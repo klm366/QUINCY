@@ -1,6 +1,31 @@
 #! /usr/bin/env python
 """Module contains experiment related classes, methods and metadata."""
 
+__author__="Deike Kleberg (2016,2017)"
+
+# show all methods of class Experiment
+# >>> from experiment import Experiment
+# >>> import inspect
+# >>> import pprint
+# >>> mem = inspect.getmembers ( Experiment, predicate=inspect.ismethod)
+# >>> pprint.pprint ([ i for i,j in mem])
+
+            # import pprint
+            # pprint.pprint ( dict ( classinstance.__dict__ ))
+            # print
+
+# ['__init__',
+#  '__repr__',
+#  'accumulate_streams',
+#  'fetch_archived_streams',
+#  'fetch_land_sea_mask',
+#  'fetch_outdata',
+#  'remotehost_fetching',
+#  'remotehost_processing',
+#  'teX_repr',
+#  'teX_short_repr']
+
+
 import os, sys, subprocess
 from netCDF4 import Dataset
 from cdo import Cdo
@@ -99,7 +124,6 @@ are derived from it.
     B4J_index       = None
     B4J_canno       = None
     B4J_refno       = None
-    modeltype       = None
                     
     def __init__ (   self, b4j_obj, **kwargs ):
         """Objects are initialized giving their attributes.
@@ -122,7 +146,6 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_initialyear = kwargs.get ( "B4J_initialyear", None )
         self.B4J_finalyear   = kwargs.get ( "B4J_finalyear", None )
         self.B4J_index       = {}
-        self.modeltype       = "generic"
 
         self.B4J_obj.logger.debug ( 'kwargs = { %s }' % ''.join("{!s} = {!r}, ".format(key,val) 
                                                         for (key,val) in kwargs.items()))
@@ -144,9 +167,6 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
             self.B4J_oceres      = exp_metadata [ "oce_res" ]
 
         host         = gethostname ()
-        print "host", host
-        print "HOST_AVAIL"
-        print HOST_AVAIL
         self.from_archive = self.B4J_host == 'archive'
         self.from_remote  = host not in HOST_AVAIL [ self.B4J_host ][ 'names' ]
         self.accumulated  = True if self.from_archive else False
@@ -156,43 +176,61 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         cmd = "ssh %s@%s '%s'" % ( self.B4J_obj.config [ 'author' ],
                                    HOST_AVAIL [ self.B4J_host ][ 'login_name' ],
                                    cmd )
+
+        self.B4J_obj.logger.debug ( "Exiting" )
         return subprocessing ( cmd )
 
 
     def remotehost_fetching ( self, remote_path, target_path ):
+        self.B4J_obj.logger.debug ( "Starting." )
         cmd = "scp %s@%s:%s %s" % ( self.B4J_obj.config [ 'author' ],
                                     HOST_AVAIL [ self.B4J_host ][ 'login_name' ],
                                     remote_path,
                                     target_path )
+        
+
+        self.B4J_obj.logger.debug ( "Exiting" )
         return subprocessing ( cmd )
 
     
     def fetch_land_sea_mask ( self, origin_path, target_path, varname ):
+        self.B4J_obj.logger.debug ( "Starting." )
         
-            target_fn = os.path.basename ( target_path )
-            
-            remote_cmd = """
-            echo 'on server' $(hostname);
-            export PATH=%s:$PATH;
-            rm -f %s;
-            cdo selname,%s %s %s
-            """ % (
-                HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
-                target_fn, varname, origin_path, target_fn )
+        target_fn = os.path.basename ( target_path )
 
-            
-            self.remotehost_processing ( remote_cmd )
-            self.B4J_obj.logger.debug ( "Executed command successfully." )
-            self.remotehost_fetching ( target_fn, self.land_sea_mask )
-            self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
-            self.remotehost_processing ( "rm -f %s" % target_fn )
-            self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+        remote_cmd = """
+        echo 'on server' $(hostname);
+        export PATH=%s:$PATH;
+        rm -f %s;
+        cdo selname,%s %s %s
+        """ % (
+            HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
+            target_fn, varname, origin_path, target_fn )
+
+
+        self.remotehost_processing ( remote_cmd )
+        self.B4J_obj.logger.debug ( "Executed command successfully." )
+        self.remotehost_fetching ( target_fn, self.land_sea_mask )
+        self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+        self.remotehost_processing ( "rm -f %s" % target_fn )
+        self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+
+        self.B4J_obj.logger.debug ( "Exiting" )
         
 
     
     def accumulate_streams ( self, orig_dirpath, orig_fn_tmpl, startyear, endyear,
                              selcodes, suffix, codes_path, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
+        print "orig_dirpath:", orig_dirpath
+        print "orig_fn_tmpl:", orig_fn_tmpl
+        print "startyear:", startyear
+        print "endyear:", endyear
+        print "selcodes:", selcodes
+        print "suffix:", suffix
+        print "codes_path:", codes_path
+        print "target_path:", target_path
+        print "from_remote:", from_remote
 
         sy  = int ( startyear )
         fy  = int ( endyear )
@@ -233,6 +271,8 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
 
             self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
                 remote_cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
+
+            print "\n\n clear:\n\n %s \n\n" % remote_cmd
             
             self.remotehost_processing ( remote_cmd )
             self.B4J_obj.logger.debug ( "Executed command successfully." )
@@ -299,7 +339,7 @@ for %s into %s. This might take a while ...""" % (
 
         os.chdir ( workingdir )
 
-        self.B4J_obj.logger.debug ( "Starting" )
+        self.B4J_obj.logger.debug ( "Exiting" )
             
 
     def fetch_outdata ( self ):
@@ -320,15 +360,15 @@ for %s into %s. This might take a while ...""" % (
             self.B4J_obj.logger.debug ( "Fetch data for field '%s'." % fieldname )
 
             assert 'fetch' in fielddict and \
-                self.modeltype in fielddict [ 'fetch' ], \
-                "No 'fetch'-section defined for %s and %s." % ( fieldname, self.modeltype )
+                self.B4J_etype in fielddict [ 'fetch' ], \
+                "No 'fetch'-section defined for %s and %s." % ( fieldname, self.B4J_etype )
             
             frequence_infix = self.outfiles_dict [ 'frequence_infixes' ][ fielddict [ "frequence" ]]\
                               if fielddict [ "frequence" ] == "monthly" else "" 
             endyearstring = self.outfiles_dict [ 'endyear_tmpl' ] % { 'endyear': self.B4J_endyear }\
                               if self.accumulated else ""
                 
-            for fileid, filedict in fielddict [ 'fetch' ][ self.modeltype ].iteritems ():
+            for fileid, filedict in fielddict [ 'fetch' ][ self.B4J_etype ].iteritems ():
                 
 
                 assert "submodel" in filedict and \
@@ -440,7 +480,7 @@ for %s into %s. This might take a while ...""" % (
                         'startdate'      : self.B4J_startyear,
                         'enddate'        : self.B4J_endyear,
                         'suffix'         : fielddict [ 'suffix' ]}
-                    assert self.modeltype in filedict, "No '%s'-section defined for %s." % fileid
+                    assert self.B4J_etype in filedict, "No '%s'-section defined for %s." % fileid
                     assert os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ])
                     try:
                         os.remove ( self.B4J_index [ fileid ])
@@ -543,9 +583,128 @@ for %s into %s. This might take a while ...""" % (
            for ( k, v ) in sorted ( self.__dict__.iteritems ())))
 
 
+class ICON_Experiment ( Experiment ):
+    """Derived class specialized on simulations done for Reiners atm_amip ICON.
+"""
+    gridtype = "unstructured"
+    suffix = 'nc'
+    outfiles_dict = { "suffix"            : "nc",
+                      "fn_tmpl"           : "%(exp_name)s%(submodel)s_%(year)s%(mon_int)s01T000000Z.nc" }
+    lsm_dict = { "fn" : "r2b4_slf_bin.nc",
+                 "var": "notsea",
+                 "bin": True }
+    
+    def __init__ ( self,  b4j_obj, **kwargs ):
+
+        Experiment.__init__ ( self, b4j_obj, **kwargs )
+        self.B4J_etype = "ICON"
+        
+        
+    def fetch_outdata ( self ):
+        """Fetch outdata.
+"""
+        from bench import bench4jsbach_scripts
+        
+        self.B4J_obj.logger.debug ( "Starting" )
+        
+        for fieldname, fielddict in self.B4J_obj.diagnostic_fields.iteritems ():
+            self.B4J_obj.logger.debug ( "Fetch data for field '%s'." % fieldname )
+
+            assert 'fetch' in fielddict and \
+                self.B4J_etype in fielddict [ 'fetch' ], \
+                "No 'fetch'-section defined for %s and %s." % ( fieldname, self.B4J_etype )
+
+            cdo = Cdo ()
+                
+            for fileid, filedict in fielddict [ 'fetch' ][ self.B4J_etype ].iteritems ():
+                print
+                print fileid
+                print filedict
+                print
+                self.B4J_index [ fileid ] = self.B4J_obj.path_template % { 
+                    'path'           : self.B4J_obj.interpolated_selected_path,
+                    'classification' : fileid,
+                    'expname'        : self.B4J_name,
+                    'startdate'      : self.B4J_startyear,
+                    'enddate'        : self.B4J_endyear,
+                    'suffix'         : fielddict [ 'suffix' ]}
+                print self.B4J_index [ fileid ]
+
+                if not self.B4J_obj.fetchremote: continue
+
+
+                orig_dirpath =  self.B4J_path
+                print orig_dirpath
+                fn_tmpl = "%(exp_name)s%(submodel)s_%(year)s%(mon_int)s01T000000Z.nc"
+                orig_fn_tmpl = self.outfiles_dict [ "fn_tmpl" ] % { "exp_name" : self.B4J_name_orig,
+                                                                    "submodel" : "_%s" % filedict [ 'submodel' ],
+                                                                    "year"     : "%(year)s",
+                                                                    "mon_int"  : "%(mon_int)s" }
+                print fn_tmpl
+                print orig_fn_tmpl
+                #orig_fn_tmpl: tra0163_jsbach_jsbach_mm_%(year)s.grb
+
+                suffix = 'nc'
+                # target_fn = self.B4J_obj.path_template % {
+                #     'path'           : '/mnt/lustre01/work/mj0060/m300050/data_temp',
+                #     'classification' : fileid,
+                #     'expname'        : self.B4J_name,
+                #     'startdate'      : self.B4J_startyear,
+                #     'enddate'        : self.B4J_endyear,
+                #     'suffix'         : fielddict [ 'suffix' ]}
+
+                target_path = self.B4J_index [ fileid ]
+                target_fn = os.path.basename ( target_path )
+
+                
+                #logstring=$(date +%Y%m%d%H%M)
+                
+                remote_cmd = """
+                echo 'on server' $(hostname);
+                echo $(pwd -P);
+                tempfn=temp;
+                echo ${tempfn};
+                for x in `seq %s 1 %s`;do
+                for y in {01..12};do
+                ARRAY[$i]=/mnt/lustre01/work/mj0060/m212005/icon-les/feature-tiles/experiments/atm_amip/v1/atm_amip_lnd_ml_${x}${y}01T000000Z.nc
+                echo ${ARRAY[i]};
+                i=$i+1;
+                done;
+                done;
+                export PATH=%s:$PATH;
+                rm -f %s;
+                cdo -P 8 -f %s select,name=%s ${ARRAY[*]} ${tempfn};
+                cdo monmean ${tempfn} %s;
+                rm -r ${tempfn}
+                """ % ( self.B4J_startyear, self.B4J_endyear,
+                        HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
+                        target_fn, suffix, filedict [ 'name' ], target_fn )
+
+                print remote_cmd
+                
+                self.remotehost_processing ( remote_cmd )
+                self.B4J_obj.logger.debug ( "Executed command successfully." )
+                self.remotehost_fetching ( target_fn, target_path )
+                self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+                self.remotehost_processing ( "rm -f %s" % target_fn )
+                self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+
+        
+        self.land_sea_mask  = self.B4J_obj.path_template % { 
+            'path'           : self.B4J_obj.interpolated_selected_path,
+            'classification' : "land_sea_mask",
+            'expname'        : self.B4J_name,
+            'startdate'      : self.B4J_startyear,
+            'enddate'        : self.B4J_endyear,
+            'suffix'         : "nc" }
+                
+        self.B4J_obj.logger.debug ( "Exiting" )
+
+
 class CMIP5_Experiment ( Experiment ):
     """Derived class specialized on simulations done for CMIP5.
 """
+    gridtype = "gaussian"
     suffix = 'nc'
     
     def __init__ ( self,  b4j_obj, **kwargs ):
@@ -553,7 +712,7 @@ class CMIP5_Experiment ( Experiment ):
         assert var_filename and os.path.isfile ( var_filename )
 
         Experiment.__init__ ( self, b4j_obj, **kwargs )
-        self.modeltype = "CMIP5"
+        self.B4J_etype = "CMIP5"
         
         nc_fid  = Dataset ( var_filename, 'r' )
         nc_attrs = nc_fid.ncattrs ()
@@ -566,6 +725,7 @@ class CMIP5_Experiment ( Experiment ):
 class MPIESM1_Experiment ( Experiment ):
     """Derived class specialized on simulations with MPIESM1.
     """
+    gridtype = "gaussian"
     
     codesfiles_dict = { "suffix"        : "codes",
                         "dirname"       : "log",
@@ -587,7 +747,7 @@ class MPIESM1_Experiment ( Experiment ):
         self.dirpath            = os.path.join ( self.B4J_path, self.B4J_name_orig )
         self.outdata_dirpath    = os.path.join ( self.dirpath, self.outfiles_dict [ "dirname" ])
         self.codesfiles_dirpath = os.path.join ( self.dirpath, self.codesfiles_dict [ 'dirname' ])
-        self.modeltype = "MPIESM1"
+        self.B4J_etype = "MPIESM1"
 
         self.codesfiles_dict [ "is_tared" ] = self.from_archive
         

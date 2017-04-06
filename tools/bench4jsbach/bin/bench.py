@@ -11,7 +11,8 @@ from wikipage import Bench4JSBach_Wikipage
 from experiment import (
     Experiment,
     CMIP5_Experiment,
-    MPIESM1_Experiment )
+    MPIESM1_Experiment,
+    ICON_Experiment )
 from util import (
     gethostname,
     log_message_newline,
@@ -267,6 +268,8 @@ class Bench_Object ( Diagnostics, Report ):
                 e = CMIP5_Experiment ( self, **kwargs )
             elif etype == "MPIESM1":
                 e = MPIESM1_Experiment ( self, **kwargs )
+            elif etype == "ICON":
+                e = ICON_Experiment ( self, **kwargs )
             else:
                 e = Experiment ( self, **kwargs )
             self.experiments.append ( e )

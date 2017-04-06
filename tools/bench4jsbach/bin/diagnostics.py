@@ -151,22 +151,29 @@ class Diagnostics ( object ):
 
         
         fielddict = self.diagnostic_fields [ fieldname ]
+        ref_etypes = list ( set ([ e.B4J_etype for e in self.experiments if e.B4J_isref ])) 
         
         cdo = Cdo ()
+       
         
         ################ PREPROCESSING ####################
 
         for exp in self.experiments:
             # TODO: validation of field configuration in preliminary step, EXTEND VALIDATION PROCESS
             assert 'preprocessing' in fielddict and \
-                exp.modeltype in fielddict [ 'preprocessing' ], \
-                "No 'preprocessing'-section defined for %s and %s." % ( fieldname, exp.modeltype )
-
-            prepdict = fielddict [ 'preprocessing' ][ exp.modeltype ]            
+                exp.B4J_etype in fielddict [ 'preprocessing' ], \
+                "No 'preprocessing'-section defined for %s and %s." % ( fieldname, exp.B4J_etype )
+                
+            prepdict = fielddict [ 'preprocessing' ][ exp.B4J_etype ]            
             executable = self.get_b4j_path (  prepdict [ 'exec' ], "scripts" )
             input_list = prepdict [ 'input' ]
             
             arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
+
+            remap_targets = [ etype for etype in ref_etypes if etype != exp.B4J_etype  ] \
+                            if exp.B4J_iscan else None
+            if remap_targets:
+                arglist.append ( "remap_targets:" + "[%s]" % ','.join ( remap_targets  ))
                             
             for key in input_list:
                 arglist.append ( key + ':' + exp.B4J_index [ key ])
@@ -180,12 +187,25 @@ class Diagnostics ( object ):
                     'enddate'        : exp.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
+                if remap_targets:
+                    for remap_target in remap_targets:
+                        output_item_remap = output_item + "_remap-" + remap_target
+                        exp.B4J_index [ output_item_remap ] = self.path_template % { 
+                            'path'           : fielddict [ "processed_path" ],
+                            'classification' : output_item_remap,
+                            'expname'        : exp.B4J_name,
+                            'startdate'      : exp.B4J_startyear,
+                            'enddate'        : exp.B4J_endyear,
+                            'suffix'         : fielddict [ 'suffix' ]}
+                        arglist.append ( output_item_remap + ":" + exp.B4J_index [ output_item_remap ])
 
             cmd = ["python", executable ] +  arglist
-            self.logger.debug ( "Calling childprocess preprocessing: \n%s" % ( cmd ))
+            self.logger.debug ( """Calling childprocess preprocessing: \n%s""" % cmd )
             subprocessing ( cmd, shell_arg = False, stderr_arg = None )
         self.logger.debug ( "Finished preprocessing with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
+
+        print "######################## PREPROCESSING FINISHED "
 
         ########### DIAGNOSTIC ############################
         
@@ -194,17 +214,27 @@ class Diagnostics ( object ):
 
         for can in self.experiments:
             if not can.B4J_iscan: continue
+            print
+            print print_item_or_list_rec (  can.B4J_index, 3 )
                                    
             for ref in self.experiments:
                 if not ref.B4J_isref:            continue
-                if ref.B4J_name == can.B4J_name: continue   
+                if ref.B4J_name == can.B4J_name: continue
+                print
+                print print_item_or_list_rec ( ref.B4J_index, 3 )
              
                 arglist = [ "fieldname:" + fieldname,
                             "suffix:" +  fielddict [ 'suffix' ],
                             "land_sea_mask:" + ref.land_sea_mask ]
                             
                 for key in input_list:
-                    arglist.append ( "can.%s" % key + ':' + can.B4J_index [ key ])
+                    if can.B4J_etype != ref.B4J_etype:
+                        gridstring = "t63grid"
+                        print "WARNING: fixed remapping to gaussian %s." % gridstring
+                        remapped = key + "_remap-" + ref.B4J_etype
+                        arglist.append ( "can.%s" % key + ':' + can.B4J_index [ remapped ])
+                    else:
+                        arglist.append ( "can.%s" % key + ':' + can.B4J_index [ key ])
                     arglist.append ( "ref.%s" % key + ':' + ref.B4J_index [ key ])
                             
                 for output_item, output_dict in fielddict [ 'diagnose' ].iteritems ():
