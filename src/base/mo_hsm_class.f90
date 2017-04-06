@@ -506,19 +506,24 @@ CONTAINS
   ! ===============================================================================
   ! Methods for hsm class
   ! ===============================================================================
-  SUBROUTINE Init_hsm(self, name)
+  SUBROUTINE Init_hsm(self, name, debug)
 
-    CLASS(t_Hsm),     INTENT(inout) :: self
-    CHARACTER(len=*), INTENT(in)    :: name
+    CLASS(t_Hsm),      INTENT(inout) :: self
+    CHARACTER(len=*),  INTENT(in)    :: name
+    LOGICAL, OPTIONAL, INTENT(in)    :: debug
 
     !TYPE(t_Action), POINTER :: action
     INTEGER :: i, nthreads
+    LOGICAL :: l_debug
 
 #ifdef _OPENMP
     nthreads = omp_get_max_threads()
 #else
     nthreads = 1
 #endif
+
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
 
     CALL self%Set_mode('full')
 
@@ -541,9 +546,9 @@ CONTAINS
       !self%actions(i) = t_Action("")
       !DEALLOCATE(action)
     !END DO
-    CALL self%Register_action(t_Action("ENTER"))
-    CALL self%Register_action(t_Action("EXIT"))
-    CALL self%Register_action(t_Action("START"))
+    CALL self%Register_action(t_Action("ENTER"), l_debug)
+    CALL self%Register_action(t_Action("EXIT"),  l_debug)
+    CALL self%Register_action(t_Action("START"), l_debug)
 
     self%name = TRIM(name)
 
@@ -1124,13 +1129,19 @@ CONTAINS
 
   END SUBROUTINE Process_exit_to_lca
 
-  SUBROUTINE Register_action_hsm(this, action)
+  SUBROUTINE Register_action_hsm(this, action, debug)
 
     CLASS(t_Hsm),   INTENT(inout) :: this
     TYPE(t_Action), INTENT(in)    :: action
+    LOGICAL, OPTIONAL, INTENT(in) :: debug
 
     INTEGER :: i
+    LOGICAL :: l_debug
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_action_hsm'
+
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
 
     i = 1
     DO WHILE (TRIM(this%actions(i)%name) /= "")
@@ -1140,7 +1151,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of actions exceeded!')
     ELSE
       this%actions(i) = action
-      CALL message(TRIM(routine), 'Registering state machine action '//TRIM(this%actions(i)%name))
+      IF (l_debug) CALL message(TRIM(routine), 'Registering state machine action '//TRIM(this%actions(i)%name))
     END IF
 
   END SUBROUTINE Register_action_hsm

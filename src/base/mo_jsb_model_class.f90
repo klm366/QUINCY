@@ -118,10 +118,10 @@ CONTAINS
 
     ALLOCATE(return_ptr)
 
-    CALL return_ptr%Init_hsm(name)
+    CALL return_ptr%Init_hsm(name, debug=.FALSE.)
 
-    CALL return_ptr%Register_action(t_Action("INTEGRATE"))
-    CALL return_ptr%Register_action(t_Action("AGGREGATE"))
+    CALL return_ptr%Register_action(t_Action("INTEGRATE"), debug=.FALSE.)
+    CALL return_ptr%Register_action(t_Action("AGGREGATE"), debug=.FALSE.)
 
     return_ptr%id                = id
     return_ptr%shortname         = TRIM(shortname)
