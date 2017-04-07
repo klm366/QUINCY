@@ -45,7 +45,7 @@ inpath     = kwargs [ 'A_seasmean' ]
 varname    = 'albedo'
 outpath    = kwargs [ 'A_seasmean_plot' ]
 unit       = 'Wm**(-2)'
-unit_TeX   = unit
+unit_TeX   = '$\\frac{W}{m^2}$'
 title_TeX  = kwargs [ 'plot_title_A_seasmean_plot' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, colormap = 'RdBu'  )

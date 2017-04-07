@@ -104,10 +104,10 @@ def colormap_prep ( vmin, vmax, vmean, nlev ):
     ticks                = np.concatenate (( ticks_left, ticks_right ), axis = 0 )
     ticks_interleave     = np.take ( ticks, np.arange ( nlev_left % tick_interleave_no,
                                                     len ( ticks ) - 1, tick_interleave_no ))
-    vals                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
+    values                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
                                    [ 0, 0.5, 1 ])
 
-    return vals, level, ticks_interleave
+    return values, level, ticks_interleave
 
     
 def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
@@ -118,7 +118,8 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
     print "\n\ninpath:", inpath
     print "varname:", varname
     print "outpath:", outpath
-    nseas = 4
+    seasonlabel =  ['DJF','MAM','JJA','SON']
+    nseas       = 4
 
     nc_fid  = Dataset ( inpath, 'r')
 
@@ -154,10 +155,10 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
 
     print vmax,vmin,vmean
     
-    # #print "####### COLORS: VALS, LEVEL: #########"
+    # #print "####### COLORS: VALUES, LEVEL: #########"
     nlev        = 20
-    vals, level, ticks_interleave = colormap_prep ( vmin, vmax, vmean, nlev )
-    colors      = plt.cm.get_cmap ( colormap )( vals )
+    values, level, ticks = colormap_prep ( vmin, vmax, vmean, nlev )
+    colors      = plt.cm.get_cmap ( colormap )( values )
     cmap, norm  = mcolors.from_levels_and_colors ( level, colors )
     norm.clip   = True
     norm.vmin   = vmin
@@ -167,13 +168,14 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
     cmap.set_over  ( color = 'r', alpha = 1.0 )
     cmap.set_under ( color = 'g', alpha = 1.0 )
     
-    f = plt.figure ( figsize = ( 16, 10 ))  
+    f = plt.figure ( figsize = ( 16, 8 ))  
     ax = [ f.add_subplot ( 2,2, i + 1 , projection = ccrs.PlateCarree ()) \
            for i in range ( nseas )]
     gs1 = gridspec.GridSpec ( 2, 2 )
-    gs1.update ( wspace = -0.08, hspace = -0.04  ) 
+    gs1.update ( wspace = -0.18, hspace = -0.14  ) 
 
     for i in range ( 4 ):
+        ax [ i ].set_title ( seasonlabel [ i ], fontsize=16 )
         ax [ i ].set_xlim ([ -180, 180 ])
         ax [ i ].set_ylim ([ -90, 90 ])
         ax [ i ].coastlines ( linewidth=0.5 )
@@ -203,14 +205,16 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
    # cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03])
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
                                      orientation = 'horizontal', extend = 'neither', 
-                                     ticks = ticks_interleave, format = '%.2e' )
-    # for t in cb.ax.get_xticklabels ():
-    #     t.set_fontsize ( 14 )    
-    # cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16 )
-    # plt.text ( 0.5, 1.04, title_TeX,
-    #            horizontalalignment = 'center',
-    #            fontsize = 20,
-    #            transform = ax.transAxes )
+                                     ticks = ticks, format = '%.2e' )
+    for t in cb.ax.get_xticklabels ():
+        t.set_fontsize ( 14 )    
+    cb.ax.text ( 0.95, -0.9, "[%s]" % unit_TeX, size = 20 )
+    #cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16, usetex = True )
+    plt.text ( 0.5, 1.04, title_TeX,
+               horizontalalignment = 'center',
+               verticalalignment = 'top',
+               fontsize = 20 )#,
+               #transform = ax.transAxes )
     
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
@@ -367,7 +371,7 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
                                      ticks = ticks_interleave, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16 )
+    #cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16, usetex = True )
     plt.text ( 0.5, 1.04, title_TeX,
                horizontalalignment = 'center',
                fontsize = 20,
