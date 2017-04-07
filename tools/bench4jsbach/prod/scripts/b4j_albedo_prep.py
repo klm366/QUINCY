@@ -38,6 +38,7 @@ cdo = Cdo ()
 
 cdo.setname ( fieldname,
               input="-setunit,1 " +\
+              "-sellonlatbox,-180,180,-90,90 " +\
               "-setvrange,0.0001,0.99 " +\
               "-div " +\
               ( " -selyear," + yearliststring + \
@@ -52,6 +53,7 @@ cdo.yseasmean ( input="-selyear," + yearliststring + \
                 output=kwargs [ 'A_seasmean' ])
 
 cdo.yseasmean ( input="-selyear," + yearliststring + \
+                "-sellonlatbox,-180,180,-90,90 " +\
                 " " + kwargs  [ 'D_selcode' ],
                 output=kwargs [ 'D_seasmean' ])
     
