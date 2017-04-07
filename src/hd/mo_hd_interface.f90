@@ -601,7 +601,7 @@ CONTAINS
       RETURN
     END IF
 
-    water_budget_old(:,:) = water_budget(:,:)
+    water_budget_old(:,:) = water_budget(:,:) * in_domain(:,:)
     global_water_budget_old = global_sum_array(water_budget_old(:,:))
 
     ! re-calculate global land water budget
