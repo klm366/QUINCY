@@ -169,11 +169,6 @@ class Diagnostics ( object ):
             input_list = prepdict [ 'input' ]
             
             arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
-
-            remap_targets = [ etype for etype in ref_etypes if etype != exp.B4J_etype  ] \
-                            if exp.B4J_iscan else None
-            if remap_targets:
-                arglist.append ( "remap_targets:" + "[%s]" % ','.join ( remap_targets  ))
                             
             for key in input_list:
                 arglist.append ( key + ':' + exp.B4J_index [ key ])
@@ -187,27 +182,71 @@ class Diagnostics ( object ):
                     'enddate'        : exp.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
-                if remap_targets:
-                    for remap_target in remap_targets:
-                        output_item_remap = output_item + "_remap-" + remap_target
-                        exp.B4J_index [ output_item_remap ] = self.path_template % { 
-                            'path'           : fielddict [ "processed_path" ],
-                            'classification' : output_item_remap,
-                            'expname'        : exp.B4J_name,
-                            'startdate'      : exp.B4J_startyear,
-                            'enddate'        : exp.B4J_endyear,
-                            'suffix'         : fielddict [ 'suffix' ]}
-                        arglist.append ( output_item_remap + ":" + exp.B4J_index [ output_item_remap ])
 
             cmd = ["python", executable ] +  arglist
             self.logger.debug ( """Calling childprocess preprocessing: \n%s""" % cmd )
             subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+
+            # Check written files:
+            new_indices = [ output_item for output_item in  fielddict [ 'preprocessing' ][ 'output' ]]
+            print new_indices
+            exp.index_check_output ( new_indices )
+        
         self.logger.debug ( "Finished preprocessing with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
 
         print "######################## PREPROCESSING FINISHED "
 
+        ########### REMAPPING FOR CANDIDATES #############################
+
+        self.logger.debug ( "Remapping: check necessity and potential processing." )
+
+        for can in self.experiments:
+            if not can.B4J_iscan: continue
+                
+            remap_targets = [ etype for etype in ref_etypes if etype != can.B4J_etype  ]
+            
+            if remap_targets:
+                for output_item in  fielddict [ 'preprocessing' ][ 'output' ]:
+                    for remap_target in remap_targets:
+                        output_item_remap = output_item + "_remap-" + remap_target
+                        can.B4J_index [ output_item_remap ] = self.path_template % { 
+                            'path'           : fielddict [ "processed_path" ],
+                            'classification' : output_item_remap,
+                            'expname'        : can.B4J_name,
+                            'startdate'      : can.B4J_startyear,
+                            'enddate'        : can.B4J_endyear,
+                            'suffix'         : fielddict [ 'suffix' ]}
+                        
+                        if remap_target == "MPIESM1":
+                            gridstring = "t63grid"
+                            print "WARNING: fixed remapping to gaussian %s." % gridstring
+
+                            print "Start remapping os %s to %s. This might take a while ..." % \
+                                ( can.B4J_index [ output_item ], gridstring )
+                            sys.stdout.flush()
+
+                            #HACK TO SAVE COMPUTING TIME
+                            if not os.path.isfile (  can.B4J_index [ output_item_remap ]):
+                                cdo.remapycon ( gridstring,
+                                                input = " -sellonlatbox,-180,180,-90,90 %s" % can.B4J_index [ output_item ],
+                                                output = can.B4J_index [ output_item_remap ])
+                        else:
+                            print "ERROR: remapping for %s not implemented yet." % remap_target
+                            sys.exit ( 1 )
+
+                new_indices = [ "%s_remap-%s" % ( output_item, remap_target ) \
+                                for output_item in fielddict [ 'preprocessing' ][ 'output' ] \
+                                for remap_target in remap_targets ]
+                print new_indices
+                can.index_check_output ( new_indices )
+
+            
+        self.logger.debug ( "Finished remapping." )
+
         ########### DIAGNOSTIC ############################
+        
+        self.logger.debug ( "Start diagnostic processing." )
         
         executable = self.get_b4j_path (  fielddict [ 'diagnose' ][ 'exec' ], "scripts" )
         input_list = fielddict [ 'diagnose' ][ 'input' ]
@@ -251,6 +290,13 @@ class Diagnostics ( object ):
 
                 cmd = ["python", executable ] +  arglist
                 subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+
+                new_indices = [ "%s_ref%d" % ( output_item, ref.B4J_refno ) \
+                                for output_item, output_dict in fielddict [ 'diagnose' ].iteritems () \
+                                if  isinstance ( output_dict, configobj.Section ) \
+                                for ref in self.experiments if ref.B4J_isref ]
+                print new_indices
+                can.index_check_output ( new_indices )
                 
         self.logger.debug ( "Finished diagnostic with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))

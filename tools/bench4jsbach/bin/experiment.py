@@ -172,6 +172,28 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.accumulated  = True if self.from_archive else False
         # ATT: if logic changes, program flow has to be adapted
 
+
+    def index_check_output ( self, tokenlist ):
+        self.B4J_obj.logger.debug ( "Starting." )
+        cdo = Cdo ()
+        for token in tokenlist:
+            if os.path.isfile ( self.B4J_index [ token ]):
+                try:
+                    filetype = cdo.filedes ( input=self.B4J_index [ token ])
+                except:
+                    filetype = "unsupported filetype"
+                else:
+                    filetype = filetype[1]
+
+                print "\nFor %s file '%s' written at %s" % ( self.B4J_name, token, self.B4J_index [ token ])
+                print "size %s byte, type %s" % ( os.stat ( self.B4J_index [ token ]).st_size, filetype )
+
+            else:
+                print "\nERROR: File '%s' not written at %s" % ( token, self.B4J_index [ token ])
+                sys.exit ( 1 )
+        self.B4J_obj.logger.debug ( "Exiting." )
+                
+
     def remotehost_processing ( self, cmd ):
         cmd = "ssh %s@%s '%s'" % ( self.B4J_obj.config [ 'author' ],
                                    HOST_AVAIL [ self.B4J_host ][ 'login_name' ],

@@ -27,21 +27,12 @@ print 'Argument List:', str(sys.argv)
 
 kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
 print "subprocess '%s', kwargs = " % __file__
-if "remap_targets" in kwargs:
-    if len ( kwargs [ "remap_targets" ]) > 2:
-        kwargs [ "remap_targets" ] = kwargs [ "remap_targets" ][1:-1].split(",")
-    else:
-        kwargs [ "remap_targets" ] = None
-
-    print kwargs [ "remap_targets" ]
-    print "*************************************"
 print print_item_or_list_rec ( kwargs, 3 )
 
 
 ### main part
 
 fieldname      = "albedo"
-output_items   =  [ 'UD_div', 'A_seasmean', 'D_seasmean' ]
 
 D = "rsds"
 D_longname = "Surface Downwelling Solar Radiation"
@@ -86,57 +77,6 @@ cdo.yseasmean ( input= kwargs [ 'UD_div' ],
 cdo.yseasmean ( input= D_f,
                 output=kwargs [ 'D_seasmean' ])
 
-# TODO: THIS PART HAS TO BE MOVED IN THE MAIN TOOL CODE
-if "remap_targets" in kwargs and kwargs [ "remap_targets" ]:
-    for remap_target in  kwargs [ "remap_targets" ]:
-        if remap_target == "MPIESM1":
-            gridstring = "t63grid"
-            print "WARNING: fixed remapping to gaussian %s." % gridstring
-            for output_item in output_items:
-                output_item_remap =  output_item + "_remap-" + remap_target
-                
-                print output_item
-                print kwargs [ output_item ]
-                print  os.path.isfile ( kwargs [ output_item ])
-                print output_item_remap
-                print kwargs [ output_item_remap ]
-                print "Start remapping os %s to %s. This might take a while ..." % \
-                    ( kwargs [ output_item ], gridstring )
-                sys.stdout.flush()
-
-                #HACK TO SAVE COMPUTING TIME
-                if not os.path.isfile (  kwargs [ output_item_remap ]):
-                    cdo.remapycon ( gridstring,
-                                    input = " -sellonlatbox,-180,180,-90,90 %s" % kwargs [ output_item ],
-                                    output = kwargs [ output_item_remap ])
-        else:
-            print "ERROR: remapping for %s not implemented yet." % remap_target
-            sys.exit ( 1 )
-
-
-### closure part, check for output files
-
-
-objective_tokens = output_items
-if "remap_targets" in kwargs and kwargs [ "remap_targets" ]:
-    for remap_target in  kwargs [ "remap_targets" ]:
-        objective_tokens += [ output_item + "_remap-" + remap_target for output_item in output_items ]
-	
-for token in objective_tokens:
-    if os.path.isfile ( kwargs [ token ]):
-        try:
-            filetype = cdo.filedes ( input=kwargs [ token ])
-        except:
-            filetype = "unsupported filetype"
-        else:
-            filetype = filetype[1]
-
-        print "\nFile '%s' written at %s" % ( token, kwargs [ token ])
-        print "size %s byte, type %s" % ( os.stat ( kwargs [ token ]).st_size, filetype )
-    
-    else:
-        print "\nERROR: File '%s' not written at %s" % ( token, kwargs [ token ])
-        sys.exit ( 1 )
     
 print "\n Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
 

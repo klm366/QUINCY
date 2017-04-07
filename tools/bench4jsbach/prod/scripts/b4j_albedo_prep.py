@@ -26,14 +26,6 @@ print 'Argument List:', str(sys.argv)
 
 kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
 print "subprocess '%s', kwargs = " % __file__
-if "remap_targets" in kwargs:
-    if len ( kwargs [ "remap_targets" ]) > 2:
-        kwargs [ "remap_targets" ] = kwargs [ "remap_targets" ][1:-1].split(",")
-    else:
-        kwargs [ "remap_targets" ] = None
-
-    print kwargs [ "remap_targets" ]
-    print "*************************************"
 print print_item_or_list_rec ( kwargs, 3 )
 
 ### main part
@@ -62,26 +54,7 @@ cdo.yseasmean ( input="-selyear," + yearliststring + \
 cdo.yseasmean ( input="-selyear," + yearliststring + \
                 " " + kwargs  [ 'D_selcode' ],
                 output=kwargs [ 'D_seasmean' ])
-
-
-### closure part, check for output files
-	
-for token in [ 'UD_div', 'A_seasmean', 'D_seasmean' ]:
-    if os.path.isfile ( kwargs [ token ]):
-        try:
-            filetype = cdo.filedes ( input=kwargs [ token ])
-        except:
-            filetype = "unsupported filetype"
-        else:
-            filetype = filetype[1]
-
-        print "\nFile '%s' written at %s" % ( token, kwargs [ token ])
-        print "size %s byte, type %s" % ( os.stat ( kwargs [ token ]).st_size, filetype )
     
-    else:
-        print "\nERROR: File '%s' not written at %s" % ( token, kwargs [ token ])
-        sys.exit ( 1 )
-    
-    print "\n Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
+print "\n Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
 
 print "\nExiting %s" % os.path.realpath(__file__)
