@@ -235,7 +235,7 @@ CONTAINS
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0       &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:))) &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_vis_lnd', mem%alb_vis_lnd,                        &
