@@ -51,7 +51,6 @@ MODULE mo_a2l_memory_class
       CO2_air            , &
       CO2_air_mol        , &
       ! For lakes:
-      albedo_lwtr        , &
       drag_wtr           , &
       drag_ice           , &
       t_acoef_wtr        , &
@@ -154,7 +153,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,    &
+    CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,             &
       & hgrid, surface,                                                      &
       & t_cf('downward_visible_shortwave_radiation', 'W/m2', ''),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -162,7 +161,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,    &
+    CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,             &
       & hgrid, surface,                                                      &
       & t_cf('downward_nir_shortwave_radiation', 'W/m2', ''),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -345,13 +344,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
-
-      CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr,                   &
-        & hgrid, surface,                                                      &
-        & t_cf('albedo_lwtr', '', 'Albedo of open lake water'),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
 
     END IF
 

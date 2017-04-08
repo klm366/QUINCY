@@ -18,7 +18,7 @@ MODULE mo_rad_memory_class
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, LAKE_TYPE
+  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
   ! Use of processes in this module
   dsl4jsb_Use_processes RAD_
@@ -66,8 +66,10 @@ MODULE mo_rad_memory_class
       & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
                                 !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
                                 !! for SOC-dependend albedo calculation
-      & alb_nir_mineralsoil     ! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE. for
+      & alb_nir_mineralsoil,  & ! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE. for
                                 ! SOC dependend albedo calculation
+      & alb_vis_lnd,          & ! Albedo on the non-lake part of tile in the VIS (visible) range
+      & alb_nir_lnd             ! Albedo of the non-lake part of tile in the NIR (near-infrared) range
 
     !
     ! Additional variables for vegetation
@@ -107,6 +109,7 @@ MODULE mo_rad_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & rad_net_lwtr,         & !< Net radiation over lake water
       & rad_net_lice,         & !< Net radiation over lake ice
+      & albedo_lwtr,          & !< Albedo of open water on lake
       & albedo_lice             !< Albedo of ice on lake
 
   CONTAINS
@@ -124,6 +127,8 @@ CONTAINS
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+
+    USE mo_rad_constants,     ONLY: AlbedoLakeWater, AlbedoLakeIceMin
 
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
@@ -201,6 +206,7 @@ CONTAINS
         & t_cf('gridcell_surface_albedo_visible', '', ''),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & lrestart=.FALSE.,                                                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir', mem%alb_nir,                                &
@@ -208,6 +214,7 @@ CONTAINS
         & t_cf('gridcell_surface_albedo_nir', '', ''),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & lrestart=.FALSE.,                                                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_snow', mem%alb_vis_snow,      &
@@ -223,6 +230,29 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
+    END IF
+
+    ! Additional variables for land tiles
+    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0       &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:))) &
+      & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'alb_vis_lnd', mem%alb_vis_lnd,                        &
+        & hgrid, surface,                                                           &
+        & t_cf('surface_albvis_lnd', '', ''),                                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.TRUE.,                                                          &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'alb_nir_lnd', mem%alb_nir_lnd,                        &
+        & hgrid, surface,                                                           &
+        & t_cf('surface_albnir_lnd', '', ''),                                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.TRUE.,                                                          &
+        & initval_r=0.0_wp )
 
     END IF
 
@@ -414,12 +444,19 @@ CONTAINS
         & lrestart=.FALSE.,                                                       &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'albedo_lice', mem%albedo_lice,                        &
+      CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr,                        &
         & hgrid, surface,                                                           &
-        & t_cf('albedo_lice', '', 'Albedo of ice on water'),                        &
+        & t_cf('albedo_lwtr', '', 'Albedo of open water on lakes'),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.55_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
+
+      CALL jsb_add_var( mem, 'albedo_lice', mem%albedo_lice,                        &
+        & hgrid, surface,                                                           &
+        & t_cf('albedo_lice', '', 'Albedo of ice on lake water'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
 
     END IF
 

@@ -19,7 +19,7 @@ MODULE mo_rad_process
   PUBLIC :: &
     & calc_radiation_surface_net, &
     & calc_par, calc_fapar_lai_cl, &
-    & calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, &
     & calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
@@ -480,6 +480,32 @@ CONTAINS
      RETURN
 
    END SUBROUTINE calc_fapar_lai_cl
+  !
+  !---------------------------------------------------------------------------------------------------------------------------------
+  !
+  PURE ELEMENTAL SUBROUTINE calc_alb_lwtr( &
+    & l_day,       &
+    & alb_lwtr     &
+    & )
+
+    ! Use declarations
+    USE mo_rad_constants,          ONLY: AlbedoLakeWater
+
+    ! Arguments
+    LOGICAL,  INTENT(in)    :: &
+      & l_day
+    REAL(wp), INTENT(inout) :: &
+      & alb_lwtr
+
+    ! ---------------------------
+    ! Go
+    
+    IF (.NOT. l_day) RETURN
+
+    ! @todo: use method from mo_surface_ocean:update_albedo_ocean from ECHAM6
+    alb_lwtr = AlbedoLakeWater
+
+  END SUBROUTINE calc_alb_lwtr
   !
   !---------------------------------------------------------------------------------------------------------------------------------
   !

@@ -197,8 +197,8 @@ CONTAINS
       & lw_srf_down,          &
       & swvis_srf_down,       &
       & swnir_srf_down,       &
-      & alb_vis,              &
-      & alb_nir,              &
+      & alb_vis_lnd,          &
+      & alb_nir_lnd,          &
       & fract_lice,           &
       & rad_net_lwtr,         &
       & rad_net_lice,         &
@@ -252,7 +252,7 @@ CONTAINS
 
       ! Water
       dsl4jsb_Get_var2D_onChunk(SEB_, t_lwtr)       ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_, albedo_lwtr)  ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
       CALL calc_radiation_surface_net( &
@@ -263,8 +263,6 @@ CONTAINS
         & lw_srf_down(:),           & ! in
         & t_lwtr(:),                & ! in
         & rad_net_lwtr(:),          & ! out
-        !& swvis_srf_net(:),        & ! out
-        !& swnir_srf_net(:),        & ! out
         & sw_net=sw_net_lwtr(:),    & ! out
         & lw_net=lw_net_lwtr(:)     & ! out
         & )
@@ -283,8 +281,6 @@ CONTAINS
         & lw_srf_down(:),           & ! in
         & t_lice(:),                & ! in
         & rad_net_lice(:),          & ! out
-        !& swvis_srf_net(:),        & ! out
-        !& swnir_srf_net(:),        & ! out
         & sw_net=sw_net_lice(:),    & ! out
         & lw_net=lw_net_lice(:)     & ! out
         & )
@@ -296,16 +292,16 @@ CONTAINS
     ELSE
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
-      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis)        ! in
-      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir)        ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_lnd)    ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,      swnir_srf_net)  ! out
 
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),    & ! in
         & swnir_srf_down(:),    & ! in
-        & alb_vis(:),           & ! in
-        & alb_nir(:),           & ! in
+        & alb_vis_lnd(:),       & ! in
+        & alb_nir_lnd(:),       & ! in
         & lw_srf_down(:),       & ! in
         & t(:),                 & ! in
         & rad_srf_net(:),       & ! out
@@ -600,7 +596,7 @@ CONTAINS
 
     ! Use declarations
     USE mo_rad_process, ONLY: &
-      & get_surface_albedo_simple, calc_soil_albedo, calc_alb_lice, calc_glacier_albedo, &
+      & get_surface_albedo_simple, calc_soil_albedo, calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, &
       & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation
     USE mo_jsb_time,    ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
@@ -649,11 +645,11 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk ::  &
       & cos_zenith_angle,      &
-      & swvis_srf_down,        &
-      & swnir_srf_down,        &
       & t_unfilt,              &
       & alb_vis,               &
       & alb_nir,               &
+      & alb_vis_lnd,           &
+      & alb_nir_lnd,           &
       & alb_vis_can,           &
       & alb_nir_can,           &
       & alb_vis_soil,          &
@@ -673,8 +669,8 @@ CONTAINS
       & fract_snow_soil,       &
       & Cpool_litter_green_ag, &
       & Cpool_slow,            &
-      & swvis_srf_net,         &
-      & swnir_srf_net
+      & swvis_srf_down,        &
+      & swnir_srf_down
     ! Lakes
     dsl4jsb_Real2D_onChunk ::  &
       & albedo_lwtr,           &
@@ -727,13 +723,15 @@ CONTAINS
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   Cpool_litter_green_ag) ! in
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   Cpool_slow)            ! in
 
-    dsl4jsb_Get_var2D_onChunk(RAD_,  swvis_srf_net)         ! in
-    dsl4jsb_Get_var2D_onChunk(RAD_,  swnir_srf_net)         ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,  alb_background)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis)               ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir)               ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis_snow)          ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir_snow)          ! inout
+    IF (.NOT. tile%is_lake) THEN
+      dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis_lnd)               ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir_lnd)               ! inout
+    END IF
 
     ! ---------------------------
     ! Go
@@ -766,8 +764,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)  ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_,   albedo_lwtr)  ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
+
+      CALL calc_alb_lwtr( &
+        & l_day(:),       & ! in
+        & albedo_lwtr(:)  & ! inout
+        & )
 
       CALL calc_alb_lice( &
         & l_day(:),       & ! in
@@ -775,6 +778,7 @@ CONTAINS
         & w_snow_lice(:), & ! in
         & albedo_lice(:)  & ! inout
         & )
+
       WHERE (l_day(:))
         alb_vis(:) = (1._wp - fract_lice(:)) * albedo_lwtr(:) + fract_lice(:) * albedo_lice(:)
         alb_nir(:) = alb_vis(:)
@@ -785,8 +789,8 @@ CONTAINS
       CALL calc_glacier_albedo( &
         & l_day(:),             & ! in
         & t_unfilt(:),          & ! in       
-        & alb_vis(:),           & ! inout
-        & alb_nir(:)            & ! inout
+        & alb_vis_lnd(:),       & ! inout
+        & alb_nir_lnd(:)        & ! inout
         & )
 
     ELSE IF (tile%is_bare) THEN
@@ -824,8 +828,8 @@ CONTAINS
       END IF
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
-      alb_vis = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
-      alb_nir = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
+      alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
+      alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
 
 
     ELSE IF (tile%is_vegetation) THEN
@@ -843,15 +847,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
       IF (use_alb_veg_simple) THEN
-        alb_vis(:) = get_surface_albedo_simple( &
-                       & t_unfilt(:),           &
-                       & fract_forest(:),       &
-                       & fract_snow_soil(:),    &
-                       & fract_snow_can(:),     &
-                       & lai(:),                &
-                       & alb_background(:)      & ! Note, alb_background <-- bc_land_phy.nc
-                       & )
-        alb_nir(:) = alb_vis(:)
+        alb_vis_lnd(:) = get_surface_albedo_simple( &
+          & t_unfilt(:),           &
+          & fract_forest(:),       &
+          & fract_snow_soil(:),    &
+          & fract_snow_can(:),     &
+          & lai(:),                &
+          & alb_background(:)      & ! Note, alb_background <-- bc_land_phy.nc
+                        )
+        alb_nir_lnd(:) = alb_vis_lnd(:)
       ELSE
 
         ! Get bare soil albedo
@@ -915,12 +919,17 @@ CONTAINS
           & alb_nir_soil(:),                  & ! in
           & alb_vis_can(:),                   & ! in
           & alb_nir_can(:),                   & ! in
-          & alb_vis(:),                       & ! inout
-          & alb_nir(:)                        & ! inout
+          & alb_vis_lnd(:),                   & ! inout
+          & alb_nir_lnd(:)                    & ! inout
           & )
         
       END IF ! use_alb_veg_simple 
     END IF ! tile%lcts(1)%id == ...
+
+    IF (.NOT. tile%is_lake) THEN
+      alb_vis(:) = alb_vis_lnd(:)
+      alb_nir(:) = alb_nir_lnd(:)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -967,10 +976,20 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,      weighted_by_fract) ! R: Nur diese beiden werden auf allen Tiles gerechnet!
-    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

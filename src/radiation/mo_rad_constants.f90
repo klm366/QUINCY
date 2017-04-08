@@ -15,7 +15,7 @@ MODULE mo_rad_constants
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER ::                  &
+  REAL(wp), PARAMETER ::                 &
     Epar                   = 2.2E5_wp,   & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
     SoilReflectivityParMin = 0.0_wp,     & ! Minimum soil reflectivity in PAR region.  R: for update_par
                                 !     LaiMax = 8._wp,                      & ! Maximum LAI (used for nitrogen scaling)
@@ -45,19 +45,20 @@ MODULE mo_rad_constants
     AlbedoSnowNirMax_age   = 0.60,        & ! Maximum albedo of fresh snow in the NIR range
     AlbedoSnowVisAge       = 0.15,        & ! Maximal rel. reduction of snow albedo by aging in the visible range
     AlbedoSnowNirAge       = 0.5,         & ! Maximal rel. reduction of snow albedo by aging in the NIR range
-    AlbedoCanopySnow_age = 0.20,          &  ! Albedo of snow covered canopy for snow age scheme (BATS)
-    AlbedoSnowAngle    = 0.4,             & ! Maximal rel. reduction of snow absorption by large solar zenith angle
+    AlbedoCanopySnow_age   = 0.20,        &  ! Albedo of snow covered canopy for snow age scheme (BATS)
+    AlbedoSnowAngle        = 0.4,         & ! Maximal rel. reduction of snow absorption by large solar zenith angle
                                 !
                                 ! Parameters of snow temperature scheme albedo
-    AlbedoSnowVisMax_temp   = 0.90,        & ! Maximum albedo of fresh snow in the visible range
-    AlbedoSnowNirMax_temp   = 0.65,        & ! Maximum albedo of fresh snow in the NIR range
-    AlbedoSnowVisMin_temp   = 0.52,        & ! Minimum albedo of fresh snow in the visible range
-    AlbedoSnowNirMin_temp   = 0.3,         & ! Minimum albedo of fresh snow in the NIR range
-    TempAlbedoSnowMax       = 5.0,         & ! Maximum snow albedo at this temperature below melting point of H2O
-    AlbedoCanopySnow_temp  = 0.20,        & ! Albedo of snow covered canopy for temperature scheme
+    AlbedoSnowVisMax_temp   = 0.90,       & ! Maximum albedo of fresh snow in the visible range
+    AlbedoSnowNirMax_temp   = 0.65,       & ! Maximum albedo of fresh snow in the NIR range
+    AlbedoSnowVisMin_temp   = 0.52,       & ! Minimum albedo of fresh snow in the visible range
+    AlbedoSnowNirMin_temp   = 0.3,        & ! Minimum albedo of fresh snow in the NIR range
+    TempAlbedoSnowMax       = 5.0,        & ! Maximum snow albedo at this temperature below melting point of H2O
+    AlbedoCanopySnow_temp   = 0.20,       & ! Albedo of snow covered canopy for temperature scheme
     !
     ! Parameters for lake albedo
-    ! TBD: These should be set dependent on resolution (see mo_surface_ice:init_albedo_ice in ECHAM6.2)
+    AlbedoLakeWater         = 0.07_wp,    & ! Albedo of open lake water
+    ! @todo: These should be set dependent on resolution (see mo_surface_ice:init_albedo_ice in ECHAM6.2)
     ! The values below correspond to the T63 settings
     AlbedoLakeIceMin        = 0.60_wp,    &
     AlbedoLakeIceMax        = 0.75_wp,    &

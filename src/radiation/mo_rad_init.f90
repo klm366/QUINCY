@@ -79,7 +79,8 @@ CONTAINS
 
 !    USE mo_rad_process, ONLY: init_radiation_temperature
 !    USE mo_rad_util,    ONLY: radiation_depth_to_layers_2d
-    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial
+    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
+      &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -125,8 +126,20 @@ CONTAINS
     dsl4jsb_var2D_onDomain(RAD_,alb_background) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_background), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_background) >= 0._wp)
 
-    dsl4jsb_var2D_onDomain(RAD_,alb_vis) = AlbedoVisInitial
-    dsl4jsb_var2D_onDomain(RAD_,alb_nir) = AlbedoNirInitial
+    IF (tile%is_lake) THEN
+      dsl4jsb_var2D_onDomain(RAD_,alb_vis) = AlbedoLakeWater
+      dsl4jsb_var2D_onDomain(RAD_,alb_nir) = AlbedoLakeWater
+    ELSE IF (tile%is_glacier) THEN
+      dsl4jsb_var2D_onDomain(RAD_,alb_vis)     = AlbedoGlacierVisMax
+      dsl4jsb_var2D_onDomain(RAD_,alb_nir)     = AlbedoGlacierNirMax
+      dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd) = AlbedoGlacierVisMax
+      dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoGlacierNirMax
+    ELSE
+      dsl4jsb_var2D_onDomain(RAD_,alb_vis)     = AlbedoVisInitial
+      dsl4jsb_var2D_onDomain(RAD_,alb_nir)     = AlbedoNirInitial
+      dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd) = AlbedoVisInitial
+      dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
+    END IF
 
     ! soil albedo
     IF (tile%contains_soil) THEN
