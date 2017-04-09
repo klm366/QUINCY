@@ -354,12 +354,13 @@ CONTAINS
     !  Snow and glacier melt
     !------------------------
 
+    glacier_melt_in_m = 0._wp
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (t_srf_unfilt > tmelt) THEN
         snow_melt_pot_in_m  = hcap_grnd * (t_srf_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
-        glacier_melt_in_m   = snow_melt_pot_in_m                  ! there is an unlimited amount of snow
-        glacier_depth       = glacier_depth - glacier_melt_in_m   ! reduce glacier depth according to melting
-        glacier_runoff_in_m = glacier_runoff + glacier_melt_in_m  ! add melt water to the runoff
+        glacier_melt_in_m   = snow_melt_pot_in_m                       ! there is an unlimited amount of snow
+        glacier_depth       = glacier_depth - glacier_melt_in_m        ! reduce glacier depth according to melting
+        glacier_runoff_in_m = glacier_runoff_in_m + glacier_melt_in_m  ! add melt water to the runoff
         ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
       END IF
     END IF

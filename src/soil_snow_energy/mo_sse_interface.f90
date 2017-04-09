@@ -275,7 +275,7 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_snow .AND. .NOT. tile%is_glacier) THEN
-  
+
       ! Calculate snow depth in m (no longer in m water equivalent)
       ! IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
         snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dsl4jsb_var2D_onChunk(HYDRO_, snow_soil_dens)

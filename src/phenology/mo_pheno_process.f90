@@ -40,9 +40,9 @@ MODULE mo_pheno_process
     REAL(wp),  intent(in)    :: NPP_rate,          & ! NPP-rate during current time step for each tile (PFT)
                                 dtime
 
-    REAL(wp),  intent(out)   :: previous_day_NPP_rate
-
-    REAL(wp),  intent(inout) :: day_NPP_sum
+    REAL(wp),  intent(inout) :: &
+      & previous_day_NPP_rate, &
+      & day_NPP_sum
 
     !-----------------------------------------------------------------------
     ! CONTENT

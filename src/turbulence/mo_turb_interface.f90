@@ -345,13 +345,13 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_star)           ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_water)         ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)          ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
 
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  max_moist)           ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_soil_column)       ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in

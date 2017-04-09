@@ -418,9 +418,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: trans
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evap_snow
-    dsl4jsb_Real3D_onChunk :: t_soil_acoef
-    dsl4jsb_Real3D_onChunk :: t_soil_bcoef
-    dsl4jsb_Real3D_onChunk :: t_soil
     dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: runoff
@@ -432,7 +429,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
     dsl4jsb_Real2D_onChunk :: w_soil_rel
-    dsl4jsb_Real2D_onChunk :: soil_depth
     dsl4jsb_Real2D_onChunk :: w_soil_root
     dsl4jsb_Real2D_onChunk :: w_soil_root_fc
     dsl4jsb_Real2D_onChunk :: root_depth
@@ -521,12 +517,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)     ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd_old) ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_acoef)  ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_bcoef)  ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil)        ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, soil_depth)    ! in
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_water)   ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)        ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)   ! out
     ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil_old)! out
@@ -552,6 +543,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_excess)  ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_water)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
@@ -776,7 +768,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
-    IF (tile%is_lake) RETURN
+    IF (tile%is_lake .OR. tile%is_glacier) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

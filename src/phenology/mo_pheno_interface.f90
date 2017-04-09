@@ -312,7 +312,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    chill_days_EG)          ! inout
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_rate)  ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_rate)  ! inout
     
     ! ---------------------------
     ! Go
@@ -349,10 +349,9 @@ CONTAINS
       & is_newday(),              & ! Input
       & NPP_rate(:),              & ! Input
       & dtime,                    & ! Input
-      & previous_day_NPP_rate(:), & ! Output (for crop and raingreen)
+      & previous_day_NPP_rate(:), & ! InOut (for crop and raingreen)
       & day_NPP_sum(:)            & ! InOut
       & )
-
                                                                                                                     
     
     ! R: laiMax_dyn was included to avoid longterm negative NPP. It is reduced if NPP is negative over a year and increased

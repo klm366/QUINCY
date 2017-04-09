@@ -30,7 +30,7 @@ MODULE mo_jsb_memory_class
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
     INTEGER :: no_of_children = 0
-    CLASS(t_jsb_memory_p), POINTER :: children(:)
+    CLASS(t_jsb_memory_p), POINTER :: children(:) => NULL()
     CLASS(t_jsb_memory)  , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
     CHARACTER(len=10)    :: owner_tile_name

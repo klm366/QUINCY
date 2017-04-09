@@ -314,13 +314,6 @@ CONTAINS
         CALL turb_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        dsl4jsb_Get_config(PHENO_)
-        IF (      tile%is_vegetation &
-          & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
-          & .AND. tile%lcts(1)%lib_id == 0) &
-            & CALL message(TRIM(routine), 'Must use phenology climatology on general, non-PFT VEG tile')
-      END IF
       ! Initialize PHENO_ before HYDRO_
       IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL pheno_init(tile)
@@ -418,6 +411,32 @@ CONTAINS
 
     END DO
 
+    ! Iterate over tiles and crossckeck tile structure
+    CALL model%Reset_tiles()
+    tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
+
+      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        dsl4jsb_Get_config(PHENO_)
+        IF (      tile%is_vegetation &
+          & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
+          & .AND. tile%lcts(1)%lib_id == 0) &
+            & CALL finish(TRIM(routine), 'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
+      END IF
+
+      tile => model%Goto_next_tile()
+
+    END DO
+    !
+    !
     IF (debug_on()) THEN
       ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
       CALL model%Reset_tiles()

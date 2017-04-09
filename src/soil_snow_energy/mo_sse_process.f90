@@ -722,13 +722,15 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !
     IF (.NOT. lstart) THEN
+      t_snow(:,:) = 0._wp
       DO jk=1,nsnow
         WHERE (jk == itop(:))                              ! Top snow layer
           t_snow(:,jk) = t_srf_unfilt(:)
-        ELSE WHERE (jk > itop(:))                          ! Snow layers below top layer
+        END WHERE
+      END DO
+      DO jk=2,nsnow
+        WHERE (jk > itop(:))                               ! Snow layers below top layer
           t_snow(:,jk) = t_snow_acoef(:,jk-1) + t_snow_bcoef(:,jk-1) * t_snow(:,jk-1)
-        ELSE WHERE                                         ! Above top snow layer or no snow layer present
-          t_snow(:,jk) = 0._wp
         END WHERE
       END DO
     END IF
@@ -747,8 +749,8 @@ CONTAINS
     zdz1(:,nsnow+1) = zd1(:,nsnow+1) * heat_cond_soil(:)
 
     ! lowest snow layer
-    z1(:) = 1._wp / (zdz2(:,nsnow+1) + zdz1(:,nsnow) + zdz1(:,nsnow+1) * (1._wp - t_soil_bcoef(:)))
     WHERE (itop(:) <= nsnow)  ! Snow present
+      z1(:) = 1._wp / (zdz2(:,nsnow+1) + zdz1(:,nsnow) + zdz1(:,nsnow+1) * (1._wp - t_soil_bcoef(:)))
       t_snow_acoef(:,nsnow) = (t_soil(:) * zdz2(:,nsnow+1) + zdz1(:,nsnow+1) * t_soil_acoef(:)) * z1(:)
       t_snow_bcoef(:,nsnow) = zdz1(:,nsnow) * z1(:)
     ELSE WHERE
@@ -757,8 +759,8 @@ CONTAINS
     END WHERE
     ! snow layers above up to top snow layer
     DO jk = nsnow, 2, -1
-      z1(:) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - t_snow_bcoef(:,jk)))
       WHERE (jk > itop(:))
+        z1(:) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - t_snow_bcoef(:,jk)))
         t_snow_acoef(:,jk-1) = (t_snow(:,jk) * zdz2(:,jk) + zdz1(:,jk) * t_snow_acoef(:,jk)) * z1(:)
         t_snow_bcoef(:,jk-1) = zdz1(:,jk-1) * z1(:)
       ! ELSE WHERE
