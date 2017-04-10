@@ -51,7 +51,7 @@ echo " Copying Fluxnet soil_forcing from :""$pathSourceBase""$expNameF"
     then
 
       #echo $siteBase
-      filenameBase=$(ls -la "$pathServerF" | grep "$siteBase" | awk '{print $9}' | rev | cut -c5- |rev)
+      filenameBase=$(ls -la "$pathServerF""met_forcing/" | grep "$siteBase" | awk '{print $9}' | rev | cut -c5- |rev)
       #echo $filenameBase
 
       echo "  site: "$filenameBase
@@ -72,7 +72,7 @@ echo " Copying Cruncep soil_forcing from :""$pathSourceBase""$expNameC"
     then
 
       #echo $siteBase
-      filenameBase=$(ls -la "$pathServerC" | grep "$siteBase" | awk '{print $9}' | rev | cut -c5- |rev)
+      filenameBase=$(ls -la "$pathServerC""met_forcing/" | grep "$siteBase" | awk '{print $9}' | rev | cut -c5- |rev)
       #echo $filenameBase
 
       echo "  site: "$filenameBase

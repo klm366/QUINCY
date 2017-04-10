@@ -1455,7 +1455,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !! Soil                                                                                              !!
+  !! Soil forcing                                                                                      !!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !-----------------------------------------------------------------------------------------------------!
 
@@ -1529,10 +1529,11 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 60
     lun = 100 + 60
-    WRITE(lun,'(4a)') 'Time stand alone RTM_decomposition*soil_layer RTM_mic_uptake*soil_layer RTM_sorption*soil_layer', &
-                      'RTM_desorption*soil_layer RTM_hsc*soil_layer', & 
-                      'RMM_decomposition*soil_layer RMM_mic_uptake*soil_layer RMM_sorption*soil_layer', &
-                      'RMM_desorption*soil_layer RMM_hsc*soil_layer' 
+    WRITE(lun,'(5a)') 'Time stand alone RTM_decomposition*soil_layer RTM_mic_uptake*soil_layer RTM_sorption*soil_layer ', &
+                      'RTM_desorption*soil_layer RTM_hsc*soil_layer ', & 
+                      'RMM_decomposition*soil_layer RMM_mic_uptake*soil_layer RMM_sorption*soil_layer ', &
+                      'RMM_desorption*soil_layer RMM_hsc*soil_layer ', &
+                      'Soil_temperature*soil_layer Soil_moisture*soil_layer'
 
     lun=lun+1   
     WRITE(lun,'(10a)')  'Time ', &
@@ -1593,7 +1594,10 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                         ! TYPE(t_sb_memory),      POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),    POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real3D_onChunk      :: percolation_sl     ! SOIL_
+    ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: percolation_sl
+    dsl4jsb_Real3D_onChunk      :: t_soil_sl
+    dsl4jsb_Real3D_onChunk      :: w_soil_sl
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg   ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb    ! local pointer to sb__mem for SLM usability
@@ -1619,6 +1623,8 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
 
 
 ! 2 be removed  *slmtemp
@@ -1638,18 +1644,22 @@ CONTAINS
     IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 + 60
-      write(lun,'(56F12.6)') time_d, &
+      write(lun,'(66F12.6)') time_d, &
+        ! per variable values per soil layer is written out
+        ! number of soil layers == soil_config%nsoil_water  (default = 5)
         sb%rtm_depolymerisation%ptr(1,:,1)  , & ! 1
         sb%rtm_mic_uptake%ptr(1,:,1)        , &
         sb%rtm_sorption%ptr(1,:,1)          , &
         sb%rtm_desorption%ptr(1,:,1)        , &
         sb%rtm_hsc%ptr(1,:,1)               , &
-        sb%rmm_depolymerisation%ptr(1,:,1)  , & 
+        sb%rmm_depolymerisation%ptr(1,:,1)  , & ! 6
         sb%rmm_mic_uptake%ptr(1,:,1)        , & 
         sb%rmm_sorption%ptr(1,:,1)          , &
         sb%rmm_desorption%ptr(1,:,1)        , &
-        sb%rmm_hsc%ptr(1,:,1)               , & ! 10
-        percolation_sl(1,:)
+        sb%rmm_hsc%ptr(1,:,1)               , &
+        percolation_sl(1,:)                 , & ! 11
+        t_soil_sl(1,:)                      , &
+        w_soil_sl(1,:)
 
       !
       ! convert 13C and 14C in delta notation
