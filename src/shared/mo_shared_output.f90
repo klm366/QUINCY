@@ -375,7 +375,7 @@ CONTAINS
     ! 0.2 Local
     INTEGER :: lun,isoil
     CHARACTER(2) :: layerstr
-    CHARACTER(100) :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
+    CHARACTER(200) :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
 
     !> 1.0 write headers
     !!
