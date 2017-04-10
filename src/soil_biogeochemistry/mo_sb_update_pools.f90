@@ -115,7 +115,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: nh4_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
     dsl4jsb_Real3D_onChunk :: po4_solute 
-    dsl4jsb_Real3D_onChunk :: po4_assoc 
+    dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
+    dsl4jsb_Real3D_onChunk :: po4_assoc_slow
+    dsl4jsb_Real3D_onChunk :: po4_occluded
     dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
@@ -123,7 +125,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
     dsl4jsb_Real3D_onChunk :: transport_po4_solute 
-    dsl4jsb_Real3D_onChunk :: transport_po4_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
+    dsl4jsb_Real3D_onChunk :: transport_po4_occluded
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
@@ -190,18 +194,22 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute)                  ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded)                ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
@@ -298,13 +306,15 @@ rmm_desorption = 1.0_wp
          transport_nh4_assoc(:,:) = 0.0_wp 
          transport_no3_solute(:,:) = 0.0_wp 
          transport_po4_solute(:,:) = 0.0_wp 
-         transport_po4_assoc(:,:) = 0.0_wp 
+         transport_po4_assoc_fast(:,:) = 0.0_wp 
+         transport_po4_assoc_slow(:,:) = 0.0_wp 
+         transport_po4_occluded(:,:) = 0.0_wp 
          transport_nh4_n15_solute(:,:) = 0.0_wp 
          transport_nh4_n15_assoc(:,:) = 0.0_wp 
          transport_no3_n15_solute(:,:) = 0.0_wp 
 
-         !fine_root_carbon = root_fraction_sl * 6._wp !veg%pool%fine_root%carbon%ptr
-         fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr
+         fine_root_carbon = root_fraction_sl * 6._wp !veg%pool%fine_root%carbon%ptr
+         !fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr
 
          !> X.0 Inorganic N assimilation
          !!
@@ -359,7 +369,7 @@ rmm_desorption = 1.0_wp
          !> 3.0 Microbial fluxes
          !!
          !> 3.1 microbial growth
-         !! currently unconstrained by nutrients 
+         !! 
          CALL calc_microbial_growth(options,soil_config%nsoil_water,sb%pool%dom,sb%pool%microbial, & 
                                     rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:), &
                                     sb%loss%dom,sb%formation%microbial, &
@@ -406,13 +416,15 @@ rmm_desorption = 1.0_wp
          !!
          k_bioturb(:,:) = calc_bioturbation_rate(options, soil_config%nsoil_water, bulk_dens_corr_sl(:,:))
          CALL calc_bioturbation_transport_wrapper(options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_sl(:,:), &
-                                          sb%pool%polymeric_litter, sb%pool%dom_assoc, & 
+                                          sb%pool%polymeric_litter, sb%pool%dom_assoc, sb%pool%fungi, & 
                                           sb%pool%microbial, sb%pool%residue, sb%pool%residue_assoc, & 
-                                          nh4_assoc(:,:), po4_assoc(:,:), nh4_n15_assoc(:,:), & 
+                                          nh4_assoc(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), & 
+                                          po4_occluded(:,:), nh4_n15_assoc(:,:), & 
                                           sb%transport%polymeric_litter, sb%transport%dom_assoc, & 
-                                          sb%transport%microbial, sb%transport%residue, & 
+                                          sb%transport%fungi, sb%transport%microbial, sb%transport%residue, & 
                                           sb%transport%residue_assoc, transport_nh4_assoc(:,:), & 
-                                          transport_po4_assoc(:,:), transport_nh4_n15_assoc(:,:))
+                                          transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), & 
+                                          transport_po4_occluded(:,:), transport_nh4_n15_assoc(:,:))
 
          !> 5.3 particle transport
          !!
@@ -421,9 +433,11 @@ rmm_desorption = 1.0_wp
                                           sb%formation,sb%loss) 
          CALL calc_particle_transport_wrapper(options, soil_config%nsoil_water, particle_fluxrate(:,:), soil_depth_sl(:,:), &
                                           sb%pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
-                                          po4_assoc(:,:), nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
+                                          po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), & 
+                                          nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
                                           sb%transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
-                                          transport_no3_solute(:,:), transport_po4_solute(:,:), transport_po4_assoc(:,:), & 
+                                          transport_no3_solute(:,:), transport_po4_solute(:,:), & 
+                                          transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), transport_po4_occluded(:,:), & 
                                           transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), transport_no3_n15_solute(:,:))
 
          !> 6.0 radioactive decay
@@ -438,6 +452,10 @@ rmm_desorption = 1.0_wp
             sb%pool%dom%carbon14%ptr(ics:ice,:,iblk)              * lambda_C14 * dtime
          sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
             sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
+         sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk)            = sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
+            sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk)            * lambda_C14 * dtime
+         sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       = sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
+            sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       * lambda_C14 * dtime
          sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
             sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
          sb%loss%residue%carbon14%ptr(ics:ice,:,iblk)          = sb%loss%residue%carbon14%ptr(ics:ice,:,iblk) + &

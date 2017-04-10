@@ -1146,6 +1146,14 @@ CONTAINS
                                                 formation%woody_litter%carbon%ptr(ics:ice,:,iblk) - & 
                                                 loss%woody_litter%carbon%ptr(ics:ice,:,iblk) + & 
                                                 transport%woody_litter%carbon%ptr(ics:ice,:,iblk)  
+    pool%fungi%carbon%ptr(ics:ice,:,iblk) = pool%fungi%carbon%ptr(ics:ice,:,iblk) + & 
+                                                formation%fungi%carbon%ptr(ics:ice,:,iblk) - & 
+                                                loss%fungi%carbon%ptr(ics:ice,:,iblk) + & 
+                                                transport%fungi%carbon%ptr(ics:ice,:,iblk)  
+    pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) = pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + & 
+                                                formation%mycorrhiza%carbon%ptr(ics:ice,:,iblk) - & 
+                                                loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + & 
+                                                transport%mycorrhiza%carbon%ptr(ics:ice,:,iblk)  
     pool%microbial%carbon%ptr(ics:ice,:,iblk) = pool%microbial%carbon%ptr(ics:ice,:,iblk) + & 
                                                 formation%microbial%carbon%ptr(ics:ice,:,iblk) - & 
                                                 loss%microbial%carbon%ptr(ics:ice,:,iblk) + & 
@@ -1180,6 +1188,14 @@ CONTAINS
                                                 formation%woody_litter%nitrogen%ptr(ics:ice,:,iblk) - & 
                                                 loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
                                                 transport%woody_litter%nitrogen%ptr(ics:ice,:,iblk)  
+    pool%fungi%nitrogen%ptr(ics:ice,:,iblk) = pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                formation%fungi%nitrogen%ptr(ics:ice,:,iblk) - & 
+                                                loss%fungi%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                transport%fungi%nitrogen%ptr(ics:ice,:,iblk)  
+    pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) = pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) - & 
+                                                loss%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                transport%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)  
     pool%microbial%nitrogen%ptr(ics:ice,:,iblk) = pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
                                                 formation%microbial%nitrogen%ptr(ics:ice,:,iblk) - & 
                                                 loss%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
@@ -1214,6 +1230,14 @@ CONTAINS
                                                 formation%woody_litter%phosphorus%ptr(ics:ice,:,iblk) - & 
                                                 loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                 transport%woody_litter%phosphorus%ptr(ics:ice,:,iblk)  
+    pool%fungi%phosphorus%ptr(ics:ice,:,iblk) = pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                formation%fungi%phosphorus%ptr(ics:ice,:,iblk) - & 
+                                                loss%fungi%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                transport%fungi%phosphorus%ptr(ics:ice,:,iblk)  
+    pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) = pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) - & 
+                                                loss%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                transport%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk)  
     pool%microbial%phosphorus%ptr(ics:ice,:,iblk) = pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                 formation%microbial%phosphorus%ptr(ics:ice,:,iblk) - & 
                                                 loss%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
@@ -1248,6 +1272,14 @@ CONTAINS
                                                 formation%woody_litter%carbon13%ptr(ics:ice,:,iblk) - & 
                                                 loss%woody_litter%carbon13%ptr(ics:ice,:,iblk) + & 
                                                 transport%woody_litter%carbon13%ptr(ics:ice,:,iblk)  
+    pool%fungi%carbon13%ptr(ics:ice,:,iblk) = pool%fungi%carbon13%ptr(ics:ice,:,iblk) + & 
+                                                formation%fungi%carbon13%ptr(ics:ice,:,iblk) - & 
+                                                loss%fungi%carbon13%ptr(ics:ice,:,iblk) + & 
+                                                transport%fungi%carbon13%ptr(ics:ice,:,iblk)  
+    pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) = pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + & 
+                                                formation%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) - & 
+                                                loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + & 
+                                                transport%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)  
     pool%microbial%carbon13%ptr(ics:ice,:,iblk) = pool%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
                                                 formation%microbial%carbon13%ptr(ics:ice,:,iblk) - & 
                                                 loss%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
@@ -1281,6 +1313,14 @@ CONTAINS
                                                 formation%woody_litter%carbon14%ptr(ics:ice,:,iblk) - & 
                                                 loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + & 
                                                 transport%woody_litter%carbon14%ptr(ics:ice,:,iblk)  
+    pool%fungi%carbon14%ptr(ics:ice,:,iblk) = pool%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                formation%fungi%carbon14%ptr(ics:ice,:,iblk) - & 
+                                                loss%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                transport%fungi%carbon14%ptr(ics:ice,:,iblk)  
+    pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) = pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                formation%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) - & 
+                                                loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                transport%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)  
     pool%microbial%carbon14%ptr(ics:ice,:,iblk) = pool%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
                                                 formation%microbial%carbon14%ptr(ics:ice,:,iblk) - & 
                                                 loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
@@ -1314,6 +1354,14 @@ CONTAINS
                                                 formation%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
                                                 loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
                                                 transport%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)  
+    pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) = pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                formation%fungi%nitrogen15%ptr(ics:ice,:,iblk) - & 
+                                                loss%fungi%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                transport%fungi%nitrogen15%ptr(ics:ice,:,iblk)  
+    pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) = pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                formation%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) - & 
+                                                loss%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                transport%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)  
     pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) = pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
                                                 formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) - & 
                                                 loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 

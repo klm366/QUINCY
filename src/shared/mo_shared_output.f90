@@ -375,7 +375,7 @@ CONTAINS
     ! 0.2 Local
     INTEGER :: lun,isoil
     CHARACTER(2) :: layerstr
-    CHARACTER(100) :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str
+    CHARACTER(100) :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
 
     !> 1.0 write headers
     !!
@@ -421,6 +421,8 @@ CONTAINS
          p6str=''
          p7str=''
          p8str=''
+         p9str=''
+         p10str=''
          DO isoil = 1,soil_config%nsoil_water
             IF(isoil<10) THEN 
               WRITE(layerstr,'(I1)') isoil
@@ -432,21 +434,23 @@ CONTAINS
             WRITE(p3str,'(a)') TRIM(p3str)//' WodLit_L'//TRIM(layerstr)
             WRITE(p4str,'(a)') TRIM(p4str)//' DOM_L'//TRIM(layerstr)
             WRITE(p5str,'(a)') TRIM(p5str)//' aDOM_L'//TRIM(layerstr)
-            WRITE(p6str,'(a)') TRIM(p6str)//' Mic_L'//TRIM(layerstr)
-            WRITE(p7str,'(a)') TRIM(p7str)//' Res_L'//TRIM(layerstr)
-            WRITE(p8str,'(a)') TRIM(p8str)//' aRes_L'//TRIM(layerstr)
+            WRITE(p6str,'(a)') TRIM(p6str)//' Fungi_L'//TRIM(layerstr)
+            WRITE(p7str,'(a)') TRIM(p7str)//' Myc_L'//TRIM(layerstr)
+            WRITE(p8str,'(a)') TRIM(p8str)//' Mic_L'//TRIM(layerstr)
+            WRITE(p9str,'(a)') TRIM(p9str)//' Res_L'//TRIM(layerstr)
+            WRITE(p10str,'(a)') TRIM(p10str)//' aRes_L'//TRIM(layerstr)
          ENDDO
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
          lun=lun+1                 
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
          lun=lun+1                 
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
          lun=lun+1                 
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
          lun=lun+1                 
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
          lun=lun+1                 
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
          lun=lun+1                 
 
          p1str=''
@@ -480,9 +484,11 @@ CONTAINS
               WRITE(layerstr,'(I2)') isoil
             ENDIF
             WRITE(p1str,'(a)') TRIM(p1str)//' PO4solute_L'//TRIM(layerstr)
-            WRITE(p2str,'(a)') TRIM(p2str)//' PO4assoc_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' PO4assoc_fast_L'//TRIM(layerstr)
+            WRITE(p3str,'(a)') TRIM(p3str)//' PO4assoc_slow_L'//TRIM(layerstr)
+            WRITE(p4str,'(a)') TRIM(p4str)//' PO4assoc_occl_L'//TRIM(layerstr)
          ENDDO
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str)
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)
          lun=lun+1                 
 
          p1str=''
@@ -544,7 +550,8 @@ CONTAINS
     REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                         dC13fruit,dC13labile,dC13reserve,dC13seed_bed
     REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water)  :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
-                                                                dC13dom,dC13dom_assoc,dC13microbial,dC13residue,dC13residue_assoc
+                                                                dC13dom,dC13dom_assoc,dC13fungi,dC13mycorrhiza,dC13microbial, & 
+                                                                dC13residue,dC13residue_assoc
     INTEGER                          :: iblk, ics, ice, nc
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -803,6 +810,7 @@ CONTAINS
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),&
                                   sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),&
                                   sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),&
+                                  sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),&
                                   sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
              lun=lun+1
@@ -812,12 +820,14 @@ CONTAINS
              dC13woody_litter(:,:) = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk))
              dC13dom(:,:) = calc_delta_C13(sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%carbon13%ptr(ics:ice,:,iblk))
              dC13dom_assoc(:,:) = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk))
+             dC13fungi(:,:) = calc_delta_C13(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk))
+             dC13mycorrhiza(:,:) = calc_delta_C13(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk))
              dC13microbial(:,:) = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk))
              dC13residue(:,:) = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon13%ptr(ics:ice,:,iblk))
              dC13residue_assoc(:,:) = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
              write(lun,'(100F12.6)') time_d,dC13soluable_litter(:,:),&
                                      dC13polymeric_litter(:,:),dC13woody_litter(:,:),dC13dom(:,:),dC13dom_assoc(:,:),& 
-                                     dC13microbial(:,:),dC13residue(:,:),dC13residue_assoc(:,:)
+                                     dC13fungi(:,:),dC13mycorrhiza(:,:),dC13microbial(:,:),dC13residue(:,:),dC13residue_assoc(:,:)
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,&
@@ -826,6 +836,9 @@ CONTAINS
                 calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk),dC13woody_litter),&
                 calc_delta_C14(sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%carbon14%ptr(ics:ice,:,iblk),dC13dom),&
                 calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk),dC13dom_assoc),&
+                calc_delta_C14(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk),dC13fungi),&
+                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
+                calc_delta_C14(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk),dC13mycorrhiza),&
                 calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
                 calc_delta_C14(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon14%ptr(ics:ice,:,iblk),dC13residue),&
                 calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk),dC13residue_assoc)
@@ -834,6 +847,7 @@ CONTAINS
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),&
+                                  sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)
              lun=lun+1
@@ -844,6 +858,8 @@ CONTAINS
                 calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
                 calc_delta_N15(sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk)), &
                 calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk),sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)), &
                 calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk)), &
                 calc_delta_N15(sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk)), &
                 calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
@@ -852,6 +868,7 @@ CONTAINS
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
+                                  sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
              lun=lun+1
@@ -863,7 +880,8 @@ CONTAINS
                                   calc_delta_N15(sb%nh4_assoc%ptr(ics:ice,:,iblk),sb%nh4_n15_assoc%ptr(ics:ice,:,iblk))
              lun=lun+1
 
-             write(lun,'(100F12.6)') time_d,sb%po4_solute%ptr(ics:ice,:,iblk),sb%po4_assoc%ptr(ics:ice,:,iblk)
+             write(lun,'(100F12.6)') time_d,sb%po4_solute%ptr(ics:ice,:,iblk),sb%po4_assoc_fast%ptr(ics:ice,:,iblk), & 
+                                            sb%po4_assoc_slow%ptr(ics:ice,:,iblk), sb%po4_occluded%ptr(ics:ice,:,iblk)
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,sb%qmax_org%ptr(ics:ice,:,iblk),sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)

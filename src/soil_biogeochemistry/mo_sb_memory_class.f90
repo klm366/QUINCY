@@ -83,11 +83,13 @@ MODULE mo_sb_memory_class
   TYPE, EXTENDS(t_jsb_n_struct) :: t_slm_struct_sb_pool
     TYPE(t_slm_struct_sb_element)  :: dom                 !< dissolved organic matter
     TYPE(t_slm_struct_sb_element)  :: dom_assoc           !< minerally associated disolved organic matter
-    TYPE(t_slm_struct_sb_element)  :: soluable_litter    !< metabolic litter (sugars, cellulose etc.)
-    TYPE(t_slm_struct_sb_element)  :: polymeric_litter   !< structural litter (lignified litter)
+    TYPE(t_slm_struct_sb_element)  :: soluable_litter     !< metabolic litter (sugars, cellulose etc.)
+    TYPE(t_slm_struct_sb_element)  :: polymeric_litter    !< structural litter (lignified litter)
     TYPE(t_slm_struct_sb_element)  :: woody_litter        !< physically protected wood litter
-    TYPE(t_slm_struct_sb_element)  :: microbial           !< microbial biomass
-    TYPE(t_slm_struct_sb_element)  :: residue             !< microbial necromass
+    TYPE(t_slm_struct_sb_element)  :: fungi               !< saprophytic fungal biomass
+    TYPE(t_slm_struct_sb_element)  :: mycorrhiza          !< mycorrhizal fungal biomass 
+    TYPE(t_slm_struct_sb_element)  :: microbial           !< microbial biomass (bacteria!)
+    TYPE(t_slm_struct_sb_element)  :: residue             !< necromass of fungi, microbial and mycorrhiza
     TYPE(t_slm_struct_sb_element)  :: residue_assoc       !< minerally associated microbial necromass 
   CONTAINS
     PRIVATE
@@ -145,8 +147,10 @@ MODULE mo_sb_memory_class
                                     noy_n15            , &  !< N15-NO_y [mol m-3]
                                     n2o_n15            , &  !< N15-N2O [mol m-3]
                                     n2_n15             , &  !< N15-N2 [mol m-3]
-                                    po4_assoc          , &  !< phosphate in soil solution [mol m-3]
-                                    po4_solute              !< minerally associated phosphate  [mol m-3]
+                                    po4_assoc_fast     , &  !< fast minerally associated phosphate  [mol m-3]
+                                    po4_assoc_slow     , &  !< slow minerally associated phosphate  [mol m-3] 
+                                    po4_occluded       , &  !< occluded phosphate [mol m-3] 
+                                    po4_solute              !< phophate in soil solution [mol m-3] 
 
     ! transport fluxes 
     TYPE(t_jsb_var_real3d)          :: &
@@ -162,7 +166,9 @@ MODULE mo_sb_memory_class
                                     transport_noy_n15            , &  !< transport of N15-NO_y [mol m-3 timestep-1]
                                     transport_n2o_n15            , &  !< transport of N15-N2O [mol m-3 timestep-1]
                                     transport_n2_n15             , &  !< transport of N15-N2 [mol m-3 timestep-1]
-                                    transport_po4_assoc          , &  !< transport of phosphate in soil solution [mol m-3 timestep-1]
+                                    transport_po4_assoc_fast     , &  !< transport of fast minerally associated phosphate  [mol m-3 timestep-1]
+                                    transport_po4_assoc_slow     , &  !< transport of slow minerally associated phosphate  [mol m-3 timestep-1] 
+                                    transport_po4_occluded       , &  !< transport of occluded phosphate [mol m-3 timestep-1] 
                                     transport_po4_solute              !< transport of minerally associated phosphate  [mol m-3 timestep-1]
 
     ! temperature response functions
@@ -876,7 +882,13 @@ CONTAINS
       CALL slm_add_var(mem, 'n2_n15', mem%n2_n15, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'po4_assoc', mem%po4_assoc, &
+      CALL slm_add_var(mem, 'po4_assoc_fast', mem%po4_assoc_fast, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'po4_assoc_slow', mem%po4_assoc_slow, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'po4_occluded', mem%po4_occluded, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'po4_solute', mem%po4_solute, &
@@ -918,7 +930,13 @@ CONTAINS
       CALL slm_add_var(mem, 'transport_n2_n15', mem%transport_n2_n15, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'transport_po4_assoc', mem%transport_po4_assoc, &
+      CALL slm_add_var(mem, 'transport_po4_assoc_fast', mem%transport_po4_assoc_fast, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_po4_assoc_slow', mem%transport_po4_assoc_slow, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_po4_occluded', mem%transport_po4_occluded, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'transport_po4_solute', mem%transport_po4_solute, &
@@ -1039,36 +1057,44 @@ CONTAINS
       !! 
       CALL slm_add_var(mem%pool,    'sb_pool_dom',                mem%pool%dom) 
       CALL slm_add_var(mem%pool,    'sb_pool_dom_assoc',          mem%pool%dom_assoc)
-      CALL slm_add_var(mem%pool,    'sb_pool_soluable_litter',   mem%pool%soluable_litter) 
-      CALL slm_add_var(mem%pool,    'sb_pool_polymeric_litter',  mem%pool%polymeric_litter) 
+      CALL slm_add_var(mem%pool,    'sb_pool_soluable_litter',    mem%pool%soluable_litter) 
+      CALL slm_add_var(mem%pool,    'sb_pool_polymeric_litter',   mem%pool%polymeric_litter) 
       CALL slm_add_var(mem%pool,    'sb_pool_woody_litter',       mem%pool%woody_litter) 
+      CALL slm_add_var(mem%pool,    'sb_pool_fungi',              mem%pool%fungi) 
+      CALL slm_add_var(mem%pool,    'sb_pool_mycorrhiza',         mem%pool%mycorrhiza) 
       CALL slm_add_var(mem%pool,    'sb_pool_microbial',          mem%pool%microbial) 
       CALL slm_add_var(mem%pool,    'sb_pool_residue',            mem%pool%residue) 
       CALL slm_add_var(mem%pool,    'sb_pool_residue_assoc',      mem%pool%residue_assoc)  
 
       CALL slm_add_var(mem%formation,    'sb_formation_dom',                mem%formation%dom) 
       CALL slm_add_var(mem%formation,    'sb_formation_dom_assoc',          mem%formation%dom_assoc)
-      CALL slm_add_var(mem%formation,    'sb_formation_soluable_litter',   mem%formation%soluable_litter) 
-      CALL slm_add_var(mem%formation,    'sb_formation_polymeric_litter',  mem%formation%polymeric_litter) 
+      CALL slm_add_var(mem%formation,    'sb_formation_soluable_litter',    mem%formation%soluable_litter) 
+      CALL slm_add_var(mem%formation,    'sb_formation_polymeric_litter',   mem%formation%polymeric_litter) 
       CALL slm_add_var(mem%formation,    'sb_formation_woody_litter',       mem%formation%woody_litter) 
+      CALL slm_add_var(mem%formation,    'sb_formation_fungi',              mem%formation%fungi) 
+      CALL slm_add_var(mem%formation,    'sb_formation_mycorrhiza',         mem%formation%mycorrhiza) 
       CALL slm_add_var(mem%formation,    'sb_formation_microbial',          mem%formation%microbial) 
       CALL slm_add_var(mem%formation,    'sb_formation_residue',            mem%formation%residue) 
       CALL slm_add_var(mem%formation,    'sb_formation_residue_assoc',      mem%formation%residue_assoc)  
 
       CALL slm_add_var(mem%loss,    'sb_loss_dom',                mem%loss%dom) 
       CALL slm_add_var(mem%loss,    'sb_loss_dom_assoc',          mem%loss%dom_assoc)
-      CALL slm_add_var(mem%loss,    'sb_loss_soluable_litter',   mem%loss%soluable_litter) 
-      CALL slm_add_var(mem%loss,    'sb_loss_polymeric_litter',  mem%loss%polymeric_litter) 
+      CALL slm_add_var(mem%loss,    'sb_loss_soluable_litter',    mem%loss%soluable_litter) 
+      CALL slm_add_var(mem%loss,    'sb_loss_polymeric_litter',   mem%loss%polymeric_litter) 
       CALL slm_add_var(mem%loss,    'sb_loss_woody_litter',       mem%loss%woody_litter) 
+      CALL slm_add_var(mem%loss,    'sb_loss_fungi',              mem%loss%fungi) 
+      CALL slm_add_var(mem%loss,    'sb_loss_mycorrhiza',         mem%loss%mycorrhiza) 
       CALL slm_add_var(mem%loss,    'sb_loss_microbial',          mem%loss%microbial) 
       CALL slm_add_var(mem%loss,    'sb_loss_residue',            mem%loss%residue) 
       CALL slm_add_var(mem%loss,    'sb_loss_residue_assoc',      mem%loss%residue_assoc)  
 
       CALL slm_add_var(mem%transport,    'sb_transport_dom',                mem%transport%dom) 
       CALL slm_add_var(mem%transport,    'sb_transport_dom_assoc',          mem%transport%dom_assoc)
-      CALL slm_add_var(mem%transport,    'sb_transport_soluable_litter',   mem%transport%soluable_litter) 
-      CALL slm_add_var(mem%transport,    'sb_transport_polymeric_litter',  mem%transport%polymeric_litter) 
+      CALL slm_add_var(mem%transport,    'sb_transport_soluable_litter',    mem%transport%soluable_litter) 
+      CALL slm_add_var(mem%transport,    'sb_transport_polymeric_litter',   mem%transport%polymeric_litter) 
       CALL slm_add_var(mem%transport,    'sb_transport_woody_litter',       mem%transport%woody_litter) 
+      CALL slm_add_var(mem%transport,    'sb_transport_fungi',              mem%transport%fungi) 
+      CALL slm_add_var(mem%transport,    'sb_transport_mycorrhiza',         mem%transport%mycorrhiza) 
       CALL slm_add_var(mem%transport,    'sb_transport_microbial',          mem%transport%microbial) 
       CALL slm_add_var(mem%transport,    'sb_transport_residue',            mem%transport%residue) 
       CALL slm_add_var(mem%transport,    'sb_transport_residue_assoc',      mem%transport%residue_assoc)  
@@ -1142,6 +1168,32 @@ CONTAINS
       CALL slm_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_carbon14', mem%pool%woody_litter%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_nitrogen15', mem%pool%woody_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%fungi, 'sb_pool_fungi_carbon', mem%pool%fungi%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%fungi, 'sb_pool_fungi_nitrogen', mem%pool%fungi%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%fungi, 'sb_pool_fungi_phosphorus', mem%pool%fungi%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%fungi, 'sb_pool_fungi_carbon13', mem%pool%fungi%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%fungi, 'sb_pool_fungi_carbon14', mem%pool%fungi%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%fungi, 'sb_pool_fungi_nitrogen15', mem%pool%fungi%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_carbon', mem%pool%mycorrhiza%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_nitrogen', mem%pool%mycorrhiza%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_phosphorus', mem%pool%mycorrhiza%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_carbon13', mem%pool%mycorrhiza%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_carbon14', mem%pool%mycorrhiza%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_nitrogen15', mem%pool%mycorrhiza%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
       CALL slm_add_var(mem%pool%microbial, 'sb_pool_microbial_carbon', mem%pool%microbial%carbon, &
@@ -1249,6 +1301,32 @@ CONTAINS
       CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_nitrogen15', mem%formation%woody_litter%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
+      CALL slm_add_var(mem%formation%fungi, 'sb_formation_fungi_carbon', mem%formation%fungi%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%fungi, 'sb_formation_fungi_nitrogen', mem%formation%fungi%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%fungi, 'sb_formation_fungi_phosphorus', mem%formation%fungi%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%fungi, 'sb_formation_fungi_carbon13', mem%formation%fungi%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%fungi, 'sb_formation_fungi_carbon14', mem%formation%fungi%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%fungi, 'sb_formation_fungi_nitrogen15', mem%formation%fungi%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_carbon', mem%formation%mycorrhiza%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_nitrogen', mem%formation%mycorrhiza%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_phosphorus', mem%formation%mycorrhiza%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_carbon13', mem%formation%mycorrhiza%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_carbon14', mem%formation%mycorrhiza%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_nitrogen15', mem%formation%mycorrhiza%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
       CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon', mem%formation%microbial%carbon, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_nitrogen', mem%formation%microbial%nitrogen, &
@@ -1354,6 +1432,32 @@ CONTAINS
       CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_nitrogen15', mem%loss%woody_litter%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
+      CALL slm_add_var(mem%loss%fungi, 'sb_loss_fungi_carbon', mem%loss%fungi%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%fungi, 'sb_loss_fungi_nitrogen', mem%loss%fungi%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%fungi, 'sb_loss_fungi_phosphorus', mem%loss%fungi%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%fungi, 'sb_loss_fungi_carbon13', mem%loss%fungi%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%fungi, 'sb_loss_fungi_carbon14', mem%loss%fungi%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%fungi, 'sb_loss_fungi_nitrogen15', mem%loss%fungi%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_carbon', mem%loss%mycorrhiza%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_nitrogen', mem%loss%mycorrhiza%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_phosphorus', mem%loss%mycorrhiza%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_carbon13', mem%loss%mycorrhiza%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_carbon14', mem%loss%mycorrhiza%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_nitrogen15', mem%loss%mycorrhiza%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
       CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon', mem%loss%microbial%carbon, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_nitrogen', mem%loss%microbial%nitrogen, &
@@ -1457,6 +1561,32 @@ CONTAINS
       CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon14', mem%transport%woody_litter%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_nitrogen15', mem%transport%woody_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%fungi, 'sb_transport_fungi_carbon', mem%transport%fungi%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%fungi, 'sb_transport_fungi_nitrogen', mem%transport%fungi%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%fungi, 'sb_transport_fungi_phosphorus', mem%transport%fungi%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%fungi, 'sb_transport_fungi_carbon13', mem%transport%fungi%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%fungi, 'sb_transport_fungi_carbon14', mem%transport%fungi%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%fungi, 'sb_transport_fungi_nitrogen15', mem%transport%fungi%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_carbon', mem%transport%mycorrhiza%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_nitrogen', mem%transport%mycorrhiza%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_phosphorus', mem%transport%mycorrhiza%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_carbon13', mem%transport%mycorrhiza%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_carbon14', mem%transport%mycorrhiza%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_nitrogen15', mem%transport%mycorrhiza%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
       CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon', mem%transport%microbial%carbon, &

@@ -108,12 +108,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: nh4_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
     dsl4jsb_Real3D_onChunk :: po4_solute 
-    dsl4jsb_Real3D_onChunk :: po4_assoc 
     dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
@@ -169,12 +166,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
 
 
@@ -526,12 +520,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: nh4_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
     dsl4jsb_Real3D_onChunk :: po4_solute 
-    dsl4jsb_Real3D_onChunk :: po4_assoc 
     dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
@@ -591,12 +582,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
 
 
