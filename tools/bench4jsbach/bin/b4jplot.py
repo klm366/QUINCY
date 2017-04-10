@@ -168,12 +168,10 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
     cmap.set_over  ( color = 'r', alpha = 1.0 )
     cmap.set_under ( color = 'g', alpha = 1.0 )
     
-    f = plt.figure ( figsize = ( 16, 8 ))  
-    ax = [ f.add_subplot ( 2,2, i + 1 , projection = ccrs.PlateCarree ()) \
+    f = plt.figure ( figsize = ( 16, 9 )) 
+    ax = [ f.add_subplot ( 2, 2, i + 1, projection = ccrs.PlateCarree () ) \
            for i in range ( nseas )]
-    gs1 = gridspec.GridSpec ( 2, 2 )
-    gs1.update ( wspace = -0.18, hspace = -0.14  ) 
-
+    
     for i in range ( 4 ):
         ax [ i ].set_title ( seasonlabel [ i ], fontsize=16 )
         ax [ i ].set_xlim ([ -180, 180 ])
@@ -200,22 +198,15 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
                                 facecolors=latestvardata, cmap=cmap, norm=norm,
                                 edgecolor="face")       
    
-    cax = f.add_axes ([ 0.125, 0.04, 0.775, 0.03 ]) # left, bottom, width, height
-    
-   # cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03])
+    f.subplots_adjust ( wspace = 0.05, hspace = 0.1 )#, bottom= 0.1 )
+    cax = f.add_axes ([ 0.125, 0.058, 0.775, 0.03 ]) # left, bottom, width, height
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
                                      orientation = 'horizontal', extend = 'neither', 
                                      ticks = ticks, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    cb.ax.text ( 0.95, -0.9, "[%s]" % unit_TeX, size = 20 )
-    #cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16, usetex = True )
-    plt.text ( 0.5, 1.04, title_TeX,
-               horizontalalignment = 'center',
-               verticalalignment = 'top',
-               fontsize = 20 )#,
-               #transform = ax.transAxes )
-    
+    cb.ax.text ( 0.95, -0.96, "[%s]" % unit_TeX, size = 20 )
+    plt.suptitle ( title_TeX, fontsize = 24 )
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
 
