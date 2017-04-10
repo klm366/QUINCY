@@ -67,7 +67,7 @@ mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = 0 )
 #####
 ##### finishing
 #####
-print "Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
+print "Plotting for field %s with '%s' run successfully." % ( fieldname, __file__ )
 
 
 print "Exiting %s" % os.path.realpath(__file__)

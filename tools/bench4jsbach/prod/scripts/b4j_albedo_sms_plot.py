@@ -6,10 +6,10 @@ from cdo import Cdo
 
 print "Starting %s" % os.path.realpath(__file__)
 
-
 #####
 ##### bench4jsbach library to environment path
 #####
+
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
 except KeyError: 
@@ -25,10 +25,10 @@ else:
 from util import print_item_or_list_rec
 from b4jplot import mapplot, mapplot_seasonal
 
-
 #####
 ##### check input parameter
 #####
+
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -41,21 +41,22 @@ fieldname      = kwargs [ "fieldname" ]
 #####
 ##### plotting
 #####
+
 inpath     = kwargs [ 'A_seasmean' ]	
 varname    = 'albedo'
 outpath    = kwargs [ 'A_seasmean_plot' ]
-unit       = 'Wm**(-2)'
-unit_TeX   = '$\\frac{W}{m^2}$'
+unit       = '1'
+unit_TeX   = unit
 title_TeX  = kwargs [ 'plot_title_A_seasmean_plot' ]
 
-mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, colormap = 'RdBu'  )
-outpath_seas = outpath.replace (  'A_seasmean_plot',  'A_seasmean_plot_test-seasonal' )
-mapplot_seasonal ( inpath, varname, outpath_seas, unit_TeX, title_TeX,
+#mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, colormap = 'RdBu'  )
+#outpath_seas = outpath.replace (  'A_seasmean_plot',  'A_seasmean_plot_test-seasonal' )
+mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
                    midpoint = 0.173, colormap = 'RdBu'  )
-
 #####
 ##### finishing
 #####
+
 print "Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
 
 print "Exiting %s" % os.path.realpath(__file__)
