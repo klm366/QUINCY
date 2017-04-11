@@ -41,7 +41,10 @@ fieldname      = kwargs [ "fieldname" ]
 cdo = Cdo ()
 
 cdo.setname ( "delta",
-              input=" -setunit,'W m-2' -setcode,'9999' -mul -sub " +\
+              input=" -setunit,'W m-2' " +\
+              " -setcode,'9999' " +\
+              "-sellonlatbox,-180,180,-90,90 " +\
+              " -mul -sub " +\
               kwargs [ "can.A_seasmean" ] + " " +\
               kwargs [ "ref.A_seasmean" ] + " " +\
               kwargs [ "ref.D_seasmean" ],

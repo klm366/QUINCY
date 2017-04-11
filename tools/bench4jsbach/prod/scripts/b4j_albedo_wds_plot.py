@@ -49,9 +49,10 @@ unit       = 'Wm**(-2)'
 unit_TeX   = '$\\frac{W}{m^2}$'
 title_TeX  = kwargs [ 'plot_title_albedo_wds_plot' ]
 
-#mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = 0, colormap = 'RdBu' )
-mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
-                   midpoint = 0, colormap = 'RdBu'  )
+#mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
+ #                  midpoint = 0 )#, colormap = 'jet'  )
+mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
+          midpoint = 0, colormap = "RdBu" )#, colormap = 'jet'  )
 
 #####
 ##### finishing

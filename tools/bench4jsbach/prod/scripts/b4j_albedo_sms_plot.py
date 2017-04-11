@@ -49,10 +49,10 @@ unit       = '1'
 unit_TeX   = unit
 title_TeX  = kwargs [ 'plot_title_A_seasmean_plot' ]
 
-#mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, colormap = 'RdBu'  )
-#outpath_seas = outpath.replace (  'A_seasmean_plot',  'A_seasmean_plot_test-seasonal' )
-mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
-                   midpoint = 0.173, colormap = 'RdBu'  )
+#mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
+ #                  midpoint = 0.173 )#, colormap = 'jet'  )
+mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
+                   midpoint = 0.173, colormap = "RdBu" )#, colormap = 'jet'  )
 #####
 ##### finishing
 #####

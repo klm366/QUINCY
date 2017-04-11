@@ -52,8 +52,9 @@ nc_fid  = Dataset ( D_f, 'a' )
 nc_fid.variables [ D ].setncattr ( 'standard_name', D_longname )
 nc_fid.close ()
 
-cdo.setname ( U, input = " -sub %s %s """ % ( D_f,
-                                              kwargs [ 'rsns_selcode' ]),
+cdo.setname ( U,
+              input = " -sub %s %s """ % (
+                  D_f, kwargs [ 'rsns_selcode' ]),
               output = U_f )
 
 nc_fid  = Dataset ( U_f, 'a' )
@@ -62,10 +63,10 @@ nc_fid.close ()
 
 cdo.setname ( fieldname,
               input="-setunit,1 " +\
-              "-setvrange,0.0001,0.99 " +\
+              #"-setvrange,0.0001,0.99 " +\
               "-div " + U_f + " " + D_f,
               output=kwargs [ 'UD_div' ],
-              options='-f nc -m 0.00011' )
+              options='-f nc ')#-m 0.00011' )
 
 nc_fid  = Dataset ( kwargs [ 'UD_div' ], 'a' )
 nc_fid.variables [ fieldname ].setncattr ( 'standard_name', fieldname )

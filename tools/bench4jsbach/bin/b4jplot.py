@@ -186,7 +186,8 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
                                                     np.abs ( lons[0:-1] - lons [1:] ) / 2 ),
                                                   axis = 0 )
             lats_shifted = lats + np.concatenate (( np.abs ( lats [0:-1] - lats [1:] ) / 2,
-                                                    np.zeros ( 1 )), axis = 0 )
+                                                    np.zeros ( 1 )),
+                                                  axis = 0 )
             ax [ i ].pcolormesh ( lons_shifted, lats_shifted,
                                   vardata [ i, :, : ], cmap=cmap, norm=norm,
                                   edgecolors='face',  
