@@ -29,9 +29,9 @@ CONTAINS
   !
   REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
-    USE mo_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
+    USE mo_echam_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
                                  jptlucu1, jptlucu2, lookuperror
-    USE mo_physical_constants, ONLY: vtmpc1                      ! = R_v/R_d - 1
+    USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
     REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
     REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
@@ -41,10 +41,10 @@ CONTAINS
 
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
-    tluc = tlucua(it)
+    tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
 
     IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN
-      qsat = tluc / (pressure - vtmpc1*tluc)
+      qsat = tluc / (pressure - rvd1*tluc)
     ELSE
       qsat = HUGE(1._wp)
     END IF
@@ -64,21 +64,21 @@ CONTAINS
 
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
 
-    USE mo_physical_constants, ONLY: &
+    USE mo_jsb_physical_constants, ONLY: &
       & cpd,       & !< Specific heat of dry air at constant pressure
-      & vtmpc2       !< cpv/cpd-1
+      & cpvd1        !< cpv/cpd-1
 
     REAL(wp), INTENT(in) :: &
       & t_srf,                      & !< Surface temperature
       & qsat_srf                      !< Surface saturation specific humidity
 
-      surface_dry_static_energy = t_srf * cpd * ( 1._wp + vtmpc2 * qsat_srf)
+      surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
 
   END FUNCTION surface_dry_static_energy
 
   REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
 
-    USE mo_physical_constants, ONLY: &
+    USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 
@@ -103,8 +103,7 @@ CONTAINS
 
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
-    USE mo_physical_constants, ONLY: grav
-    USE mo_echam_vdiff_params, ONLY: cvdifts  ! TBD: change to 1. for standalone JSBACH
+    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     REAL(wp), INTENT(in) :: &
       & drag,      &

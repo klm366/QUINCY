@@ -1,0 +1,78 @@
+!>
+!! @brief Contains structures and methods for phenology config
+!!
+!! @author
+!!  Rainer Schneck, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Rainer Schneck (2015-09-09)
+!!
+MODULE mo_pheno_config_class
+#ifndef __NO_JSBACH__
+
+  USE mo_exception,         ONLY: message, finish
+  USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: wp
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_pheno_config, Init_pheno_config
+
+  TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
+    CHARACTER(len=15) :: scheme   !< Phenology scheme to use ('logrop', 'climatology')
+     !LOGICAL :: first_call_phenology_this_day  ! TRUE marks if a new day has just started and update_phenology is called for the top tile
+    CONTAINS
+      PROCEDURE :: Init => Init_pheno_config
+  END type t_pheno_config
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_config_class'
+
+CONTAINS
+
+  SUBROUTINE Init_pheno_config(config)
+
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+
+    CLASS(t_pheno_config), INTENT(inout) :: config
+
+    LOGICAL :: active
+    CHARACTER(len=15) :: scheme
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+
+    NAMELIST /jsb_pheno_nml/  &
+      & active,       &
+      & scheme,       &
+      & ic_filename,  &
+      & bc_filename            
+
+    INTEGER :: nml_handler, nml_unit, istat
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
+
+    CALL message(TRIM(routine), 'Starting phenology configuration')
+
+    ! Set defaults
+    active              = .TRUE.
+    scheme              = 'logrop'
+    bc_filename         = 'bc_land_phenology.nc'    
+    ic_filename         = 'ic_land_phenology.nc'
+    !first_call_phenology_this_day = .FALSE.
+
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+
+    nml_unit = position_nml('jsb_pheno_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_pheno_nml)
+
+    config%active              = active
+    config%scheme              = TRIM(scheme)
+    config%ic_filename         = ic_filename
+    config%bc_filename         = bc_filename
+
+    CALL close_nml(nml_handler)
+
+  END SUBROUTINE Init_pheno_config
+
+#endif
+END MODULE mo_pheno_config_class

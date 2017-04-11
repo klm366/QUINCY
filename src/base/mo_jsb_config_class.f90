@@ -16,12 +16,14 @@ MODULE mo_jsb_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_config, t_jsb_model_config, new_model_config
+  PUBLIC :: t_jsb_config, t_jsb_config_p, t_jsb_model_config, new_model_config
 
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)  :: grid_filename
+    CHARACTER(len=filename_max)  :: fract_filename
     CHARACTER(len=30)            :: grid_name
     CHARACTER(len=30)            :: usecase
+    CHARACTER(len=10)            :: hsm_mode
   END TYPE t_jsb_model_config
 
   TYPE, ABSTRACT :: t_jsb_config
@@ -32,6 +34,10 @@ MODULE mo_jsb_config_class
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
+
+  TYPE t_jsb_config_p
+    CLASS(t_jsb_config), POINTER :: p
+  END TYPE t_jsb_config_p
 
   ABSTRACT INTERFACE
     SUBROUTINE Init_config(config)
@@ -44,14 +50,12 @@ MODULE mo_jsb_config_class
 
 CONTAINS
 
-  FUNCTION new_model_config(namelist_filename) RESULT(config)
+  FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    CHARACTER(len=*), INTENT(in) :: namelist_filename
-    TYPE(t_jsb_model_config), POINTER :: config
-
-    TYPE(t_jsb_model_config), POINTER :: new
+    CHARACTER(len=*),         INTENT(in) :: namelist_filename
+    TYPE(t_jsb_model_config), POINTER    :: model_config
 
     CHARACTER(len=filename_max) :: grid_filename
     CHARACTER(len=30)           :: grid_name
@@ -60,10 +64,14 @@ CONTAINS
       grid_filename,          &
       grid_name
 
+    CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=30)           :: usecase
+    CHARACTER(len=10)           :: hsm_mode
 
     NAMELIST /jsb_model_nml/  &
-      usecase
+      usecase, &
+      hsm_mode, &
+      fract_filename
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -71,12 +79,14 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Starting model configuration from '//TRIM(namelist_filename))
 
-    ALLOCATE(new)
+    ALLOCATE(model_config)
 
     ! Set defaults
-    grid_filename = ''
-    grid_name     = ''
-    usecase       = ''
+    grid_filename  = ''
+    grid_name      = ''
+    usecase        = ''
+    hsm_mode       = 'simple'
+    fract_filename = 'bc_land_frac.nc'
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -84,17 +94,17 @@ CONTAINS
     nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
 
-    new%grid_filename = grid_filename
-    new%grid_name     = grid_name
+    model_config%grid_filename = grid_filename
+    model_config%grid_name     = grid_name
 
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
 
-    new%usecase       = usecase
+    model_config%usecase        = usecase
+    model_config%hsm_mode       = hsm_mode
+    model_config%fract_filename = fract_filename
 
     CALL close_nml(nml_handler)
-
-    config => new
 
   END FUNCTION new_model_config
 

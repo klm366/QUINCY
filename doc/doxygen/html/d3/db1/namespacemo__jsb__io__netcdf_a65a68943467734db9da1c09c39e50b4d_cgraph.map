@@ -1,6 +1,0 @@
-<map id="mo_jsb_io_netcdf::jsb_netcdf_open_input" name="mo_jsb_io_netcdf::jsb_netcdf_open_input">
-<area shape="rect" id="node2" href="$d7/d72/namespacemo__jsb__grid.html#ad009e7ddbafe2ef26506e2a5abdeb4db" title="mo_jsb_grid::get_grid" alt="" coords="209,5,355,32"/>
-<area shape="rect" id="node3" href="$d7/d2c/namespacemo__jsb__io__netcdf__iface.html#a62f76a91ba113d51746677418c103187" title="mo_jsb_io_netcdf_iface\l::netcdf_open_input" alt="" coords="203,57,361,98"/>
-<area shape="rect" id="node4" href="$da/ded/namespacemo__jsb__parallel__iface.html#a9eaf6712087d55f627849cf84c1c1433" title="mo_jsb_parallel_iface\l::my_process_is_stdio" alt="" coords="422,27,575,69"/>
-<area shape="rect" id="node5" href="$d7/d2c/namespacemo__jsb__io__netcdf__iface.html#a14c4e6dbfc96b953416a81add4b76022" title="mo_jsb_io_netcdf_iface::nf" alt="" coords="409,93,588,120"/>
-</map>

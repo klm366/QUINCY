@@ -2,6 +2,7 @@ MODULE mo_jsb_grid
 #ifndef __NO_JSBACH__
 
   USE mo_exception,      ONLY: message, finish
+  USE mo_jsb_control,    ONLY: debug_on
   USE mo_jsb_grid_class, ONLY: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
 
   IMPLICIT NONE
@@ -24,7 +25,7 @@ CONTAINS
     INTEGER :: i, idx
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_grid'
 
-    CALL message(TRIM(routine), 'going to register new JSBACH grid instance')
+    IF (debug_on()) CALL message(TRIM(routine), 'going to register new JSBACH grid instance')
 
     idx = 0
 
