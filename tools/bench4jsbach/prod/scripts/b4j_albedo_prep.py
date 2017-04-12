@@ -6,6 +6,9 @@ from cdo import Cdo
 
 print "Starting %s" % os.path.realpath(__file__)
 
+#####
+##### bench4jsbach library to environment path
+#####
 
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
@@ -21,6 +24,10 @@ else:
 from util import print_item_or_list_rec
 import os
 
+#####
+##### check input parameter
+#####
+
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -28,34 +35,31 @@ kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
 print "subprocess '%s', kwargs = " % __file__
 print print_item_or_list_rec ( kwargs, 3 )
 
-### main part
+#####
+##### calculation
+#####
 
 fieldname      = "albedo"
-yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
-                                                        int ( kwargs [ 'finalyear' ]) + 1 ))
 
 cdo = Cdo ()
 
 cdo.setname ( fieldname,
-              input="-setunit,1 " +\
-              " -sellonlatbox,-180,180,-90,90 " +\
-              #" -setvrange,0.0001,0.99 " +\
+              input=" -setunit,1 " +\
               " -div " +\
-              ( " -selyear," + yearliststring + \
-                " " +  kwargs [ 'U_selcode' ]) +\
-              ( " -selyear," + yearliststring + \
-                " " +  kwargs [ 'D_selcode' ]),
+                " " +  kwargs [ 'U_selcode' ] +\
+                " " +  kwargs [ 'D_selcode' ],
               output=kwargs [ 'UD_div' ],
-              options='-f nc ')#-m 0.00011' )
+              options='-f nc ')
 
-cdo.yseasmean ( input="-selyear," + yearliststring + \
-                " " + kwargs [ 'UD_div' ],
+cdo.yseasmean ( input= kwargs [ 'UD_div' ],
                 output=kwargs [ 'A_seasmean' ])
 
-cdo.yseasmean ( input="-selyear," + yearliststring + \
-                " -sellonlatbox,-180,180,-90,90 " +\
-                " " + kwargs  [ 'D_selcode' ],
+cdo.yseasmean ( input= kwargs  [ 'D_selcode' ],
                 output=kwargs [ 'D_seasmean' ])
+
+#####
+##### finishing
+#####
     
 print "\n Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
 

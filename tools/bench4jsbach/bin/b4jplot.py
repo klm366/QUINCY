@@ -10,6 +10,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.basemap import addcyclic, shiftgrid
 import cartopy.crs as ccrs
 import cartopy as cart
 import numpy as np
@@ -129,9 +130,11 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
     time      = nc_fid.variables [ 'time' ][ : ]
 
     if grid_type == "gaussian":
-        lats    = nc_fid.variables [ 'lat' ][ : ]
-        lons    = nc_fid.variables [ 'lon' ][ : ] 
-        vardata = var [ :, :, : ]
+        lats          = nc_fid.variables [ 'lat' ][ : ]
+        lons_orig     = nc_fid.variables [ 'lon' ][ : ] 
+        vardata_orig  = var [ :, :, : ]
+        vardata, lons = addcyclic ( vardata_orig, lons_orig )        
+        vardata, lons = shiftgrid ( 180., vardata, lons, start = False )
     elif grid_type == "unstructured":
         
         rad2deg_ = 180 / math.pi
@@ -216,14 +219,18 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
 def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
               midpoint = np.nan, vmin = np.nan, vmax = np.nan,
               colormap = "BrBG" ):
+
     #from datetime import datetime
 
+    
     print "\n\ninpath:", inpath
     print "varname:", varname
     print "outpath:", outpath
     print "CAUTION: tstep_no := 0 hardcoded"
 
     tstep_no = 0
+
+    
 
     nc_fid  = Dataset ( inpath, 'r')
 
@@ -233,9 +240,11 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
     time      = nc_fid.variables [ 'time' ][ : ]
 
     if grid_type == "gaussian":
-        lats    = nc_fid.variables [ 'lat' ][ : ]
-        lons    = nc_fid.variables [ 'lon' ][ : ] 
-        vardata = var [ tstep_no, :, : ]
+        lats          = nc_fid.variables [ 'lat' ][ : ]
+        lons_orig     = nc_fid.variables [ 'lon' ][ : ] 
+        vardata_orig  = var [ tstep_no, :, : ]
+        vardata, lons = addcyclic ( vardata_orig, lons_orig )        
+        vardata, lons = shiftgrid ( 180., vardata, lons, start = False )
     elif grid_type == "unstructured":
         
         rad2deg_ = 180 / math.pi
@@ -363,7 +372,6 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
                                      ticks = ticks_interleave, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    #cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16, usetex = True )
     plt.text ( 0.5, 1.04, title_TeX,
                horizontalalignment = 'center',
                fontsize = 20,

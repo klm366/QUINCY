@@ -229,17 +229,9 @@ class Diagnostics ( object ):
 
                             #HACK TO SAVE COMPUTING TIME
                             if not os.path.isfile (  can.B4J_index [ output_item_remap ]):
-                                tempname = "tmp" + datetime.now().strftime('%Y%m%d-%H%M%S')
-                                # cdo.remapycon ( gridstring,
-                                #                 input = " -sellonlatbox,-180,180,-90,90 %s" % can.B4J_index [ output_item ],
-                                #                 output = can.B4J_index [ output_item_remap ])
                                 cdo.remapycon ( gridstring,
                                                 input = can.B4J_index [ output_item ],
-                                                output = tempname )
-
-                                cdo.sellonlatbox ( "-180,180,-90,90",
-                                                   input = tempname,
-                                                   output = can.B4J_index [ output_item_remap ])
+                                                output = can.B4J_index [ output_item_remap ])
                         else:
                             print "ERROR: remapping for %s not implemented yet." % remap_target
                             sys.exit ( 1 )

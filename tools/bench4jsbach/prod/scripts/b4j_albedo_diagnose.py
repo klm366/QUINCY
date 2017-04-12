@@ -9,6 +9,7 @@ print "Starting %s" % os.path.realpath(__file__)
 #####
 ##### bench4jsbach library to environment path
 #####
+
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
 except KeyError: 
@@ -26,6 +27,7 @@ from util import print_item_or_list_rec
 #####
 ##### check input parameter
 #####
+
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -33,17 +35,18 @@ kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
 print "subprocess '%s', kwargs = " % __file__
 print print_item_or_list_rec ( kwargs, 3 )
 
-fieldname      = kwargs [ "fieldname" ]
-
 #####
 ##### calculation
 #####
+
+fieldname      = kwargs [ "fieldname" ]
+
 cdo = Cdo ()
 
 cdo.setname ( "delta",
               input=" -setunit,'W m-2' " +\
               " -setcode,'9999' " +\
-              "-sellonlatbox,-180,180,-90,90 " +\
+              " -setmisstoc,0 " +\
               " -mul -sub " +\
               kwargs [ "can.A_seasmean" ] + " " +\
               kwargs [ "ref.A_seasmean" ] + " " +\
@@ -51,7 +54,7 @@ cdo.setname ( "delta",
               output=kwargs [ "albedo_wds" ],
               options='-f %s' % kwargs [ "suffix" ])
 
-cdo.fldmean ( input="-setmisstoc,0 -mul " +\
+cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
               kwargs [ "albedo_wds" ] + " " +\
               kwargs [ "land_sea_mask" ],
               output=kwargs [ "albedo_wdsgm" ],
@@ -61,7 +64,7 @@ cdo.timmean ( input=kwargs [ "albedo_wdsgm" ],
               output=kwargs [ "albedo_wdsgtm" ],
               options='-f %s' % kwargs [ "suffix" ])
         
-cdo.fldmean ( input="-abs -setmisstoc,0 -mul " +\
+cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
               kwargs [ "albedo_wds" ] + " " +\
               kwargs [ "land_sea_mask" ],
               output=kwargs [ "albedo_wdsgd" ],
@@ -74,6 +77,7 @@ cdo.timmean ( input=kwargs [ "albedo_wdsgd" ],
 #####
 ##### finishing
 #####
+
 print "Diagnostic for field %s with '%s' run successfully." % ( fieldname, __file__ )
 
 print "Exiting %s" % os.path.realpath(__file__)
