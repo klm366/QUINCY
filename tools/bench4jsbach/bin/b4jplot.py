@@ -218,19 +218,11 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
     
 def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
               midpoint = np.nan, vmin = np.nan, vmax = np.nan,
-              colormap = "BrBG" ):
-
-    #from datetime import datetime
-
-    
+              colormap = "BrBG", tstep_no = 0 ):
+   
     print "\n\ninpath:", inpath
     print "varname:", varname
     print "outpath:", outpath
-    print "CAUTION: tstep_no := 0 hardcoded"
-
-    tstep_no = 0
-
-    
 
     nc_fid  = Dataset ( inpath, 'r')
 
@@ -258,92 +250,24 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
         sys.exit ( 1 )
         
     nc_fid.close ()
-
-
-    if grid_type == "unstructured":
-        ncells, nv = clon_vertices.shape
-
-        # shift vertices of cells covering half the globe
-        mt_wholeglobe_r = (( np.amax (clon_vertices, axis = 1 ) - np.amin (clon_vertices, axis = 1 )) > 180 ).astype ( int )
-        mt_wholeglobe_mask = np.array ([ mt_wholeglobe_r, mt_wholeglobe_r, mt_wholeglobe_r ]).T               
-        east = ( clon_vertices < 0 ).astype ( int )
-        east_weight = np.sum ( mt_wholeglobe_mask * east, axis=1 )
-        east_weight_mask = np.array ([ east_weight,  east_weight,  east_weight ]).T
-        shift_eastwest = ( east_weight_mask == 1 ).astype ( int ) * ( east == 1 ).astype ( int ) * 360 + \
-                         ( east_weight_mask == 2 ).astype ( int ) * ( east == 0 ).astype ( int ) * ( -360 )
-        newxvc = clon_vertices + shift_eastwest
-        
-        # copy east/west margin cells
-        eastmargincells = ( newxvc > 180  ).astype ( int )
-        eastmargincells_rowid, margincells_colid =  eastmargincells.nonzero ()
-        eastmargincells_rowid = np.unique ( eastmargincells_rowid )
-        eastnnewcells = eastmargincells_rowid.shape [ 0 ]
-        
-        westmargincells = ( newxvc < -180 ).astype ( int )
-        westmargincells_rowid, margincells_colid =  westmargincells.nonzero ()
-        westmargincells_rowid = np.unique ( westmargincells_rowid )
-        westnnewcells = westmargincells_rowid.shape [ 0 ]
-
-        nallcells = ncells + eastnnewcells + westnnewcells
-        
-        # calculate and concatenate new triangles
-        eastnewrows = np.take ( newxvc, eastmargincells_rowid, axis = 0 )
-        westnewrows = np.take ( newxvc, westmargincells_rowid, axis = 0 )
-        latestxvc = np.concatenate (( newxvc,
-                                      eastnewrows - 360,
-                                      westnewrows + 360 ), axis = 0 )
-        latestyvc = np.concatenate (( clat_vertices, 
-                                      np.take ( clat_vertices, eastmargincells_rowid, axis = 0 ), 
-                                      np.take ( clat_vertices, westmargincells_rowid, axis = 0)),
-                                    axis = 0 )
-        latestvardata = np.ma.concatenate (( vardata, 
-                                             np.take ( vardata, eastmargincells_rowid, axis = 0),
-                                             np.take ( vardata, westmargincells_rowid, axis = 0 )), 
-                                           axis = 0 )
-        
-        newxvc = latestxvc.ravel ()
-        newyvc = latestyvc.ravel ()
-        triangles = np.reshape ( np.arange ( nallcells * nv ), ( nallcells, nv ))
-
     
     vmax    = vardata.max () if np.isnan ( vmax ) else vmax
     vmin    = vardata.min () if np.isnan ( vmin ) else vmin
-    vmean   = vardata.mean () if np.isnan ( midpoint ) else midpoint   
-    
-# # arguments
-    nlev                = 20
-    tick_interleave_no   = int ( nlev // 10 )
-    midval               =  vmean
+    vmean   = vardata.mean () if np.isnan ( midpoint ) else midpoint
 
-# calculate colormap, colorbar, ticks
-    assert nlev        >=  5   
-    vrange               = vmax - vmin if vmax > 0 else abs ( vmin - vmax )
-    unit                 = vrange  / ( nlev - 1 )
-    baselevel_left_val   = midval - unit/2
-    baselevel_right_val  = midval + unit/2
+    print vmax,vmin,vmean
     
-    nlev_left           = int (( baselevel_left_val - vmin ) // unit ) + 1
-    nlev_right          = int (( vmax - baselevel_right_val ) // unit ) + 1
-    nlev_revised        = nlev_left + nlev_right + 1
-    leftlevel_left_val   = baselevel_left_val -  nlev_left * unit
-    rightlevel_right_val = baselevel_right_val + nlev_right * unit
-    level               = np.arange ( leftlevel_left_val, rightlevel_right_val + unit/2, unit )
-    ticks_left           = np.arange ( midval, leftlevel_left_val, - unit ) [::-1]
-    ticks_right          = np.delete ( np.arange ( midval, rightlevel_right_val, unit ), 0 )
-    ticks                = np.concatenate (( ticks_left, ticks_right ), axis = 0 )
-    ticks_interleave     = np.take ( ticks, np.arange ( nlev_left % tick_interleave_no,
-                                                    len ( ticks ) - 1, tick_interleave_no ))
-    vals                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
-                                   [ 0, 0.5, 1 ])
-
-    #print "####### COLORS: VALS, LEVEL: #########"
-    colors      = plt.cm.get_cmap ( colormap )( vals )
+    # #print "####### COLORS: VALUES, LEVEL: #########"
+    nlev        = 20
+    values, level, ticks = colormap_prep ( vmin, vmax, vmean, nlev )
+    colors      = plt.cm.get_cmap ( colormap )( values )
     cmap, norm  = mcolors.from_levels_and_colors ( level, colors )
     norm.clip   = True
     norm.vmin   = vmin
     norm.vmax   = vmax
-    cmap.set_bad ( color = 'silver', alpha = 1.0 )
-    cmap.set_over ( color = 'r', alpha = 1.0 )
+    
+    cmap.set_bad   ( color = 'silver', alpha = 1.0 )
+    cmap.set_over  ( color = 'r', alpha = 1.0 )
     cmap.set_under ( color = 'g', alpha = 1.0 )
     
     f = plt.figure ( figsize = ( 16, 8 ))  
@@ -361,7 +285,9 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
                         vardata, cmap=cmap, norm=norm,
                         edgecolors='face',  
                         rasterized=True, zorder=0 )
-    elif grid_type == 'unstructured':
+    elif grid_type == 'unstructured': 
+        newxvc, newyvc, triangles, latestvardata = triangles_prep (
+            clon_vertices, clat_vertices, vardata )
         plt.tripcolor( newxvc, newyvc, triangles,
                        facecolors=latestvardata, cmap=cmap, norm=norm,
                        edgecolor="face")       
@@ -369,7 +295,7 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
     cax = f.add_axes ([ 0.125, 0.04, 0.775, 0.03 ]) # left, bottom, width, height           
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
                                      orientation = 'horizontal', extend = 'neither', 
-                                     ticks = ticks_interleave, format = '%.2e' )
+                                     ticks = ticks, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
     plt.text ( 0.5, 1.04, title_TeX,
