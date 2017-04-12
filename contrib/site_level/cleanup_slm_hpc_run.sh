@@ -80,7 +80,6 @@ if [ $compareSimCRUNCEPvsGFDB == T ]; then
   Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-process_daily.R $simFold  # creates two .csv files
   sync
   Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-create_figs.R $simFold    # creates a .pdf with multiple figures
-  rm "$simFold"obs_site.csv
   sync
 fi
 

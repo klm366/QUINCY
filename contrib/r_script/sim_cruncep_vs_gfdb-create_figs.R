@@ -33,17 +33,12 @@ moddim<-dim(model_mean)
 nsite<-moddim[1]
 
 mod2obs_idx<-numeric(nsite)
-obs4mod<-array(NA,c(nsite,obsdim[2]))
+obs4mod<-obs[1:nsite,]   # create a new data.frame by copying part of the obs data.frame
 for (s in 1:nsite) {
   mod2obs_idx[s]<-which(model_mean$Site_ID[s]==obs$Site.Code)
   for (v in 1:obsdim[2]) obs4mod[s,v]<-obs[mod2obs_idx[s],v]
 }
-colnames(obs4mod)<-colnames(obs)
 write.csv(obs4mod,file='obs_site.csv',row.names=F)
-rm(obs4mod)
-obs4mod<-read.csv('obs_site.csv',stringsAsFactors=F)
-# matrix -> data.frame
-#obs4mod<-as.data.frame(obs4mod, obs4modrow.names = NULL, optional = FALSE, stringsAsFactors = FALSE)
 
 pchidx<-c(1,19,0,15,2,17)
 pchleg<-c('BroadDec','BroadEve','NeedleDec','NeedleEve','BroadMix','Mixed')
