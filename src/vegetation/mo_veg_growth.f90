@@ -750,7 +750,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_config_class,      ONLY: veg_config
     USE mo_base_constants,        ONLY: dtime, one_day
-    USE mo_veg_constants,         ONLY: delta_n_leaf
+    USE mo_veg_constants          ! e.g. delta_n_leaf
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -1555,7 +1555,10 @@ CONTAINS
   !!
   !! In the current implementation, maintenance is given preference over growth, but 
   !! nevertheless, maintenance is limited to the available C   
-  !!
+  !! 
+  !! Note on veg_growth: it was an explicit decision making all veg_growth\%POOLs INTENT(inout) 
+  !!       but overwrite veg_growth%labile (making it essentially INTENT(in)), see Ticket #162 and r504
+  !! 
   !! Input: veg
   !! 
   !! output: growth of tissue types, maintenance respiration and growth respiration 
@@ -1616,7 +1619,7 @@ CONTAINS
                                                    growth_respiration_c14       , & !< growth respiration
                                                    n_processing_respiration_c13 , & !< respiration associated with N processing
                                                    n_processing_respiration_c14     !< respiration associated with N processing
-    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_growth                       !< fluxes: growth
+    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
     REAL(wp),                     INTENT(out)   :: maint_respiration_pot        , & !< potential maintenance respiration
                                                    maint_respiration            , & !< maintenance respiration
                                                    growth_respiration               !< growth respiration
@@ -1732,14 +1735,15 @@ CONTAINS
 
     !> 4.0 partition growth to tissue types
     !! 
-    veg_growth%leaf        = veg_falloc%leaf        * veg_growth%labile
-    veg_growth%fine_root   = veg_falloc%fine_root   * veg_growth%labile 
-    veg_growth%coarse_root = veg_falloc%coarse_root * veg_growth%labile
-    veg_growth%sap_wood    = veg_falloc%sap_wood    * veg_growth%labile
-    veg_growth%fruit       = veg_falloc%fruit       * veg_growth%labile
+    veg_growth%leaf        = veg_growth%leaf        + veg_falloc%leaf        * veg_growth%labile
+    veg_growth%fine_root   = veg_growth%fine_root   + veg_falloc%fine_root   * veg_growth%labile 
+    veg_growth%coarse_root = veg_growth%coarse_root + veg_falloc%coarse_root * veg_growth%labile
+    veg_growth%sap_wood    = veg_growth%sap_wood    + veg_falloc%sap_wood    * veg_growth%labile
+    veg_growth%fruit       = veg_growth%fruit       + veg_falloc%fruit       * veg_growth%labile
 
     !> 4.1 invert flux of labile to be out of the labile pool
     !! 
+    !! essentially, this calculation makes veg_growth%labile INTENT(in)
     veg_growth%labile%carbon     = veg_growth%labile%carbon     * (-1.0_wp)
     veg_growth%labile%nitrogen   = veg_growth%labile%nitrogen   * (-1.0_wp)
     veg_growth%labile%phosphorus = veg_growth%labile%phosphorus * (-1.0_wp)

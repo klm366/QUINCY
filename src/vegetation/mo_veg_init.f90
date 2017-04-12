@@ -138,6 +138,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: fresp_growth
     USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14 
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np
 
     IMPLICIT NONE
     ! ---------------------------
@@ -159,6 +160,8 @@ CONTAINS
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: target_np_leaf
+    dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
+    dsl4jsb_Real2D_onChunk      :: target_np_fine_root
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
@@ -246,6 +249,8 @@ CONTAINS
     ! 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
@@ -322,12 +327,14 @@ CONTAINS
 
       target_cn_leaf(:)             = lctlib%cn_leaf
       target_np_leaf(:)             = lctlib%np_leaf
+      target_cn_fine_root(:)        = target_cn_leaf(:) / root2leaf_cn
+      target_np_fine_root(:)        = target_np_leaf(:) / root2leaf_np
 
       IF(veg_config%flag_tile_veg_dynamics)THEN
-         veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
+         veg%init_pool%carbon%ptr    = lctlib%seed_size * 10.0_wp
          dens_ind(:)                 = 0.0_wp 
       ELSE
-         veg%init_pool%carbon%ptr         = 50.0_wp 
+         veg%init_pool%carbon%ptr    = 50.0_wp 
          dens_ind(:)                 = 1.0_wp 
       ENDIF
 
