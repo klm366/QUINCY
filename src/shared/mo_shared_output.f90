@@ -1242,7 +1242,7 @@ CONTAINS
                                        recycling_fine_root_n(1) + recycling_heart_wood_n(1) )     * dtime_one *1000000._wp/dtime
              res_use_n_acc    = res_use_n_acc     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
              n_fixation_acc   = n_fixation_acc    + n_fixation(1)                   * dtime_one 
-             n_loss_acc       = n_loss_acc        + sb%volatilisation_n%ptr(1,1,1)  * dtime_one 
+             n_loss_acc       = n_loss_acc        + sb%volatilisation_n%ptr(1,1,1) * soil_depth_sl(1,1) * dtime_one 
              uptake_p_acc     = uptake_p_acc      + uptake_p(1)                     * dtime_one
              recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + & 
                                        recycling_fine_root_p(1) + recycling_heart_wood_p(1) )     * dtime_one *1000000._wp/dtime
