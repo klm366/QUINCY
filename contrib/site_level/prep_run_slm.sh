@@ -58,6 +58,7 @@ sb_model_scheme="one_pool"      # one_pool four_pool jsm
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
 flag_calc_soil_energy="F"
 # canopy model options
 flag_t_resp_acclimation="T"
@@ -396,6 +397,7 @@ validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_s
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
+validateUserConfigValues "$flag_n_deposition" "$validateFlags" "flag_n_deposition"
 validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
@@ -779,6 +781,12 @@ if [ $flag_sb_prescribe_po4 == T ]
     changeNamelistValue flag_sb_prescribe_po4 ".TRUE."
   else
     changeNamelistValue flag_sb_prescribe_po4 ".FALSE."
+fi
+if [ $flag_n_deposition == T ]
+  then
+    changeNamelistValue flag_n_deposition ".TRUE."
+  else
+    changeNamelistValue flag_n_deposition ".FALSE."
 fi
 if [ "$specialFluxnetOutput" == "T" ]
   then

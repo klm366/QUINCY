@@ -45,6 +45,7 @@
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.
   flag_sb_prescribe_po4=.FALSE.
+  flag_n_deposition=.FALSE.
 /
 &BASE_CTL
   ! basic model config

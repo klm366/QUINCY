@@ -69,6 +69,8 @@ PROGRAM land_model_driver
                                   co2_mixing_ratio_C13 , &
                                   co2_mixing_ratio_C14 , &
                                   ga                   , &
+                                  nhx_deposition     , &
+                                  noy_deposition     , &
                                   ! For lakes:
                                   albedo_lwtr        , &
                                   drag_wtr           , &
@@ -151,6 +153,8 @@ PROGRAM land_model_driver
   ALLOCATE(co2_mixing_ratio_C13(nc))                             
   ALLOCATE(co2_mixing_ratio_C14(nc))                              
   ALLOCATE(ga(nc))                                                
+  ALLOCATE(nhx_deposition(nc))                                                
+  ALLOCATE(noy_deposition(nc))                                                
   ! For lakes:
   ALLOCATE(albedo_lwtr(nc))                                     
   ALLOCATE(drag_wtr(nc))                                        
@@ -192,6 +196,7 @@ PROGRAM land_model_driver
     CALL open_forcing_input_file
   END IF
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
+  ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','plant','soil')
       CALL allocate_slm_output_variables ! mo_shared_output
@@ -263,6 +268,8 @@ PROGRAM land_model_driver
                                   co2_mixing_ratio_C13    = co2_mixing_ratio_C13(:) , &
                                   co2_mixing_ratio_C14    = co2_mixing_ratio_C14(:) , &
                                   ga                      = ga(:)                   , &
+                                  nhx_deposition          = nhx_deposition(:)     , &
+                                  noy_deposition          = noy_deposition(:)     , &
                                   ! For lakes:
                                   albedo_lwtr             = albedo_lwtr(:)        , &
                                   drag_wtr                = drag_wtr(:)           , &
@@ -308,6 +315,8 @@ PROGRAM land_model_driver
                                   co2_mixing_ratio_C13(:) , &
                                   co2_mixing_ratio_C14(:) , &
                                   ga(:)                   , &
+                                  nhx_deposition(:)     , &
+                                  noy_deposition(:)     , &
                                   ! For lakes:
                                   albedo_lwtr(:)        , &
                                   drag_wtr(:)           , &

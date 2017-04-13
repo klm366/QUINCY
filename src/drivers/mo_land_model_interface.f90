@@ -58,6 +58,8 @@ CONTAINS
                                   co2_mixing_ratio_C13 , &
                                   co2_mixing_ratio_C14 , &
                                   ga                   , &
+                                  nhx_deposition     , &
+                                  noy_deposition     , &
                                   ! For lakes:
                                   albedo_lwtr        , &
                                   drag_wtr           , &
@@ -147,6 +149,8 @@ CONTAINS
                                   co2_mixing_ratio_C13(:) , &
                                   co2_mixing_ratio_C14(:) , &
                                   ga(:)                   , &
+                                  nhx_deposition(:)     , &
+                                  noy_deposition(:)     , &
                                   ! For lakes:
                                   albedo_lwtr(:)        , &
                                   drag_wtr(:)           , &
@@ -229,6 +233,8 @@ CONTAINS
       co2_mixing_ratio_C13    = co2_mixing_ratio_C13(:) , &
       co2_mixing_ratio_C14    = co2_mixing_ratio_C14(:) , &
       ga                      = ga(:)                   , &
+      nhx_deposition          = nhx_deposition(:)     , &
+      noy_deposition          = noy_deposition(:)     , &
       ! For lakes:
       albedo_lwtr             = albedo_lwtr(:)        , &
       drag_wtr                = drag_wtr(:)           , &

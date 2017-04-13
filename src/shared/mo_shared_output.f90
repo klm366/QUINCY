@@ -52,7 +52,8 @@ MODULE mo_shared_output
   REAL(wp), ALLOCATABLE, SAVE :: transpiration_acc    
   REAL(wp), ALLOCATABLE, SAVE :: drainage_acc    
   REAL(wp), ALLOCATABLE, SAVE :: gc_acc               
-  REAL(wp), ALLOCATABLE, SAVE :: ga_acc               
+  REAL(wp), ALLOCATABLE, SAVE :: ga_acc    
+  REAL(wp), ALLOCATABLE, SAVE :: n_deposition_acc
   REAL(wp), ALLOCATABLE, SAVE :: ppfd_acc 
   REAL(wp), ALLOCATABLE, SAVE :: rnet_acc 
   REAL(wp), ALLOCATABLE, SAVE :: qh_acc 
@@ -119,6 +120,7 @@ CONTAINS
     ALLOCATE(drainage_acc) 
     ALLOCATE(gc_acc)
     ALLOCATE(ga_acc)
+    ALLOCATE(n_deposition_acc)
     ALLOCATE(ppfd_acc)
     ALLOCATE(rnet_acc)
     ALLOCATE(qh_acc)
@@ -187,6 +189,7 @@ CONTAINS
     drainage_acc        = 0.0_wp 
     gc_acc              = 0.0_wp
     ga_acc              = 0.0_wp
+    n_deposition_acc    = 0.0_wp
     ppfd_acc            = 0.0_wp
     rnet_acc            = 0.0_wp
     qh_acc              = 0.0_wp
@@ -1011,7 +1014,7 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                           'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation Nloss'
+        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NDeposition NFixation Nloss'
         lun=lun+1
         WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
         lun=lun+1
@@ -1087,21 +1090,30 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: ga                        ! A2L_
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: albedo                    ! L2A_
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition
+    dsl4jsb_Real2D_onChunk      :: noy_deposition
+    ! L2A_
+    dsl4jsb_Real2D_onChunk      :: albedo
     dsl4jsb_Real2D_onChunk      :: net_radiation
     dsl4jsb_Real2D_onChunk      :: sensible_heat_flx
     dsl4jsb_Real2D_onChunk      :: latent_heat_flx
     dsl4jsb_Real2D_onChunk      :: ground_heat_flx
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation        ! ASSIMI_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
     dsl4jsb_Real2D_onChunk      :: canopy_cond
-    dsl4jsb_Real2D_onChunk      :: drainage                  ! SOIL_
+    ! SOIL_ 2D
+    dsl4jsb_Real2D_onChunk      :: drainage
+    ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    dsl4jsb_Real2D_onChunk      :: appfd                     ! RAD_
-    dsl4jsb_Real2D_onChunk      :: growth_respiration        ! VEG_
+    ! RAD_
+    dsl4jsb_Real2D_onChunk      :: appfd
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
     dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
@@ -1151,6 +1163,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
     dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
@@ -1250,7 +1264,8 @@ CONTAINS
              transpiration_acc= transpiration_acc + transpiration(1)                * dtime_one 
              drainage_acc     = drainage_acc      + drainage(1)                     * dtime_one 
              gc_acc           = gc_acc            + canopy_cond(1)                                                      
-             ga_acc           = ga_acc            + ga(1)                                                   
+             ga_acc           = ga_acc            + ga(1) 
+             n_deposition_acc = n_deposition_acc  + (nhx_deposition(1) + noy_deposition(1)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
              albedo_acc       = albedo_acc        + albedo(1)
              ppfd_acc         = ppfd_acc          + swpar_srf_down(1) * rad2ppfd  * dtime_one               
              rnet_acc         = rnet_acc          + net_radiation(1)              * dtime_one               
@@ -1279,20 +1294,20 @@ CONTAINS
        
                ! write
                lun = 100 + 30
-               write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc, &
-                                     n_transform_resp_acc,n_fixation_resp_acc, & 
+               write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                                     n_transform_resp_acc,n_fixation_resp_acc         , & 
                                      npp_acc, res_use_c_acc
                lun=lun+1
                dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
                dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
                dC13rm = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
-               write(lun,'(7F18.6)') time_d,dC13gpp,dC13rg,dC13rm, & 
-                                     calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp), & 
-                                     calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg), & 
+               write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
+                                     calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
+                                     calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                      calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                lun=lun+1
-               write(lun,'(20F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc, & 
-                                      res_use_n_acc, n_fixation_acc, n_loss_acc
+               write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
+                                      res_use_n_acc, n_deposition_acc, n_fixation_acc, n_loss_acc
                lun=lun+1
                write(lun,'(4F12.6)') time_d, uptake_p_acc, recycling_p_acc, res_use_p_acc
                lun=lun+1
@@ -1336,6 +1351,7 @@ CONTAINS
                drainage_acc      = 0.0_wp
                gc_acc            = 0.0_wp
                ga_acc            = 0.0_wp
+               n_deposition_acc  = 0.0_wp
                ppfd_acc          = 0.0_wp
                rnet_acc          = 0.0_wp
                qh_acc            = 0.0_wp

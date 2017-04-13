@@ -51,6 +51,9 @@ mo_sb_update_pools.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_shared_constants.o \
+  mo_a2l_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_soil_memory_class.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_jsm_processes.o \
@@ -90,6 +93,7 @@ mo_sb_simple_model.o: \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_a2l_memory_class.o \
   mo_soil_config_class.o \
   mo_shared_constants.o \
   mo_sb_constants.o \

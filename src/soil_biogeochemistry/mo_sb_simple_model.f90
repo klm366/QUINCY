@@ -55,6 +55,7 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
+    dsl4jsb_Use_memory(A2L_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -77,7 +78,12 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
+    ! A2L
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition
+    dsl4jsb_Real2D_onChunk      :: noy_deposition
+    ! ..
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -132,14 +138,19 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(A2L_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)                       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)                       ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
@@ -210,9 +221,14 @@ CONTAINS
 
        CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
 
+       IF(sb_config%flag_n_deposition) THEN
+         nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
+         no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
+       END IF
+
        veg%uptake_nh4%ptr(ice:ice,iblk) = plant_uptake_nh4_sl(:,1) * soil_depth_sl(:,1)
        veg%uptake_no3%ptr(ice:ice,iblk) = plant_uptake_no3_sl(:,1) * soil_depth_sl(:,1)
-       veg%uptake_p%ptr(ice:ice,iblk) = plant_uptake_po4_sl(:,1) * soil_depth_sl(:,1)
+       veg%uptake_p%ptr(ice:ice,iblk)   = plant_uptake_po4_sl(:,1) * soil_depth_sl(:,1)
        IF(.NOT.sb_config%flag_sb_prescribe_nh4) THEN
           nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - sb%nitrification%ptr(ice:ice,:,iblk) & 
                                                        - sb%volatilisation_n%ptr(ice:ice,:,iblk)- plant_uptake_nh4_sl(:,:)) * dtime/1.e6_wp

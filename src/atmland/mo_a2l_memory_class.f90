@@ -62,6 +62,8 @@ MODULE mo_a2l_memory_class
                               co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                               co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                               ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
+                              nhx_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
+                              noy_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
                               ! For lakes:
                               albedo_lwtr        , &
                               drag_wtr           , &
@@ -343,6 +345,13 @@ CONTAINS
 
     CALL slm_add_var( mem, 'ga', mem%ga,&
             & initval_r= ga_init )
+
+    CALL slm_add_var( mem, 'nhx_deposition', mem%nhx_deposition,&
+            & initval_r=0.0_wp )
+
+    CALL slm_add_var( mem, 'noy_deposition', mem%noy_deposition,&
+            & initval_r=0.0_wp )
+
 
 !    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 

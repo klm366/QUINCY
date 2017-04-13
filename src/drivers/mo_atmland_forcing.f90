@@ -68,6 +68,8 @@ CONTAINS
                                   co2_mixing_ratio_C13 , &! out
                                   co2_mixing_ratio_C14 , &! out
                                   ga                   , &! out
+                                  nhx_deposition     , &  ! out
+                                  noy_deposition     , &  ! out
                                   ! For lakes:
                                   albedo_lwtr        , &  ! out
                                   drag_wtr           , &  ! out
@@ -88,6 +90,8 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config
     USE mo_soil_config_class,     ONLY: soil_config
+    USE mo_shared_constants,      ONLY: molar_mass_N
+    USE mo_base_constants,        ONLY: one_day
 
     ! Use of process memories
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -123,6 +127,8 @@ CONTAINS
                                       co2_mixing_ratio_C13(:) , &  !< ..
                                       co2_mixing_ratio_C14(:) , &  !< ..
                                       ga(:)                   , &  !< ..
+                                      nhx_deposition(:)     , &    !< ..
+                                      noy_deposition(:)     , &    !< ..
                                       ! For lakes:
                                       albedo_lwtr(:)        , &    !< ..
                                       drag_wtr(:)           , &    !< ..
@@ -142,7 +148,7 @@ CONTAINS
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r,                                           &
-                     nhx_r, nox_r   ! dummy variable for nhx_srf_down & noy_srf_down
+                     nhx_deposition_r, noy_deposition_r   ! variables reading nhx_srf_down & noy_srf_down from the climate forcing file (maybe rename there to)
     ! READ() input variables for: soil
     REAL(wp) ::      leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
                      leaf_dC13_r, leaf_DC14_r, leaf_dN15_r  , &
@@ -255,6 +261,8 @@ CONTAINS
     co2_mixing_ratio_C13(nc)  = 0.0_wp
     co2_mixing_ratio_C14(nc)  = 0.0_wp
     ga(nc)                    = 0.0_wp
+    nhx_deposition(nc)        = 0.0_wp
+    noy_deposition(nc)        = 0.0_wp
     ! For lakes:
     albedo_lwtr(nc)     = 0.0_wp
     drag_wtr(nc)        = 0.0_wp
@@ -296,7 +304,7 @@ CONTAINS
                      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r,                                        &
-                     nhx_r, nox_r 
+                     nhx_deposition_r, noy_deposition_r
 
     ! day of the year: current time step
     doy_new = day 
@@ -318,7 +326,7 @@ CONTAINS
                      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r,                                        &
-                     nhx_r, nox_r 
+                     nhx_deposition_r, noy_deposition_r
     END IF
 
     !> 3.0 parameter units are re-scaled
@@ -368,6 +376,8 @@ CONTAINS
     co2_mixing_ratio_C13(nc)  =         co2_mixing_ratio_C13(1) 
     co2_mixing_ratio_C14(nc)  =         co2_mixing_ratio_C14(1) 
     ga(nc)                    =         ga(1)                   
+    nhx_deposition(nc)  =         nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+    noy_deposition(nc)  =         noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
     ! For lakes:    
     albedo_lwtr(nc)     =         albedo_lwtr(1)    
     drag_wtr(nc)        =         drag_wtr(1)       

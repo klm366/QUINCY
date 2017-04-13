@@ -84,6 +84,8 @@ CONTAINS
       co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
       co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
       ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
+      nhx_deposition     , &
+      noy_deposition     , &
       ! For lakes:
       albedo_lwtr        , &
       drag_wtr           , &
@@ -131,6 +133,8 @@ CONTAINS
                                       co2_mixing_ratio_C13(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       co2_mixing_ratio_C14(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       ga(:)                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
+                                      nhx_deposition(:)     , &    ! added with r506
+                                      noy_deposition(:)     , &    ! added with r506
                                       ! For lakes:
                                       drag_wtr(:)           , &
                                       drag_ice(:)           , &
@@ -204,8 +208,10 @@ CONTAINS
     IF (PRESENT(co2_mixing_ratio_C13)) dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C13) = co2_mixing_ratio_C13 (:)
     IF (PRESENT(co2_mixing_ratio_C14)) dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C14) = co2_mixing_ratio_C14 (:)
     IF (PRESENT(ga))                dsl4jsb_var2D_onChunk(A2L_,ga)                 = ga               (:)
-    ! For lakes:
+    IF (PRESENT(nhx_deposition))    dsl4jsb_var2D_onChunk(A2L_,nhx_deposition)    = nhx_deposition    (:)
+    IF (PRESENT(noy_deposition))    dsl4jsb_var2D_onChunk(A2L_,noy_deposition)    = noy_deposition    (:)
 
+    ! For lakes:
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       IF (PRESENT(drag_wtr))        dsl4jsb_var2D_onChunk(A2L_,drag_wtr)          = drag_wtr          (:)
       IF (PRESENT(drag_ice))        dsl4jsb_var2D_onChunk(A2L_,drag_ice)          = drag_ice          (:)
