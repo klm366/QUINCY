@@ -17,7 +17,8 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-n_uptake_scheme="standard"      # prescribed standard std_plus_costs optimal resistance
+bnf_scheme="standard"           # prescribed standard std_plus_costs optimal resistance
+myc_scheme="no"                 # mycchoriza scheme: no am ecm
 p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
 sb_model_scheme="one_pool"      # one_pool four_pool jsm 
@@ -72,7 +73,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":p:m:y:o:n:h" opt; do
+while getopts ":p:m:y:o:b:h" opt; do
   case "$opt" in
   "p")
     echo "   plant_functional_type_id=""$OPTARG"
@@ -119,27 +120,27 @@ while getopts ":p:m:y:o:n:h" opt; do
       ;;
     esac
     ;;
-  "n")
+  "b")
     case "$OPTARG" in
     "pre")
-      echo "   n_uptake_scheme=prescribed"
-      n_uptake_scheme="prescribed"
+      echo "   bnf_scheme=prescribed"
+      bnf_scheme="prescribed"
       ;;
     "std")
-      echo "   n_uptake_scheme=standard"
-      n_uptake_scheme="standard"
+      echo "   bnf_scheme=standard"
+      bnf_scheme="standard"
       ;;
     "stdp")
-      echo "   n_uptake_scheme=std_plus_costs"
-      n_uptake_scheme="std_plus_costs"
+      echo "   bnf_scheme=std_plus_costs"
+      bnf_scheme="std_plus_costs"
       ;;
     "opt")
-      echo "   n_uptake_scheme=optimal"
-      n_uptake_scheme="optimal"
+      echo "   bnf_scheme=optimal"
+      bnf_scheme="optimal"
       ;;
     "res")
-      echo "   n_uptake_scheme=resistance"
-      n_uptake_scheme="resistance"
+      echo "   bnf_scheme=resistance"
+      bnf_scheme="resistance"
       ;;
     esac
     ;;
@@ -171,8 +172,8 @@ while getopts ":p:m:y:o:n:h" opt; do
     echo "       nf: using only optimal Nfraction"
     echo "       nl: using only optimal Nleaf"
     echo "       al: using only optimal allocation"
-    echo " -n set the N uptake scheme"
-    echo "    Arguments to -n:"
+    echo " -b set the BNF scheme"
+    echo "    Arguments to -b:"
     echo "       pre : prescribed"
     echo "       std : standard"
     echo "       stdp: standard plus transformation costs"
@@ -207,7 +208,8 @@ return 0
 }
 # lists to validate against
 validateSlmModel="land plant soil canopy test_canopy"
-validateNUptakeScheme="prescribed standard std_plus_costs optimal resistance"
+validateBNFScheme="prescribed standard std_plus_costs optimal resistance"
+validateMycScheme="no am ecm"
 validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
@@ -221,7 +223,8 @@ validateSiteDataSet="f c n"
 
 ## validate user-defined model-options ##
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
-validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
+validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
+validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
 validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
@@ -359,7 +362,8 @@ return 0                                                                        
  #changeNamelistValue soil_theta_prescribe 1.
 
 changeNamelistValue slm_model_name "$slmModel"
-changeNamelistValue n_uptake_scheme "$n_uptake_scheme" 
+changeNamelistValue bnf_scheme "$bnf_scheme" 
+changeNamelistValue myc_scheme "$myc_scheme" 
 changeNamelistValue p_uptake_scheme "$p_uptake_scheme" 
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 

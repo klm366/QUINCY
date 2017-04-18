@@ -431,7 +431,7 @@ CONTAINS
 
     !> 3 Update mineral pool
     !!
-    IF(veg_config%n_uptake_scheme /= 'prescribed') THEN
+    IF(veg_config%bnf_scheme /= 'prescribed') THEN
        sb%volatilisation_n%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * floss_nmin * 1.e6_wp 
        sb%nitrification%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * 1.e6_wp 
        sb%nh4_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) + & 

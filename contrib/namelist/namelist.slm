@@ -4,7 +4,10 @@
   flag_optimal_Nleaf=.FALSE.
   flag_optimal_allocation=.FALSE.
   ! options for the vegetation
-  n_uptake_scheme="standard"
+  ! biological nitrogen fixation
+  bnf_scheme="standard"
+  ! mycorrhiza
+  myc_scheme="standard"
   p_uptake_scheme="prescribed"
   plant_functional_type_id=5
 /

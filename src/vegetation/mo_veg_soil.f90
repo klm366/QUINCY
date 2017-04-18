@@ -172,7 +172,7 @@ CONTAINS
 
     !> 2.1 Nitrogen uptake
     !!
-    SELECT CASE (veg_config%n_uptake_scheme)
+    SELECT CASE (veg_config%bnf_scheme)
       !> 2.1.1 Case 1  maintain prescribed C:N irrespective of nutrient uptake capacity == no nutrient limitation case 
       !!
       CASE ("prescribed")
@@ -223,7 +223,7 @@ CONTAINS
     !> 3.0 N fixation
     !!
     !!
-    SELECT CASE (veg_config%n_uptake_scheme)
+    SELECT CASE (veg_config%bnf_scheme)
       !> 3.1 Case 1: no N fixation
       !!
       CASE ("prescribed") 

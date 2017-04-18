@@ -29,9 +29,10 @@ MODULE mo_veg_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
-    CHARACTER(15)    :: n_uptake_scheme            !< select scheme to simulate N uptake
-                                                   ! "prescribed|standard|std_plus_costs|resistance|optimal"           
-    CHARACTER(15)    :: p_uptake_scheme            !< select scheme to simulate P uptake
+    CHARACTER(15)    :: bnf_scheme       , &       !< select scheme to simulate BNF (biological nitrogen fixation)
+                                                   ! "prescribed|standard|std_plus_costs|resistance|optimal"   
+                        myc_scheme       , &       !< select scheme to simulate mycorrhiza
+                        p_uptake_scheme            !< select scheme to simulate P uptake
                                                    ! "prescribed|standard"           
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
@@ -61,7 +62,8 @@ CONTAINS
     LOGICAL       :: active
     ! variables for reading from namlist, identical to variable-name in namelist
     INTEGER       :: plant_functional_type_id
-    CHARACTER(15) :: n_uptake_scheme, & 
+    CHARACTER(15) :: bnf_scheme       , & 
+                     myc_scheme       , &
                      p_uptake_scheme
     LOGICAL       :: flag_tile_veg_dynamics
     LOGICAL       :: flag_optimal_Nleaf
@@ -69,7 +71,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /vegetation_ctl/       & 
-      n_uptake_scheme,              & 
+      bnf_scheme,                   & 
+      myc_scheme,                   &
       p_uptake_scheme,              & 
       plant_functional_type_id,     &
       flag_tile_veg_dynamics,       &
@@ -82,7 +85,8 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    n_uptake_scheme                = "standard"  ! prescribed standard std_plus_costs resistance optimal
+    bnf_scheme                     = "standard"  ! prescribed standard std_plus_costs resistance optimal
+    myc_scheme                     = "no"        ! no am ecm
     p_uptake_scheme                = "standard"  ! prescribed standard
     plant_functional_type_id       = 1
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
@@ -97,11 +101,19 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
     CALL close_nml(nml_handler)
 
-    ! check input for n_uptake scheme
-    SELECT CASE (TRIM(n_uptake_scheme))
+    ! check input for BNF scheme
+    SELECT CASE (TRIM(bnf_scheme))
      CASE ("prescribed","standard","std_plus_costs","resistance","optimal")
      CASE DEFAULT
-       WRITE(message_text,'(2a)') 'invalid n_uptake_scheme',n_uptake_scheme
+       WRITE(message_text,'(2a)') 'invalid bnf_scheme',bnf_scheme
+       CALL finish("mo_veg_config_class:init_veg_config",message_text) 
+    ENDSELECT
+
+    ! check input for mycorrhiza scheme
+    SELECT CASE (TRIM(myc_scheme))
+     CASE ("no","am","ecm")
+     CASE DEFAULT
+       WRITE(message_text,'(2a)') 'invalid myc_scheme',myc_scheme
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
     ENDSELECT
 
@@ -114,7 +126,8 @@ CONTAINS
     ENDSELECT
 
     ! pass values as read from file
-    config%n_uptake_scheme               = TRIM(n_uptake_scheme)
+    config%bnf_scheme                    = TRIM(bnf_scheme)
+    config%myc_scheme                    = TRIM(myc_scheme)
     config%p_uptake_scheme               = TRIM(p_uptake_scheme)
     config%pft_id                        = plant_functional_type_id
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  

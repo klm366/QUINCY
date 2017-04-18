@@ -935,7 +935,7 @@ CONTAINS
            !! NPP = gN * R * growth_cn
            !! Or similar relationships for P
            !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
-           SELECT CASE (veg_config%n_uptake_scheme)
+           SELECT CASE (veg_config%bnf_scheme)
            CASE ("prescribed", "standard","resistance")
               k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
                    (labile_carbon + reserve_carbon - &
@@ -1009,7 +1009,7 @@ CONTAINS
          leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
          ! leaf:root ratio
          IF (veg_config%flag_optimal_allocation) THEN
-            SELECT CASE (veg_config%n_uptake_scheme)
+            SELECT CASE (veg_config%bnf_scheme)
            CASE ("prescribed", "standard","resistance")
               k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
                    (labile_carbon + reserve_carbon - &
@@ -1651,7 +1651,7 @@ CONTAINS
                                       &   )
 
     !> 1.5 Determine C use for N uptake
-    IF(veg_config%n_uptake_scheme == 'optimal' .OR. veg_config%n_uptake_scheme == 'resistance' .OR. veg_config%n_uptake_scheme == 'std_plus_costs') THEN
+    IF(veg_config%bnf_scheme == 'optimal' .OR. veg_config%bnf_scheme == 'resistance' .OR. veg_config%bnf_scheme == 'std_plus_costs') THEN
       n_processing_respiration_pot = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3 + & 
                                      n_fixation * cost_n_fixation
       n_processing_respiration_act = MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, & 
@@ -1665,7 +1665,7 @@ CONTAINS
        n_transform_respiration  = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3
        n_fixation_respiration   = n_fixation * cost_n_fixation
        n_processing_respiration = n_fixation_respiration + n_transform_respiration
-!    ELSEIF(veg_config%n_uptake_scheme == 'std_plus_costs') THEN
+!    ELSEIF(veg_config%bnf_scheme == 'std_plus_costs') THEN
 !      n_processing_respiration_pot = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3 
 !      n_processing_respiration_act = MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, & 
 !                                         n_processing_respiration_pot)
