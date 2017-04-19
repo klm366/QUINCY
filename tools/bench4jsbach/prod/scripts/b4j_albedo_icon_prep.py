@@ -85,6 +85,31 @@ cdo.yseasmean ( input= kwargs [ 'UD_div' ],
 cdo.yseasmean ( input= D_f,
                 output=kwargs [ 'D_seasmean' ])
 
+
+
+
+##### new, only candidates
+cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
+              kwargs [ "A_seasmean" ] + " " +\
+              kwargs [ "land_sea_mask" ],
+              output=kwargs [ "A_seasmean_gm" ],
+              options='-f %s' % kwargs [ "suffix" ] )
+
+cdo.timmean ( input=kwargs [ "A_seasmean_gm" ],
+              output=kwargs [ "A_seasmean_gtm" ],
+              options='-f %s' % kwargs [ "suffix" ])
+        
+cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
+              kwargs [ "A_seasmean" ] + " " +\
+              kwargs [ "land_sea_mask" ],
+              output=kwargs [ "A_seasmean_gd" ],
+              options='-f %s' % kwargs [ "suffix" ] )
+
+cdo.timmean ( input=kwargs [ "A_seasmean_gd" ],
+              output=kwargs [ "A_seasmean_gtd" ],
+              options='-f %s' % kwargs [ "suffix" ] )
+
+
 #####
 ##### finishing
 #####

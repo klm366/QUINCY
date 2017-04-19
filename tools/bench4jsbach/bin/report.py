@@ -39,10 +39,9 @@ doc_template = """
 \\usepackage{geometry}
  \\geometry{
  a4paper,
- total={140mm,247mm},
- left=30mm,
- top=40mm,
- bottom=30mm
+ total={150mm,247mm},
+ top=30mm,
+ bottom=25mm
  }
 
 %% dina4 : 21 cm x 29,7 cm 
@@ -416,16 +415,16 @@ table below. You may find detailed information on each method following the appr
                         if "canplot" in ss_dict:
                             plot = can.B4J_index [ ss_dict [ "canplot" ]]
                             dss += includegraphics_template (  plot,
-                                                               width      = '1.5',
-                                                               hspace     = '-3.3' )
+                                                               width      = '1.28',
+                                                               hspace     = '-2.' )
                         
                         for ref in self.experiments:
                             if not ref.B4J_isref:            continue
                             if ref.B4J_name == can.B4J_name: continue
                             plot = can.B4J_index [ '%s_plot_ref%d' % ( subsection, ref.B4J_refno )]
                             dss += includegraphics_template (  plot,
-                                                               width      = '1.5',
-                                                               hspace     = '-3.3' )
+                                                               width      = '1.28',
+                                                               hspace     = '-2.' )
                     elif ss_dict [ 'isvector' ] == True:
                         
                         if "canplot" in ss_dict:

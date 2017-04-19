@@ -169,7 +169,10 @@ class Diagnostics ( object ):
             executable = self.get_b4j_path (  prepdict [ 'exec' ], "scripts" )
             input_list = prepdict [ 'input' ]
             
-            arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
+            #arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
+            arglist = [ "fieldname:" + fieldname,
+                        "suffix:" +  fielddict [ 'suffix' ],
+                        "land_sea_mask:" + exp.land_sea_mask ]
                             
             for key in input_list:
                 arglist.append ( key + ':' + exp.B4J_index [ key ])
