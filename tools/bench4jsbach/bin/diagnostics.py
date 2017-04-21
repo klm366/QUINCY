@@ -505,6 +505,12 @@ class Diagnostics ( object ):
             else:
                 print ( "ERROR: case '%s' not implemented yet." % p_dict [ 'nref' ])
                 sys.exit ( 1 )
+
+            
+            # Check written files:
+            # new_indices = [ output_item for output_item in  fielddict [ 'preprocessing' ][ 'output' ]]
+            # print new_indices
+            # exp.index_check_output ( new_indices )
                 
         self.logger.debug ( "Finished plotting with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))

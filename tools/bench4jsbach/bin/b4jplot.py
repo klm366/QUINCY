@@ -17,6 +17,8 @@ import numpy as np
 from pandas import DataFrame
 import math
 from pprint import pprint
+
+from diagnostics import get_seasonal_period_2d_coords
 from util import print_item_or_list_rec
 
 # from matplotlib import rcParams
@@ -305,8 +307,122 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
     
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
-  
 
+
+
+def seas_timemean_plot ( varname = None,
+                         inpathlist_gm = None, inpathlist_tm = None,
+                         outpath = None, mono = False,
+                         unit = None, title = None,
+                         legendlist_gm = None, legendlist_tm = None ):
+    
+
+    seasons =  ['DJF','MAM','JJA','SON']
+
+    listlen = len ( inpathlist_gm )
+
+    hmargin_unitfactor = 1./2.
+    vmargin_factor = 1./15.
+        
+    fig     = plt.figure()
+
+    refs    = []
+    xcoords = []
+    ymin    = sys.float_info.max
+    ymax    = - sys.float_info.max
+
+    for idx in range ( listlen ):
+
+        nc_fid = Dataset ( inpathlist_gm [ idx ], 'r' )  
+        time = nc_fid.variables [ 'time' ][ : ]
+        gm = nc_fid.variables [ varname ][ : ] 
+        nc_fid.close ()
+
+        nc_fid = Dataset ( inpathlist_tm [ idx ], 'r')
+        tm = nc_fid.variables [ varname ][ : ] 
+        nc_fid.close ()
+
+        xcoords, ycoords = get_seasonal_period_2d_coords ( time, gm [ :, 0, 0 ],
+                                                           hmargin_unitfactor, vmargin_factor )
+
+        ymin = np.amin ( gm [ :, 0, 0 ]) if np.amin ( gm [ :, 0, 0 ]) < ymin  else  ymin 
+        ymax = np.amax ( gm [ :, 0, 0 ]) if np.amax ( gm [ :, 0, 0 ]) > ymax  else  ymax
+        plt.plot ( xcoords, ycoords, colorlist [ idx ] + '-' )
+        plt.plot ( time, gm [ :, 0, 0 ],
+                   colorlist [ idx ] + 'o',
+                   label = legendlist_gm [ idx ] if mono == False else None )
+        plt.axhline ( tm [ 0, 0, 0 ],
+                      color =  colorlist [ idx ],
+                      label = legendlist_tm [ idx ])
+
+    ymargin = ( ymax - ymin ) * vmargin_factor
+    plt.axis ([ xcoords [ 0 ], xcoords [ 5 ], ymin - ymargin, ymax + ymargin ])  
+    plt.title ( title, y = 1.08 )
+    plt.ylabel ( unit,
+                 rotation = 0,
+                 position = ( -0.5, .96 ),
+                 fontsize = 20 ) 
+    plt.xlabel ( "season")
+    plt.xticks ( time, seasons )
+    plt.grid ( 'on' )
+    lgd = plt.legend ( numpoints = 1,  
+                       loc = 2,                  
+                       bbox_to_anchor = ( 1.05, 1 ))
+    plt.savefig ( outpath,
+                  dpi = 100, 
+                  bbox_extra_artists = ( lgd, ), 
+                  bbox_inches = 'tight' )
+    plt.close ()
+    
+
+
+def seas_timemean_plot_wrapper ( varname, unit, can_name, canno, 
+                                 input_can, subtitle_can,
+                                 input_delta, legend_delta, subtitle_delta,
+                                 outpath ):
+
+    f = plt.figure ( figsize = ( 10, 15 ))
+    show_can = True
+    supgrid = gridspec.GridSpec( 2 if show_can == True else 1, 1 ) 
+    art = []
+
+    ####### first subplot
+    subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 0 ])
+    ax = plt.Subplot ( f, subgrid [ :, : ])
+    f.add_subplot ( ax )
+    
+    # first subplot args
+    subtitle   = subtitle_can
+    inpathlist = [ input_can ]
+    legendlist = []
+
+    # first subplot call
+    seas_timemean_plot ( varname, unit, subtitle, inpathlist, legendlist, 
+                         ax = ax,
+                         art = art,
+                         mono = True )
+    
+    ####### second subplot
+    subgrid = gridspec.GridSpecFromSubplotSpec (1, 1, subplot_spec = supgrid [ 1 ])
+    ax = plt.Subplot ( f, subgrid [ :, : ])
+    f.add_subplot ( ax ) 
+
+    # first subplot args
+    subtitle      = subtitle_delta
+    inpathlist = input_delta
+    legendlist = legend_delta
+
+    # first subplot call
+    seas_timemean_plot ( varname, unit, subtitle, inpathlist, legendlist, 
+                         ax = ax,
+                         art = art )
+
+    plt.savefig ( outpath,
+                  bbox_extra_artists = ( art [ 0 ], ) if art else None,
+                  bbox_inches = 'tight' if art else None  )
+
+    plt.close ()
+    
 
 def zon_plot ( varname, unit, title, inpathlist, legendlist, 
                outpath = None, 
