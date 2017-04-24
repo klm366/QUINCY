@@ -119,9 +119,9 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
             outfile.write("!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n")
             if verbose:
                 if cwd:
-                    print '   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd)
+                    print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
                 else:
-                    print '   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile
+                    print('   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile)
             for line in infile:
                 if outputfile == '':
                     outfile.write('! ' + line)
@@ -133,7 +133,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                             pat, replace = macros[key]
                             line = pat.sub(replace, line)
                         except:
-                            print 'ERROR in', inputfile, ': dsl4jsb macro not found:', match.group(1).lower()
+                            print('ERROR in', inputfile, ': dsl4jsb macro not found:', match.group(1).lower())
                             sys.exit()
                 outfile.write(line)
 
@@ -148,11 +148,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hvki:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
     except getopt.GetoptError:
-        print help_text
+        print(help_text)
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print help_text
+            print(help_text)
             sys.exit()
         elif opt in ("-v", "--verbose"):
             verbose = True
@@ -169,13 +169,13 @@ def main(argv):
         elif opt in ("-t", "--odir"):
             outputdir = os.path.abspath(arg)    # Make outputdir absolute
             if not os.path.exists(outputdir):
-                print 'Output directory ' + outputdir + ' does not exist.'
+                print('Output directory ' + outputdir + ' does not exist.')
                 sys.exit()
     if inputdir != '' and outputdir == '':
-        print 'Input directory specified, but no output directory'
+        print('Input directory specified, but no output directory')
         sys.exit()
     if inputfile != '' and inputdir != '':
-        print 'Specify either input file or input directory but not both!'
+        print('Specify either input file or input directory but not both!')
         sys.exit()
     if inputdir != '' and outputdir != '':
         inputfile = ''
