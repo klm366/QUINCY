@@ -1,4 +1,3 @@
-
 #! /usr/bin/env python
 # -*- coding:  utf-8 -*-y
 
@@ -41,30 +40,29 @@ print print_item_or_list_rec ( kwargs, 3 )
 ##### plotting
 #####
 
-print "Hello World"
-
-can_name       = kwargs [ "can_name" ]
-canno          = kwargs [ "canno" ]
+fieldname   = "albedo"
 varname     = "delta"
-varname_can = "albedo"
+varname_can = fieldname
 unit_can    = "1"
 unit = "$\\frac{W}{m^{2}}$"
-#outpath = kwargs [ "new_albedo_wdsgtm_plot" ]
+can_name       = kwargs [ "can_name" ]
+canno          = kwargs [ "canno" ]
 outpath = kwargs [ "albedo_wdsgtm_plot" ]
 inpathlist_gm_can = [ kwargs [  "A_seasmean_gm" ]]
 inpathlist_tm_can =  [ kwargs [  "A_seasmean_gtm" ]]
-#subtitle_can   = kwargs [ "plot_title_new_albedo_wdsgtm_plot" ] % { 'funstr' : "",
-subtitle_can   = kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "",
-                                                                    'stat1str': "gm",
-                                                                    'stat2str': "tm",
-                                                                    'expabr': "C_%s" % ( canno ),
-                                                                    'expl'     : "" }
-#subtitle_delta = kwargs [ "plot_title_new_albedo_wdsgtm_plot" ] % { 'funstr' : "\Delta ",
-subtitle_delta = kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "\Delta ",
-                                                                    'stat1str': "gm",
-                                                                    'stat2str': "tm",
-                                                                    'expabr': "C_%s" % ( canno ),
-                                                                    'expl'     : "" }
+subtitle_can   = kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "A",
+                                                                'stat1str': "gsm",
+                                                                'stat2str': "gtm",
+                                                                'expabr'  : "C_%s" % ( canno ),
+                                                                'expl'    : ", $C_{%s}$: %s" % ( canno, can_name )}
+subtitle_delta = kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "w\Delta A",
+                                                                'stat1str': "gsm",
+                                                                'stat2str': "gtm",
+                                                                'expabr'  : "C_%sR" % ( canno ),
+                                                                'expl'    : ", $C_{%s}$: %s" % ( canno, can_name )}
+
+
+
                           
 token             = "albedo_wdsgm_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
@@ -73,13 +71,11 @@ legendlist_gm     = []
 for k in keylist:
     refno = k.split ( token, 1 )[1][0]
     inpathlist_gm.append ( kwargs [ k ])
-    #legend =  kwargs [ "plot_title_new_albedo_wdsgtm_plot" ] % { 'funstr' : "\Delta ",
-    legend =  kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "\Delta ",
-                                                                 'stat1str': "gm",
-                                                                 'stat2str': "tm",
-                                                                 'expabr': "C_%sR_%s" % ( canno, refno ),
-                                                                 'expl'     : "\n$R_{%s}$: %s" % \
-                                                                 ( refno,  kwargs [ "ref%s"  % refno ])}
+    legend =  kwargs [ "legend_tmpl_albedo_wdsgtm_plot" ] % { 'funstr' : "w \Delta A ",
+                                                              'stat1str': "gsm",
+                                                              'expabr': "C_%sR_%s" % ( canno, refno ),
+                                                              'expl'     : " $R_{%s}$: %s" % \
+                                                              ( refno,  kwargs [ "ref%s"  % refno ])}
     legendlist_gm.append ( legend )
 
 
@@ -90,13 +86,10 @@ legendlist_tm     = []
 for k in keylist:
     refno = k.split ( token, 1 )[1][0]
     inpathlist_tm.append ( kwargs [ k ])
-    #legend =  kwargs [ "plot_title_new_albedo_wdsgtm_plot" ] % { 'funstr' : "\Delta ",
-    legend =  kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "\Delta ",
-                                                                 'stat1str': "tm",
-                                                                 'stat2str': "gm",
-                                                                 'expabr': "C_%sR_%s" % ( canno, refno ),
-                                                                 'expl'     : "\n$R_{%s}$: %s" % \
-                                                                 ( refno,  kwargs [ "ref%s"  % refno ])}
+    legend =  kwargs [ "legend_tmpl_albedo_wdsgtm_plot" ] % { 'funstr'  : "w \Delta A ",
+                                                              'stat1str': "gtm",
+                                                              'expabr'  : "C_%sR_%s" % ( canno, refno ),
+                                                              'expl'    : "" }
     legendlist_tm.append ( legend )
 
 seas_timemean_plot_wrapper ( varname = varname,
@@ -118,6 +111,6 @@ seas_timemean_plot_wrapper ( varname = varname,
 ##### finishing
 #####
 
-#print "Plotting for field %s with '%s' run successfully." % ( fieldname, __file__ )
+print "Plotting for field %s with '%s' run successfully." % ( fieldname, __file__ )
 
 print "Exiting %s" % os.path.realpath(__file__)

@@ -496,6 +496,11 @@ class Diagnostics ( object ):
                             arglist.append ( "plot_title_%s:" % ( classification_str ) + \
                                              output_dict [ 'plot_title' ])
 
+                        if 'legend_tmpl' in output_dict:
+                            output_dict.main.interpolation = False
+                            arglist.append ( "legend_tmpl_%s:" % ( classification_str ) + \
+                                             output_dict [ 'legend_tmpl' ])
+
 
                         arglist.append ( classification_str + ":" + can.B4J_index [ classification_str ])
 
