@@ -40,11 +40,11 @@ print print_item_or_list_rec ( kwargs, 3 )
 ##### plotting
 #####
 
-fieldname   = "albedo"
-varname     = "delta"
-varname_can = fieldname
-unit_can    = "1"
-unit = "$\\frac{W}{m^{2}}$"
+field_name  = kwargs [ "field_name" ]
+varname     = kwargs [ "varname" ]
+varname_can = field_name
+unit_can    = kwargs [ "unit_can" ]
+unit        = kwargs [ "unit" ]
 can_name       = kwargs [ "can_name" ]
 canno          = kwargs [ "canno" ]
 outpath = kwargs [ "albedo_wdsgtm_plot" ]
@@ -111,6 +111,6 @@ seas_timemean_plot_wrapper ( varname = varname,
 ##### finishing
 #####
 
-print "Plotting for field %s with '%s' run successfully." % ( fieldname, __file__ )
+print "Plotting for field %s with '%s' run successfully." % ( field_name, __file__ )
 
 print "Exiting %s" % os.path.realpath(__file__)

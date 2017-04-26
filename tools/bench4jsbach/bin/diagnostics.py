@@ -465,9 +465,12 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
-                    arglist = [ "can_name:" + can.B4J_name, "canno:%d" % can.B4J_canno ]
-
+                    arglist = [ "field_name:" + fielddict [ "field_name" ],
+                                "can_name:" + can.B4J_name,
+                                "canno:%d" % can.B4J_canno ]
+                    
                     for classification_str in p_dict [ 'input_can' ]:
+                        assert os.path.isfile ( can.B4J_index [ classification_str ])
                         arglist.append ( classification_str + ':' + can.B4J_index [ classification_str ])
 
                     for ref in self.experiments:
@@ -478,7 +481,12 @@ class Diagnostics ( object ):
                        
                         for key in input_list:
                             classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )
+                            assert os.path.isfile ( can.B4J_index [ classification_str ])
                             arglist.append ( classification_str + ':' + can.B4J_index [ classification_str ])
+
+                    for key in [ 'varname', 'unit', 'varname_can', 'unit_can' ]:
+                        if key in p_dict:
+                            arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
                         
                     for output_item, output_dict in p_dict.iteritems ():
                         if not isinstance ( output_dict, configobj.Section ): continue
@@ -503,6 +511,7 @@ class Diagnostics ( object ):
 
 
                         arglist.append ( classification_str + ":" + can.B4J_index [ classification_str ])
+
 
                     cmd = ["python", executable ] +  arglist
                     subprocessing ( cmd, shell_arg = False, stderr_arg = None )
