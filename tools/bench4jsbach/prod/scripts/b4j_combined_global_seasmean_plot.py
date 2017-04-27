@@ -4,7 +4,7 @@
 import sys, os
 from cdo import Cdo
 
-print "Starting %s" % os.path.realpath(__file__)
+print "\n\nStarting %s" % os.path.realpath(__file__)
 
 #####
 ##### bench4jsbach library to environment path
@@ -40,71 +40,79 @@ print print_item_or_list_rec ( kwargs, 3 )
 ##### plotting
 #####
 
-field_name  = kwargs [ "field_name" ]
-varname     = kwargs [ "varname" ]
-varname_can = field_name
-unit_can    = kwargs [ "unit_can" ]
-unit        = kwargs [ "unit" ]
-can_name       = kwargs [ "can_name" ]
-canno          = kwargs [ "canno" ]
-outpath = kwargs [ "albedo_wdsgtm_plot" ]
-inpathlist_gm_can = [ kwargs [  "A_seasmean_gm" ]]
-inpathlist_tm_can =  [ kwargs [  "A_seasmean_gtm" ]]
-subtitle_can   = kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "A",
-                                                                'stat1str': "gsm",
-                                                                'stat2str': "gtm",
-                                                                'expabr'  : "C_%s" % ( canno ),
-                                                                'expl'    : ", $C_{%s}$: %s" % ( canno, can_name )}
-subtitle_delta = kwargs [ "plot_title_albedo_wdsgtm_plot" ] % { 'funstr' : "w\Delta A",
-                                                                'stat1str': "gsm",
-                                                                'stat2str': "gtm",
-                                                                'expabr'  : "C_%sR" % ( canno ),
-                                                                'expl'    : ", $C_{%s}$: %s" % ( canno, can_name )}
+can_name          = kwargs [ "can_name" ]
+canno             = kwargs [ "canno" ]
 
+title_tmpl        = kwargs [ "title_tmpl" ]
+legend_tmpl       = kwargs [ "legend_tmpl" ]
+funstr            = kwargs [ 'funstr' ]
+statstr           = kwargs [ 'statstr' ]
+statstr_tm        = kwargs [ 'statstr_tm' ]
 
+outpath           = kwargs [ "outpath" ]
+field_name        = kwargs [ "field_name" ]
+varname           = kwargs [ "varname" ]
+unit              = kwargs [ "unit" ]
 
-                          
-token             = "albedo_wdsgm_ref"
+varname_can       = kwargs [ "varname_can" ]
+unit_can          = kwargs [ "unit_can" ]
+funstr_can        = kwargs [ 'funstr_can' ]
+inpathlist_gm_can = [ kwargs [  "input_can" ]]
+inpathlist_tm_can = [ kwargs [  "input_can_tm" ]]
+
+subtitle_can      = title_tmpl % { 'funstr'  : funstr_can,
+                                  'stat1str' : statstr,
+                                  'stat2str' : statstr_tm,
+                                  'expabr'   : "C_%s" % ( canno ),
+                                  'expl'     : ", $C_{%s}$: %s" % ( canno, can_name )}
+
+subtitle_delta    = title_tmpl % { 'funstr'  : funstr,
+                                   'stat1str': statstr,
+                                   'stat2str': statstr_tm,
+                                   'expabr'  : "C_%sR" % ( canno ),
+                                   'expl'    : ", $C_{%s}$: %s" % ( canno, can_name )}
+
+token             = "input_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
 inpathlist_gm     = []
 legendlist_gm     = []
 for k in keylist:
-    refno = k.split ( token, 1 )[1][0]
+    refno  = k.split ( token, 1 )[1][0]
     inpathlist_gm.append ( kwargs [ k ])
-    legend =  kwargs [ "legend_tmpl_albedo_wdsgtm_plot" ] % { 'funstr' : "w \Delta A ",
-                                                              'stat1str': "gsm",
-                                                              'expabr': "C_%sR_%s" % ( canno, refno ),
-                                                              'expl'     : " $R_{%s}$: %s" % \
-                                                              ( refno,  kwargs [ "ref%s"  % refno ])}
+    legend =  legend_tmpl % { 'funstr'  : funstr,
+                              'stat1str': statstr,
+                              'expabr'  : "C_%sR_%s" % ( canno, refno ),
+                              'expl'    : " $R_{%s}$: %s" % \
+                              ( refno,  kwargs [ "ref%s"  % refno ])}
     legendlist_gm.append ( legend )
 
 
-token             = "albedo_wdsgtm_ref"
+token             = "input_tm_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
 inpathlist_tm     = []
 legendlist_tm     = []
 for k in keylist:
-    refno = k.split ( token, 1 )[1][0]
+    refno  = k.split ( token, 1 )[1][0]
     inpathlist_tm.append ( kwargs [ k ])
-    legend =  kwargs [ "legend_tmpl_albedo_wdsgtm_plot" ] % { 'funstr'  : "w \Delta A ",
-                                                              'stat1str': "gtm",
-                                                              'expabr'  : "C_%sR_%s" % ( canno, refno ),
-                                                              'expl'    : "" }
+    legend = legend_tmpl % { 'funstr'  : funstr,
+                             'stat1str': statstr_tm,
+                             'expabr'  : "C_%sR_%s" % ( canno, refno ),
+                             'expl'    : "" }
     legendlist_tm.append ( legend )
 
-seas_timemean_plot_wrapper ( varname = varname,
-                            varname_can = "albedo",
-                            inpathlist_gm_can = inpathlist_gm_can, 
-                            inpathlist_tm_can = inpathlist_tm_can, 
-                            subtitle_can = subtitle_can,
-                            inpathlist_gm = inpathlist_gm, 
-                            inpathlist_tm = inpathlist_tm,
-                            outpath = outpath, 
-                            unit = unit,
-                            unit_can = unit_can,
-                            subtitle_delta = subtitle_delta,
-                            legendlist_gm = legendlist_gm, 
-                            legendlist_tm = legendlist_tm )
+seas_timemean_plot_wrapper ( varname           = varname,
+                             varname_can       = "albedo",
+                             inpathlist_gm_can = inpathlist_gm_can, 
+                             inpathlist_tm_can = inpathlist_tm_can, 
+                             subtitle_can      = subtitle_can,
+                             inpathlist_gm     = inpathlist_gm, 
+                             inpathlist_tm     = inpathlist_tm,
+                             outpath           = outpath, 
+                             unit              = unit,
+                             unit_can          = unit_can,
+                             subtitle_delta    = subtitle_delta,
+                             legendlist_gm     = legendlist_gm, 
+                             legendlist_tm     = legendlist_tm )
 
 
 #####

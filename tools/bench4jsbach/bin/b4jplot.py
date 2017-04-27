@@ -382,7 +382,6 @@ def seas_timemean_plot ( varname = None,
                          legendlist_gm = None, legendlist_tm = None,
                          ax = None,
                          art = None ):
-    
 
     seasons =  ['DJF','MAM','JJA','SON']
     time    = [ 1,3,5,7 ]

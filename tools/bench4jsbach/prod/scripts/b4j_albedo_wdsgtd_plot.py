@@ -16,7 +16,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 from pycmbs.mapping import map_plot
 
-print "Starting %s" % os.path.realpath(__file__)
+print "\n\nStarting %s" % os.path.realpath(__file__)
 
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
@@ -123,4 +123,4 @@ plt.savefig ( kwargs [ 'albedo_wdsgtd_plot' ],
               bbox_inches = 'tight' )
 plt.close ()
 
-print "Exiting %s" % os.path.realpath(__file__)
+print "Exiting %s\n\n" % os.path.realpath(__file__)

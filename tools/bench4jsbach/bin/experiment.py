@@ -34,7 +34,8 @@ from util import (
     getdomain,
     gethostname,
     print_none,
-    subprocessing )
+    subprocessing,
+    stdout2devnull )
 
 #: a test documentation for the archive prefix constant
 ARCHIVE_PREFIX = "/hpss/arch/"
@@ -178,12 +179,14 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         cdo = Cdo ()
         for token in tokenlist:
             if os.path.isfile ( self.B4J_index [ token ]):
-                try:
-                    filetype = cdo.filedes ( input=self.B4J_index [ token ])
-                except:
-                    filetype = "unsupported filetype"
-                else:
-                    filetype = filetype[1]
+
+                with stdout2devnull ():
+                    try:
+                        filetype = cdo.filedes ( input=self.B4J_index [ token ])
+                    except:
+                        filetype = "unsupported filetype"
+                    else:
+                        filetype = filetype[1]
 
                 print "\nFor %s file '%s' written at %s" % ( self.B4J_name, token, self.B4J_index [ token ])
                 print "size %s byte, type %s" % ( os.stat ( self.B4J_index [ token ]).st_size, filetype )
