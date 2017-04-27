@@ -428,37 +428,57 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
-                    arglist = [ "can_name:" + can.B4J_name, "canno:%d" % can.B4J_canno ]
+                    arglist = [ "field_name:" + fielddict [ "field_name" ],
+                                "can_name:" + can.B4J_name,
+                                "canno:%d" % can.B4J_canno ]
+
+                    output_dict.main.interpolation = False
+                    for key in [ 'varname', 'unit',
+                                 'title_tmpl', 'legend_tmpl',
+                                 'funstr', 'statstr', 'statstr_tm' ]:
+                        if key in p_dict:
+                            arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
 
                     for ref in self.experiments:
                         if not ref.B4J_isref:            continue
                         if ref.B4J_name == can.B4J_name: continue
 
                         arglist.append ( "ref%s:" % ( ref.B4J_refno )  + ref.B4J_name  )
-                       
-                        for key in input_list:
-                            classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )
-                            arglist.append ( classification_str + ':' + can.B4J_index [ classification_str ])
 
+                        assert len ( input_list ) == 1
+                        classification_str =  "%s_ref%d" % ( input_list [ 0 ],  ref.B4J_refno )
+                        assert os.path.isfile ( can.B4J_index [ classification_str ])
+                        arglist.append ( "input_ref%d:" % ( ref.B4J_refno ) + \
+                                         can.B4J_index [ classification_str ])
+
+                        if 'input_tm' in p_dict:
+                            classification_str =  "%s_ref%d" % ( p_dict [ 'input_tm' ],  ref.B4J_refno )
+                            assert os.path.isfile ( can.B4J_index [ classification_str ])
+                            arglist.append ( 'input_tm_ref%d:' % ( ref.B4J_refno )  + \
+                                             can.B4J_index [ classification_str ])
+
+                    # TODO: HAS TO BE 1 OUTPUT ITEM
+                    count = 0
                     for output_item, output_dict in p_dict.iteritems ():
                         if not isinstance ( output_dict, configobj.Section ): continue
-                        can.B4J_index [ output_item ] = self.path_template % { 
+                        classification_str = output_item
+                        can.B4J_index [ classification_str ] = self.path_template % { 
                             'path'           : fielddict [ "graphics_path" ],
-                            'classification' : output_item,
+                            'classification' : classification_str,
                             'expname'        : can.B4J_name,
                             'startdate'      : can.B4J_startyear,
                             'enddate'        : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
-                        
-                        print "############## 1 ##############"
-                        print output_item
-                        print output_dict
-                        print "#############################"
 
-                        arglist.append ( output_item + ":" + can.B4J_index [ output_item ])
+                        arglist.append ( "outpath" + ":" + can.B4J_index [ classification_str ])
+                        count += 1
+                    if count != 1:
+                        print "\n\nWARNING: 'outpath' keyword argument is overwritten with the last item.\n\n"
 
                     cmd = ["python", executable ] +  arglist
                     subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+                    
+                    can.index_check_output ([ classification_str ])
 
                     
             elif p_dict [ 'nref' ] == "combined":
@@ -468,6 +488,13 @@ class Diagnostics ( object ):
                     arglist = [ "field_name:" + fielddict [ "field_name" ],
                                 "can_name:" + can.B4J_name,
                                 "canno:%d" % can.B4J_canno ]
+
+                    output_dict.main.interpolation = False
+                    for key in [ 'varname', 'unit', 'varname_can', 'unit_can',
+                                 'title_tmpl', 'legend_tmpl',
+                                 'funstr', 'funstr_can', 'statstr', 'statstr_tm' ]:
+                        if key in p_dict:
+                            arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
             
                     assert 'input_can' in p_dict and \
                         os.path.isfile ( can.B4J_index [ p_dict [ 'input_can' ]])
@@ -494,13 +521,6 @@ class Diagnostics ( object ):
                             assert os.path.isfile ( can.B4J_index [ classification_str ])
                             arglist.append ( 'input_tm_ref%d:' % ( ref.B4J_refno )  + \
                                              can.B4J_index [ classification_str ])
-
-                    output_dict.main.interpolation = False
-                    for key in [ 'varname', 'unit', 'varname_can', 'unit_can',
-                                 'title_tmpl', 'legend_tmpl',
-                                 'funstr', 'funstr_can', 'statstr', 'statstr_tm' ]:
-                        if key in p_dict:
-                            arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
 
                     # TODO: HAS TO BE 1 OUTPUT ITEM
                     count = 0

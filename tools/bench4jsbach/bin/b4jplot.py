@@ -310,22 +310,28 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
 
 
 
-def seas_timemean_plot_orig ( varname = None,
-                              inpathlist_gm = None, inpathlist_tm = None,
-                              outpath = None, mono = False,
-                              unit = None, title = None,
-                              legendlist_gm = None, legendlist_tm = None,
-                              **kwargs ):
+def seas_timemean_plot ( varname       = None,
+                         inpathlist_gm = None,
+                         inpathlist_tm = None,
+                         outpath       = None, 
+                         unit          = None,
+                         title         = None,
+                         legendlist_gm = None,
+                         legendlist_tm = None,
+                         mono          = False,
+                         **kwargs ):
     
 
     seasons =  ['DJF','MAM','JJA','SON']
 
     listlen = len ( inpathlist_gm )
 
+    assert listlen > 0
+
     hmargin_unitfactor = 1./2.
     vmargin_factor = 1./15.
         
-    fig     = plt.figure()
+    fig     = plt.figure ( figsize = ( 10, 7 ))
     
     ymin    = sys.float_info.max
     ymax    = - sys.float_info.max
@@ -353,14 +359,14 @@ def seas_timemean_plot_orig ( varname = None,
         plt.axhline ( tm [ 0, 0, 0 ],
                       color =  colorlist [ idx ],
                       label = legendlist_tm [ idx ])
-
+        
     ymargin = ( ymax - ymin ) * vmargin_factor
     plt.axis ([ xcoords [ 0 ], xcoords [ 5 ], ymin - ymargin, ymax + ymargin ])  
-    plt.title ( title, y = 1.08 )
-    plt.ylabel ( unit,
-                 rotation = 0,
-                 position = ( -0.5, .96 ),
-                 fontsize = 20 ) 
+    plt.title ( title, y = 1.04, fontsize = 18 )
+    plt.ylabel ( "[ %s ]" % unit,
+                 rotation = 90,
+                 position = ( -0.5, .88 ),
+                 fontsize = 14 ) 
     plt.xlabel ( "season")
     plt.xticks ( time, seasons )
     plt.grid ( 'on' )
@@ -375,13 +381,13 @@ def seas_timemean_plot_orig ( varname = None,
 
 
     
-def seas_timemean_plot ( varname = None,
-                         inpathlist_gm = None, inpathlist_tm = None,
-                         outpath = None, mono = False,
-                         unit = None, title = None,
-                         legendlist_gm = None, legendlist_tm = None,
-                         ax = None,
-                         art = None ):
+def seas_timemean_subplot ( varname = None,
+                            inpathlist_gm = None, inpathlist_tm = None,
+                            outpath = None, mono = False,
+                            unit = None, title = None,
+                            legendlist_gm = None, legendlist_tm = None,
+                            ax = None,
+                            art = None ):
 
     seasons =  ['DJF','MAM','JJA','SON']
     time    = [ 1,3,5,7 ]
@@ -462,14 +468,14 @@ def seas_timemean_plot_wrapper ( varname = None,
     f.add_subplot ( ax )
 
     # first subplot call
-    seas_timemean_plot ( varname       = varname_can,
-                         inpathlist_gm = inpathlist_gm_can, 
-                         inpathlist_tm = inpathlist_tm_can, 
-                         unit          = unit_can, 
-                         title         = subtitle_can,
-                         ax            = ax,
-                         art           = art,
-                         mono          = True )
+    seas_timemean_subplot ( varname       = varname_can,
+                            inpathlist_gm = inpathlist_gm_can, 
+                            inpathlist_tm = inpathlist_tm_can, 
+                            unit          = unit_can, 
+                            title         = subtitle_can,
+                            ax            = ax,
+                            art           = art,
+                            mono          = True )
     
     ####### second subplot
     subgrid = gridspec.GridSpecFromSubplotSpec (1, 1, subplot_spec = supgrid [ 1 ])
@@ -477,16 +483,15 @@ def seas_timemean_plot_wrapper ( varname = None,
     f.add_subplot ( ax ) 
 
     # second subplot call
-    seas_timemean_plot ( varname       = varname,
-                         inpathlist_gm = inpathlist_gm, 
-                         inpathlist_tm = inpathlist_tm,
-                         unit          = unit,
-                         title         = subtitle_delta,
-                         legendlist_gm = legendlist_gm,
-                         legendlist_tm = legendlist_tm,
-                         ax            = ax,
-                         art           = art )
-    
+    seas_timemean_subplot ( varname       = varname,
+                            inpathlist_gm = inpathlist_gm, 
+                            inpathlist_tm = inpathlist_tm,
+                            unit          = unit,
+                            title         = subtitle_delta,
+                            legendlist_gm = legendlist_gm,
+                            legendlist_tm = legendlist_tm,
+                            ax            = ax,
+                            art           = art )
 
     plt.savefig ( outpath,
                   bbox_extra_artists = ( art [ 0 ], ) if art else None,

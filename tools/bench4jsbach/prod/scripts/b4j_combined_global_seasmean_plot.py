@@ -101,7 +101,7 @@ for k in keylist:
     legendlist_tm.append ( legend )
 
 seas_timemean_plot_wrapper ( varname           = varname,
-                             varname_can       = "albedo",
+                             varname_can       = varname_can,
                              inpathlist_gm_can = inpathlist_gm_can, 
                              inpathlist_tm_can = inpathlist_tm_can, 
                              subtitle_can      = subtitle_can,
