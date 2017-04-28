@@ -377,14 +377,25 @@ class Diagnostics ( object ):
                     if not can.B4J_iscan: continue
 
                     arglist = [ "fieldname:" + fieldname,
-                                "suffix:" +  fielddict [ 'suffix' ],
                                 "land_sea_mask:" + can.land_sea_mask,
                                 "can_name:" + can.B4J_name,
                                 "canno:%d" % can.B4J_canno ]
+
                     
-                    for key in input_list:
-                        arglist.append ( key + ':' + can.B4J_index [ key ])
-                        
+                    output_dict.main.interpolation = False
+                    for key in [ 'varname', 'unit',
+                                 'title_tmpl', 'funstr', 'statstr',
+                                 'midpoint', 'vmin', 'vmax' ]:
+                        if key in p_dict:
+                            arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
+                    
+                    # for key in input_list:
+                    #     arglist.append ( key + ':' + can.B4J_index [ key ])
+                    assert len ( input_list ) == 1
+                    arglist.append ( 'inpath:' + can.B4J_index [ input_list [ 0 ]])
+                    
+                    # TODO: HAS TO BE 1 OUTPUT ITEM
+                    count = 0
                     for output_item, output_dict in p_dict.iteritems ():
                         if not isinstance ( output_dict, configobj.Section ): continue
                         classification_str = output_item
@@ -418,7 +429,11 @@ class Diagnostics ( object ):
                             except:
                                 print "ERROR in plotting title."
 
-                        arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+                        #arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+                        arglist.append ( "outpath" + ":" + can.B4J_index [ classification_str ])
+                        count += 1
+                    if count != 1:
+                        print "\n\nWARNING: 'outpath' keyword argument is overwritten with the last item.\n\n"
                         
                     cmd = ["python", executable ] +  arglist
                     subprocessing ( cmd, shell_arg = False, stderr_arg = None )

@@ -113,14 +113,33 @@ def colormap_prep ( vmin, vmax, vmean, nlev ):
     return values, level, ticks_interleave
 
     
-def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
-                       midpoint = np.nan, vmin = np.nan, vmax = np.nan,
-                       colormap = "BrBG" ):
+def mapplot_seasonal ( varname    = None,
+                       inpath     = None,
+                       outpath    = None,
+                       unit       = None,
+                       title      = None,
+                       midpoint   = None,
+                       vmin       = None,
+                       vmax       = None,
+                       colormap   = "BrBG" ):
     #from datetime import datetime
 
-    print "\n\ninpath:", inpath
+    print "\n\n mapplot_seasonal args:"
     print "varname:", varname
+    print "inpath:", inpath
     print "outpath:", outpath
+    print "unit:", unit
+    print "title:", title
+    print "midpoint:", midpoint
+    print "vmin:", vmin
+    print "vmax:", vmax
+    print "colormap:", colormap
+    print "end args\n\n"
+    
+    midpoint = float ( midpoint ) if midpoint else np.nan
+    vmin     = float ( vmin )     if vmin     else np.nan
+    vmax     = float ( vmax )     if vmax     else np.nan
+    
     seasonlabel =  ['DJF','MAM','JJA','SON']
     nseas       = 4
 
@@ -211,8 +230,8 @@ def mapplot_seasonal ( inpath, varname, outpath, unit_TeX, title_TeX,
                                      ticks = ticks, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    cb.ax.text ( 0.95, -0.96, "[%s]" % unit_TeX, size = 20 )
-    plt.suptitle ( title_TeX, fontsize = 24 )
+    cb.ax.text ( 0.95, -0.96, "[%s]" % unit, size = 20 )
+    plt.suptitle ( title, fontsize = 24 )
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
 
@@ -382,12 +401,16 @@ def seas_timemean_plot ( varname       = None,
 
     
 def seas_timemean_subplot ( varname = None,
-                            inpathlist_gm = None, inpathlist_tm = None,
-                            outpath = None, mono = False,
-                            unit = None, title = None,
-                            legendlist_gm = None, legendlist_tm = None,
+                            inpathlist_gm = None,
+                            inpathlist_tm = None,
+                            outpath = None,
+                            unit = None,
+                            title = None,
+                            legendlist_gm = None,
+                            legendlist_tm = None,
                             ax = None,
-                            art = None ):
+                            art = None,
+                            mono = False ):
 
     seasons =  ['DJF','MAM','JJA','SON']
     time    = [ 1,3,5,7 ]
