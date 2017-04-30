@@ -322,13 +322,37 @@ class Diagnostics ( object ):
                         if ref.B4J_name == can.B4J_name: continue
 
                         arglist = [ "fieldname:" + fieldname,
-                                    "suffix:" +  fielddict [ 'suffix' ],
-                                    "land_sea_mask:" + can.land_sea_mask ]
-                            
+                                    "land_sea_mask:" + can.land_sea_mask,
+                                    "can_name:" + can.B4J_name,
+                                    "canno:%d" % can.B4J_canno, 
+                                    "ref_name:" + ref.B4J_name,
+                                    "refno:%d" % ref.B4J_refno ]
+
+                    
+                        output_dict.main.interpolation = False
+                        for key in [ 'varname', 'unit',
+                                     'title_tmpl', 'funstr', 'statstr', 'nref',
+                                     'midpoint', 'vmin', 'vmax',
+                                     'colormap' ]:
+                            if key in p_dict:
+                                arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
+
+                        # todo: only one input?
+                        count = 0
                         for key in input_list:
                             classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )
-                            arglist.append ( key + ':' + can.B4J_index [ classification_str ])
+                            assert os.path.isfile ( can.B4J_index [ classification_str ])
+                            #arglist.append ( "input_ref%d:" % ( ref.B4J_refno ) + \
+                            arglist.append ( "inpath:" + \
+                                            can.B4J_index [ classification_str ])
+                            count += 1
+                        if count != 1:
+                            print "\n\nWARNING: 'inpath' keyword argument is overwritten with the last item.\n\n"
+                            
 
+                        # TODO: solve problems with tokens, this does not work with hydrology script
+                        # TODO: HAS TO BE 1 OUTPUT ITEM
+                        count = 0
                         for output_item, output_dict in p_dict.iteritems ():
                             if not isinstance ( output_dict, configobj.Section ): continue
                             classification_str = "%s_ref%d" % ( output_item,  ref.B4J_refno )
@@ -365,8 +389,13 @@ class Diagnostics ( object ):
                                 except:
                                     print "ERROR in plotting title."
 
+                            #arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+                            arglist.append ( "outpath" + ":" + can.B4J_index [ classification_str ])
+                            count += 1
+                        if count != 1:
+                            print "\n\nWARNING: 'outpath' keyword argument is overwritten with the last item.\n\n"
 
-                            arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+
 
                         cmd = ["python", executable ] +  arglist
                         subprocessing ( cmd, shell_arg = False, stderr_arg = None )
@@ -384,8 +413,9 @@ class Diagnostics ( object ):
                     
                     output_dict.main.interpolation = False
                     for key in [ 'varname', 'unit',
-                                 'title_tmpl', 'funstr', 'statstr',
-                                 'midpoint', 'vmin', 'vmax' ]:
+                                 'title_tmpl', 'funstr', 'statstr', 'nref',
+                                 'midpoint', 'vmin', 'vmax',
+                                 'colormap' ]:
                         if key in p_dict:
                             arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
                     
@@ -429,7 +459,6 @@ class Diagnostics ( object ):
                             except:
                                 print "ERROR in plotting title."
 
-                        #arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
                         arglist.append ( "outpath" + ":" + can.B4J_index [ classification_str ])
                         count += 1
                     if count != 1:

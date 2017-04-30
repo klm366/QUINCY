@@ -34,6 +34,8 @@ darkgreen  = '#6fc1b6'
     
 colors_hydrology  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
 
+seasonlabel =  ['DJF','MAM','JJA','SON']
+nseas       = 4
 
 def triangles_prep ( clon_vertices, clat_vertices, vardata ):
     print "start triangles_prep"
@@ -122,26 +124,10 @@ def mapplot_seasonal ( varname    = None,
                        vmin       = None,
                        vmax       = None,
                        colormap   = "BrBG" ):
-    #from datetime import datetime
-
-    print "\n\n mapplot_seasonal args:"
-    print "varname:", varname
-    print "inpath:", inpath
-    print "outpath:", outpath
-    print "unit:", unit
-    print "title:", title
-    print "midpoint:", midpoint
-    print "vmin:", vmin
-    print "vmax:", vmax
-    print "colormap:", colormap
-    print "end args\n\n"
     
     midpoint = float ( midpoint ) if midpoint else np.nan
     vmin     = float ( vmin )     if vmin     else np.nan
     vmax     = float ( vmax )     if vmax     else np.nan
-    
-    seasonlabel =  ['DJF','MAM','JJA','SON']
-    nseas       = 4
 
     nc_fid  = Dataset ( inpath, 'r')
 
@@ -171,13 +157,10 @@ def mapplot_seasonal ( varname    = None,
     nc_fid.close ()
 
     assert time.shape [ 0 ] == nseas
-
     
     vmax    = vardata.max () if np.isnan ( vmax ) else vmax
     vmin    = vardata.min () if np.isnan ( vmin ) else vmin
     vmean   = vardata.mean () if np.isnan ( midpoint ) else midpoint
-
-    print vmax,vmin,vmean
     
     # #print "####### COLORS: VALUES, LEVEL: #########"
     nlev        = 20
@@ -223,14 +206,14 @@ def mapplot_seasonal ( varname    = None,
                                 facecolors=latestvardata, cmap=cmap, norm=norm,
                                 edgecolor="face")       
    
-    f.subplots_adjust ( wspace = 0.05, hspace = 0.1 )#, bottom= 0.1 )
+    f.subplots_adjust ( wspace = 0.05, hspace = 0.1 )#, bottom= 0.15 )
     cax = f.add_axes ([ 0.125, 0.058, 0.775, 0.03 ]) # left, bottom, width, height
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
                                      orientation = 'horizontal', extend = 'neither', 
                                      ticks = ticks, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    cb.ax.text ( 0.95, -0.96, "[%s]" % unit, size = 20 )
+    cb.ax.text ( 0.98, -1.3, "[%s]" % unit, size = 20 )
     plt.suptitle ( title, fontsize = 24 )
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
@@ -340,9 +323,6 @@ def seas_timemean_plot ( varname       = None,
                          mono          = False,
                          **kwargs ):
     
-
-    seasons =  ['DJF','MAM','JJA','SON']
-
     listlen = len ( inpathlist_gm )
 
     assert listlen > 0
@@ -387,7 +367,7 @@ def seas_timemean_plot ( varname       = None,
                  position = ( -0.5, .88 ),
                  fontsize = 14 ) 
     plt.xlabel ( "season")
-    plt.xticks ( time, seasons )
+    plt.xticks ( time, seasonlabel )
     plt.grid ( 'on' )
     lgd = plt.legend ( numpoints = 1,  
                        loc = 2,                  
@@ -412,7 +392,6 @@ def seas_timemean_subplot ( varname = None,
                             art = None,
                             mono = False ):
 
-    seasons =  ['DJF','MAM','JJA','SON']
     time    = [ 1,3,5,7 ]
 
     listlen = len ( inpathlist_gm )
@@ -455,7 +434,7 @@ def seas_timemean_subplot ( varname = None,
                     fontsize = 14 ) 
     ax.set_xlabel ( "season")
     ax.set_xticks ( time )
-    ax.set_xticklabels ( seasons )
+    ax.set_xticklabels ( seasonlabel )
     ax.grid ( 'on' )
     lgd = ax.legend ( numpoints = 1,  
                      loc = 2, 

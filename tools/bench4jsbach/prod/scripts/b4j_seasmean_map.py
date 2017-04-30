@@ -42,13 +42,6 @@ fieldname      = kwargs [ "fieldname" ]
 ##### plotting
 #####
 
-# inpath     = kwargs [ 'A_seasmean' ]	
-# varname    = 'albedo'
-# outpath    = kwargs [ 'A_seasmean_plot' ]
-# unit       = '1'
-# unit_TeX   = unit
-# title_TeX  = kwargs [ 'plot_title_A_seasmean_plot' ]
-
 can_name          = kwargs.get ( "can_name" )
 canno             = kwargs.get ( "canno" )
 
@@ -59,7 +52,7 @@ statstr           = kwargs.get ( 'statstr', 'STAT' )
 inpath            = kwargs.get ( 'inpath' )
 field_name        = kwargs.get ( "field_name" )
 varname           = kwargs.get ( "varname" )
-unit              = kwargs.get ( "unit", 'unkn' )
+unit              = kwargs.get ( "unit", 'UNKN' )
 
 colormap          = kwargs.get ( 'colormap', 'BrBG' )
 midpoint          = kwargs.get ( 'midpoint', None )
@@ -68,12 +61,21 @@ vmax              = kwargs.get ( 'vmax', None )
 
 outpath           = kwargs.get ( "outpath" )
 
+nref              = kwargs.get ( 'nref', None )
 
-title             = title_tmpl % { 'funstr': funstr,
+if nref == "single":
+    refno         = kwargs.get ( 'refno' )
+    ref_name      = kwargs.get ( 'ref_name' )
+    title         = title_tmpl % { 'funstr': funstr,
+                                   'stat1str': statstr,
+                                   'expabr': "C_%sR_%s" % ( canno, refno ),
+                                   'expl': ", $C_{%s}$: %s, $R_{%s}$: %s" % (
+                                       canno, can_name, refno, ref_name )}
+else:
+    title         = title_tmpl % { 'funstr': funstr,
                                    'stat1str': statstr,
                                    'expabr': "C_%s" % ( canno ),
                                    'expl': ", $C_{%s}$: %s" % ( canno, can_name )}
-
 
 mapplot_seasonal ( varname    = varname,
                    inpath     = inpath,
