@@ -157,7 +157,7 @@ function generate_gauss_data {
 #    sed -i '/C3C4_crop_LUH2v2h_/s/LUH2v2h_//' jsbach_init_file.ksh
     sed -i '/LUH_states=/s/=.*$/=LUH_states_T255.nc/' jsbach_init_file.ksh
 #    sed -i '/${pool_land}\/soil_parameters_/s/soil_parameters.*$/5soillayers_${res_atm}.nc .\/soil_parameters_${res_atm}.nc/' jsbach_init_file.ksh
-#  else
+  else
     sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
   fi
   sed -i '/pool=/a pool=\/pool\/data\/ECHAM6\/\$\{res_atm\}' jsbach_init_file.ksh
@@ -680,9 +680,14 @@ do
       ulimit -m unlimited
   fi
 
-  [[ "${old_r2b4_amip}" != "true" ]] && grid_name=R02B${n0} || grid_name=r2b4_amip
-
-  source_res=${source_res_dict[${bisection}]}
+  if [[ "${old_r2b4_amip}" != "true" ]]
+  then
+     grid_name=R02B${n0}
+     source_res=${source_res_dict[${bisection}]}
+  else
+     grid_name=r2b4_amip
+     source_res=T63
+  fi
 
   echo "=============================================================="
   echo "===  Generating files for $grid_name from $source_res      ==="
@@ -740,7 +745,7 @@ do
 
   [[ "${old_r2b4_amip}" != "true" ]] && \
     output_dir="${output_path}/R2B${bisection}/land" || \
-    output_dir="${output_path}/r2b4_amip/lnd"
+    output_dir="${output_path}/r2b4_amip/land"
   mkdir -p ${output_dir} || true
 
   if [[ ${dryrun} != "true" ]]
