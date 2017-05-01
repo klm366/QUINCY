@@ -11,7 +11,7 @@
 #  Nov 10, 2016: Reiner Schnur, MPIM
 #  
 
-import sys, getopt, re, os, fnmatch
+import sys, getopt, re, os, fnmatch, io
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
 #re_function = re.compile(r'.*(dsl4jsb_(.*?)( |\())+', re.IGNORECASE)
@@ -125,7 +125,7 @@ def tolower(match):
     return match.group(1).lower()+'_'
 
 def process_file(inputfile, outputfile, verbose=False, cwd=None):
-    with open(inputfile, 'r') as infile:
+    with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (open(outputfile, 'w') if outputfile != '' else sys.stdout) as outfile:
             outfile.write("!\n! This file was automatically generated from:\n")
             outfile.write("!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n")
@@ -148,7 +148,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                         except:
                             print('ERROR in ' + inputfile + ': dsl4jsb macro not found: ' + match.group(1).lower())
                             sys.exit()
-                outfile.write(line)
+                outfile.write(str(line))
 
 def main(argv):
     inputfile = ''
