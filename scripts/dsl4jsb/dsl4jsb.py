@@ -127,8 +127,8 @@ def tolower(match):
 def process_file(inputfile, outputfile, verbose=False, cwd=None):
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
-            outfile.write("!\n! This file was automatically generated from:\n")
-            outfile.write("!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n")
+            outfile.write(u'!\n! This file was automatically generated from:\n')
+            outfile.write(u'!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n')
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
@@ -136,7 +136,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                     print('   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile)
             for line in infile:
                 if outputfile == '':
-                    outfile.write('! ' + line)
+                    outfile.write(u'! ' + line)
                 matches = re.finditer(re_function, line)
                 if matches:
                     for match in matches:         # match.groupt(1) contains the macro name without "dsl4jsb_"
