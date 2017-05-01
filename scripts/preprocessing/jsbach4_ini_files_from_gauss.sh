@@ -71,7 +71,6 @@ soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_condu
 moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
-#[[ ${npfts} > 0 ]] && varlist="${varlist} cover_fract"
 
 coupled=false    # land sea mask for coupled experiment?
 hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04/Land/hd_para_icon_r2b4_pre04_vs1_5.nc
@@ -146,11 +145,21 @@ function generate_gauss_data {
   sed -i '/pool_atm_standalone=\/work\/mh0081\/prep\/echam6/d' create_input_cosmos.ksh
   sed -i '/pool_atm_standalone=\/work\/im0454\/ECHAM6/d' create_input_cosmos.ksh
   sed -i '216,224d' create_input_cosmos.ksh
+  sed -i '/pool_srf=\/work\/im0454\/JSBACH/d' create_input_cosmos.ksh
 
   sed -i '/lcmip5_pasture=.true./a\[\[ ${lpasture} = true \]\] && lpasture=\.true\. \|\| lpasture=\.false\.' jsbach_init_file.ksh
   sed -i '1,$s/^#vg//' jsbach_init_file.ksh
   #sed -i '/lpasture=.true./alandcover_series=false' jsbach_init_file.ksh
-  sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
+  if [[ "${res_atm}" == "T255" ]]
+  then
+#    sed -i '/pool_land=/a pool_land=/pool/data/JSBACH/T255' jsbach_init_file.ksh
+    sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
+#    sed -i '/C3C4_crop_LUH2v2h_/s/LUH2v2h_//' jsbach_init_file.ksh
+    sed -i '/LUH_states=/s/=.*$/=LUH_states_T255.nc/' jsbach_init_file.ksh
+#    sed -i '/${pool_land}\/soil_parameters_/s/soil_parameters.*$/5soillayers_${res_atm}.nc .\/soil_parameters_${res_atm}.nc/' jsbach_init_file.ksh
+#  else
+    sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
+  fi
   sed -i '/pool=/a pool=\/pool\/data\/ECHAM6\/\$\{res_atm\}' jsbach_init_file.ksh
   sed -i '/landcover_series=/a pasture_rule=\$cmip5_pasture' jsbach_init_file.ksh
   sed -i '/landcover_series=/a lpasture=\$cmip5_pasture' jsbach_init_file.ksh
