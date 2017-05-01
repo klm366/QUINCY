@@ -71,6 +71,7 @@ soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_condu
 moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
+#[[ ${npfts} > 0 ]] && varlist="${varlist} cover_fract"
 
 coupled=false    # land sea mask for coupled experiment?
 hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04/Land/hd_para_icon_r2b4_pre04_vs1_5.nc
@@ -94,20 +95,21 @@ sso_dict[orothe]=SSO_THETA
 
 set +u
 . ${MODULESHOME}/init/bash
-module unload cdo nco netcdf
+module unload cdo nco netcdf nag
 case `hostname` in
   mlogin*|mistralpp*)
     module load cdo/1.8.0-magicsxx-gcc48
     module load nco/4.5.0-gcc48
     module load netcdf_c/4.3.2-gcc48
+    module load nag/6.0.1064
     ;;
    *)
     module load cdo/1.8.0-gccsys
     module load nco/4.5.2
     module load netcdf
+    module load nag
     ;;
 esac
-module load nag
 set -u
 
 #_____________________________________________________________________________
@@ -152,10 +154,26 @@ function generate_gauss_data {
   sed -i '/pool=/a pool=\/pool\/data\/ECHAM6\/\$\{res_atm\}' jsbach_init_file.ksh
   sed -i '/landcover_series=/a pasture_rule=\$cmip5_pasture' jsbach_init_file.ksh
   sed -i '/landcover_series=/a lpasture=\$cmip5_pasture' jsbach_init_file.ksh
+  sed -i '/`uname -s` == AIX/s/`uname -s` == AIX/`hostname` == mistralpp*/' jsbach_init_file.ksh
+  sed -i '/F90=xlf_r/s/xlf_r/nagfor/' jsbach_init_file.ksh
+  sed -i '80a F90FLAGS="-colour -maxcontin=100 -wmismatch=define_var_new,nf_get_var_double,nf_copy_att,nf_get_var_real,nf_put_var_double,nf_def_var,nf_put_vara_double,dgemm,nfmpi_def_dim,nfmpi_put_vara_double,nfmpi_def_var -C=all -g -gline -nan -w=uep"' jsbach_init_file.ksh
+  sed -i '/qextname/d' jsbach_init_file.ksh
+  sed -i '/XLFRTEOPTS/d' jsbach_init_file.ksh
+  sed -i '/\/sw\/aix61\/netcdf-4.1.1/s/NETCDFROOT=.*$/NETCDFFROOT=\/sw\/rhel6-x64\/netcdf\/netcdf_fortran-4.4.2-static-nag60/' jsbach_init_file.ksh
+  sed -i '/netcdf_fortran-4.4.2-static-nag60/a NETCDFROOT=\/sw\/rhel6-x64\/netcdf\/netcdf_c-4.4.0-gcc48' jsbach_init_file.ksh
+  sed -i '/NETCDF_LIBDIR=/a NETCDFF_LIBDIR=-L\$\{NETCDFFROOT\}\/lib' jsbach_init_file.ksh
+  sed -i '/NETCDF_INCLUDE=/a NETCDFF_INCLUDE=-I\$\{NETCDFFROOT\}\/include' jsbach_init_file.ksh
+  sed -i '91a NETCDFF_LIB="-lnetcdff"' jsbach_init_file.ksh
+  sed -i '/hdf5-1.8.4-patch1/s/=.*$/=\/sw\/rhel6-x64\/hdf5\/hdf5-1.8.14-threadsafe-gcc48/' jsbach_init_file.ksh
+  sed -i '/HDF5_LIB="-lhdf5_hl -lhdf5"/s/hdf5\"$/hdf5 -ldl\"/' jsbach_init_file.ksh
+  sed -i '/aix61\/szip-2.1/s/=.*$/=\/sw\/rhel6-x64\/sys\/libaec-0.3.2-gcc48/' jsbach_init_file.ksh
+  sed -i '/aix61\/zlib-1.2.6/s/=.*$/=\/usr\/lib64/' jsbach_init_file.ksh
+  sed -i '/ZLIB_LIB=/s/-lz/-lz -ldl -lm -lnuma -Wl,--export-dynamic -lrt -lnsl -lutil -lm -ldl/' jsbach_init_file.ksh
+  sed -i '/ZLIB_LIB=/a export LD_LIBRARY_PATH=\"\/sw\/rhel6-x64\/hdf5\/hdf5-1.8.14-threadsafe-gcc48\/lib:\/sw\/rhel6-x64\/netcdf\/netcdf_c-4.4.0-gcc48\/lib:\/sw\/rhel6-x64\/sys\/libaec-0.3.2-gcc48\/lib\"' jsbach_init_file.ksh
 
   [[ -d tarfiles ]] || mkdir ./tarfiles
 
-  ./create_input_cosmos.ksh
+  ./create_input_cosmos.ksh >& /dev/null
 
   tar xf tarfiles/cosmos-s/input_cosmos-s.tar
   mv input/jsbach/jsbach_*.nc ../
