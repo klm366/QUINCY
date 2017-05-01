@@ -148,7 +148,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                         except:
                             print('ERROR in ' + inputfile + ': dsl4jsb macro not found: ' + match.group(1).lower())
                             sys.exit()
-                outfile.write(str(line))
+                outfile.write(line)
 
 def main(argv):
     inputfile = ''
