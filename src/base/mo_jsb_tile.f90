@@ -22,7 +22,8 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
     &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
-  USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_msg
+  ! USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_msg
+  USE mo_jsb_task_class,      ONLY: t_jsb_process_task
   USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
 
   IMPLICIT NONE
