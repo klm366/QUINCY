@@ -16,13 +16,15 @@ MODULE mo_jsb_task_class
 
   USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, l_timer, debug_on
 
-  USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
+  ! USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
+  USE mo_hsm_class,       ONLY: t_Message
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_msg, t_jsb_task_options
+  ! PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_msg, t_jsb_task_options
+  PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
 
   TYPE t_jsb_task_options
     REAL(wp) :: dtime   = -1._wp
@@ -87,7 +89,8 @@ CONTAINS
   SUBROUTINE Do_it(this, msg, tile, options)
 
     CLASS(t_jsb_process_task),  INTENT(in)    :: this
-    CLASS(t_jsb_task_msg),      INTENT(in)    :: msg
+    ! CLASS(t_jsb_task_msg),      INTENT(in)    :: msg
+    CLASS(t_Message),           INTENT(in)    :: msg
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
