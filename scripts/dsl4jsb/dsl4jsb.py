@@ -126,7 +126,7 @@ def tolower(match):
 
 def process_file(inputfile, outputfile, verbose=False, cwd=None):
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
-        with (open(outputfile, 'w') if outputfile != '' else sys.stdout) as outfile:
+        with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
             outfile.write("!\n! This file was automatically generated from:\n")
             outfile.write("!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n")
             if verbose:
