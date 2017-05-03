@@ -20,6 +20,7 @@ MODULE mo_jsb_config_class
 
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)  :: grid_filename
+    CHARACTER(len=filename_max)  :: fract_filename
     CHARACTER(len=30)            :: grid_name
     CHARACTER(len=30)            :: usecase
   END TYPE t_jsb_model_config
@@ -60,10 +61,12 @@ CONTAINS
       grid_filename,          &
       grid_name
 
+    CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=30)           :: usecase
 
     NAMELIST /jsb_model_nml/  &
-      usecase
+      usecase, &
+      fract_filename
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -74,9 +77,10 @@ CONTAINS
     ALLOCATE(new)
 
     ! Set defaults
-    grid_filename = ''
-    grid_name     = ''
-    usecase       = ''
+    grid_filename  = ''
+    grid_name      = ''
+    usecase        = ''
+    fract_filename = 'bc_land_frac.nc'
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -90,7 +94,8 @@ CONTAINS
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
 
-    new%usecase       = usecase
+    new%usecase        = usecase
+    new%fract_filename = fract_filename
 
     CALL close_nml(nml_handler)
 

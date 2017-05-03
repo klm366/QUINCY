@@ -61,10 +61,11 @@ CONTAINS
   !!
   !! Subroutine to construct new instance of basic model structure.
   !!
-  FUNCTION new_model(name, shortname, description, namelist_filename) RESULT(return_ptr)
+  FUNCTION new_model(id, name, shortname, description, namelist_filename) RESULT(return_ptr)
 
     USE mo_jsb_process_factory, ONLY: max_no_of_processes
 
+    INTEGER,                    INTENT(in) :: id
     CHARACTER(len=*),           INTENT(in) :: name
     CHARACTER(len=*),           INTENT(in) :: shortname
     CHARACTER(len=*),           INTENT(in) :: description
@@ -77,6 +78,7 @@ CONTAINS
 
     ALLOCATE(return_ptr)
 
+    return_ptr%id                = id
     return_ptr%name              = TRIM(name)
     return_ptr%shortname         = TRIM(shortname)
     return_ptr%description       = TRIM(description)

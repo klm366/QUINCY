@@ -166,7 +166,7 @@ CONTAINS
       & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water))    ! Soil layer thicknesses from namelist
 
     CALL jsb_netcdf_close_file(input_file)                              ! Temporary
-    input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%id)     ! Temporary
+    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%id)     ! Temporary
 
     ! Maximum foliage projected cover
     return_pointer => jsb_netcdf_read_2d(        &

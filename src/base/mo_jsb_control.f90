@@ -29,6 +29,7 @@ MODULE mo_jsb_control
   INTEGER :: debug
 
   TYPE t_jsb_model_nml
+    INTEGER            :: model_id
     CHARACTER(len=30)  :: model_name
     CHARACTER(len=10)  :: model_shortname
     CHARACTER(len=132) :: model_description
@@ -78,12 +79,13 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
 
+    INTEGER            :: model_id
     CHARACTER(len=30)  :: model_name
     CHARACTER(len=10)  :: model_shortname
     CHARACTER(len=132) :: model_description
     CHARACTER(len=filename_max) :: model_namelist_filename
 
-    INTEGER :: nml_handler, nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat, i
     LOGICAL :: rwnd
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_jsb_control_namelist'
@@ -95,6 +97,7 @@ CONTAINS
       debug
 
     NAMELIST /jsb_model_nml/   &
+      model_id,                &
       model_name,              &
       model_shortname,         &
       model_description,       &
@@ -111,27 +114,52 @@ CONTAINS
     nml_unit = position_nml('jsb_control_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_control_nml)
 
+    ! Get number of models first
     rwnd = .TRUE.
     no_of_models = 0
     DO
       nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
       IF (istat /= POSITIONED) EXIT
-      IF (no_of_models >= max_no_of_models) THEN
-        CALL finish(routine, 'no_of_models >= max_no_of_models')
-      ENDIF
+      rwnd=.FALSE.
+      no_of_models = no_of_models + 1
+      READ(nml_unit, jsb_model_nml)
+    END DO
+
+    IF (no_of_models >= max_no_of_models) THEN
+      CALL finish(routine, 'no_of_models >= max_no_of_models')
+    ENDIF
+
+    ! Now read namelists again and set parameters
+    ! Note: no_of_models needs to be known here (therfore extra loop above) in order to test for a valid model_id below
+    rwnd = .TRUE.
+    DO i=1,no_of_models
+      nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
+      IF (istat /= POSITIONED) THEN
+        CALL finish(TRIM(routine), 'jsb_model_nml not found in namelist')
+      END IF
       rwnd=.false.
 
+      model_id = i
       model_name = ''
       model_shortname = ''
       model_description = ''
       model_namelist_filename = ''
+
       READ(nml_unit, jsb_model_nml)
 
-      no_of_models = no_of_models + 1
-      jsb_models_nml(no_of_models)%model_name              = model_name
-      jsb_models_nml(no_of_models)%model_shortname         = model_shortname
-      jsb_models_nml(no_of_models)%model_description       = model_description
-      jsb_models_nml(no_of_models)%model_namelist_filename = model_namelist_filename
+      IF (jsb_models_nml(model_id)%model_id > 0) THEN
+        CALL finish(TRIM(routine), 'Model id already taken.')
+      END IF
+
+      IF (model_id > no_of_models) THEN
+        CALL finish(TRIM(routine), 'Model id larger than number of models.')
+      END IF
+
+      jsb_models_nml(i)%model_id                = model_id
+      jsb_models_nml(i)%model_name              = model_name
+      jsb_models_nml(i)%model_shortname         = model_shortname
+      jsb_models_nml(i)%model_description       = model_description
+      jsb_models_nml(i)%model_namelist_filename = model_namelist_filename
     END DO
 
     CALL close_nml(nml_handler)

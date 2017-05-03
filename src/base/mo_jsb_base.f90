@@ -14,6 +14,7 @@ MODULE mo_jsb_base
 !!$  USE mo_jsb_class, ONLY: t_jsb, jsbach
   USE mo_jsb_class,   ONLY: jsbach
   USE mo_exception,   ONLY: message_text, message, finish
+  USE mo_util,        ONLY: int2string
 
   IMPLICIT NONE
   PRIVATE
@@ -70,12 +71,12 @@ CONTAINS
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(current)
-      current => new_model(jsb_models_nml(model_idx)%model_name,              &
-                           jsb_models_nml(model_idx)%model_shortname,         &
-                           jsb_models_nml(model_idx)%model_description,       &
-                           jsb_models_nml(model_idx)%model_namelist_filename)
-      current%id = model_idx
-      jsbach%models(model_idx)%m => current
+      current => new_model(jsb_models_nml(model_idx)%model_id,                &
+        &                  jsb_models_nml(model_idx)%model_name,              &
+        &                  jsb_models_nml(model_idx)%model_shortname,         &
+        &                  jsb_models_nml(model_idx)%model_description,       &
+        &                  jsb_models_nml(model_idx)%model_namelist_filename)
+      jsbach%models(jsb_models_nml(model_idx)%model_id)%m => current
     END DO
 
     ! Configure models according to model namelist(s)
@@ -83,6 +84,12 @@ CONTAINS
        NULLIFY(current)
        current => jsbach%models(model_idx)%m
        current%config => new_model_config(current%namelist_filename)
+
+       CALL message(TRIM(routine), 'New jsbach model: '//TRIM(current%shortname))
+       CALL message('     ', '... ID: '//TRIM(int2string(current%id)))
+       CALL message('     ', '... Usecase: '//TRIM(current%config%usecase))
+       CALL message('     ', '... Reading configuration from namelist: '//TRIM(current%namelist_filename))
+       CALL message('     ', '... Reading tile fractions from: '//TRIM(current%config%fract_filename))
 
        IF (jsbach_runs_standalone()) THEN
          CALL init_time(TRIM(current%namelist_filename), TRIM(current%shortname), jsbach_is_restarted())
@@ -93,8 +100,6 @@ CONTAINS
     END DO
 
     !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: delete!?
-
-    CALL message(TRIM(routine), 'done basic initialization')
 
   END SUBROUTINE init_base
 

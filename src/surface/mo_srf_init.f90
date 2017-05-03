@@ -105,8 +105,8 @@ CONTAINS
 
     CALL jsb_netcdf_close_file(input_file)
 
-    CALL message(TRIM(routine), 'Initializing srf memory for tile '//TRIM(tile%name)//' from bc_land_frac.nc')
-    input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%id)     ! Temporary
+    CALL message(TRIM(routine), 'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(model%config%fract_filename))
+    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%id)     ! Temporary
 !!$    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_filename), model%id)
 
     ! Land mask (including glacies and lakes)
