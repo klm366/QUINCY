@@ -218,15 +218,21 @@ def mapplot_seasonal ( varname    = None,
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
 
+
+def mapplot ( varname    = None,
+              inpath     = None,
+              outpath    = None,
+              unit       = None,
+              title      = None,
+              midpoint   = None,
+              vmin       = None,
+              vmax       = None,
+              colormap   = "BrBG",
+              tstep_no = 0 ):
     
-    
-def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
-              midpoint = np.nan, vmin = np.nan, vmax = np.nan,
-              colormap = "BrBG", tstep_no = 0 ):
-   
-    print "\n\ninpath:", inpath
-    print "varname:", varname
-    print "outpath:", outpath
+    midpoint = float ( midpoint ) if midpoint else np.nan
+    vmin     = float ( vmin )     if vmin     else np.nan
+    vmax     = float ( vmax )     if vmax     else np.nan
 
     nc_fid  = Dataset ( inpath, 'r')
 
@@ -302,11 +308,11 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX,
                                      ticks = ticks, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    plt.text ( 0.5, 1.04, title_TeX,
+    plt.text ( 0.5, 1.04, title,
                horizontalalignment = 'center',
                fontsize = 20,
                transform = ax.transAxes )
-    
+    cb.ax.text ( 0.89, 1.5, "[%s]" % unit, size = 16 )
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
 

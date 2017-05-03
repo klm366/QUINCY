@@ -300,7 +300,7 @@ class Diagnostics ( object ):
                                 if  isinstance ( output_dict, configobj.Section ) \
                                 for ref in self.experiments if ref.B4J_isref ]
                 print new_indices
-                can.index_check_output ( new_indices )
+                #can.index_check_output ( new_indices )
                 
         self.logger.debug ( "Finished diagnostic with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))

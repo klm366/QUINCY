@@ -9,6 +9,7 @@ print "Starting %s" % os.path.realpath(__file__)
 #####
 ##### bench4jsbach library to environment path
 #####
+
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
 except KeyError: 
@@ -25,6 +26,7 @@ from util import print_item_or_list_rec
 #####
 ##### check input parameter
 #####
+
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -35,18 +37,17 @@ print print_item_or_list_rec ( kwargs, 3 )
 #####
 ##### constants definition
 #####
+
 fieldname      = "hydrology"
 unit           = "mm/day"
 unit_factor_EP = 86400
 sign_adjust_E     = -1
 unit_factor_RD = 86400000
 
-yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
-                                                        int ( kwargs [ 'finalyear' ]) + 1 ))
-
 #####
 ##### set unit to mm/day
-##### 
+#####
+
 cdo = Cdo ()
 
 cdo.setname ( "precip_acc",
