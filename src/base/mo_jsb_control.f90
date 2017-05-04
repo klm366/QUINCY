@@ -174,7 +174,7 @@ CONTAINS
       READ(nml_unit, jsb_model_nml)
 
       IF (jsb_models_nml(model_id)%model_id > 0) THEN
-        CALL finish(TRIM(routine), 'Model id alread taken.')
+        CALL finish(TRIM(routine), 'Model id already taken.')
       END IF
 
       IF (model_id > no_of_models) THEN
