@@ -21,9 +21,6 @@ from pprint import pprint
 from diagnostics import get_seasonal_period_2d_coords
 from util import print_item_or_list_rec
 
-# from matplotlib import rcParams
-# rcParams.update({'figure.autolayout': True})
-
 
 colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
     
