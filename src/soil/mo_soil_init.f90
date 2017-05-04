@@ -194,7 +194,7 @@ CONTAINS
       MERGE(dsl4jsb_var2D_onDomain(SOIL, vhcap), 2.e6_wp, dsl4jsb_var2D_onDomain(SOIL, vhcap) >= 0._wp)
 
     CALL jsb_netcdf_close_file(input_file)                              ! Temporary
-    input_file = jsb_netcdf_open_input('bc_land_phys.nc', model%id)     ! Temporary
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_filename), model%id)
 
     ! Albedo
     return_pointer => jsb_netcdf_read_2d(         &

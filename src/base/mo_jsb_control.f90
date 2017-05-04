@@ -22,6 +22,7 @@ MODULE mo_jsb_control
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
+  PUBLIC :: max_no_of_models
 
   LOGICAL :: is_standalone
   LOGICAL :: restart_jsbach
@@ -36,7 +37,7 @@ MODULE mo_jsb_control
     CHARACTER(len=filename_max) :: model_namelist_filename
   END TYPE t_jsb_model_nml
 
-  INTEGER, PARAMETER    :: max_no_of_models = 2
+  INTEGER, PARAMETER    :: max_no_of_models = 10
   INTEGER :: no_of_models = 0
   TYPE(t_jsb_model_nml) :: jsb_models_nml(max_no_of_models)
 
@@ -125,7 +126,7 @@ CONTAINS
       READ(nml_unit, jsb_model_nml)
     END DO
 
-    IF (no_of_models >= max_no_of_models) THEN
+    IF (no_of_models > max_no_of_models) THEN
       CALL finish(routine, 'no_of_models >= max_no_of_models')
     ENDIF
 
