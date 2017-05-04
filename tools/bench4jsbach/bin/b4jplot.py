@@ -506,14 +506,20 @@ def seas_timemean_plot_wrapper ( varname = None,
                   bbox_inches = 'tight' if art else None  )
 
     plt.close ()
-    
 
-def zon_plot ( varname, unit, title, inpathlist, legendlist, 
-               outpath = None, 
-               ax = None,
-               art = None,
-               mono = False ):  
-  
+
+
+def zon_plot ( varname       = None,
+               inpathlist    = None,
+               outpath       = None, 
+               unit          = None,
+               title         = None,
+               legendlist    = None,
+               ax            = None,
+               art           = None,
+               mono          = False,
+               **kwargs ):
+
     nrefargs = len ( inpathlist )   
     
     for refarg_no in range ( nrefargs ):
@@ -544,11 +550,17 @@ def zon_plot ( varname, unit, title, inpathlist, legendlist,
     if isinstance ( art, list ) and lgd: art.append ( lgd )
 
 
-def zon_plot_wrapper ( varname, unit, can_name, canno, 
-                       input_can, subtitle_can,
-                       input_delta, legend_delta, subtitle_delta,
-                       outpath ):
-
+def zon_plot_wrapper ( varname_can    = None,
+                       inpathlist_can = None,
+                       unit_can       = None,
+                       subtitle_can   = None,
+                       varname        = None,
+                       inpathlist     = None,
+                       unit           = None, 
+                       subtitle       = None,
+                       outpath        = None, 
+                       legendlist     = None ):
+   
     f = plt.figure ( figsize = ( 10, 15 ))
     show_can = True
     supgrid = gridspec.GridSpec( 2 if show_can == True else 1, 1 ) 
@@ -558,32 +570,28 @@ def zon_plot_wrapper ( varname, unit, can_name, canno,
     subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 0 ])
     ax = plt.Subplot ( f, subgrid [ :, : ])
     f.add_subplot ( ax )
-    
-    # first subplot args
-    subtitle   = subtitle_can
-    inpathlist = [ input_can ]
-    legendlist = []
 
-    # first subplot call
-    zon_plot ( varname, unit, subtitle, inpathlist, legendlist, 
-               ax = ax,
-               art = art,
-               mono = True )
+    zon_plot ( varname       = varname_can,
+               inpathlist    = inpathlist_can,
+               unit          = unit_can,
+               title         = subtitle_can,
+               legendlist    = [],
+               ax            = ax,
+               art           = art,
+               mono          = True )
     
     ####### second subplot
     subgrid = gridspec.GridSpecFromSubplotSpec (1, 1, subplot_spec = supgrid [ 1 ])
     ax = plt.Subplot ( f, subgrid [ :, : ])
     f.add_subplot ( ax ) 
 
-    # first subplot args
-    subtitle      = subtitle_delta
-    inpathlist = input_delta
-    legendlist = legend_delta
-
-    # first subplot call
-    zon_plot ( varname, unit, subtitle, inpathlist, legendlist, 
-               ax = ax,
-               art = art )
+    zon_plot ( varname       = varname,
+               inpathlist    = inpathlist,
+               unit          = unit,
+               title         = subtitle,
+               legendlist    = legendlist,
+               ax            = ax,
+               art           = art )
 
     plt.savefig ( outpath,
                   bbox_extra_artists = ( art [ 0 ], ) if art else None,
