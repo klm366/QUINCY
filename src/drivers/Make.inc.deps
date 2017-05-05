@@ -25,6 +25,7 @@ mo_land_model_interface.o: \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_shared_output.o \
+  mo_sb_util.o \
   mo_veg_util.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \

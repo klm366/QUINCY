@@ -8,18 +8,165 @@
 !! First version by Jan Engel (20170104)
 !!
 MODULE mo_sb_util
+#include "dsl_jsbach.inc"
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
-!  PRIVATE
-!  PUBLIC
+  PRIVATE
+  PUBLIC reset_sb_fluxes
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
-!CONTAINS
+CONTAINS
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init/reset sb fluxes (with/to zero)
+  !! 
+  !! called in the land model interface prior to all Tasks
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE reset_sb_fluxes(tile, options)
+
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_base_constants,        ONLY: zero
+
+    ! Use of process memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    TYPE(t_slm_tile),         INTENT(inout), TARGET  :: tile         !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)             :: options      !< model options
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_model),      POINTER       :: model
+    !TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                               :: iblk, ics, ice, nc
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_sb_fluxes'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
+    ! Declare pointers to variables in memory
+    ! SB_
+    dsl4jsb_Real3D_onChunk :: het_respiration
+    dsl4jsb_Real3D_onChunk :: het_respiration_c13
+    dsl4jsb_Real3D_onChunk :: het_respiration_c14
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_no3_solute
+    dsl4jsb_Real3D_onChunk :: transport_po4_solute 
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
+    dsl4jsb_Real3D_onChunk :: transport_po4_occluded
+    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
+! 2 be removed later: pointer to sb   *slmtemp
+    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
+    ! Get local variables from options argument
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(SB_)
+    ! Get process memories
+    dsl4jsb_Get_memory(SB_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    !lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
+
+
+! 2 be removed  *slmtemp
+    sb   => sb__mem
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    !> 1.0 initialise/reset fluxes
+    !!
+    CALL sb%loss%init(zero)
+    CALL sb%formation%init(zero)
+    CALL sb%transport%init(zero)
+    het_respiration(:,:)              = zero
+    het_respiration_c13(:,:)          = zero
+    het_respiration_c14(:,:)          = zero
+    net_mineralisation_nh4(:,:)       = zero
+    net_mineralisation_nh4_n15(:,:)   = zero
+    net_mineralisation_no3(:,:)       = zero
+    net_mineralisation_no3_n15(:,:)   = zero
+    net_mineralisation_po4(:,:)       = zero
+    plant_uptake_nh4_sl(:,:)          = zero
+    plant_uptake_nh4_n15_sl(:,:)      = zero
+    plant_uptake_no3_sl(:,:)          = zero
+    plant_uptake_no3_n15_sl(:,:)      = zero
+    plant_uptake_po4_sl(:,:)          = zero
+    transport_nh4_solute(:,:)         = zero 
+    transport_nh4_assoc(:,:)          = zero 
+    transport_no3_solute(:,:)         = zero 
+    transport_po4_solute(:,:)         = zero 
+    transport_po4_assoc_fast(:,:)     = zero 
+    transport_po4_assoc_slow(:,:)     = zero 
+    transport_po4_occluded(:,:)       = zero 
+    transport_nh4_n15_solute(:,:)     = zero 
+    transport_nh4_n15_assoc(:,:)      = zero 
+    transport_no3_n15_solute(:,:)     = zero 
+
+  END SUBROUTINE reset_sb_fluxes
+
+
 
 
 #endif

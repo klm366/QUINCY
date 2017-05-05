@@ -17,7 +17,7 @@ MODULE mo_veg_util
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: set_zero_vegetation_fluxes    ! called in the land model interface prior to all Tasks
+  PUBLIC :: reset_veg_fluxes    ! called in the land model interface prior to all Tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
@@ -25,11 +25,11 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> set all vegetation fluxes to zero
+  !> init/reset vegetation fluxes (with/to zero)
   !! 
   !! called in the land model interface prior to all Tasks
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE set_zero_vegetation_fluxes(tile)
+  SUBROUTINE reset_veg_fluxes(tile)
 
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -41,7 +41,7 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout)      :: tile           !< one tile
     ! 0.2 Local
     REAL(wp) :: flux_zero
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_zero_vegetation_fluxes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory), POINTER      :: veg__mem  
@@ -95,6 +95,6 @@ CONTAINS
     CALL veg%delta_dens_ind%init(flux_zero)                !< ??
     CALL veg%unit_transpiration%init(flux_zero)            !< ??
 
-  END SUBROUTINE set_zero_vegetation_fluxes
+  END SUBROUTINE reset_veg_fluxes
 
 END MODULE mo_veg_util

@@ -11,7 +11,7 @@ MODULE mo_sb_update_pools
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps8, eps4
+  USE mo_kind,            ONLY: wp, eps8, eps4
   USE mo_exception,       ONLY: message, message_text, finish
   USE mo_base_memory,     ONLY: t_jsb_task_options
 
@@ -285,6 +285,7 @@ CONTAINS
          sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
             sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
 
+
       CASE('jsm')
 
 !BLARPP
@@ -294,34 +295,6 @@ rmm_depolymerisation = 1.0_wp
 rmm_hsc = 1.0_wp
 rmm_sorption = 1.0_wp
 rmm_desorption = 1.0_wp
-         !> 1.0 initialise fluxes
-         !!
-         CALL sb%loss%init(0.0_wp)
-         CALL sb%formation%init(0.0_wp)
-         CALL sb%transport%init(0.0_wp)
-         het_respiration(:,:) = 0.0_wp
-         het_respiration_c13(:,:) = 0.0_wp
-         het_respiration_c14(:,:) = 0.0_wp
-         net_mineralisation_nh4(:,:) = 0.0_wp
-         net_mineralisation_nh4_n15(:,:) = 0.0_wp
-         net_mineralisation_no3(:,:) = 0.0_wp
-         net_mineralisation_no3_n15(:,:) = 0.0_wp
-         net_mineralisation_po4(:,:) = 0.0_wp
-         plant_uptake_nh4_sl(:,:) = 0.0_wp
-         plant_uptake_nh4_n15_sl(:,:) = 0.0_wp
-         plant_uptake_no3_sl(:,:) = 0.0_wp
-         plant_uptake_no3_n15_sl(:,:) = 0.0_wp
-         plant_uptake_po4_sl(:,:) = 0.0_wp
-         transport_nh4_solute(:,:) = 0.0_wp 
-         transport_nh4_assoc(:,:) = 0.0_wp 
-         transport_no3_solute(:,:) = 0.0_wp 
-         transport_po4_solute(:,:) = 0.0_wp 
-         transport_po4_assoc_fast(:,:) = 0.0_wp 
-         transport_po4_assoc_slow(:,:) = 0.0_wp 
-         transport_po4_occluded(:,:) = 0.0_wp 
-         transport_nh4_n15_solute(:,:) = 0.0_wp 
-         transport_nh4_n15_assoc(:,:) = 0.0_wp 
-         transport_no3_n15_solute(:,:) = 0.0_wp 
 
          fine_root_carbon = root_fraction_sl * 6._wp !veg%pool%fine_root%carbon%ptr
          !fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr

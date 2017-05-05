@@ -106,7 +106,8 @@ CONTAINS
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
-    USE mo_veg_util,                      ONLY: set_zero_vegetation_fluxes
+    USE mo_veg_util,                      ONLY: reset_veg_fluxes
+    USE mo_sb_util,                       ONLY: reset_sb_fluxes
 
     ! Process interfaces:
     USE mo_rad_interface
@@ -256,9 +257,11 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
     !! land ---------------------------------------------------------------------------------------
     CASE('land')
-    !! set vegetation fluxes to zero
+
+    !! init/reset fluxes (with/to zero)
     !! 
-      CALL set_zero_vegetation_fluxes(tile)   ! mo_veg_util
+      CALL reset_veg_fluxes(tile)                 ! mo_veg_util
+      CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
     !! run Tasks
     !!
@@ -298,9 +301,11 @@ CONTAINS
     CASE('plant')
     !! plant --------------------------------------------------------------------------------------
     ! currently same as land !
-    !! set vegetation fluxes to zero
+
+    !! init/reset fluxes (with/to zero)
     !! 
-      CALL set_zero_vegetation_fluxes(tile)   ! mo_veg_util
+      CALL reset_veg_fluxes(tile)                 ! mo_veg_util
+      CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
     !! run Tasks
     !!
@@ -340,6 +345,10 @@ CONTAINS
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------
 
+    !! init/reset fluxes (with/to zero)
+    !! 
+      CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
+
       CALL update_sb_pools        (tile, model%options)
       !! output pool: write output in certain intervals, see mo_shared_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -354,9 +363,10 @@ CONTAINS
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
-    !! set vegetation fluxes to zero
+
+    !! init/reset fluxes (with/to zero)
     !! 
-      CALL set_zero_vegetation_fluxes(tile)   ! mo_veg_util
+      CALL reset_veg_fluxes(tile)                 ! mo_veg_util
 
     !! run Tasks
     !!
@@ -527,7 +537,7 @@ CONTAINS
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_veg_util,              ONLY: set_zero_vegetation_fluxes
+    USE mo_veg_util,              ONLY: reset_veg_fluxes
     USE mo_shared_constants,      ONLY: molar_mass_N, Tzero 
 
     ! Use of process memories
@@ -770,7 +780,7 @@ CONTAINS
            swpar_srf_down = swpar_srf_down(:))
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -810,7 +820,7 @@ CONTAINS
            q_air = q_air)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -841,7 +851,7 @@ CONTAINS
            co2_mixing_ratio = co2_mixing_ratio)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -867,7 +877,7 @@ CONTAINS
                           q_air = q_air) 
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -895,7 +905,7 @@ CONTAINS
      w_soil_root_theta(:) = w_soil_root_theta(:) + 0.01_wp 
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -934,7 +944,7 @@ CONTAINS
                           inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -970,7 +980,7 @@ CONTAINS
                           inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -1007,7 +1017,7 @@ CONTAINS
                           inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
