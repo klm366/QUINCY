@@ -55,7 +55,7 @@ bnf_scheme="standard"           # prescribed standard std_plus_costs optimal res
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
 p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
-sb_model_scheme="one_pool"      # one_pool four_pool jsm 
+sb_model_scheme="simple"        # simple jsm 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="F"       # set po4solute to a constant value
@@ -118,7 +118,7 @@ if [ $flag_generate_soil_forcing == "T" ]
   myc_scheme="no"
   p_uptake_scheme="standard"
   soil_moisture_scheme="layer"
-  sb_model_scheme="one_pool"
+  sb_model_scheme="simple"
   flag_calc_soil_energy="T"
 
   flag_t_resp_acclimation="T"
@@ -311,7 +311,7 @@ validateMycScheme="no am ecm"
 validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
-validateSBModelScheme="one_pool four_pool jsm"
+validateSBModelScheme="simple jsm"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 validateFlags="F T"

@@ -101,23 +101,7 @@ CONTAINS
  
     SELECT CASE(TRIM(sb_config%sb_model_scheme))
 
-       CASE('one_pool')  
- 
-          ! Initial values for Siliva's simple one-bucket soil biogeochemical scheme
-          ! Initialise surface litter pool to 0.5 mol / m2 N and P, and provide some initial NH4 and PO4
-          sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 8.45_wp * 50._wp / soil_config%dz_water(1)
-          sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = 8.45_wp / soil_config%dz_water(1)
-          sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk)
-          sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
-                                                                    (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) * & 
-                                                                    calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-          sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
-                                                                    (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-          sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
-          sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
-         
-       CASE('four_pool')
+       CASE('simple')
 
           ! Initial values for Soenke's four pool soil biogeochemical model
           sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 500._wp / molar_mass_C / soil_config%dz_water(1)

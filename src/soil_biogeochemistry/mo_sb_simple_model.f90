@@ -214,37 +214,29 @@ CONTAINS
 
     END SELECT
 
-    IF(sb_config%sb_model_scheme=='one_pool') THEN
-       CALL calc_sb_dynamics_1pool(tile, options)
-    ELSEIF(sb_config%sb_model_scheme=='four_pool') THEN
-       CALL calc_sb_dynamics_4pools(tile, options)
+    CALL calc_sb_fluxes_simple(tile, options)
 
-       CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
+    CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
 
-       IF(sb_config%flag_n_deposition) THEN
-         nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
-         no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
-       END IF
+    IF(sb_config%flag_n_deposition) THEN
+      nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
+      no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
+    END IF
 
-       veg%uptake_nh4%ptr(ice:ice,iblk) = plant_uptake_nh4_sl(:,1) * soil_depth_sl(:,1)
-       veg%uptake_no3%ptr(ice:ice,iblk) = plant_uptake_no3_sl(:,1) * soil_depth_sl(:,1)
-       veg%uptake_p%ptr(ice:ice,iblk)   = plant_uptake_po4_sl(:,1) * soil_depth_sl(:,1)
-       IF(.NOT.sb_config%flag_sb_prescribe_nh4) THEN
-          nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - sb%nitrification%ptr(ice:ice,:,iblk) & 
+    veg%uptake_nh4%ptr(ice:ice,iblk) = plant_uptake_nh4_sl(:,1) * soil_depth_sl(:,1)
+    veg%uptake_no3%ptr(ice:ice,iblk) = plant_uptake_no3_sl(:,1) * soil_depth_sl(:,1)
+    veg%uptake_p%ptr(ice:ice,iblk)   = plant_uptake_po4_sl(:,1) * soil_depth_sl(:,1)
+    IF(.NOT.sb_config%flag_sb_prescribe_nh4) THEN
+      nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - sb%nitrification%ptr(ice:ice,:,iblk) & 
                                                        - sb%volatilisation_n%ptr(ice:ice,:,iblk)- plant_uptake_nh4_sl(:,:)) * dtime/1.e6_wp
-          nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_nh4_n15(:,:) / 1000000.0_wp * dtime
-       ENDIF
-       IF(.NOT.sb_config%flag_sb_prescribe_no3) THEN
-          no3_solute(:,:)     = no3_solute(:,:)     + (sb%nitrification%ptr(ice:ice,:,iblk) - plant_uptake_no3_sl(:,:)) / dtime/1.e6_wp 
-          no3_n15_solute(:,:) = no3_n15_solute(:,:) + net_mineralisation_no3_n15(:,:) / 1000000.0_wp * dtime
-       ENDIF
-       IF(.NOT.sb_config%flag_sb_prescribe_po4) THEN
-          po4_solute(:,:)     = po4_solute(:,:) + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) * dtime/1.e6_wp 
-       ENDIF
-
-    ELSE
-       WRITE(message_text,'(2a)') 'invalid sb_model_scheme: ',sb_config%sb_model_scheme
-       CALL finish("mo_sb_update_pools:update_soil_pools_simple: ",message_text) 
+      nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_nh4_n15(:,:) / 1000000.0_wp * dtime
+    ENDIF
+    IF(.NOT.sb_config%flag_sb_prescribe_no3) THEN
+      no3_solute(:,:)     = no3_solute(:,:)     + (sb%nitrification%ptr(ice:ice,:,iblk) - plant_uptake_no3_sl(:,:)) / dtime/1.e6_wp 
+      no3_n15_solute(:,:) = no3_n15_solute(:,:) + net_mineralisation_no3_n15(:,:) / 1000000.0_wp * dtime
+    ENDIF
+    IF(.NOT.sb_config%flag_sb_prescribe_po4) THEN
+      po4_solute(:,:)     = po4_solute(:,:) + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) * dtime/1.e6_wp 
     ENDIF
 
   END SUBROUTINE update_sb_simple_model_process
@@ -257,216 +249,7 @@ CONTAINS
   !> routine to update soil litter and mineral pools (simple version for vegetation model testing)
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_sb_dynamics_1pool(tile, options)
-
-    USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_constants,        ONLY: dtime, one_day, one_year
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_config_class,      ONLY: veg_config
-    USE mo_sb_constants
-
-    ! Use of process memories
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout), TARGET    :: tile          !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)               :: options       !< model options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    INTEGER                               :: isoil
-    INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_simple'
-    ! ---------------------------
-    ! 0.3 Memory allocation
-    ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: uptake_nh4
-    dsl4jsb_Real2D_onChunk      :: uptake_no3
-    dsl4jsb_Real2D_onChunk      :: uptake_p
-!! *slmtemp    
-    TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
-    TYPE(t_soil_memory), POINTER            :: soil       ! local pointer to soil__mem for SLM usability
-    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process config
-!    dsl4jsb_Get_config(xx_)
-    ! Get process memories
-    dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SOIL_)
-    dsl4jsb_Get_memory(SB_)
-    ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
-
-
-!! *slmtemp
-    veg  => veg__mem
-    soil => soil__mem
-    sb   => sb__mem
-
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-    !> 1.0 Calculate soil litter pool decomposition.
-    !!
-    sb%het_respiration%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
-                                             sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) 
-    sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
-                                                  sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) 
-    sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
-                                                  sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) 
-    sb%het_respiration_c13%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
-                                                 sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) 
-    sb%het_respiration_c14%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
-                                                 sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) 
-    sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
-                                                    sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) 
-
-    ! > 1.1 subtract losses
-    !!
-    sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) - & 
-                                                          sb%het_respiration%ptr(ics:ice,:,iblk) * dtime
-    sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                            sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * dtime
-    sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                              sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * dtime
-    sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                            sb%het_respiration_c13%ptr(ics:ice,:,iblk) * dtime
-    sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                            sb%het_respiration_c14%ptr(ics:ice,:,iblk) * dtime
-    sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                              sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) * dtime
-
-    !> 2 Update soil litter pool with litter fall
-    !!
-    sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
-       (veg%litterfall%leaf%carbon%ptr + veg%litterfall%sap_wood%carbon%ptr + & 
-        veg%litterfall%heart_wood%carbon%ptr + veg%litterfall%fruit%carbon%ptr + & 
-        veg%litterfall%labile%carbon%ptr + veg%litterfall%reserve%carbon%ptr + & 
-        veg%litterfall%seed_bed%carbon%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
-    sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) +  & 
-       (veg%litterfall%leaf%nitrogen%ptr + veg%litterfall%sap_wood%nitrogen%ptr + & 
-        veg%litterfall%heart_wood%nitrogen%ptr + veg%litterfall%fruit%nitrogen%ptr + & 
-        veg%litterfall%labile%nitrogen%ptr + veg%litterfall%reserve%nitrogen%ptr + & 
-        veg%litterfall%seed_bed%nitrogen%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
-    sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-       (veg%litterfall%leaf%phosphorus%ptr + veg%litterfall%sap_wood%phosphorus%ptr + & 
-        veg%litterfall%heart_wood%phosphorus%ptr + veg%litterfall%fruit%phosphorus%ptr + & 
-        veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + & 
-        veg%litterfall%seed_bed%phosphorus%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
-    sb%pool%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-       (veg%litterfall%leaf%carbon13%ptr + veg%litterfall%sap_wood%carbon13%ptr + & 
-        veg%litterfall%heart_wood%carbon13%ptr + veg%litterfall%fruit%carbon13%ptr + & 
-        veg%litterfall%labile%carbon13%ptr + veg%litterfall%reserve%carbon13%ptr + & 
-        veg%litterfall%seed_bed%carbon13%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
-    sb%pool%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-       (veg%litterfall%leaf%carbon14%ptr + veg%litterfall%sap_wood%carbon14%ptr + & 
-        veg%litterfall%heart_wood%carbon14%ptr + veg%litterfall%fruit%carbon14%ptr + & 
-        veg%litterfall%labile%carbon14%ptr + veg%litterfall%reserve%carbon14%ptr + & 
-        veg%litterfall%seed_bed%carbon14%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
-    sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-       (veg%litterfall%leaf%nitrogen15%ptr + veg%litterfall%sap_wood%nitrogen15%ptr + & 
-        veg%litterfall%heart_wood%nitrogen15%ptr + veg%litterfall%fruit%nitrogen15%ptr + & 
-        veg%litterfall%labile%nitrogen15%ptr + veg%litterfall%reserve%nitrogen15%ptr + & 
-        veg%litterfall%seed_bed%nitrogen15%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
-
-    DO isoil = 1,1
-
-       sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr ) / & ! * & 
-          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
-       sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr ) / & ! * & 
-          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
-       sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr ) / & ! * & 
-          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
-       sb%pool%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr ) / & ! * & 
-          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
-       sb%pool%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr ) / & ! * & 
-          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
-       sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr ) / & ! * & 
-          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
-
-    ENDDO
-
-    !> 3 Update mineral pool
-    !!
-    IF(veg_config%bnf_scheme /= 'prescribed') THEN
-       sb%volatilisation_n%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * floss_nmin * 1.e6_wp 
-       sb%nitrification%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * 1.e6_wp 
-       sb%nh4_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) + & 
-                                           sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * (1._wp - fnit_nmin) * dtime
-       sb%no3_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) + & 
-                                           sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * dtime
-       sb%nh4_solute%ptr(ics:ice,1,iblk) = sb%nh4_solute%ptr(ics:ice,1,iblk) - & 
-                                           uptake_nh4(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
-       sb%no3_solute%ptr(ics:ice,1,iblk) = sb%no3_solute%ptr(ics:ice,1,iblk) - & 
-                                           uptake_no3(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
-    ENDIF
-
-    IF(veg_config%p_uptake_scheme /= 'prescribed') THEN
-       sb%po4_solute%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) + sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * dtime
-       sb%po4_solute%ptr(ics:ice,1,iblk) = sb%po4_solute%ptr(ics:ice,1,iblk) - uptake_p(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
-    ENDIF
- 
-    !> 5.0 convert rates to µmol/ m3 / s
-    !!
-    sb%het_respiration%ptr(ics:ice,:,iblk) = sb%het_respiration%ptr(ics:ice,:,iblk) * 1000000._wp
-    sb%het_respiration_c13%ptr(ics:ice,:,iblk) = sb%het_respiration_c13%ptr(ics:ice,:,iblk) * 1000000._wp
-    sb%het_respiration_c14%ptr(ics:ice,:,iblk) = sb%het_respiration_c14%ptr(ics:ice,:,iblk) * 1000000._wp
-    sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * 1000000._wp
-    sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) = sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * 1000000._wp
-    sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) * 1000000._wp
-
-  END SUBROUTINE calc_sb_dynamics_1pool
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> routine to update soil litter and mineral pools (simple version for vegetation model testing)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_sb_dynamics_4pools(tile, options)
+  SUBROUTINE calc_sb_fluxes_simple(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
@@ -978,6 +761,6 @@ CONTAINS
     nitrification(:,:) = nitrification(:,:) / dtime * 1000000._wp 
 
 
-  END SUBROUTINE calc_sb_dynamics_4pools 
+  END SUBROUTINE calc_sb_fluxes_simple 
 
 END MODULE mo_sb_simple_model

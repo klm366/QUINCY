@@ -262,7 +262,7 @@ CONTAINS
  
     !> 2.0 Calculate soil pools 
     SELECT CASE(TRIM(sb_config%sb_model_scheme))
-      CASE('one_pool','four_pool')
+      CASE('simple')
 
          CALL update_sb_simple_model_process(tile,options)
 
