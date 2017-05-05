@@ -536,7 +536,8 @@ class Diagnostics ( object ):
                     output_dict.main.interpolation = False
                     for key in [ 'varname', 'unit', 'varname_can', 'unit_can',
                                  'title_tmpl', 'legend_tmpl',
-                                 'funstr', 'funstr_can', 'statstr', 'statstr_tm' ]:
+                                 'funstr', 'funstr_can', 'statstr', 'statstr_tm',
+                                 'varnamelist', 'colorlist','legendlist' ]:
                         if key in p_dict:
                             arglist.append ( '%s:%s' % ( key, p_dict [ key ]))
             

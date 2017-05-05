@@ -210,7 +210,8 @@ def mapplot_seasonal ( varname    = None,
                                      ticks = ticks, format = '%.2e' )
     for t in cb.ax.get_xticklabels ():
         t.set_fontsize ( 14 )    
-    cb.ax.text ( 0.98, -1.3, "[%s]" % unit, size = 20 )
+    #cb.ax.text ( 0.98, -1.3, "[%s]" % unit, size = 20 )
+    cb.ax.text ( 0.89, 1.3, "[%s]" % unit, size = 16 )
     plt.suptitle ( title, fontsize = 24 )
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
@@ -635,14 +636,21 @@ def hist_plot (  colno, colcolors, colnames,
                       bbox_inches = 'tight' )
         plt.close ()
 
-
-def hist_plot_wrapper ( colno, colcolors, colnames,
-                        varnames, unit, can_name, canno,
-                       input_can, subtitle_can,
-                       input_delta, subtitle_delta, xlabel_delta,
-                       outpath ):
-    print "in hist_plot_wrapper ()"
-
+        
+def hist_plot_wrapper ( nbar          = None,
+                        colorlist      = None,
+                        legendlist     = None,
+                        varnamelist    = None,
+                        unit           = None,
+                        can_name       = None,
+                        canno          = None,
+                        input_can      = None,
+                        subtitle_can   = None,
+                        input_delta    = None,
+                        subtitle_delta = None,
+                        xticklabellist = None,
+                        outpath        = None ):
+   
     show_can = True
 
     ndeltas = len ( input_delta )
@@ -656,22 +664,19 @@ def hist_plot_wrapper ( colno, colcolors, colnames,
     ax = plt.Subplot ( f, subgrid [ :, : ])
     f.add_subplot ( ax )
 
-    accum = np.array ([[]])
-    nc_fid = Dataset ( input_can )
-    vardat = np.concatenate (( nc_fid.variables [ varnames [ 0 ]] [ : ][ 0 ],
-                               nc_fid.variables [ varnames [ 1 ]] [ : ][ 0 ],
-                               nc_fid.variables [ varnames [ 2 ]] [ : ][ 0 ],
-                               nc_fid.variables [ varnames [ 3 ]] [ : ][ 0 ]),
-                               axis = 1 )
+    accum = vardat =  np.array ([[]])
+    nc_fid = Dataset ( input_can [ 0 ])
+    for i in range ( nbar ):
+        vardat = np.concatenate (( vardat,
+                                   nc_fid.variables [ varnamelist [ i ]] [ : ][ 0 ]),
+                                 axis = 1 )
     nc_fid.close ()
     accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
-    hist_plot (  colno, colcolors, colnames,
+    
+    hist_plot (  nbar, colorlist, legendlist,
                  accum, unit, [ ""], subtitle_can,
                  ax = ax,
-                 legend = False )
-    
-
-                      
+                 legend = False )                     
 
     ####### second subplot
     subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 1: ])
@@ -682,17 +687,17 @@ def hist_plot_wrapper ( colno, colcolors, colnames,
     nrefs = len ( input_delta )
     accum = np.array ([[]])
     for k in range ( nrefs ):
+        vardat = np.array ([[]])
         nc_fid = Dataset ( input_delta [ k ])
-        vardat = np.concatenate (( nc_fid.variables [ varnames [ 0 ]] [ : ][ 0 ],
-                                   nc_fid.variables [ varnames [ 1 ]] [ : ][ 0 ],
-                                   nc_fid.variables [ varnames [ 2 ]] [ : ][ 0 ],
-                                   nc_fid.variables [ varnames [ 3 ]] [ : ][ 0 ]),
-                                 axis = 1 )
+        for i in range ( nbar ):
+            vardat = np.concatenate (( vardat,
+                                       nc_fid.variables [ varnamelist [ i ]] [ : ][ 0 ]),
+                                     axis = 1 )
         nc_fid.close ()
         accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
 
-    hist_plot (  colno, colcolors, colnames,
-                 accum, unit, xlabel_delta, subtitle_delta,
+    hist_plot (  nbar, colorlist, legendlist,
+                 accum, unit, xticklabellist, subtitle_delta,
                  ax = ax,
                  art = art,
                  ylabel = not show_can )

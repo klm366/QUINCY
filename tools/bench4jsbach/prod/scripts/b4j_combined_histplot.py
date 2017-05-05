@@ -2,7 +2,7 @@
 # -*- coding:  utf-8 -*-y
 
 import sys, os
-from cdo import Cdo
+import ast
 
 print "\n\nStarting %s" % os.path.realpath(__file__)
 
@@ -23,7 +23,7 @@ else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
 
 from util import print_item_or_list_rec
-from b4jplot import zon_plot_wrapper
+from b4jplot import hist_plot_wrapper, colors_hydrology
 
 #####
 ##### check input parameter
@@ -40,67 +40,63 @@ print print_item_or_list_rec ( kwargs, 3 )
 ##### plotting
 #####
 
-can_name          = kwargs [ "can_name" ]
-canno             = kwargs [ "canno" ]
+can_name          = kwargs.get ( "can_name" )
+canno             = kwargs.get ( "canno" )
 
-title_tmpl        = kwargs [ "title_tmpl" ]
-legend_tmpl       = kwargs [ "legend_tmpl" ]
+title_tmpl        = kwargs.get ( "title_tmpl" )
 
-field_name        = kwargs [ "field_name" ]
+field_name        = kwargs.get ( "field_name" )
 
-varname           = kwargs [ "varname" ]
-unit              = kwargs [ "unit" ]
-funstr            = kwargs [ 'funstr' ]
-statstr           = kwargs [ 'statstr' ]
-statstr_tm        = kwargs.get ( 'statstr_tm', None )
+varnamelist       = ast.literal_eval ( kwargs.get ( "varnamelist" ))
+legendlist        = ast.literal_eval ( kwargs.get ( "legendlist" ))
+unit              = kwargs.get ( "unit" )
+funstr            = kwargs.get ( 'funstr' )
+statstr           = kwargs.get ( 'statstr' )
 
-inpathlist_gm_can = [ kwargs [  "input_can" ]]
-varname_can       = kwargs [ "varname_can" ]
-unit_can          = kwargs [ "unit_can" ]
-funstr_can        = kwargs [ 'funstr_can' ]
+inpathlist_can    = [ kwargs.get (  "input_can" )]
+funstr_can        = kwargs.get ( "funstr_can" )
 
-outpath           = kwargs [ "outpath" ]
+colorlist         = ast.literal_eval ( kwargs.get ( "colorlist" ))
+
+outpath           = kwargs.get ( "outpath" )
+
+nbar              = len ( varnamelist )
 
 subtitle_can      = title_tmpl % { 'funstr'  : funstr_can,
                                    'stat1str' : statstr,
-                                   'stat2str' : statstr_tm,
                                    'expabr'   : "C_%s" % ( canno ),
-                                   'expl'     : ", $C_{%s}$: %s" % ( canno, can_name )}
+                                   'expl'     : ", field values"}
 
 subtitle_delta    = title_tmpl % { 'funstr'  : funstr,
                                    'stat1str': statstr,
-                                   'stat2str': statstr_tm,
                                    'expabr'  : "C_%sR" % ( canno ),
-                                   'expl'    : ", $C_{%s}$: %s" % ( canno, can_name )}
+                                   'expl'    : ", differences" }
 
 token             = "input_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
-inpathlist_gm     = []
-legendlist_gm     = []
+keylist.sort ()
+inpathlist        = []
+xticklabellist    = []
 for k in keylist:
     refno  = k.split ( token, 1 )[1][0]
-    inpathlist_gm.append ( kwargs [ k ])
-    legend =  legend_tmpl % { 'funstr'  : funstr,
-                              'stat1str': statstr,
-                              'stat2str': statstr_tm,
-                              'expabr'  : "C_%sR_%s" % ( canno, refno ),
-                              'expl'    : ",\n $R_{%s}$: %s" % \
-                              ( refno,  kwargs [ "ref%s"  % refno ])}
-    legendlist_gm.append ( legend )
+    inpathlist.append ( kwargs.get ( k ))
+    xticklabel = "$R_{%s}$: %s" % ( refno,  kwargs.get ( "ref%s"  % refno ))
+    xticklabellist.append ( xticklabel )
+    
 
-print inpathlist_gm
-print legendlist_gm
-
-zon_plot_wrapper ( varname_can       = varname_can,
-                   inpathlist_can    = inpathlist_gm_can, 
-                   unit_can          = unit_can,
-                   subtitle_can      = subtitle_can,
-                   varname           = varname,
-                   inpathlist        = inpathlist_gm, 
-                   unit              = unit,
-                   subtitle          = subtitle_delta,
-                   outpath           = outpath, 
-                   legendlist        = legendlist_gm )
+hist_plot_wrapper ( nbar           = nbar,
+                    colorlist      = colorlist,
+                    legendlist     = legendlist,
+                    varnamelist    = varnamelist,
+                    unit           = unit,
+                    can_name       = can_name,
+                    canno          = canno,
+                    input_can      = inpathlist_can,
+                    subtitle_can   = subtitle_can,
+                    input_delta    = inpathlist,
+                    subtitle_delta = subtitle_delta,
+                    xticklabellist = xticklabellist,
+                    outpath        = outpath )
 
 
 #####
