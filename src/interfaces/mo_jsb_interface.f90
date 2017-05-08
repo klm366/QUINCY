@@ -239,16 +239,16 @@ CONTAINS
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
       ! For lakes:
-      & drag_wtr           = drag_wtr(:),           &
-      & drag_ice           = drag_ice(:),           &
-      & t_acoef_wtr        = t_acoef_wtr(:),        &
-      & t_bcoef_wtr        = t_bcoef_wtr(:),        &
-      & q_acoef_wtr        = q_acoef_wtr(:),        &
-      & q_bcoef_wtr        = q_bcoef_wtr(:),        &
-      & t_acoef_ice        = t_acoef_ice(:),        &
-      & t_bcoef_ice        = t_bcoef_ice(:),        &
-      & q_acoef_ice        = q_acoef_ice(:),        &
-      & q_bcoef_ice        = q_bcoef_ice(:)         &
+      & drag_wtr           = drag_wtr,              &
+      & drag_ice           = drag_ice,              &
+      & t_acoef_wtr        = t_acoef_wtr,           &
+      & t_bcoef_wtr        = t_bcoef_wtr,           &
+      & q_acoef_wtr        = q_acoef_wtr,           &
+      & q_bcoef_wtr        = q_bcoef_wtr,           &
+      & t_acoef_ice        = t_acoef_ice,           &
+      & t_bcoef_ice        = t_bcoef_ice,           &
+      & q_acoef_ice        = q_acoef_ice,           &
+      & q_bcoef_ice        = q_bcoef_ice            &
       & )
     NULLIFY(tile)
 
@@ -258,39 +258,39 @@ CONTAINS
     ! Finally, give the required variables back to the atmosphere
     ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
     tile => model%Get_top_tile()
-    CALL update_land2atm(                     &
-      & tile,                                 &
-      & model%options(no_omp_thread),         &
-      & t_srf           = t_srf(:),           &
-      & t_eff_srf       = t_eff_srf(:),       &
-      & qsat_srf        = qsat_srf(:),        &
-      & s_srf           = s_srf(:),           &
-      & fact_q_air      = fact_q_air(:),      &
-      & fact_qsat_srf   = fact_qsat_srf(:),   &
-      & evapopot        = evapopot,           &
-      & evapotrans      = evapotrans(:),      &
-      & latent_hflx     = latent_hflx(:),     &
-      & sensible_hflx   = sensible_hflx(:),   &
-      & grnd_hflx       = grnd_hflx(:),       &
-      & grnd_hcap       = grnd_hcap,          &
-      & rough_h_srf     = rough_h_srf(:),     &
-      & rough_m_srf     = rough_m_srf(:),     &
-      & q_snocpymlt     = q_snocpymlt(:),     &
-      & alb_vis_dir     = alb_vis_dir(:),     &
-      & alb_nir_dir     = alb_nir_dir(:),     &
-      & alb_vis_dif     = alb_vis_dif(:),     &
-      & alb_nir_dif     = alb_nir_dif(:),     &
-      & t_lwtr          = t_lwtr(:),          &
-      & evapo_wtr       = evapo_wtr(:),       &
-      & latent_hflx_wtr    = latent_hflx_wtr(:),    &
-      & sensible_hflx_wtr  = sensible_hflx_wtr(:),  &
-      & t_lice             = t_lice(:),             &
-      & evapo_ice          = evapo_ice(:),          &
-      & latent_hflx_ice    = latent_hflx_ice(:),    &
-      & sensible_hflx_ice  = sensible_hflx_ice(:),  &
-      & ice_fract_lake     = ice_fract_lake(:),     &
-      & albedo_lwtr        = albedo_lwtr(:),        &
-      & albedo_lice        = albedo_lice(:)         &
+    CALL update_land2atm(                        &
+      & tile,                                    &
+      & model%options(no_omp_thread),            &
+      & t_srf              = t_srf(:),           &
+      & t_eff_srf          = t_eff_srf(:),       &
+      & qsat_srf           = qsat_srf(:),        &
+      & s_srf              = s_srf(:),           &
+      & fact_q_air         = fact_q_air(:),      &
+      & fact_qsat_srf      = fact_qsat_srf(:),   &
+      & evapopot           = evapopot,           &
+      & evapotrans         = evapotrans(:),      &
+      & latent_hflx        = latent_hflx(:),     &
+      & sensible_hflx      = sensible_hflx(:),   &
+      & grnd_hflx          = grnd_hflx(:),       &
+      & grnd_hcap          = grnd_hcap,          &
+      & rough_h_srf        = rough_h_srf(:),     &
+      & rough_m_srf        = rough_m_srf(:),     &
+      & q_snocpymlt        = q_snocpymlt(:),     &
+      & alb_vis_dir        = alb_vis_dir(:),     &
+      & alb_nir_dir        = alb_nir_dir(:),     &
+      & alb_vis_dif        = alb_vis_dif(:),     &
+      & alb_nir_dif        = alb_nir_dif(:),     &
+      & t_lwtr             = t_lwtr,             &
+      & evapo_wtr          = evapo_wtr,          &
+      & latent_hflx_wtr    = latent_hflx_wtr,    &
+      & sensible_hflx_wtr  = sensible_hflx_wtr,  &
+      & t_lice             = t_lice,             &
+      & evapo_ice          = evapo_ice,          &
+      & latent_hflx_ice    = latent_hflx_ice,    &
+      & sensible_hflx_ice  = sensible_hflx_ice,  &
+      & ice_fract_lake     = ice_fract_lake,     &
+      & albedo_lwtr        = albedo_lwtr,        &
+      & albedo_lice        = albedo_lice         &
       & )
     NULLIFY(tile)
 
