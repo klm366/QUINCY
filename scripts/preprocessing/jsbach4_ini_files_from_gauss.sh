@@ -73,6 +73,8 @@ oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
 coupled=false    # land sea mask for coupled experiment?
+coupled_grid_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/ATMOOCEANINP_pre04_OceWithCoast_158km_editSLOHH2017_G.nc
+coupled_lsf_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/lsf.remapycon.pre04_158km_editSLOHH2017_G.nc
 hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04/Land/hd_para_icon_r2b4_pre04_vs1_5.nc
 
 debug=false             # true/false
@@ -197,14 +199,12 @@ function generate_land_sea_mask {
     echo "Generating land sea mask ..."
     if [[ ${coupled} == "true" ]]
     then
-        if [[ ${bisection} -ne 4 ]] || [[ "${old_r2b4_amip}" == "true" ]]
+        if [[ ${bisection} -ne 4 ]] || [[ "${old_r2b4_amip}" != "true" ]]
         then
             echo "Generation of files for coupled experiments currently only supported for r2b4"
             exit
         else
-            ${cdo} chname,lsf,notsea \
-                   /pool/data/ICON/coupled_input_temp/aloy_pre04/lsf.remapycon.pre04_0158km_2016.nc \
-                   ${grid_name}_notsea.nc
+            ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
         fi
     else
         [[ "${old_r2b4_amip}" != "true" ]]                                                          && \
@@ -321,11 +321,23 @@ function remap_var {
                     -setgrid,${icon_grid_file} -selvar,topography_c ${extpar_file} \
                      ${grid_name}_${var}_remap.nc
             else
-              ${cdo} setvar,elevation -ifthen ${grid_name}_notsea_miss.nc \
-                    -remapdis,${icon_grid_file} \
-                    -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
-                    -selvar,topography_c ${extpar_file} \
-                     ${grid_name}_${var}_remap.nc
+              if [[ "${coupled}" != "true" ]]
+              then
+                ${cdo} setvar,elevation -ifthen ${grid_name}_notsea_miss.nc \
+                      -remapdis,${icon_grid_file} \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,topography_c ${extpar_file} \
+                       ${grid_name}_${var}_remap.nc
+              else
+                temp=$(mktemp -u --tmpdir=.)
+                ${cdo} setvar,elevation -ifthen ${grid_name}_notsea_miss.nc \
+                      -remapdis,${grid_name}_notsea.nc \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,topography_c ${extpar_file} \
+                       ${temp}
+                ${cdo} setgrid,${grid_name}_notsea.nc ${temp} ${grid_name}_${var}_remap.nc
+                rm ${temp}
+              fi
             fi
             ;;
         oro* )
@@ -338,11 +350,23 @@ function remap_var {
                     -selvar,${sso_dict[${var}]} ${extpar_file} \
                      ${grid_name}_${var}_remap.nc
             else
-              ${cdo} setvar,${var} -ifthen ${grid_name}_notsea_miss.nc \
-                    -remap${remap_scheme},${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
-                    -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
-                    -selvar,${sso_dict[${var}]} ${extpar_file} \
-                     ${grid_name}_${var}_remap.nc
+              if [[ "${coupled}" != "true" ]]
+              then
+                ${cdo} setvar,${var} -ifthen ${grid_name}_notsea_miss.nc \
+                      -remap${remap_scheme},${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,${sso_dict[${var}]} ${extpar_file} \
+                       ${grid_name}_${var}_remap.nc
+              else
+                temp=$(mktemp -u --tmpdir=.)
+                ${cdo} setvar,${var} -setgrid,${coupled_grid_file} -ifthen ${grid_name}_notsea_miss.nc \
+                      -remap${remap_scheme},${coupled_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,${sso_dict[${var}]} ${extpar_file} \
+                       ${temp}
+                ${cdo} setgrid,${grid_name}_notsea.nc ${temp} ${grid_name}_${var}_remap.nc
+                rm ${temp}
+              fi
             fi
             ;;
         cover_fract )
@@ -698,7 +722,12 @@ do
 
   remap_weights=wgt${remap_scheme}_${source_res}_to_${grid_name}.nc
 
-  icon_grid_file=${grid_path}/${icon_grid}
+  if [[ "${coupled}" != "true" ]]
+  then
+    icon_grid_file=${grid_path}/${icon_grid}
+  else
+    icon_grid_file=${coupled_grid_file}
+  fi
 
   command="${cdo} gen${remap_scheme},$icon_grid_file -setmissval,-9.e33 -random,${source_res}grid  $remap_weights"
   echo "Generating remap weights: $command"
@@ -745,7 +774,7 @@ do
 
   [[ "${old_r2b4_amip}" != "true" ]] && \
     output_dir="${output_path}/R2B${bisection}/land" || \
-    output_dir="${output_path}/r2b4_amip/land"
+    output_dir="${output_path}/r2b4_amip/lnd"
   mkdir -p ${output_dir} || true
 
   if [[ ${dryrun} != "true" ]]
