@@ -656,6 +656,7 @@ class ICON_Experiment ( Experiment ):
                 print self.B4J_index [ fileid ]
 
                 if not self.B4J_obj.fetchremote: continue
+                if os.path.isfile ( self.B4J_index [ fileid ]): continue
 
 
                 orig_dirpath =  self.B4J_path
@@ -663,23 +664,16 @@ class ICON_Experiment ( Experiment ):
                 fn_tmpl = "%(exp_name)s%(submodel)s_%(year)s%(mon_int)s01T000000Z.nc"
                 orig_fn_tmpl = self.outfiles_dict [ "fn_tmpl" ] % { "exp_name" : self.B4J_name_orig,
                                                                     "submodel" : "_%s" % filedict [ 'submodel' ],
-                                                                    "year"     : "%(year)s",
-                                                                    "mon_int"  : "%(mon_int)s" }
+                                                                    "year"     : "${x}",
+                                                                    "mon_int"  : "${y}" }
                 print fn_tmpl
                 print orig_fn_tmpl
-                #orig_fn_tmpl: tra0163_jsbach_jsbach_mm_%(year)s.grb
-
+                
                 suffix = 'nc'
-                # target_fn = self.B4J_obj.path_template % {
-                #     'path'           : '/mnt/lustre01/work/mj0060/m300050/data_temp',
-                #     'classification' : fileid,
-                #     'expname'        : self.B4J_name,
-                #     'startdate'      : self.B4J_startyear,
-                #     'enddate'        : self.B4J_endyear,
-                #     'suffix'         : fielddict [ 'suffix' ]}
-
+                
                 target_path = self.B4J_index [ fileid ]
                 target_fn = os.path.basename ( target_path )
+                print self.B4J_path
 
                 
                 #logstring=$(date +%Y%m%d%H%M)
@@ -691,7 +685,7 @@ class ICON_Experiment ( Experiment ):
                 echo ${tempfn};
                 for x in `seq %s 1 %s`;do
                 for y in {01..12};do
-                ARRAY[$i]=/mnt/lustre01/work/mj0060/m212005/icon-les/feature-tiles/experiments/atm_amip/v1/atm_amip_lnd_ml_${x}${y}01T000000Z.nc
+                ARRAY[$i]=%s/%s
                 echo ${ARRAY[i]};
                 i=$i+1;
                 done;
@@ -702,8 +696,10 @@ class ICON_Experiment ( Experiment ):
                 cdo monmean ${tempfn} %s;
                 rm -r ${tempfn}
                 """ % ( self.B4J_startyear, self.B4J_endyear,
+                        self.B4J_path, orig_fn_tmpl,
                         HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
                         target_fn, suffix, filedict [ 'name' ], target_fn )
+
 
                 print remote_cmd
                 
