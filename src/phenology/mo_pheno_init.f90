@@ -91,7 +91,6 @@ CONTAINS
     ptr_mon => input_file%Read_2d_time(    &
       & variable_name='lai_clim')
     ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
-    ! TODO Implement proper macros for getting lai_mon from mem
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
@@ -100,7 +99,6 @@ CONTAINS
     ptr_mon => input_file%Read_2d_time(    &
       & variable_name='veg_fract')
     ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
-    ! TODO Implement proper macros for getting lai_mon from mem
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
