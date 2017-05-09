@@ -396,7 +396,7 @@ CONTAINS
    !! bulk-density is converted to mol C
    WHERE(bulk_dens_corr_sl(:,:) > eps8)
       particle_fluxrate(:,:) = particle_fluxrate(:,:) / & 
-            (bulk_dens_corr_sl(:,:) * carbon_per_dryweight_SOM * molar_mass_C * 1000._wp) 
+            (bulk_dens_corr_sl(:,:) * carbon_per_dryweight_SOM / molar_mass_C * 1000._wp) 
    ENDWHERE
 
   END FUNCTION calc_particle_fluxrate
