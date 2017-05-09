@@ -13,17 +13,17 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID="std_plus_costs_1pool"      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
+experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant, soil are currently available
 
 
 ##>> sites <<###########################################################################################
 # select sites: FLUXNET or CRUNCEPv5
-siteDataSet="c"           # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteDataSet="f"           # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
 customSiteList="T"        # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
-customSiteListFileName="my_site_list.txt"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
 
@@ -40,8 +40,8 @@ spinupLengthGFDB=300         # years of spin-up before output is saved
 # (3) parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
 # please provide the line number of the site you want to use in your "customSiteListFileName"
-paramSensitivitySim="T"         # T (True) or F (False) [large caps]
-paramSensitivitySiteNumber=2    # line 2 to ...  (there is a header at line 1)
+paramSensitivitySim="F"         # T (True) or F (False) [large caps]
+paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 
 # (4) generate forcing for stand alone soil model
 flag_generate_soil_forcing="F"  # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
@@ -51,7 +51,7 @@ yearsSoilForcing=1              # number of years of forcing to be generated
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-bnf_scheme="std_plus_costs"           # prescribed standard std_plus_costs optimal resistance
+bnf_scheme="standard"           # prescribed standard std_plus_costs optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
 p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
@@ -77,14 +77,14 @@ flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 soil_depth=5.7                  # meters
 
 # simulation length & output
-simulation_length_number=500     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
-output_interval_pool="daily"   # timestep daily weekly monthly yearly
-output_interval_flux="daily"   # timestep daily weekly monthly yearly
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+output_interval_pool="weekly"   # timestep daily weekly monthly yearly
+output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=500     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
 # forcing input
-flag_oneYearForcing="T"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
+flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0      # float !
