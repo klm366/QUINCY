@@ -227,26 +227,8 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-    !> 1.0 Initialise output 
-    !!
-    CALL sb%loss%init(0.0_wp)
-    CALL sb%formation%init(0.0_wp)
-    het_respiration(:,:) = 0.0_wp
-    het_respiration_c13(:,:) = 0.0_wp
-    het_respiration_c14(:,:) = 0.0_wp
-    net_mineralisation_nh4(:,:) = 0.0_wp
-    net_mineralisation_nh4_n15(:,:) = 0.0_wp
-    net_mineralisation_no3(:,:) = 0.0_wp
-    net_mineralisation_no3_n15(:,:) = 0.0_wp
-    net_mineralisation_po4(:,:) = 0.0_wp
-    plant_uptake_nh4_sl(:,:) = 0.0_wp
-    plant_uptake_nh4_n15_sl(:,:) = 0.0_wp
-    plant_uptake_no3_sl(:,:) = 0.0_wp
-    plant_uptake_no3_n15_sl(:,:) = 0.0_wp
-    plant_uptake_po4_sl(:,:) = 0.0_wp
-    volatilisation_n(:,:) = 0.0_wp
-    nitrification(:,:) = 0.0_wp
-
+!!BLARPP
+rmm_depolymerisation(:,:) = 1.0_wp
 
     !> 1.1 Communicate vegetation uptake to soil layers (BLARPPP - temporary for now)
     plant_uptake_nh4_sl(:,1) = uptake_nh4(:) / soil_depth_sl(:,1) * dtime/1.e6 ! convert to mol/timestep

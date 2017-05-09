@@ -214,8 +214,13 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
-
+!BLARPP
+!percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
+rmm_mic_uptake = 1.0_wp
+rmm_depolymerisation = 1.0_wp
+rmm_hsc = 1.0_wp
+rmm_sorption = 1.0_wp
+rmm_desorption = 1.0_wp
 
     fine_root_carbon = root_fraction_sl * 6._wp !veg%pool%fine_root%carbon%ptr
     !fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr

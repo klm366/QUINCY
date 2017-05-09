@@ -246,17 +246,62 @@ CONTAINS
     SELECT CASE(TRIM(sb_config%sb_model_scheme))
       CASE('simple')
 
-        !!BLARPP
-        rmm_depolymerisation(:,:) = 1.0_wp
-
         CALL update_sb_simple_model_process(tile,options)
 
-        CALL calc_organic_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
+      CASE('jsm')
 
-        IF(sb_config%flag_n_deposition) THEN
-          nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
-          no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
-        END IF
+        CALL update_sb_jsm(tile, options)
+
+    ENDSELECT 
+
+    !> 1.0 loss of C14 due to radioactive decay
+    !!
+    sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  = sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
+       sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  * lambda_C14 * dtime
+    sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) * lambda_C14 * dtime
+    sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)     = sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)     * lambda_C14 * dtime
+    sb%loss%dom%carbon14%ptr(ics:ice,:,iblk)              = sb%loss%dom%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%dom%carbon14%ptr(ics:ice,:,iblk)              * lambda_C14 * dtime
+    sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
+    sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk)            = sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
+       sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk)            * lambda_C14 * dtime
+    sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       = sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
+       sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       * lambda_C14 * dtime
+    sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
+       sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
+    sb%loss%residue%carbon14%ptr(ics:ice,:,iblk)          = sb%loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
+    sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
+       sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    * lambda_C14 * dtime 
+
+    !> 2.0 update of organic pools
+    !!
+    CALL calc_organic_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
+
+    !> 2.1 update diagnostics and other state variables depending on organic matter content 
+    !!
+    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
+    bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
+    qmax_org = calc_qmax_org(bulk_dens_corr_sl)
+
+    !> 3.0 update of inorganic pools
+    !!
+  
+    !> 3.1 atmospheric deposition
+    !!
+    IF(sb_config%flag_n_deposition) THEN
+      nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
+      no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
+    END IF
+
+    !> 3.X other processes
+    !@todo: merge sections after making sure subroutines have same units!
+    !!
+    SELECT CASE(TRIM(sb_config%sb_model_scheme))
+      CASE('simple')
 
         veg%uptake_nh4%ptr(ice:ice,iblk) = plant_uptake_nh4_sl(:,1) * soil_depth_sl(:,1)
         veg%uptake_no3%ptr(ice:ice,iblk) = plant_uptake_no3_sl(:,1) * soil_depth_sl(:,1)
@@ -274,69 +319,7 @@ CONTAINS
           po4_solute(:,:)     = po4_solute(:,:) + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) * dtime/1.e6_wp 
         ENDIF
 
-         !> 6.0 radioactive decay
-         !!
-         sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  = sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  * lambda_C14 * dtime
-         sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) * lambda_C14 * dtime
-         sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)     = sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)     * lambda_C14 * dtime
-         sb%loss%dom%carbon14%ptr(ics:ice,:,iblk)              = sb%loss%dom%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%dom%carbon14%ptr(ics:ice,:,iblk)              * lambda_C14 * dtime
-         sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
-         sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
-         sb%loss%residue%carbon14%ptr(ics:ice,:,iblk)          = sb%loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
-         sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
-
-
       CASE('jsm')
-
-!BLARPP
-!percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
-rmm_mic_uptake = 1.0_wp
-rmm_depolymerisation = 1.0_wp
-rmm_hsc = 1.0_wp
-rmm_sorption = 1.0_wp
-rmm_desorption = 1.0_wp
-
-         CALL update_sb_jsm(tile, options)
-
-
-         !> 6.0 radioactive decay
-         !!
-         sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  = sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  * lambda_C14 * dtime
-         sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) * lambda_C14 * dtime
-         sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)     = sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)     * lambda_C14 * dtime
-         sb%loss%dom%carbon14%ptr(ics:ice,:,iblk)              = sb%loss%dom%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%dom%carbon14%ptr(ics:ice,:,iblk)              * lambda_C14 * dtime
-         sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
-         sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk)            = sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk)            * lambda_C14 * dtime
-         sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       = sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       * lambda_C14 * dtime
-         sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
-         sb%loss%residue%carbon14%ptr(ics:ice,:,iblk)          = sb%loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
-            sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
-         sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-            sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    * lambda_C14 * dtime 
-
-         !> 7.0 update pools
-         !!
-         CALL calc_organic_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
-         IF(sb_config%flag_n_deposition) THEN
-           nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
-           no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
-         END IF
 
          nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:))/ 1000000.0_wp &
                                                    + transport_nh4_solute(:,:)
@@ -366,18 +349,7 @@ rmm_desorption = 1.0_wp
          !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
          !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-         !> 7.1 update diagnostics and other state variables 
-         !!
-         bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
-         bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
-         qmax_org = calc_qmax_org(bulk_dens_corr_sl)
-
-      CASE('canopy','test_canopy')
-
-         CALL message(TRIM(routine), 'invalid model-type: '//TRIM(base_config%slm_model_name))
-
     ENDSELECT
-
 
   END SUBROUTINE update_sb_pools
 
