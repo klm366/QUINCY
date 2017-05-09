@@ -12,9 +12,8 @@ MODULE mo_sb_simple_model
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps8, eps4
+  USE mo_kind,            ONLY: wp, eps8, eps4
   USE mo_exception,       ONLY: message, message_text, finish
-  USE mo_base_memory,     ONLY: t_jsb_task_options
 
   IMPLICIT NONE
 
@@ -41,22 +40,18 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_constants,        ONLY: dtime
-    USE mo_base_config_class,     ONLY: base_config
-    USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_shared_constants,      ONLY: lambda_C14
-    USE mo_sb_config_class,       ONLY: sb_config
-    USE mo_sb_constants
-    USE mo_shared_isotope
-    USE mo_sb_jsm_processes
+!    USE mo_base_constants,        ONLY: dtime
+!    USE mo_base_config_class,     ONLY: base_config
+!    USE mo_soil_config_class,     ONLY: soil_config
+!    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
+!    USE mo_shared_constants,      ONLY: lambda_C14
+!    USE mo_sb_config_class,       ONLY: sb_config
+!    USE mo_sb_constants
+!    USE mo_shared_isotope
+!    USE mo_sb_jsm_processes
 
  
-    ! Use of process memory
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
-    dsl4jsb_Use_memory(A2L_)
+
 
     IMPLICIT NONE
     ! ---------------------------
@@ -65,180 +60,25 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)             :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc
-    INTEGER                               :: isoil
-!!
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1
-!!
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
+    !TYPE(t_jsb_model),      POINTER       :: model
+    !TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    !INTEGER                               :: iblk, ics, ice, nc
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model_process'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(VEG_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(A2L_)
-    ! Declare pointers to variables in memory
-    ! A2L
-    dsl4jsb_Real2D_onChunk      :: nhx_deposition
-    dsl4jsb_Real2D_onChunk      :: noy_deposition
-    ! ..
-    dsl4jsb_Real3D_onChunk :: t_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
-    dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
-    dsl4jsb_Real3D_onChunk :: rtm_sorption
-    dsl4jsb_Real3D_onChunk :: rtm_desorption
-    dsl4jsb_Real3D_onChunk :: rtm_hsc
-    dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
-    dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
-    dsl4jsb_Real3D_onChunk :: rmm_sorption
-    dsl4jsb_Real3D_onChunk :: rmm_desorption
-    dsl4jsb_Real3D_onChunk :: rmm_hsc
-    dsl4jsb_Real3D_onChunk :: het_respiration
-    dsl4jsb_Real3D_onChunk :: het_respiration_c13
-    dsl4jsb_Real3D_onChunk :: het_respiration_c14
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
-    dsl4jsb_Real3D_onChunk :: nitrification 
-    dsl4jsb_Real3D_onChunk :: denitrification 
-    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
-    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
-    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
-    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
-    dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
-    dsl4jsb_Real3D_onChunk :: nh4_solute 
-    dsl4jsb_Real3D_onChunk :: no3_solute
-    dsl4jsb_Real3D_onChunk :: po4_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
-    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
-! 2 be removed?: pointers to veg assimi *slmtemp
-    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process config
-!    dsl4jsb_Get_config(SB_)
-    ! Get process memories
-    dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SOIL_)
-    dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(A2L_)
-    ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)                       ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)                       ! in
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)
-    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)
-    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
+    ! ...
 
 
-! 2 be removed  *slmtemp
-    sb   => sb__mem
-    veg   => veg__mem
+
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !> 1.0 Calculate biophysical rate modifiers
-    !!
-    !! for the full and plant only model, update soil modifiers. In the soil model, these are read from a file 
-    SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant')
-
-         rtm_depolymerisation = calc_temperature_rate_modifier(t_soil_sl,ea_depolymerisation) 
-         rtm_mic_uptake       = calc_temperature_rate_modifier(t_soil_sl,ea_mic_uptake)
-         rtm_sorption         = calc_temperature_rate_modifier(t_soil_sl,ea_sorption) 
-         rtm_desorption       = calc_temperature_rate_modifier(t_soil_sl,ea_desorption) 
-         rtm_hsc              = calc_temperature_rate_modifier(t_soil_sl,ea_hsc) 
-          
-         rmm_depolymerisation = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) 
-         !!BLARPP
-         rmm_depolymerisation(:,:) = 1.0_wp
-         rmm_mic_uptake       = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_mic_uptake)
-         rmm_sorption         = calc_convert_bulk_to_liquid(w_soil_sl)
-         rmm_desorption       = calc_convert_bulk_to_liquid(w_soil_sl) 
-         rmm_hsc              = calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_hsc) 
-
-    END SELECT
 
     CALL calc_sb_fluxes_simple(tile, options)
 
-!    CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
-
-!    IF(sb_config%flag_n_deposition) THEN
-!      nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
-!      no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
-!    END IF
-
-!    veg%uptake_nh4%ptr(ice:ice,iblk) = plant_uptake_nh4_sl(:,1) * soil_depth_sl(:,1)
-!    veg%uptake_no3%ptr(ice:ice,iblk) = plant_uptake_no3_sl(:,1) * soil_depth_sl(:,1)
-!    veg%uptake_p%ptr(ice:ice,iblk)   = plant_uptake_po4_sl(:,1) * soil_depth_sl(:,1)
-!    IF(.NOT.sb_config%flag_sb_prescribe_nh4) THEN
-!      nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - sb%nitrification%ptr(ice:ice,:,iblk) & 
-!                                                       - sb%volatilisation_n%ptr(ice:ice,:,iblk)- plant_uptake_nh4_sl(:,:)) * dtime/1.e6_wp
-!      nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_nh4_n15(:,:) / 1000000.0_wp * dtime
-!    ENDIF
-!    IF(.NOT.sb_config%flag_sb_prescribe_no3) THEN
-!      no3_solute(:,:)     = no3_solute(:,:)     + (sb%nitrification%ptr(ice:ice,:,iblk) - plant_uptake_no3_sl(:,:)) / dtime/1.e6_wp 
-!      no3_n15_solute(:,:) = no3_n15_solute(:,:) + net_mineralisation_no3_n15(:,:) / 1000000.0_wp * dtime
-!    ENDIF
-!    IF(.NOT.sb_config%flag_sb_prescribe_po4) THEN
-!      po4_solute(:,:)     = po4_solute(:,:) + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) * dtime/1.e6_wp 
-!    ENDIF
 
   END SUBROUTINE update_sb_simple_model_process
 
@@ -295,10 +135,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
-    dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
-    dsl4jsb_Real3D_onChunk :: rtm_sorption
-    dsl4jsb_Real3D_onChunk :: rtm_desorption
-    dsl4jsb_Real3D_onChunk :: rtm_hsc
     dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rmm_sorption
@@ -357,10 +193,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)

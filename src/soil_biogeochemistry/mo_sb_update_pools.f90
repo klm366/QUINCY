@@ -52,6 +52,7 @@ CONTAINS
     USE mo_sb_simple_model 
     USE mo_shared_isotope
     USE mo_sb_jsm_main,           ONLY: update_sb_jsm
+    USE mo_sb_rate_modifier,      ONLY: update_sb_rate_modifier
  
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -93,11 +94,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl 
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
-    dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
-    dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
-    dsl4jsb_Real3D_onChunk :: rtm_sorption
-    dsl4jsb_Real3D_onChunk :: rtm_desorption
-    dsl4jsb_Real3D_onChunk :: rtm_hsc
     dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rmm_sorption
@@ -179,11 +175,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)      ! soil: in / land+plant: out
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)            ! soil: in / land+plant: out
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)              ! soil: in / land+plant: out
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)            ! soil: in / land+plant: out
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)                   ! soil: in / land+plant: out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! out
@@ -247,23 +238,16 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
 
-         rtm_depolymerisation = calc_temperature_rate_modifier(t_soil_sl,ea_depolymerisation) 
-         rtm_mic_uptake       = calc_temperature_rate_modifier(t_soil_sl,ea_mic_uptake)
-         rtm_sorption         = calc_temperature_rate_modifier(t_soil_sl,ea_sorption) 
-         rtm_desorption       = calc_temperature_rate_modifier(t_soil_sl,ea_desorption) 
-         rtm_hsc              = calc_temperature_rate_modifier(t_soil_sl,ea_hsc) 
-     
-         rmm_depolymerisation = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) 
-         rmm_mic_uptake       = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_mic_uptake)
-         rmm_sorption         = calc_convert_bulk_to_liquid(w_soil_sl)
-         rmm_desorption       = calc_convert_bulk_to_liquid(w_soil_sl) 
-         rmm_hsc              = calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_hsc) 
+        CALL update_sb_rate_modifier(tile, options)
 
     ENDSELECT
  
     !> 2.0 Calculate soil pools 
     SELECT CASE(TRIM(sb_config%sb_model_scheme))
       CASE('simple')
+
+        !!BLARPP
+        rmm_depolymerisation(:,:) = 1.0_wp
 
         CALL update_sb_simple_model_process(tile,options)
 
