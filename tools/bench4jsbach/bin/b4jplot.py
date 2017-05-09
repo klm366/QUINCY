@@ -127,7 +127,6 @@ def mapplot_seasonal ( varname    = None,
     vmax     = float ( vmax )     if vmax     else np.nan
 
     nc_fid  = Dataset ( inpath, 'r')
-
     var       = nc_fid.variables [ varname ]
     units     = var.units
     grid_type = var.grid_type
@@ -152,7 +151,7 @@ def mapplot_seasonal ( varname    = None,
         sys.exit ( 1 )
 
     nc_fid.close ()
-
+    
     assert time.shape [ 0 ] == nseas
     
     vmax    = vardata.max () if np.isnan ( vmax ) else vmax

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """Module contains experiment related classes, methods and metadata."""
 
-__author__="Deike Kleberg (2016,2017)"
+__author__="Deike Kleberg"
 
 # show all methods of class Experiment
 # >>> from experiment import Experiment
@@ -51,7 +51,8 @@ HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
                "mistral" : { "login_name" : "mistral.dkrz.de",
                              "names"      : [ "mlogin100", "mlogin101",
                                               "mlogin102", "mlogin103",
-                                              "mlogin104", "mlogin105" ],
+                                              "mlogin104", "mlogin105",
+                                              "mistralpp1", "mistralpp2", "mistralpp3", "mistralpp4", "mistralpp5" ],
                              "domain"     : "hpc.dkrz.de",
                              "cdo_path"   : "/sw/rhel6-x64/cdo/cdo-1.7.0-magicsxx-gcc48/bin" },
                "archive" : { "login_name" : None,
@@ -241,9 +242,8 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
 
         self.B4J_obj.logger.debug ( "Exiting" )
-        
 
-    
+
     def accumulate_streams ( self, orig_dirpath, orig_fn_tmpl, startyear, endyear,
                              selcodes, suffix, codes_path, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
@@ -260,18 +260,7 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         sy  = int ( startyear )
         fy  = int ( endyear )
         
-        if not from_remote:
-            cdo = Cdo ()
-            try:
-                os.remove ( target_path )
-            except OSError:
-                pass
-            cdo.mergetime ( input = [ os.path.join ( orig_dirpath,
-                                                     orig_fn_tmpl % \
-                                                     { 'year' : y }) \
-                                      for y in range ( sy, fy + 1 )],
-                            output = target_path )
-        elif not os.path.isfile ( target_path ):
+        if not os.path.isfile ( target_path ):
             assert 'cdo_path' in HOST_AVAIL [ self.B4J_host ] and \
                 'login_name' in  HOST_AVAIL [ self.B4J_host ],\
                 "Configuration for host %s incomplete." %  HOST_AVAIL [ self.B4J_host ]
@@ -279,7 +268,7 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
             target_fn = os.path.basename ( target_path )
             ofnt     = orig_fn_tmpl.replace ( '%(year)s', '${y}' )
 
-            remote_cmd = """
+            cmd = """
             echo 'on server' $(hostname);
             for y in `seq %d 1 %d`;do
             ARRAY[$i]=%s/%s;
@@ -288,23 +277,44 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
             done;
             export PATH=%s:$PATH;
             rm -f %s;
+            echo %s %s %s %s
             cdo -f %s -t %s select,code=%s ${ARRAY[*]} %s;
             """ % (
-                sy, fy, orig_dirpath, ofnt,
+                sy, fy, 
+                orig_dirpath, ofnt,
                 HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
-                target_fn, suffix, codes_path, selcodes, target_fn )
-
-            self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
-                remote_cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
-
-            print "\n\n clear:\n\n %s \n\n" % remote_cmd
+                target_fn, 
+                suffix, codes_path, selcodes, target_fn,
+                suffix, codes_path, selcodes, target_fn )
             
-            self.remotehost_processing ( remote_cmd )
-            self.B4J_obj.logger.debug ( "Executed command successfully." )
-            self.remotehost_fetching ( target_fn, target_path )
-            self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
-            self.remotehost_processing ( "rm -f %s" % target_fn )
-            self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+            if from_remote:
+                self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
+                        cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
+
+                print "\n\n clear:\n\n %s \n\n" % cmd
+
+                self.remotehost_processing ( cmd )
+                self.B4J_obj.logger.debug ( "Executed command successfully." )
+                self.remotehost_fetching ( target_fn, target_path )
+                self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+                self.remotehost_processing ( "rm -f %s" % target_fn )
+                self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+            else:
+                cmd = "cd %s" % ( self.B4J_obj.interpolated_selected_path ) + cmd
+
+                self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
+                        cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
+
+                print "\n\n clear:\n\n %s \n\n" % cmd
+
+                sp = subprocess.Popen( cmd, shell=True,
+                                       stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+                stdout, stderr = sp.communicate()
+                if sp.returncode:
+                    print "stdout: ", stdout
+                    print "stderr: ", stderr
+                    print "returncode: %d" % sp.returncode
+                    sys.exit ( sp.returncode )
         else:
             pass
             
@@ -490,7 +500,7 @@ for %s into %s. This might take a while ...""" % (
         # TODO : CHECK/IMPLEMENT CASE FOR ACCUMULATED AND NOT FROM_ARCHIVE
         if self.from_archive and fetchfile_list:
             self.fetch_archived_streams ( fetchfile_list )
-            
+           
         if self.accumulated:
             cdo = Cdo ()
             
