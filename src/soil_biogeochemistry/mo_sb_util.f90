@@ -80,6 +80,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: volatilisation_n
+    dsl4jsb_Real3D_onChunk :: nitrification
 ! 2 be removed later: pointer to sb   *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -124,6 +126,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)               ! out
 
 
 ! 2 be removed  *slmtemp
@@ -163,6 +167,8 @@ CONTAINS
     transport_nh4_n15_solute(:,:)     = zero 
     transport_nh4_n15_assoc(:,:)      = zero 
     transport_no3_n15_solute(:,:)     = zero 
+    volatilisation_n(:,:)             = zero
+    nitrification(:,:)                = zero
 
   END SUBROUTINE reset_sb_fluxes
 
