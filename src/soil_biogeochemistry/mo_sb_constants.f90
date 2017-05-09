@@ -16,16 +16,12 @@ MODULE mo_sb_constants
 
   ! parameters for simple soil biogeochemical model
   REAL(wp), SAVE :: & 
-      tau_litter, &        !< soil litter pool turnover time (years)
-      floss_nmin, &        !< fractional loss of N per unit N mineralisation 
-      fnit_nmin            !< fractional nitrification per unit N mineralisation 
-
-   ! four pool model
-   REAL(wp), SAVE :: & 
-      tau_slow, & 
-      tau_fast, &
-      tau_non_woody_litter, &
-      residue_cue
+      floss_nmin, &             !< fractional loss of N per unit N mineralisation 
+      fnit_nmin, &              !< fractional nitrification per unit N mineralisation 
+      tau_slow, &               !< ..
+      tau_fast, &               !< ..
+      tau_non_woody_litter, &   !< ..
+      residue_cue               !< ..
 
   ! parameter for JSM implementation
 
@@ -138,11 +134,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_sb_constants'
 
     ! parameters for simple soil biogeochemical model 
-    tau_litter = 5.0_wp  ! years
     floss_nmin = 0.05_wp
     fnit_nmin  = 0.1_wp
-
-    ! parameters for less simple soil bgc model
     tau_slow = 50._wp * one_year * one_day
     tau_fast = 5._wp * one_year * one_day
     tau_non_woody_litter = 0.7_wp * one_year * one_day
