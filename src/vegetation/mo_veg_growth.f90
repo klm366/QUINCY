@@ -14,6 +14,9 @@ MODULE mo_veg_growth
   USE mo_kind
   USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
+  USE mo_base_memory,           ONLY: t_jsb_task_options
+  USE mo_soil_config_class,     ONLY: soil_config
+  USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_constants
 
 
@@ -47,12 +50,13 @@ CONTAINS
     USE mo_assimi_config_class,     ONLY: assimi_config
 
     ! Use of process memories
-    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
     ! ---------------------------
@@ -76,6 +80,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Logical2D_onChunk   :: growing_season
@@ -97,8 +102,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
+    ! SB_
+    dsl4jsb_Real3D_onChunk      :: nh4_solute
     ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
@@ -123,6 +131,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_npp_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_pot
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act
     dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation
     dsl4jsb_Real2D_onChunk      :: target_np_leaf
@@ -167,9 +179,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: k2_opt
     dsl4jsb_Real2D_onChunk      :: growth_req_p
     dsl4jsb_Real2D_onChunk      :: growth_req_n
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: uptake_p
+    dsl4jsb_Real2D_onChunk      :: f_n_demand
+    dsl4jsb_Real2D_onChunk      :: f_p_demand
     dsl4jsb_Real2D_onChunk      :: n_fixation
+    dsl4jsb_Real2D_onChunk      :: n_fixation_n15
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
     dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
@@ -212,6 +232,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -236,7 +257,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)          ! in
     ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_solute)                          ! in
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)                 ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in
@@ -261,8 +285,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)       ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)                 !   out
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation)                    !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act)                  ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act)                  ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation)                    ! out 
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)                !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_coarse_root)              !   out
@@ -305,9 +333,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, k2_opt)                             !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)                       !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)                       !   out
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                         !   inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         !   inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)                           ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)                         ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)                         ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                         ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                     ! out 
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)           ! in
@@ -348,6 +384,34 @@ CONTAINS
     !> 1.1 calculate costs of N uptake and fixation
     !!
     veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air(1), veg%t_air_tacclim_mavg%ptr)
+
+    CALL calc_actual_nutrient_uptake_rate(options, soil_config%nsoil_water, lctlib, &
+                                           veg%pool%fine_root%carbon%ptr, & 
+                                           veg%pool%labile%carbon%ptr, & 
+                                           veg%pool%labile%nitrogen%ptr, & 
+                                           veg%pool%labile%phosphorus%ptr, & 
+                                           veg%pool%reserve%carbon%ptr, & 
+                                           veg%pool%reserve%nitrogen%ptr, & 
+                                           veg%pool%reserve%phosphorus%ptr,&
+                                           nh4_solute(:,:), &
+                                           soil_depth_sl(:,:), &
+                                           growth_req_p_tuptake_mavg(:), &
+                                           demand_uptake_n_tuptake_mavg(:), &
+                                           demand_uptake_p_tuptake_mavg(:), &
+                                           cost_n_fixation_tuptake_mavg(:), &
+                                           cost_n_uptake_root(:), &
+                                           unit_uptake_n_pot(:), &
+                                           unit_uptake_p_pot(:), &
+                                           uptake_nh4(:), &
+                                           uptake_no3(:), &
+                                           uptake_p(:), &
+                                           f_n_demand(:), &
+                                           f_p_demand(:), &
+                                           unit_uptake_n_act(:), &
+                                           unit_uptake_p_act(:), &
+                                           n_fixation(:), &
+                                           n_fixation_n15(:)         ) 
+
     CALL calc_nitrogen_uptake_costs(lctlib                           , &    ! in
                                     t_air(:)                         , &
                                     veg%pool%fine_root%carbon%ptr    , &
@@ -622,6 +686,170 @@ CONTAINS
   END FUNCTION calc_meristem_activity 
 
 
+  !-----------------------------------------------------------------------------------------------------
+  ! 1.1 Sub Task of update_growth
+  ! 
+  !----------------------------------------------------------------------------------------------------------
+  !> Routine to calculate actual uptake rates of nitrogen and phosphorus from soil given the 
+  !! vegetation demands and resource availability 
+  !!   
+  !! output: actual uptake rates and associated respiration costs 
+  !----------------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_actual_nutrient_uptake_rate(options, nsoil, lctlib, &
+                                              pool_fine_root_carbon, & 
+                                              pool_labile_carbon, & 
+                                              pool_labile_nitrogen, & 
+                                              pool_labile_phosphorus, & 
+                                              pool_reserve_carbon, & 
+                                              pool_reserve_nitrogen, & 
+                                              pool_reserve_phosphorus, &
+                                              nh4_solute, & 
+                                              soil_depth_sl, &
+                                              growth_req_p_tuptake_mavg, &
+                                              demand_uptake_n_tuptake_mavg, &
+                                              demand_uptake_p_tuptake_mavg, &
+                                              cost_n_fixation_tuptake_mavg, &
+                                              cost_n_uptake_root, &
+                                              unit_uptake_n_pot, &
+                                              unit_uptake_p_pot, &
+                                              uptake_nh4, &
+                                              uptake_no3, &
+                                              uptake_p, &
+                                              f_n_demand, &
+                                              f_p_demand, &
+                                              unit_uptake_n_act, &
+                                              unit_uptake_p_act, &
+                                              n_fixation, & 
+                                              n_fixation_n15)
+                       
+    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
+    USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
+    USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation
+
+    IMPLICIT NONE
+    
+    ! 0.1 InOut
+    TYPE(t_jsb_task_options),              INTENT(in)    :: options                  !< model options
+    INTEGER,                               INTENT(in)    :: nsoil
+    TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
+    REAL(wp),                              INTENT(in)    :: pool_fine_root_carbon    
+    REAL(wp),                              INTENT(in)    :: pool_labile_carbon    
+    REAL(wp),                              INTENT(in)    :: pool_labile_nitrogen    
+    REAL(wp),                              INTENT(in)    :: pool_labile_phosphorus    
+    REAL(wp),                              INTENT(in)    :: pool_reserve_carbon    
+    REAL(wp),                              INTENT(in)    :: pool_reserve_nitrogen    
+    REAL(wp),                              INTENT(in)    :: pool_reserve_phosphorus    
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_solute
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl 
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: growth_req_p_tuptake_mavg
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: demand_uptake_n_tuptake_mavg
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: demand_uptake_p_tuptake_mavg
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: cost_n_uptake_root
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: cost_n_fixation_tuptake_mavg 
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: unit_uptake_n_pot 
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: unit_uptake_p_pot 
+    REAL(wp), DIMENSION(options%nc),       INTENT(inout) :: uptake_nh4 
+    REAL(wp), DIMENSION(options%nc),       INTENT(inout) :: uptake_no3 
+    REAL(wp), DIMENSION(options%nc),       INTENT(inout) :: uptake_p 
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: f_n_demand
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: f_p_demand 
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: unit_uptake_n_act 
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: unit_uptake_p_act 
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: n_fixation 
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: n_fixation_n15 
+
+    REAL(wp), DIMENSION(options%nc) :: dcost        , &  ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
+                                       n_demand     , &  ! N demand of plants (mu mol N /m2 / s) 
+                                       f_nacq_bnf   , &  ! fraction of N uptake as BFN
+                                       f_nacq_nup   , &  ! fraction of N uptake as Nuptake
+                                       scal
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_actual_nutrient_uptake_rate'
+
+    !> 1.0 Calculate an instantaneous scalar of nutrient demand
+    !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
+    !!
+    !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P
+!@todo: why is this a lctlib and not a general parameter?
+    IF(pool_labile_carbon + pool_reserve_carbon > eps8) THEN
+       f_n_demand(:) = 1._wp - exp(-(lctlib%labile_cn_max * MAX(1._wp/lctlib%labile_cn_min - &
+            (pool_labile_nitrogen+pool_reserve_nitrogen)/&
+            (pool_labile_carbon+pool_reserve_carbon), 0._wp))**2._wp)
+    ELSE
+       f_n_demand(:) = 1.0_wp
+    ENDIF
+
+    IF(pool_labile_nitrogen > eps8) THEN
+       f_p_demand(:) = lctlib%np_leaf * &
+           MAX(growth_req_p_tuptake_mavg(:) - pool_labile_phosphorus / pool_labile_nitrogen, 0.0_wp)
+    ELSE
+       f_p_demand(:) = 1.0_wp
+    ENDIF
+
+    !> 3.0 N fixation
+    !!
+    !!
+    SELECT CASE (veg_config%bnf_scheme)
+      !> 3.1 Case 1: no N fixation
+      !!
+      CASE ("prescribed") 
+        n_fixation(:) = 0.0_wp
+
+      CASE("standard","std_plus_costs")
+        WHERE(nh4_solute(:,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND. &
+              spread(pool_fine_root_carbon,1,options%nc) > eps8) 
+          n_fixation(:) = lctlib%bnf_base 
+        END WHERE
+
+      !> 3.2 Case 2: optimal N fixation
+      !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
+      CASE ("optimal")
+        WHERE(cost_n_fixation_tuptake_mavg(:) <= cost_n_uptake_root(:))
+           dcost(:)         = cost_n_uptake_root(:) - cost_n_fixation_tuptake_mavg(:)
+           n_fixation(:) = pool_fine_root_carbon * vmax_bnf * dcost(:) / (k_bnf + dcost(:))
+        ELSEWHERE
+           n_fixation(:) = 0.0_wp
+        END WHERE
+
+      !> 3.3 Case 3: Ohm's law analogy 
+      !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
+      CASE ("resistance")
+         ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
+!SZ: why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
+         n_demand(:) = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
+                    pool_labile_carbon / tau_labile / one_day * 1.e6
+
+         f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / &
+                      (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), 0.0_wp)
+         f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
+  
+
+         n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
+         
+         WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:) )
+               scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
+               uptake_nh4(:) = uptake_nh4(:) * scal(:)
+               uptake_no3(:) = uptake_no3(:) * scal(:)
+         END WHERE
+           
+    ENDSELECT 
+
+    !> 3.4 15N flux associated with symbiontic N fixation 
+    !! follows atmospheric signature
+    n_fixation_n15(:) = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_nfixation))
+
+    !> 4.0 Calculate potential and actual N uptake per unit fine root carbon
+    !!
+    IF(pool_fine_root_carbon > eps8) THEN
+      unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / pool_fine_root_carbon
+      unit_uptake_p_act(:) = uptake_p(:) / pool_fine_root_carbon
+    ELSE
+      unit_uptake_n_act(:) = unit_uptake_n_pot(:) * demand_uptake_n_tuptake_mavg(:)
+      unit_uptake_p_act(:) = unit_uptake_p_pot(:) * demand_uptake_p_tuptake_mavg(:)
+    ENDIF
+
+  END SUBROUTINE calc_actual_nutrient_uptake_rate
+ 
   !-----------------------------------------------------------------------------------------------------
   ! 1.1 Sub Task of update_growth
   ! 

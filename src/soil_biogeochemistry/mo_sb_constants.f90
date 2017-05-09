@@ -109,8 +109,7 @@ MODULE mo_sb_constants
       eta_nitrate_production, &  !< fractionation of N15 due to microbial NO3 production during nitrification (per mill)
       eta_denitrification, &     !< fractionation of N15 due to microbial denitrification (per mill)
       eta_ammonification, &      !< fractionation of N15 due to microbial ammonification (per mill)
-      eta_volatilisation_nh3, &  !< fractionation of N15 due to NH3 volatilisation (per mill)
-      eta_nfixation              !< fractionation of N15 due to N fixation (per mill)
+      eta_volatilisation_nh3     !< fractionation of N15 due to NH3 volatilisation (per mill)
 
    ! only temporarily
    REAL(wp), SAVE :: & 
@@ -215,7 +214,6 @@ CONTAINS
     eta_denitrification    = 31._wp
     eta_ammonification     = 2.5_wp
     eta_volatilisation_nh3 = 50._wp
-    eta_nfixation          = 3.0_wp        
 
     ! BLARPP temporarily
     nh4_solute_prescribe = 0.1_wp

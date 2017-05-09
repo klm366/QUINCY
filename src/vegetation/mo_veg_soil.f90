@@ -145,31 +145,6 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
-
-    !> 1.0 Calculate an instantaneous scalar of nutrient demand
-    !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
-    !!
-    !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
-    IF(veg%pool%labile%carbon%ptr > eps8) THEN
-       f_n_demand(:) = 1._wp-exp(-(lctlib%labile_cn_max  *MAX(1._wp/lctlib%labile_cn_min - &
-            (veg%pool%labile%nitrogen%ptr+veg%pool%reserve%nitrogen%ptr)/&
-            (veg%pool%labile%carbon%ptr+veg%pool%reserve%carbon%ptr), 0._wp))**2._wp)
-    ELSE
-       f_n_demand(:) = 1.0_wp
-    ENDIF
-
-    IF(veg%pool%labile%nitrogen%ptr > eps8) THEN
-       f_p_demand(:) = lctlib%np_leaf * & 
-           MAX(growth_req_p_tuptake_mavg(:) - veg%pool%labile%phosphorus%ptr / veg%pool%labile%nitrogen%ptr, 0.0_wp)
-    ELSE
-       f_p_demand(:) = 1.0_wp
-    ENDIF
-
-    !> 2.0 inorganic uptake (first guess)
-    !!
-    !!
-
     !> 2.1 Nitrogen uptake
     !!
     SELECT CASE (veg_config%bnf_scheme)
@@ -220,54 +195,6 @@ CONTAINS
 
     ENDSELECT
 
-    !> 3.0 N fixation
-    !!
-    !!
-    SELECT CASE (veg_config%bnf_scheme)
-      !> 3.1 Case 1: no N fixation
-      !!
-      CASE ("prescribed") 
-        n_fixation(:) = 0.0_wp
-
-      CASE("standard","std_plus_costs")
-        WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND. &
-              spread(veg%pool%fine_root%carbon%ptr,1,nc) > eps8) 
-          n_fixation(:) = lctlib%bnf_base 
-        END WHERE
-
-      !> 3.2 Case 2: optimal N fixation
-      !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
-      CASE ("optimal")
-        WHERE(cost_n_fixation_tuptake_mavg(:) <= cost_n_uptake_root(:))
-           dcost(:)         = cost_n_uptake_root(:) - cost_n_fixation_tuptake_mavg(:)
-           n_fixation(:) = veg%pool%fine_root%carbon%ptr * vmax_bnf * dcost(:) / (k_bnf + dcost(:))
-        ELSEWHERE
-           n_fixation(:) = 0.0_wp
-        END WHERE
-
-      !> 3.3 Case 3: Ohm's law analogy 
-      !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
-      CASE ("resistance")
-         ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
-!SZ: why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
-         n_demand(:) = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
-                    veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
-
-         f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / &
-                      (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), 0.0_wp)
-         f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
-  
-
-         n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
-         
-         WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:) )
-               scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
-               uptake_nh4(:) = uptake_nh4(:) * scal(:)
-               uptake_no3(:) = uptake_no3(:) * scal(:)
-         END WHERE
-           
-    ENDSELECT 
-
     !> 4.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
     unit_uptake_n_pot(:) = lctlib%vmax_uptake_n * &
@@ -278,14 +205,6 @@ CONTAINS
     unit_uptake_p_pot(:) = lctlib%vmax_uptake_p * &
                                 sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + &
                                 1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) ))
-
-    IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
-      unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / veg%pool%fine_root%carbon%ptr
-      unit_uptake_p_act(:) = uptake_p(:) / veg%pool%fine_root%carbon%ptr
-    ELSE
-      unit_uptake_n_act(:) = unit_uptake_n_pot(:) * demand_uptake_n_tuptake_mavg(:)
-      unit_uptake_p_act(:) = unit_uptake_p_pot(:) * demand_uptake_p_tuptake_mavg(:)
-    ENDIF
 
   END SUBROUTINE update_vegsoil_bgc
 
