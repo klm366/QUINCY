@@ -905,9 +905,6 @@ CONTAINS
     t_air_month_mavg(:)      = calc_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
     t_jmax_opt_mavg(:)       = calc_mavg(t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
 
-
-
-
   END SUBROUTINE calc_moving_averages
 
 

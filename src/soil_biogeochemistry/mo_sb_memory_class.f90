@@ -797,6 +797,8 @@ CONTAINS
     CALL this%soluable_litter%init(s)
     CALL this%polymeric_litter%init(s)
     CALL this%woody_litter%init(s)
+	CALL this%fungi%init(s)
+	CALL this%mycorrhiza%init(s)
     CALL this%microbial%init(s)
     CALL this%residue%init(s)
     CALL this%residue_assoc%init(s)

@@ -251,9 +251,9 @@ CONTAINS
                                                                                     (one_day*one_year) *1.e6_wp
     IF (ABS(this%k_bnf                - missval) > eps8)  k_bnf                 = this%k_bnf / &
                                                                                     (molar_mass_C/molar_Mass_N)
-    IF (ABS(this%offset_bnf           - missval) > eps8)  offset_bnf            = this%offset_bnf * &
-                                                                                    (transform_cost_nh4+transform_cost_no3) / &
-																					2.0_wp
+    IF (ABS(this%offset_bnf           - missval) > eps8)  offset_bnf            = this%offset_bnf * 2.0_wp * &
+																					(transform_cost_nh4*transform_cost_no3)/ &
+																					(transform_cost_nh4+transform_cost_no3)
     IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
