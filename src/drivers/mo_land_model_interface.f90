@@ -268,7 +268,6 @@ CONTAINS
     !!
       CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
-      CALL update_vegsoil_bgc     (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
@@ -319,7 +318,6 @@ CONTAINS
     !!
       CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
-      CALL update_vegsoil_bgc     (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
