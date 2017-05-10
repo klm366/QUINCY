@@ -652,10 +652,6 @@ class ICON_Experiment ( Experiment ):
             cdo = Cdo ()
                 
             for fileid, filedict in fielddict [ 'fetch' ][ self.B4J_etype ].iteritems ():
-                print
-                print fileid
-                print filedict
-                print
                 self.B4J_index [ fileid ] = self.B4J_obj.path_template % { 
                     'path'           : self.B4J_obj.interpolated_selected_path,
                     'classification' : fileid,
@@ -663,35 +659,27 @@ class ICON_Experiment ( Experiment ):
                     'startdate'      : self.B4J_startyear,
                     'enddate'        : self.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
-                print self.B4J_index [ fileid ]
 
-                if not self.B4J_obj.fetchremote: continue
+                #if not self.B4J_obj.fetchremote: continue
                 if os.path.isfile ( self.B4J_index [ fileid ]): continue
 
 
                 orig_dirpath =  self.B4J_path
-                print orig_dirpath
                 fn_tmpl = "%(exp_name)s%(submodel)s_%(year)s%(mon_int)s01T000000Z.nc"
                 orig_fn_tmpl = self.outfiles_dict [ "fn_tmpl" ] % { "exp_name" : self.B4J_name_orig,
                                                                     "submodel" : "_%s" % filedict [ 'submodel' ],
                                                                     "year"     : "${x}",
                                                                     "mon_int"  : "${y}" }
-                print fn_tmpl
-                print orig_fn_tmpl
-                
                 suffix = 'nc'
                 
                 target_path = self.B4J_index [ fileid ]
                 target_fn = os.path.basename ( target_path )
-                print self.B4J_path
 
-                
-                #logstring=$(date +%Y%m%d%H%M)
-                
-                remote_cmd = """
+                cmd = """
                 echo 'on server' $(hostname);
                 echo $(pwd -P);
-                tempfn=temp;
+                logstring=$(date +%%Y%%m%%d%%H%%M)
+                tempfn=temp_${logstring};
                 echo ${tempfn};
                 for x in `seq %s 1 %s`;do
                 for y in {01..12};do
@@ -701,6 +689,8 @@ class ICON_Experiment ( Experiment ):
                 done;
                 done;
                 export PATH=%s:$PATH;
+                echo ${PATH};
+                echo %s %s %s;
                 rm -f %s;
                 cdo -P 8 -f %s select,name=%s ${ARRAY[*]} ${tempfn};
                 cdo monmean ${tempfn} %s;
@@ -708,17 +698,39 @@ class ICON_Experiment ( Experiment ):
                 """ % ( self.B4J_startyear, self.B4J_endyear,
                         self.B4J_path, orig_fn_tmpl,
                         HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
-                        target_fn, suffix, filedict [ 'name' ], target_fn )
+                        suffix, filedict [ 'name' ],target_fn,
+                        target_fn,
+                        suffix, filedict [ 'name' ], 
+                        target_fn )
+            
+                if self.from_remote:
+                    self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
+                            cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
 
-
-                print remote_cmd
+                    print "\n\n clear:\n\n %s \n\n" % cmd
                 
-                self.remotehost_processing ( remote_cmd )
-                self.B4J_obj.logger.debug ( "Executed command successfully." )
-                self.remotehost_fetching ( target_fn, target_path )
-                self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
-                self.remotehost_processing ( "rm -f %s" % target_fn )
-                self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+                    self.remotehost_processing ( cmd )
+                    self.B4J_obj.logger.debug ( "Executed command successfully." )
+                    self.remotehost_fetching ( target_fn, target_path )
+                    self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+                    self.remotehost_processing ( "rm -f %s" % target_fn )
+                    self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+                else:
+                    cmd = "cd %s" % ( self.B4J_obj.interpolated_selected_path ) + cmd
+
+                    self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
+                            cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
+
+                    print "\n\n clear:\n\n %s \n\n" % cmd
+
+                    sp = subprocess.Popen( cmd, shell=True,
+                                           stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+                    stdout, stderr = sp.communicate()
+                    if sp.returncode:
+                        print "stdout: ", stdout
+                        print "stderr: ", stderr
+                        print "returncode: %d" % sp.returncode
+                        sys.exit ( sp.returncode )
 
         
         self.land_sea_mask  = self.B4J_obj.path_template % { 
