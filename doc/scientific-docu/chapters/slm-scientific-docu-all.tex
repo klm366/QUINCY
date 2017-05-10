@@ -54,14 +54,14 @@ echam text
 \section{Land Model Interface}
 \label{sec:land_model_interface}
 
-The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, plant, canopy, soil, test{\_}canopy) for one time step.
+The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, plant, soil, canopy, test{\_}canopy) for one time step.
 ~\\
 
 
 \textbf{Basic structure and functionality:}
 \begin{itemize}
 \item \texttt{CALL update\_a2l} (atm2land forcing)
-\item select the SLM model (base{\_}config\%slm{\_}model{\_}name) and run the tasks according to the Call-Tree
+\item select the SLM model (base{\_}config\%slm{\_}model{\_}name) and run the tasks according to the Call-Tree including the write output routines
 \begin{itemize}
 \item land
 \item plant
@@ -73,25 +73,38 @@ The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, 
 \end{itemize}
 ~\\
 
-\textbf{SLM plant: Call-Tree a.k.a. Queue}
+\textbf{SLM land/plant: Call-Tree a.k.a. Queue}
 \begin{enumerate}
-\item set{\_}zero{\_}vegetation{\_}fluxes
+\item set{\_}zero{\_}veg{\_}fluxes
+\item set{\_}zero{\_}sb{\_}fluxes
+\item update{\_}sb{\_}rate{\_}modifier
 \item update{\_}radiation
-\item update{\_}vegsoil{\_}bgc
 \item update{\_}phenology
 \item update{\_}canopy{\_}fluxes
-\item update{\_}growth
 \item update{\_}veg{\_}turnover
 \item update{\_}veg{\_}dynamics
-\item update{\_}sb{\_}pools
+\item CASE (sb{\_}config\%sb{\_}model{\_}scheme)
+\begin{enumerate}
+  \item simple: update{\_}sb{\_}simple{\_}model
+  \item jsm: update{\_}sb{\_}jsm
+\end{enumerate}
+\item update{\_}growth
 \item update{\_}soil{\_}physics
 \item update{\_}veg{\_}pools
+\item update{\_}sb{\_}pools
 \item update{\_}time{\_}averages
 \item write data: write{\_}output{\_}pool and write{\_}output{\_}flux
 \end{enumerate}
+~\\
 
 \textbf{SLM soil: Call-Tree a.k.a. Queue}
 \begin{enumerate}
+\item set{\_}zero{\_}sb{\_}fluxes
+\item CASE (sb{\_}config\%sb{\_}model{\_}scheme)
+\begin{enumerate}
+  \item simple: update{\_}sb{\_}simple{\_}model
+  \item jsm: update{\_}sb{\_}jsm
+\end{enumerate}
 \item update{\_}sb{\_}pools
 \item write data: write{\_}output{\_}pool and write{\_}output{\_}flux
 \end{enumerate}
@@ -121,4 +134,14 @@ The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, 
 \end{itemize}
 \end{itemize}
 ~\\
+
+
+\newpage
+\section{Memory structure and usage}
+\label{sec:memoryl_struc_use}
+
+General: Each process has its own memory named \texttt{mo{\_}PROCESS{\_}memory{\_}class} containing two important parts: a) the memory itself \texttt{t{\_}PROCESS{\_}memory} which is a \texttt{TYPE} that extends \texttt{t{\_}jsb{\_}memory}, and b) the Subroutine that initializes the memory \texttt{Init{\_}PROCESS{\_}memory} using the \texttt{slm{\_}add{\_}var} Function. To create a new variable it needs to be inserted into the process memory and a \texttt{slm{\_}add{\_}var} Function with the variable needs to be created in the init routine.
+
+
+
 

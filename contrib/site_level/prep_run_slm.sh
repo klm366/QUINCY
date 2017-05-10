@@ -78,8 +78,8 @@ soil_depth=5.7                  # meters
 
 # simulation length & output
 simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
-output_interval_pool="yearly"   # timestep daily weekly monthly yearly
-output_interval_flux="yearly"   # timestep daily weekly monthly yearly
+output_interval_pool="weekly"   # timestep daily weekly monthly yearly
+output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
@@ -92,7 +92,7 @@ soil_theta_prescribe=1.0      # float !
 
 ##>> details about the HPC, if unsure stick with these defaults <<################################
 queue="BTM"                  # available queues: all io BTM mpi_large
-fastNodes="T"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
+fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000                  # memory per job you may need [mega byte]; here provided in MB but recalculated to KB which is what OpenLava needs
 numberCpuMax=80              # maximum number of simulations started in parallel
