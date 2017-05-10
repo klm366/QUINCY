@@ -1,7 +1,10 @@
 mo_sb_interface.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_sb_update_pools.o 
+  mo_sb_update_pools.o \
+  mo_sb_rate_modifier.o \
+  mo_sb_simple_model.o \
+  mo_sb_jsm_main.o
 
 mo_sb_constants.o: \
   mo_kind.o

@@ -232,28 +232,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !> 1.0 Calculate biophysical rate modifiers
-    !!
-    !! for the full and plant only model, update soil modifiers. In the soil model, these are read from a file 
-    SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant')
-
-        CALL update_sb_rate_modifier(tile, options)
-
-    ENDSELECT
- 
-    !> 2.0 Calculate soil pools 
-    SELECT CASE(TRIM(sb_config%sb_model_scheme))
-      CASE('simple')
-
-        CALL update_sb_simple_model_process(tile,options)
-
-      CASE('jsm')
-
-        CALL update_sb_jsm(tile, options)
-
-    ENDSELECT 
-
     !> 1.0 loss of C14 due to radioactive decay
     !!
     sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  = sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 

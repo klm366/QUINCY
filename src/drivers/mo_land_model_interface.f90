@@ -103,6 +103,7 @@ CONTAINS
     USE mo_base_memory,                   ONLY: t_slm_tile
     USE mo_jsb_model_class,               ONLY: t_jsb_model
     USE mo_base_config_class,             ONLY: base_config
+    USE mo_sb_config_class,               ONLY: sb_config
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
@@ -265,16 +266,23 @@ CONTAINS
 
     !! run Tasks
     !!
+      CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_vegsoil_bgc     (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
+      SELECT CASE(TRIM(sb_config%sb_model_scheme))
+        CASE('simple')
+          CALL update_sb_simple_model (tile, model%options) 
+        CASE('jsm')
+          CALL update_sb_jsm          (tile, model%options)
+      ENDSELECT
       CALL update_growth          (tile, model%options)
-      CALL update_sb_pools        (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
+      CALL update_sb_pools        (tile, model%options)
 
     !! accumulation over time - daytime & moving average
     !! 
@@ -309,16 +317,23 @@ CONTAINS
 
     !! run Tasks
     !!
+      CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_vegsoil_bgc     (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
+      SELECT CASE(TRIM(sb_config%sb_model_scheme))
+        CASE('simple')
+          CALL update_sb_simple_model (tile, model%options) 
+        CASE('jsm')
+          CALL update_sb_jsm          (tile, model%options)
+      ENDSELECT
       CALL update_growth          (tile, model%options)
-      CALL update_sb_pools        (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
+      CALL update_sb_pools        (tile, model%options)
 
     !! accumulation over time - daytime & moving average
     !! 
@@ -349,7 +364,16 @@ CONTAINS
     !! 
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
-      CALL update_sb_pools        (tile, model%options)
+      !CALL update_sb_rate_modifier    (tile, model%options)
+      SELECT CASE(TRIM(sb_config%sb_model_scheme))
+        CASE('simple')
+          CALL update_sb_simple_model (tile, model%options) 
+        CASE('jsm')
+          CALL update_sb_jsm          (tile, model%options)
+      ENDSELECT
+      CALL update_sb_pools            (tile, model%options)
+
+
       !! output pool: write output in certain intervals, see mo_shared_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days

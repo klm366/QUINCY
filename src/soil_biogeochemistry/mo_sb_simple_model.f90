@@ -18,7 +18,7 @@ MODULE mo_sb_simple_model
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_sb_simple_model_process 
+  PUBLIC :: update_sb_simple_model 
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_simple_model'
@@ -34,7 +34,7 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_sb_simple_model_process(tile, options)
+  SUBROUTINE update_sb_simple_model(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -63,7 +63,7 @@ CONTAINS
     !TYPE(t_jsb_model),      POINTER       :: model
     !TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     !INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model_process'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! ...
@@ -80,7 +80,7 @@ CONTAINS
     CALL calc_sb_fluxes_simple(tile, options)
 
 
-  END SUBROUTINE update_sb_simple_model_process
+  END SUBROUTINE update_sb_simple_model
 
 
   !-----------------------------------------------------------------------------------------------------
