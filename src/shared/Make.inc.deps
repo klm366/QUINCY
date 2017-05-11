@@ -56,6 +56,8 @@ mo_shared_output.o: \
   mo_rad_constants.o \
   mo_veg_constants.o \
   mo_veg_config_class.o \
+  mo_soil_config_class.o \
+  mo_sb_config_class.o \
   mo_pheno_memory_class.o \
   mo_soil_memory_class.o \
   mo_sb_memory_class.o \
