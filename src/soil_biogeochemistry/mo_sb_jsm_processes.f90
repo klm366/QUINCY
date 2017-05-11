@@ -336,15 +336,12 @@ CONTAINS
   !!
   !! Input: solute concentration, microbial biomass, fine root biomass, rate modifiers 
   !!
-  !! Output: microbial and plant inorganic uptake rates, and the isotopic signature
+  !! Output: microbial and plant inorganic uptake rates
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_inorganic_uptake(solute, microbial_carbon, fine_root_carbon, &
                                              rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, & 
                                              vmax_mic_uptake, km_mic_uptake, vmax_plant_uptake, km_plant_uptake, & 
-                                             mic_uptake, plant_uptake, solute_n15, & 
-                                             eta_mic_uptake, eta_plant_uptake, mic_uptake_n15, plant_uptake_n15)
-
-    USE mo_shared_isotope, ONLY: calc_fractionation
+                                             mic_uptake, plant_uptake)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -359,41 +356,27 @@ CONTAINS
     REAL(wp), INTENT(in)            :: km_mic_uptake           !< half-saturation constant of microbial nutrient uptake (mol S / m3)
     REAL(wp), INTENT(in)            :: vmax_plant_uptake       !< maximium uptake rate of microbial biomass (µmol S / mol C / s)
     REAL(wp), INTENT(in)            :: km_plant_uptake         !< half-saturation constant of microbial nutrient uptake (mol S / m3)
-    REAL(wp), INTENT(out)           :: mic_uptake              !< microbial uptake flux (µmol / m3 / timestep), sign convention (-ve = uptake!!)
+    REAL(wp), INTENT(out)           :: mic_uptake              !< microbial uptake flux (µmol / m3 / timestep)
     REAL(wp), INTENT(out)           :: plant_uptake            !< plant uptake flux (µmol / m3 / timestep)
-    REAL(wp), INTENT(in),  OPTIONAL :: solute_n15              !< concentration of the solvent to be taken up (mol / m3)
-    REAL(wp), INTENT(in),  OPTIONAL :: eta_mic_uptake          !< discrimination of microbial uptake
-    REAL(wp), INTENT(in),  OPTIONAL :: eta_plant_uptake        !< discrimination of plant uptake
-    REAL(wp), INTENT(out), OPTIONAL :: mic_uptake_n15          !< immobilisation flux (µmol / m3 / timestep)
-    REAL(wp), INTENT(out), OPTIONAL :: plant_uptake_n15        !< plant uptake flux (µmol / m3 / timestep)
     ! 0.2 Local
     REAL(wp)              :: hlp1,hlp2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_inorganic_uptake'
 
     !> 1.0 uptake
-    !! co-limited rates of N uptake for microbes, plants and processing (nitrification, denitrification)
+    !! co-limited rates of N uptake for microbes and plants 
     hlp1 = rtm_hsc * rmm_hsc * km_mic_uptake
     hlp2 = rtm_hsc * rmm_hsc * km_plant_uptake
-    mic_uptake     = rtm_mic_uptake * rmm_mic_uptake * vmax_mic_uptake * microbial_carbon * solute * dtime / &
+    mic_uptake     = rtm_mic_uptake * rmm_mic_uptake * vmax_mic_uptake * microbial_carbon * solute / &
                          (hlp1 + solute + hlp1/hlp2 * fine_root_carbon + microbial_carbon)
-    plant_uptake   = rtm_mic_uptake * rmm_mic_uptake * vmax_plant_uptake * fine_root_carbon * solute * dtime / &
+    plant_uptake   = rtm_mic_uptake * rmm_mic_uptake * vmax_plant_uptake * fine_root_carbon * solute / &
                          (hlp2 + solute + hlp2/hlp1 * microbial_carbon + fine_root_carbon)
 
-    !> 1.1 limit to possible solution, and invert sign on microbial uptake flux (-> net mineralisation)
+    !> 1.1 limit to possible solution
     !!
-    hlp1 = mic_uptake + plant_uptake
-    IF(hlp1 > (solute * 1000000._wp) .AND. hlp1 > eps8)THEN
+    hlp1 = (mic_uptake + plant_uptake) 
+    IF(hlp1 > (solute * 1000000._wp/dtime) .AND. hlp1 > eps8)THEN
        mic_uptake = - 1.0_wp * mic_uptake / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
        plant_uptake = plant_uptake / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
-    ELSE 
-       mic_uptake = - 1.0_wp * mic_uptake
-    ENDIF
-
-    IF(PRESENT(solute_n15))THEN
-       !> 2.0 isotopic signature of flux
-       !!
-       mic_uptake_n15 = mic_uptake * calc_fractionation(solute,solute_n15,eta_mic_uptake)
-       plant_uptake_n15 = plant_uptake * calc_fractionation(solute,solute_n15,eta_plant_uptake)
     ENDIF
 
   END SUBROUTINE calc_inorganic_uptake
@@ -516,6 +499,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_microbial_growth(options,nsoil,pool_dom,pool_microbial, & 
                                    rtm_mic_uptake,rmm_mic_uptake,rtm_hsc,rmm_hsc, &
+                                   mic_uptake_nh4,mic_uptake_nh4_n15, &
+                                   mic_uptake_no3,mic_uptake_no3_n15,mic_uptake_po4, &
                                    loss_dom,formation_microbial, &
                                    het_respiration,het_respiration_c13,het_respiration_c14, &
                                    net_mineralisation_nh4,net_mineralisation_nh4_n15, &
@@ -536,16 +521,21 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_mic_uptake      !< moisture rate modifier [-]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_hsc             !< temperature rate modifier [-]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_hsc             !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_nh4      !< microbial uptake rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_nh4_n15  !< microbial uptake rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_no3      !< microbial uptake rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_no3_n15  !< microbial uptake rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_po4      !< microbial uptake rate [µmol P/m3/s]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_dom            !< microbial death [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_microbial !< DOM formation from microbial death [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration     !< respiration rate [µmol C/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c13 !< respiration rate [µmol 13C/m3/timestep] 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c14 !< respiration rate [µmol 14C/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4     !< net mineralisation rate [µmol N/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4_n15 !< net mineralisation rate [µmol 15N/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3     !< net mineralisation rate [µmol N/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [µmol 15N/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_po4     !< net mineralisation rate [µmol P/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration     !< respiration rate [µmol C/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c13 !< respiration rate [µmol 13C/m3/s] 
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c14 !< respiration rate [µmol 14C/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4     !< net mineralisation rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4_n15 !< net mineralisation rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3     !< net mineralisation rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_po4     !< net mineralisation rate [µmol P/m3/s]
     ! ---------------------------
     ! 0.2 Local 
     REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1             , &
@@ -553,7 +543,6 @@ CONTAINS
                                              uptake_dom  
     REAL(wp), DIMENSION(options%nc,nsoil) :: growth_c,growth_n,growth_p,growth,uptake_c,uptake_n,uptake_p 
     REAL(wp), DIMENSION(options%nc,nsoil) :: scal,microbial_cue_eff,microbial_nue_eff,microbial_pue_eff 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: immobilisation_nh4,immobilisation_nh4_n15,immobilisation_no3,immobilisation_no3_n15,immobilisation_po4 
     REAL(wp), DIMENSION(options%nc,nsoil) :: gross_mineralisation_nh4,gross_mineralisation_nh4_n15,gross_mineralisation_po4 
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
@@ -565,18 +554,10 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
 
-    !> 1.0 convert net_mineralisation to immobilisation flux (µmol / m3 / timestep)
-    !!
-    immobilisation_nh4(:,:)     = - net_mineralisation_nh4(:,:)
-    immobilisation_nh4_n15(:,:) = - net_mineralisation_nh4_n15(:,:)
-    immobilisation_no3(:,:)     = - net_mineralisation_no3(:,:)
-    immobilisation_no3_n15(:,:) = - net_mineralisation_no3_n15(:,:)
-    immobilisation_po4(:,:)     = - net_mineralisation_po4(:,:)
-
-    !> 2.0 microbial DOM consumption 
+    !> 1.0 potential microbial DOM consumption (µmol / m3 / s) 
     !! 
     hlp1 = pool_dom%carbon%ptr(ics:ice,:,iblk) / (km_mic_uptake * rtm_hsc * rmm_hsc + pool_dom%carbon%ptr(ics:ice,:,iblk) )
-    uptake_c(:,:) = vmax_mic_uptake * rtm_mic_uptake(:,:) * rmm_mic_uptake(:,:) * hlp1(:,:) * dtime * & 
+    uptake_c(:,:) = vmax_mic_uptake * rtm_mic_uptake(:,:) * rmm_mic_uptake(:,:) * hlp1(:,:) * & 
                          pool_microbial%carbon%ptr(ics:ice,:,iblk) 
     WHERE(pool_dom%carbon%ptr(ics:ice,:,iblk) > eps8)
        f_uptake(:,:) = uptake_c(:,:) / pool_dom%carbon%ptr(ics:ice,:,iblk)
@@ -586,13 +567,13 @@ CONTAINS
     uptake_n(:,:) = f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk) 
     uptake_p(:,:) = f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk)
 
-    !> 2.1 microbial growth rates in µmol C / m3 / timestep, given by C, N and P availability, and the rate-limiting growth rate
+    !> 1.1 microbial growth rates in µmol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
     !! 
     growth_c(:,:) = microbial_cue * uptake_c(:,:) 
     growth_n(:,:) = (microbial_nue * uptake_n(:,:) + &
-                     immobilisation_nh4(:,:) + immobilisation_no3(:,:)) * microbial_cn
+                     mic_uptake_nh4(:,:) + mic_uptake_no3(:,:)) * microbial_cn
     growth_p(:,:) = (microbial_pue * uptake_p(:,:) + & 
-                      immobilisation_po4(:,:)) * microbial_np * microbial_cn
+                      mic_uptake_po4(:,:)) * microbial_np * microbial_cn
     WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
        ! carbon uptake is limiting
        growth(:,:) = growth_c(:,:)
@@ -604,7 +585,7 @@ CONTAINS
        growth(:,:) = growth_p(:,:)
     ENDWHERE
 
-    !> 3.0 Adjust carbon-use efficiency such that the growth is stoichiometrically balanced
+    !> 2.0 Adjust carbon-use efficiency such that the growth is stoichiometrically balanced
     !!
     microbial_cue_eff(:,:) = microbial_cue
     WHERE(growth(:,:) < growth_c(:,:))
@@ -612,23 +593,23 @@ CONTAINS
        microbial_cue_eff(:,:) = growth / uptake_c(:,:)
     ENDWHERE
  
-    !> 3.1 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
+    !> 2.1 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
     !!     and calculate gross mineralisation rate (and its isotopic signature)
     microbial_nue_eff(:,:) = microbial_nue
     WHERE(growth(:,:) < growth_n(:,:)) 
        ! inorganic N immobilisation flux in agreement with C growth
        hlp1(:,:) = MAX(growth / microbial_cn - microbial_nue * uptake_n(:,:),0.0_wp)
-       WHERE(immobilisation_nh4(:,:) + immobilisation_no3(:,:) > eps8)
-          scal(:,:) = hlp1(:,:) / (immobilisation_nh4(:,:) + immobilisation_no3(:,:)) 
+       WHERE(mic_uptake_nh4(:,:) + mic_uptake_no3(:,:) > eps8)
+          scal(:,:) = hlp1(:,:) / (mic_uptake_nh4(:,:) + mic_uptake_no3(:,:)) 
        ELSEWHERE
           scal(:,:) = 0.0_wp
        ENDWHERE
-       immobilisation_nh4(:,:)     = immobilisation_nh4(:,:)     * scal(:,:) 
-       immobilisation_nh4_n15(:,:) = immobilisation_nh4_n15(:,:) * scal(:,:)
-       immobilisation_no3(:,:)     = immobilisation_no3(:,:)     * scal(:,:) 
-       immobilisation_no3_n15(:,:) = immobilisation_no3_n15(:,:) * scal(:,:)
+       mic_uptake_nh4(:,:)     = mic_uptake_nh4(:,:)     * scal(:,:) 
+       mic_uptake_nh4_n15(:,:) = mic_uptake_nh4_n15(:,:) * scal(:,:)
+       mic_uptake_no3(:,:)     = mic_uptake_no3(:,:)     * scal(:,:) 
+       mic_uptake_no3_n15(:,:) = mic_uptake_no3_n15(:,:) * scal(:,:)
        WHERE(uptake_n(:,:) > eps8)
-          microbial_nue_eff(:,:) = ( growth / microbial_cn - immobilisation_nh4(:,:) - immobilisation_no3(:,:) ) / uptake_n(:,:)
+          microbial_nue_eff(:,:) = ( growth / microbial_cn - mic_uptake_nh4(:,:) - mic_uptake_no3(:,:) ) / uptake_n(:,:)
        ENDWHERE
     ENDWHERE
     gross_mineralisation_nh4(:,:) = (1._wp - microbial_nue_eff(:,:)) * uptake_n(:,:) 
@@ -636,73 +617,73 @@ CONTAINS
                                                                                            pool_dom%nitrogen15%ptr(ics:ice,:,iblk),& 
                                                                                            eta_ammonification)
 
-    !> 3.2 Adjust phosphorus-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
+    !> 2.2 Adjust phosphorus-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
     !!     and calculate gross mineralisation rate 
     microbial_pue_eff(:,:) = microbial_pue
     WHERE(growth(:,:) < growth_p(:,:))  
-       ! inorganic P immobilisation flux, in aggreement with C and N uptake
-       immobilisation_po4(:,:) = MAX(growth / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0)
+       ! inorganic P immobilisation flux, in agreement with C and N uptake
+       mic_uptake_po4(:,:) = MAX(growth / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0)
        ! In the case that the source C:N:P is too tight for microbes, cause gross mineralisation
        WHERE(uptake_p(:,:) > eps8)
-          microbial_pue_eff(:,:) = ( growth / microbial_cn / microbial_np - immobilisation_po4(:,:) ) / uptake_p(:,:)
+          microbial_pue_eff(:,:) = ( growth / microbial_cn / microbial_np - mic_uptake_po4(:,:) ) / uptake_p(:,:)
        ENDWHERE
     ENDWHERE
     gross_mineralisation_po4(:,:) = (1._wp - microbial_pue_eff(:,:)) * uptake_p(:,:)
 
-    !> 4.0 update fluxes
+    !> 3.0 update fluxes (note that loss and formation of organic matter is in mol/m3/timestep, whereas fluxes are in µmol/m3/s)
     !! carbon
     uptake_dom(:,:) = f_uptake(:,:) * pool_dom%carbon%ptr(ics:ice,:,iblk)
     loss_dom%carbon%ptr(ics:ice,:,iblk)            = loss_dom%carbon%ptr(ics:ice,:,iblk) + & 
-                                                     uptake_dom(:,:) / 1000000._wp
+                                                     uptake_dom(:,:) * dtime / 1000000._wp
     formation_microbial%carbon%ptr(ics:ice,:,iblk) = formation_microbial%carbon%ptr(ics:ice,:,iblk) + & 
-                                                     microbial_cue_eff(:,:) * uptake_dom(:,:) / 1000000._wp 
+                                                     microbial_cue_eff(:,:) * uptake_dom(:,:) * dtime / 1000000._wp 
     het_respiration(:,:)                           = het_respiration(:,:) + & 
                                                      (1._wp - microbial_cue_eff(:,:)) * uptake_dom(:,:) 
 
     !! nitrogen
-    net_mineralisation_nh4(:,:) = gross_mineralisation_nh4(:,:) - immobilisation_nh4(:,:)
-    net_mineralisation_no3(:,:) = - immobilisation_no3(:,:)
+    net_mineralisation_nh4(:,:) = gross_mineralisation_nh4(:,:) - mic_uptake_nh4(:,:)
+    net_mineralisation_no3(:,:) = - mic_uptake_no3(:,:)
     uptake_dom(:,:)        = f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk)
     loss_dom%nitrogen%ptr(ics:ice,:,iblk)            = loss_dom%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                       uptake_dom(:,:) / 1000000.0_wp 
+                                                       uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%nitrogen%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
                                                        (microbial_nue_eff(:,:) * uptake_dom(:,:) + & 
-                                                        immobilisation_nh4(:,:) + immobilisation_no3(:,:)) / 1000000.0_wp 
+                                                        mic_uptake_nh4(:,:) + mic_uptake_no3(:,:)) * dtime / 1000000.0_wp 
    
     !! phosphorus
-    net_mineralisation_po4(:,:) = gross_mineralisation_po4(:,:) - immobilisation_po4(:,:)
+    net_mineralisation_po4(:,:) = gross_mineralisation_po4(:,:) - mic_uptake_po4(:,:)
     uptake_dom(:,:)        = f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk)
     loss_dom%phosphorus%ptr(ics:ice,:,iblk)            = loss_dom%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                         uptake_dom(:,:) / 1000000.0_wp 
+                                                         uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%phosphorus%ptr(ics:ice,:,iblk) = formation_microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                          (microbial_pue_eff(:,:) * uptake_dom(:,:) + & 
-                                                          immobilisation_po4(:,:)) / 1000000.0_wp 
+                                                          mic_uptake_po4(:,:)) * dtime / 1000000.0_wp 
    
     !! carbon13
     uptake_dom(:,:) = f_uptake(:,:) * pool_dom%carbon13%ptr(ics:ice,:,iblk)
     loss_dom%carbon13%ptr(ics:ice,:,iblk)            = loss_dom%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                       uptake_dom(:,:) / 1000000._wp 
+                                                       uptake_dom(:,:) * dtime / 1000000._wp 
     formation_microbial%carbon13%ptr(ics:ice,:,iblk) = formation_microbial%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                       microbial_cue_eff(:,:) * uptake_dom(:,:) / 1000000.0_wp 
+                                                       microbial_cue_eff(:,:) * uptake_dom(:,:) * dtime / 1000000.0_wp 
     het_respiration_c13(:,:)                         = het_respiration_c13(:,:) + (1._wp - microbial_cue_eff(:,:) ) * uptake_dom(:,:)
 
     !! carbon14
     uptake_dom(:,:) = f_uptake(:,:) * pool_dom%carbon14%ptr(ics:ice,:,iblk)
     loss_dom%carbon14%ptr(ics:ice,:,iblk)            = loss_dom%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                       uptake_dom(:,:) / 1000000.0_wp 
+                                                       uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%carbon14%ptr(ics:ice,:,iblk) = formation_microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                       microbial_cue_eff(:,:) * uptake_dom(:,:) / 1000000.0_wp
+                                                       microbial_cue_eff(:,:) * uptake_dom(:,:) * dtime / 1000000.0_wp
     het_respiration_c14(:,:)                         = het_respiration_c14(:,:) + (1._wp - microbial_cue_eff(:,:) ) * uptake_dom(:,:)
 
     !! nitrogen15
-    net_mineralisation_nh4_n15(:,:) = gross_mineralisation_nh4_n15(:,:) - immobilisation_nh4_n15(:,:)
-    net_mineralisation_no3_n15(:,:) = - immobilisation_no3_n15(:,:)
+    net_mineralisation_nh4_n15(:,:) = gross_mineralisation_nh4_n15(:,:) - mic_uptake_nh4_n15(:,:)
+    net_mineralisation_no3_n15(:,:) = - mic_uptake_no3_n15(:,:)
     uptake_dom(:,:) = f_uptake(:,:) * pool_dom%nitrogen15%ptr(ics:ice,:,iblk)
     loss_dom%nitrogen15%ptr(ics:ice,:,iblk)            = loss_dom%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                         uptake_dom(:,:) / 1000000.0_wp 
+                                                         uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
                                                          (microbial_nue * uptake_dom(:,:) + & 
-                                                         immobilisation_nh4_n15(:,:) + immobilisation_no3_n15(:,:)) / 1000000.0_wp
+                                                         mic_uptake_nh4_n15(:,:) + mic_uptake_no3_n15(:,:)) * dtime / 1000000.0_wp
 
   END SUBROUTINE calc_microbial_growth
 

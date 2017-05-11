@@ -47,12 +47,8 @@ CONTAINS
     USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
-    USE mo_sb_jsm_processes
-    USE mo_sb_jsm_transport
-    USE mo_sb_simple_model 
-    USE mo_shared_isotope
-    USE mo_sb_jsm_main,           ONLY: update_sb_jsm
-    USE mo_sb_rate_modifier,      ONLY: update_sb_rate_modifier
+    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_org
+    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_N15N14
  
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -87,43 +83,20 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
     ! ..
-    dsl4jsb_Real3D_onChunk :: t_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
-    dsl4jsb_Real3D_onChunk :: percolation_sl 
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
-    dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
-    dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
-    dsl4jsb_Real3D_onChunk :: rmm_sorption
-    dsl4jsb_Real3D_onChunk :: rmm_desorption
-    dsl4jsb_Real3D_onChunk :: rmm_hsc
-    dsl4jsb_Real3D_onChunk :: het_respiration
-    dsl4jsb_Real3D_onChunk :: het_respiration_c13
-    dsl4jsb_Real3D_onChunk :: het_respiration_c14
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
-!    dsl4jsb_Real3D_onChunk :: nitrification 
-!    dsl4jsb_Real3D_onChunk :: denitrification 
+    dsl4jsb_Real3D_onChunk :: nitrification 
+    dsl4jsb_Real3D_onChunk :: volatilisation_n 
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
-    dsl4jsb_Real3D_onChunk :: nh4_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_assoc 
-    dsl4jsb_Real3D_onChunk :: no3_solute
-    dsl4jsb_Real3D_onChunk :: po4_solute 
-    dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
-    dsl4jsb_Real3D_onChunk :: po4_assoc_slow
-    dsl4jsb_Real3D_onChunk :: po4_occluded
-    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
-    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
@@ -134,14 +107,22 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
-    dsl4jsb_Real3D_onChunk :: k_bioturb 
+    dsl4jsb_Real3D_onChunk :: nh4_solute 
+    dsl4jsb_Real3D_onChunk :: nh4_assoc 
+    dsl4jsb_Real3D_onChunk :: no3_solute
+    dsl4jsb_Real3D_onChunk :: po4_solute 
+    dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
+    dsl4jsb_Real3D_onChunk :: po4_assoc_slow
+    dsl4jsb_Real3D_onChunk :: po4_occluded
+    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
+    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
+    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
-    dsl4jsb_Real3D_onChunk :: particle_fluxrate 
-! 2 be removed?: pointers to veg assimi *slmtemp
+
+! 2 be removed?: pointers to sb *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -164,37 +145,24 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_,     nhx_deposition)               ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     noy_deposition)               ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_deposition)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      noy_deposition)              ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)        ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)              ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
-!    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)
-!    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
@@ -205,26 +173,23 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
 
 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
-    veg   => veg__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -267,64 +232,48 @@ CONTAINS
 
     !> 3.0 update of inorganic pools
     !!
-  
-    !> 3.1 atmospheric deposition
+    !> 3.1 ecosystem internal processes  
+    !!
+    nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:) - & 
+                                                 volatilisation_n(:,:) - nitrification(:,:) + &
+                                                 transport_nh4_solute(:,:)) * dtime/1.e6_wp
+    nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:) + &
+                                                 transport_nh4_n15_solute(:,:)) * dtime/1.e6_wp
+    no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:) + &
+                                                 nitrification(:,:) + &
+                                                 transport_no3_solute(:,:)) * dtime/1.e6_wp
+    no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:) + &
+                                                 transport_no3_n15_solute(:,:)) * dtime/1.e6_wp
+    po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) + &
+                                                 transport_po4_solute(:,:)) * dtime/1.e6_wp
+
+    IF(sb_config%flag_sb_prescribe_nh4)THEN
+       hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
+       nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
+       nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+    ENDIF
+    IF(sb_config%flag_sb_prescribe_no3)THEN
+       hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
+       no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
+       no3_n15_solute(:,:) = no3_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+    ENDIF
+    IF(sb_config%flag_sb_prescribe_po4)THEN
+       po4_solute(:,:) = po4_solute_prescribe 
+    ENDIF
+    !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
+    !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
+    !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
+
+    !> 3.2 atmospheric deposition
     !!
     IF(sb_config%flag_n_deposition) THEN
-      nh4_solute(:,1)     = nh4_solute(:,1)   + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
-      no3_solute(:,1)     = no3_solute(:,1)   + noy_deposition(:) / soil_depth_sl(:,1) * dtime
+      nh4_solute(:,1)     = nh4_solute(:,1) + nhx_deposition(:) / soil_depth_sl(:,1) * dtime
+      no3_solute(:,1)     = no3_solute(:,1) + noy_deposition(:) / soil_depth_sl(:,1) * dtime
+      nh4_n15_solute(:,1) = nh4_solute(:,1) + nhx_deposition(:) / & 
+                            ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+      no3_n15_solute(:,1) = no3_solute(:,1) + noy_deposition(:) / & 
+                            ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
     END IF
-
-    !> 3.X other processes
-    !@todo: merge sections after making sure subroutines have same units!
-    !!
-    SELECT CASE(TRIM(sb_config%sb_model_scheme))
-      CASE('simple')
-
-        IF(.NOT.sb_config%flag_sb_prescribe_nh4) THEN
-          nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - sb%nitrification%ptr(ice:ice,:,iblk) & 
-                                          - sb%volatilisation_n%ptr(ice:ice,:,iblk)- plant_uptake_nh4_sl(:,:)) * dtime/1.e6_wp
-          nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_nh4_n15(:,:) / 1000000.0_wp * dtime
-        ENDIF
-        IF(.NOT.sb_config%flag_sb_prescribe_no3) THEN
-          no3_solute(:,:)     = no3_solute(:,:)     + (sb%nitrification%ptr(ice:ice,:,iblk) - plant_uptake_no3_sl(:,:)) / dtime/1.e6_wp 
-          no3_n15_solute(:,:) = no3_n15_solute(:,:) + net_mineralisation_no3_n15(:,:) / 1000000.0_wp * dtime
-        ENDIF
-        IF(.NOT.sb_config%flag_sb_prescribe_po4) THEN
-          po4_solute(:,:)     = po4_solute(:,:) + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) * dtime/1.e6_wp 
-        ENDIF
-
-      CASE('jsm')
-
-         nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:))/ 1000000.0_wp &
-                                                   + transport_nh4_solute(:,:)
-         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:)) / 1000000.0_wp &
-                                                   + transport_nh4_n15_solute(:,:)
-         no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:)) / 1000000.0_wp &
-                                                   + transport_no3_solute(:,:)
-         no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:)) / 1000000.0_wp &
-                                                   + transport_no3_n15_solute(:,:)
-         po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) / 1000000.0_wp &
-                                                   + transport_po4_solute(:,:)
-
-         IF(sb_config%flag_sb_prescribe_nh4)THEN
-            hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
-            nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
-            nh4_n15_solute(:,:) = nh4_solute(:,:) * calc_mixing_ratio_N15N14(0.0_wp) 
-         ENDIF
-         IF(sb_config%flag_sb_prescribe_no3)THEN
-            hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
-            no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
-            no3_n15_solute(:,:) = no3_solute(:,:) * calc_mixing_ratio_N15N14(0.0_wp) 
-         ENDIF
-         IF(sb_config%flag_sb_prescribe_po4)THEN
-            po4_solute(:,:) = po4_solute_prescribe 
-         ENDIF
-         !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
-         !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
-         !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
-
-    ENDSELECT
 
   END SUBROUTINE update_sb_pools
 

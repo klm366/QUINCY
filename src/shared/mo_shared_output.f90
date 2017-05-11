@@ -1379,7 +1379,7 @@ CONTAINS
              !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
              !! for any interval larger timestep multiply by dtime
              IF(output_interval_flux < 1.0_wp) THEN
-                 dtime_one = 1.0_wp / dtime            ! interval = timestep
+                 dtime_one = 1.0_wp                     ! interval = timestep
                ELSE
                  dtime_one = 1.0_wp / 1000000.0_wp      ! interval > timestep
              END IF
@@ -1388,27 +1388,27 @@ CONTAINS
                                       veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
                                       veg%litterfall%sap_wood%carbon%ptr + veg%litterfall%heart_wood%carbon%ptr + &
                                       veg%litterfall%labile%carbon%ptr + veg%litterfall%reserve%carbon%ptr + &
-                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) * 1000000.0_wp * dtime_one
+                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) * 1000000.0_wp * dtime_one/dtime
              litterfallC13_acc = litterfallC13_acc + (veg%litterfall%leaf%carbon13%ptr + & 
                                       veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
                                       veg%litterfall%sap_wood%carbon13%ptr + veg%litterfall%heart_wood%carbon13%ptr + &
                                       veg%litterfall%labile%carbon13%ptr + veg%litterfall%reserve%carbon13%ptr + &
-                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) * 1000000.0_wp * dtime_one
+                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) * 1000000.0_wp * dtime_one/dtime
              litterfallC14_acc = litterfallC14_acc + (veg%litterfall%leaf%carbon14%ptr + & 
                                       veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
                                       veg%litterfall%sap_wood%carbon14%ptr + veg%litterfall%heart_wood%carbon14%ptr + &
                                       veg%litterfall%labile%carbon14%ptr + veg%litterfall%reserve%carbon14%ptr + &
-                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) * 1000000.0_wp * dtime_one
+                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) * 1000000.0_wp * dtime_one/dtime
              litterfallN_acc = litterfallN_acc + (veg%litterfall%leaf%nitrogen%ptr + & 
                                       veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
                                       veg%litterfall%sap_wood%nitrogen%ptr + veg%litterfall%heart_wood%nitrogen%ptr + &
                                       veg%litterfall%labile%nitrogen%ptr + veg%litterfall%reserve%nitrogen%ptr + &
-                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) * 1000000.0_wp * dtime_one
+                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) * 1000000.0_wp * dtime_one/dtime
              litterfallP_acc = litterfallP_acc + (veg%litterfall%leaf%phosphorus%ptr + & 
                                       veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
                                       veg%litterfall%sap_wood%phosphorus%ptr + veg%litterfall%heart_wood%phosphorus%ptr + &
                                       veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
-                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) * 1000000.0_wp * dtime_one
+                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) * 1000000.0_wp * dtime_one/dtime
              
              het_respC_acc   = het_respC_acc   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
              het_respC13_acc = het_respC13_acc + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
@@ -1417,11 +1417,11 @@ CONTAINS
              net_min_no3_acc = net_min_no3_acc + SUM(sb%net_mineralisation_no3%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
              net_min_po4_acc = net_min_po4_acc + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
 
-             leachingCorg_acc = leachingCorg_acc + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
-             leachingC13org_acc = leachingC13org_acc + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
-             leachingC14org_acc = leachingC14org_acc + sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
-             leachingNorg_acc = leachingNorg_acc + sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
-             leachingPorg_acc = leachingPorg_acc + sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
+             leachingCorg_acc = leachingCorg_acc - sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingNorg_acc = leachingNorg_acc - sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingPorg_acc = leachingPorg_acc - sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
