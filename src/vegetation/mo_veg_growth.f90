@@ -23,7 +23,7 @@ MODULE mo_veg_growth
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_growth
+  PUBLIC :: update_veg_growth
   PUBLIC :: calc_diameter_from_woody_biomass, calc_height_from_diameter
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_growth'
@@ -37,7 +37,7 @@ CONTAINS
   !> update plant growth (flux\%growth)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_growth(tile, options)
+  SUBROUTINE update_veg_growth(tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
@@ -70,7 +70,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: dheight    !< delta height
     INTEGER                               :: ichunk     !< loop over chunks ics:ice / 1:nc
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_growth'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -654,11 +654,11 @@ CONTAINS
                            maint_respiration(1)             , &
                            growth_respiration(1)  )  
 
-  END SUBROUTINE update_growth 
+  END SUBROUTINE update_veg_growth 
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! 1.0 Sub Task of update_growth
+  ! 1.0 Sub Task of update_veg_growth
   ! 
   !-----------------------------------------------------------------------------------------------------
   !> calculates the activity of the meristem for growth 
@@ -703,7 +703,7 @@ CONTAINS
 
 
   !----------------------------------------------------------------------------------------------------------
-  ! 1.1 Sub Task of update_growth
+  ! 1.1 Sub Task of update_veg_growth
   ! 
   !----------------------------------------------------------------------------------------------------------
   !> Routine to calculate N and P demand to regulate N and P uptake 
@@ -762,7 +762,7 @@ CONTAINS
   END SUBROUTINE calc_nutrient_demand_scalar
 
   !----------------------------------------------------------------------------------------------------------
-  ! 1.1 Sub Task of update_growth
+  ! 1.1 Sub Task of update_veg_growth
   ! 
   !----------------------------------------------------------------------------------------------------------
   !> Routine to calculate actual uptake rates of nitrogen and phosphorus from soil given the 
@@ -1045,7 +1045,7 @@ CONTAINS
   END SUBROUTINE calc_actual_nutrient_uptake_rate
  
   !-----------------------------------------------------------------------------------------------------
-  ! 2.0 Sub Task of update_growth
+  ! 2.0 Sub Task of update_veg_growth
   ! 
   ! ------------------------------------------------------------------------------------------
   !> Routine to calculate the target stoichiometry of the newly growth tissue
@@ -1133,7 +1133,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! 3.2 Sub Task of update_growth  (3.1 calc_marginal_canopy_flux_increment:mo_veg_canopy)
+  ! 3.2 Sub Task of update_veg_growth  (3.1 calc_marginal_canopy_flux_increment:mo_veg_canopy)
   ! 
   !-----------------------------------------------------------------------------------------------------
   !> calculates the current allometry of a tree 
@@ -1391,7 +1391,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! 4.0 Sub Task of update_growth
+  ! 4.0 Sub Task of update_veg_growth
   ! 
   !----------------------------------------------------------------------------------------------------------
   !> Calculate flux between reserve and labile pools for each element 
@@ -1581,7 +1581,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! 5.0 Sub Task of update_growth
+  ! 5.0 Sub Task of update_veg_growth
   ! 
   !-----------------------------------------------------------------------------------------------------
   !> Calculates allocation fractions for each tissue type and element
@@ -1864,7 +1864,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! 6.0 Sub Task of update_growth
+  ! 6.0 Sub Task of update_veg_growth
   ! 
   !-----------------------------------------------------------------------------------------------------
   !> Calculate partitioning of labile pool outflow into maintenance, growth respiration and growth 

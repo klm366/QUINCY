@@ -15,7 +15,7 @@ MODULE mo_veg_interface
   USE mo_kind
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_veg_growth,            ONLY: update_growth
+  USE mo_veg_growth,            ONLY: update_veg_growth
   USE mo_veg_turnover,          ONLY: update_veg_turnover
   USE mo_veg_dynamics,          ONLY: update_veg_dynamics
   USE mo_veg_update_pools,      ONLY: update_veg_pools

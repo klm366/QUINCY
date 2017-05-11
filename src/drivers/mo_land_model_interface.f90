@@ -278,7 +278,7 @@ CONTAINS
         CASE('jsm')
           CALL update_sb_jsm          (tile, model%options)
       ENDSELECT
-      CALL update_growth          (tile, model%options)
+      CALL update_veg_growth      (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
@@ -328,7 +328,7 @@ CONTAINS
         CASE('jsm')
           CALL update_sb_jsm          (tile, model%options)
       ENDSELECT
-      CALL update_growth          (tile, model%options)
+      CALL update_veg_growth      (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
