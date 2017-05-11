@@ -74,6 +74,7 @@ mo_sb_update_pools.o: \
   mo_shared_constants.o \
   mo_a2l_memory_class.o \
   mo_veg_memory_class.o \
+  mo_veg_config_class.o \
   mo_soil_memory_class.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \

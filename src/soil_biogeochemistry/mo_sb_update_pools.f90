@@ -45,6 +45,7 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
+    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_org
@@ -257,7 +258,7 @@ CONTAINS
        no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
        no3_n15_solute(:,:) = no3_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
     ENDIF
-    IF(sb_config%flag_sb_prescribe_po4)THEN
+    IF(sb_config%flag_sb_prescribe_po4.OR.veg_config%p_uptake_scheme=='prescribed')THEN
        po4_solute(:,:) = po4_solute_prescribe 
     ENDIF
     !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
