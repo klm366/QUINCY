@@ -581,27 +581,27 @@ rmm_depolymerisation(:,:) = 1.0_wp
 
     DO isoil = 1,1
 
-       sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
+       sb%formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr ) / & ! * & 
           !root_fraction_sl(:,isoil) / & 
             soil_depth_sl(:,isoil) 
-       sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
+       sb%formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr ) / & ! * & 
           !root_fraction_sl(:,isoil) / & 
             soil_depth_sl(:,isoil) 
-       sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
+       sb%formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr ) / & ! * & 
           !root_fraction_sl(:,isoil) / & 
             soil_depth_sl(:,isoil) 
-       sb%pool%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
+       sb%formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr ) / & ! * & 
           !root_fraction_sl(:,isoil) / & 
             soil_depth_sl(:,isoil) 
-       sb%pool%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
+       sb%formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr ) / & ! * & 
           !root_fraction_sl(:,isoil) / & 
             soil_depth_sl(:,isoil) 
-       sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
+       sb%formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr ) / & ! * & 
           !root_fraction_sl(:,isoil) / & 
             soil_depth_sl(:,isoil) 
