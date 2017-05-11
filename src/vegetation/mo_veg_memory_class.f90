@@ -213,7 +213,7 @@ MODULE mo_veg_memory_class
                                     uptake_nh4_n15            , & !< 15NH4 uptake from soil (µmol N m-2 s-1)
                                     uptake_no3                , & !< NO3 uptake from soil (µmol N m-2 s-1)
                                     uptake_no3_n15            , & !< 15NO3 uptake from soil (µmol N m-2 s-1)
-                                    uptake_p                  , & !< P uptake from soil (µmol P m-2 s-1) 
+                                    uptake_po4                , & !< PO4 uptake from soil (µmol P m-2 s-1) 
                                     n_fixation                , & !< symbiontic N fixation (µmol N m-2 s-1)
                                     n_fixation_n15            , & !< symbiontic N fixation (µmol 15N m-2 s-1)
                                     recycling_leaf_n          , & !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
@@ -1525,7 +1525,7 @@ CONTAINS
       CALL slm_add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'uptake_p', mem%uptake_p, &
+      CALL slm_add_var(mem, 'uptake_po4', mem%uptake_po4, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'n_fixation', mem%n_fixation, &

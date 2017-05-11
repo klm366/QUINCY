@@ -99,7 +99,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_veg_config_class,     ONLY: veg_config
+    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_sb_constants
 
     ! Use of process memories
@@ -118,7 +118,8 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: apparent_mic_cue,growth_c,growth_n,hlp1
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: apparent_mic_cue,growth_c,growth_n,hlp1,hlp2
+    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_lesssimple'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -127,13 +128,8 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: uptake_nh4
-    dsl4jsb_Real2D_onChunk :: uptake_no3
-    dsl4jsb_Real2D_onChunk :: uptake_p
     dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
     dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
-    dsl4jsb_Real2D_onChunk :: demand_uptake_n_tuptake_mavg
-    dsl4jsb_Real2D_onChunk :: demand_uptake_p_tuptake_mavg
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -189,13 +185,8 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot)
-    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg) 
-    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg) 
     dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)
@@ -238,70 +229,57 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 !!BLARPP
 rmm_depolymerisation(:,:) = 1.0_wp
-    !> 2.1 Nitrogen uptake
+    !> 1.0 Plant nutrient uptake rates
     !!
+    !> 1.1 inorganic N uptake 
+    !!
+    !! potential N uptake rate (µmol N / mol C fine-root / s)
+    hlp1(:,1) = lctlib%vmax_uptake_n * & 
+                nh4_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
+                1._wp / ( lctlib%soil_n_aff2 + nh4_solute(:,1) * soil_depth_sl(:,1) )) 
+    hlp2(:,1) = lctlib%vmax_uptake_n / soil_depth_sl(:,1) * dtime/1.e6 * &
+                no3_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
+                1._wp / ( lctlib%soil_n_aff2 + no3_solute(:,1) * soil_depth_sl(:,1) )) 
+    unit_uptake_n_pot(:) = hlp1(:,1) + hlp2(:,1) 
+
     SELECT CASE (veg_config%bnf_scheme)
-      !> 2.1.1 Case 1  maintain prescribed C:N irrespective of nutrient uptake capacity == no nutrient limitation case 
+      !> 1.1.1 Case 1  maintain prescribed C:N irrespective of nutrient uptake capacity == no nutrient limitation case 
       !!
       CASE ("prescribed")
-         ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-         uptake_nh4(:) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dtime
+         ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m3 / timestep 
+         plant_uptake_nh4_sl(:,1) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - & 
+                                        veg%pool%labile%nitrogen%ptr, 0.0_wp) / soil_depth_sl(:,1)
 
-      !> 2.1.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
+      !> 1.1.2 Case 2. inorganic N uptake according to Michaelis-Menten Kinetics  
       !!
       CASE ("standard","std_plus_costs","optimal","resistance")
-         ! OCN's MM Kinetics
-         uptake_nh4(:) = lctlib%vmax_uptake_n * &
-                 demand_uptake_n_tuptake_mavg(:) * & 
-                 sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) )) * & 
-                   veg%pool%fine_root%carbon%ptr
-         
-         uptake_no3(:) = lctlib%vmax_uptake_n * &
-                 demand_uptake_n_tuptake_mavg(:) * & 
-                 sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1) )) * & 
-                 veg%pool%fine_root%carbon%ptr
+         ! uptake rate in µmol N / m3 / timestep 
+         plant_uptake_nh4_sl(:,1) = hlp1(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
+         plant_uptake_no3_sl(:,1) = hlp2(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
     ENDSELECT
 
-    !> 2.2 inorganic P uptake 
+    !> 1.2 inorganic P uptake 
     !!
+    !! potential P uptake rate (µmol P / mol C fine-root / s)
+    unit_uptake_p_pot(:) = lctlib%vmax_uptake_p * &
+                           po4_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + &
+                           1._wp / ( lctlib%soil_p_aff2 + po4_solute(:,1) * soil_depth_sl(:,1) ))
     SELECT CASE (veg_config%p_uptake_scheme)
-      !> 2.1 Case 1  maintain prescribed N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
+      !> 1.2.1 Case 1  maintain prescribed N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
       !!
       CASE ("prescribed")
-         ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-         uptake_p(:) = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + uptake_nh4(:) * dtime / 1.e6 - &
-                           veg%pool%labile%phosphorus%ptr, 0.0_wp) * &
-                          1.e6_wp / dtime
+         ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m3 / timestep
+         plant_uptake_po4_sl(:,1) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf / lctlib%np_leaf - &
+                           veg%pool%labile%phosphorus%ptr, 0.0_wp)  / soil_depth_sl(:,1)
 
-      !> 2.2 Case 2. Calculate inorganic P uptake according to Michaelis-Mnten Kinetics  
+      !> 1.2.2 Case 2. Calculate inorganic P uptake according to Michaelis-Menten Kinetics  
       !!
       CASE ("standard")
-         ! OCN's MM Kinetics
-         uptake_p(:) = lctlib%vmax_uptake_p * & 
-                 demand_uptake_p_tuptake_mavg(:) * & 
-                 sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + & 
-                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) )) * & 
-                 veg%pool%fine_root%carbon%ptr
+         ! uptake rate in µmol P / m3 / timestep 
+         plant_uptake_po4_sl(:,1) = unit_uptake_p_pot(:) * & 
+                                    veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
 
     ENDSELECT
-
-    !> 4.0 Calculate potential and actual N uptake per unit fine root carbon
-    !!
-    unit_uptake_n_pot(:) = lctlib%vmax_uptake_n * &
-                                (sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1))) + &
-                                 sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1))))
-    unit_uptake_p_pot(:) = lctlib%vmax_uptake_p * &
-                                sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + &
-                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) ))
-
-    !> 1.1 Communicate vegetation uptake to soil layers (BLARPPP - temporary for now)
-    plant_uptake_nh4_sl(:,1) = uptake_nh4(:) / soil_depth_sl(:,1) * dtime/1.e6 ! convert to mol/timestep
-    !plant_uptake_no3_sl(:,1) = uptake_no3(:) / soil_depth_sl(:,1)
-    plant_uptake_po4_sl(:,1) = uptake_p(:) / soil_depth_sl(:,1) * dtime/1.e6 ! convert to mol/timestep
 
     !> 2.0 Calculate decomposition of pools: dP/dt = - f(T)*f(M)/tau_pool * P
     !!
@@ -639,6 +617,7 @@ rmm_depolymerisation(:,:) = 1.0_wp
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) / dtime * 1000000._wp
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._wp
     plant_uptake_nh4_sl(:,:) = plant_uptake_nh4_sl(:,:) / dtime * 1000000._wp 
+    plant_uptake_no3_sl(:,:) = plant_uptake_no3_sl(:,:) / dtime * 1000000._wp 
     plant_uptake_po4_sl(:,:) = plant_uptake_po4_sl(:,:) / dtime * 1000000._wp 
     volatilisation_n(:,:) = volatilisation_n(:,:) / dtime * 1000000._wp
     nitrification(:,:) = nitrification(:,:) / dtime * 1000000._wp 

@@ -46,7 +46,7 @@ MODULE mo_shared_output
   REAL(wp), ALLOCATABLE, SAVE :: n_loss_acc         
   REAL(wp), ALLOCATABLE, SAVE :: recycling_n_acc     
   REAL(wp), ALLOCATABLE, SAVE :: res_use_n_acc        
-  REAL(wp), ALLOCATABLE, SAVE :: uptake_p_acc         
+  REAL(wp), ALLOCATABLE, SAVE :: uptake_po4_acc         
   REAL(wp), ALLOCATABLE, SAVE :: recycling_p_acc     
   REAL(wp), ALLOCATABLE, SAVE :: res_use_p_acc        
   REAL(wp), ALLOCATABLE, SAVE :: transpiration_acc    
@@ -113,7 +113,7 @@ CONTAINS
     ALLOCATE(res_use_n_acc)  
     ALLOCATE(n_fixation_acc)   
     ALLOCATE(n_loss_acc)   
-    ALLOCATE(uptake_p_acc)
+    ALLOCATE(uptake_po4_acc)
     ALLOCATE(recycling_p_acc)  
     ALLOCATE(res_use_p_acc)   
     ALLOCATE(transpiration_acc) 
@@ -182,7 +182,7 @@ CONTAINS
     res_use_n_acc       = 0.0_wp  
     n_fixation_acc      = 0.0_wp   
     n_loss_acc          = 0.0_wp   
-    uptake_p_acc        = 0.0_wp
+    uptake_po4_acc        = 0.0_wp
     recycling_p_acc     = 0.0_wp  
     res_use_p_acc       = 0.0_wp   
     transpiration_acc   = 0.0_wp 
@@ -1128,7 +1128,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
     dsl4jsb_Real2D_onChunk      :: n_fixation
-    dsl4jsb_Real2D_onChunk      :: uptake_p
+    dsl4jsb_Real2D_onChunk      :: uptake_po4
     dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
@@ -1197,7 +1197,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
@@ -1257,7 +1257,7 @@ CONTAINS
              res_use_n_acc    = res_use_n_acc     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
              n_fixation_acc   = n_fixation_acc    + n_fixation(1)                   * dtime_one 
              n_loss_acc       = n_loss_acc        + sb%volatilisation_n%ptr(1,1,1) * soil_depth_sl(1,1) * dtime_one 
-             uptake_p_acc     = uptake_p_acc      + uptake_p(1)                     * dtime_one
+             uptake_po4_acc     = uptake_po4_acc      + uptake_po4(1)                     * dtime_one
              recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + & 
                                        recycling_fine_root_p(1) + recycling_heart_wood_p(1) )     * dtime_one *1000000._wp/dtime
              res_use_p_acc    = res_use_p_acc     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
@@ -1309,7 +1309,7 @@ CONTAINS
                write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
                                       res_use_n_acc, n_deposition_acc, n_fixation_acc, n_loss_acc
                lun=lun+1
-               write(lun,'(4F12.6)') time_d, uptake_p_acc, recycling_p_acc, res_use_p_acc
+               write(lun,'(4F12.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                lun=lun+1
                write(lun,'(12F16.8)') time_d, transpiration_acc, drainage_acc, gc_acc, ga_acc
                lun=lun+1
@@ -1344,7 +1344,7 @@ CONTAINS
                res_use_n_acc     = 0.0_wp
                n_fixation_acc    = 0.0_wp
                n_loss_acc        = 0.0_wp
-               uptake_p_acc      = 0.0_wp
+               uptake_po4_acc      = 0.0_wp
                recycling_p_acc   = 0.0_wp
                res_use_p_acc     = 0.0_wp
                transpiration_acc = 0.0_wp

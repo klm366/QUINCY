@@ -81,7 +81,7 @@ CONTAINS
     CALL veg%uptake_no3_n15%init(flux_zero)                !< 15NO3 uptake (µmol N m-2 s-1)
     CALL veg%n_fixation%init(flux_zero)                    !< ??
     CALL veg%n_fixation_n15%init(flux_zero)                !< ??
-    CALL veg%uptake_p%init(flux_zero)                      !< ??
+    CALL veg%uptake_po4%init(flux_zero)                    !< ??
     CALL veg%recycling_leaf_n%init(flux_zero)              !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
     CALL veg%recycling_leaf_n15%init(flux_zero)            !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
     CALL veg%recycling_leaf_p%init(flux_zero)              !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
