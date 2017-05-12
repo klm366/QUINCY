@@ -88,20 +88,11 @@ CONTAINS
     !! 
     !! SLM models: land, plant,soil (case 1) and canopy (case 2)
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land')
-        CALL init_slm_plant(tile, options)
+      CASE('land','plant','soil')
+        CALL init_veg_plant(tile, options)
 
-      CASE('plant')
-        CALL init_slm_plant(tile, options)
-
-      CASE('soil')
-        CALL init_slm_plant(tile, options)
-
-      CASE('canopy')
-        CALL init_slm_canopy(tile, options)
-
-      CASE('test_canopy')
-        CALL init_slm_canopy(tile, options)
+      CASE('canopy','test_canopy')
+        CALL init_veg_canopy(tile, options)
 
       CASE DEFAULT
         CALL finish('veg_init','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
@@ -130,7 +121,7 @@ CONTAINS
   !!
   !! currently used for: SLM land plant and soil
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_plant(tile, options)
+  SUBROUTINE init_veg_plant(tile, options)
 
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
@@ -151,7 +142,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: hlp1       ! needs to be Scalar as long as pools are Scalar !
     INTEGER                                      :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm_plant'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_veg_plant'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -442,7 +433,7 @@ CONTAINS
     t_air_month_mavg(:)               = 283.15_wp
     t_jmax_opt_mavg(:)                = 17.0_wp
 
-  END SUBROUTINE init_slm_plant
+  END SUBROUTINE init_veg_plant
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -450,7 +441,7 @@ CONTAINS
   !!
   !! called from init_slm
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_canopy(tile, options)
+  SUBROUTINE init_veg_canopy(tile, options)
 
     USE mo_shared_constants,                ONLY: molar_mass_N
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, standard_press_srf
@@ -467,7 +458,7 @@ CONTAINS
     REAL(wp)                                     :: ref_lai    !< LAI
     REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2
     INTEGER                                      :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm_canopy'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_veg_canopy'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -625,7 +616,7 @@ CONTAINS
     t_jmax_opt_mavg(:)                = 17.0_wp
 
 
-  END SUBROUTINE init_slm_canopy
+  END SUBROUTINE init_veg_canopy
 
 
 

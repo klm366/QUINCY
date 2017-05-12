@@ -821,17 +821,17 @@ CONTAINS
     npp_talloc_mavg(:)                  = calc_mavg(npp_talloc_mavg(:), npp(:), &
          mavg_period_talloc, do_calc=growing_season(:))
     SELECT CASE (veg_config%bnf_scheme)
-    CASE ("prescribed", "standard","resistance")
-       n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), n_fixation(:), &
-            mavg_period_talloc, do_calc=growing_season(:))
-    CASE("optimal")
-       WHERE (n_fixation(:)>0._wp)
-          hlp=n_fixation/ veg%pool%fine_root%carbon%ptr
-       ELSE WHERE
-          hlp = 0.0_wp
-       ENDWHERE
-       n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), hlp, &
-            mavg_period_talloc, do_calc=growing_season(:))
+      CASE("optimal")
+         WHERE (n_fixation(:)>0._wp)
+            hlp=n_fixation/ veg%pool%fine_root%carbon%ptr
+         ELSE WHERE
+            hlp = 0.0_wp
+         ENDWHERE
+         n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), hlp, &
+              mavg_period_talloc, do_calc=growing_season(:))
+      CASE DEFAULT 
+         n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), n_fixation(:), &
+              mavg_period_talloc, do_calc=growing_season(:))
     ENDSELECT
     unit_npp_talloc_mavg(:)             = calc_mavg(unit_npp_talloc_mavg(:), unit_npp(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))

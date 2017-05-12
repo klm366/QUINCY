@@ -17,14 +17,13 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-bnf_scheme="standard"           # prescribed standard std_plus_costs optimal resistance
+bnf_scheme="standard"           # standard std_plus_costs optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
-p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
 sb_model_scheme="simple"        # simple jsm 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
-flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
 flag_calc_soil_energy="T"
 # canopy model options
@@ -122,10 +121,6 @@ while getopts ":p:m:y:o:b:h" opt; do
     ;;
   "b")
     case "$OPTARG" in
-    "pre")
-      echo "   bnf_scheme=prescribed"
-      bnf_scheme="prescribed"
-      ;;
     "std")
       echo "   bnf_scheme=standard"
       bnf_scheme="standard"
@@ -208,9 +203,8 @@ return 0
 }
 # lists to validate against
 validateSlmModel="land plant soil canopy test_canopy"
-validateBNFScheme="prescribed standard std_plus_costs optimal resistance"
+validateBNFScheme="standard std_plus_costs optimal resistance"
 validateMycScheme="no am ecm"
-validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
 validateSBModelScheme="simple jsm"
@@ -225,7 +219,6 @@ validateSiteDataSet="f c n"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
 validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
-validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
@@ -364,7 +357,6 @@ return 0                                                                        
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
 changeNamelistValue myc_scheme "$myc_scheme" 
-changeNamelistValue p_uptake_scheme "$p_uptake_scheme" 
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"

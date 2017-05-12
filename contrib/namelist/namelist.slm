@@ -8,7 +8,6 @@
   bnf_scheme="standard"
   ! mycorrhiza
   myc_scheme="standard"
-  p_uptake_scheme="prescribed"
   plant_functional_type_id=5
 /
 &ASSIMILATION_CTL

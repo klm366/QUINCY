@@ -99,7 +99,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_sb_constants
 
     ! Use of process memories
@@ -242,21 +241,9 @@ rmm_depolymerisation(:,:) = 1.0_wp
                 1._wp / ( lctlib%soil_n_aff2 + no3_solute(:,1) * soil_depth_sl(:,1) )) 
     unit_uptake_n_pot(:) = hlp1(:,1) + hlp2(:,1) 
 
-    SELECT CASE (veg_config%bnf_scheme)
-      !> 1.1.1 Case 1  maintain prescribed C:N irrespective of nutrient uptake capacity == no nutrient limitation case 
-      !!
-      CASE ("prescribed")
-         ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m3 / timestep 
-         plant_uptake_nh4_sl(:,1) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - & 
-                                        veg%pool%labile%nitrogen%ptr, 0.0_wp) / soil_depth_sl(:,1)
-
-      !> 1.1.2 Case 2. inorganic N uptake according to Michaelis-Menten Kinetics  
-      !!
-      CASE ("standard","std_plus_costs","optimal","resistance")
-         ! uptake rate in µmol N / m3 / timestep 
-         plant_uptake_nh4_sl(:,1) = hlp1(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
-         plant_uptake_no3_sl(:,1) = hlp2(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
-    ENDSELECT
+    ! uptake rate in µmol N / m3 / timestep 
+    plant_uptake_nh4_sl(:,1) = hlp1(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
+    plant_uptake_no3_sl(:,1) = hlp2(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
 
     !> 1.2 inorganic P uptake 
     !!
@@ -264,22 +251,9 @@ rmm_depolymerisation(:,:) = 1.0_wp
     unit_uptake_p_pot(:) = lctlib%vmax_uptake_p * &
                            po4_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + &
                            1._wp / ( lctlib%soil_p_aff2 + po4_solute(:,1) * soil_depth_sl(:,1) ))
-    SELECT CASE (veg_config%p_uptake_scheme)
-      !> 1.2.1 Case 1  maintain prescribed N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
-      !!
-      CASE ("prescribed")
-         ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m3 / timestep
-         plant_uptake_po4_sl(:,1) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf / lctlib%np_leaf - &
-                           veg%pool%labile%phosphorus%ptr, 0.0_wp)  / soil_depth_sl(:,1)
-
-      !> 1.2.2 Case 2. Calculate inorganic P uptake according to Michaelis-Menten Kinetics  
-      !!
-      CASE ("standard")
-         ! uptake rate in µmol P / m3 / timestep 
-         plant_uptake_po4_sl(:,1) = unit_uptake_p_pot(:) * & 
-                                    veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
-
-    ENDSELECT
+    ! uptake rate in µmol P / m3 / timestep 
+    plant_uptake_po4_sl(:,1) = unit_uptake_p_pot(:) * & 
+                               veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
 
     !> 2.0 Calculate decomposition of pools: dP/dt = - f(T)*f(M)/tau_pool * P
     !!

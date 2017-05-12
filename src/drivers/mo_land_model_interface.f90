@@ -307,31 +307,21 @@ CONTAINS
 
     CASE('plant')
     !! plant --------------------------------------------------------------------------------------
-    ! currently same as land !
 
     !! init/reset fluxes (with/to zero)
     !! 
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
-      CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
     !! run Tasks
     !!
-      CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
-      SELECT CASE(TRIM(sb_config%sb_model_scheme))
-        CASE('simple')
-          CALL update_sb_simple_model (tile, model%options) 
-        CASE('jsm')
-          CALL update_sb_jsm          (tile, model%options)
-      ENDSELECT
       CALL update_veg_growth      (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
-      CALL update_sb_pools        (tile, model%options)
 
     !! accumulation over time - daytime & moving average
     !! 
