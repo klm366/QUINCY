@@ -175,26 +175,30 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         # ATT: if logic changes, program flow has to be adapted
 
 
+    def check_output ( self, filepath ): 
+        cdo = Cdo ()       
+        if os.path.isfile ( filepath ):         
+            with stdout2devnull ():
+                try:
+                    filetype = cdo.filedes ( input=filepath )
+                except:
+                    filetype = "unsupported filetype"
+                else:
+                    filetype = filetype [ 1 ]
+                    
+            print "\nFor %s file '%s' written at %s" % ( self.B4J_name, token, filepath )
+            print "size %s byte, type %s" % ( os.stat ( filepath).st_size, filetype )
+
+        else:
+            print "\nERROR: File '%s' not written at %s" % ( token, filepath )
+            sys.exit ( 1 )
+        self.B4J_obj.logger.debug ( "Exiting." )
+
+
     def index_check_output ( self, tokenlist ):
         self.B4J_obj.logger.debug ( "Starting." )
-        cdo = Cdo ()
         for token in tokenlist:
-            if os.path.isfile ( self.B4J_index [ token ]):
-
-                with stdout2devnull ():
-                    try:
-                        filetype = cdo.filedes ( input=self.B4J_index [ token ])
-                    except:
-                        filetype = "unsupported filetype"
-                    else:
-                        filetype = filetype[1]
-
-                print "\nFor %s file '%s' written at %s" % ( self.B4J_name, token, self.B4J_index [ token ])
-                print "size %s byte, type %s" % ( os.stat ( self.B4J_index [ token ]).st_size, filetype )
-
-            else:
-                print "\nERROR: File '%s' not written at %s" % ( token, self.B4J_index [ token ])
-                sys.exit ( 1 )
+            self.check_output ( self.b4j_index [ token ])
         self.B4J_obj.logger.debug ( "Exiting." )
                 
 
@@ -625,9 +629,11 @@ class ICON_Experiment ( Experiment ):
     suffix = 'nc'
     outfiles_dict = { "suffix"            : "nc",
                       "fn_tmpl"           : "%(exp_name)s%(submodel)s_%(year)s%(mon_int)s01T000000Z.nc" }
-    lsm_dict = { "fn" : "r2b4_slf_bin.nc",
-                 "var": "notsea",
-                 "bin": True }
+    # lsm_dict = { "fn" : "r2b4_slf_bin.nc",
+    #              "var": "notsea",
+    #              "bin": True }
+    lsm_dict = { "fn"  : "bc_land_frac.nc",
+                 "varn": "notsea" }
     
     def __init__ ( self,  b4j_obj, **kwargs ):
 
@@ -733,13 +739,34 @@ class ICON_Experiment ( Experiment ):
                         sys.exit ( sp.returncode )
 
         
-        self.land_sea_mask  = self.B4J_obj.path_template % { 
+        self.land_sea_mask  = """%(path)s/%(classification)s_%(expname)s.%(suffix)s""" % { 
             'path'           : self.B4J_obj.interpolated_selected_path,
             'classification' : "land_sea_mask",
-            'expname'        : self.B4J_name,
-            'startdate'      : self.B4J_startyear,
-            'enddate'        : self.B4J_endyear,
+            'expname'        : self.B4J_name_orig,
             'suffix'         : "nc" }
+
+        if not os.path.isfile ( self.land_sea_mask ):
+            # fetching land-sea-mask
+            lsm_path = """%(path)s/%(fn)s""" % {
+                'path' : self.B4J_path,
+                'fn': self.lsm_dict [ 'fn' ]}
+
+            self.B4J_obj.logger.debug ( "Fetching land_sea_mask '%s' from %s." % ( self.lsm_dict [ "varn" ], 
+                                                                                   lsm_path ))
+            if not self.from_remote:
+                assert os.path.isfile ( lsm_path ), "No file found for %s." % lsm_path
+                cdo = Cdo ()
+                cdo.gtc ( 0,
+                          input = " -select,name=%s %s " % ( self.lsm_dict [ "varn" ],
+                                                             lsm_path ),
+                          output = self.land_sea_mask )
+            else:
+                print "Fetching land sea mask: remote case not implemented jet. EXITING."
+                sys.exit ( 0 )
+                
+            self.check_output ( self.land_sea_mask )
+            self.B4J_obj.logger.debug ( "Fetched land sea mask '%s'." %  self.land_sea_mask )
+            # finished fetching land-sea-mask
                 
         self.B4J_obj.logger.debug ( "Exiting" )
 
