@@ -271,7 +271,9 @@ CONTAINS
     ELSE ! diagnose sensible heat flux from net radiation and set soil temperature to air temperature 
        ground_heat_flx(:) = 0.0_wp 
        sensible_heat_flx(:) = net_radiation(:) - latent_heat_flx(:) 
-       t_soil_sl(:,1) = t_air(:)
+       DO isoil = 1,soil_config%nsoil_water
+          t_soil_sl(:,isoil) = t_air(:)
+       ENDDO
     ENDIF
 
     !> 3.0 update soil moisture
