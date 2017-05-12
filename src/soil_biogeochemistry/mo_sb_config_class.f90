@@ -105,16 +105,6 @@ CONTAINS
         CALL finish("mo_sb_config_class:init_sb_config",message_text) 
     ENDSELECT
 
-    SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('soil')
-         IF(TRIM(sb_model_scheme) /= "jsm") THEN
-            sb_model_scheme = "jsm"  
-            WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 
-                                       ' this is the only possible configuration for the standalone soil model'
-            WRITE(*,*) "mo_sb_config_class:init_sb_config",message_text 
-         ENDIF
-    END SELECT
-
     ! pass values as read from file
     config%sb_model_scheme                 = sb_model_scheme
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
