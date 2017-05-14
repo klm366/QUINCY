@@ -44,25 +44,33 @@ fieldname      = kwargs [ "fieldname" ]
 cdo = Cdo ()
 
 ##### differences of yearsums
-cdo.sub ( input  = "%s %s" % ( kwargs [ "can.E_yearsummean" ], kwargs [ "ref.E_yearsummean" ]),
+cdo.sub ( input  = " %s %s " % ( kwargs [ "can.E_yearsummean" ], kwargs [ "ref.E_yearsummean" ]),
           output = kwargs [ "E_yearsumdiff" ])
 
-cdo.sub ( input  = "%s %s" % ( kwargs [ "can.P_yearsummean" ], kwargs [ "ref.P_yearsummean" ]),
+cdo.sub ( input  = " %s %s " % ( kwargs [ "can.P_yearsummean" ], kwargs [ "ref.P_yearsummean" ]),
           output = kwargs ["P_yearsumdiff"  ])
 
 ##### zonal mean of differences
-cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
+cdo.zonmean ( input  = " %s " % ( kwargs [ "E_yearsumdiff" ]),
               output = kwargs [ "E_ysd-zonmean" ])
 
-cdo.zonmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
+cdo.zonmean ( input  = " %s " % ( kwargs [ "P_yearsumdiff" ]),
               output = kwargs [ "P_ysd-zonmean" ])
 
 ##### field mean of differences
-cdo.fldmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
+cdo.fldmean ( input  = " %s " % ( kwargs [ "E_yearsumdiff" ]),
               output = kwargs [ "E_ysdfm" ])
 
-cdo.fldmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
+cdo.fldmean ( input  = " %s " % ( kwargs [ "P_yearsumdiff" ]),
               output = kwargs [ "P_ysdfm" ])
+
+cdo.setname ( 'waterstorage_change',
+              input  = " -sub %s  %s " %\
+                         ( kwargs [ "P_ysdfm" ], kwargs [ "E_ysdfm" ]),
+              output = kwargs [ "WSC_ysdfm" ])
+cdo.merge ( input  = " %s %s %s " % ( kwargs [ "P_ysdfm" ], kwargs [ "E_ysdfm" ],
+                                        kwargs [ "WSC_ysdfm" ]),
+            output =  kwargs [ "H_ysdfm" ])
 
 
 #####
