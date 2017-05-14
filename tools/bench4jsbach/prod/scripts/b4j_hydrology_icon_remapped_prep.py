@@ -44,6 +44,9 @@ cdo = Cdo ()
 cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsummean" ]),
               output = kwargs [ "E_ys-zonmean" ])
 
+cdo.zonmean ( input  = "%s" % ( kwargs [ "P_yearsummean" ]),
+              output = kwargs [ "P_ys-zonmean" ])
+
 #####
 ##### finishing
 #####

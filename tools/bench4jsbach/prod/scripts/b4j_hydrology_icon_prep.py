@@ -55,18 +55,30 @@ cdo.setname ( "evapotranspiration",
               unit, unit_factor_EP, sign_adjust_E, kwargs [ 'E_selcode' ]),
               output = kwargs [ 'E_hydrology' ])
 
+cdo.setname ( "precip_acc",
+              input = " -setunit,%s -mulc,%d  %s" % ( unit, unit_factor_EP, kwargs [ 'P_selcode' ]),
+              output = kwargs [ 'P_hydrology' ])
+
 #####
 ##### calculate yearly sum from yearly mean from monthly mean, weighted by days per month, days per year
 #####
 
 cdo.timmean (  input  = " -muldpy -yearmonmean %s " % ( kwargs [ 'E_hydrology' ]), 
                output = kwargs [ 'E_yearsummean' ])
+
+cdo.timmean (  input  = " -muldpy -yearmonmean %s " % ( kwargs [ 'P_hydrology' ]), 
+               output = kwargs [ 'P_yearsummean' ])
+
+#####
 #####
 ##### calculate field mean from yearly sum
 #####
 
 cdo.fldmean ( input  = "%s" % ( kwargs [ "E_yearsummean" ]),
               output = kwargs [ "E_ysfm" ])
+
+cdo.fldmean ( input  = "%s" % ( kwargs [ "P_yearsummean" ]),
+              output = kwargs [ "P_ysfm" ])
 
 #####
 ##### finishing
