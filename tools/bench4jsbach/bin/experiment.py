@@ -186,11 +186,11 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                 else:
                     filetype = filetype [ 1 ]
                     
-            print "\nFor %s file '%s' written at %s" % ( self.B4J_name, token, filepath )
+            print "\nFile %s exists:" % ( filepath )
             print "size %s byte, type %s" % ( os.stat ( filepath).st_size, filetype )
 
         else:
-            print "\nERROR: File '%s' not written at %s" % ( token, filepath )
+            print "\nERROR: File '%s' does not exist." % ( filepath )
             sys.exit ( 1 )
         self.B4J_obj.logger.debug ( "Exiting." )
 
@@ -198,7 +198,7 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
     def index_check_output ( self, tokenlist ):
         self.B4J_obj.logger.debug ( "Starting." )
         for token in tokenlist:
-            self.check_output ( self.b4j_index [ token ])
+            self.check_output ( self.B4J_index [ token ])
         self.B4J_obj.logger.debug ( "Exiting." )
                 
 
@@ -762,8 +762,36 @@ class ICON_Experiment ( Experiment ):
                           output = self.land_sea_mask )
             else:
                 print "Fetching land sea mask: remote case not implemented jet. EXITING."
-                sys.exit ( 0 )
+
                 
+                cmd = """
+                echo 'on server' $(hostname);
+                echo $(pwd -P);
+                export PATH=%s:$PATH;
+                echo ${PATH};
+                echo %s %s %s %s;
+                rm -f %s;
+                cdo  -f %s -gtc,0 -select,name=%s %s %s;
+                """ % ( HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
+                        fielddict [ 'suffix' ], self.lsm_dict [ "varn" ],
+                        lsm_path, os.path.basename ( self.land_sea_mask ),
+                        os.path.basename ( self.land_sea_mask ),
+                        fielddict [ 'suffix' ], self.lsm_dict [ "varn" ],
+                        lsm_path, os.path.basename ( self.land_sea_mask ))
+                
+                self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
+                    cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
+
+                print "\n\n clear:\n\n %s \n\n" % cmd
+
+                self.remotehost_processing ( cmd )
+                self.B4J_obj.logger.debug ( "Executed command successfully." )
+                self.remotehost_fetching (  os.path.basename ( self.land_sea_mask ),
+                                            self.land_sea_mask )
+                self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+                self.remotehost_processing ( "rm -f %s" % os.path.basename ( self.land_sea_mask ))
+                self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+
             self.check_output ( self.land_sea_mask )
             self.B4J_obj.logger.debug ( "Fetched land sea mask '%s'." %  self.land_sea_mask )
             # finished fetching land-sea-mask

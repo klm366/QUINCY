@@ -67,25 +67,18 @@ else:
     print "* Initialized Bench_Object. Defining Diagnostics."
     print "* Reading configuration file '%s'." %  args [ 0 ]
     print "******************************************"
-
     
     b4j_obj.fetchremote = options.fetchremote
-
     
     # fetch outdata
     for exp in b4j_obj.experiments:
         exp.fetch_outdata ()
-
         
-    # print "\n\nHere we are."
-    # sys.exit ( 0 )
-
     # diagnosis
     for f_n,f_bench in b4j_obj.config [ 'fields' ].iteritems():
         ret = b4j_obj.diagnostic_generic ( f_n )
         b4j_obj.logger.debug ( "Finished diagnostic for '%s' successfully." % f_n ) if not ret else \
                 b4j_obj.logger.debug ( "Diagnostic for '%s' failed." % f_n )
-
     
     # reporting
     b4j_obj.write_report () if b4j_obj.reporting else None
