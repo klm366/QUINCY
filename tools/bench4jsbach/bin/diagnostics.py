@@ -209,7 +209,7 @@ class Diagnostics ( object ):
             if not can.B4J_iscan: continue
                 
             remap_targets = [ etype for etype in ref_etypes if etype != can.B4J_etype  ]
-            
+
             if remap_targets:
                 for output_item in  fielddict [ 'preprocessing' ][ 'output' ]:
                     for remap_target in remap_targets:
@@ -247,6 +247,59 @@ class Diagnostics ( object ):
 
             
         self.logger.debug ( "Finished remapping." )
+
+        ################ PREPROCESSING REMAPPED ####################
+
+        if 'preprocessing_remapped' in fielddict:
+            for exp in self.experiments:
+            # TODO: validation of field configuration in preliminary step, EXTEND VALIDATION PROCESS
+                assert 'preprocessing_remapped' in fielddict and \
+                    exp.B4J_etype in fielddict [ 'preprocessing_remapped' ], \
+                    "No 'preprocessing_remapped'-section defined for %s and %s." % ( fieldname, exp.B4J_etype )
+                
+                prepdict = fielddict [ 'preprocessing_remapped' ][ exp.B4J_etype ]            
+                executable = self.get_b4j_path (  prepdict [ 'exec' ], "scripts" )
+                input_list = prepdict [ 'input' ]
+
+                arglist = [ "fieldname:" + fieldname,
+                            "suffix:" +  fielddict [ 'suffix' ],
+                            "land_sea_mask:" + exp.land_sea_mask ]
+
+                ############## TODO: replace against generic solution
+                remap_targets = [ etype for etype in ref_etypes if exp.B4J_iscan and \
+                                  exp.B4J_etype != etype  ]
+                assert len ( remap_targets ) <= 1
+                if not exp.B4J_iscan or not remap_targets:
+                    for key in input_list:
+                        arglist.append ( key + ':' + exp.B4J_index [ key ])
+                else:
+                    for remap_target in remap_targets:
+                        for key in input_list:
+                            input_item_remap = key + "_remap-" + remap_target
+                            arglist.append ( key + ':' + exp.B4J_index [ input_item_remap ])
+                    ############# end to replace
+
+
+                for output_item in  fielddict [ 'preprocessing_remapped' ][ 'output' ]:
+                    exp.B4J_index [ output_item ] = self.path_template % { 
+                        'path'           : fielddict [ "processed_path" ],
+                        'classification' : output_item,
+                        'expname'        : exp.B4J_name,
+                        'startdate'      : exp.B4J_startyear,
+                        'enddate'        : exp.B4J_endyear,
+                        'suffix'         : fielddict [ 'suffix' ]}
+                    arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
+
+                cmd = ["python", executable ] +  arglist
+                self.logger.debug ( """Calling childprocess preprocessing_remapped: \n%s""" % cmd )
+                subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+
+                # Check written files:
+                new_indices = [ output_item for output_item in  fielddict [ 'preprocessing_remapped' ][ 'output' ]]
+                exp.index_check_output ( new_indices )
+
+            self.logger.debug ( "Finished preprocessing_remapped remapped with %s for field %s and all experiments successfully." %  \
+                                ( executable, fieldname ))
 
         ########### DIAGNOSTIC ############################
         
