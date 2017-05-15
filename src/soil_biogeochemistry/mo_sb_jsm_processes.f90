@@ -375,7 +375,7 @@ CONTAINS
     !!
     hlp1 = (mic_uptake + plant_uptake) 
     IF(hlp1 > (solute * 1000000._wp/dtime) .AND. hlp1 > eps8)THEN
-       mic_uptake = - 1.0_wp * mic_uptake / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
+       mic_uptake   = mic_uptake   / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
        plant_uptake = plant_uptake / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
     ENDIF
 
