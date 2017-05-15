@@ -352,7 +352,7 @@ CONTAINS
     !! 
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
-      !CALL update_sb_rate_modifier    (tile, model%options)
+      CALL update_sb_rate_modifier    (tile, model%options)
       SELECT CASE(TRIM(sb_config%sb_model_scheme))
         CASE('simple')
           CALL update_sb_simple_model (tile, model%options) 

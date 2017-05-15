@@ -94,7 +94,6 @@ CONTAINS
     USE mo_base_constants,        ONLY: one_day
 
     ! Use of process memories
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
@@ -169,13 +168,11 @@ CONTAINS
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_dC13_r, seed_bed_DC14_r, seed_bed_dN15_r
     REAL(wp), DIMENSION(soil_config%nsoil_water) :: & 
-                     rtm_depolymerisation_r, rtm_mic_uptake_r, &
-                     rtm_sorption_r, rtm_desorption_r, & 
-                     rtm_hsc_r, rmm_depolymerisation_r, & 
-                     rmm_mic_uptake_r, rmm_sorption_r, & 
-                     rmm_desorption_r, rmm_hsc_r, &
-                     percolation_sl_r, &
-                     t_soil_sl_r, w_soil_sl_r
+                     t_soil_sl_r, w_soil_sl_r, &
+                     percolation_sl_r, root_fraction_sl_r
+    REAL(wp) ::      veg_pool_fine_root_carbon_r
+
+
     INTEGER                   :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
     INTEGER                   :: lun           ! logical unit number for file input stream, see '2.0 read data'
     REAL(wp), DIMENSION(nc)   :: sw_toa_down   ! potential radiation at the top of the atmosphere
@@ -193,16 +190,15 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
     ! SOIL_
-    dsl4jsb_Real3D_onChunk      :: percolation_sl
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
+    dsl4jsb_Real3D_onChunk      :: percolation_sl
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
 ! 2 be removed: pointers to veg assimi *slmtemp
-    TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
@@ -213,20 +209,19 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
 !    lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
 
 
 ! 2 be removed  *slmtemp
-    sb      => sb__mem 
     veg     => veg__mem 
 
 
@@ -454,26 +449,18 @@ CONTAINS
 
     lun=10
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-                     rtm_depolymerisation_r(1:nlevel_soil), rtm_mic_uptake_r(1:nlevel_soil), &
-                     rtm_sorption_r(1:nlevel_soil), rtm_desorption_r(1:nlevel_soil), & 
-                     rtm_hsc_r(1:nlevel_soil), rmm_depolymerisation_r(1:nlevel_soil), & 
-                     rmm_mic_uptake_r(1:nlevel_soil), rmm_sorption_r(1:nlevel_soil), & 
-                     rmm_desorption_r(1:nlevel_soil), rmm_hsc_r(1:nlevel_soil), &
-                     percolation_sl_r(1:nlevel_soil), &
-                     t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil)
+                     t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil), &
+                     percolation_sl_r(1:nlevel_soil), root_fraction_sl_r(1:nlevel_soil), &
+                     veg_pool_fine_root_carbon_r
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-                     rtm_depolymerisation_r(1:nlevel_soil), rtm_mic_uptake_r(1:nlevel_soil), &
-                     rtm_sorption_r(1:nlevel_soil), rtm_desorption_r(1:nlevel_soil), & 
-                     rtm_hsc_r(1:nlevel_soil), rmm_depolymerisation_r(1:nlevel_soil), & 
-                     rmm_mic_uptake_r(1:nlevel_soil), rmm_sorption_r(1:nlevel_soil), & 
-                     rmm_desorption_r(1:nlevel_soil), rmm_hsc_r(1:nlevel_soil), &
-                     percolation_sl_r(1:nlevel_soil), &
-                     t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil)
+                     t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil), &
+                     percolation_sl_r(1:nlevel_soil), root_fraction_sl_r(1:nlevel_soil), &
+                     veg_pool_fine_root_carbon_r
     END IF
 
     !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
@@ -543,22 +530,13 @@ CONTAINS
 
     DO isoil = 1,nlevel_soil
 
-       sb%rtm_depolymerisation%ptr(ics:ice,isoil,iblk) = rtm_depolymerisation_r(isoil)
-       sb%rtm_mic_uptake%ptr(ics:ice,isoil,iblk)       = rtm_mic_uptake_r(isoil)
-       sb%rtm_sorption%ptr(ics:ice,isoil,iblk)         = rtm_sorption_r(isoil)
-       sb%rtm_desorption%ptr(ics:ice,isoil,iblk)       = rtm_desorption_r(isoil)
-       sb%rtm_hsc%ptr(ics:ice,isoil,iblk)              = rtm_hsc_r(isoil)
-       sb%rmm_depolymerisation%ptr(ics:ice,isoil,iblk) = rmm_depolymerisation_r(isoil)
-       sb%rmm_mic_uptake%ptr(ics:ice,isoil,iblk)       = rmm_mic_uptake_r(isoil)
-       sb%rmm_sorption%ptr(ics:ice,isoil,iblk)         = rmm_sorption_r(isoil)
-       sb%rmm_desorption%ptr(ics:ice,isoil,iblk)       = rmm_desorption_r(isoil)
-       sb%rmm_hsc%ptr(ics:ice,isoil,iblk)              = rmm_hsc_r(isoil)
-       percolation_sl(:,isoil)                         = percolation_sl_r(isoil)
        t_soil_sl(:,isoil)                              = t_soil_sl_r(isoil)
        w_soil_sl(:,isoil)                              = w_soil_sl_r(isoil)
-
-
+       percolation_sl(:,isoil)                         = percolation_sl_r(isoil)
+       root_fraction_sl(:,isoil)                       = root_fraction_sl_r(isoil)
     ENDDO
+    veg%pool%fine_root%carbon%ptr                      = veg_pool_fine_root_carbon_r
+
 
     END SELECT  ! land plant canopy vs soil
 

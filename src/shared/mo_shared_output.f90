@@ -1548,11 +1548,11 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 60
     lun = 100 + 60
-    WRITE(lun,'(5a)') 'Time stand alone RTM_decomposition*soil_layer RTM_mic_uptake*soil_layer RTM_sorption*soil_layer ', &
-                      'RTM_desorption*soil_layer RTM_hsc*soil_layer ', & 
-                      'RMM_decomposition*soil_layer RMM_mic_uptake*soil_layer RMM_sorption*soil_layer ', &
-                      'RMM_desorption*soil_layer RMM_hsc*soil_layer ', &
-                      'Soil_temperature*soil_layer Soil_moisture*soil_layer'
+    WRITE(lun,'(5a)') 'Time ', &
+                      'Soil_temperature*soil_layer Soil_moisture*soil_layer ', &
+                      'Percolation*soil_layer ', &
+                      'Root_fraction*soil_layer ', &
+                      'Veg_pool_fine_root_Carbon'
 
     lun=lun+1   
     WRITE(lun,'(10a)')  'Time ', &
@@ -1585,7 +1585,6 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
@@ -1610,16 +1609,15 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
-    dsl4jsb_Def_memory(SB_)                         ! TYPE(t_sb_memory),      POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),    POINTER :: soil__mem
     ! Declare pointers to variables in memory
     ! SOIL_
-    dsl4jsb_Real3D_onChunk      :: percolation_sl
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
+    dsl4jsb_Real3D_onChunk      :: percolation_sl
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg   ! local pointer to veg__mem for SLM usability
-    TYPE(t_sb_memory),            POINTER     :: sb    ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -1635,20 +1633,19 @@ CONTAINS
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SB_)                         
     dsl4jsb_Get_memory(SOIL_)                         
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
 
 
 ! 2 be removed  *slmtemp
     veg => veg__mem 
-    sb  => sb__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -1663,25 +1660,18 @@ CONTAINS
     IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 + 60
-      write(lun,'(66F12.6)') time_d, &
+      write(lun,'(66F12.6)') time_d         , &
         ! per variable values per soil layer is written out
         ! number of soil layers == soil_config%nsoil_water  (default = 5)
-        sb%rtm_depolymerisation%ptr(1,:,1)  , & ! 1
-        sb%rtm_mic_uptake%ptr(1,:,1)        , &
-        sb%rtm_sorption%ptr(1,:,1)          , &
-        sb%rtm_desorption%ptr(1,:,1)        , &
-        sb%rtm_hsc%ptr(1,:,1)               , &
-        sb%rmm_depolymerisation%ptr(1,:,1)  , & ! 6
-        sb%rmm_mic_uptake%ptr(1,:,1)        , & 
-        sb%rmm_sorption%ptr(1,:,1)          , &
-        sb%rmm_desorption%ptr(1,:,1)        , &
-        sb%rmm_hsc%ptr(1,:,1)               , &
-        percolation_sl(1,:)                 , & ! 11
         t_soil_sl(1,:)                      , &
-        w_soil_sl(1,:)
+        w_soil_sl(1,:)                      , &
+        percolation_sl(1,:)                 , &
+        root_fraction_sl(1,:)               , &
+        veg%pool%fine_root%carbon%ptr
 
-      !
-      ! convert 13C and 14C in delta notation
+
+      !> convert 13C and 14C in delta notation
+      !! 
       dC13_leaf        = calc_delta_C13(veg%litterfall%leaf%carbon%ptr,veg%litterfall%leaf%carbon13%ptr)
       dC13_fine_root   = calc_delta_C13(veg%litterfall%fine_root%carbon%ptr,veg%litterfall%fine_root%carbon13%ptr)
       dC13_coarse_root = calc_delta_C13(veg%litterfall%coarse_root%carbon%ptr,veg%litterfall%coarse_root%carbon13%ptr)

@@ -97,7 +97,7 @@ CONTAINS
       CASE ("jsm")
          IF(TRIM(base_config%slm_model_name) /= "soil") THEN
             WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 
-                                       'is currently only possible configuration for the standalone soil model'
+                                       ' currently only works for the standalone soil model'
             CALL finish("mo_sb_config_class:init_sb_config",message_text) 
          ENDIF 
       CASE DEFAULT
