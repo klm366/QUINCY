@@ -15,14 +15,14 @@
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
-slmModel="land"             # land, plant, soil are currently available
+slmModel="land"        # land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant) are currently available
 
 
 ##>> sites <<###########################################################################################
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"           # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="T"        # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
+customSiteList="F"        # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
 customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
@@ -299,7 +299,7 @@ return 0
 }
 # lists to validate against
 validatesiteDataSet="f c"
-validateSlmModel="land plant soil"  # canopy
+validateSlmModel="land plant soil"
 validateBNFScheme="standard std_plus_costs optimal resistance"
 validateMycScheme="no am ecm"
 validateCanopyLayerScheme="standard fapar"
@@ -454,15 +454,12 @@ if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
 fi
 
 
-## SLM model forcing: land/plant/canopy/soil 
+## SLM model forcing: land/plant/soil 
 case "$slmModel" in
 "land")
   siteDataFoldForcing="$siteDataFold""met_forcing/"
   ;;
 "plant")
-  siteDataFoldForcing="$siteDataFold""met_forcing/"
-  ;;
-"canopy")
   siteDataFoldForcing="$siteDataFold""met_forcing/"
   ;;
 "soil")
@@ -734,7 +731,7 @@ fi
 sync
 
 ## define a function that manipulates the namelist && change namelist according to options ##
-# model: slm_model_name = land plant soil canopy
+# model: slm_model_name = land plant soil
 # 2 do: add other options like optimization
 
  # this function is copied from run_slm.sh without any modification

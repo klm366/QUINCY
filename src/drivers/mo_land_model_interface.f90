@@ -268,8 +268,9 @@ CONTAINS
     !!
       CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
-      CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
+      CALL update_soil_physics    (tile, model%options)
+      CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
       SELECT CASE(TRIM(sb_config%sb_model_scheme))
@@ -279,7 +280,6 @@ CONTAINS
           CALL update_sb_jsm          (tile, model%options)
       ENDSELECT
       CALL update_veg_growth      (tile, model%options)
-      CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
 
@@ -315,12 +315,12 @@ CONTAINS
     !! run Tasks
     !!
       CALL update_radiation       (tile, model%options)
-      CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
+      CALL update_soil_physics    (tile, model%options)
+      CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
       CALL update_veg_growth      (tile, model%options)
-      CALL update_soil_physics    (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
 
     !! accumulation over time - daytime & moving average
