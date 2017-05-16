@@ -23,6 +23,12 @@ MODULE mo_hsm_class
   INTEGER, PARAMETER :: MAX_STATE_NESTING = 10
   INTEGER, PARAMETER :: MAX_ACTIONS = 5
 
+  ENUM, BIND(C)
+    ENUMERATOR :: &
+      & HSM_full = 1, &
+      & HSM_simple
+  END ENUM
+
   TYPE t_Action
     CHARACTER(len=10) :: name = ""
   CONTAINS
@@ -53,6 +59,7 @@ MODULE mo_hsm_class
     CHARACTER(len=10)           :: name
     CHARACTER(len=50)           :: description
 !!$    INTEGER                     :: id
+    INTEGER                     :: level = 0                      ! Level in hierarchy (top=1)
     INTEGER                     :: path(MAX_STATE_NESTING) = -1
     INTEGER, PRIVATE            :: no_of_children = -1
     !
@@ -63,7 +70,6 @@ MODULE mo_hsm_class
     !
     CLASS(t_State), POINTER     :: next_sibling => NULL()
     CLASS(t_State), POINTER     :: prev_sibling => NULL()
-!!$    PROCEDURE(Handler_interface), POINTER :: Handler           ! State's handler function
   CONTAINS
     PROCEDURE :: Init_state
     PROCEDURE :: Get_parent         => Get_parent_state
@@ -105,8 +111,10 @@ MODULE mo_hsm_class
     CLASS(t_State_p), ALLOCATABLE :: source(:)      !< Source state during last transition
     TYPE(t_Action),   ALLOCATABLE :: actions(:)         !< List of possible actions (events)
     INTEGER,          ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
+    INTEGER                       :: mode               !< HSM_full or HSM_simple
   CONTAINS
     PROCEDURE :: Init_hsm
+    PROCEDURE :: Set_mode          => Set_mode_hsm
     PROCEDURE :: Get_current       => Get_current_hsm
     PROCEDURE :: Goto              => Goto_state_hsm
     PROCEDURE :: Goto_next         => Goto_next_state_hsm
@@ -139,10 +147,9 @@ MODULE mo_hsm_class
 !!$    END FUNCTION Handler_interface
 !!$  END INTERFACE
   ABSTRACT INTERFACE
-    FUNCTION Handler_interface(this, hsm, msg_in) RESULT(msg_out)
+    FUNCTION Handler_interface(this, msg_in) RESULT(msg_out)
       IMPORT :: t_State, t_Hsm, t_Message
       CLASS(t_State),   INTENT(inout) :: this
-      CLASS(t_Hsm),     INTENT(inout) :: hsm
       CLASS(t_Message), INTENT(in)    :: msg_in
       CLASS(t_Message), POINTER       :: msg_out
     END FUNCTION Handler_interface
@@ -230,6 +237,7 @@ CONTAINS
     IF (.NOT. PRESENT(parent)) THEN
       this%path(:) = -1
       this%path(1) = 1
+      this%level = 1
       !CALL this%Print_state()
       RETURN
     END IF
@@ -238,7 +246,9 @@ CONTAINS
     CLASS IS (t_State)
 
       this%path(:) = parent%path(:)
-      depth = MINLOC(parent%path, DIM=1)  ! Index of first -1 in path of parent
+      depth = parent%level + 1
+      ! depth = MINLOC(parent%path, DIM=1)  ! Index of first -1 in path of parent
+      this%level = depth
 
       IF (.NOT. ASSOCIATED(parent%first_child)) THEN
         parent%first_child => this
@@ -383,8 +393,9 @@ CONTAINS
 
     CLASS(t_State), INTENT(in) :: this
 
-    CHARACTER(LEN=2*MAX_STATE_NESTING) :: c_path
-    INTEGER :: i
+    CHARACTER(LEN=3*MAX_STATE_NESTING) :: c_path
+
+    INTEGER :: i, pos1, pos2, pos_sum
 
     INTEGER :: no_omp_thread
 
@@ -394,11 +405,23 @@ CONTAINS
     no_omp_thread = 1
 #endif
 
+    c_path = ''
+    pos1 = 0
+    pos2 = 0
+    pos_sum = 0
     DO i=1,MAX_STATE_NESTING
       IF (this%path(i) /= -1) THEN
-        WRITE(c_path(2*i-1:2*i),'(I1,A1)') this%path(i), '-'
+        pos1 = pos2 + 1
+        IF (this%path(i) < 10) THEN
+          pos2 = pos1 + 1
+          WRITE(c_path(pos1:pos2),'(I1,A1)') this%path(i), '-'
+        ELSE IF (this%path(i) < 100) THEN
+          pos2 = pos1 + 2
+          WRITE(c_path(pos1:pos2),'(I2,A1)') this%path(i), '-'
+        END IF
+        pos_sum = pos_sum + pos2 - pos1 + 1
       ELSE
-        c_path(2*i-2:2*MAX_STATE_NESTING) = ' '
+        c_path(pos_sum:3*MAX_STATE_NESTING) = ' '  ! Delete last dash
         EXIT
       END IF
     END DO
@@ -466,7 +489,8 @@ CONTAINS
 !!$    this%msg => msg
 !!$    this%hsm => hsm
     !CALL this%Print_state()
-    return_ptr => this%Handler(hsm, msg)
+
+    return_ptr => this%Handler(msg)
 
     SELECT CASE (TRIM(msg%action%name))
     CASE ('START')
@@ -482,19 +506,27 @@ CONTAINS
   ! ===============================================================================
   ! Methods for hsm class
   ! ===============================================================================
-  SUBROUTINE Init_hsm(self, name)
+  SUBROUTINE Init_hsm(self, name, debug)
 
-    CLASS(t_Hsm), INTENT(inout) :: self
-    CHARACTER(len=*), INTENT(in)         :: name
+    CLASS(t_Hsm),      INTENT(inout) :: self
+    CHARACTER(len=*),  INTENT(in)    :: name
+    LOGICAL, OPTIONAL, INTENT(in)    :: debug
 
     !TYPE(t_Action), POINTER :: action
     INTEGER :: i, nthreads
+    LOGICAL :: l_debug
 
 #ifdef _OPENMP
     nthreads = omp_get_max_threads()
 #else
     nthreads = 1
 #endif
+
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
+
+    CALL self%Set_mode('full')
+
     ALLOCATE(self%current(nthreads))
     ALLOCATE(self%next   (nthreads))
     ALLOCATE(self%source (nthreads))
@@ -514,13 +546,27 @@ CONTAINS
       !self%actions(i) = t_Action("")
       !DEALLOCATE(action)
     !END DO
-    CALL self%Register_action(t_Action("ENTER"))
-    CALL self%Register_action(t_Action("EXIT"))
-    CALL self%Register_action(t_Action("START"))
+    CALL self%Register_action(t_Action("ENTER"), l_debug)
+    CALL self%Register_action(t_Action("EXIT"),  l_debug)
+    CALL self%Register_action(t_Action("START"), l_debug)
 
     self%name = TRIM(name)
 
   END SUBROUTINE Init_hsm
+
+  SUBROUTINE Set_mode_hsm(self, mode)
+
+    CLASS(t_Hsm),     INTENT(inout) :: self
+    CHARACTER(len=*), INTENT(in), OPTIONAL :: mode
+
+    SELECT CASE (TRIM(mode))
+    CASE ('full', 'FULL')
+      self%mode = HSM_full
+    CASE ('simple', 'SIMPLE')
+      self%mode = HSM_simple
+   END SELECT
+
+  END SUBROUTINE Set_mode_hsm
 
   FUNCTION Get_current_hsm(this) RESULT(return_ptr)
 
@@ -672,11 +718,15 @@ CONTAINS
     IF (l_debug) CALL message(TRIM(routine), 'Taking transition from '//TRIM(this%current(no_omp_thread)%p%name)//&
       &                                                         ' to '//TRIM(that%name))
 
-    IF (ASSOCIATED(this%next(no_omp_thread)%p)) &
-      & CALL finish(TRIM(routine), 'Transition already in progress')
+    IF (this%mode == HSM_full) THEN
 
-    !CALL this%Process_exit_to_LCA(that)
-    this%levels_to_lca(no_omp_thread) = this%Get_levels_to_LCA(that)
+      IF (ASSOCIATED(this%next(no_omp_thread)%p)) &
+        & CALL finish(TRIM(routine), 'Transition already in progress')
+
+      this%levels_to_lca(no_omp_thread) = this%Get_levels_to_LCA(that)
+
+    END IF
+
     this%next(no_omp_thread)%p => that
 
   END SUBROUTINE Goto_state_hsm
@@ -769,6 +819,11 @@ CONTAINS
     no_omp_thread = 1
 #endif
 
+    IF (this%mode == HSM_simple) THEN
+      this%current(no_omp_thread)%p => this%top
+      RETURN
+    END IF
+
 !!$    CALL message(TRIM(routine), 'Starting hsm ...')
 
     !ALLOCATE(t_Message::start_msg)
@@ -834,36 +889,75 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(msg)) RETURN
 
-    !hsm => this
-    ALLOCATE(t_Message::start_msg)
-    start_msg%action = this%Get_action('START')
+    SELECT CASE (this%mode)
+    CASE (HSM_simple)
 
-!!$    CALL this%Process_exit_to_LCA()
-
-    ALLOCATE(new_msg, source=msg)
-    state => this%current(no_omp_thread)%p
-    IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
-    DO WHILE (ASSOCIATED(state))
-      IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
-      this%source(no_omp_thread)%p => state
-      tmp_msg => state%Process_message(this, new_msg)
-      IF (ASSOCIATED(new_msg)) THEN
-      !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
-        DEALLOCATE(new_msg)
-      END IF
-      new_msg => tmp_msg
-      CALL this%Process_exit_to_LCA()
-      IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN      ! State transition taken (i.e. already exited to LCA)
-        ! Execute entry and start messages to target
-        CALL this%Process_entry_to_next()
-        this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
-        NULLIFY(this%next(no_omp_thread)%p)
-        tmp_msg => this%current(no_omp_thread)%p%Process_message(this, start_msg)
-        IF (ASSOCIATED(tmp_msg)) THEN
-          !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
-          DEALLOCATE(tmp_msg)
+      ! Transitions are only taken to parent, next sibling or first child
+      ALLOCATE(new_msg, source=msg)
+      state => this%current(no_omp_thread)%p
+      IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
+      DO WHILE (ASSOCIATED(state))
+        ! Process message on current state
+        IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
+        tmp_msg => state%Process_message(this, new_msg)
+        IF (ASSOCIATED(new_msg)) THEN
+          DEALLOCATE(new_msg)
         END IF
-        DO WHILE (ASSOCIATED(this%next(no_omp_thread)%p))
+        new_msg => tmp_msg    ! new_msg not null: message not processed, or message processed and new message_text
+                              ! new_msg is null : message processed and no new message
+        !
+        ! Message not processed or new message and transition: goto next state with message
+        ! Message not processed or new message and no transition: goto parent with message
+        ! Message processed and transition: goto next state and exit loop
+        ! Message processed and no transition: exit loop
+        IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN  ! Take transition to next
+          ! CALL this%Process_entry_to_next()
+          IF (this%next(no_omp_thread)%p%level == this%current(no_omp_thread)%p%level) THEN
+            ! Goto to a sibling: exit current state   
+            this%current(no_omp_thread)%p%visited = .FALSE.   ! Exit current on way up
+          END IF
+          this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
+          NULLIFY(this%next(no_omp_thread)%p)
+          this%current(no_omp_thread)%p%visited = .TRUE.  ! Enter new state
+          IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
+            EXIT
+          ELSE
+            state => this%current(no_omp_thread)%p
+          END IF
+        ELSE                                ! No state transition taken
+          IF (ASSOCIATED(new_msg)) THEN
+            state%visited = .FALSE.         ! Exit current state
+            state => state%parent           ! Goto parent
+          ELSE
+            EXIT
+          END IF
+        END IF
+      END DO
+
+
+    CASE (HSM_full)
+
+      !hsm => this
+      ALLOCATE(t_Message::start_msg)
+      start_msg%action = this%Get_action('START')
+
+  !!$    CALL this%Process_exit_to_LCA()
+
+      ALLOCATE(new_msg, source=msg)
+      state => this%current(no_omp_thread)%p
+      IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
+      DO WHILE (ASSOCIATED(state))
+        IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
+        this%source(no_omp_thread)%p => state
+        tmp_msg => state%Process_message(this, new_msg)
+        IF (ASSOCIATED(new_msg)) THEN
+        !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+          DEALLOCATE(new_msg)
+        END IF
+        new_msg => tmp_msg
+        CALL this%Process_exit_to_LCA()
+        IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN      ! State transition taken (i.e. already exited to LCA)
+          ! Execute entry and start messages to target
           CALL this%Process_entry_to_next()
           this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
           NULLIFY(this%next(no_omp_thread)%p)
@@ -872,27 +966,38 @@ CONTAINS
             !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
             DEALLOCATE(tmp_msg)
           END IF
-        END DO
-        IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
-          EXIT
-        ELSE
-          state => this%current(no_omp_thread)%p
+          DO WHILE (ASSOCIATED(this%next(no_omp_thread)%p))
+            CALL this%Process_entry_to_next()
+            this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
+            NULLIFY(this%next(no_omp_thread)%p)
+            tmp_msg => this%current(no_omp_thread)%p%Process_message(this, start_msg)
+            IF (ASSOCIATED(tmp_msg)) THEN
+              !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
+              DEALLOCATE(tmp_msg)
+            END IF
+          END DO
+          IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
+            EXIT
+          ELSE
+            state => this%current(no_omp_thread)%p
+          END IF
+        ELSE                                ! No state transition taken
+          IF (ASSOCIATED(new_msg)) THEN
+            state => state%parent
+          ELSE
+            EXIT
+          END IF
         END IF
-      ELSE                                ! No state transition taken
-        IF (ASSOCIATED(new_msg)) THEN
-          state => state%parent
-        ELSE
-          EXIT
-        END IF
-      END IF
-    END DO
+      END DO
 
-    !DEALLOCATE(start_msg%action)
-    DEALLOCATE(start_msg)
-    IF (ASSOCIATED(new_msg)) THEN
-      !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
-      DEALLOCATE(new_msg)
-    END IF
+      !DEALLOCATE(start_msg%action)
+      DEALLOCATE(start_msg)
+      IF (ASSOCIATED(new_msg)) THEN
+        !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+        DEALLOCATE(new_msg)
+      END IF
+
+    END SELECT
 
     IF (l_debug) THEN
       IF (ASSOCIATED(new_msg)) THEN
@@ -933,26 +1038,31 @@ CONTAINS
       RETURN
     END IF
 
-    ALLOCATE(t_Message::entry_msg)
-    entry_msg%action = this%Get_action('ENTER')
+    SELECT CASE (this%mode)
+    CASE (HSM_simple)
+      this%next(no_omp_thread)%p%visited = .TRUE.
+    CASE (HSM_full)
+      ALLOCATE(t_Message::entry_msg)
+      entry_msg%action = this%Get_action('ENTER')
 
-    i = 0
-    state => this%next(no_omp_thread)%p
-    DO WHILE (state /= this%current(no_omp_thread)%p)
-      i = i + 1
-      entrypath(i)%p => state
-      state => state%parent
-      IF (.NOT. ASSOCIATED(state)) EXIT
-    END DO
+      i = 0
+      state => this%next(no_omp_thread)%p
+      DO WHILE (state /= this%current(no_omp_thread)%p)
+        i = i + 1
+        entrypath(i)%p => state
+        state => state%parent
+        IF (.NOT. ASSOCIATED(state)) EXIT
+      END DO
 
-    DO j=i,1,-1
-      state => entrypath(j)%p
-      tmp_msg => state%Process_message(this, entry_msg)
-      IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
-    END DO
+      DO j=i,1,-1
+        state => entrypath(j)%p
+        tmp_msg => state%Process_message(this, entry_msg)
+        IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
+      END DO
 
-    !DEALLOCATE(entry_msg%action)
-    DEALLOCATE(entry_msg)
+      !DEALLOCATE(entry_msg%action)
+      DEALLOCATE(entry_msg)
+    END SELECT
 
 !!$    CALL message(TRIM(routine), 'Processing of entry messages finished.')
 
@@ -1019,13 +1129,19 @@ CONTAINS
 
   END SUBROUTINE Process_exit_to_lca
 
-  SUBROUTINE Register_action_hsm(this, action)
+  SUBROUTINE Register_action_hsm(this, action, debug)
 
     CLASS(t_Hsm),   INTENT(inout) :: this
     TYPE(t_Action), INTENT(in)    :: action
+    LOGICAL, OPTIONAL, INTENT(in) :: debug
 
     INTEGER :: i
+    LOGICAL :: l_debug
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_action_hsm'
+
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
 
     i = 1
     DO WHILE (TRIM(this%actions(i)%name) /= "")
@@ -1035,7 +1151,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'Maximum number of actions exceeded!')
     ELSE
       this%actions(i) = action
-      CALL message(TRIM(routine), 'Registering state machine action '//TRIM(this%actions(i)%name))
+      IF (l_debug) CALL message(TRIM(routine), 'Registering state machine action '//TRIM(this%actions(i)%name))
     END IF
 
   END SUBROUTINE Register_action_hsm

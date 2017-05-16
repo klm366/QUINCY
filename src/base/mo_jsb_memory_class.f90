@@ -1,27 +1,25 @@
 !>
-!! @brief Contains the class and methods for the JSBACH4 memory structure
+!! @brief Contains the class and methods for the JSBACH memory structure
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
-!! Copied to SLM by Jan Engel (20160815)
+!! Copied to SLM by Jan Engel (20160815) & updated 20170516
 !!
 MODULE mo_jsb_memory_class
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: finish
   USE mo_jsb_config_class,    ONLY: t_jsb_config
-  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, &
+  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D, &
                                     t_jsb_struct_p, t_jsb_struct, t_jsb_n_struct_p, t_jsb_n_struct        ! *slmjsb4
-
-
-!  USE mo_jsb_process_factory, ONLY: Create_process_memory
 
   IMPLICIT NONE
   PRIVATE
+
   PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
 
   TYPE, ABSTRACT :: t_jsb_param
@@ -33,6 +31,9 @@ MODULE mo_jsb_memory_class
     INTEGER :: grid_id = 0
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
+    INTEGER :: no_of_children = 0
+    CLASS(t_jsb_memory_p), POINTER :: children(:) => NULL()
+    CLASS(t_jsb_memory)  , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
     CHARACTER(len=10)    :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
@@ -52,7 +53,8 @@ MODULE mo_jsb_memory_class
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
     PROCEDURE                                    :: Get_var_real2d
     PROCEDURE                                    :: Get_var_real3d
-  END type t_jsb_memory
+    PROCEDURE                                    :: Get_var_position
+  END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p
     CLASS(t_jsb_memory), POINTER :: p => NULL()
@@ -65,7 +67,7 @@ MODULE mo_jsb_memory_class
       IMPORT :: t_jsb_memory, t_jsb_config
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
-      INTEGER,             INTENT(in)    :: lct_ids!(:)
+      INTEGER,             INTENT(in)    :: lct_ids!(:)   ! *slmtemp
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
@@ -82,7 +84,7 @@ CONTAINS
 
     CLASS(t_jsb_memory),     INTENT(in) :: this
     CHARACTER(len=*),        INTENT(in) :: name
-    CLASS(t_jsb_var_real2d), POINTER    :: var_ptr
+    CLASS(t_jsb_var),        POINTER    :: var_ptr
 
     INTEGER :: i
 
@@ -92,11 +94,9 @@ CONTAINS
 
     var_ptr => NULL()
     DO i=1,this%no_of_vars
+      IF (this%vars(i)%p%type /= REAL2D) CYCLE
       IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN
-        SELECT TYPE (v => this%vars(i)%p)
-        TYPE IS (t_jsb_var_real2d)
-          var_ptr => v
-        END SELECT
+        var_ptr => this%vars(i)%p
         EXIT
       END IF
     END DO
@@ -113,7 +113,7 @@ CONTAINS
 
     CLASS(t_jsb_memory),     INTENT(in) :: this
     CHARACTER(len=*),        INTENT(in) :: name
-    CLASS(t_jsb_var_real3d), POINTER    :: var_ptr
+    CLASS(t_jsb_var),        POINTER    :: var_ptr
 
     INTEGER :: i
 
@@ -121,11 +121,9 @@ CONTAINS
 
     var_ptr => NULL()
     DO i=1,this%no_of_vars
+      IF (this%vars(i)%p%type /= REAL3D) CYCLE
       IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN
-        SELECT TYPE (v => this%vars(i)%p)
-        TYPE IS (t_jsb_var_real3d)
-          var_ptr => v
-        END SELECT
+        var_ptr => this%vars(i)%p
         EXIT
       END IF
     END DO
@@ -138,5 +136,33 @@ CONTAINS
 
   END FUNCTION Get_var_real3d
 
-!#endif
+  FUNCTION Get_var_position(this, name) RESULT(pos)
+
+    CLASS(t_jsb_memory),     INTENT(in) :: this
+    CHARACTER(len=*),        INTENT(in) :: name
+    INTEGER                             :: pos
+
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_var_position'
+
+    IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
+
+    pos = 0
+    DO i=1,this%no_of_vars
+      IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN
+        pos = i
+        EXIT
+      END IF
+    END DO
+      
+    ! Note: Not finding the variable in this memory, i.e. returning 0, should only happen because
+    !       the variable belongs to an LCT that's not handled by this tile.
+
+    !IF (.NOT. ASSOCIATED(var_ptr)) &
+    !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
+
+  END FUNCTION Get_var_position
+
+#endif
 END MODULE mo_jsb_memory_class

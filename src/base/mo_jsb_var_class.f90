@@ -22,6 +22,7 @@ MODULE mo_jsb_var_class
   PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! *slmjsb4
   PUBLIC :: t_jsb_var_logical2d                                               ! *slmjsb4
   PUBLIC :: t_jsb_var_real1d, t_jsb_var_logical1d                             !! for SLM compatbility -> used in veg_mem_class  *slmtemp
+  PUBLIC :: REAL2D, REAL3D
 
 !> @todo in JSBACH4 this parameter is defined in mo_jsb_varlist_iface (USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN), 
 !! thus, delete here and insert the USE statement instead later
@@ -38,17 +39,19 @@ MODULE mo_jsb_var_class
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_var
-!!$    INTEGER           :: type = REAL2D
     CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
     CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
+    INTEGER                    :: type            ! REAL2D / REAL3D
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
+    INTEGER, ALLOCATABLE       :: child_idx(:)
     REAL(dp)                   :: missval
-  !CONTAINS
+    LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
+                                                  ! of those where variable doesn't exist
   END TYPE t_jsb_var
 
   !-----------------------------------------------------------------------------------------------------!
-  ! 1D  *slmtemp                                                                                        !
+  ! 1D/Scalar  *slmtemp                                                                                        !
   !-----------------------------------------------------------------------------------------------------!
 
 ! *slmtemp

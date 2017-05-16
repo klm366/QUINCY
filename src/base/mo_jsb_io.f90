@@ -5,21 +5,21 @@
 !!  Jan Engel, MPI-BGC Jena (copied from JSBACH4 git at 20160817)
 !!
 !! @par Revision History
-!! First version by Jan Engel (20160817); no changes compared to JSBACH4 except for not USEing mo_jsb_io_iface nor all '!! ' lines
+!! First version by Jan Engel (20160817) & updated 20170516
 !!
 MODULE mo_jsb_io
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp, dp
-!!  USE mo_jsb_io_iface, ONLY:                                           &
-!!    Get_netcdf_precision,                                              &
-!!    DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
-!!    ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
-!!    FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
-!!    GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
-!!    TSTEP_CONSTANT,                                                    &
-!!    zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy,             &
-!!    cdiDefMissval
+!  USE mo_jsb_io_iface, ONLY:                                           &
+!    Get_netcdf_precision,                                              &
+!    DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
+!    ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
+!    FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
+!    GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
+!    TSTEP_CONSTANT, TSTEP_INSTANT,                                     &
+!    zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy,             &
+!    cdiDefMissval, read_io_namelist
 
   USE mo_exception, ONLY: finish
 
@@ -27,10 +27,10 @@ MODULE mo_jsb_io
 
   PUBLIC
 
-!!  INTEGER, PARAMETER :: grib_bits     = DATATYPE_PACK16, &
-!!                        grib_extbits  = DATATYPE_PACK24, &
-!!                        nc_bits       = DATATYPE_FLT32,  &
-!!                        nc_extbits    = DATATYPE_FLT64
+!  INTEGER, PARAMETER :: grib_bits     = DATATYPE_PACK16, &
+!                        grib_extbits  = DATATYPE_PACK24, &
+!                        nc_bits       = DATATYPE_FLT32,  &
+!                        nc_extbits    = DATATYPE_FLT64
 
   TYPE t_cf
     CHARACTER(len=128) :: standard_name = ''
@@ -79,28 +79,39 @@ MODULE mo_jsb_io
   ! value cannot be represented as integer within 53 bits."
   REAL(dp), PARAMETER :: missval = -9.E+15_dp
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_io'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
 
-CONTAINS
+!CONTAINS
 
-!!  FUNCTION Construct_cf(standard_name, units, long_name, datatype) RESULT(return_value)
+!  FUNCTION Construct_cf(standard_name, units, long_name, datatype) RESULT(return_value)
 
-!!    CHARACTER(len=*), INTENT(in) :: standard_name
-!!    CHARACTER(len=*), INTENT(in) :: units
-!!    CHARACTER(len=*), INTENT(in) :: long_name
-!!    INTEGER, OPTIONAL,  INTENT(in) :: datatype
-!!    TYPE(t_cf)         :: return_value
+!    CHARACTER(len=*), INTENT(in) :: standard_name
+!    CHARACTER(len=*), INTENT(in) :: units
+!    CHARACTER(len=*), INTENT(in) :: long_name
+!    INTEGER, OPTIONAL,  INTENT(in) :: datatype
+!    TYPE(t_cf)         :: return_value
 
-!!    return_value%standard_name = TRIM(standard_name)
-!!    return_value%units         = TRIM(units)
-!!    return_value%long_name     = TRIM(long_name)
-!!    IF (PRESENT(datatype)) THEN
-!!      return_value%datatype = datatype
-!!    ELSE
-!!      return_value%datatype = Get_netcdf_precision()
-!!    END IF
+!    return_value%standard_name = TRIM(standard_name)
+!    return_value%units         = TRIM(units)
+!    return_value%long_name     = TRIM(long_name)
+!    IF (PRESENT(datatype)) THEN
+!      return_value%datatype = datatype
+!    ELSE
+!      return_value%datatype = Get_netcdf_precision()
+!    END IF
 
-!!  END FUNCTION Construct_cf
+!  END FUNCTION Construct_cf
 
-!#endif
+!  !>
+!  !! @brief Initialize io control for JSBACH
+!  !!
+!  SUBROUTINE init_io(namelist_filename)
+
+!    CHARACTER(len=*), INTENT(in) :: namelist_filename
+!    
+!    CALL read_io_namelist(TRIM(namelist_filename))
+!  
+!  END SUBROUTINE init_io
+
+#endif
 END MODULE mo_jsb_io

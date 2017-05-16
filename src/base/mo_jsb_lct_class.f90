@@ -8,16 +8,17 @@
 !! First version by Reiner Schnur (2016-02-01)
 !!
 !! @par SLM - Revision History
-!! copied from git:JSBACH4 to SLM at 20160615, commit planned for r170 (commented out some lines with "!+")
+!! copied from git:JSBACH4 to SLM at 20160615 & updated 20170516
 !! 
 MODULE mo_jsb_lct_class
-!+ #ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE
+
   PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   PUBLIC :: max_no_of_lct, t_jsb_lct, Contains_lct
 
@@ -167,5 +168,5 @@ CONTAINS
 
   END FUNCTION Get_lct_type_longname
 
-!+ #endif
+#endif
 END MODULE mo_jsb_lct_class

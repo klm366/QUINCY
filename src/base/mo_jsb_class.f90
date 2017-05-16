@@ -6,17 +6,18 @@
 !!
 !! @par Revision History
 !!  Reiner Schnur, MPI-M Hamburg
-!!  Jan Engel, MPI-BGC Jena: initial integration into SLM and adaption to SLM (20161025) using current git:feature/tiles version
+!!  Jan Engel, MPI-BGC Jena: initial integration into SLM and adaption to SLM (20161025) & update 20170516
 !!
 MODULE mo_jsb_class
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model, t_jsb_model_m 
+  USE mo_jsb_model_class, ONLY: t_jsb_model, t_jsb_model_m
 
   IMPLICIT NONE
   PRIVATE
+
   ! t_jsb needs to be public for the NEC compiler
-  PUBLIC :: t_jsb, jsbach, Get_model
+  PUBLIC :: t_jsb, jsbach, get_model
 
   TYPE t_jsb
      INTEGER :: no_of_models
@@ -25,10 +26,10 @@ MODULE mo_jsb_class
 
   TYPE(t_jsb) :: jsbach
 
-  INTERFACE Get_model
+  INTERFACE get_model
      MODULE PROCEDURE get_model_by_id
      !MODULE PROCEDURE get_model_by_name
-  END INTERFACE Get_model
+  END INTERFACE get_model
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_class'
 
@@ -58,5 +59,5 @@ CONTAINS
 
   END FUNCTION get_model_by_id
 
-!#endif
+#endif
 END MODULE mo_jsb_class
