@@ -54,7 +54,7 @@ yearsSoilForcing=1              # number of years of forcing to be generated
 bnf_scheme="standard"           # standard std_plus_costs optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
 soil_moisture_scheme="bucket"   # prescribed bucket layer
-sb_model_scheme="simple"        # simple jsm 
+sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -116,7 +116,7 @@ if [ $flag_generate_soil_forcing == "T" ]
   bnf_scheme="standard"
   myc_scheme="no"
   soil_moisture_scheme="layer"
-  sb_model_scheme="simple"
+  sb_model_scheme="simple_0d"
   flag_calc_soil_energy="T"
 
   flag_t_resp_acclimation="T"
@@ -304,7 +304,7 @@ validateBNFScheme="standard std_plus_costs optimal resistance"
 validateMycScheme="no am ecm"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
-validateSBModelScheme="simple jsm"
+validateSBModelScheme="simple_0d simple_1d jsm"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 validateFlags="F T"

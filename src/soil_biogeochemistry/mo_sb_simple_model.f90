@@ -40,17 +40,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-!    USE mo_base_constants,        ONLY: dtime
-!    USE mo_base_config_class,     ONLY: base_config
-!    USE mo_soil_config_class,     ONLY: soil_config
-!    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-!    USE mo_shared_constants,      ONLY: lambda_C14
-!    USE mo_sb_config_class,       ONLY: sb_config
-!    USE mo_sb_constants
-!    USE mo_shared_isotope
-!    USE mo_sb_jsm_processes
-
- 
 
 
     IMPLICIT NONE
@@ -99,6 +88,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_soil_config_class,     ONLY: soil_config
+    USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
 
     ! Use of process memories
@@ -115,9 +105,16 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    INTEGER                               :: isoil
+    INTEGER                               :: isoil, &             !< loop over soil_config%nsoil_water ?
+                                             nsoil_act            !< a working version of soil_config%nsoil_water
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: apparent_mic_cue,growth_c,growth_n,hlp1,hlp2
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) ::  &
+                                             apparent_mic_cue , &
+                                             growth_c         , &
+                                             growth_n         , &
+                                             hlp1             , &
+                                             hlp2             , &
+                                             root_fraction_act_sl
     
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_lesssimple'
     ! ---------------------------
@@ -226,6 +223,20 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
+
+    !> differentiate between simple_0d & simple_1d (1 & many soil layers)
+    !!
+    !! this affects the looping below in this routine
+    IF(sb_config%sb_model_scheme == 'simple_0d') THEN
+      nsoil_act = 1
+      root_fraction_act_sl(:,1)                         = 1.0_wp
+      root_fraction_act_sl(:,2:soil_config%nsoil_water) = 0.0_wp
+    ELSE ! simple_1d
+      nsoil_act                 = soil_config%nsoil_water
+      root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
+    ENDIF
+
 !!BLARPP
 rmm_depolymerisation(:,:) = 1.0_wp
     !> 1.0 Plant nutrient uptake rates

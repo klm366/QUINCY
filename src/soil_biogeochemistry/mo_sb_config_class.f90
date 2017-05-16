@@ -78,7 +78,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
 
     ! Set defaults
-    sb_model_scheme             = "simple"  ! simple jsm 
+    sb_model_scheme             = "simple_0d"  ! simple_0d simple_1d jsm
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
@@ -93,7 +93,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     SELECT CASE (TRIM(sb_model_scheme))
-      CASE ("simple")
+      CASE ("simple_0d", "simple_1d")
       CASE ("jsm")
          IF(TRIM(base_config%slm_model_name) /= "soil") THEN
             WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 

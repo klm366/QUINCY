@@ -101,7 +101,7 @@ CONTAINS
  
     SELECT CASE(TRIM(sb_config%sb_model_scheme))
 
-       CASE('simple')
+       CASE("simple_0d", "simple_1d")
 
           ! Initial values for Soenke's four pool soil biogeochemical model
           sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 500._wp / molar_mass_C / soil_config%dz_water(1)
@@ -182,7 +182,7 @@ CONTAINS
          sb%k_bioturb%ptr(ics:ice,:,iblk) = calc_bioturbation_rate(options,soil_config%nsoil_water,sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)) 
 
        CASE DEFAULT
-         CALL finish(routine,'Invalid SLM model name. SB_ must only be used with plant, land or soil')
+         CALL finish(routine,'Invalid setting of sb_model_scheme.')
  
     END SELECT
 

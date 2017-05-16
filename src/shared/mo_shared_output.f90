@@ -471,10 +471,10 @@ CONTAINS
             ENDIF
             WRITE(p1str,'(a)') TRIM(p1str)//' NH4solute_L'//TRIM(layerstr)
             WRITE(p2str,'(a)') TRIM(p2str)//' NO3solute_L'//TRIM(layerstr)
-            WRITE(p3str,'(a)') TRIM(p3str)//' d15N_NH4solute_L'//TRIM(layerstr)
-            WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NO3solute_L'//TRIM(layerstr)
+!            WRITE(p3str,'(a)') TRIM(p3str)//' d15N_NH4solute_L'//TRIM(layerstr)
+!            WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NO3solute_L'//TRIM(layerstr)
             WRITE(p5str,'(a)') TRIM(p5str)//' NH4assoc_L'//TRIM(layerstr)
-            WRITE(p6str,'(a)') TRIM(p6str)//' d15N_NH4assoc_L'//TRIM(layerstr)
+!            WRITE(p6str,'(a)') TRIM(p6str)//' d15N_NH4assoc_L'//TRIM(layerstr)
          ENDDO
          WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
          lun=lun+1                 
@@ -717,7 +717,8 @@ CONTAINS
               lun=lun+1
               write(lun,'(9F12.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
-              write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
+              write(lun,'(20F12.6)') time_d, &
+                                     SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), & 
                                      sb%pool%polymeric_litter%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
                                      sb%pool%polymeric_litter%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
                                      sb%pool%woody_litter%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
@@ -733,17 +734,23 @@ CONTAINS
                                      sb%no3_solute%ptr(1,1,1)*soil_depth_sl(1,1), & 
                                      sb%po4_solute%ptr(1,1,1)*soil_depth_sl(1,1)
 
-              dC13polymeric_litter(:,:) = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,1),sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,1))
+              dC13polymeric_litter(1,1) = calc_delta_C13(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                                                         SUM(sb%pool%polymeric_litter%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
               dC13woody_litter(:,:)     = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,1),sb%pool%woody_litter%carbon13%ptr(ics:ice,:,1))
               dC13microbial(:,:)        = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,1),sb%pool%microbial%carbon13%ptr(ics:ice,:,1))
               dC13residue(:,:)          = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,1),sb%pool%residue%carbon13%ptr(ics:ice,:,1))
 
               lun=lun+1
-              write(lun,'(20F14.6)') time_d,dC13polymeric_litter(1,1),dC13woody_litter(1,1),dC13microbial(1,1),dC13residue(1,1), & 
-                calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(1,1,1),sb%pool%polymeric_litter%carbon14%ptr(1,1,1),dC13polymeric_litter(1,1)), &
-                calc_delta_C14(sb%pool%woody_litter%carbon%ptr(1,1,1),sb%pool%woody_litter%carbon14%ptr(1,1,1),dC13woody_litter(1,1)), &
-                calc_delta_C14(sb%pool%microbial%carbon%ptr(1,1,1),sb%pool%microbial%carbon14%ptr(1,1,1),dC13microbial(1,1)), &
-                calc_delta_C14(sb%pool%residue%carbon%ptr(1,1,1),sb%pool%residue%carbon14%ptr(1,1,1),dC13residue(1,1))!, &
+              write(lun,'(20F14.6)') time_d, &
+                dC13polymeric_litter(1,1), dC13woody_litter(1,1), dC13microbial(1,1), dC13residue(1,1), & 
+                calc_delta_C14(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                               SUM(sb%pool%polymeric_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13polymeric_litter(1,1)), &
+                calc_delta_C14(SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                               SUM(sb%pool%woody_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13woody_litter(1,1)), &
+                calc_delta_C14(SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                               SUM(sb%pool%microbial%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13microbial(1,1)), &
+                calc_delta_C14(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))!, &
                 !calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
@@ -878,10 +885,10 @@ CONTAINS
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,sb%nh4_solute%ptr(ics:ice,:,iblk),sb%no3_solute%ptr(ics:ice,:,iblk), &
-                                  calc_delta_N15(sb%nh4_solute%ptr(ics:ice,:,iblk),sb%nh4_n15_solute%ptr(ics:ice,:,iblk)), &            
-                                  calc_delta_N15(sb%no3_solute%ptr(ics:ice,:,iblk),sb%no3_n15_solute%ptr(ics:ice,:,iblk)), &            
-                                  sb%nh4_assoc%ptr(ics:ice,:,iblk), &
-                                  calc_delta_N15(sb%nh4_assoc%ptr(ics:ice,:,iblk),sb%nh4_n15_assoc%ptr(ics:ice,:,iblk))
+!                                  calc_delta_N15(sb%nh4_solute%ptr(ics:ice,:,iblk),sb%nh4_n15_solute%ptr(ics:ice,:,iblk)), &            
+!                                  calc_delta_N15(sb%no3_solute%ptr(ics:ice,:,iblk),sb%no3_n15_solute%ptr(ics:ice,:,iblk)), &            
+                                  sb%nh4_assoc%ptr(ics:ice,:,iblk) !, &
+!                                  calc_delta_N15(sb%nh4_assoc%ptr(ics:ice,:,iblk),sb%nh4_n15_assoc%ptr(ics:ice,:,iblk))
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,sb%po4_solute%ptr(ics:ice,:,iblk),sb%po4_assoc_fast%ptr(ics:ice,:,iblk), & 
