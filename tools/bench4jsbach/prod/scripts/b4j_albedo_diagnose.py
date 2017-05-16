@@ -43,10 +43,19 @@ fieldname      = kwargs [ "fieldname" ]
 
 cdo = Cdo ()
 
+# cdo.setname ( "delta",
+#               input=" -setunit,'W m-2' " +\
+#               " -setcode,'9999' " +\
+#               " -setmisstoc,0 " +\
+#               " -mul -sub " +\
+#               kwargs [ "can.A_seasmean" ] + " " +\
+#               kwargs [ "ref.A_seasmean" ] + " " +\
+#               kwargs [ "ref.D_seasmean" ],
+#               output=kwargs [ "albedo_wds" ],
+#               options='-f %s' % kwargs [ "suffix" ])
 cdo.setname ( "delta",
               input=" -setunit,'W m-2' " +\
               " -setcode,'9999' " +\
-              " -setmisstoc,0 " +\
               " -mul -sub " +\
               kwargs [ "can.A_seasmean" ] + " " +\
               kwargs [ "ref.A_seasmean" ] + " " +\
@@ -54,9 +63,13 @@ cdo.setname ( "delta",
               output=kwargs [ "albedo_wds" ],
               options='-f %s' % kwargs [ "suffix" ])
 
-cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
-              kwargs [ "albedo_wds" ] + " " +\
-              kwargs [ "land_sea_mask" ],
+# cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
+#               kwargs [ "albedo_wds" ] + " " +\
+#               kwargs [ "land_sea_mask" ],
+#               output=kwargs [ "albedo_wdsgm" ],
+#               options='-f %s' % kwargs [ "suffix" ] )
+
+cdo.fldmean ( input=kwargs [ "albedo_wds" ],
               output=kwargs [ "albedo_wdsgm" ],
               options='-f %s' % kwargs [ "suffix" ] )
 
@@ -64,9 +77,13 @@ cdo.timmean ( input=kwargs [ "albedo_wdsgm" ],
               output=kwargs [ "albedo_wdsgtm" ],
               options='-f %s' % kwargs [ "suffix" ])
         
-cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
-              kwargs [ "albedo_wds" ] + " " +\
-              kwargs [ "land_sea_mask" ],
+# cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
+#               kwargs [ "albedo_wds" ] + " " +\
+#               kwargs [ "land_sea_mask" ],
+#               output=kwargs [ "albedo_wdsgd" ],
+#               options='-f %s' % kwargs [ "suffix" ] )
+        
+cdo.fldmean ( input=" -abs %s " %  kwargs [ "albedo_wds" ],
               output=kwargs [ "albedo_wdsgd" ],
               options='-f %s' % kwargs [ "suffix" ] )
 

@@ -43,11 +43,19 @@ fieldname      = "albedo"
 
 cdo = Cdo ()
 
+# cdo.setname ( fieldname,
+#               input=" -setunit,1 " +\
+#               " -div " +\
+#                 " " +  kwargs [ 'U_selcode' ] +\
+#                 " " +  kwargs [ 'D_selcode' ],
+#               output=kwargs [ 'UD_div' ],
+#               options='-f nc ')
+
 cdo.setname ( fieldname,
-              input=" -setunit,1 " +\
-              " -div " +\
-                " " +  kwargs [ 'U_selcode' ] +\
-                " " +  kwargs [ 'D_selcode' ],
+              input=" -setunit,1 -mul %s -div %s %s " % (
+        kwargs [ 'land_sea_mask' ],
+        kwargs [ 'U_selcode' ],
+        kwargs [ 'D_selcode' ]),
               output=kwargs [ 'UD_div' ],
               options='-f nc ')
 
@@ -55,30 +63,43 @@ cdo.yseasmean ( input= kwargs [ 'UD_div' ],
                 output=kwargs [ 'A_seasmean' ])
 
 #### only references
-cdo.yseasmean ( input= kwargs  [ 'D_selcode' ],
+# cdo.yseasmean ( input= kwargs  [ 'D_selcode' ],
+#                 output=kwargs [ 'D_seasmean' ])
+
+cdo.yseasmean ( input=" -mul %s %s " % (
+        kwargs [ 'land_sea_mask' ],
+        kwargs [ 'D_selcode' ]),
                 output=kwargs [ 'D_seasmean' ])
 
 
 ##### new, only candidates
-cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
-              kwargs [ "A_seasmean" ] + " " +\
-              kwargs [ "land_sea_mask" ],
+# cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
+#               kwargs [ "A_seasmean" ] + " " +\
+#               kwargs [ "land_sea_mask" ],
+#               output=kwargs [ "A_seasmean_gm" ],
+#               options='-f %s' % kwargs [ "suffix" ] )
+
+cdo.fldmean ( input=kwargs [ "A_seasmean" ],
               output=kwargs [ "A_seasmean_gm" ],
-              options='-f %s' % kwargs [ "suffix" ] )
+              options=' -f %s ' % kwargs [ "suffix" ] )
 
 cdo.timmean ( input=kwargs [ "A_seasmean_gm" ],
               output=kwargs [ "A_seasmean_gtm" ],
-              options='-f %s' % kwargs [ "suffix" ])
+              options=' -f %s ' % kwargs [ "suffix" ])
         
-cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
-              kwargs [ "A_seasmean" ] + " " +\
-              kwargs [ "land_sea_mask" ],
+# cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
+#               kwargs [ "A_seasmean" ] + " " +\
+#               kwargs [ "land_sea_mask" ],
+#               output=kwargs [ "A_seasmean_gd" ],
+#               options='-f %s' % kwargs [ "suffix" ] )
+
+cdo.fldmean ( input=" -abs %s " %  kwargs [ "A_seasmean" ], 
               output=kwargs [ "A_seasmean_gd" ],
-              options='-f %s' % kwargs [ "suffix" ] )
+              options=' -f %s ' % kwargs [ "suffix" ] )
 
 cdo.timmean ( input=kwargs [ "A_seasmean_gd" ],
               output=kwargs [ "A_seasmean_gtd" ],
-              options='-f %s' % kwargs [ "suffix" ] )
+              options=' -f %s ' % kwargs [ "suffix" ] )
 
 
 #####

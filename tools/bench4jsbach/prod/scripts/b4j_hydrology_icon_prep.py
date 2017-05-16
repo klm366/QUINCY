@@ -50,13 +50,30 @@ unit_factor_RD = 86400000
 
 cdo = Cdo ()
 
+# cdo.setname ( "evapotranspiration",
+#               input = " -setunit,%s -mulc,%d -mulc,%d %s " % (
+#               unit, unit_factor_EP, sign_adjust_E, kwargs [ 'E_selcode' ]),
+#               output = kwargs [ 'E_hydrology' ])
+
 cdo.setname ( "evapotranspiration",
-              input = " -setunit,%s -mulc,%d -mulc,%d %s " % (
-              unit, unit_factor_EP, sign_adjust_E, kwargs [ 'E_selcode' ]),
+              input = " -setunit,%s -mulc,%d -mulc,%d -mul %s %s " % (
+        unit, 
+        unit_factor_EP, 
+        sign_adjust_E, 
+        kwargs [ 'land_sea_mask' ], 
+        kwargs [ 'E_selcode' ]),
               output = kwargs [ 'E_hydrology' ])
 
+# cdo.setname ( "precip_acc",
+#               input = " -setunit,%s -mulc,%d  %s" % ( unit, unit_factor_EP, kwargs [ 'P_selcode' ]),
+#               output = kwargs [ 'P_hydrology' ])
+
 cdo.setname ( "precip_acc",
-              input = " -setunit,%s -mulc,%d  %s" % ( unit, unit_factor_EP, kwargs [ 'P_selcode' ]),
+              input = " -setunit,%s -mulc,%d -mul %s %s " % ( 
+        unit, 
+        unit_factor_EP,
+        kwargs [ 'land_sea_mask' ], 
+        kwargs [ 'P_selcode' ]),
               output = kwargs [ 'P_hydrology' ])
 
 #####
