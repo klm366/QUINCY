@@ -105,15 +105,14 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    INTEGER                               :: isoil, &             !< loop over soil_config%nsoil_water ?
-                                             nsoil_act            !< a working version of soil_config%nsoil_water
+    INTEGER                               :: isoil                !< loop over soil_config%nsoil_water
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) ::  &
-                                             apparent_mic_cue , &
-                                             growth_c         , &
-                                             growth_n         , &
-                                             hlp1             , &
-                                             hlp2             , &
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) ::      &
+                                             apparent_mic_cue     , &
+                                             growth_c             , &
+                                             growth_n             , &
+                                             hlp1                 , &
+                                             hlp2                 , &
                                              root_fraction_act_sl
     
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_lesssimple'
@@ -227,13 +226,12 @@ CONTAINS
 
     !> differentiate between simple_0d & simple_1d (1 & many soil layers)
     !!
-    !! this affects the looping below in this routine
+    !! for the OD model, all processes happen only in the first layer of the soil
+    !@todo: needs some adjustments wrt to the rtm, rmm and km values
     IF(sb_config%sb_model_scheme == 'simple_0d') THEN
-      nsoil_act = 1
       root_fraction_act_sl(:,1)                         = 1.0_wp
       root_fraction_act_sl(:,2:soil_config%nsoil_water) = 0.0_wp
     ELSE ! simple_1d
-      nsoil_act                 = soil_config%nsoil_water
       root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
     ENDIF
 
@@ -241,30 +239,35 @@ CONTAINS
 rmm_depolymerisation(:,:) = 1.0_wp
     !> 1.0 Plant nutrient uptake rates
     !!
-    !> 1.1 inorganic N uptake 
-    !!
-    !! potential N uptake rate (µmol N / mol C fine-root / s)
-    hlp1(:,1) = lctlib%vmax_uptake_n * & 
-                nh4_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
-                1._wp / ( lctlib%soil_n_aff2 + nh4_solute(:,1) * soil_depth_sl(:,1) )) 
-    hlp2(:,1) = lctlib%vmax_uptake_n / soil_depth_sl(:,1) * dtime/1.e6 * &
-                no3_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
-                1._wp / ( lctlib%soil_n_aff2 + no3_solute(:,1) * soil_depth_sl(:,1) )) 
-    unit_uptake_n_pot(:) = hlp1(:,1) + hlp2(:,1) 
-
-    ! uptake rate in µmol N / m3 / timestep 
-    plant_uptake_nh4_sl(:,1) = hlp1(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
-    plant_uptake_no3_sl(:,1) = hlp2(:,1) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
-
-    !> 1.2 inorganic P uptake 
-    !!
-    !! potential P uptake rate (µmol P / mol C fine-root / s)
-    unit_uptake_p_pot(:) = lctlib%vmax_uptake_p * &
-                           po4_solute(:,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + &
-                           1._wp / ( lctlib%soil_p_aff2 + po4_solute(:,1) * soil_depth_sl(:,1) ))
-    ! uptake rate in µmol P / m3 / timestep 
-    plant_uptake_po4_sl(:,1) = unit_uptake_p_pot(:) * & 
-                               veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,1) * dtime/1.e6
+    unit_uptake_n_pot(:) = 0.0_wp
+    unit_uptake_p_pot(:) = 0.0_wp
+    DO isoil = 1,soil_config%nsoil_water
+      !> 1.1 inorganic N uptake 
+      !!
+      !! potential N uptake rate (µmol N / mol C fine-root / s), weighted by root distribution
+      hlp1(:,isoil) = root_fraction_act_sl(:,isoil) * lctlib%vmax_uptake_n * & 
+                  nh4_solute(:,isoil) * soil_depth_sl(:,isoil) * ( lctlib%soil_n_aff1 + & 
+                  1._wp / ( lctlib%soil_n_aff2 + nh4_solute(:,isoil) * soil_depth_sl(:,isoil) )) 
+      hlp2(:,isoil) = root_fraction_act_sl(:,isoil) * lctlib%vmax_uptake_n / soil_depth_sl(:,isoil) * dtime/1.e6 * &
+                  no3_solute(:,isoil) * soil_depth_sl(:,isoil) * ( lctlib%soil_n_aff1 + & 
+                  1._wp / ( lctlib%soil_n_aff2 + no3_solute(:,isoil) * soil_depth_sl(:,isoil) )) 
+      unit_uptake_n_pot(:) = unit_uptake_n_pot(:) + hlp1(:,isoil) + hlp2(:,isoil) 
+  
+      ! uptake rate in µmol N / m3 / timestep 
+      plant_uptake_nh4_sl(:,isoil) = hlp1(:,isoil) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,isoil) * dtime/1.e6
+      plant_uptake_no3_sl(:,isoil) = hlp2(:,isoil) * veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,isoil) * dtime/1.e6
+  
+      !> 1.2 inorganic P uptake 
+      !!
+      !! potential P uptake rate (µmol P / mol C fine-root / s)
+      hlp1(:,isoil) = root_fraction_act_sl(:,isoil) * lctlib%vmax_uptake_p * &
+                             po4_solute(:,isoil) * soil_depth_sl(:,isoil) * ( lctlib%soil_p_aff1 + &
+                             1._wp / ( lctlib%soil_p_aff2 + po4_solute(:,isoil) * soil_depth_sl(:,isoil) ))
+      unit_uptake_p_pot(:) = unit_uptake_p_pot(:) + hlp1(:,isoil)
+      ! uptake rate in µmol P / m3 / timestep 
+      plant_uptake_po4_sl(:,isoil) = hlp1(:,isoil) * & 
+                                 veg%pool%fine_root%carbon%ptr / soil_depth_sl(:,isoil) * dtime/1.e6
+    END DO
 
     !> 2.0 Calculate decomposition of pools: dP/dt = - f(T)*f(M)/tau_pool * P
     !!
@@ -564,34 +567,27 @@ rmm_depolymerisation(:,:) = 1.0_wp
        (veg%litterfall%sap_wood%nitrogen15%ptr + veg%litterfall%heart_wood%nitrogen15%ptr) / &
        soil_depth_sl(:,1)
 
-    DO isoil = 1,1
+    DO isoil = 1,soil_config%nsoil_water
 
-       sb%formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr ) / & ! * & 
-          !root_fraction_sl(:,isoil) / & 
-            soil_depth_sl(:,isoil) 
-       sb%formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr ) / & ! * & 
-          !root_fraction_sl(:,isoil) / & 
-            soil_depth_sl(:,isoil) 
+       sb%formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)     = sb%formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
+          ( veg%litterfall%fine_root%carbon%ptr     + veg%litterfall%coarse_root%carbon%ptr )     * & 
+          root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+       sb%formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk)   = sb%formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
+          ( veg%litterfall%fine_root%nitrogen%ptr   + veg%litterfall%coarse_root%nitrogen%ptr )   * & 
+          root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb%formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr ) / & ! * & 
-          !root_fraction_sl(:,isoil) / & 
-            soil_depth_sl(:,isoil) 
-       sb%formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr ) / & ! * & 
-          !root_fraction_sl(:,isoil) / & 
-            soil_depth_sl(:,isoil) 
-       sb%formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr ) / & ! * & 
-          !root_fraction_sl(:,isoil) / & 
-            soil_depth_sl(:,isoil) 
+          ( veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr ) * & 
+          root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+       sb%formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk)   = sb%formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
+          ( veg%litterfall%fine_root%carbon13%ptr   + veg%litterfall%coarse_root%carbon13%ptr )   * & 
+          root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+       sb%formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk)   = sb%formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
+          ( veg%litterfall%fine_root%carbon14%ptr   + veg%litterfall%coarse_root%carbon14%ptr )   * & 
+          root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb%formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
-          ( veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr ) / & ! * & 
-          !root_fraction_sl(:,isoil) / & 
-            soil_depth_sl(:,isoil) 
-
-    ENDDO
+          ( veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr ) * & 
+          root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+    END DO
 
     !> 6.0 convert rates to µmol/ m3 / s
     !!

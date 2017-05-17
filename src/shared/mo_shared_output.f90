@@ -718,39 +718,42 @@ CONTAINS
               write(lun,'(9F12.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
               write(lun,'(20F12.6)') time_d, &
-                                     SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), & 
-                                     sb%pool%polymeric_litter%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%polymeric_litter%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%woody_litter%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%woody_litter%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%woody_litter%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%microbial%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%microbial%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%microbial%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%residue%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%residue%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%pool%residue%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%nh4_solute%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%no3_solute%ptr(1,1,1)*soil_depth_sl(1,1), & 
-                                     sb%po4_solute%ptr(1,1,1)*soil_depth_sl(1,1)
+                                     SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     , & 
+                                     SUM(sb%pool%polymeric_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))   , & 
+                                     SUM(sb%pool%polymeric_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:)) , & 
+                                     SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))         , & 
+                                     SUM(sb%pool%woody_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))       , & 
+                                     SUM(sb%pool%woody_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))     , & 
+                                     SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:))            , & 
+                                     SUM(sb%pool%microbial%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))          , & 
+                                     SUM(sb%pool%microbial%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))        , & 
+                                     SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:))              , & 
+                                     SUM(sb%pool%residue%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))            , & 
+                                     SUM(sb%pool%residue%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))          , & 
+                                     SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
+                                     SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
+                                     SUM(sb%po4_solute%ptr(1,:,1)*soil_depth_sl(1,:))
 
               dC13polymeric_litter(1,1) = calc_delta_C13(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                                          SUM(sb%pool%polymeric_litter%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
-              dC13woody_litter(:,:)     = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,1),sb%pool%woody_litter%carbon13%ptr(ics:ice,:,1))
-              dC13microbial(:,:)        = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,1),sb%pool%microbial%carbon13%ptr(ics:ice,:,1))
-              dC13residue(:,:)          = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,1),sb%pool%residue%carbon13%ptr(ics:ice,:,1))
+              dC13woody_litter(1,1)     = calc_delta_C13(SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                                                         SUM(sb%pool%woody_litter%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
+              dC13microbial(1,1)        = calc_delta_C13(SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                                                         SUM(sb%pool%microbial%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
+              dC13residue(1,1)          = calc_delta_C13(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                                                         SUM(sb%pool%residue%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
 
               lun=lun+1
               write(lun,'(20F14.6)') time_d, &
-                dC13polymeric_litter(1,1), dC13woody_litter(1,1), dC13microbial(1,1), dC13residue(1,1), & 
+                dC13polymeric_litter(1,1), dC13woody_litter(1,1), dC13microbial(1,1), dC13residue(1,1)                          , & 
                 calc_delta_C14(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%polymeric_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13polymeric_litter(1,1)), &
+                               SUM(sb%pool%polymeric_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13polymeric_litter(1,1)) , &
                 calc_delta_C14(SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%woody_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13woody_litter(1,1)), &
+                               SUM(sb%pool%woody_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13woody_litter(1,1))         , &
                 calc_delta_C14(SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%microbial%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13microbial(1,1)), &
+                               SUM(sb%pool%microbial%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13microbial(1,1))               , &
                 calc_delta_C14(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))!, &
+                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                  !, &
                 !calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
