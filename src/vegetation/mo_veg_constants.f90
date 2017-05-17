@@ -57,7 +57,12 @@ MODULE mo_veg_constants
       ! sink limitation signal strength to photosynthesis (exp(-(lambda * labile/target_labile)^k))
       lambda_sinklim_ps,    & !< lambda in photosynthesis response function to labile pool size 
       k_sinklim_ps,         & !< k in photosynthesis response function to labile pool size 
-      beta_sinklim_ps_min     !< maximum downacclimation of photosynthetic capacity due to sink limitation 
+      beta_sinklim_ps_min,  & !< maximum downacclimation of photosynthetic capacity due to sink limitation 
+      lambda_n_demand,      & !< maximum CN of labile pool, needed for N demand
+      lambda_p_demand,      & !< ..
+      k_f_demand,           & !< ..
+      labile_cn_min_uptake, & !< minimum CN of labile pool, needed for N demand
+      labile_np_min_uptake    !< ..
 
   ! Resorption parameters
   REAL(wp), SAVE :: & 
@@ -195,6 +200,11 @@ CONTAINS
       lambda_sinklim_ps       = 0.05_wp
       k_sinklim_ps            = 2.0_wp 
       beta_sinklim_ps_min     = 0.25_wp 
+      lambda_n_demand         = 75.0_wp
+      lambda_p_demand         = 75.0_wp
+      k_f_demand              = 2.0_wp
+      labile_cn_min_uptake    = 16.0_wp
+      labile_np_min_uptake    = 10.0_wp
 
   ! Resorption parameters
       resorp_fract_leaf     = 0.5_wp  

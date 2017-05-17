@@ -184,7 +184,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: k2_opt
     dsl4jsb_Real2D_onChunk      :: growth_req_p
     dsl4jsb_Real2D_onChunk      :: growth_req_n
-    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
@@ -345,7 +344,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, k2_opt)                             !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)                       !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)                       !   out
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)       ! in
@@ -399,14 +397,12 @@ CONTAINS
     !!
     fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
 
-    CALL calc_nutrient_demand_scalar(lctlib, &
-                                     veg%pool%labile%carbon%ptr, & 
+    CALL calc_nutrient_demand_scalar(veg%pool%labile%carbon%ptr, & 
                                      veg%pool%labile%nitrogen%ptr, & 
                                      veg%pool%labile%phosphorus%ptr, & 
                                      veg%pool%reserve%carbon%ptr, & 
                                      veg%pool%reserve%nitrogen%ptr, & 
                                      veg%pool%reserve%phosphorus%ptr,&
-                                     growth_req_p_tuptake_mavg(:), &
                                      f_n_demand(:), &
                                      f_p_demand(:))
 
@@ -712,51 +708,56 @@ CONTAINS
   !!   
   !! output: N and P demand scalar for root uptake 
   !----------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_nutrient_demand_scalar(lctlib, &
-                                                   labile_carbon, & 
+  ELEMENTAL SUBROUTINE calc_nutrient_demand_scalar(labile_carbon, & 
                                                    labile_nitrogen, & 
                                                    labile_phosphorus, & 
                                                    reserve_carbon, & 
                                                    reserve_nitrogen, & 
                                                    reserve_phosphorus, &
-                                                   growth_req_p_tuptake_mavg, &
                                                    f_n_demand, &
                                                    f_p_demand)
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
+    USE mo_veg_constants,       ONLY: lambda_n_demand, lambda_p_demand, labile_cn_min_uptake, labile_np_min_uptake
+    USE mo_shared_constants,    ONLY: molar_mass_C, molar_mass_N, molar_mass_P
 
     IMPLICIT NONE
     
     ! 0.1 InOut
-    TYPE(t_lctlib_element), INTENT(in)  :: lctlib                    !< land-cover-type library - parameter across pft's
     REAL(wp),               INTENT(in)  :: labile_carbon             !< labile pool carbon (mol C / m2)
     REAL(wp),               INTENT(in)  :: labile_nitrogen           !< labile pool nitrogen (mol N / m2)
     REAL(wp),               INTENT(in)  :: labile_phosphorus         !< labile pool phosphorus (mol P / m2)
     REAL(wp),               INTENT(in)  :: reserve_carbon            !< reserve pool carbon (mol C / m2)
     REAL(wp),               INTENT(in)  :: reserve_nitrogen          !< reserve pool nitrogen (mol N / m2)
     REAL(wp),               INTENT(in)  :: reserve_phosphorus        !< reserve pool phosphorus (mol P / m2)
-    REAL(wp),               INTENT(in)  :: growth_req_p_tuptake_mavg !< time-averaged P reqiured for growth (mol P / mol C)
     REAL(wp),               INTENT(out) :: f_n_demand                !< root N uptake demand scalar (unitless)
     REAL(wp),               INTENT(out) :: f_p_demand                !< root P uptake demand scalar (unitless)
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_demand_scalar'
 
+
     !> 1.0 Calculate an instantaneous scalar of nutrient demand
     !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
     !!
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P
-!@todo: calc_nutrient_demand: why is this a lctlib and not a general parameter?
+
+    !> 1.1 N demand
+    !!
     IF(labile_carbon + reserve_carbon > eps8) THEN
-       f_n_demand = 1._wp - exp(-(lctlib%labile_cn_max * MAX(1._wp/lctlib%labile_cn_min - &
-            (labile_nitrogen+reserve_nitrogen)/&
-            (labile_carbon+reserve_carbon), 0._wp))**2._wp)
+      f_n_demand = 1._wp - exp(-(lambda_n_demand * &
+                                 MAX(1._wp/labile_cn_min_uptake - molar_mass_N/molar_mass_C * &
+                                 (labile_nitrogen+reserve_nitrogen) / (labile_carbon+reserve_carbon), 0._wp)) ** &
+                               k_f_demand)
     ELSE
-       f_n_demand = 1.0_wp
+      f_n_demand = 1.0_wp
     ENDIF
-!@todo: calc_nutrient_demand: needs to be same formualtion for N and P
-    IF(labile_nitrogen > eps8) THEN
-       f_p_demand = lctlib%np_leaf * &
-           MAX(growth_req_p_tuptake_mavg - labile_phosphorus / labile_nitrogen, 0.0_wp)
+
+    !> 1.2 P demand
+    !!
+    IF(labile_nitrogen + reserve_nitrogen > eps8) THEN
+      f_p_demand = 1._wp - exp(-(lambda_p_demand * &
+                                 MAX(1._wp/labile_np_min_uptake - molar_mass_P/molar_mass_N * &
+                                 (labile_phosphorus+reserve_phosphorus) / (labile_nitrogen+reserve_nitrogen), 0._wp)) ** &
+                               k_f_demand)
     ELSE
        f_p_demand = 1.0_wp
     ENDIF
