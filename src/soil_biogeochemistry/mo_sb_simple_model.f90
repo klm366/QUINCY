@@ -368,10 +368,11 @@ rmm_depolymerisation(:,:) = 1.0_wp
     
     ! calculate potential immobilisation rate 
     hlp1(:,:) = growth_c(:,:) * microbial_cn - (sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk))
+    hlp2(:,:) = hlp1(:,:) + plant_uptake_nh4_sl(:,:)
     ! limit to available N
-    WHERE(hlp1(:,:) + plant_uptake_nh4_sl(:,:) > nh4_solute(:,:) .AND. hlp1(:,:) + plant_uptake_nh4_sl(:,:) > 1.e-13)
-        hlp1(:,:) = nh4_solute(:,:) * hlp1(:,:) / (hlp1(:,:) + plant_uptake_nh4_sl(:,:)) 
-        plant_uptake_nh4_sl(:,:) = nh4_solute(:,:) * plant_uptake_nh4_sl(:,:) / (hlp1(:,:) + plant_uptake_nh4_sl(:,:)) 
+    WHERE(hlp1(:,:) + plant_uptake_nh4_sl(:,:) > nh4_solute(:,:) .AND. hlp2(:,:) > 1.e-13)
+        hlp1(:,:) = nh4_solute(:,:) * hlp1(:,:) / hlp2(:,:) 
+        plant_uptake_nh4_sl(:,:) = nh4_solute(:,:) * plant_uptake_nh4_sl(:,:) / hlp2(:,:)
     ENDWHERE 
     
     ! calculate C growth based on N availability
