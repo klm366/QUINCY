@@ -52,7 +52,7 @@ U_longname = "Surface Upwelling Solar Radiation"
 
 cdo = Cdo ()
 
-cdo.setname ( D, input = "-mul %s -add %s %s """ % (
+cdo.setname ( D, input = "-ifthen %s -add %s %s """ % (
         kwargs [ 'land_sea_mask' ],
         kwargs [ 'Dvis_selcode' ],
         kwargs [ 'Dnir_selcode' ]),
@@ -62,7 +62,7 @@ nc_fid  = Dataset ( D_f, 'a' )
 nc_fid.variables [ D ].setncattr ( 'standard_name', D_longname )
 nc_fid.close ()
 
-cdo.setname ( U, input = " -mul %s -sub %s %s """ % (
+cdo.setname ( U, input = " -ifthen %s -sub %s %s """ % (
         kwargs [ 'land_sea_mask' ],
         D_f, 
         kwargs [ 'rsns_selcode' ]),
@@ -92,11 +92,6 @@ cdo.yseasmean ( input= D_f,
 
 
 ##### new, only candidates
-# cdo.fldmean ( input=" -setmisstoc,0 -mul " +\
-#               kwargs [ "A_seasmean" ] + " " +\
-#               kwargs [ "land_sea_mask" ],
-#               output=kwargs [ "A_seasmean_gm" ],
-#               options='-f %s' % kwargs [ "suffix" ] )
 
 cdo.fldmean ( input=kwargs [ "A_seasmean" ],
               output=kwargs [ "A_seasmean_gm" ],
@@ -105,12 +100,6 @@ cdo.fldmean ( input=kwargs [ "A_seasmean" ],
 cdo.timmean ( input=kwargs [ "A_seasmean_gm" ],
               output=kwargs [ "A_seasmean_gtm" ],
               options='-f %s' % kwargs [ "suffix" ])
-        
-# cdo.fldmean ( input=" -abs -setmisstoc,0 -mul " +\
-#               kwargs [ "A_seasmean" ] + " " +\
-#               kwargs [ "land_sea_mask" ],
-#               output=kwargs [ "A_seasmean_gd" ],
-#               options='-f %s' % kwargs [ "suffix" ] )
         
 cdo.fldmean ( input=" -abs %s " %  kwargs [ "A_seasmean" ],
               output=kwargs [ "A_seasmean_gd" ],

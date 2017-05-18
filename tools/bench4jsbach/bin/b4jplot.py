@@ -618,7 +618,20 @@ def hist_plot (  colno, colcolors, colnames,
     if ylabel == True:
         ax_loc.yaxis.set_label_coords ( -0.2, .92 ) 
         ax_loc.set_ylabel ( "[ %s ]" % unit, rotation = 90 )
-    
+
+
+    ############ set y margins
+    ymargin=0.04
+    dmax = alldat.max ()
+    dmin = alldat.min ()
+    ylimtop = dmax if dmax > 0 else 0
+    ylimbottom = dmin if dmin < 0 else 0
+    span = ylimtop - ylimbottom
+    ylimaxtop = ylimtop + ( span * ymargin ) if ylimtop > 0 else 0
+    ylimaxbottom = ylimbottom - ( span * ymargin ) if ylimbottom < 0 else 0
+    ax_loc.set_ylim(ylimaxbottom, ylimaxtop )
+    ###################
+        
     ax_loc.grid ( 'on')
     ax_loc.axhline ( 0, color = 'k' )
     if legend == True:

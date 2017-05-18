@@ -50,41 +50,25 @@ unit_factor_RD = 86400000
 
 cdo = Cdo ()
 
-# cdo.setname ( "precip_acc",
-#               input = " -setunit,%s -mulc,%d  %s" % ( unit, unit_factor_EP, kwargs [ 'P_selcode' ]),
-#               output = kwargs [ 'P_hydrology' ])
-
 cdo.setname ( "precip_acc",
-              input = " -setunit,%s -mulc,%d  -mul %s %s " % ( 
+              input = " -setunit,%s -mulc,%d %s " % ( 
         unit, 
         unit_factor_EP, 
-        kwargs [ 'land_sea_mask' ],
         kwargs [ 'P_selcode' ]),
               output = kwargs [ 'P_hydrology' ])
 
-# cdo.setname ( "evapotranspiration",
-#               input = " -setunit,%s -mulc,%d -mulc,%d %s" % (
-#               unit, unit_factor_EP, sign_adjust_E, kwargs [ 'E_selcode' ]),
-#               output = kwargs [ 'E_hydrology' ])
-
 cdo.setname ( "evapotranspiration",
-              input = " -setunit,%s -mulc,%d -mulc,%d -mul %s %s " % (
+              input = " -setunit,%s -mulc,%d -mulc,%d %s " % (
         unit, 
         unit_factor_EP, 
-        sign_adjust_E,
-        kwargs [ 'land_sea_mask' ],  
+        sign_adjust_E, 
         kwargs [ 'E_selcode' ]),
               output = kwargs [ 'E_hydrology' ])
 
-# cdo.setname ( "disch",
-#               input = " -setunit,%s -mulc,%d  %s" % ( unit, unit_factor_RD, kwargs [ 'RD_selcode' ]),
-#               output = kwargs [ 'RD_hydrology' ])
-
 cdo.setname ( "disch",
-              input = " -setunit,%s -mulc,%d  -mul %s %s " % ( 
+              input = " -setunit,%s -mulc,%d %s " % ( 
         unit, 
         unit_factor_RD, 
-        kwargs [ 'land_sea_mask' ], 
         kwargs [ 'RD_selcode' ]),
               output = kwargs [ 'RD_hydrology' ])
 
@@ -93,15 +77,21 @@ cdo.setname ( "disch",
 ##### 
 
 cdo.sellonlatbox ( -180,180,-90,90,
-                   input  = "-timmean -muldpy -yearmonmean %s" % ( kwargs [ 'E_hydrology' ]), 
+                   input  = " -ifthen %s -timmean -muldpy -yearmonmean %s " % (
+                       kwargs [ 'land_sea_mask' ], 
+                       kwargs [ 'E_hydrology' ]),
                    output = kwargs [ 'E_yearsummean' ])
 
 cdo.sellonlatbox ( -180,180,-90,90,
-                   input  = "-timmean -muldpy -yearmonmean %s" % ( kwargs [ 'P_hydrology' ]), 
+                   input  = " -ifthen %s -timmean -muldpy -yearmonmean %s " % (
+                       kwargs [ 'land_sea_mask' ],
+                       kwargs [ 'P_hydrology' ]), 
                    output = kwargs [ 'P_yearsummean' ])
 
 cdo.sellonlatbox ( -180,180,-90,90,
-                   input  = "-timmean -muldpy -yearmonmean %s" % ( kwargs [ 'RD_hydrology' ]), 
+                   input  = " -ifthen %s -timmean -muldpy -yearmonmean %s " % (
+                       kwargs [ 'land_sea_mask' ],
+                       kwargs [ 'RD_hydrology' ]), 
                    output = kwargs [ 'RD_yearsummean' ])
 
 
