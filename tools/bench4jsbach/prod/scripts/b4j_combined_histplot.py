@@ -74,7 +74,7 @@ subtitle_delta    = title_tmpl % { 'funstr'  : funstr,
 
 token             = "input_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
-keylist.sort ()
+keylist.sort () if keylist else None
 inpathlist        = []
 xticklabellist    = []
 for k in keylist:

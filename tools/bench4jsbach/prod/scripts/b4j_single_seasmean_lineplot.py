@@ -62,6 +62,7 @@ title             = title_tmpl % { 'funstr'  : funstr,
 
 token             = "input_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
+keylist.sort () if keylist else None
 inpathlist_gm     = []
 legendlist_gm     = []
 for k in keylist:
@@ -77,6 +78,7 @@ for k in keylist:
 
 token             = "input_tm_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
+keylist.sort () if keylist else None
 inpathlist_tm     = []
 legendlist_tm     = []
 for k in keylist:

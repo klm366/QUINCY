@@ -80,7 +80,6 @@ cdo.timmean ( input=kwargs [ "A_seasmean_gd" ],
               output=kwargs [ "A_seasmean_gtd" ],
               options=' -f %s ' % kwargs [ "suffix" ] )
 
-
 #####
 ##### finishing
 #####

@@ -75,6 +75,7 @@ subtitle_delta    = title_tmpl % { 'funstr'  : funstr,
 
 token             = "input_ref"
 keylist           = [ k for k in kwargs.keys () if k.startswith ( token )]
+keylist.sort () if keylist else None
 inpathlist_gm     = []
 legendlist_gm     = []
 for k in keylist:
@@ -87,9 +88,6 @@ for k in keylist:
                               'expl'    : ",\n $R_{%s}$: %s" % \
                               ( refno,  kwargs [ "ref%s"  % refno ])}
     legendlist_gm.append ( legend )
-
-print inpathlist_gm
-print legendlist_gm
 
 zon_plot_wrapper ( varname_can       = varname_can,
                    inpathlist_can    = inpathlist_gm_can, 
