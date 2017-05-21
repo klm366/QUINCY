@@ -457,6 +457,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
+    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
@@ -476,6 +477,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
 
