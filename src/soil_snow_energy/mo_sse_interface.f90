@@ -576,50 +576,60 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
-    vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
-      &                             SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
-      &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
-      &                                     fract_org_sl(:,:)                                                  , &
-      & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
-      & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
-      &                                     soil_depth_sl(:,:)                                                 , &
-      &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
-      & )
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
+      vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
+        &                             SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
+        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
+        &                                     fract_org_sl(:,:)                                                  , &
+        & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
+        & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
+        &                                     soil_depth_sl(:,:)                                                 , &
+        &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
+        & )
+    ELSE
+      vol_heat_cap_sl(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
+    ENDIF
 
-    heat_cond_sl (:,:) = calc_thermal_conductivity( &
-      &                             SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
-      &       dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl)                                                         , &
-      &       dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl)                                                          , &
-      &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
-      &       dsl4jsb_var3D_onChunk(HYDRO_, vol_field_cap_sl)                                                  , &
-      &                                     fract_org_sl(:,:)                                                  , &
-      &                                     soil_depth_sl(:,:)                                                 , &
-      &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
-      & )
+    IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
+      heat_cond_sl (:,:) = calc_thermal_conductivity( &
+        &                             SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
+        &       dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl)                                                         , &
+        &       dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl)                                                          , &
+        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
+        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_field_cap_sl)                                                  , &
+        &                                     fract_org_sl(:,:)                                                  , &
+        &                                     soil_depth_sl(:,:)                                                 , &
+        &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
+        & )
+    ELSE
+      heat_cond_sl(:,:) = SPREAD(heat_cond(:), DIM=2, ncopies=nsoil)
+    END IF
 
     IF (.NOT. (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil)) THEN
       DEALLOCATE(fract_org_sl)
     END IF
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-        ! WHERE (snow_soil_dens(:) > dens_snow_min)          ! "old" or mixture of old and fresh snow
-        vol_heat_cap_snow(:) = ci * snow_soil_dens(:)                               ! Use specific heat of ice (Verseghy 1991)
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
+        WHERE (snow_soil_dens(:) > dens_snow_min)          ! "old" or mixture of old and fresh snow
+          vol_heat_cap_snow(:) = ci * snow_soil_dens(:)                               ! Use specific heat of ice (Verseghy 1991)
           ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
           ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                         ! Goodrich (1982)
-        heat_cond_snow   (:) = 2.5e-6_wp*snow_soil_dens(:)**2._wp - 0.123e-3_wp*snow_soil_dens(:) + 0.024_wp ! Calonne et al. (2011)
-        ! ELSE WHERE                                         ! fresh snow
+          heat_cond_snow   (:) = 2.5e-6_wp*snow_soil_dens(:)**2._wp - 0.123e-3_wp*snow_soil_dens(:) + 0.024_wp ! Calonne et al. (2011)
+        ELSE WHERE                                         ! fresh snow
         !   ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
         !   ! vol_heat_cap_snow(:) = vol_hcap_snow_min
-        !   heat_cond_snow   (:) = hcond_snow_min
-        !   vol_heat_cap_snow(:) = ci * dens_snow_min
-        ! END WHERE
+          heat_cond_snow   (:) = hcond_snow_min
+          vol_heat_cap_snow(:) = ci * dens_snow_min
+        END WHERE
       ELSE
         vol_heat_cap_snow(:) = vol_hcap_snow                                          ! Use specific heat of snow (cs * dens_snow) 
         heat_cond_snow   (:) = hcond_snow
       END IF
-    ! ELSE   l_snow=.FALSE. not allowed currently
+    ELSE
+      vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow) 
+      heat_cond_snow   (:) = hcond_snow
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

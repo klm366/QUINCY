@@ -100,22 +100,27 @@ CONTAINS
     END DO
 
     ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-    ! IF (dsl4jsb_Config(SSE_)%l_hcap_map) THEN
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
       ptr_2D => input_file%Read_2d(         &
         & variable_name='heat_capacity',            &
         & fill_array = dsl4jsb_var_ptr(SSE_, vol_heat_cap))
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
-    ! ELSE
-    !   DO iblk=1,SIZE(fao,2)
-    !     dsl4jsb_var_ptr(SSE_,vol_heat_cap)(:,iblk) = fao_vol_hcap(NINT(fao(:,iblk)))
-    !   END DO
-    ! END IF
+    ELSE
+      DO iblk=1,SIZE(fao,2)
+        dsl4jsb_var_ptr(SSE_,vol_heat_cap)(:,iblk) = fao_vol_hcap(NINT(fao(:,iblk)))
+      END DO
+    END IF
 
     ! Heat conductivity of mineral soil
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='heat_conductivity',         &
-      & fill_array = dsl4jsb_var_ptr(SSE_, heat_cond))
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
+    IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+      ptr_2D => input_file%Read_2d(         &
+        & variable_name='heat_conductivity',         &
+        & fill_array = dsl4jsb_var_ptr(SSE_, heat_cond))
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
+    ELSE
+      dsl4jsb_var2D_onDomain(SSE_, heat_cond) = &
+        & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
+    END IF
 
     CALL input_file%Close()                              ! Temporary
 
@@ -258,26 +263,34 @@ CONTAINS
       fract_org_sl(:,:,:) = 0._wp
     END IF
 
-    vol_heat_cap_sl (:,:,:) = calc_vol_heat_capacity( &
-      &                              SPREAD( vol_heat_cap(:,:),                 DIM=2, ncopies=nsoil)               , &
-      &       dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)                                                       , &
-      &                                      fract_org_sl(:,:,:)                                                    , &
-      & MERGE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) / soil_depth_sl(:,:,:), 0._wp, soil_depth_sl(:,:,:) > 0._wp), &
-      & MERGE(dsl4jsb_var3D_onDomain(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:,:), 0._wp, soil_depth_sl(:,:,:) > 0._wp), &
-      &                                      soil_depth_sl(:,:,:)                                                   , &
-      &                       SPREAD(SPREAD( soil_e%dz(:),                       DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
-      & )
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
+      vol_heat_cap_sl (:,:,:) = calc_vol_heat_capacity( &
+        &                              SPREAD( vol_heat_cap(:,:),                 DIM=2, ncopies=nsoil)               , &
+        &       dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)                                                       , &
+        &                                      fract_org_sl(:,:,:)                                                    , &
+        & MERGE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) / soil_depth_sl(:,:,:), 0._wp, soil_depth_sl(:,:,:) > 0._wp), &
+        & MERGE(dsl4jsb_var3D_onDomain(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:,:), 0._wp, soil_depth_sl(:,:,:) > 0._wp), &
+        &                                      soil_depth_sl(:,:,:)                                                   , &
+        &                       SPREAD(SPREAD( soil_e%dz(:),                       DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
+        & )
+    ELSE
+      vol_heat_cap_sl(:,:,:) = SPREAD( vol_heat_cap(:,:), DIM=2, ncopies=nsoil)
+    END IF
 
-    heat_cond_sl (:,:,:) = calc_thermal_conductivity( &
-      &                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
-      &       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl)                                                             , &
-      &       dsl4jsb_var3D_onDomain(HYDRO_, w_ice_sl)                                                              , &
-      &       dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)                                                       , &
-      &       dsl4jsb_var3D_onDomain(HYDRO_, vol_field_cap_sl)                                                      , &
-      &                                      fract_org_sl(:,:,:)                                                    , &
-      &                                      soil_depth_sl(:,:,:)                                                   , &
-      &                       SPREAD(SPREAD( soil_e%dz(:),                       DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
-      & )
+    IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
+      heat_cond_sl (:,:,:) = calc_thermal_conductivity( &
+        &                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
+        &       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl)                                                             , &
+        &       dsl4jsb_var3D_onDomain(HYDRO_, w_ice_sl)                                                              , &
+        &       dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)                                                       , &
+        &       dsl4jsb_var3D_onDomain(HYDRO_, vol_field_cap_sl)                                                      , &
+        &                                      fract_org_sl(:,:,:)                                                    , &
+        &                                      soil_depth_sl(:,:,:)                                                   , &
+        &                       SPREAD(SPREAD( soil_e%dz(:),                       DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
+        & )
+    ELSE
+      heat_cond_sl(:,:,:) = SPREAD(heat_cond(:,:), DIM=2, ncopies=nsoil)
+    END IF
 
     IF (.NOT. (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil)) THEN
       DEALLOCATE(fract_org_sl)
