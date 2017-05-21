@@ -151,14 +151,10 @@ function generate_gauss_data {
 
   sed -i '/lcmip5_pasture=.true./a\[\[ ${lpasture} = true \]\] && lpasture=\.true\. \|\| lpasture=\.false\.' jsbach_init_file.ksh
   sed -i '1,$s/^#vg//' jsbach_init_file.ksh
-  #sed -i '/lpasture=.true./alandcover_series=false' jsbach_init_file.ksh
   if [[ "${res_atm}" == "T255" ]]
   then
-#    sed -i '/pool_land=/a pool_land=/pool/data/JSBACH/T255' jsbach_init_file.ksh
     sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
-#    sed -i '/C3C4_crop_LUH2v2h_/s/LUH2v2h_//' jsbach_init_file.ksh
     sed -i '/LUH_states=/s/=.*$/=LUH_states_T255.nc/' jsbach_init_file.ksh
-#    sed -i '/${pool_land}\/soil_parameters_/s/soil_parameters.*$/5soillayers_${res_atm}.nc .\/soil_parameters_${res_atm}.nc/' jsbach_init_file.ksh
   else
     sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
   fi
@@ -718,7 +714,6 @@ do
   echo "=============================================================="
 
   [[ "${old_r2b4_amip}" != "true" ]] && icon_grid=icon_grid_00${n1}_R02B${n0}_G.nc || icon_grid=${grid_name}.nc
-  # icon_grid=r2b4_amip.nc   # activate this for coupled=true
 
   remap_weights=wgt${remap_scheme}_${source_res}_to_${grid_name}.nc
 
@@ -773,7 +768,7 @@ do
   generate_output_files
 
   [[ "${old_r2b4_amip}" != "true" ]] && \
-    output_dir="${output_path}/R2B${bisection}/land" || \
+    output_dir="${output_path}/R02B${n0}/land" || \
     output_dir="${output_path}/r2b4_amip/lnd"
   mkdir -p ${output_dir} || true
 
