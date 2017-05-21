@@ -242,6 +242,7 @@ CONTAINS
       CALL model%Queue_task(RAD_,    "radiation_par")
     END IF
     CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(SSE_,    "soil_properties")
     CALL model%Queue_task(SSE_,    "soil_temperature")
     CALL model%Queue_task(HYDRO_,  "soil_hydrology")
@@ -259,7 +260,7 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
     END IF
     CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
-    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI_, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
                                                      ! should be called after the soil hydrology is calculated
