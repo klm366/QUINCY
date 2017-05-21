@@ -24,6 +24,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=30)            :: grid_name
     CHARACTER(len=30)            :: usecase
     CHARACTER(len=10)            :: hsm_mode
+    LOGICAL                      :: l_compat401      ! Use configuration compatible with jsbach 4.01
   END TYPE t_jsb_model_config
 
   TYPE, ABSTRACT :: t_jsb_config
@@ -64,11 +65,13 @@ CONTAINS
       grid_filename,          &
       grid_name
 
+    LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=30)           :: usecase
     CHARACTER(len=10)           :: hsm_mode
 
     NAMELIST /jsb_model_nml/  &
+      l_compat401, &
       usecase, &
       hsm_mode, &
       fract_filename
@@ -82,6 +85,7 @@ CONTAINS
     ALLOCATE(model_config)
 
     ! Set defaults
+    l_compat401    = .FALSE.
     grid_filename  = ''
     grid_name      = ''
     usecase        = ''
@@ -100,6 +104,7 @@ CONTAINS
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
 
+    model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
     model_config%hsm_mode       = hsm_mode
     model_config%fract_filename = fract_filename
