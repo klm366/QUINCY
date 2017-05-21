@@ -100,9 +100,6 @@ CONTAINS
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 
-    IF (.NOT. l_snow) &
-      & CALL finish(TRIM(routine), 'Only the new snow model is possible. Set l_snow=.TRUE. in namelist.')
-
     config%nsnow         = nsnow
     IF (l_snow .AND. nsnow > max_snow_layers) THEN
       CALL finish(TRIM(routine), 'Too many snow layers, maximum is '//TRIM(int2string(max_snow_layers)))
@@ -114,7 +111,7 @@ CONTAINS
     IF (l_snow) THEN
       CALL message(TRIM(routine), 'Using '//TRIM(int2string(nsnow))//' snow layers.')
     ELSE
-      CALL message(TRIM(routine), 'Not using snow layers.')
+      CALL message(TRIM(routine), 'Not using multi-layer snow model')
     END IF
 
     config%l_dynsnow     = l_dynsnow

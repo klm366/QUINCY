@@ -120,7 +120,7 @@ CONTAINS
 
   SUBROUTINE update_soil_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
 
@@ -232,9 +232,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_bcoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_snow)            ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_acoef)      ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)      ! inout
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap_snow) ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, hcap_grnd)         ! out
@@ -243,6 +240,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, grnd_hflx_old)     ! out
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       dsl4jsb_Get_var3D_onChunk(SSE_, snow_depth_sl)   ! out
+      dsl4jsb_Get_var3D_onChunk(SSE_, t_snow)          ! inout
+      dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_acoef)    ! inout
+      dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)    ! inout
     END IF
     IF (.NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)   ! in
@@ -272,6 +272,31 @@ CONTAINS
       t_unfilt_corrected(:) = t_unfilt(:)
     ELSE
       t_unfilt_corrected(:) = t_unfilt(:) - dsl4jsb_var2D_onChunk(HYDRO_, snowmelt) * dtime * alf / hcap_grnd(:) 
+    END IF
+
+    IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+
+      CALL calc_soiltemp_old( &
+        & nc, &
+        & nsoil, &
+        & soil_e%dz(:), &
+        & soil_e%levels(:), &
+        & dtime, &
+        & lstart, &
+        & t_unfilt_corrected                     (:),  &
+        & dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil),  &
+        & dsl4jsb_var2D_onChunk(SSE_,   heat_cond),    &
+        & dsl4jsb_var2D_onChunk(SSE_,   vol_heat_cap), &
+        & t_soil_acoef                          (:,:), &
+        & t_soil_bcoef                          (:,:), &
+        & t_soil                                (:,:), &
+        & hcap_grnd                             (:),   &
+        & grnd_hflx                             (:),   &
+        & SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &                
+        & )
+
+      RETURN
+
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_snow .AND. .NOT. tile%is_glacier) THEN
@@ -454,10 +479,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx_old,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd_old,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   snow_depth_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_acoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
+    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+      dsl4jsb_Aggregate_onChunk(SSE_,   snow_depth_sl,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_acoef,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
+    END IF
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)

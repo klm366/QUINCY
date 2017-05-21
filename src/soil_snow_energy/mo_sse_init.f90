@@ -294,7 +294,9 @@ CONTAINS
         vol_heat_cap_snow(:,:) = vol_hcap_snow
         heat_cond_snow   (:,:) = hcond_snow
       END IF
-    ! ELSE   l_snow=.FALSE. not allowed currently
+      END IF
+    ! ELSE
+    !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old
     END IF
 
   END SUBROUTINE init_soil_properties
