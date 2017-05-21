@@ -325,7 +325,7 @@ CONTAINS
         & matrix_pot_sl  (:,1)                        , &
         & bclapp_sl      (:,1)                          &
         & )
-      WHERE (has_snow_layer(:) .AND. .NOT. is_glacier(:))
+      WHERE (.NOT. has_snow_layer(:) .AND. .NOT. is_glacier(:))
         WHERE (w_soil_sl(:,1) > MAX(liquid_max(:), dsl4jsb_Config(SSE_)%w_soil_critical))
           ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
           t_star(:) = MAX(t_star(:), tmelt)
