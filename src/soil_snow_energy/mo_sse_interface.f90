@@ -168,6 +168,7 @@ CONTAINS
     !
     REAL(wp), DIMENSION(options%nc) :: &
       & snow_depth, &
+      & snow_fract, &
       & t_unfilt_corrected, &
       & t_soil_top, &
       & hcap_grnd_snow, &
@@ -299,23 +300,32 @@ CONTAINS
 
     END IF
 
-    IF (dsl4jsb_Config(SSE_)%l_snow .AND. .NOT. tile%is_glacier) THEN
+    ! l_snow=.TRUE. below here
+
+    IF (.NOT. tile%is_glacier) THEN
 
       ! Calculate snow depth in m (no longer in m water equivalent)
-      ! IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
+      IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
         snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dsl4jsb_var2D_onChunk(HYDRO_, snow_soil_dens)
-      ! ELSE
-        ! snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
-      ! END IF
+      ELSE
+        snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
+      END IF
 
       ! Calculate top snow layer for previous time step
       itop_old(:) = nsnow + 1 - COUNT(snow_depth_sl(:,:) > 0._wp, DIM=2)
 
       ! Calculate depths of snow layers
       snow_depth_sl(:,:) = 0._wp
-      WHERE (snow_depth(:) <= snow_depth_min)
+
+      snow_fract(:) = dsl4jsb_var2D_onChunk(HYDRO_, fract_snow_soil)
+
+      WHERE (snow_depth(:) > snow_depth_min .AND. snow_fract(:) > EPSILON(1._wp))
+        snow_depth(:) = snow_depth(:) / snow_fract(:)
+      ELSE WHERE
         snow_depth(:) = 0._wp
+        snow_fract(:) = 0._wp
       END WHERE
+
       DO isnow=nsnow,1,-1
         WHERE (snow_depth(:) > 0._wp)
           snow_depth_sl(:,isnow) = MIN(snow_depth(:), snow_e%dz(isnow))
@@ -350,19 +360,23 @@ CONTAINS
         & t_snow_acoef     (:,:), &
         & t_snow_bcoef     (:,:), &
         ! out
+        & t_soil_top         (:), &
         & hcap_grnd_snow     (:), &
         & grnd_hflx_snow     (:)  &
         & )
 
       WHERE (snow_depth_sl(:, nsnow) > 0._wp)   ! At least one snow layer above soil
-        t_soil_top(:) = t_snow_acoef(:,nsnow) + t_snow_bcoef(:,nsnow) * t_snow(:,nsnow)
+        t_soil_top(:) = snow_fract(:) * t_soil_top(:) + (1._wp - snow_fract(:)) * t_unfilt_corrected(:)
       ELSE WHERE                                ! No snow
         t_soil_top(:) = t_unfilt_corrected(:)
       END WHERE
     ELSE
       snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
+      snow_depth_sl(:,:) = 0._wp
+      snow_fract(:) = 0._wp
       t_soil_top(:) = t_unfilt_corrected(:)
-      ! @todo: for l_snow=.FALSE., the soil layers would have to be prepared here accounting for snow in the soil layers.
+      grnd_hflx_snow(:) = 0._wp
+      hcap_grnd_snow(:) = 0._wp
     END IF
 
     ! @todo: move water/ice calculations to HYDRO_ process 
@@ -424,18 +438,13 @@ CONTAINS
         & )
     END IF
 
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      WHERE (snow_depth_sl(:,nsnow) > 0._wp)
-        grnd_hflx(:) = grnd_hflx_snow(:)
-        hcap_grnd(:) = hcap_grnd_snow(:)
-      ELSE WHERE
-        grnd_hflx(:) = grnd_hflx_soil(:)
-        hcap_grnd(:) = hcap_grnd_soil(:)
-      END WHERE
-    ELSE
+    WHERE (snow_depth_sl(:,nsnow) > 0._wp)
+      grnd_hflx(:) = snow_fract(:) * grnd_hflx_snow(:) + (1._wp - snow_fract(:)) * grnd_hflx_soil(:)
+      hcap_grnd(:) = snow_fract(:) * hcap_grnd_snow(:) + (1._wp - snow_fract(:)) * hcap_grnd_soil(:)
+    ELSE WHERE
       grnd_hflx(:) = grnd_hflx_soil(:)
       hcap_grnd(:) = hcap_grnd_soil(:)
-    END IF
+    END WHERE
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

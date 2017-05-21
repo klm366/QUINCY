@@ -576,7 +576,7 @@ CONTAINS
     & vol_heat_cap_soil, heat_cond_soil, &
     & t_soil, t_soil_acoef, t_soil_bcoef, &
     & t_snow, t_snow_acoef, t_snow_bcoef,   &
-    & hcap_grnd, grnd_hflx)
+    & t_soil_top, hcap_grnd, grnd_hflx)
     !
     !
     !   AUTHOR:  FREDERIC HOURDIN     30/01/92
@@ -657,13 +657,14 @@ CONTAINS
     REAL(wp), INTENT(inout) :: t_snow_acoef(nidx,nsnow)   !! snow A coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(inout) :: t_snow_bcoef(nidx,nsnow)   !! snow B coefficient of Richtmyer and Morton scheme
 
+    REAL(wp), INTENT(out)   :: t_soil_top(nidx)           !! new temperature of top soil layer
     REAL(wp), INTENT(out)   :: hcap_grnd(nidx)            !! heat capacity of the top snow layer [J m-2 K-1]
     REAL(wp), INTENT(out)   :: grnd_hflx(nidx)            !! ground heat flux [J m-2 s-1]
 
     !------------------------------------------------------------------
     !  local Variables
 
-    INTEGER  :: jl, jk, itop_new, itop_prev
+    INTEGER  :: jl, jk, itop_new !, itop_prev
     REAL(wp) :: zmid(nidx,nsnow+2)
     REAL(wp) :: z1(nidx)
     REAL(wp) :: zd1(nidx,nsnow+1)
@@ -671,6 +672,7 @@ CONTAINS
 
     grnd_hflx(:) = 0._wp
     hcap_grnd(:) = 0._wp
+    t_soil_top(:) = t_srf_unfilt(:)
 
     !
     !-----------------------------------------------------------------------------------------------
@@ -695,26 +697,26 @@ CONTAINS
     ! Reset old values accounting for changes in number of snow layers
     !
     DO jl=1,nidx
-      itop_prev = itop_old(jl)
+      ! itop_prev = itop_old(jl)
       itop_new = itop(jl)
-      t_snow_acoef(jl,1:itop_new-1) = 0._wp
-      t_snow_bcoef(jl,1:itop_new-1) = 0._wp
+      ! t_snow_acoef(jl,1:itop_new-1) = 0._wp
+      ! t_snow_bcoef(jl,1:itop_new-1) = 0._wp
       t_snow      (jl,1:itop_new-1) = 0._wp
-      DO jk=itop_new,nsnow                                     ! At least one snow layer present
-        IF (itop_new < itop_prev .AND. jk < itop_prev) THEN    ! New snow layer
-          IF (itop_prev == nsnow+1) THEN                       ! No snow layers present in previous time step
-            t_snow_acoef(jl,jk) = t_soil_acoef(jl)             ! so we use coefficients and old temperature from top soil layer
-            t_snow_bcoef(jl,jk) = t_soil_bcoef(jl)
-            t_snow      (jl,jk) = t_soil      (jl)
-          ELSE                                                 ! Use values from previous top snow layer
-            t_snow_acoef(jl,jk) = t_snow_acoef(jl,itop_prev)
-            t_snow_bcoef(jl,jk) = t_snow_bcoef(jl,itop_prev)
-            t_snow      (jl,jk) = t_snow      (jl,itop_prev)
-          END IF
-        ! ELSE                                                 ! Snow layer was present before
-        !   ! Nothing to do
-        END IF
-      END DO
+      ! DO jk=itop_new,nsnow                                     ! At least one snow layer present
+      !   IF (itop_new < itop_prev .AND. jk < itop_prev) THEN    ! New snow layer
+      !     IF (itop_prev == nsnow+1) THEN                       ! No snow layers present in previous time step
+      !       t_snow_acoef(jl,jk) = t_soil_acoef(jl)             ! so we use coefficients and old temperature from top soil layer
+      !       t_snow_bcoef(jl,jk) = t_soil_bcoef(jl)
+      !       t_snow      (jl,jk) = t_soil      (jl)
+      !     ELSE                                                 ! Use values from previous top snow layer
+      !       t_snow_acoef(jl,jk) = t_snow_acoef(jl,itop_prev)
+      !       t_snow_bcoef(jl,jk) = t_snow_bcoef(jl,itop_prev)
+      !       t_snow      (jl,jk) = t_snow      (jl,itop_prev)
+      !     END IF
+      !   ! ELSE                                                 ! Snow layer was present before
+      !   !   ! Nothing to do
+      !   END IF
+      ! END DO
     END DO
     !
     !-----------------------------------------------------------------------------------------------
@@ -724,20 +726,35 @@ CONTAINS
     IF (.NOT. lstart) THEN
       t_snow(:,:) = 0._wp
       DO jk=1,nsnow
-        WHERE (jk == itop(:))                              ! Top snow layer
+        WHERE (itop(:) <= jk .AND. jk <= itop_old(:))           ! zero+ new snow layers: layers from new top layer to top prev layer
+          t_snow(:,jk) = t_srf_unfilt(:)
+        ELSE WHERE (itop(:) > itop_old(:) .AND. jk == itop(:))  ! snow present but fewer snow layers : new top layer
           t_snow(:,jk) = t_srf_unfilt(:)
         END WHERE
       END DO
       DO jk=2,nsnow
-        WHERE (jk > itop(:))                               ! Snow layers below top layer
+        WHERE (jk > MAX(itop(:), itop_old(:)))                   ! Snow layers below top new and old layer
           t_snow(:,jk) = t_snow_acoef(:,jk-1) + t_snow_bcoef(:,jk-1) * t_snow(:,jk-1)
         END WHERE
       END DO
+      ! New temperature for top soil layer (t_srf_unfilt where there was or is no snow)
+      WHERE (MAX(itop(:),itop_old(:)) <= nsnow)
+        t_soil_top(:) = t_snow_acoef(:,nsnow) + t_snow_bcoef(:,nsnow) * t_snow(:,nsnow)
+      ELSE WHERE
+        t_soil_top(:) = t_srf_unfilt(:)
+      END WHERE
     END IF
+
     !
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
+
+    DO jl=1,nidx
+      itop_new = itop(jl)
+      t_snow_acoef(jl,1:itop_new-1) = 0._wp
+      t_snow_bcoef(jl,1:itop_new-1) = 0._wp
+    END DO
 
     DO jk = 1,nsnow
       WHERE (jk >= itop(:))
