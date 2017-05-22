@@ -73,14 +73,18 @@ The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, 
 \end{itemize}
 ~\\
 
-\textbf{SLM land/plant: Call-Tree a.k.a. Queue}
+\textbf{SLM model call-trees}
+\\ 
+
+\textsc{SLM Land} (Plant + Soil)
 \begin{enumerate}
-\item set{\_}zero{\_}veg{\_}fluxes
-\item set{\_}zero{\_}sb{\_}fluxes
+\item reset{\_}veg{\_}fluxes
+\item reset{\_}sb{\_}fluxes
 \item update{\_}sb{\_}rate{\_}modifier
 \item update{\_}radiation
-\item update{\_}phenology
 \item update{\_}canopy{\_}fluxes
+\item update{\_}soil{\_}physics
+\item update{\_}phenology
 \item update{\_}veg{\_}turnover
 \item update{\_}veg{\_}dynamics
 \item CASE (sb{\_}config\%sb{\_}model{\_}scheme)
@@ -89,25 +93,61 @@ The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, 
   \item jsm: update{\_}sb{\_}jsm
 \end{enumerate}
 \item update{\_}growth
-\item update{\_}soil{\_}physics
 \item update{\_}veg{\_}pools
 \item update{\_}sb{\_}pools
 \item update{\_}time{\_}averages
-\item write data: write{\_}output{\_}pool and write{\_}output{\_}flux
+\item write{\_}output{\_}pool
+\item write{\_}output{\_}flux
 \end{enumerate}
 ~\\
 
-\textbf{SLM soil: Call-Tree a.k.a. Queue}
+
+\textsc{SLM Plant}
 \begin{enumerate}
-\item set{\_}zero{\_}sb{\_}fluxes
+\item reset{\_}veg{\_}fluxes
+\item update{\_}radiation
+\item update{\_}canopy{\_}fluxes
+\item update{\_}soil{\_}physics
+\item update{\_}phenology
+\item update{\_}veg{\_}turnover
+\item update{\_}veg{\_}dynamics
+\item update{\_}growth
+\item update{\_}veg{\_}pools
+\item update{\_}time{\_}averages
+\item write{\_}output{\_}pool
+\item write{\_}output{\_}flux
+\end{enumerate}
+~\\
+
+
+\textsc{SLM Soil}
+\begin{enumerate}
+\item reset{\_}sb{\_}fluxes
+\item update{\_}sb{\_}rate{\_}modifier
 \item CASE (sb{\_}config\%sb{\_}model{\_}scheme)
 \begin{enumerate}
   \item simple: update{\_}sb{\_}simple{\_}model
   \item jsm: update{\_}sb{\_}jsm
 \end{enumerate}
 \item update{\_}sb{\_}pools
-\item write data: write{\_}output{\_}pool and write{\_}output{\_}flux
+\item write{\_}output{\_}pool
+\item write{\_}output{\_}flux
 \end{enumerate}
+~\\
+
+
+\textsc{SLM Canopy} (Subset of Plant)
+\begin{enumerate}
+\item reset{\_}veg{\_}fluxes
+\item update{\_}radiation
+\item update{\_}canopy{\_}fluxes
+\item update{\_}soil{\_}physics
+\item update{\_}veg{\_}pools
+\item update{\_}time{\_}averages
+\item write{\_}output{\_}flux
+\end{enumerate}
+~\\
+
 
 
 \newpage

@@ -30,7 +30,7 @@ singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent wit
 
 ##>> special runs <<####################################################################################
 # (1) run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="T"    # T (True) or F (False) [large caps]
+specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
 
 # (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
