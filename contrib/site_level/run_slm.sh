@@ -116,6 +116,9 @@ case "$slmModel" in
 "plant")
   cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
   ;;
+"canopy")
+  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  ;;
 "soil")
   cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*_lit.dat      ./"$forceSoilLitterFile"
   cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*_sph.dat      ./"$forceSoilPhysicFile"
@@ -249,7 +252,7 @@ if [ $specialFluxnetOutput == "T" ]; then
   mv ./*.nc                 ./output 
 fi
 mv ./*.txt                  ./output 
-if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] # || [ "$slmModel" == "soil" ]
+if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "canopy" ] # || [ "$slmModel" == "soil" ]
  then
   mv ./*.pdf                  ./postprocessing
 fi

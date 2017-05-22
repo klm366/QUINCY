@@ -198,7 +198,7 @@ PROGRAM land_model_driver
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(base_config%slm_model_name))
-    CASE('land','plant','soil')
+    CASE('land','plant','soil','canopy')
       CALL allocate_slm_output_variables ! mo_shared_output
       CALL init_slm_output_variables     ! mo_shared_output
       CALL open_pool_output_files
@@ -206,8 +206,6 @@ PROGRAM land_model_driver
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing
       END IF
-!    CASE('canopy')
-!      see  mo_land_model_interface:canopy_model_write_data
     CASE('test_canopy')
       ntimestep = 1
    END SELECT

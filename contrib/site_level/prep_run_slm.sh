@@ -15,7 +15,7 @@
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
-slmModel="land"        # land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant) are currently available
+slmModel="land"        # land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant), canopy
 
 
 ##>> sites <<###########################################################################################
@@ -30,7 +30,7 @@ singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent wit
 
 ##>> special runs <<####################################################################################
 # (1) run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
+specialFluxnetOutput="T"    # T (True) or F (False) [large caps]
 
 # (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
@@ -254,7 +254,7 @@ while getopts ":e:s:c:m:y:o:b:h" opt; do
     echo "       F: not using the custom site list"
     echo " -m set slmModel"
     echo "    Arguments to -m:"
-    echo "       land plant soil"
+    echo "       land plant soil canopy"
     echo " -y set simulation length"
     echo "    Arguments to -y:"
     echo "       any integer value"
@@ -299,7 +299,7 @@ return 0
 }
 # lists to validate against
 validatesiteDataSet="f c"
-validateSlmModel="land plant soil"
+validateSlmModel="land plant soil canopy"
 validateBNFScheme="standard std_plus_costs optimal resistance"
 validateMycScheme="no am ecm"
 validateCanopyLayerScheme="standard fapar"
@@ -454,12 +454,15 @@ if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
 fi
 
 
-## SLM model forcing: land/plant/soil 
+## SLM model forcing: land/plant/canopy/soil 
 case "$slmModel" in
 "land")
   siteDataFoldForcing="$siteDataFold""met_forcing/"
   ;;
 "plant")
+  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  ;;
+"canopy")
   siteDataFoldForcing="$siteDataFold""met_forcing/"
   ;;
 "soil")
@@ -731,7 +734,7 @@ fi
 sync
 
 ## define a function that manipulates the namelist && change namelist according to options ##
-# model: slm_model_name = land plant soil
+# model: slm_model_name = land plant soil canopy
 # 2 do: add other options like optimization
 
  # this function is copied from run_slm.sh without any modification
@@ -896,7 +899,7 @@ fi
 
 ## cleanup temporary files and folders via cleanup_slm_hpc_run.sh ##
 # this job is pending until the above started $jobName has ended
-sleep 2s  # just some waiting time to avoid any interference with the above started job
+sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
 bsub -w "ended($jobName)" -q "$queue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" ./cleanup_slm_hpc_run.sh "$jobName" "$array" "$singleSiteName"
 

@@ -975,6 +975,19 @@ CONTAINS
         fname = 'soilfluxes'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
+      CASE('canopy') ! subset of CASE('land','plant')
+        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+
       CASE('soil')
         fname = 'soilfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
@@ -1034,6 +1047,17 @@ CONTAINS
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
         WRITE(lun,'(a)') 'Time HetResp HetResp_dC13 HetResp_DC14 Net_Mineralisation_NH4 Net_Mineralisation_PO4' 
+
+      CASE('canopy') ! subset of CASE('land','plant')
+        ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
+        lun=lun+1   
+        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
+                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
 
       CASE('soil')
         WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
@@ -1227,7 +1251,7 @@ CONTAINS
 
 
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant')
+      CASE('land','plant','canopy')
 
         !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
         !! 
@@ -1307,36 +1331,64 @@ CONTAINS
        
                ! write
                lun = 100 + 30
-               write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
-                                     n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                     npp_acc, res_use_c_acc
-               lun=lun+1
-               dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
-               dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
-               dC13rm = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
-               write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
-                                     calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
-                                     calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
-                                     calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
-               lun=lun+1
-               write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
-                                      res_use_n_acc, n_deposition_acc, n_fixation_acc, n_loss_acc
-               lun=lun+1
-               write(lun,'(4F12.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
-               lun=lun+1
-               write(lun,'(12F16.8)') time_d, transpiration_acc, drainage_acc, gc_acc, ga_acc
-               lun=lun+1
-               IF(ppfd_acc>eps8) THEN
-                  hlp1=appfd_acc/ppfd_acc
-               ELSE
-                  hlp1=0.0_wp
-               ENDIF
-               write(lun,'(12F16.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
-                                      albedo_acc, ppfd_acc, appfd_acc, hlp1
-               lun=lun+1
-               dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
-               write(lun,'(12F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
-                                      net_min_nh4_acc, net_min_po4_acc
+               SELECT CASE(TRIM(base_config%slm_model_name))
+                 CASE('land','plant')
+                   write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                                         n_transform_resp_acc,n_fixation_resp_acc         , & 
+                                         npp_acc, res_use_c_acc
+                   lun=lun+1
+                   dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
+                   dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
+                   dC13rm = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
+                   write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
+                                         calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
+                                         calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
+                                         calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
+                   lun=lun+1
+                   write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
+                                          res_use_n_acc, n_deposition_acc, n_fixation_acc, n_loss_acc
+                   lun=lun+1
+                   write(lun,'(4F12.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
+                   lun=lun+1
+                   write(lun,'(12F16.8)') time_d, transpiration_acc, drainage_acc, gc_acc, ga_acc
+                   lun=lun+1
+                   IF(ppfd_acc>eps8) THEN
+                      hlp1=appfd_acc/ppfd_acc
+                   ELSE
+                      hlp1=0.0_wp
+                   ENDIF
+                   write(lun,'(12F16.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
+                                          albedo_acc, ppfd_acc, appfd_acc, hlp1
+                   lun=lun+1
+                   dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
+                   write(lun,'(12F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
+                                          net_min_nh4_acc, net_min_po4_acc
+
+                 CASE('canopy') ! subset of CASE('land','plant')
+                   ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
+                   write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                                         n_transform_resp_acc,n_fixation_resp_acc         , & 
+                                         npp_acc, res_use_c_acc
+                   lun=lun+1
+                   dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
+                   dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
+                   dC13rm = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
+                   write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
+                                         calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
+                                         calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
+                                         calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
+                   lun=lun+1
+                   write(lun,'(12F16.8)') time_d, transpiration_acc, drainage_acc, gc_acc, ga_acc
+                   lun=lun+1
+                   IF(ppfd_acc>eps8) THEN
+                      hlp1=appfd_acc/ppfd_acc
+                   ELSE
+                      hlp1=0.0_wp
+                   ENDIF
+                   write(lun,'(12F16.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
+                                          albedo_acc, ppfd_acc, appfd_acc, hlp1
+               END SELECT
+
                ! set zero
                gpp_acc           = 0.0_wp
                growth_resp_acc   = 0.0_wp

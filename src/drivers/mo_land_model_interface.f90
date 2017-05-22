@@ -259,13 +259,13 @@ CONTAINS
     !! land ---------------------------------------------------------------------------------------
     CASE('land')
 
-    !! init/reset fluxes (with/to zero)
-    !! 
+      !! init/reset fluxes (with/to zero)
+      !! 
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
-    !! run Tasks
-    !!
+      !! run Tasks
+      !!
       CALL update_sb_rate_modifier(tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
@@ -283,24 +283,24 @@ CONTAINS
       CALL update_veg_pools       (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
 
-    !! accumulation over time - daytime & moving average
-    !! 
+      !! accumulation over time - daytime & moving average
+      !! 
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
-    !! output pool: write output in certain intervals, see mo_shared_output
-    !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
-    !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-    !! 
+      !! output pool: write output in certain intervals, see mo_shared_output
+      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
+      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
+      !! 
       CALL write_output_pool(tile, model%options, time_day, time_year)
 
-    !! output flux: write output in certain intervals, see mo_shared_output
-    !! 
-    !! 
+      !! output flux: write output in certain intervals, see mo_shared_output
+      !! 
+      !! 
       CALL write_output_flux(tile, model%options, time_day, time_year)
 
-    !! output litterfall and soilphysics: usually this would be output at each timstep
-    !! 
-    !! 
+      !! output litterfall and soilphysics: usually this would be output at each timstep
+      !! 
+      !! 
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
@@ -308,12 +308,12 @@ CONTAINS
     CASE('plant')
     !! plant --------------------------------------------------------------------------------------
 
-    !! init/reset fluxes (with/to zero)
-    !! 
+      !! init/reset fluxes (with/to zero)
+      !! 
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
 
-    !! run Tasks
-    !!
+      !! run Tasks
+      !!
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
@@ -323,24 +323,24 @@ CONTAINS
       CALL update_veg_growth      (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
 
-    !! accumulation over time - daytime & moving average
-    !! 
+      !! accumulation over time - daytime & moving average
+      !! 
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
-    !! output pool: write output in certain intervals, see mo_shared_output
-    !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
-    !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-    !! 
+      !! output pool: write output in certain intervals, see mo_shared_output
+      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
+      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
+      !! 
       CALL write_output_pool(tile, model%options, time_day, time_year)
 
-    !! output flux: write output in certain intervals, see mo_shared_output
-    !! 
-    !! 
+      !! output flux: write output in certain intervals, see mo_shared_output
+      !! 
+      !! 
       CALL write_output_flux(tile, model%options, time_day, time_year)
 
-    !! output litterfall and soilphysics: usually this would be output at each timstep
-    !! 
-    !! 
+      !! output litterfall and soilphysics: usually this would be output at each timstep
+      !! 
+      !! 
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year) 
       END IF
@@ -348,8 +348,8 @@ CONTAINS
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------
 
-    !! init/reset fluxes (with/to zero)
-    !! 
+      !! init/reset fluxes (with/to zero)
+      !! 
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
       CALL update_sb_rate_modifier    (tile, model%options)
@@ -376,25 +376,25 @@ CONTAINS
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
 
-    !! init/reset fluxes (with/to zero)
-    !! 
+      !! init/reset fluxes (with/to zero)
+      !! 
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
 
-    !! run Tasks
-    !!
+      !! run Tasks
+      !!
       CALL update_veg_pools       (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
 
-    !! accumulation over time - daytime & moving average
-    !! 
+      !! accumulation over time - daytime & moving average
+      !! 
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
-    !! output fluxes -> filename: fort.20
-    !! output also some a2l variables
-    !! 
-      CALL canopy_model_write_data(tile, model%options, time_day, time_year, t_air(1), swpar_srf_down(1))                           
+      !! output flux: write output in certain intervals, see mo_shared_output
+      !! ! only some flux files are written, see CASE statements in shared_output
+      !! 
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
     CASE('test_canopy')
     !! test_canopy --------------------------------------------------------------------------------
@@ -435,101 +435,6 @@ CONTAINS
       & )
     END IF
   END SUBROUTINE land_model_interface
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Write results and data from canopy model
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE canopy_model_write_data(tile, options, time_day, time_year, t_air, swpar_srf_down)
-
-    USE mo_rad_constants,         ONLY: rad2ppfd
-    USE mo_base_constants,        ONLY: one_year
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-
-    ! Use of process memories
-    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
-    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    REAL(wp),        INTENT(in)         :: time_day          !< displays the 'real time' in days; time_day == 1.0 after one day has passed
-    INTEGER,         INTENT(in)         :: time_year         !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
-    REAL(wp),        INTENT(in)         :: t_air             !< air temp
-    REAL(wp),        INTENT(in)         :: swpar_srf_down    !< short wave light at surface level ?
-    ! ---------------------------
-    ! 0.2 Local
-    INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':canopy_model_write_data'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem  
-    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
-    dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation        ! ASSIMI_
-    dsl4jsb_Real2D_onChunk      :: canopy_cond
-    dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
-    dsl4jsb_Real2D_onChunk      :: appfd                     ! RAD_
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl           ! VEG_
-    ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process config
-!    dsl4jsb_Get_config(xx_)
-    ! Get process memories
-    dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(RAD_)
-    ! Get process variables (Set pointers to variables in memory)
-!    model  => Get_model(tile%owner_model_id)
-!    lctlib => model%lctlib(tile%lcts%lib_id) 
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
-
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-      WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2ppfd, &
-                            gross_assimilation(1), appfd(1), & 
-                            canopy_cond(1), co2_conc_leaf(1) 
-      WRITE(21,'(20F16.7)') ppfd_sunlit_cl(1,:)       ! write values of all canopy layers
-      WRITE(22,'(20F16.7)') ppfd_shaded_cl(1,:)       ! write values of all canopy layers
-      WRITE(23,'(20F16.7)') fleaf_sunlit_cl(1,:)   ! write values of all canopy layers
-      WRITE(24,'(20F16.7)') ppfd_sunlit_cl(1,:) * fleaf_sunlit_cl(1,:) + &
-                            & ppfd_shaded_cl(1,:) + (1._wp - fleaf_sunlit_cl(1,:))  ! write values of all canopy layers
-
-  END SUBROUTINE canopy_model_write_data
 
 
   !-----------------------------------------------------------------------------------------------------

@@ -3,22 +3,45 @@
 # postprocessing of output data (e.g. plot canopy model output)
 # called from contrib/site_level/run_slm.sh (HPC simulations) or run_canopy.R (local SLM runs)
 
+###
+### copy pasted from the postprocessing_plant.R to cover the flux output files
+###
+print("postprocessing SLM output")
+
+# string function to remove trailing/leading blanks
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+
+#read timestep of output file from namelist for pool & flux
+namelist=read.delim('namelist.slm',header=F,sep="=",stringsAsFactors=F)
+tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
+
 # message
-#print(" postprocessing SLM output")
+#print(" postprocessing SLM plant output")
 
-flist = "fort.20" #list.files(path= ".",patter="fort*")
-nplot= 6          #length(flist)
+# get flux output files  
+flist_flux = Sys.glob(paste0("vegflux*","_",tstep_flux,"*.txt")) 
 
+#create overall file list
+flist=c(flist_flux) #(flist_pool,flist_flux)
+nplot=length(flist)
 
+# plot data
 pdf("canopy_model_plots.pdf", paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
-mat=matrix(seq(1,3*nplot,1),nrow=nplot,ncol=3,byrow=T)
-layout(mat)
-par(mai=c(0.5,0.5,0,0))
+
 for (i in 1:nplot) {
-  dat=read.table(flist,header=T)
-  plot(dat[,1],dat[,i+1],xlab=colnames(dat)[1],ylab=colnames(dat)[i+1],type='l')
+  print(paste('   reading',flist[i]))
+  dat=read.table(flist[i],header=T)
+  nvar=dim(dat)[2]
+  mat=matrix(seq(1,2*round(nvar/2)+2,1),nrow=round(nvar/2)+1,ncol=2,byrow=T) 
+  layout(mat)
+  par(mai=c(0.5,1,0,0))
+  for (v in 2:nvar) {
+    if(!all(is.na(dat[,v]))) plot(dat[,v],ylab=colnames(dat)[v],type='l')
+  }
 }
-garbage <- dev.off()  # run dev.off() but suppress the notification it usually provides
+
+garbage <- dev.off()
+
 
 
 # message

@@ -21,7 +21,7 @@ array=$2                          # was an job array or just one job simulated  
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                    # SLM model: land plant soil
+slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                    # SLM model: land plant soil canopy
 paramSensitivitySim=$(sed -n 7p "$simFold""default_files/config.txt" | awk '{print $1}')      # T/F  -> parameter sensitivity
 compareSimCRUNCEPvsGFDB=$(sed -n 8p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
 
@@ -92,7 +92,7 @@ if [ $paramSensitivitySim == T ]; then
 fi
 
 ## create one pdf file from the postprocessing pdf of all sites
-if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] # || [ "$slmModel" == "soil" ]
+if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "canopy" ] # || [ "$slmModel" == "soil" ]
  then
 
   cd "$simFold"

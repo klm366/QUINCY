@@ -156,7 +156,7 @@ while getopts ":p:m:y:o:b:h" opt; do
     echo "       note: setPFTAutomatically is set to: no"
     echo " -m set slmModel"
     echo "    Arguments to -m:"
-    echo "       land plant soil"
+    echo "       land plant soil canopy"
     echo " -y set simulation length"
     echo "    Arguments to -y:"
     echo "       any integer value"
@@ -301,7 +301,6 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
 else  # in case: $slmModel == "test_canopy"
   setPFTAutomatically="no"
 fi    # [$slmModel != "test_canopy"]
-[ $slmModel == "canopy" ] && simulation_length_number=10
 
 
 ## create folder, and copy R scripts, namelist, parameter-list and climate.dat file there ##
@@ -511,20 +510,9 @@ compiler=$(sed -n 2p ./../../../util/Make.inc.local | awk '{print $3}')
 echo "Simulation finished"
 sync
 
-## R script for postprocessing ##
-postProcessCanopy=F
-echo " Starting postprocessing"
-if [ $slmModel == "canopy" ]
- then
-  if [ $postProcessCanopy == F ]
-   then
-    echo "  Oh snap, postprocessing was disabled for SLM CANOPY in the run-slm_test-bed.sh [postProcessCanopy=F]"
-  else
-    Rscript ./postprocessing_"$slmModel".R
-  fi
-else
- Rscript ./postprocessing_"$slmModel".R
-fi
+## run R script for postprocessing ##
+Rscript ./postprocessing_"$slmModel".R
+
 sync
 echo " ... done !"
 
