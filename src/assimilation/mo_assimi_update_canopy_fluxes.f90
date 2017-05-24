@@ -497,6 +497,9 @@ CONTAINS
   
         END SELECT
 
+        ! nco could become zero
+        if (nco < eps8) nco = eps8
+
         ! output factors for optimal fraction calculation
         m_et = m1 * n1 / fn_et_cl
         m_rub = m2 * n2 / fn_rub_cl

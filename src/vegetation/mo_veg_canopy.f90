@@ -245,19 +245,32 @@ CONTAINS
         ENDWHERE
      ELSE
         !> 3.2.1 optimal case 
-        DO icanopy = 1,ncanopy
+        ! for canopy layer = 1
+        icanopy = 1
+        WHERE(lai_cl(:,icanopy) > eps8)
+          WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) == 1) ! new layer with new leaves
+            ! first layers: use static allocation as first guess
+            fn_chl_cl(:,icanopy) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(:,icanopy))) / chl2n
+            ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
+            fn_et_cl(:,icanopy) = (1._wp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
+                                  (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+            ! fraction in PepC
+            fn_pepc_cl(:,icanopy)=f_pepc
+            ! fraction of Rubisco is determined as the remainder
+            fn_rub_cl(:,icanopy) = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - fn_pepc_cl(:,icanopy)
+          ENDWHERE
+        ELSEWHERE
+              leaf_nitrogen_cl(:,icanopy)   = 0.0_wp
+              fn_oth_cl(:,icanopy)  = 1.0_wp
+              fn_chl_cl(:,icanopy)  = 0.0_wp
+              fn_et_cl(:,icanopy)   = 0.0_wp
+              fn_rub_cl(:,icanopy)  = 0.0_wp
+              fn_pepc_cl(:,icanopy) = 0.0_wp
+        ENDWHERE
+
+        ! for canopy layer > 1
+        DO icanopy = 2,ncanopy
            WHERE(lai_cl(:,icanopy) > eps8)
-              WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) == 1) ! new layer with new leaves
-                 ! first layers: use static allocation as first guess
-                 fn_chl_cl(:,icanopy) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(:,icanopy))) / chl2n
-                 ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-                 fn_et_cl(:,icanopy) = (1._wp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
-                                     (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
-                 ! fraction in PepC
-                 fn_pepc_cl(:,icanopy)=f_pepc
-                 ! fraction of Rubisco is determined as the remainder
-                 fn_rub_cl(:,icanopy) = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - fn_pepc_cl(:,icanopy)
-              ENDWHERE
               WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) > 1) ! other layers: copy from above layer 
                  fn_chl_cl(:,icanopy)        = fn_chl_cl(:,icanopy-1)
                  fn_et_cl(:,icanopy)         = fn_et_cl(:,icanopy-1)
@@ -275,15 +288,16 @@ CONTAINS
               fn_rub_cl(:,icanopy)  = 0.0_wp
               fn_pepc_cl(:,icanopy) = 0.0_wp
            ENDWHERE
+        ENDDO ! icanopy
 
-           IF(optimise_n_fractions)THEN
-
-              CALL optimise_canopy_n_fractions(lctlib                  , & ! in
-                                               lai_cl(:,icanopy)       , & 
+        IF(optimise_n_fractions) THEN
+          DO icanopy = 1,ncanopy
+            CALL optimise_canopy_n_fractions(lctlib                       , & ! in
+                                               lai_cl(:,icanopy)          , & 
                                                leaf_nitrogen_cl(:,icanopy), &
                                                ppfd_sunlit_cl(:,icanopy)  , &
                                                ppfd_shaded_cl(:,icanopy)  , &
-                                               fleaf_sunlit_cl(:,icanopy), &
+                                               fleaf_sunlit_cl(:,icanopy) , &
                                                t_air(:)                   , &
                                                t_acclim(:)                , &
                                                press_srf(:)               , &
@@ -299,9 +313,8 @@ CONTAINS
                                                fn_rub_cl(:,icanopy)      , &
                                                fn_et_cl(:,icanopy)       , &
                                                fn_pepc_cl(:,icanopy) )           
-           ENDIF
-
-        ENDDO
+          ENDDO
+        ENDIF ! optimise_n_fractions
      ENDIF
 
   END SUBROUTINE calc_canopy_layers
@@ -580,13 +593,23 @@ CONTAINS
      &     fn_et_cl,       &                     !< updated fraction of N in ET
      &     fn_pepc_cl                            !< updated fraction of N in PepC (C4-only)
     ! 0.2 Local
+    REAL(wp)  :: hlp1, hlp2, hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_update_n_fractions'
+
+    hlp1 = ABS(fn_rub_opt_cl-fn_rub_cl) / fn_rub_cl
+    hlp2 = ABS(fn_et_opt_cl-fn_et_cl) / fn_et_cl
+    ! since C3 plants don't have PEPC, avoid dividing by zero here
+    IF(fn_pepc_cl>eps8) THEN
+       hlp3 = ABS(fn_pepc_opt_cl-fn_pepc_cl)/ fn_pepc_cl
+    ELSE
+       hlp3 = 0.0_wp
+    ENDIF
 
 
     ! check if changing fraction to optimal values is possible in one timestep
-    IF (ABS(fn_rub_opt_cl-fn_rub_cl) / fn_rub_cl <= delta_n_fraction .AND. &
-        ABS(fn_et_opt_cl-fn_et_cl) / fn_et_cl <= delta_n_fraction .AND. &
-        ABS(fn_pepc_opt_cl-fn_pepc_cl) / fn_pepc_cl <= delta_n_fraction) THEN
+    IF (hlp1 <= delta_n_fraction .AND. &
+        hlp2 <= delta_n_fraction .AND. &
+        hlp3 <= delta_n_fraction) THEN
        fn_rub_cl = fn_rub_opt_cl
        fn_et_cl = fn_et_opt_cl
        fn_pepc_cl = fn_pepc_opt_cl
@@ -992,10 +1015,13 @@ CONTAINS
         ! adjust N fractions for any changes in canopy N distribtuion
         ! for optimal fractions this is only a aproximation
         IF (lai(ichunk)>eps8) THEN
+          ! avoid division by zero for plants that have no leaf nitrogen
+          WHERE (leaf_nitrogen_new_cl(ichunk,:) > eps8 .AND. fn_oth_cl(ichunk,:) < 1._wp)
            fn_rub_new_cl(ichunk,:) = fn_rub_cl(ichunk,:) * (1._wp - fn_oth_new_cl(ichunk,:)) / (1._wp - fn_oth_cl(ichunk,:))
            fn_et_new_cl(ichunk,:) = fn_et_cl(ichunk,:) * (1._wp - fn_oth_new_cl(ichunk,:)) / (1._wp - fn_oth_cl(ichunk,:))
            fn_pepc_new_cl(ichunk,:) = fn_pepc_cl(ichunk,:) * (1._wp - fn_oth_new_cl(ichunk,:)) / (1._wp - fn_oth_cl(ichunk,:))
            fn_chl_new_cl(ichunk,:) = fn_chl_cl(ichunk,:) * (1._wp - fn_oth_new_cl(ichunk,:)) / (1._wp - fn_oth_cl(ichunk,:))
+          END WHERE
         END IF
 
         ! calculate photosynthesis for each layer

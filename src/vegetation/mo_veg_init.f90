@@ -466,6 +466,40 @@ CONTAINS
     ! Declare pointers to variables in memory
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
+    dsl4jsb_Real2D_onChunk      :: target_cn_leaf
+    dsl4jsb_Real2D_onChunk      :: target_np_leaf
+    dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
+    dsl4jsb_Real2D_onChunk      :: target_np_fine_root
+    dsl4jsb_Real2D_onChunk      :: dens_ind
+    dsl4jsb_Real2D_onChunk      :: dphi
+    dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: press_srf_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
@@ -496,6 +530,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
@@ -520,6 +556,40 @@ CONTAINS
     ! ---------------------------
     ! 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
@@ -550,6 +620,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
     ! 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
 
 !! *slmtemp
@@ -614,6 +686,44 @@ CONTAINS
     t_air_week_mavg(:)                = 283.15_wp
     t_air_month_mavg(:)               = 283.15_wp
     t_jmax_opt_mavg(:)                = 17.0_wp
+
+      !! initialising moving averages
+      !! 
+      ! allocation
+      npp_talloc_mavg(:) = 0.0_wp
+      n_fixation_talloc_mavg(:) = 0.0_wp
+      transpiration_talloc_mavg(:) = eps8
+      unit_transpiration_talloc_mavg(:) = 1.e-6
+      unit_uptake_n_talloc_mavg(:) = eps8
+      unit_uptake_p_talloc_mavg(:) = 4._wp*1.e-10
+      dphi_talloc_mavg(:) =  - lctlib%phi_leaf_min
+      growth_cn_talloc_mavg(:) = 60.0_wp
+      unit_npp_talloc_mavg(:) = unit_uptake_n_talloc_mavg(:) * growth_cn_talloc_mavg(:)
+      growth_cp_talloc_mavg(:) = 2000.0_wp
+      labile_carbon_talloc_mavg(:) = 0.0_wp
+      labile_nitrogen_talloc_mavg(:) = 0.0_wp
+      labile_phosphorus_talloc_mavg(:) = 0.0_wp
+      reserve_carbon_talloc_mavg(:) = 0.0_wp
+      reserve_nitrogen_talloc_mavg(:) = 0.0_wp
+      reserve_phosphorus_talloc_mavg(:) = 0.0_wp
+      ! N fraction optimisation
+      ! 
+      fleaf_sunlit_tfrac_mavg_cl(:,:) = 0.5_wp
+      t_air_tfrac_mavg(:) = 283.15_wp
+      press_srf_tfrac_mavg(:) = standard_press_srf
+      co2_mixing_ratio_tfrac_mavg(:) = def_co2_mixing_ratio
+      ga_tfrac_mavg(:) = 0.2_wp
+      beta_sinklim_ps_tfrac_mavg(:) = 1.0_wp
+      ! leaf N optimisation
+      ! 
+      fleaf_sunlit_tcnl_mavg_cl(:,:) = 0.5_wp
+      t_air_tcnl_mavg(:) = 283.15_wp
+      press_srf_tcnl_mavg(:) = standard_press_srf
+      co2_mixing_ratio_tcnl_mavg(:) = def_co2_mixing_ratio
+      beta_sinklim_ps_tcnl_mavg(:) = 1.0_wp
+      growth_cn_tcnl_mavg(:) = 60.0_wp
+      uptake_n_tcnl_mavg(:) = eps8
+      npp_tcnl_mavg(:) = uptake_n_tcnl_mavg * growth_cn_tcnl_mavg
 
 
   END SUBROUTINE init_veg_canopy
