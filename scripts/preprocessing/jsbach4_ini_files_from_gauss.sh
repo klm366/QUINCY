@@ -313,20 +313,20 @@ function remap_var {
             echo "Extracting elevation from EXTPAR file ..."
             if [[ "${old_r2b4_amip}" != "true" ]] 
             then
-              ${cdo} setvar,elevation -ifthen ${grid_name}_notsea_miss.nc \
+              ${cdo} setvar,elevation \
                     -setgrid,${icon_grid_file} -selvar,topography_c ${extpar_file} \
                      ${grid_name}_${var}_remap.nc
             else
               if [[ "${coupled}" != "true" ]]
               then
-                ${cdo} setvar,elevation -ifthen ${grid_name}_notsea_miss.nc \
+                ${cdo} setvar,elevation \
                       -remapdis,${icon_grid_file} \
                       -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
                       -selvar,topography_c ${extpar_file} \
                        ${grid_name}_${var}_remap.nc
               else
                 temp=$(mktemp -u --tmpdir=.)
-                ${cdo} setvar,elevation -ifthen ${grid_name}_notsea_miss.nc \
+                ${cdo} setvar,elevation \
                       -remapdis,${grid_name}_notsea.nc \
                       -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
                       -selvar,topography_c ${extpar_file} \
@@ -341,21 +341,21 @@ function remap_var {
             # Note: setrtoc in followoing is necessary because SSO variables in extpar file contain missing values
             if [[ "${old_r2b4_amip}" != "true" ]] 
             then
-              ${cdo} setvar,${var} -ifthen ${grid_name}_notsea_miss.nc \
+              ${cdo} setvar,${var} \
                     -setgrid,${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
                     -selvar,${sso_dict[${var}]} ${extpar_file} \
                      ${grid_name}_${var}_remap.nc
             else
               if [[ "${coupled}" != "true" ]]
               then
-                ${cdo} setvar,${var} -ifthen ${grid_name}_notsea_miss.nc \
+                ${cdo} setvar,${var} \
                       -remap${remap_scheme},${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
                       -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
                       -selvar,${sso_dict[${var}]} ${extpar_file} \
                        ${grid_name}_${var}_remap.nc
               else
                 temp=$(mktemp -u --tmpdir=.)
-                ${cdo} setvar,${var} -setgrid,${coupled_grid_file} -ifthen ${grid_name}_notsea_miss.nc \
+                ${cdo} setvar,${var} -setgrid,${coupled_grid_file} \
                       -remap${remap_scheme},${coupled_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
                       -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
                       -selvar,${sso_dict[${var}]} ${extpar_file} \
