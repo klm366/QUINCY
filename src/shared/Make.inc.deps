@@ -1,7 +1,7 @@
 mo_shared_constants.o: \
   mo_kind.o
 
-mo_shared_util.o: \
+mo_util.o: \
   mo_kind.o
 
 mo_phy_schemes.o: \

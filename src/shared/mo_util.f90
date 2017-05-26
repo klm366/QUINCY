@@ -8,7 +8,7 @@
 !! First version by Jan Engel (2016-03-23)
 !! 2nd version by Jan Engel (2016-07-15); all content removed, see SVN r198 & trac ticket #63
 !!
-MODULE mo_shared_util
+MODULE mo_util
 
   USE mo_kind,         ONLY: wp
 
@@ -16,7 +16,7 @@ MODULE mo_shared_util
   PRIVATE
   PUBLIC :: tolower, int2string
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_util'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_util'
 
 CONTAINS
 
@@ -78,4 +78,4 @@ CONTAINS
 
 
 
-END MODULE mo_shared_util
+END MODULE mo_util

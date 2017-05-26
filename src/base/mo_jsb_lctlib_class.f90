@@ -21,7 +21,7 @@ MODULE mo_jsb_lctlib_class
 !  USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
   USE mo_kind,         ONLY: wp
   USE mo_exception,    ONLY: message_text, finish
-  USE mo_shared_util,  ONLY: int2string
+  USE mo_util,         ONLY: int2string
 
   IMPLICIT NONE
   PRIVATE
@@ -157,7 +157,7 @@ CONTAINS
     !
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
-    USE mo_shared_util, ONLY: tolower
+    USE mo_util,    ONLY: tolower
 
     ! USE statements necessary for modifying input values of lctlib parameters
     USE mo_base_constants,          ONLY: one_day, one_year

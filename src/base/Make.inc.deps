@@ -41,7 +41,7 @@ mo_jsb_lctlib_class.o: \
   mo_shared_constants.o \
   mo_veg_constants.o \
   mo_assimi_config_class.o \
-  mo_shared_util.o
+  mo_util.o
 
 mo_jsb_lct_class.o: \
   mo_kind.o \
