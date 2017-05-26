@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
     USE mo_base_memory,                     ONLY: t_slm_tile, grid
     USE mo_jsb_model_class,                 ONLY: t_jsb_model, new_model
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
-    USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
+    USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, Read_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
                                                   PHENO_, SB_, Get_process_name
@@ -159,7 +159,7 @@ CONTAINS
     model%options%ics     = ics                ! Index of chunk start
     model%options%ice     = ice                ! Index of chunk end
     model%options%nc      = ice - ics + 1      ! Length of chunk  (end-number - start-number + 1)
-    !model%lctlib => init_lctlib()           ! not possible here - need init constants init !!
+    !model%lctlib => Read_lctlib()             ! not possible here - need init constants init !!
 
 
     !! 4 Tile init
@@ -244,11 +244,11 @@ CONTAINS
     END DO          ! iproc
 
 
-    !! 8 lctlib init
+    !! 8 lctlib init and read
     !!
-    !! Important! init_lctlib() needs config and constants init to be finished !
+    !! Important! Read_lctlib() needs config and constants init to be finished !
     !! 
-    model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
+    model%lctlib => Read_lctlib("lctlib_slm_nlct8.def")   
 
 
     !! 9 Time init

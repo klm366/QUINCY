@@ -24,6 +24,8 @@ MODULE mo_pheno_constants
 
   !< some useful numbers for easy identification of photosynthetic pathways and growth forms
   !! need to be parameters (i.e. constant across model runtime)
+  !! 
+  !! JSBACH4.1 (20170519): Phenology type (none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grass: 4; crop: 5) 
   INTEGER, PARAMETER ::           &
       ievergreen    = 1         , &
       iraingreen    = 2         , &

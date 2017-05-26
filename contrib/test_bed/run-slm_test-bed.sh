@@ -303,10 +303,15 @@ else  # in case: $slmModel == "test_canopy"
 fi    # [$slmModel != "test_canopy"]
 
 
-## create folder, and copy R scripts, namelist, parameter-list and climate.dat file there ##
+## create folder, and copy some file there ##
+# postprocessing R scripts
+# namelist
+# lctlib_slm_nlct8.def
+# forcing (climate/ soil)
 mkdir -p ./"$slmModel"
-cp ../r_script/postprocessing_"$slmModel".R ./"$slmModel"
-cp ../namelist/namelist.slm ./"$slmModel"
+cp ../r_script/postprocessing_"$slmModel".R   ./"$slmModel"
+cp ../namelist/namelist.slm                   ./"$slmModel"
+cp ../../data/lctlib_slm_nlct8.def            ./"$slmModel"
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
   then
     if [ "$siteDataSet" == "n" ]

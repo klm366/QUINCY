@@ -13,7 +13,7 @@
 
 ## arguments passed to run_slm.sh ##
 jobName=$1                # a user specific alphanumeric string
-simDefaultFiles=$2        # name of folder with binary namelist R-Script in $bgiScratchUserFold/$jobName
+simDefaultFiles=$2        # name of folder with binary namelist lctlib R-Script in $bgiScratchUserFold/slm/$jobName
 singleSiteName=$3         # only provided if a single site should be simulated (not for param sensitivity), else a job array will be run
 
 
@@ -21,7 +21,7 @@ singleSiteName=$3         # only provided if a single site should be simulated (
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-simFoldDefaultFiles="$simFold""$simDefaultFiles"   # namelist binary R-Script config-file (provided by prep_run_slm.sh)
+simFoldDefaultFiles="$simFold""$simDefaultFiles"   # namelist binary lctlib R-Script config-file (provided by prep_run_slm.sh)
 
 
 ## job array ID & job index number ##
@@ -57,6 +57,7 @@ fi
 
 ## further variables ##
 slmNamelist="namelist.slm"
+slmLctlib="lctlib_slm_nlct8.def"
 slmBinary="land.x"
 slmRscript="postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
 slmRscript4fluxfile="convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
@@ -98,8 +99,9 @@ jobErrFold="./error/"
 mkdir -p "$jobErrFold"  # folder for error files and out files of this job
 
 ## copy files specific to this job into the job folder ##
-# namelist, binary, R-Script
+# namelist, binary, lctlib, R-Script
 cp "$simFoldDefaultFiles""$slmNamelist" ./
+cp "$simFoldDefaultFiles""$slmLctlib"   ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
 # special fluxnet-output files
@@ -243,6 +245,7 @@ mkdir -p ./input
 mkdir -p ./output
 mkdir -p ./postprocessing
 mv ./"$slmNamelist"         ./input
+mv ./"$slmLctlib"           ./input
 if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi

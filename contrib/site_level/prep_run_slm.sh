@@ -318,12 +318,15 @@ mkdir -p "$bgiScratchUserFold"
 slmBinary="../../x86_64-intel/bin/land.x"                  ## just one binary for all models
 slmNamelistFolder="../namelist/"
 slmNamelistFilename="namelist.slm"
+slmLctlibFolder="../../data/"
+slmLctlibFilename="lctlib_slm_nlct8.def"
 slmParamSensiFolder="../parameter_list/"
 slmParamListDefaultFilename="param.listD"
 slmParamTableFilename="param_table.txt"
 slmParamListDefault="$slmParamSensiFolder""param.listD"
 slmParamTable="$slmParamSensiFolder""param_table.txt"
 slmNamelist="$slmNamelistFolder""$slmNamelistFilename"            ## just one namelist for all models
+slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                  ## Landcovertype library for SLM with 8 PFTs
 slmRscript="../r_script/postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
 slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
 slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"  ## just the R-Script for FLUXNET diagnostics 
@@ -640,6 +643,11 @@ if [ ! -e "$slmNamelist" ]   # exit if non-existing
 	echo "EXIT! namelist is missing"
 	exit
 fi
+if [ ! -e "$slmLctlib" ]   # exit if non-existing
+  then
+	echo "EXIT! lctlib is missing"
+	exit
+fi
 if [ ! -e "$siteList" ]      # exit if non-existing
   then
 	echo "EXIT! site-list-data file is missing"
@@ -716,6 +724,7 @@ fi
 ## copy namelist binary R-Scripts to simulation folder ##
 cp "$slmBinary"     "$simFoldDefaultFiles"
 cp "$slmNamelist"   "$simFoldDefaultFiles"
+cp "$slmLctlib"     "$simFoldDefaultFiles"
 cp "$slmRscript"    "$simFoldDefaultFiles"
 if [ $specialFluxnetOutput == "T" ]; then 
   cp "$slmRscript4fluxfile" "$simFoldDefaultFiles"
