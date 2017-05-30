@@ -668,7 +668,7 @@ def hist_plot_wrapper ( nbar          = None,
     ndeltas = len ( input_delta )
 
     f        = plt.figure ( figsize = ( 10, 6 ))
-    supgrid  = gridspec.GridSpec( 1, ndeltas if show_can == True else 1 ) 
+    supgrid  = gridspec.GridSpec( 1, 2 if show_can == True else 1 ) 
     art      = []
 
     ####### first subplot

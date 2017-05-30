@@ -222,11 +222,12 @@ class Bench_Object ( Diagnostics, Report ):
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
 
         self.reporting = config [ "reporting" ]
-        self.wikipage  = Bench4JSBach_Wikipage ( self.config [ 'redmine_user' ],
-                                                 self.config [ 'redmine_key' ])
+        self.wikipage  = None
+                         
 
         es = self.config [ "experiments" ]
         n_refs = n_cans = 0
+
         for en, attr in es.iteritems ():
             name        = en
             name_orig   = attr.get ( "name_orig", None )
@@ -259,6 +260,11 @@ class Bench_Object ( Diagnostics, Report ):
                             'B4J_bench'        : self,
                             'redmine_user'     : self.config [ 'redmine_user' ],
                             'redmine_key'      : self.config [ 'redmine_key' ]}
+
+            if not path and not self.wikipage:
+                self.wikipage  = Bench4JSBach_Wikipage ( self.config [ 'redmine_user' ],
+                                                         self.config [ 'redmine_key' ])
+                
             
             if etype == "CMIP5":
                 varfile = find_files ( "*%s*%s*%s" % \
@@ -267,17 +273,21 @@ class Bench_Object ( Diagnostics, Report ):
                 kwargs [ 'var_filename' ] = varfile
                 e = CMIP5_Experiment ( self, **kwargs )
             elif etype == "MPIESM1":
+                kwargs [ "B4J_atmres" ]  = attr.get ( 'atm_res', "T63" )
+                kwargs [ "B4J_oceres" ]  = attr.get ( 'oce_res', "T63" )
                 e = MPIESM1_Experiment ( self, **kwargs )
             elif etype == "ICON":
                 e = ICON_Experiment ( self, **kwargs )
             else:
                 e = Experiment ( self, **kwargs )
             self.experiments.append ( e )
+
         if n_refs < 1 or n_cans < 1:
             raise Exception ( "No candidate or no reference experiment defined."  )
         self.n_cans = n_cans
         self.n_refs = n_refs
 
+        
         self.init_diagnostics ()
         
         self.logger.debug ( "Exiting." )

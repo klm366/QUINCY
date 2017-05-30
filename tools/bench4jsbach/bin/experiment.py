@@ -845,7 +845,9 @@ class MPIESM1_Experiment ( Experiment ):
         self.dirpath            = os.path.join ( self.B4J_path, self.B4J_name_orig )
         self.outdata_dirpath    = os.path.join ( self.dirpath, self.outfiles_dict [ "dirname" ])
         self.codesfiles_dirpath = os.path.join ( self.dirpath, self.codesfiles_dict [ 'dirname' ])
-        self.B4J_etype = "MPIESM1"
+        self.B4J_etype          = "MPIESM1"
+        self.B4J_atmres         = kwargs.get ( "B4J_atmres" )
+        self.B4J_oceres         = kwargs.get ( "B4J_oceres" )
 
         self.codesfiles_dict [ "is_tared" ] = self.from_archive
         
