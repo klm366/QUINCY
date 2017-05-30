@@ -318,7 +318,7 @@ CONTAINS
 #ifdef __ICON__
     next = time_config%tc_current_date + (1) * time_config%tc_dt_model 
 #else
-    previous = next_date
+    next = next_date
 #endif
 
   END FUNCTION get_time_next
