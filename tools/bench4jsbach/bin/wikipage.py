@@ -26,7 +26,7 @@ detail_finalyear                = 'finalyear'
 
 
 class Bench4JSBach_Wikipage ( object ):
-    codezmaw_url     = "https://code.zmaw.de"
+    codezmaw_url     = "https://code.mpimet.mpg.de"
     project_name     = "jsbach-bench"
     wikipage_name    = "Bench4jsbach_simulations"
     redmine          = None
