@@ -128,6 +128,7 @@ class Bench_Object ( Diagnostics, Report ):
     logger_name        = 'B4J_LOGGER'
     reporting          = False
     fetchremote        = False
+    deleteintermediate = False
     
     path_template      = "%(path)s/%(classification)s_%(expname)s_%(startdate)s-%(enddate)s.%(suffix)s"
     lsmpath_template   = "%(path)s/%(classification)s_%(expname)s.%(suffix)s"    
@@ -412,6 +413,21 @@ configuration file '%s' have to accord with the corresponding section name
             f.write ( config_contents )
 
         dkl_logger.debug ( "Exiting." )
+
+
+    def cleanup_intermediate ( self ):
+        dirs2clean = [  self.processed_path,
+                        os.path.join ( self.report_path, "sources" )]            
+        count = 0
+        for dir in dirs2clean:
+            for root, subdir, files in os.walk ( dir ):
+                for f in files:
+                    os.remove ( os.path.join ( root, f ))
+                    count += 1
+                    
+        self.logger.debug ( """Finished cleanup for diagnostics. 
+Deleted %d files out of the directories
+%s""" % ( count, print_item_or_list_rec ( dirs2clean, 3 )))
 
 
     def get_b4j_path ( self, filename, b4j_filetype ):

@@ -21,8 +21,14 @@ from util import print_item_or_list_rec
 
 work_dir = os.path.join ( bench4jsbach_base, "work" )
 
-parser = OptionParser()
-(options, args) = parser.parse_args()
+usage  = """Usage: <B4J RUNCLEAN SCRIPT> [options] [YOUR SCRIPT]"""
+parser = OptionParser ( usage = usage )
+parser.add_option("-f", "--force",
+                  action  = "store_true", 
+                  dest    = "force", 
+                  default = False,
+                  help    = "force cleaning of a b4j run environment, delete all files")
+( options, args ) = parser.parse_args ()
 
 nargs = len ( args )
 if nargs != 1:
@@ -55,6 +61,7 @@ else:
     dirs2clean = [ b4j_obj.graphics_path,
                    b4j_obj.processed_path,
                    b4j_obj.report_path ]
+    dirs2clean.append ( b4j_obj.interpolated_selected_path ) if options.force else None
 
     count = 0
     for dir in dirs2clean:

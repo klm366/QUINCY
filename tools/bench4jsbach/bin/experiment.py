@@ -495,7 +495,7 @@ for %s into %s. This might take a while ...""" % (
         self.land_sea_mask  = self.B4J_obj.lsmpath_template % { 
             'path'           : self.B4J_obj.interpolated_selected_path,
             'classification' : "land_sea_mask",
-            'expname'        : self.B4J_name,
+            'expname'        : self.B4J_name_orig,
             'suffix'         : fielddict [ 'suffix' ]}
         
         if os.path.isfile ( self.land_sea_mask ) and \

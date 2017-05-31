@@ -18,12 +18,19 @@ import bench
 
 start = timeit.default_timer ()
 
-usage  = """Usage: <B4J RUN SCRIPT> [options] [YOUR SCRIPT NAME | YOUR SCRIPT ]"""
+usage  = """Usage: <B4J RUN SCRIPT> [options] [YOUR SCRIPT NAME | YOUR SCRIPT]"""
 parser = OptionParser ( usage = usage )
-parser.add_option("-f", "--fetchremote",
-                  action="store_true", dest="fetchremote", default=False,
-                  help="fetch input files to b4j run environment")
-(options, args) = parser.parse_args()
+parser.add_option ( "-f", "--fetchremote",
+                    action  = "store_true", 
+                    dest    = "fetchremote", 
+                    default = False,
+                    help    = "force fetching of input files to a b4j run environment" )
+parser.add_option ( "-d", "--deleteintermediate",
+                    action  = "store_true",
+                    dest    = "deleteintermediate",
+                    default = False,
+                    help    = "delete intermediate files" )
+( options, args ) = parser.parse_args ()
 
 
 ### Start action:
@@ -68,7 +75,8 @@ else:
     print "* Reading configuration file '%s'." %  args [ 0 ]
     print "******************************************"
     
-    b4j_obj.fetchremote = options.fetchremote
+    b4j_obj.fetchremote        = options.fetchremote
+    b4j_obj.deleteintermediate = options.deleteintermediate
     
     # fetch outdata
     for exp in b4j_obj.experiments:
@@ -82,6 +90,9 @@ else:
     
     # reporting
     b4j_obj.write_report () if b4j_obj.reporting else None
+
+    # cleanup 
+    b4j_obj.cleanup_intermediate () if b4j_obj.deleteintermediate else None
     
     b4j_obj.logger.debug ( "Exiting." )
 
