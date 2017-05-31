@@ -13,6 +13,7 @@ MODULE mo_jsb_base
 !!$  USE mo_jsb_model_class, ONLY: t_jsb_model_m
 !!$  USE mo_jsb_class, ONLY: t_jsb, jsbach
   USE mo_jsb_class,   ONLY: jsbach
+  USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message_text, message, finish
   USE mo_util,        ONLY: int2string
 
@@ -20,21 +21,7 @@ MODULE mo_jsb_base
   PRIVATE
 
   PUBLIC :: jsbach
-  PUBLIC :: init_base !, register_model
-!!$  PUBLIC :: get_model
-
-!!$  TYPE t_jsb
-!!$    INTEGER :: no_of_models
-!!$    TYPE(t_jsb_model_m), POINTER :: models(:)
-!!$  END TYPE t_jsb
-
-
-!!$  TYPE(t_jsb) :: jsbach
-
-!!$  INTERFACE get_model
-!!$     MODULE PROCEDURE get_model_by_id
-!!$     !MODULE PROCEDURE get_model_by_name
-!!$  END INTERFACE get_model
+  PUBLIC :: init_base !, register_models
 
 CONTAINS
 
@@ -42,7 +29,7 @@ CONTAINS
 
     USE mo_jsb_control,        ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       & jsbach_runs_standalone, jsbach_is_restarted
-    USE mo_jsb_parallel_iface, ONLY: init_parallel_iface, init_mpi_communicators
+    USE mo_jsb_parallel,       ONLY: init_parallel_iface, init_mpi_communicators
     USE mo_jsb_model_class,    ONLY: t_jsb_model, new_model
     USE mo_jsb_config_class,   ONLY: new_model_config
     USE mo_jsb_time,           ONLY: init_time
@@ -100,6 +87,8 @@ CONTAINS
     END DO
 
     !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: delete!?
+
+    IF (debug_on()) CALL message(TRIM(routine), 'done basic initialization')
 
   END SUBROUTINE init_base
 

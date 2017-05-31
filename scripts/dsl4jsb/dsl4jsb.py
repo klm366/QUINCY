@@ -11,11 +11,11 @@
 #  Nov 10, 2016: Reiner Schnur, MPIM
 #  
 
-import sys, getopt, re, os, fnmatch
+import sys, getopt, re, os, fnmatch, io
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
 #re_function = re.compile(r'.*(dsl4jsb_(.*?)( |\())+', re.IGNORECASE)
-re_function = re.compile(r'dsl4jsb_(.*?)( |\()', re.IGNORECASE)
+re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
 
 # Table of macros
 #   Each entry is of the form
@@ -24,71 +24,80 @@ re_function = re.compile(r'dsl4jsb_(.*?)( |\()', re.IGNORECASE)
 #
 macros = {
     'use_processes' : [re.compile(
-        r'dsl4jsb_Use_processes (.*)',                                   re.IGNORECASE),
-        r'USE mo_jsb_process_factory, ONLY: Get_process_memory, Get_process_config, \1'],
+        r'dsl4jsb_Use_processes (.*)',                                       re.IGNORECASE),
+        r'USE mo_jsb_process_class, ONLY: \1'],
     'use_memory' : [re.compile(
-        r'dsl4jsb_Use_memory\((.*)\)',                                   re.IGNORECASE),
+        r'dsl4jsb_Use_memory *\((.*)_ *\)',                                  re.IGNORECASE),
         r'USE mo_\1_memory_class, ONLY: t_\1_memory'],
     'def_memory' : [re.compile(
-        r'dsl4jsb_Def_memory\((.*)\)',                                   re.IGNORECASE),
+        r'dsl4jsb_Def_memory *\((.*)_ *\)',                                  re.IGNORECASE),
         r'TYPE(t_\1_memory), POINTER :: \1__mem'],
     'get_memory' : [re.compile(
-        r'dsl4jsb_Get_memory\((.*)\)',                                   re.IGNORECASE),
-        r'CALL Get_process_memory(tile%mem, \1, \1__mem)'],
+        r'dsl4jsb_Get_memory *\((.*)_ *\)',                                  re.IGNORECASE),
+        r'SELECT TYPE (mm => tile%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem => mm ; END SELECT'],
+    'memory' : [re.compile(
+        r'dsl4jsb_Memory *\((.*?)_ *\)',                                     re.IGNORECASE),
+        r'\1__mem'],
     'use_config' : [re.compile(
-        r'dsl4jsb_Use_config\((.*)\)',                                   re.IGNORECASE),
+        r'dsl4jsb_Use_config *\((.*)_ *\)',                                  re.IGNORECASE),
         r'USE mo_\1_config_class, ONLY: t_\1_config'],
     'def_config' : [re.compile(
-        r'dsl4jsb_Def_config\((.*)\)',                                   re.IGNORECASE),
+        r'dsl4jsb_Def_config *\((.*)_ *\)',                                  re.IGNORECASE),
         r'TYPE(t_\1_config), POINTER :: \1__conf'],
     'get_config' : [re.compile(
-        r'dsl4jsb_Get_config\((.*)\)',                                   re.IGNORECASE),
-        r'CALL Get_process_config(model%processes(\1)%p%config, \1__conf)'],
+        r'dsl4jsb_Get_config *\((.*)_ *\)',                                  re.IGNORECASE),
+        r'SELECT TYPE (cc => model%processes(\1_)%p%config); TYPE IS (t_\1_config) ; \1__conf => cc ; END SELECT'],
     'config' : [re.compile(
-        r'dsl4jsb_Config\((.*?)\)',                                      re.IGNORECASE),
+        r'dsl4jsb_Config *\((.*?)_ *\)',                                     re.IGNORECASE),
         r'\1__conf'],
+    'lctlib' : [re.compile(
+        r'dsl4jsb_Lctlib',                                                   re.IGNORECASE),
+        r'model%lctlib(tile%lcts(1)%lib_id)'],
+    'lctlib_param' : [re.compile(
+        r'dsl4jsb_Lctlib_param *\((.*?)\)',                                  re.IGNORECASE),
+        r'model%lctlib(tile%lcts(1)%lib_id)%\1'],
     'real2d_onchunk' : [re.compile(
-        r'dsl4jsb_Real2D_onChunk',                                       re.IGNORECASE),
+        r'dsl4jsb_Real2D_onChunk',                                           re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:)'],
     'real3d_onchunk' : [re.compile(
-        r'dsl4jsb_Real3D_onChunk',                                       re.IGNORECASE),
+        r'dsl4jsb_Real3D_onChunk',                                           re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
     'get_var2d_onchunk' : [re.compile(
-        r'dsl4jsb_Get_var2D_onChunk\((.*?), *(.*?), *(.*?)\)',           re.IGNORECASE),
+        r'dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)',                re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,iblk)'],
     'get_var3d_onchunk' : [re.compile(
-        r'dsl4jsb_Get_var3D_onChunk\((.*?), *(.*?), *(.*?)\)',           re.IGNORECASE),
+        r'dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)',                re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],
     'var2d_onchunk' : [re.compile(
-        r'dsl4jsb_var2D_onChunk\((.*?), *(.*?)\)',                       re.IGNORECASE),
+        r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)',                    re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
     'var3d_onchunk' : [re.compile(
-        r'dsl4jsb_var3D_onChunk\((.*?), *(.*?)\)',                       re.IGNORECASE),
+        r'dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)',                    re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,:,iblk)'],
     'real2d_ondomain' : [re.compile(
-        r'dsl4jsb_Real2D_onDomain',                                      re.IGNORECASE),
+        r'dsl4jsb_Real2D_onDomain',                                          re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
     'real3d_ondomain' : [re.compile(
-        r'dsl4jsb_Real3D_onDomain',                                      re.IGNORECASE),
+        r'dsl4jsb_Real3D_onDomain',                                          re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
     'get_var2d_ondomain' : [re.compile(
-        r'dsl4jsb_Get_var2D_onDomain\((.*?), *(.*?), *(.*?)\)',          re.IGNORECASE),
+        r'dsl4jsb_Get_var2D_onDomain *\((.*?)_ *, *(.*?) *\)',               re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:)'],
     'get_var3d_ondomain' : [re.compile(
-        r'dsl4jsb_Get_var3D_onDomain\((.*?), *(.*?), *(.*?)\)',          re.IGNORECASE),
+        r'dsl4jsb_Get_var3D_onDomain *\((.*?)_ *, *(.*?) *\)',               re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:,:)'],
     'var2d_ondomain' : [re.compile(
-        r'dsl4jsb_var2D_onDomain\((.*?), *(.*?)\)',                      re.IGNORECASE),
+        r'dsl4jsb_var2D_onDomain *\((.*?)_ *, *(.*?) *\)',                   re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:)'],
     'var3d_ondomain' : [re.compile(
-        r'dsl4jsb_var3D_onDomain\((.*?), *(.*?)\)',                      re.IGNORECASE),
+        r'dsl4jsb_var3D_onDomain *\((.*?)_ *, *(.*?) *\)',                   re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:,:)'],
-    'var2d_ptr' : [re.compile(
-        r'dsl4jsb_var2D_ptr\((.*?), *(.*?)\)',                           re.IGNORECASE),
+    'var_ptr' : [re.compile(
+        r'dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)',                          re.IGNORECASE),
         r'\1__mem%\2%ptr'],
-    'var3d_ptr' : [re.compile(
-        r'dsl4jsb_var3D_ptr\((.*?), *(.*?)\)',                           re.IGNORECASE),
-        r'\1__mem%\2%ptr'],
+    'aggregate_onchunk' : [re.compile(
+        r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)',        re.IGNORECASE),
+        r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
     }
 
 help_text = """
@@ -112,19 +121,22 @@ def get_input_files(root):
             else:
                 yield os.path.join(dir.replace('./',''), file)
 
+def tolower(match):
+    return match.group(1).lower()+'_'
+
 def process_file(inputfile, outputfile, verbose=False, cwd=None):
-    with open(inputfile, 'r') as infile:
-        with (open(outputfile, 'w') if outputfile != '' else sys.stdout) as outfile:
-            outfile.write("!\n! This file was automatically generated from:\n")
-            outfile.write("!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n")
+    with io.open(inputfile, 'r', encoding="utf-8") as infile:
+        with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
+            outfile.write(u'!\n! This file was automatically generated from:\n')
+            outfile.write(u'!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n')
             if verbose:
                 if cwd:
-                    print '   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd)
+                    print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
                 else:
-                    print '   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile
+                    print('   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile)
             for line in infile:
                 if outputfile == '':
-                    outfile.write('! ' + line)
+                    outfile.write(u'! ' + line)
                 matches = re.finditer(re_function, line)
                 if matches:
                     for match in matches:         # match.groupt(1) contains the macro name without "dsl4jsb_"
@@ -132,8 +144,9 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                             key = match.group(1).lower()
                             pat, replace = macros[key]
                             line = pat.sub(replace, line)
+                            line = re.sub(r'([A-Z2]*?)_', tolower, line)
                         except:
-                            print 'ERROR in', inputfile, ': dsl4jsb macro not found:', match.group(1).lower()
+                            print('ERROR in ' + inputfile + ': dsl4jsb macro not found: ' + match.group(1).lower())
                             sys.exit()
                 outfile.write(line)
 
@@ -148,11 +161,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hvki:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
     except getopt.GetoptError:
-        print help_text
+        print(help_text)
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print help_text
+            print(help_text)
             sys.exit()
         elif opt in ("-v", "--verbose"):
             verbose = True
@@ -169,13 +182,13 @@ def main(argv):
         elif opt in ("-t", "--odir"):
             outputdir = os.path.abspath(arg)    # Make outputdir absolute
             if not os.path.exists(outputdir):
-                print 'Output directory ' + outputdir + ' does not exist.'
+                print('Output directory ' + outputdir + ' does not exist.')
                 sys.exit()
     if inputdir != '' and outputdir == '':
-        print 'Input directory specified, but no output directory'
+        print('Input directory specified, but no output directory')
         sys.exit()
     if inputfile != '' and inputdir != '':
-        print 'Specify either input file or input directory but not both!'
+        print('Specify either input file or input directory but not both!')
         sys.exit()
     if inputdir != '' and outputdir != '':
         inputfile = ''

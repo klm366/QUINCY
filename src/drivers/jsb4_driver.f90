@@ -18,18 +18,20 @@ PROGRAM jsb4_driver
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday
   USE mo_jsb_class,          ONLY: get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
 
-  dsl4jsb_Use_processes SRF
-  dsl4jsb_Use_memory(SRF)
+  dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(TURB_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
   ! Currently from adapter
   USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
@@ -85,9 +87,11 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
 
   TYPE(t_jsb_model), POINTER :: model
-  TYPE(t_jsb_tile),  POINTER :: tile
+  CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
-  dsl4jsb_Def_memory(SRF)
+  dsl4jsb_Def_memory(SEB_)
+  dsl4jsb_Def_memory(TURB_)
+  dsl4jsb_Def_memory(HYDRO_)
 
   !! JSB4 interface variables - input
   REAL(wp), ALLOCATABLE :: t_air_K(:,:)
@@ -134,7 +138,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hcap(:)
   REAL(wp), ALLOCATABLE :: rough_m_srf(:)
-  REAL(wp), ALLOCATABLE :: tte_corr(:)
+  REAL(wp), ALLOCATABLE :: q_snocpymlt(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dir(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dir(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
@@ -152,8 +156,6 @@ PROGRAM jsb4_driver
 
   ! Start MPI
   CALL p_start
-
-  CALL jsbach_init_version
 
   ! Initialize wallclock timer
 !$OMP PARALLEL
@@ -191,6 +193,8 @@ PROGRAM jsb4_driver
   CALL init_timer
 
   ! - jsbach_init
+  CALL jsbach_init_version
+
   CALL init_base('namelist.jsbach')
   CALL init_model(nproca, nprocb, npedim, model_id)
 
@@ -247,7 +251,7 @@ PROGRAM jsb4_driver
   ALLOCATE(grnd_hflx(nproma))
   ALLOCATE(grnd_hcap(nproma))
   ALLOCATE(rough_m_srf(nproma))
-  ALLOCATE(tte_corr(nproma))
+  ALLOCATE(q_snocpymlt(nproma))
   ALLOCATE(alb_vis_dir(nproma))
   ALLOCATE(alb_nir_dir(nproma))
   ALLOCATE(alb_vis_dif(nproma))
@@ -290,17 +294,18 @@ PROGRAM jsb4_driver
 
     CALL IO_read_streams
 
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
-      dsl4jsb_Get_memory(SRF)
-
-      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, t_srf)
-      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_q_air)
-      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_qsat_srf)
-      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, rough_h_srf)
+      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
+      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
+      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
+      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(SRF, evapotrans),-EPSILON(1._wp)) &
-        & / MIN(dsl4jsb_var2D_onChunk(SRF, evapopot),  -EPSILON(1._wp))
+      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotranspiration),-EPSILON(1._wp)) &
+        & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
 
   ENDIF
@@ -361,11 +366,13 @@ PROGRAM jsb4_driver
 
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
-        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
+        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), frac_par_diffuse(:,iblk), &
+        & press_srf(:,iblk), drag_srf(:,iblk), &
         & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk), &
+        & CO2_concentration(:,iblk), &
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-        & rough_h_srf_proc(:,iblk), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
+        & rough_h_srf_proc(:,iblk), rough_m_srf(:), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:), evapopot(:))
 
       IF (.NOT. read_interface_vars) THEN
@@ -430,7 +437,7 @@ PROGRAM jsb4_driver
 
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
   DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
-  DEALLOCATE(rough_m_srf, tte_corr, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+  DEALLOCATE(rough_m_srf, q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)

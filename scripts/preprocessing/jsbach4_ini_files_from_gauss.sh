@@ -1,0 +1,801 @@
+#!/bin/bash
+#_____________________________________________________________________________
+# Script to construct for a given ICON grid file initial fields and boundary conditions
+# for the land model JSBACH4+ and the ICON atmosphere by interpolating existing files
+# from ECHAM6 on Gaussian grid
+#
+# Reiner Schnur, MPI-M, 2017-04-10 initial version
+# 
+# Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
+#
+set -eu
+#_____________________________________________________________________________
+
+rootdir=/pool/data/ICON/grids
+
+case `hostname` in
+  mlogin*|mistralpp*)
+    basedir=${rootdir}/private/jsbach
+    #basedir=/work/mj0060/m212005/ini_files/jsbach4/icon                             # for local use
+    #
+    #output_path=${rootdir}/public/mpim                                             # eventually it should be this
+    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land  # temporary
+    #output_path=/work/mj0060/m212005/data/icon                                      # for local use
+    ;;
+  *)
+    basedir=/scratch/local1/m212005/ini_files/jsbach4/icon                          # for local use
+    output_path=/scratch/local1/m212005/data/icon                                   # for local use
+    ;;
+esac
+
+workdir=${basedir}/workdir
+
+old_r2b4_amip=false                                       # Temporary: old r2b4_amip grid (true) or new grids (false)
+[[ "${old_r2b4_amip}" != "true" ]] && \
+  grid_path=/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids || \
+  grid_path=/pool/data/ICON/grids/private/r2b4_amip
+
+bisections="0 1 2 3 4 5 6 7 8 9 10 11"
+#bisections="4"  # for testing
+
+remap_scheme=dis
+declare -A source_res_dict
+source_res_dict[0]=T31
+source_res_dict[1]=T31
+source_res_dict[2]=T31
+source_res_dict[3]=T63
+source_res_dict[4]=T63
+source_res_dict[5]=T63
+source_res_dict[6]=T127
+source_res_dict[7]=T127
+source_res_dict[8]=T127
+source_res_dict[9]=T255
+source_res_dict[10]=T255
+source_res_dict[11]=T255
+
+extpar_path=${rootdir}/private/mpim/icon_preprocessing/source/extpar.2016
+
+# Currently, only 0 or 11 possible
+npfts_list="0 11"
+
+# Only 1976 currently.
+year=1976
+
+#input_root=/pool/data/JSBACH/input
+
+# Note: glac must be at beginning of varlist
+varlist="glac lake init_moist snow roughness_length albedo elevation
+fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
+albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
+soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
+moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
+oromea orostd orosig orogam orothe oropic oroval"
+varlist="${varlist} cover_fract"
+
+coupled=false    # land sea mask for coupled experiment?
+coupled_grid_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/ATMOOCEANINP_pre04_OceWithCoast_158km_editSLOHH2017_G.nc
+coupled_lsf_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/lsf.remapycon.pre04_158km_editSLOHH2017_G.nc
+hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04/Land/hd_para_icon_r2b4_pre04_vs1_5.nc
+
+debug=false             # true/false
+debug_remap_scheme=nn
+
+dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
+clean=true    # Delete workdir after finished (true/false)
+
+declare -A sso_dict
+sso_dict[oromea]=topography_c
+sso_dict[oroval]=SSO_OROMIN
+sso_dict[oropic]=SSO_OROMAX
+sso_dict[orostd]=SSO_STDH
+sso_dict[orosig]=SSO_SIGMA
+sso_dict[orogam]=SSO_GAMMA
+sso_dict[orothe]=SSO_THETA
+
+#_____________________________________________________________________________
+
+set +u
+. ${MODULESHOME}/init/bash
+module unload cdo nco netcdf nag
+case `hostname` in
+  mlogin*|mistralpp*)
+    module load cdo/1.8.0-magicsxx-gcc48
+    module load nco/4.5.0-gcc48
+    module load netcdf_c/4.3.2-gcc48
+    module load nag/6.0.1064
+    ;;
+   *)
+    module load cdo/1.8.0-gccsys
+    module load nco/4.5.2
+    module load netcdf
+    module load nag
+    ;;
+esac
+set -u
+
+#_____________________________________________________________________________
+#
+# Function definitions
+#_____________________________________________________________________________
+#
+function generate_gauss_data {
+
+  res_atm=${source_res}
+  case ${res_atm} in
+    T31) res_oce=TP10
+         ;;
+    T63) res_oce=TP04
+         ;;
+    T127) res_oce=TP04
+         ;;
+    T255) res_oce=TP6M
+         ;;
+  esac
+
+  [[ -d initial_tarfiles ]] && rm -rf initial_tarfiles
+  svn -r 9074 checkout https://svn.zmaw.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
+  cd initial_tarfiles
+  sed -i '/export cplmod=asob/s/asob/s/' create_input_cosmos.ksh
+  sed -i "/export res_atm=T63/s/T63/$res_atm/" create_input_cosmos.ksh
+  sed -i "/export res_oce=TP10/s/TP10/$res_oce/" create_input_cosmos.ksh
+  sed -i '/cd input\/jsbach/aexport echam_fractional=true' create_input_cosmos.ksh
+  sed -i '/export pool_cpl=/aexport pool_cpl=\`pwd\`\/tarfiles' create_input_cosmos.ksh
+  sed -i '/export wrkdir=/aexport wrkdir=\`pwd\`/tarfiles/work\$\$' create_input_cosmos.ksh
+  sed -i '1,$s/800/0800/g' create_input_cosmos.ksh
+  sed -i -e '205,248d' -e '259,276d' create_input_cosmos.ksh
+  sed -i '/export dynveg=true/s/true/false/' create_input_cosmos.ksh
+  sed -i '/pool_atm_standalone=\/work\/mh0081\/prep\/echam6/d' create_input_cosmos.ksh
+  sed -i '/pool_atm_standalone=\/work\/im0454\/ECHAM6/d' create_input_cosmos.ksh
+  sed -i '216,224d' create_input_cosmos.ksh
+  sed -i '/pool_srf=\/work\/im0454\/JSBACH/d' create_input_cosmos.ksh
+
+  sed -i '/lcmip5_pasture=.true./a\[\[ ${lpasture} = true \]\] && lpasture=\.true\. \|\| lpasture=\.false\.' jsbach_init_file.ksh
+  sed -i '1,$s/^#vg//' jsbach_init_file.ksh
+  if [[ "${res_atm}" == "T255" ]]
+  then
+    sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
+    sed -i '/LUH_states=/s/=.*$/=LUH_states_T255.nc/' jsbach_init_file.ksh
+  else
+    sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
+  fi
+  sed -i '/pool=/a pool=\/pool\/data\/ECHAM6\/\$\{res_atm\}' jsbach_init_file.ksh
+  sed -i '/landcover_series=/a pasture_rule=\$cmip5_pasture' jsbach_init_file.ksh
+  sed -i '/landcover_series=/a lpasture=\$cmip5_pasture' jsbach_init_file.ksh
+  sed -i '/`uname -s` == AIX/s/`uname -s` == AIX/`hostname` == mistralpp*/' jsbach_init_file.ksh
+  sed -i '/F90=xlf_r/s/xlf_r/nagfor/' jsbach_init_file.ksh
+  sed -i '80a F90FLAGS="-colour -maxcontin=100 -wmismatch=define_var_new,nf_get_var_double,nf_copy_att,nf_get_var_real,nf_put_var_double,nf_def_var,nf_put_vara_double,dgemm,nfmpi_def_dim,nfmpi_put_vara_double,nfmpi_def_var -C=all -g -gline -nan -w=uep"' jsbach_init_file.ksh
+  sed -i '/qextname/d' jsbach_init_file.ksh
+  sed -i '/XLFRTEOPTS/d' jsbach_init_file.ksh
+  sed -i '/\/sw\/aix61\/netcdf-4.1.1/s/NETCDFROOT=.*$/NETCDFFROOT=\/sw\/rhel6-x64\/netcdf\/netcdf_fortran-4.4.2-static-nag60/' jsbach_init_file.ksh
+  sed -i '/netcdf_fortran-4.4.2-static-nag60/a NETCDFROOT=\/sw\/rhel6-x64\/netcdf\/netcdf_c-4.4.0-gcc48' jsbach_init_file.ksh
+  sed -i '/NETCDF_LIBDIR=/a NETCDFF_LIBDIR=-L\$\{NETCDFFROOT\}\/lib' jsbach_init_file.ksh
+  sed -i '/NETCDF_INCLUDE=/a NETCDFF_INCLUDE=-I\$\{NETCDFFROOT\}\/include' jsbach_init_file.ksh
+  sed -i '91a NETCDFF_LIB="-lnetcdff"' jsbach_init_file.ksh
+  sed -i '/hdf5-1.8.4-patch1/s/=.*$/=\/sw\/rhel6-x64\/hdf5\/hdf5-1.8.14-threadsafe-gcc48/' jsbach_init_file.ksh
+  sed -i '/HDF5_LIB="-lhdf5_hl -lhdf5"/s/hdf5\"$/hdf5 -ldl\"/' jsbach_init_file.ksh
+  sed -i '/aix61\/szip-2.1/s/=.*$/=\/sw\/rhel6-x64\/sys\/libaec-0.3.2-gcc48/' jsbach_init_file.ksh
+  sed -i '/aix61\/zlib-1.2.6/s/=.*$/=\/usr\/lib64/' jsbach_init_file.ksh
+  sed -i '/ZLIB_LIB=/s/-lz/-lz -ldl -lm -lnuma -Wl,--export-dynamic -lrt -lnsl -lutil -lm -ldl/' jsbach_init_file.ksh
+  sed -i '/ZLIB_LIB=/a export LD_LIBRARY_PATH=\"\/sw\/rhel6-x64\/hdf5\/hdf5-1.8.14-threadsafe-gcc48\/lib:\/sw\/rhel6-x64\/netcdf\/netcdf_c-4.4.0-gcc48\/lib:\/sw\/rhel6-x64\/sys\/libaec-0.3.2-gcc48\/lib\"' jsbach_init_file.ksh
+
+  [[ -d tarfiles ]] || mkdir ./tarfiles
+
+  ./create_input_cosmos.ksh >& /dev/null
+
+  tar xf tarfiles/cosmos-s/input_cosmos-s.tar
+  mv input/jsbach/jsbach_*.nc ../
+  rm -rf input tarfiles
+  cd ..
+  rm -rf initial_tarfiles
+
+}
+
+function generate_land_sea_mask {
+
+    echo "Generating land sea mask ..."
+    if [[ ${coupled} == "true" ]]
+    then
+        if [[ ${bisection} -ne 4 ]] || [[ "${old_r2b4_amip}" != "true" ]]
+        then
+            echo "Generation of files for coupled experiments currently only supported for r2b4"
+            exit
+        else
+            ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
+        fi
+    else
+        [[ "${old_r2b4_amip}" != "true" ]]                                                          && \
+            # Note: blend out some grid boxes which are land in FR_LAND_TOPO
+            ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -selvar,FR_LAND_TOPO    \
+                   ${extpar_file} ${grid_name}_notsea.nc                                            || \
+            ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
+                   ${icon_grid_file} ${grid_name}_notsea.nc
+        ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
+    fi
+
+    # Used to mask out ocean with missing values, debug_file needs this
+    ${cdo} setctomiss,0 -setmissval,-9e33 ${grid_name}_notsea.nc ${grid_name}_notsea_miss.nc
+    debug_file ${grid_name}_notsea_miss.nc
+
+    debug_file ${grid_name}_notsea.nc
+}
+
+function extrapolate_var {
+
+    local var=$1     # Variable name
+
+    local cdo_files="gauss_${source_res}_${var}.nc gauss_${source_res}_${var}_ext.nc"
+
+    if [[ -f gauss_${source_res}_${var}.nc ]]
+    then
+      temp=$(mktemp -u --tmpdir=.)
+      ${cdo} setmissval,-9.e33 gauss_${source_res}_${var}.nc ${temp}
+      mv ${temp} gauss_${source_res}_${var}.nc
+    fi
+
+    case ${var} in
+
+        init_moist | layer_moist | roughness_length | root_depth | fao )
+            echo "Extrapolating $var ..."
+            ${cdo} setmisstoc,0 -setmissval,-9.e33 -fillmiss -setmissval,0 ${cdo_files}
+            ;;
+        albedo )
+            echo "Extrapolating $var ..."
+            ${cdo}  -setmissval,-9.e33 -fillmiss -setmissval,0.07 ${cdo_files}
+            ;;
+        albedo_veg_vis | albedo_veg_nir | albedo_soil_vis | albedo_soil_nir | surf_temp )
+            echo "Extrapolating $var ..."
+            ${cdo} copy ${cdo_files}
+            ;;
+        maxmoist )
+            echo "Extrapolating $var ..."
+            ${cdo}  -setmissval,-9.e33 -fillmiss -setmissval,1.e-13 ${cdo_files}
+            ;;
+        forest_fract| snow )
+            echo "Extrapolating $var ..."
+            ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc ${cdo_files}
+            ;;
+        glac | lake )
+            echo "Extrapolating $var ..."
+            ${cdo} setvar,${var} -setmissval,-9.e33 -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc ${cdo_files}
+            ;;
+        lai_clim | veg_fract | veg_ratio_max | roughness_length_oro | \
+        soil_depth | bclapp | soil_field_cap | heat_capacity | heat_conductivity | hyd_cond_sat | \
+        moisture_pot | pore_size_index | soil_porosity | wilting_point )
+            echo "Extrapolating $var ..."
+            ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc \
+                gauss_${source_res}_${var}.nc gauss_${source_res}_${var}_ext.nc
+            ;;
+        cover_fract )
+            echo "Extrapolating $var ..."
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} splitlevel gauss_${source_res}_${var}.nc cfract
+            ${cdo} sub cfract000001.nc gauss_${source_res}_glac.nc cfract_tmp.nc && mv cfract_tmp.nc cfract000001.nc
+            ${cdo} merge cfract0000??.nc ${temp} && rm cfract0000??.nc
+            ${cdo} setvar,${var} -setmisstoc,0 -setmissval,-9.e33 -fillmiss -ifnotthen gauss_${source_res}_glac.nc \
+                  -ifthen gauss_${source_res}_notsea_miss.nc  ${temp} gauss_${source_res}_${var}_ext.nc
+            rm ${temp}
+            ;;
+        #* ) echo "Not extrapolating $var ..."
+        #   ;;
+    esac
+
+    return 0
+
+}
+
+function remap_var {
+
+    local var=$1
+
+    case ${var} in
+
+        fao )
+            echo "Remapping $var ..."
+            ${cdo} setname,fao -setmisstoc,0 -setmissval,-9e33 -ifthen ${grid_name}_notsea_miss.nc \
+                  -remapnn,${icon_grid_file} gauss_${source_res}_${var}_ext.nc ${grid_name}_${var}_remap.nc
+            ;;
+        albedo )
+            echo "Remapping $var ..."
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+            ${cdo} setvar,${var} -setmisstoc,0.07 -ifthenelse ${grid_name}_glac_remap.nc \
+                -mulc,0.7 ${grid_name}_glac_remap.nc ${temp} ${grid_name}_${var}_remap.nc
+            rm ${temp}
+            ;;
+        albedo_veg_vis | albedo_veg_nir | albedo_soil_vis | albedo_soil_nir )
+            echo "Remapping $var ..."
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+            ${cdo} setvar,${var} -setmisstoc,0.07 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+            rm ${temp}
+            ;;
+        elevation )
+            echo "Extracting elevation from EXTPAR file ..."
+            if [[ "${old_r2b4_amip}" != "true" ]] 
+            then
+              ${cdo} setvar,elevation \
+                    -setgrid,${icon_grid_file} -selvar,topography_c ${extpar_file} \
+                     ${grid_name}_${var}_remap.nc
+            else
+              if [[ "${coupled}" != "true" ]]
+              then
+                ${cdo} setvar,elevation \
+                      -remapdis,${icon_grid_file} \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,topography_c ${extpar_file} \
+                       ${grid_name}_${var}_remap.nc
+              else
+                temp=$(mktemp -u --tmpdir=.)
+                ${cdo} setvar,elevation \
+                      -remapdis,${grid_name}_notsea.nc \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,topography_c ${extpar_file} \
+                       ${temp}
+                ${cdo} setgrid,${grid_name}_notsea.nc ${temp} ${grid_name}_${var}_remap.nc
+                rm ${temp}
+              fi
+            fi
+            ;;
+        oro* )
+            echo "Extracting $var from EXTPAR file ..."
+            # Note: setrtoc in followoing is necessary because SSO variables in extpar file contain missing values
+            if [[ "${old_r2b4_amip}" != "true" ]] 
+            then
+              ${cdo} setvar,${var} \
+                    -setgrid,${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
+                    -selvar,${sso_dict[${var}]} ${extpar_file} \
+                     ${grid_name}_${var}_remap.nc
+            else
+              if [[ "${coupled}" != "true" ]]
+              then
+                ${cdo} setvar,${var} \
+                      -remap${remap_scheme},${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,${sso_dict[${var}]} ${extpar_file} \
+                       ${grid_name}_${var}_remap.nc
+              else
+                temp=$(mktemp -u --tmpdir=.)
+                ${cdo} setvar,${var} -setgrid,${coupled_grid_file} \
+                      -remap${remap_scheme},${coupled_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
+                      -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
+                      -selvar,${sso_dict[${var}]} ${extpar_file} \
+                       ${temp}
+                ${cdo} setgrid,${grid_name}_notsea.nc ${temp} ${grid_name}_${var}_remap.nc
+                rm ${temp}
+              fi
+            fi
+            ;;
+        cover_fract )
+            # npft should be consistent with cover_fract from the JSBACH3 input file
+            echo "Remapping $var ..."
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+            ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+
+            ${cdo} splitlevel ${grid_name}_${var}_remap.nc cfract
+            local n=1
+            #while [[ ${n} -le ${npfts} ]]
+            while [[ ${n} -le 11 ]]
+            do
+                nt=$(printf "%2.2i" $n)
+                ${cdo} setmissval,-9.e33 -mul cfract0000${nt}.nc -mulc,-1 -subc,1 ${grid_name}_glac_remap.nc cfract${nt}.nc && rm cfract0000${nt}.nc
+                (( n = n + 1 ))
+            done
+            ${cdo} setmissval,-9.e33 -add cfract01.nc ${grid_name}_glac_remap.nc ${temp} && mv ${temp} cfract01.nc
+            rm ${grid_name}_${var}_remap.nc
+            ${cdo} merge cfract??.nc ${grid_name}_${var}_remap.nc
+            ;;
+        roughness_length | roughness_length_oro )
+            echo "Remapping $var ..."
+            [[ "${var}" == "roughness_length" ]] && oce_rough=0.001 || oce_rough=0.0
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+            ${cdo} setvar,${var} -setmissval,-9.e33 -setmisstoc,${oce_rough} -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+            rm ${temp}
+            ;;
+        glac )
+            echo "Remapping $var ..."
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+            ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc -gec,0.5 ${temp} ${grid_name}_${var}_remap.nc
+            rm ${temp}
+            ;;
+        surf_temp )
+            echo "Remapping $var ..."
+            temp=$(mktemp -u --tmpdir=.)
+            ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+            ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+            rm ${temp}
+            ;;
+        * )
+            if [[ -f gauss_${source_res}_${var}_ext.nc ]]
+            then
+                echo "Remapping $var ..."
+                temp=$(mktemp -u --tmpdir=.)
+                ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
+                ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+                ${cdo} mul ${grid_name}_${var}_remap.nc -mulc,-1 -subc,1 ${grid_name}_glac_remap.nc ${temp}
+                mv ${temp} ${grid_name}_${var}_remap.nc
+                #rm ${temp}
+            fi
+            ;;
+    esac
+
+    # if [[ ${var} == "glac" ]]
+    # then
+    #     temp=$(mktemp -u --tmpdir=.)
+    #     ${cdo} gec,0.5 ${grid_name}_glac_remap.nc ${temp}
+    #     mv ${temp} ${grid_name}_glac_remap.nc
+    # fi
+
+    # Copy attributes
+    [[ -f gauss_${source_res}_${var}.nc ]] && \
+        ncks -A -C -H -v ${var} gauss_${source_res}_${var}.nc ${grid_name}_${var}_remap.nc >& /dev/null
+
+    [[ -f ${grid_name}_${var}_remap.nc ]] && debug_file ${grid_name}_${var}_remap.nc
+
+    return 0
+}
+
+function generate_fractions {
+
+    ${cdo} setvar,fract_glac -setmisstoc,0 -gec,0.5 ${grid_name}_glac_remap.nc ${grid_name}_fract_glac.nc
+    ncatted -a long_name,fract_glac,m,c,'Fraction of glacier tile rel. to land tile' ${grid_name}_fract_glac.nc
+    debug_file ${grid_name}_fract_glac.nc
+
+    ${cdo} setvar,fract_veg -ltc,0.5 ${grid_name}_fract_glac.nc ${grid_name}_fract_veg.nc
+    ncatted -a long_name,fract_veg,m,c,'Fraction of vegetated tile rel. to land tile' ${grid_name}_fract_veg.nc
+    debug_file ${grid_name}_fract_veg.nc
+
+    ${cdo} setvar,sea -mulc,-1 -subc,1 ${grid_name}_notsea.nc ${grid_name}_sea.nc
+    ncatted -a long_name,sea,m,c,'Fraction of ocean' ${grid_name}_sea.nc
+    debug_file ${grid_name}_sea.nc
+
+    ${cdo} setvar,fract_lake -setmisstoc,0 ${grid_name}_lake_remap.nc ${grid_name}_fract_lake.nc
+    ncatted -a long_name,fract_lake,m,c,'Fraction of lake tile rel. to box tile' ${grid_name}_fract_lake.nc
+    debug_file ${grid_name}_fract_lake.nc
+
+    ${cdo} setvar,fract_land -mulc,-1 -subc,1 ${grid_name}_fract_lake.nc ${grid_name}_fract_land.nc
+    ncatted -a long_name,fract_land,m,c,'Fraction of land tile rel. to box tile' ${grid_name}_fract_land.nc
+    debug_file ${grid_name}_fract_land.nc
+
+    # The following three are duplicates for compatibility with echam_phy_init, should be removed at a later time.
+    ${cdo} setvar,glac ${grid_name}_fract_glac.nc ${grid_name}_glac.nc
+    ncatted -a long_name,glac,m,c,'Fraction of glacier' ${grid_name}_glac.nc
+    debug_file ${grid_name}_glac.nc
+
+    ${cdo} setvar,lake -mul ${grid_name}_notsea.nc ${grid_name}_fract_lake.nc ${grid_name}_lake.nc
+    ncatted -a long_name,lake,m,c,'Fraction of lakes' ${grid_name}_lake.nc
+    debug_file ${grid_name}_lake.nc
+
+    ${cdo} setvar,land -mul ${grid_name}_notsea.nc ${grid_name}_fract_land.nc ${grid_name}_land.nc
+    ncatted -a long_name,land,m,c,'Fraction of land' ${grid_name}_land.nc
+    debug_file ${grid_name}_land.nc
+
+    # Generate PFT fractions
+    local i=1
+
+    for npfts in $npfts_list
+    do
+      if [[ $npfts -gt 0 ]]
+      then
+
+        pft_tag="${npfts}pfts_"
+        i=1
+        while [[ ${i} -le ${npfts} ]]
+        do
+          ipft=$(printf "%2.2i" $i)
+          ${cdo} chname,cover_fract,pft${ipft} -sellevel,$i ${grid_name}_cover_fract_remap.nc pft${ipft}.nc
+          if [[ ${i} -eq 1 ]]
+          then
+            ${cdo} setrtoc,1,1.1,0 pft${ipft}.nc zpft && mv zpft pft${ipft}.nc
+          fi
+          ncwa -a ntiles pft${ipft}.nc zpft 
+          ${cdo} setmisstoc,0 zpft pft${ipft}.nc && rm zpft
+          (( i = i + 1 ))
+        done
+        ${cdo} enssum pft*.nc fract_sum.nc
+        ${cdo} mulc,-1 -subc,1 -gtc,0 -setmisstoc,0 fract_sum.nc fract_sum2.nc && mv fract_sum2.nc fract_sum.nc
+        ${cdo} add pft03.nc fract_sum.nc zpft && mv zpft pft03.nc
+        rm fract_sum.nc
+        for i in $(seq 1 $npfts)
+        do
+          ipft=$(printf "%2.2i" $i)
+          ${cdo} setname,fract_pft${ipft} pft${ipft}.nc ${grid_name}_fract_pft${ipft}_remap.nc && rm pft${ipft}.nc
+          ncatted -a long_name,fract_pft${ipft},m,c,"Fraction of pft${ipft} tile rel. to veg tile" ${grid_name}_fract_pft${ipft}_remap.nc
+          debug_file ${grid_name}_fract_pft${ipft}_remap.nc
+        done        
+
+      fi
+    done
+
+}
+
+function crosscheck_vars {
+
+    temp=$(mktemp -u --tmpdir=.)
+    ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
+    mv ${temp} ${grid_name}_soil_depth_remap.nc
+
+    temp=$(mktemp -u --tmpdir=.)
+    ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
+    ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
+    mv ${temp} ${grid_name}_maxmoist_remap.nc
+    rm max_soilwater.nc
+
+    temp=$(mktemp -u --tmpdir=.)
+    ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
+    mv ${temp} ${grid_name}_surf_temp_remap.nc
+    debug_file ${grid_name}_surf_temp_remap.nc
+}
+
+function copy_uuid {
+
+    local file=$1
+
+    uuidOfHGrid=$(ncdump -h ${icon_grid_file} | grep ':uuidOfHGrid = ' | cut -f2 -d'"')
+    ncatted -a uuidOfHGrid,global,o,c,${uuidOfHGrid} ${file}
+
+}
+
+function generate_output_files {
+
+    local outfile=""
+    local pft_tag=""
+
+  for npfts in $npfts_list
+  do
+    [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
+    outfile="${grid_name}_bc_land_frac_${pft_tag}${year}.nc"
+    echo "Generating output file ${outfile} ..."
+    if [[ ${npfts} -gt 0 ]]
+    then
+        ${cdo} merge \
+            ${grid_name}_notsea.nc \
+            ${grid_name}_fract_glac.nc \
+            ${grid_name}_sea.nc \
+            ${grid_name}_fract_lake.nc \
+            ${grid_name}_fract_land.nc \
+            ${grid_name}_fract_veg.nc \
+            ${grid_name}_veg_ratio_max_remap.nc \
+            ${grid_name}_fract_pft*_remap.nc \
+            ${grid_name}_land.nc \
+            ${grid_name}_lake.nc \
+            ${grid_name}_glac.nc \
+            ${outfile}
+    else
+        ${cdo} merge \
+            ${grid_name}_notsea.nc \
+            ${grid_name}_fract_glac.nc \
+            ${grid_name}_sea.nc \
+            ${grid_name}_fract_lake.nc \
+            ${grid_name}_fract_land.nc \
+            ${grid_name}_fract_veg.nc \
+            ${grid_name}_veg_ratio_max_remap.nc \
+            ${grid_name}_land.nc \
+            ${grid_name}_lake.nc \
+            ${grid_name}_glac.nc \
+            ${outfile}
+    fi
+    #ncrename -d cell,ncells ${outfile} >& /dev/null
+    copy_uuid ${outfile}
+    debug_file ${outfile}
+
+  done
+
+  outfile="${grid_name}_bc_land_phys_${year}.nc"
+  echo "Generating output file ${outfile} ..."
+  ${cdo} merge \
+      ${grid_name}_lai_clim_remap.nc \
+      ${grid_name}_veg_fract_remap.nc \
+      ${grid_name}_roughness_length_remap.nc \
+      ${grid_name}_roughness_length_oro_remap.nc \
+      ${grid_name}_albedo_remap.nc \
+      ${grid_name}_albedo_veg_vis_remap.nc \
+      ${grid_name}_albedo_veg_nir_remap.nc \
+      ${grid_name}_albedo_soil_vis_remap.nc \
+      ${grid_name}_albedo_soil_nir_remap.nc \
+      ${grid_name}_forest_fract_remap.nc \
+      ${outfile}
+  #ncrename -d cell,ncells ${outfile} >& /dev/null
+  copy_uuid ${outfile}
+  debug_file ${outfile}
+
+  outfile="${grid_name}_bc_land_soil_${year}.nc"
+  echo "Generating output file ${outfile} ..."
+  ${cdo} merge \
+      ${grid_name}_soil_depth_remap.nc \
+      ${grid_name}_root_depth_remap.nc \
+      ${grid_name}_bclapp_remap.nc \
+      ${grid_name}_soil_field_cap_remap.nc \
+      ${grid_name}_heat_capacity_remap.nc \
+      ${grid_name}_heat_conductivity_remap.nc \
+      ${grid_name}_hyd_cond_sat_remap.nc \
+      ${grid_name}_moisture_pot_remap.nc \
+      ${grid_name}_pore_size_index_remap.nc \
+      ${grid_name}_soil_porosity_remap.nc \
+      ${grid_name}_wilting_point_remap.nc \
+      ${grid_name}_fao_remap.nc \
+      ${grid_name}_maxmoist_remap.nc \
+      ${outfile}
+  #ncrename -d cell,ncells ${outfile} >& /dev/null
+  copy_uuid ${outfile}
+  debug_file ${outfile}
+
+  outfile="${grid_name}_bc_land_sso_${year}.nc"
+  echo "Generating output file ${outfile} ..."
+  ${cdo} merge \
+      ${grid_name}_elevation_remap.nc \
+      ${grid_name}_oromea_remap.nc \
+      ${grid_name}_orostd_remap.nc \
+      ${grid_name}_orosig_remap.nc \
+      ${grid_name}_orogam_remap.nc \
+      ${grid_name}_orothe_remap.nc \
+      ${grid_name}_oropic_remap.nc \
+      ${grid_name}_oroval_remap.nc \
+      ${outfile}
+  #ncrename -d cell,ncells ${outfile} >& /dev/null
+  copy_uuid ${outfile}
+  debug_file ${outfile}
+
+  outfile="${grid_name}_ic_land_soil_${year}.nc"
+  echo "Generating output file ${outfile} ..."
+  ${cdo} merge \
+      ${grid_name}_init_moist_remap.nc \
+      ${grid_name}_surf_temp_remap.nc \
+      ${grid_name}_layer_moist_remap.nc \
+      ${grid_name}_snow_remap.nc \
+      ${outfile}
+  #ncrename -d cell,ncells ${outfile} >& /dev/null
+  copy_uuid ${outfile}
+  debug_file ${outfile}
+
+}
+
+function debug_file {
+
+    local file=$1
+    local target_res=${source_res_dict[${bisection}]}
+    local debug_weights=wgt${debug_remap_scheme}_${grid_name}_to_${target_res}.nc
+
+    if [[ ${debug} == "true" ]]
+    then
+        if [[ ! -f ${debug_weights} ]]
+        then
+            ${cdo} gen${debug_remap_scheme},${target_res}grid -random,${icon_grid_file} ${debug_weights}
+        fi
+        ${cdo} remap,${target_res}grid,${debug_weights} -setgrid,${icon_grid_file} -setmisstoc,0 ${file} debug_${file}
+    fi
+
+}
+#_____________________________________________________________________________
+#
+# Main script
+#_____________________________________________________________________________
+#
+if [[ ${year} -ne 1976 ]]
+then
+  echo "Only year 1976 currently supported!."
+  exit
+fi
+
+mkdir -p ${workdir} || true
+cd ${workdir}
+rm -rf *
+
+[[ "${old_r2b4_amip}" == "true" ]] && bisections="4"
+
+for bisection in $bisections
+do
+  cdo="cdo -s -b F64"
+  #cdo="cdo -b F64"
+  n0=$(printf "%2.2i" $bisection)
+  (( n1 = bisection + 1 ))
+  n1=$(printf "%2.2i" $n1)
+  if [[ $bisection -ge 8  ]]
+  then
+      cdo="${cdo} -f nc4 -P 8"
+      ulimit -s unlimited
+      ulimit -v unlimited
+      ulimit -m unlimited
+  fi
+
+  if [[ "${old_r2b4_amip}" != "true" ]]
+  then
+     grid_name=R02B${n0}
+     source_res=${source_res_dict[${bisection}]}
+  else
+     grid_name=r2b4_amip
+     source_res=T63
+  fi
+
+  echo "=============================================================="
+  echo "===  Generating files for $grid_name from $source_res      ==="
+  echo "=============================================================="
+
+  [[ "${old_r2b4_amip}" != "true" ]] && icon_grid=icon_grid_00${n1}_R02B${n0}_G.nc || icon_grid=${grid_name}.nc
+
+  remap_weights=wgt${remap_scheme}_${source_res}_to_${grid_name}.nc
+
+  if [[ "${coupled}" != "true" ]]
+  then
+    icon_grid_file=${grid_path}/${icon_grid}
+  else
+    icon_grid_file=${coupled_grid_file}
+  fi
+
+  command="${cdo} gen${remap_scheme},$icon_grid_file -setmissval,-9.e33 -random,${source_res}grid  $remap_weights"
+  echo "Generating remap weights: $command"
+  time $command
+
+  [[ "${old_r2b4_amip}" != "true" ]] && \
+      extpar_file=$(ls ${extpar_path}/icon_extpar_grid_00${n1}_${grid_name}_G_????????.nc) || \
+      extpar_file=$(ls ${extpar_path}/icon_extpar_grid_0005_R02B04_G_????????.nc)
+  echo "extpar input file: $extpar_file"
+
+  echo Creating Gaussian input file ...
+  generate_gauss_data
+
+  shopt -s extglob
+  #[[ $npfts -gt 0 ]] && \
+  #    input_file=`ls ${input_root}/r0*/${source_res}/jsbach_${source_res}+(GR|TP)*_fractional_${npts}tiles_5layers_${year}.nc | tail -1` || \
+  #    input_file=`ls ${input_root}/r0*/${source_res}/jsbach_${source_res}+(GR|TP)*_fractional_11tiles_5layers_${year}.nc | tail -1`
+  input_file=`ls jsbach_${source_res}TP*_fractional_11tiles_5layers_${year}_no-dynveg.nc`
+  shopt -u extglob
+
+  echo "Extracting Gaussian variables from ${input_file}"
+  ${cdo} splitname ${input_file} gauss_${source_res}_
+  ${cdo} setctomiss,0 gauss_${source_res}_slf.nc gauss_${source_res}_notsea_miss.nc
+
+  echo Processing $icon_grid ...
+
+  generate_land_sea_mask
+
+  for var in $varlist
+  do
+    extrapolate_var $var 
+  done
+
+  for var in $varlist
+  do
+    remap_var $var
+  done
+
+  generate_fractions
+
+  crosscheck_vars
+
+  generate_output_files
+
+  [[ "${old_r2b4_amip}" != "true" ]] && \
+    output_dir="${output_path}/R02B${n0}/land" || \
+    output_dir="${output_path}/r2b4_amip/lnd"
+  mkdir -p ${output_dir} || true
+
+  if [[ ${dryrun} != "true" ]]
+  then
+    echo "Copying output files to ${output_dir}"
+    [[ ${clean} == "true" ]] && cpmv="mv" || cpmv="cp -p"
+    for npfts in $npfts_list
+    do
+      [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
+      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}$year.nc
+    done
+    ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_$year.nc
+    ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_$year.nc
+    ${cpmv} ${grid_name}_bc_land_sso_$year.nc  ${output_dir}/bc_land_sso_$year.nc
+    ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_$year.nc
+
+    [[ ${coupled} == "true" ]] && cp -p ${hd_file} ${output_dir}/bc_land_hd.nc
+  fi
+
+done
+
+if [[ ${clean} == "true" ]]
+then
+  echo "Cleaning up ..."
+  cd ${workdir}/..
+  rm -rf ${workdir}
+fi
+
+
