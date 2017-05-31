@@ -127,9 +127,11 @@ class Bench_Object ( Diagnostics, Report ):
     logger             = None
     logger_name        = 'B4J_LOGGER'
     reporting          = False
-    fetchremote         = False
+    fetchremote        = False
     
-    
+    path_template      = "%(path)s/%(classification)s_%(expname)s_%(startdate)s-%(enddate)s.%(suffix)s"
+    lsmpath_template   = "%(path)s/%(classification)s_%(expname)s.%(suffix)s"    
+
     def __init__ ( self, config_arg, **kwargs ):
         """This object coordinates the bench4jsbach run. 
 

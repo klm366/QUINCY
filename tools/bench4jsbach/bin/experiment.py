@@ -492,13 +492,10 @@ for %s into %s. This might take a while ...""" % (
                         self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( orig_dirpath,
                                                                                    orig_filename )
 
-
-        self.land_sea_mask  = self.B4J_obj.path_template % { 
+        self.land_sea_mask  = self.B4J_obj.lsmpath_template % { 
             'path'           : self.B4J_obj.interpolated_selected_path,
             'classification' : "land_sea_mask",
             'expname'        : self.B4J_name,
-            'startdate'      : self.B4J_startyear,
-            'enddate'        : self.B4J_endyear,
             'suffix'         : fielddict [ 'suffix' ]}
         
         if os.path.isfile ( self.land_sea_mask ) and \
@@ -743,7 +740,7 @@ class ICON_Experiment ( Experiment ):
                         sys.exit ( sp.returncode )
 
         
-        self.land_sea_mask  = """%(path)s/%(classification)s_%(expname)s.%(suffix)s""" % { 
+        self.land_sea_mask  = self.B4J_obj.lsmpath_template % { 
             'path'           : self.B4J_obj.interpolated_selected_path,
             'classification' : "land_sea_mask",
             'expname'        : self.B4J_name_orig,

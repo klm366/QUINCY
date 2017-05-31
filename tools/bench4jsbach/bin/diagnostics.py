@@ -128,9 +128,6 @@ def get_largest_common_yearlist ( filelist ):
 
 
 class Diagnostics ( object ):
-    # TODO: take varname out as it is already in path
-    path_template = """%(path)s/%(classification)s_%(expname)s_%(startdate)s-%(enddate)s.%(suffix)s"""
-
 
     def __init__ ( self, **kwargs ):
         super ( Diagnostics, self ).__init__()
