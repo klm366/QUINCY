@@ -274,7 +274,7 @@ class Bench_Object ( Diagnostics, Report ):
                 e = CMIP5_Experiment ( self, **kwargs )
             elif etype == "MPIESM1":
                 kwargs [ "B4J_atmres" ]  = attr.get ( 'atm_res', "T63" )
-                kwargs [ "B4J_oceres" ]  = attr.get ( 'oce_res', "T63" )
+                kwargs [ "B4J_oceres" ]  = attr.get ( 'oce_res', "GR15" )
                 e = MPIESM1_Experiment ( self, **kwargs )
             elif etype == "ICON":
                 e = ICON_Experiment ( self, **kwargs )

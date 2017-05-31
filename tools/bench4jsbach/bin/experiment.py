@@ -424,7 +424,9 @@ for %s into %s. This might take a while ...""" % (
                     'enddate'      : self.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
 
-                if not self.B4J_obj.fetchremote: continue
+                if os.path.isfile ( self.B4J_index [ fileid ]) and \
+                   not self.B4J_obj.fetchremote:
+                    continue
                 
                 orig_dirpath = os.path.join ( self.outdata_dirpath,
                                               filedict [ "submodel" ])
@@ -499,7 +501,9 @@ for %s into %s. This might take a while ...""" % (
             'enddate'        : self.B4J_endyear,
             'suffix'         : fielddict [ 'suffix' ]}
         
-        if not self.B4J_obj.fetchremote: return
+        if os.path.isfile ( self.land_sea_mask ) and \
+           not self.B4J_obj.fetchremote:
+            return
         
         # TODO : CHECK/IMPLEMENT CASE FOR ACCUMULATED AND NOT FROM_ARCHIVE
         if self.from_archive and fetchfile_list:
