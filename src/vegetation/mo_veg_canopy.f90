@@ -679,6 +679,7 @@ CONTAINS
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,      ONLY: r_gas_dryair
     USE mo_rad_constants,         ONLY: rad2ppfd, kbl0_vis
+    USE mo_assimi_constants,      ONLY: ic3phot, ic4phot
 
 
     IMPLICIT NONE
@@ -742,6 +743,28 @@ CONTAINS
     INTEGER                                    :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
+    !> 0.9 init some local variables
+    !! 
+    !! diff C3 and C4; fractions may sum up to one with fn_pepc beeing 0.0 for C3
+    SELECT CASE (lctlib%ps_pathway)
+      CASE (ic3phot)
+        fn_oth_new_cl(:,:)        = 0.7_wp
+        fn_chl_new_cl(:,:)        = 0.1_wp
+        fn_et_new_cl(:,:)         = 0.1_wp
+        fn_rub_new_cl(:,:)        = 0.1_wp
+        fn_pepc_new_cl(:,:)       = 0.0_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
+      CASE (ic4phot)
+        fn_oth_new_cl(:,:)        = 0.6_wp
+        fn_chl_new_cl(:,:)        = 0.1_wp
+        fn_et_new_cl(:,:)         = 0.1_wp
+        fn_rub_new_cl(:,:)        = 0.1_wp
+        fn_pepc_new_cl(:,:)       = 0.1_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid ps_pathway, only ic3phot and ic4phot are covered', lctlib%ps_pathway
+        CALL finish(routine,message_text) 
+    ENDSELECT
+
+    leaf_nitrogen_new_cl(:,:) = 0.0_wp  ! is set to 0.0_wp in calc_canopy_layers() too
 
     !> 1.0 copy current plant state into dummy variables
     !!

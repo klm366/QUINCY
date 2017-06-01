@@ -43,7 +43,7 @@ CONTAINS
     USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def
     USE mo_phy_schemes
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2, drain_frac, fdrain_runoff, kdiff_theta, min_theta_wpot
+    USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2, drain_frac, fdrain_runoff, kdiff_theta, min_theta_wpot                                        
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
 
     ! Use of process memories
@@ -305,7 +305,7 @@ CONTAINS
 
           !> 3.1.4 calculate soil wtaer potential according to Campbell et al 1974 
           w_soil_root_pot(:) = k_soil_phi1 * & 
-              ( w_soil_root(:) / w_soil_root_fc(:) )**k_soil_phi2
+                              ( MAX(min_theta_wpot,w_soil_root(:) / w_soil_root_fc(:)) )**k_soil_phi2
 
           !> 3.1.5 update soil moisture by layer 
           !! using mean theta of the rooting zone for those layer that contain roots
@@ -434,7 +434,7 @@ CONTAINS
           !!
           w_soil_root_pot(:) = 0.0_wp
           DO isoil=1,soil_config%nsoil_water
-             WHERE(w_soil_fc_sl(:,1) > eps8)
+             WHERE(w_soil_fc_sl(:,isoil) > eps8)
                  w_soil_root_pot(:) = w_soil_root_pot(:) + root_fraction_sl(:,isoil) * &
                           k_soil_phi1 * ( MAX(min_theta_wpot,w_soil_sl(:,isoil) / w_soil_fc_sl(:,isoil)) )**k_soil_phi2
              ENDWHERE

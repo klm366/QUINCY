@@ -215,6 +215,9 @@ CONTAINS
    beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_theta(:), &
                                             lctlib%lambda_soil_ps   , &
                                             lctlib%weibull_k_soil_ps)
+   ! catch beta_soil_ps getting zero
+   WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
+
    beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_theta(:), &
                                             lctlib%lambda_soil_gs   , &
                                             lctlib%weibull_k_soil_gs)
@@ -496,9 +499,6 @@ CONTAINS
           agsf1 = agsf1 * msat
   
         END SELECT
-
-        ! nco could become zero
-        if (nco < eps8) nco = eps8
 
         ! output factors for optimal fraction calculation
         m_et = m1 * n1 / fn_et_cl

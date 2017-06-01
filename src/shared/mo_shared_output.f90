@@ -715,7 +715,7 @@ CONTAINS
                 veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
                 veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
               lun=lun+1
-              write(lun,'(9F12.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
+              write(lun,'(9F16.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
               write(lun,'(20F12.6)') time_d, &
                                      SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     , & 
