@@ -331,17 +331,10 @@ CONTAINS
 
 #ifdef __ICON__
     TYPE(t_datetime) :: next
-    LOGICAL :: luse_rad
 
     next = get_time_next()
     !ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(next),NINT(get_dt_rad())) == 0
     IF (mpi_phy_tc(model_id)%dt_rad >  dt_zero) THEN
-       luse_rad  = (mpi_phy_tc(model_id)%sd_rad <= next) .AND. &
-            &      (mpi_phy_tc(model_id)%ed_rad >  next)
-    ELSE
-       luse_rad  = .FALSE.
-    END IF
-    IF (luse_rad) THEN
        ltrig_rad_m1 = isCurrentEventActive(mpi_phy_tc(model_id)%ev_rad,next)
     ELSE
        ltrig_rad_m1 = .FALSE.
