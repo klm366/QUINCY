@@ -16,13 +16,13 @@ MODULE mo_jsb_time_iface
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
 
 #ifdef __ICON__
-  USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime, &
-    &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                  &
-    &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                  &
-    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,      &   
-    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,   & 
-    &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,       &
-    &                                  getNoOfSecondsElapsedInDayDateTime,                      &
+  USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
+    &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                       &
+    &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                       &
+    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &   
+    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        & 
+    &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
+    &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
     &                                  divideDatetimeDifferenceInSeconds, isCurrentEventActive
   USE mo_time_config,            ONLY: time_config !configure_time
   USE mo_time_nml,               ONLY: read_time_namelist
