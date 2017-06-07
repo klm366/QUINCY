@@ -324,20 +324,28 @@ CONTAINS
 
   END FUNCTION get_time_next
 
+  !
+  ! Check whether we are one time step before radiation is calculated in atmosphere
+  !
   FUNCTION is_time_ltrig_rad_m1(model_id) RESULT(ltrig_rad_m1)
 
     INTEGER, INTENT(in) :: model_id
     LOGICAL :: ltrig_rad_m1
 
 #ifdef __ICON__
-    TYPE(t_datetime) :: next
+    !
+    ! In the ICON MPI atmosphere, radiation is triggered based on the radiation time delta and the old  time step.
+    ! We therefore use the current time step to check whether we're one time step before the radiation is triggered
+    ! in the atmosphere
+    TYPE(t_datetime) :: current
+    INTEGER          :: dt_rad
 
-    next = get_time_next()
-    !ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(next),NINT(get_dt_rad())) == 0
-    IF (mpi_phy_tc(model_id)%dt_rad >  dt_zero) THEN
-       ltrig_rad_m1 = isCurrentEventActive(mpi_phy_tc(model_id)%ev_rad,next)
+    current = get_time_current()
+    IF (mpi_phy_tc(model_id)%dt_rad > dt_zero) THEN
+      dt_rad = getTotalSecondsTimeDelta(mpi_phy_tc(model_id)%dt_rad, current)
+      ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(current), dt_rad) == 0
     ELSE
-       ltrig_rad_m1 = .FALSE.
+      ltrig_rad_m1 = .FALSE.
     END IF
 
 #else
