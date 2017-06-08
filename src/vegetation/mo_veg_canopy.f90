@@ -251,11 +251,11 @@ CONTAINS
           WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) == 1) ! new layer with new leaves
             ! first layers: use static allocation as first guess
             fn_chl_cl(:,icanopy) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(:,icanopy))) / chl2n
+            ! fraction in PepC
+            fn_pepc_cl(:,icanopy)=f_pepc
             ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
             fn_et_cl(:,icanopy) = (1._wp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
                                   (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
-            ! fraction in PepC
-            fn_pepc_cl(:,icanopy)=f_pepc
             ! fraction of Rubisco is determined as the remainder
             fn_rub_cl(:,icanopy) = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - fn_pepc_cl(:,icanopy)
           ENDWHERE
@@ -745,26 +745,22 @@ CONTAINS
 
     !> 0.9 init some local variables
     !! 
-    !! diff C3 and C4; fractions may sum up to one with fn_pepc beeing 0.0 for C3
-    SELECT CASE (lctlib%ps_pathway)
-      CASE (ic3phot)
-        fn_oth_new_cl(:,:)        = 0.7_wp
-        fn_chl_new_cl(:,:)        = 0.1_wp
-        fn_et_new_cl(:,:)         = 0.1_wp
-        fn_rub_new_cl(:,:)        = 0.1_wp
-        fn_pepc_new_cl(:,:)       = 0.0_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
-      CASE (ic4phot)
-        fn_oth_new_cl(:,:)        = 0.6_wp
-        fn_chl_new_cl(:,:)        = 0.1_wp
-        fn_et_new_cl(:,:)         = 0.1_wp
-        fn_rub_new_cl(:,:)        = 0.1_wp
-        fn_pepc_new_cl(:,:)       = 0.1_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
-      CASE DEFAULT
-        WRITE(message_text,'(2a)') 'invalid ps_pathway, only ic3phot and ic4phot are covered', lctlib%ps_pathway
-        CALL finish(routine,message_text) 
-    ENDSELECT
+!    fn_oth_new_cl(:,:)        = fn_oth_cl(:,:)
+!    fn_chl_new_cl(:,:)        = fn_chl_cl(:,:)
+!    fn_et_new_cl(:,:)         = fn_et_cl(:,:)
+!    fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
+!    fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
 
-    leaf_nitrogen_new_cl(:,:) = 0.0_wp  ! is set to 0.0_wp in calc_canopy_layers() too
+    !! temporal solution for ticket #210
+    fn_oth_new_cl(:,:)        = 1.0_wp
+    fn_chl_new_cl(:,:)        = 0.0_wp
+    fn_et_new_cl(:,:)         = 0.0_wp
+    fn_rub_new_cl(:,:)        = 0.0_wp
+    fn_pepc_new_cl(:,:)       = 0.0_wp
+
+    !! @todo init with a value or leave un-initialized ?
+    !leaf_nitrogen_new_cl(:,:) = ...
+
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -809,8 +805,6 @@ CONTAINS
                             fn_chl_cl           = fn_chl_new_cl(:,:)          , &
                             fn_oth_cl           = fn_oth_new_cl(:,:)          , &
                             inquire_n_fractions = .TRUE.                      )   ! identifier
-
-
 
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:)<eps8) 

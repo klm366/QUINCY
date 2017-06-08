@@ -216,10 +216,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
-    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
-    dsl4jsb_Real3D_onChunk      :: fn_rub_cl
-    dsl4jsb_Real3D_onChunk      :: fn_et_cl
-    dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -309,10 +305,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
 
 
 !! *slmtemp
@@ -366,10 +358,12 @@ CONTAINS
          veg%pool%reserve  = veg%init_pool 
       END IF
 
-    ! plant variables
-    dphi(:)               = - lctlib%phi_leaf_min
-    beta_sinklim_ps(:)    = 1.0_wp
-    leaf_cn_direction(:)  = 1.0_wp
+      ! plant variables
+      dphi(:)               = - lctlib%phi_leaf_min
+      beta_sinklim_ps(:)    = 1.0_wp
+      leaf_cn_direction(:)  = 1.0_wp
+      fn_oth_cl(:,:)        = 1.0_wp  ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
+                                      ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
 
       ! initialising moving averages
       ! allocation
@@ -397,26 +391,6 @@ CONTAINS
       co2_mixing_ratio_tfrac_mavg(:) = def_co2_mixing_ratio
       ga_tfrac_mavg(:) = 0.2_wp
       beta_sinklim_ps_tfrac_mavg(:) = 1.0_wp
-
-
-      !! diff C3 and C4; fractions may sum up to one with fn_pepc beeing 0.0 for C3
-      SELECT CASE (lctlib%ps_pathway)
-        CASE (ic3phot)
-          fn_oth_cl(:,:)    = 0.7_wp
-          fn_chl_cl(:,:)    = 0.1_wp
-          fn_rub_cl(:,:)    = 0.1_wp
-          fn_et_cl(:,:)     = 0.1_wp
-          fn_pepc_cl(:,:)   = 0.0_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
-        CASE (ic4phot)
-          fn_oth_cl(:,:)    = 0.6_wp
-          fn_chl_cl(:,:)    = 0.1_wp
-          fn_rub_cl(:,:)    = 0.1_wp
-          fn_et_cl(:,:)     = 0.1_wp
-          fn_pepc_cl(:,:)   = 0.1_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
-        CASE DEFAULT
-          WRITE(message_text,'(2a)') 'invalid ps_pathway, only ic3phot and ic4phot are covered', lctlib%ps_pathway
-          CALL finish(routine,message_text) 
-      ENDSELECT
 
       ! leaf N optimisation
       fleaf_sunlit_tcnl_mavg_cl(:,:) = 0.5_wp
@@ -561,10 +535,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
-    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
-    dsl4jsb_Real3D_onChunk      :: fn_rub_cl
-    dsl4jsb_Real3D_onChunk      :: fn_et_cl
-    dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -655,10 +625,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
 
 !! *slmtemp
     veg     => veg__mem 
@@ -677,7 +643,10 @@ CONTAINS
     !< 2.0 Initialise tile
     !! 
     !! Initialisation of soil and vegetation, so far relevant
-    lai(:) = ref_lai 
+    lai(:)          = ref_lai 
+    fn_oth_cl(:,:)  = 1.0_wp    ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
+                                ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
+
 
     IF(veg_config%pft_id==0) THEN
       veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * lai(1)
@@ -749,24 +718,6 @@ CONTAINS
       co2_mixing_ratio_tfrac_mavg(:) = def_co2_mixing_ratio
       ga_tfrac_mavg(:) = 0.2_wp
       beta_sinklim_ps_tfrac_mavg(:) = 1.0_wp
-      !! diff C3 and C4; fractions may sum up to one with fn_pepc beeing 0.0 for C3
-      SELECT CASE (lctlib%ps_pathway)
-        CASE (ic3phot)
-          fn_oth_cl(:,:)    = 0.7_wp
-          fn_chl_cl(:,:)    = 0.1_wp
-          fn_rub_cl(:,:)    = 0.1_wp
-          fn_et_cl(:,:)     = 0.1_wp
-          fn_pepc_cl(:,:)   = 0.0_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
-        CASE (ic4phot)
-          fn_oth_cl(:,:)    = 0.6_wp
-          fn_chl_cl(:,:)    = 0.1_wp
-          fn_rub_cl(:,:)    = 0.1_wp
-          fn_et_cl(:,:)     = 0.1_wp
-          fn_pepc_cl(:,:)   = 0.1_wp  ! is 0.0 for c3 and 0.1 for c4; all fn sum up to 1.0
-        CASE DEFAULT
-          WRITE(message_text,'(2a)') 'invalid ps_pathway, only ic3phot and ic4phot are covered', lctlib%ps_pathway
-          CALL finish(routine,message_text) 
-      ENDSELECT
       ! leaf N optimisation
       ! 
       fleaf_sunlit_tcnl_mavg_cl(:,:) = 0.5_wp
