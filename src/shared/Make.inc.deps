@@ -11,7 +11,7 @@ mo_shared_isotope.o: \
   mo_kind.o \
   mo_shared_constants.o
 
-mo_shared_time_averages.o: \
+mo_shared_update_time_averages.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_class.o \
@@ -62,5 +62,3 @@ mo_shared_output.o: \
   mo_soil_memory_class.o \
   mo_sb_memory_class.o \
   mo_rad_memory_class.o
-
-

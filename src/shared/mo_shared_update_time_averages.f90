@@ -1,5 +1,5 @@
 !>
-!! @brief 
+!! @brief
 !!    generic routines providing various ways for the averaging of variables over time for all model processes
 !!
 !! @author
@@ -29,21 +29,21 @@ MODULE mo_shared_update_time_averages
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_update_time_averages'
 
-CONTAINS 
+CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
   ! Main Task
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
   !> update time averages across processes at the end of a time step
-  !! 
+  !!
   !! no aggregation of any avg variable to Top Tile (not using Integrate Aggregate Routines)
-  !! 
+  !!
   !! 1.0 daytime averages \n
   !! 2.0 moving averages \n
   !! 3.0 ...
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_time_averages(tile, options, time_day, timestep_prop_day)
 
@@ -66,17 +66,17 @@ CONTAINS
 
 
     !> 1.0 daytime averages
-    !! 
+    !!
     CALL calc_daytime_averages(tile, options, time_day, timestep_prop_day)
 
 
     !> 2.0 moving averages
-    !! 
+    !!
     CALL calc_moving_averages(tile, options)
 
 
     !> 3.0 .... averages < open for implementation, just add another routine to this module and call it here
-    !! 
+    !!
 
 
   END SUBROUTINE update_time_averages
@@ -84,7 +84,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub-Task
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
   !> calculate daytime averages
   !!
@@ -238,7 +238,7 @@ CONTAINS
 
 
 !! *slmtemp
-    veg       => veg__mem 
+    veg       => veg__mem
 
 
 
@@ -248,10 +248,10 @@ CONTAINS
 
 
     !> 1.0 if light is available (i.e. daytime)
-    !! 
+    !!
 
     !> 1.1 1D variables
-    !! 
+    !!
     WHERE(swpar_srf_down(:) > eps8)
         ! 1.1.1 count number of values added to var_daytime
         daytime_counter(:) = daytime_counter(:) + 1.0_wp
@@ -269,7 +269,7 @@ CONTAINS
     END WHERE
 
     !> 1.2 2D variables
-    !! 
+    !!
     DO icanopy=1,assimi_config%ncanopy
       WHERE(swpar_srf_down(:) > eps8)
         ! 1.2.2 add values and count number of values
@@ -281,16 +281,16 @@ CONTAINS
 
 
     !> 2.0 at the timestep after local midnight (1st timestep of the new day) calc daytime averages
-    !! 
+    !!
     !! calculate the average of the previous day and pass this value to the according variable \n
     !! the timestep right after midnight is identofied based on changes in cos_zenith_angle (turning from negative to positive)
 
     !> 2.1 1D variables
-    !! 
+    !!
     WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
           (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
-      ! check if at least one value had been assigned at the current day, avoiding division by zero 
-      ! calculate the average over the previous day and pass it to the according *_daytime variable; 
+      ! check if at least one value had been assigned at the current day, avoiding division by zero
+      ! calculate the average over the previous day and pass it to the according *_daytime variable;
       WHERE(daytime_counter(:) > eps8)
           t_air_daytime(:)            = t_air_daytime_dacc(:)              / daytime_counter(:)
           press_srf_daytime(:)        = press_srf_daytime_dacc(:)          / daytime_counter(:)
@@ -315,11 +315,11 @@ CONTAINS
     END WHERE
 
     !> 2.2 2D variables
-    !! 
+    !!
     DO icanopy=1,assimi_config%ncanopy
       WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
             (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
-        WHERE(daytime_counter(:) > eps8)        
+        WHERE(daytime_counter(:) > eps8)
           ppfd_sunlit_daytime_cl(:,icanopy)   = ppfd_sunlit_daytime_dacc_cl(:,icanopy)   / daytime_counter(:)
           ppfd_shaded_daytime_cl(:,icanopy)   = ppfd_shaded_daytime_dacc_cl(:,icanopy)   / daytime_counter(:)
           fleaf_sunlit_daytime_cl(:,icanopy)  = fleaf_sunlit_daytime_dacc_cl(:,icanopy)  / daytime_counter(:)
@@ -337,7 +337,7 @@ CONTAINS
 
 
     !> 3.0 zero the counter for number of accumulated values (*_dacc) per day
-    !! 
+    !!
     WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
           (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
       daytime_counter(:)                    = 0.0_wp
@@ -356,10 +356,10 @@ CONTAINS
   !> calculate and return the moving average of a single variable or an array
   !!
   !! used in Sub-Task calc_moving_averages()
-  !! 
-  !! per default the avg_period_length has the unit 'day'; 
-  !! 
-  !! calculates the average across a certain period preceding to the current time step; \n 
+  !!
+  !! per default the avg_period_length has the unit 'day';
+  !!
+  !! calculates the average across a certain period preceding to the current time step; \n
   !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean, \n
   !! if the optional parameter 'do_calc' is present: the moving average is calculated if do_calc = TRUE !
   !!
@@ -385,7 +385,7 @@ CONTAINS
 
 
     !> 1.0 optional arguments
-    !! 
+    !!
 
     !> 1.1 set TRUE per default, i.e. can only be FALSE if 'do_calc' is is present
     !!
@@ -394,7 +394,7 @@ CONTAINS
     IF(PRESENT(do_calc))  l_do_calc = do_calc
 
     !> 1.2 calc period length in seconds
-    !! 
+    !!
     avg_period2seconds = one_day  ! (one_day == 86400._wp seconds)
     IF(l_do_calc .AND. PRESENT(avg_period_unit)) THEN
       SELECT CASE(TRIM(avg_period_unit))
@@ -422,10 +422,10 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub-Task
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
   !> calculate moving averages
-  !! 
+  !!
   !! variable-specific averaging period, previous to the current timestep
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_moving_averages(tile, options)
@@ -433,7 +433,8 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_shared_constants           ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
     USE mo_veg_config_class,        ONLY: veg_config
-    
+    use mo_assimi_config_class,     ONLY: assimi_config
+
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -485,7 +486,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl 
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
@@ -716,7 +717,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 !! *slmtemp
-    veg       => veg__mem 
+    veg       => veg__mem
 
 
 
@@ -733,7 +734,7 @@ CONTAINS
                                                     mavg_period_tlabile, do_calc=(growth_req_n(:) > eps8))
     growth_req_p_tlabile_mavg(:)       = calc_mavg(growth_req_p_tlabile_mavg(:), growth_req_p(:), &
                                                     mavg_period_tlabile, do_calc=(growth_req_p(:) > eps8))
-    
+
     !> 1.2 averages at the time-scale of phenology
     t_air_tphen_mavg(:)           = calc_mavg(t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
     beta_soil_gs_tphen_mavg(:) = calc_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
@@ -746,45 +747,45 @@ CONTAINS
     demand_uptake_p_tuptake_mavg(:)     = calc_mavg(demand_uptake_p_tuptake_mavg(:), f_p_demand(:), &
                                                      mavg_period_tuptake, do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
     cost_n_fixation_tuptake_mavg(:)     = calc_mavg(cost_n_fixation_tuptake_mavg(:), cost_n_fixation(:), &
-                                                     mavg_period_tuptake, do_calc=growing_season(:)) 
+                                                     mavg_period_tuptake, do_calc=growing_season(:))
     growth_req_n_tuptake_mavg(:)        = calc_mavg(growth_req_n_tuptake_mavg(:), growth_req_n(:), &
                                                      mavg_period_tuptake, do_calc=(growth_req_n(:) > eps8))
     growth_req_p_tuptake_mavg(:)        = calc_mavg(growth_req_p_tuptake_mavg(:), growth_req_p(:), &
                                                      mavg_period_tuptake, do_calc=(growth_req_p(:) > eps8))
 
-    !> 1.4 averages at the time-scale of within-leaf N allocation fractions 
+    !> 1.4 averages at the time-scale of within-leaf N allocation fractions
     !!
-    ppfd_sunlit_tfrac_mavg_cl(:,:)     = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
+    ppfd_sunlit_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
+                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+    ppfd_shaded_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
+                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+    fleaf_sunlit_tfrac_mavg_cl(:,:)   = calc_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
+                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+    t_air_tfrac_mavg(:)               = calc_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
                                                   mavg_period_tfrac)
-    ppfd_shaded_tfrac_mavg_cl(:,:)     = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
+    press_srf_tfrac_mavg(:)           = calc_mavg(press_srf_tfrac_mavg(:), press_srf_daytime(:), &
                                                   mavg_period_tfrac)
-    fleaf_sunlit_tfrac_mavg_cl(:,:)    = calc_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
+    co2_mixing_ratio_tfrac_mavg(:)    = calc_mavg(co2_mixing_ratio_tfrac_mavg(:), co2_mixing_ratio_daytime(:), &
                                                   mavg_period_tfrac)
-    t_air_tfrac_mavg(:)              = calc_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
+    ga_tfrac_mavg(:)                  = calc_mavg(ga_tfrac_mavg(:), ga_daytime(:), &
                                                   mavg_period_tfrac)
-    press_srf_tfrac_mavg(:)          = calc_mavg(press_srf_tfrac_mavg(:), press_srf_daytime(:), &
+    beta_soil_ps_tfrac_mavg(:)        = calc_mavg(beta_soil_ps_tfrac_mavg(:), beta_soil_ps_daytime(:), &
                                                   mavg_period_tfrac)
-    co2_mixing_ratio_tfrac_mavg(:)   = calc_mavg(co2_mixing_ratio_tfrac_mavg(:), co2_mixing_ratio_daytime(:), &
+    beta_sinklim_ps_tfrac_mavg(:)     = calc_mavg(beta_sinklim_ps_tfrac_mavg(:), beta_sinklim_ps_daytime(:), &
                                                   mavg_period_tfrac)
-    ga_tfrac_mavg(:)                 = calc_mavg(ga_tfrac_mavg(:), ga_daytime(:), &
+    beta_soil_gs_tfrac_mavg(:)        = calc_mavg(beta_soil_gs_tfrac_mavg(:), beta_soil_gs_daytime(:), &
                                                   mavg_period_tfrac)
-    beta_soil_ps_tfrac_mavg(:)    = calc_mavg(beta_soil_ps_tfrac_mavg(:), beta_soil_ps_daytime(:), &
-                                                  mavg_period_tfrac)
-    beta_sinklim_ps_tfrac_mavg(:)    = calc_mavg(beta_sinklim_ps_tfrac_mavg(:), beta_sinklim_ps_daytime(:), &
-                                                  mavg_period_tfrac)
-    beta_soil_gs_tfrac_mavg(:)    = calc_mavg(beta_soil_gs_tfrac_mavg(:), beta_soil_gs_daytime(:), &
-                                                  mavg_period_tfrac)
-    beta_air_tfrac_mavg(:)        = calc_mavg(beta_air_tfrac_mavg(:), beta_air_daytime(:), &
+    beta_air_tfrac_mavg(:)            = calc_mavg(beta_air_tfrac_mavg(:), beta_air_daytime(:), &
                                                   mavg_period_tfrac)
 
-    !> 1.5 averages at the time-scale of leaf N allocation fractions 
+    !> 1.5 averages at the time-scale of leaf N allocation fractions
     !!
     ppfd_sunlit_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
-                                                  mavg_period_tcnl)
+                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
     ppfd_shaded_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
-                                                  mavg_period_tcnl)
+                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
     fleaf_sunlit_tcnl_mavg_cl(:,:)     = calc_mavg(fleaf_sunlit_tcnl_mavg_cl(:,:), fleaf_sunlit_cl(:,:), &
-                                                  mavg_period_tcnl)
+                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
     t_air_tcnl_mavg(:)               = calc_mavg(t_air_tcnl_mavg(:), t_air(:), &
                                                   mavg_period_tcnl, do_calc=growing_season(:))
     press_srf_tcnl_mavg(:)           = calc_mavg(press_srf_tcnl_mavg(:), press_srf(:), &
@@ -800,9 +801,10 @@ CONTAINS
     beta_soil_gs_tcnl_mavg(:)     = calc_mavg(beta_soil_gs_tcnl_mavg(:), beta_soil_gs(:), &
                                                   mavg_period_tcnl,  do_calc=growing_season(:))
     beta_air_tcnl_mavg(:)         = calc_mavg(beta_air_tcnl_mavg(:), beta_air(:), &
-         mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_season(:))
     uptake_n_tcnl_mavg         = calc_mavg(uptake_n_tcnl_mavg, &
-         uptake_nh4(:)+uptake_no3(:)+n_fixation(:), mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  uptake_nh4(:)+uptake_no3(:)+n_fixation(:), &
+                                                  mavg_period_tcnl, do_calc=growing_season(:))
 
     WHERE (growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
@@ -829,7 +831,7 @@ CONTAINS
          ENDWHERE
          n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), hlp, &
               mavg_period_talloc, do_calc=growing_season(:))
-      CASE DEFAULT 
+      CASE DEFAULT
          n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), n_fixation(:), &
               mavg_period_talloc, do_calc=growing_season(:))
     ENDSELECT
@@ -845,17 +847,17 @@ CONTAINS
                                                       mavg_period_talloc, do_calc=growing_season(:))
     unit_uptake_p_talloc_mavg(:)    = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg%pool%labile%carbon%ptr, & 
+    labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg%pool%labile%carbon%ptr, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg%pool%labile%nitrogen%ptr, & 
+    labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg%pool%labile%nitrogen%ptr, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg%pool%labile%phosphorus%ptr, & 
+    labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg%pool%labile%phosphorus%ptr, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg%pool%reserve%carbon%ptr, & 
+    reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg%pool%reserve%carbon%ptr, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg%pool%reserve%nitrogen%ptr, & 
+    reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg%pool%reserve%nitrogen%ptr, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg%pool%reserve%phosphorus%ptr, & 
+    reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg%pool%reserve%phosphorus%ptr, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
     WHERE(growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
@@ -864,13 +866,13 @@ CONTAINS
     END WHERE
     growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), &
                                             mavg_period_tgrowth, do_calc=growing_season(:))
-    
+
     WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
        hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
     ELSE WHERE
        hlp(:) = 0._wp
     END WHERE
-    
+
     growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), &
                                             mavg_period_tgrowth, do_calc=growing_season(:))
 
@@ -883,23 +885,23 @@ CONTAINS
     END IF
     leaf2root_troot_mavg(:)      = calc_mavg(leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &
                                                do_calc=(veg%pool%leaf%carbon%ptr > eps8) .AND. &
-                                                       (veg%pool%fine_root%carbon%ptr > eps8), & 
+                                                       (veg%pool%fine_root%carbon%ptr > eps8), &
                                                avg_period_unit='year')
     unit_npp_troot_mavg(:)       = calc_mavg(unit_npp_troot_mavg(:), unit_npp(:), lctlib%tau_fine_root, &
-                                               do_calc=growing_season(:), avg_period_unit='year') 
+                                               do_calc=growing_season(:), avg_period_unit='year')
     unit_uptake_n_pot_troot_mavg(:)  = calc_mavg(unit_uptake_n_pot_troot_mavg(:), unit_uptake_n_pot(:), lctlib%tau_fine_root, &
                                                do_calc=growing_season(:), avg_period_unit='year')
     unit_uptake_p_pot_troot_mavg(:)  = calc_mavg(unit_uptake_p_pot_troot_mavg(:), unit_uptake_p_pot(:), lctlib%tau_fine_root, &
                                                do_calc=growing_season(:), avg_period_unit='year')
     fmaint_rate_troot_mavg(:)    = calc_mavg(fmaint_rate_troot_mavg(:), fmaint_rate(:), lctlib%tau_fine_root, &
-                                               do_calc=growing_season(:), avg_period_unit='year') 
+                                               do_calc=growing_season(:), avg_period_unit='year')
 
-    !> 1.8 averages at the vegetation dynamics time-scale 
+    !> 1.8 averages at the vegetation dynamics time-scale
     an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
                                           do_calc=(veg%pool%leaf%carbon%ptr > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     t_air_tacclim_mavg(:)    = calc_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
-    !> 1.10 averages with a weekly, monthly timescale 
+    !> 1.10 averages with a weekly, monthly timescale
     !!
     t_air_week_mavg(:)       = calc_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)
     t_air_month_mavg(:)      = calc_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
