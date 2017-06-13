@@ -1,10 +1,10 @@
 !>
-!! @brief 
-!!  interface for land model \n  
+!! @brief
+!!  interface for land model \n
 !!  run SLM for one time step
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Sönke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !!  First version by Sönke Zaehle (2015-12-04) \n
@@ -28,7 +28,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> land model interface
-  !! 
+  !!
   !! selection of the model via the namlist.slm - BASE_CTL:slm_model_name
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE land_model_interface(tile, &                ! one tile
@@ -164,7 +164,7 @@ CONTAINS
                                   t_acoef_ice(:)        , &
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
-                                  q_bcoef_ice(:)        
+                                  q_bcoef_ice(:)
                                                      !! a2l memory - end
     REAL(wp),INTENT(out)          :: &              !! l2a memory - INTENT(out) - start
                                   t_srf(:)             ,   &
@@ -194,7 +194,7 @@ CONTAINS
     CHARACTER(len=*),       PARAMETER   :: routine = TRIM(modname)//':land_model_interface'
     ! ---------------------------
     ! 0.5 Get Memory
-    ! 
+    !
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
 
@@ -206,7 +206,7 @@ CONTAINS
 
 
     !> pass atmland variables from forcing input (driver) to a2l
-    !! 
+    !!
     IF (l_forcing) THEN       ! l_forcing is true
       CALL update_a2l( &
       ! the sequence of input variables is consistent with the sequence of var in t_a2l_memory & atmland_interface
@@ -260,7 +260,7 @@ CONTAINS
     CASE('land')
 
       !! init/reset fluxes (with/to zero)
-      !! 
+      !!
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
@@ -275,7 +275,7 @@ CONTAINS
       CALL update_veg_dynamics    (tile, model%options)
       SELECT CASE(TRIM(sb_config%sb_model_scheme))
         CASE("simple_0d", "simple_1d")
-          CALL update_sb_simple_model (tile, model%options) 
+          CALL update_sb_simple_model (tile, model%options)
         CASE('jsm')
           CALL update_sb_jsm          (tile, model%options)
       ENDSELECT
@@ -284,23 +284,23 @@ CONTAINS
       CALL update_sb_pools        (tile, model%options)
 
       !! accumulation over time - daytime & moving average
-      !! 
+      !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
       !! output pool: write output in certain intervals, see mo_shared_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !! 
+      !!
       CALL write_output_pool(tile, model%options, time_day, time_year)
 
       !! output flux: write output in certain intervals, see mo_shared_output
-      !! 
-      !! 
+      !!
+      !!
       CALL write_output_flux(tile, model%options, time_day, time_year)
 
       !! output litterfall and soilphysics: usually this would be output at each timstep
-      !! 
-      !! 
+      !!
+      !!
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
@@ -309,7 +309,7 @@ CONTAINS
     !! plant --------------------------------------------------------------------------------------
 
       !! init/reset fluxes (with/to zero)
-      !! 
+      !!
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
 
       !! run Tasks
@@ -324,38 +324,38 @@ CONTAINS
       CALL update_veg_pools       (tile, model%options)
 
       !! accumulation over time - daytime & moving average
-      !! 
+      !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
       !! output pool: write output in certain intervals, see mo_shared_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !! 
+      !!
       CALL write_output_pool(tile, model%options, time_day, time_year)
 
       !! output flux: write output in certain intervals, see mo_shared_output
-      !! 
-      !! 
+      !!
+      !!
       CALL write_output_flux(tile, model%options, time_day, time_year)
 
       !! output litterfall and soilphysics: usually this would be output at each timstep
-      !! 
-      !! 
+      !!
+      !!
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year) 
+        CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
 
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------
 
       !! init/reset fluxes (with/to zero)
-      !! 
+      !!
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
       CALL update_sb_rate_modifier    (tile, model%options)
       SELECT CASE(TRIM(sb_config%sb_model_scheme))
         CASE("simple_0d", "simple_1d")
-          CALL update_sb_simple_model (tile, model%options) 
+          CALL update_sb_simple_model (tile, model%options)
         CASE('jsm')
           CALL update_sb_jsm          (tile, model%options)
       ENDSELECT
@@ -365,35 +365,35 @@ CONTAINS
       !! output pool: write output in certain intervals, see mo_shared_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !! 
+      !!
       CALL write_output_pool(tile, model%options, time_day, time_year)
-  
+
       !! output flux: write output in certain intervals, see mo_shared_output
-      !! 
-      !! 
+      !!
+      !!
       CALL write_output_flux(tile, model%options, time_day, time_year)
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
 
       !! init/reset fluxes (with/to zero)
-      !! 
+      !!
       CALL reset_veg_fluxes(tile)                 ! mo_veg_util
 
       !! run Tasks
       !!
-      CALL update_veg_pools       (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
+      CALL update_veg_pools       (tile, model%options)
 
       !! accumulation over time - daytime & moving average
-      !! 
+      !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !! ! only some flux files are written, see CASE statements in shared_output
-      !! 
+      !!
       CALL write_output_flux(tile, model%options, time_day, time_year)
 
     CASE('test_canopy')
@@ -405,7 +405,7 @@ CONTAINS
     END SELECT  ! select SLM model !
 
     !> pass atmland variables from l2a memory back to the driver
-    !! 
+    !!
     IF (l_forcing) THEN       ! l_forcing is true if update_a2l() is called (depends on the SLM model selected)
       CALL update_l2a( &
       ! the sequence of input variables is consistent with the sequence of var in t_l2a_memory !
@@ -439,8 +439,8 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Run the test_canopy model from the land model interface
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE run_test_canopy_model(tile, options)
 
@@ -454,7 +454,7 @@ CONTAINS
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_veg_util,              ONLY: reset_veg_fluxes
-    USE mo_shared_constants,      ONLY: molar_mass_N, Tzero 
+    USE mo_shared_constants,      ONLY: molar_mass_N, Tzero
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -478,7 +478,7 @@ CONTAINS
     INTEGER, PARAMETER                        :: npft  = 8         !< number of PFTs simulated by the test_canopy model
     TYPE(t_jsb_model),      POINTER           :: model
     TYPE(t_lctlib_element), POINTER           :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc)           :: & 
+    REAL(wp), DIMENSION(options%nc)           :: &
                   t_air           , &
                   press_srf       , &
                   q_air           , &
@@ -507,14 +507,14 @@ CONTAINS
     INTEGER       :: i,lun
     INTEGER       :: ref_pft                          ! PFT identifier
     ! parameters (specific to the test_canopy model)
-    REAL(wp),SAVE :: ref_t_air = 25.0_wp              ! temperature in deg C 
+    REAL(wp),SAVE :: ref_t_air = 25.0_wp              ! temperature in deg C
     REAL(wp),SAVE :: ref_vpd = 1000._wp               ! vpd in Pa
     REAL(wp),SAVE :: ref_swdown = 652.173913_wp       ! PAR in W m-2
     REAL(wp),SAVE :: ref_fdiffuse = 0.2_wp            ! diffuse fraction
     REAL(wp),SAVE :: ref_cos_angle = 0.8_wp           ! cosine of zenith angle
     REAL(wp),SAVE :: ref_co2_mixing_ratio = 380.0_wp  ! co2 in ppm
     REAL(wp),SAVE :: ref_wind = 1.0_wp                ! wind in m/s
-    REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC 
+    REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
     INTEGER       :: iblk, ics, ice, nc
@@ -522,9 +522,9 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem  
-    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
-    dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory), POINTER      :: soil__mem  
+    dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem
+    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem
+    dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory), POINTER      :: soil__mem
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk      :: net_assimilation          ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: canopy_cond
@@ -592,7 +592,7 @@ CONTAINS
 
 
 ! 2 be removed  *slmtemp
-    veg    => veg__mem 
+    veg    => veg__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -601,19 +601,19 @@ CONTAINS
 
 
     !> 1.0 Init
-    !! 
+    !!
 
-    !> 1.1 Initalisation of met-forcing which is assumed constant 
-    !! 
-    !!  
-    t_air(:)            = ref_t_air + TZero 
+    !> 1.1 Initalisation of met-forcing which is assumed constant
+    !!
+    !!
+    t_air(:)            = ref_t_air + TZero
     press_srf(:)        = standard_press_srf
     q_air(:)            = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(1) * eps_vpd
-    co2_mixing_ratio(:) = def_co2_mixing_ratio   ! def_co2_mixing_ratio is used instead of ref_co2_mixing_ratio 
+    co2_mixing_ratio(:) = def_co2_mixing_ratio   ! def_co2_mixing_ratio is used instead of ref_co2_mixing_ratio
     rain(:)             = 0.0_wp
     snow(:)             = 0.0_wp
-    swpar_srf_down(:)   = ref_swdown 
-    swvis_srf_down(:)   = swpar_srf_down(:) / frac_par_swvis_srf 
+    swpar_srf_down(:)   = ref_swdown
+    swvis_srf_down(:)   = swpar_srf_down(:) / frac_par_swvis_srf
     swnir_srf_down(:)   = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
     swpar_fdiffuse(:)   = ref_fdiffuse
     wind_air(:)         = ref_wind
@@ -647,11 +647,11 @@ CONTAINS
            co2_mixing_ratio        = co2_mixing_ratio(:)   , &
            ga                      = ga(:)                 )
 
-    !> 1.2 Initialisation of soil and vegetation (so far relevant) 
+    !> 1.2 Initialisation of soil and vegetation (so far relevant)
     !!
-    !!  
+    !!
     w_soil_root_theta(:) = ref_theta
-    lai(:)   = ref_lai 
+    lai(:)   = ref_lai
     IF(ref_pft==0) THEN
       veg%pool%leaf%nitrogen%ptr     = ref_nleaf / molar_mass_N * lai(1)
     ELSE
@@ -661,7 +661,7 @@ CONTAINS
     CALL calc_canopy_layers(&
                           nc                  = nc                                      , &
                           ncanopy             = assimi_config%ncanopy                   , &
-                          lctlib              = lctlib                                  , & 
+                          lctlib              = lctlib                                  , &
                           leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
                           lai                 = lai(:),&
                           lai_cl              = lai_cl(1,:), &
@@ -676,19 +676,19 @@ CONTAINS
     t_jmax_opt_mavg(1) = 20._wp+0.35_wp*(t_air(1) - Tzero)
   !> 2.0 Sensitivity plots
   !!
-  !!  
+  !!
 
   !> 2.1 PAR (0-1500 µmol m-2 s-1)
-  !! 
-  !! 
+  !!
+  !!
   lun = 10
-  WRITE(lun,*) 'PAR A GC CI' 
+  WRITE(lun,*) 'PAR A GC CI'
 
-  swpar_srf_down(:) = 0.0_wp 
+  swpar_srf_down(:) = 0.0_wp
   DO i = 1,16
 
-     swpar_srf_down(:) = swpar_srf_down(:) + 100.0_wp / rad2ppfd 
-     swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf 
+     swpar_srf_down(:) = swpar_srf_down(:) + 100.0_wp / rad2ppfd
+     swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf
      swnir_srf_down(:) = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
      CALL update_a2l(tile, &
            options            , &
@@ -701,16 +701,16 @@ CONTAINS
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') swpar_srf_down(1) * rad2ppfd, & 
-           net_assimilation(1), canopy_cond(1) *1000._wp, & 
+     WRITE(lun,'(4F16.7)') swpar_srf_down(1) * rad2ppfd, &
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
            co2_conc_leaf(1)/co2_mixing_ratio(1) !,&
 !           net_assimilation(1),
 !           co2_conc_leaf(1)/co2_mixing_ratio(1),veg%pool%leaf%nitrogen%ptr*molar_mass_N,&
 !           net_assimilation(1)/(veg%pool%leaf%nitrogen%ptr*molar_mass_N)
 
   END DO
-  swpar_srf_down(:) = ref_swdown 
-  swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf 
+  swpar_srf_down(:) = ref_swdown
+  swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf
   swnir_srf_down(:) = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
   CALL update_a2l(tile, &
            options            , &
@@ -719,16 +719,16 @@ CONTAINS
            swpar_srf_down = swpar_srf_down)
 
   !> 2.2 Temperature (-5,60 °C)
-  !! 
-  !! 
+  !!
+  !!
   lun = lun + 1
-  WRITE(lun,*) 'T A GC CI' 
+  WRITE(lun,*) 'T A GC CI'
   t_air(:) = - 5.0_wp + Tzero
   hlp1(:)  = t_jmax_opt_mavg(:)
 
   DO i = 1,70
 
-     t_air(:) = t_air(:) + 1.0_wp 
+     t_air(:) = t_air(:) + 1.0_wp
      q_air(:) = 0.8_wp * calc_spec_humidity_sat(t_air(:),press_srf(:))
      t_jmax_opt_mavg(1) = 20._wp+0.35_wp*(t_air(1) - Tzero)
      CALL update_a2l(tile, &
@@ -741,9 +741,9 @@ CONTAINS
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(5F16.7)') t_air(1), &  
+     WRITE(lun,'(5F16.7)') t_air(1), &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
   END DO
   t_air(:)    = ref_t_air + Tzero
@@ -752,13 +752,13 @@ CONTAINS
         options            , &
         t_air = t_air, &
         q_air = q_air)
-  t_jmax_opt_mavg(:) = hlp1(:) 
+  t_jmax_opt_mavg(:) = hlp1(:)
 
-  !> 2.3 atmospheric CO2 (175 - 1000 ppm) 
-  !! 
-  !! 
-  lun = lun + 1 
-  WRITE(lun,*) 'CO2 A GC CI' 
+  !> 2.3 atmospheric CO2 (175 - 1000 ppm)
+  !!
+  !!
+  lun = lun + 1
+  WRITE(lun,*) 'CO2 A GC CI'
   co2_mixing_ratio(:) = 150._wp
   DO i = 1,34
 
@@ -774,7 +774,7 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') co2_mixing_ratio(1), &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
   END DO
   co2_mixing_ratio(:) = ref_co2_mixing_ratio
@@ -782,16 +782,16 @@ CONTAINS
                        options , &
                        co2_mixing_ratio = co2_mixing_ratio)
 
-  !> 2.4 VPD (0-3.3 kPa) 
-  !! 
-  !! 
+  !> 2.4 VPD (0-3.3 kPa)
+  !!
+  !!
   lun = lun + 1
-  WRITE(lun,*) 'VPD A GC CI' 
+  WRITE(lun,*) 'VPD A GC CI'
   DO i = 1,30
      q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - i * 100.0_wp / press_srf(1) * eps_vpd
      CALL update_a2l(tile    , &
                           options , &
-                          q_air = q_air) 
+                          q_air = q_air)
 
      !! canopy calculation fluxes
      CALL reset_veg_fluxes(tile)    !< mo_veg_util
@@ -802,24 +802,24 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') vpd(1), &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
   END DO
   q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(1) * eps_vpd
   vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(1) / 1000.0_wp
      CALL update_a2l(tile    , &
                           options , &
-                          q_air = q_air) 
+                          q_air = q_air)
 
   !> 2.5 Theta (0-100 %)
-  !! 
-  !! 
+  !!
+  !!
   lun = lun + 1
-  WRITE(lun,*) 'THETA A GC CI' 
+  WRITE(lun,*) 'THETA A GC CI'
   w_soil_root_theta(:) = 0.0_wp
   DO i = 1,100
 
-     w_soil_root_theta(:) = w_soil_root_theta(:) + 0.01_wp 
+     w_soil_root_theta(:) = w_soil_root_theta(:) + 0.01_wp
 
      !! canopy calculation fluxes
      CALL reset_veg_fluxes(tile)    !< mo_veg_util
@@ -828,26 +828,26 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') w_soil_root_theta(1) *100._wp, &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
   END DO
   w_soil_root_theta(:) = ref_theta
 
   !> 2.6 LAI (0-11)
-  !! 
-  !! 
+  !!
+  !!
   lun = lun + 1
   WRITE(lun,*) 'LAI A GC CI'
   lai(:) = 0.0_wp
 ! @todo test_canopy_model -> over what are you looping here ? "i" does not change any as far as I can see (Jan 20160927)
-  DO i = 1,22 
+  DO i = 1,22
 
-     lai(:) = lai(:) + 0.5_wp 
+     lai(:) = lai(:) + 0.5_wp
      veg%pool%leaf%nitrogen%ptr=ref_nleaf/molar_mass_N*lai(1)
      CALL calc_canopy_layers(&
                           nc                  = nc                                      , &
                           ncanopy             = assimi_config%ncanopy                   , &
-                          lctlib              = lctlib                                  , & 
+                          lctlib              = lctlib                                  , &
                           leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
                           lai                 = lai(:),&
                           lai_cl              = lai_cl(1,:), &
@@ -867,14 +867,14 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') lai(1), &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
   END DO
-  lai(:) = ref_lai 
+  lai(:) = ref_lai
 
   !> 2.7 leaf N (0.5-3 g N / m2(LAI))
-  !! 
-  !! 
+  !!
+  !!
   lun = lun + 1
   WRITE(lun,*) 'Nleaf A GC CI'
   DO i = 1,24
@@ -883,7 +883,7 @@ CONTAINS
      CALL calc_canopy_layers(&
                           nc                  = nc                                      , &
                           ncanopy             = assimi_config%ncanopy                   , &
-                          lctlib              = lctlib                                  , & 
+                          lctlib              = lctlib                                  , &
                           leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
                           lai                 = lai(:),&
                           lai_cl              = lai_cl(1,:), &
@@ -901,16 +901,16 @@ CONTAINS
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') veg%pool%leaf%nitrogen%ptr/lai(1)*molar_mass_N, & 
+     WRITE(lun,'(4F16.7)') veg%pool%leaf%nitrogen%ptr/lai(1)*molar_mass_N, &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
   END DO
   veg%pool%leaf%nitrogen%ptr=ref_nleaf/molar_mass_N*lai(1)
 
   !> 2.8 PFT
-  !! 
-  !! 
+  !!
+  !!
   lun = lun + 1
   WRITE(lun,*) 'PFT A GC CI'
   DO i = 1,npft
@@ -920,7 +920,7 @@ CONTAINS
      CALL calc_canopy_layers(&
                           nc                  = nc                                      , &
                           ncanopy             = assimi_config%ncanopy                   , &
-                          lctlib              = model%lctlib(i)                         , & 
+                          lctlib              = model%lctlib(i)                         , &
                           leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
                           lai                 = lai(:),&
                           lai_cl              = lai_cl(1,:), &
@@ -940,9 +940,9 @@ CONTAINS
 
      WRITE(lun,'(I1,3F16.7)') i, &
            net_assimilation(1), canopy_cond(1) *1000._wp, &
-           co2_conc_leaf(1)/co2_mixing_ratio(1) 
+           co2_conc_leaf(1)/co2_mixing_ratio(1)
 
-  END DO 
+  END DO
   !STOP
   END SUBROUTINE run_test_canopy_model
 
