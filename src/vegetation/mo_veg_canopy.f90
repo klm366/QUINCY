@@ -93,7 +93,7 @@ CONTAINS
                                                                                   !  (average over time)
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(out)   :: lai_cl                !< LAI of canopy layer
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(out)   :: cumm_lai_cl           !< cummlative LAI above canopy layer
-    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: leaf_nitrogen_cl      !< total N in canopy layer (mmol N/m2)
+    REAL(wp),DIMENSION(nc,ncanopy),INTENT(out)   :: leaf_nitrogen_cl      !< total N in canopy layer (mmol N/m2)
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: fn_rub_cl             !< fraction of N in Rubisco
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: fn_et_cl              !< fraction of N in Electron Transport
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: fn_pepc_cl            !< fraction of N in PepC
