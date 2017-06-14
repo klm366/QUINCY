@@ -300,22 +300,24 @@ CONTAINS
         l_forcing = .FALSE.
     END SELECT
     ! run model init
-    ! for land the same init routine as plant is run
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-        CALL pheno_init(tile, model%options)     ! pheno 
-        CALL veg_init(tile, model%options)       ! veg 
-        CALL soil_init(tile, model%options)      ! soil
-        CALL sb_init(tile, model%options)        ! sb 
+        CALL pheno_init   (tile, model%options)
+        CALL assimi_init  (tile, model%options)
+        CALL veg_init     (tile, model%options)
+        CALL soil_init    (tile, model%options)
+        CALL sb_init      (tile, model%options)
       CASE('soil')
-        CALL veg_init(tile, model%options)       ! veg, strictly speaking not necessary, but to be safe
-        CALL soil_init(tile, model%options)      ! soil
-        CALL sb_init(tile, model%options)        ! sb 
+        CALL veg_init     (tile, model%options)       ! strictly speaking not necessary, but to be safe
+        CALL soil_init    (tile, model%options)
+        CALL sb_init      (tile, model%options)
       CASE('canopy')
-        CALL veg_init(tile, model%options)       ! veg 
-        CALL soil_init(tile, model%options)      ! soil
+        CALL veg_init     (tile, model%options)
+        CALL assimi_init  (tile, model%options)
+        CALL soil_init    (tile, model%options)
       CASE('test_canopy')
-        CALL veg_init(tile, model%options)       ! veg 
+        CALL veg_init     (tile, model%options)
+        CALL assimi_init  (tile, model%options)
         ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
         CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')

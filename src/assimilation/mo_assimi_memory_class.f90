@@ -154,16 +154,16 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_air', mem%beta_air, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'gross_assimilation_cl', mem%gross_assimilation_cl, &
             initval_r=0.0_wp) ! initvalue
@@ -181,43 +181,43 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
     END IF
 
