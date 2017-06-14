@@ -59,7 +59,6 @@ flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
-flag_calc_soil_energy="F"
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -117,8 +116,7 @@ if [ $flag_generate_soil_forcing == "T" ]
   myc_scheme="no"
   soil_moisture_scheme="layer"
   sb_model_scheme="simple_0d"
-  flag_calc_soil_energy="T"
-
+  
   flag_t_resp_acclimation="T"
   flag_t_jmax_acclimation="T"
   flag_optimal_Nfraction="F"
@@ -397,7 +395,6 @@ validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_pres
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
 validateUserConfigValues "$flag_n_deposition" "$validateFlags" "flag_n_deposition"
-validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
@@ -804,12 +801,6 @@ if [ $paramSensitivitySim == T ]
     changeNamelistValue set_parameter_values_from_file ".TRUE."
   else
     changeNamelistValue set_parameter_values_from_file ".FALSE."
-fi
-if [ $flag_calc_soil_energy == T ]
-  then
-    changeNamelistValue flag_calc_soil_energy ".TRUE."
-  else
-    changeNamelistValue flag_calc_soil_energy ".FALSE."
 fi
 if [ $flag_tile_veg_dynamics == T ]
   then

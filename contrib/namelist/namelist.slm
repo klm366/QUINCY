@@ -32,7 +32,6 @@
 &SOIL_CTL
   ! flags for the soil process
   soil_moisture_scheme="bucket"
-  flag_calc_soil_energy=.FALSE.
   ! soil process options
   ! number of soil layers [default is 5] [energy==water]
   nsoil_energy=5
@@ -74,4 +73,3 @@
   ! use only the 1st year of climate input [FALSE TRUE]
   flag_climate_forcing_one_year=.FALSE.
 /
-

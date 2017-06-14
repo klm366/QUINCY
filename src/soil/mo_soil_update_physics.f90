@@ -240,43 +240,35 @@ CONTAINS
 
     !> 2.0 Estimate surface temperature and sensible heat flux 
     !!
-    IF (soil_config%flag_calc_soil_energy) THEN ! case of a simple diagnostic soil energy calculation
-       !> 2.1 simple estimate of sensible heat flux
-       !! (ignoring instabilities and actual surface moisture...)
-       !!
-       sensible_heat_flx(:) = heat_transfer_coef(drag_srf(:), model%options%steplen) * & 
-                             (surface_dry_static_energy(t_soil_sl(:,1),q_sat_soil(:)) - & 
-                              surface_dry_static_energy(t_air(:),q_air(:)))
 
-       !> 2.2 Estimate ground flux and update deep soil temperature
-       !! working upwards to estimate net transfer implied by previous temperature profile 
-       !! (ignores interaction of diffusion with water or ice)
-       !!
-       DO isoil = soil_config%nsoil_water,2,-1
-          WHERE(soil_depth_sl(:,isoil) > eps8)
-             ground_heat_flx(:) = (t_soil_sl(:,isoil-1)-t_soil_sl(:,isoil)) * therm_cond_sl(:,isoil) / & 
-                        (soil_depth_sl(:,isoil)/2.0_wp+soil_depth_sl(:,isoil-1)/2.0_wp)
-             t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + ground_heat_flx(:) * dtime / & 
-                        (heat_capa_sl(:,isoil) * bulk_dens_sl(:,isoil) * soil_depth_sl(:,isoil)) 
-          END WHERE 
-       ENDDO 
-  
-       !> 2.3 update net radiation flux at the surface, and implied soil temperature
-       !!
-       net_radiation(:) = latent_heat_flx(:) + sensible_heat_flx(:) - ground_heat_flx(:) 
-       t_soil_sl(:,1) = t_soil_sl(:,1) + ( sw_srf_net(:) - net_radiation(:) + & 
-                                ! simple estimate of surface net longwave flux
-                                lw_srf_down(:) - stbo * zemiss_def * t_soil_sl(:,1)**4 ) / & 
-                                (heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) * &
-                                dtime 
+    !> 2.1 simple estimate of sensible heat flux
+    !! (ignoring instabilities and actual surface moisture...)
+    !!
+    sensible_heat_flx(:) = heat_transfer_coef(drag_srf(:), model%options%steplen) * & 
+                          (surface_dry_static_energy(t_soil_sl(:,1),q_sat_soil(:)) - & 
+                           surface_dry_static_energy(t_air(:),q_air(:)))
 
-    ELSE ! diagnose sensible heat flux from net radiation and set soil temperature to air temperature 
-       ground_heat_flx(:) = 0.0_wp 
-       sensible_heat_flx(:) = net_radiation(:) - latent_heat_flx(:) 
-       DO isoil = 1,soil_config%nsoil_water
-          t_soil_sl(:,isoil) = t_air(:)
-       ENDDO
-    ENDIF
+    !> 2.2 Estimate ground flux and update deep soil temperature
+    !! working upwards to estimate net transfer implied by previous temperature profile 
+    !! (ignores interaction of diffusion with water or ice)
+    !!
+    DO isoil = soil_config%nsoil_water,2,-1
+      WHERE(soil_depth_sl(:,isoil) > eps8)
+           ground_heat_flx(:) = (t_soil_sl(:,isoil-1)-t_soil_sl(:,isoil)) * therm_cond_sl(:,isoil) / & 
+                      (soil_depth_sl(:,isoil)/2.0_wp+soil_depth_sl(:,isoil-1)/2.0_wp)
+           t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + ground_heat_flx(:) * dtime / & 
+                      (heat_capa_sl(:,isoil) * bulk_dens_sl(:,isoil) * soil_depth_sl(:,isoil)) 
+      END WHERE 
+    ENDDO 
+
+    !> 2.3 update net radiation flux at the surface, and implied soil temperature
+    !!
+    net_radiation(:) = latent_heat_flx(:) + sensible_heat_flx(:) - ground_heat_flx(:) 
+    t_soil_sl(:,1) = t_soil_sl(:,1) + ( sw_srf_net(:) - net_radiation(:) + & 
+                              ! simple estimate of surface net longwave flux
+                              lw_srf_down(:) - stbo * zemiss_def * t_soil_sl(:,1)**4 ) / & 
+                              (heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) * &
+                              dtime 
 
     !> 3.0 update soil moisture
     !!

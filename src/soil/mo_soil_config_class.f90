@@ -38,7 +38,6 @@ MODULE mo_soil_config_class
     REAL(wp)              :: soil_awc_prescribe, &
                              soil_theta_prescribe
     CHARACTER(15)         :: soil_moisture_scheme       !< soil moisture "prescribed|bucke|layer"
-    LOGICAL               :: flag_calc_soil_energy      !< calculate simple soil energy model 
     CONTAINS
       PROCEDURE :: Init => Init_soil_config
   END Type t_soil_config
@@ -74,7 +73,6 @@ CONTAINS
     REAL(wp) :: soil_awc_prescribe    , &
                 soil_theta_prescribe
     CHARACTER(15)  :: soil_moisture_scheme
-    LOGICAL  :: flag_calc_soil_energy
     INTEGER  :: i   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
@@ -88,8 +86,7 @@ CONTAINS
                           soil_depth      , &
                           soil_awc_prescribe        , &
                           soil_theta_prescribe      , &
-                          soil_moisture_scheme      , &
-                          flag_calc_soil_energy
+                          soil_moisture_scheme  
      
 
     ! variables for reading model-options from namelist
@@ -110,7 +107,6 @@ CONTAINS
     soil_awc_prescribe            = 300.0_wp
     soil_theta_prescribe          = 1.0_wp 
     soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
-    flag_calc_soil_energy         = .FALSE.  ! .TRUE. .FALSE.
 
     ! read the namelist
     ! 
@@ -151,8 +147,6 @@ CONTAINS
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
     config%soil_moisture_scheme      = soil_moisture_scheme
-    config%flag_calc_soil_energy     = flag_calc_soil_energy
-
     config%soil_depth_energy(1)      = dz_energy(1)
     DO i=2,nsoil_energy
       config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)

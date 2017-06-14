@@ -25,7 +25,6 @@ flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
-flag_calc_soil_energy="T"
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -226,7 +225,6 @@ validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_pres
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
 validateUserConfigValues "$flag_n_deposition" "$validateFlags" "flag_n_deposition"
-validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
@@ -388,12 +386,6 @@ if [ $flag_n_deposition == T ]
     changeNamelistValue flag_n_deposition ".TRUE."
   else
     changeNamelistValue flag_n_deposition ".FALSE."
-fi
-if [ $flag_calc_soil_energy == T ]
-  then
-    changeNamelistValue flag_calc_soil_energy ".TRUE."
-  else
-    changeNamelistValue flag_calc_soil_energy ".FALSE."
 fi
 if [ $flag_tile_veg_dynamics == T ]
   then
