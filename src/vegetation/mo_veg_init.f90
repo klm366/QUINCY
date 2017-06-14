@@ -295,7 +295,7 @@ CONTAINS
       !> 1.2 Canopy & Test_Canopy
       !!
       CASE('canopy','test_canopy')
-        ref_lai   = 6.0_wp
+        ref_lai   = 6.0_wp  !! the ref_lai of 6.0 works great for all sites that are not too dry; but use 0.5_wp for dry sites like ZA-Kru
         ref_nleaf = 2.0_wp
         lai(:)    = ref_lai
         !leaf_nitrogen

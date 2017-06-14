@@ -69,7 +69,7 @@ CONTAINS
                                              evaporation  , &
                                              infiltration , &
                                              hlp1
-    REAL(wp),DIMENSION(options%nc,soil_config%nsoil_water) :: &   ! 2D (nc,z-axis)
+    REAL(wp),DIMENSION(options%nc,soil_config%nsoil_water) :: &   ! 2D (nc,z-axis)  -> used for CASE("layer")
                                              ftranspiration , &
                                              fevaporation   , &
                                              theta_sl
@@ -230,6 +230,8 @@ CONTAINS
                         (q_sat - q_air(:)) / ( 10._wp / ga(:)) * & 
                         SUM(w_soil_sl(:,1:2)) / SUM(w_soil_fc_sl(:,1:2)) 
           WHERE(evaporation(:) < eps8) evaporation(:) = 0.0_wp
+       CASE DEFAULT
+          evaporation(:) = 0.0_wp
     ENDSELECT
 
     !> 1.4 calculate latent heat flux (W m-2) 
