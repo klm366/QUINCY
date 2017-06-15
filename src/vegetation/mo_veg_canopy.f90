@@ -227,7 +227,8 @@ CONTAINS
         !> 3.2.1 case of presribed fractions
         WHERE(lai_cl(:,:) > eps8) ! canopy layers with leaves
            ! fraction in chlorophyll
-           fn_chl_cl(:,:) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(:,:))) / chl2n
+           fn_chl_cl(:,:) = MIN(0.99_wp - fn_oth_cl(:,:), & 
+                                (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(:,:))) / chl2n)
            ! fraction in PepC
            fn_pepc_cl(:,:) = f_pepc
            ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
