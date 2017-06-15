@@ -27,7 +27,7 @@ MODULE mo_sb_memory_class
   PUBLIC :: t_slm_struct_sb_element, t_slm_struct_sb_pool   ! *slmjsb4
   PUBLIC :: max_no_of_structs, max_no_of_n_structs                      ! *slmjsb4
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 80   !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 120   !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -177,7 +177,10 @@ MODULE mo_sb_memory_class
                                     rtm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
                                     rtm_sorption, &         !< rate modifier for sorption [--]
                                     rtm_desorption, &       !< rate modifier for desorption [--]
-                                    rtm_hsc                 !< rate modifier for half-saturation constants [--] 
+                                    rtm_hsc, &              !< rate modifier for half-saturation constants [--] 
+                                    rtm_nitrification, &    !< rate modifier for nitrification [--] 
+                                    rtm_denitrification, &  !< rate modifier for denitrification [--] 
+                                    rtm_gasdiffusion        !< rate modifier for gasdiffusion [--] 
 
     ! moisture response functions
     TYPE(t_jsb_var_real3d)          :: &
@@ -185,7 +188,9 @@ MODULE mo_sb_memory_class
                                     rmm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
                                     rmm_sorption, &         !< rate modifier for sorption [--]
                                     rmm_desorption, &       !< rate modifier for desorption [--]
-                                    rmm_hsc                 !< rate modifier for half-saturation constants [--] 
+                                    rmm_hsc, &              !< rate modifier for half-saturation constants [--] 
+                                    rmm_nitrification, &    !< rate modifier for nitrification [--] 
+                                    rmm_gasdiffusion        !< rate modifier for gasdiffusion [--] 
 
     TYPE(t_jsb_var_real3d)          :: &
                                     het_respiration    ,    &  !< heterotrophic respiration  [mol m-3 s-1]
@@ -202,15 +207,37 @@ MODULE mo_sb_memory_class
                                     plant_uptake_no3_n15_sl, &  !< plant uptake of N15  [mol m-3 s-1] 
                                     plant_uptake_po4_sl,   &  !< plant uptake of P  [mol m-3 s-1]
                                     volatilisation_n,       &  !< volatilisation of N  [µmol m-3 s-1]
-                                    nitrification, &             !< nitrification  [µmol m-3 s-1]
-                                    denitrification              !< nitrification  [µmol m-3 s-1]
+                                    nitrification_no3, &         !< nitrification NO3 [µmol m-3 s-1]
+                                    nitrification_noy, &         !< nitrification to NOy  [µmol m-3 s-1]
+                                    nitrification_n2o, &         !< nitrification to N2O [µmol m-3 s-1]
+                                    denitrification_noy, &       !< nitrification NOy [µmol m-3 s-1]
+                                    denitrification_n2o, &       !< nitrification to N2O  [µmol m-3 s-1]
+                                    denitrification_n2           !< denitrification to N2  [µmol m-3 s-1]
+
+    ! 2D transport fluxes for communication with groundwater and atmosphere
+    TYPE(t_jsb_var_real2d)          :: & 
+                                    leaching_nh4_solute, &      !< land to groundwater flux of NH4 [µmol m-2 s-1]
+                                    leaching_no3_solute, &      !< land to groundwater flux of NO3 [µmol m-2 s-1]
+                                    leaching_po4_solute, &      !< land to groundwater flux of PO4 [µmol m-2 s-1]
+                                    leaching_nh4_n15_solute, &  !< land to groundwater flux of 15NH4 [µmol m-2 s-1]
+                                    leaching_no3_n15_solute, &  !< land to groundwater flux of 15NO3 [µmol m-2 s-1]
+                                    emission_nh3, &             !< land to atmosphere flux of NH3 [µmol m-2 s-1] 
+                                    emission_noy, &             !< land to atmosphere flux of NOy [µmol m-2 s-1] 
+                                    emission_n2o, &             !< land to atmosphere flux of N2O [µmol m-2 s-1]
+                                    emission_n2, &              !< land to atmosphere flux of N2 [µmol m-2 s-1]
+                                    emission_nh3_n15, &         !< land to atmosphere flux of 15NH3 [µmol m-2 s-1]
+                                    emission_noy_n15, &         !< land to atmosphere flux of 15NOy [µmol m-2 s-1]
+                                    emission_n2o_n15, &         !< land to atmosphere flux of 15N2O [µmol m-2 s-1]
+                                    emission_n2_n15             !< land to atmosphere flux of 15N2 [µmol m-2 s-1]
+                       
     
     TYPE(t_jsb_var_real3d)          :: &
-      qmax_org, &        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
-      k_bioturb, &                !< diffusion rate resulting from bioturbation 
-      bulk_dens_corr_sl, &         !< organic fraction corrected bulk-density of the soil [kg m-3]
-      bulk_soil_carbon_sl, &            !< carbon in the soil kg C m-3?
-      particle_fluxrate
+      qmax_org, &                       !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
+      k_bioturb, &                      !< diffusion rate resulting from bioturbation 
+      bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
+      bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
+      particle_fluxrate, &              !< burial rate due to organic matter fall and decay [s-1?] 
+      anaerobic_volume_fraction_sl      !< anaerobic volume fraction [--]
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_sb_element   !< test ...
@@ -959,6 +986,15 @@ CONTAINS
       CALL slm_add_var(mem, 'rtm_hsc', mem%rtm_hsc, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'rtm_nitrification', mem%rtm_nitrification, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_denitrification', mem%rtm_denitrification, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_gasdiffusion', mem%rtm_gasdiffusion, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'rmm_depolymerisation', mem%rmm_depolymerisation, &
             initval_r=0.0_wp) ! initvalue
   
@@ -972,6 +1008,12 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'rmm_hsc', mem%rmm_hsc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_nitrification', mem%rmm_nitrification, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_gasdiffusion', mem%rmm_gasdiffusion, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'het_respiration', mem%het_respiration, &
@@ -1016,10 +1058,22 @@ CONTAINS
       CALL slm_add_var(mem, 'volatilisation_n', mem%volatilisation_n, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'nitrification', mem%nitrification, &
+      CALL slm_add_var(mem, 'nitrification_no3', mem%nitrification_no3, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'denitrification', mem%denitrification, &
+      CALL slm_add_var(mem, 'nitrification_noy', mem%nitrification_noy, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'nitrification_n2o', mem%nitrification_n2o, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'denitrification_noy', mem%denitrification_noy, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'denitrification_n2o', mem%denitrification_n2o, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'denitrification_n2', mem%denitrification_n2, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'qmax_org', mem%qmax_org, &
@@ -1035,6 +1089,48 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'particle_fluxrate', mem%particle_fluxrate, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'leaching_nh4_solute', mem%leaching_nh4_solute, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'leaching_no3_solute', mem%leaching_no3_solute, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'leaching_po4_solute', mem%leaching_po4_solute, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_nh3', mem%emission_nh3, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_noy', mem%emission_noy, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_n2o', mem%emission_n2o, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_n2', mem%emission_n2, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_nh3_n15', mem%emission_nh3_n15, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_noy_n15', mem%emission_noy_n15, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_n2o_n15', mem%emission_n2o_n15, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_n2_n15', mem%emission_n2_n15, &
             initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)

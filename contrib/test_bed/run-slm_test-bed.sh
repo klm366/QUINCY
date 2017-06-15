@@ -19,8 +19,9 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 # plant-soil model options
 bnf_scheme="standard"           # standard std_plus_costs optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
-soil_moisture_scheme="bucket"   # prescribed bucket layer
+soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
+sb_nloss_scheme="fixed"         # fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -53,7 +54,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
+siteDataSet="n"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
 siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
 soil_awc_prescribe=300.0        # float !
@@ -207,6 +208,7 @@ validateMycScheme="no am ecm"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
 validateSBModelScheme="simple_0d simple_1d jsm"
+validateSBNLossScheme="fixed dynamic"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
@@ -221,6 +223,7 @@ validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
+validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
@@ -363,6 +366,7 @@ changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
+changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 if [ $flag_sb_prescribe_nh4 == T ]
   then
     changeNamelistValue flag_sb_prescribe_nh4 ".TRUE."

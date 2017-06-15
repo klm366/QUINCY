@@ -48,11 +48,15 @@ MODULE mo_soil_memory_class
 
     ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
     TYPE(t_jsb_var_real2d)          :: &
+                                    interception,     & !< surface interception evaporation  [kg / m2 / s]
+                                    evaporation,      & !< surface evaporation  [kg / m2 / s]
                                     runoff,           & !< surface runoff  [kg / m2 / s]
-                                    drainage            !< drainage        [kg / m2 / s]
+                                    drainage,         & !< drainage        [kg / m2 / s]
+                                    drainage_fraction   !< water mass fraction lost from the soil column by drainage [1 / s] 
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d)          :: &
+                                    w_skin,           & !< Water content in skin reservoir                                          [m]
                                     w_soil_root,      & !< Water content in root zone of the soil                                   [m]
                                     w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
                                     w_soil_root_pwp     !< Water content at permanent wilting point in root zone of the soil        [m]
@@ -154,10 +158,19 @@ CONTAINS
       CALL slm_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'interception', mem%interception, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'evaporation', mem%evaporation, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'runoff', mem%runoff, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'drainage', mem%drainage, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'drainage_fraction', mem%drainage_fraction, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'drainage_sl', mem%drainage_sl, &
@@ -167,6 +180,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'w_soil_root', mem%w_soil_root, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_skin', mem%w_skin, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'w_soil_root_fc', mem%w_soil_root_fc, &

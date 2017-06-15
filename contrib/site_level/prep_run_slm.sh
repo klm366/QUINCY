@@ -53,8 +53,9 @@ yearsSoilForcing=1              # number of years of forcing to be generated
 # plant-soil model options
 bnf_scheme="standard"           # standard std_plus_costs optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
-soil_moisture_scheme="bucket"   # prescribed bucket layer
+soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
+sb_nloss_scheme="fixed"         # fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -302,6 +303,7 @@ validateBNFScheme="standard std_plus_costs optimal resistance"
 validateMycScheme="no am ecm"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
+validateSBNLossScheme="fixed dynamic"
 validateSBModelScheme="simple_0d simple_1d jsm"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
@@ -391,6 +393,7 @@ validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_scheme"
+validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
@@ -766,6 +769,7 @@ changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme" 
 changeNamelistValue sb_model_scheme "$sb_model_scheme" 
+changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 if [ $flag_sb_prescribe_nh4 == T ]
   then
     changeNamelistValue flag_sb_prescribe_nh4 ".TRUE."

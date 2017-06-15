@@ -90,7 +90,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_shared_constants,      ONLY: molar_mass_N
+    USE mo_shared_constants,      ONLY: molar_mass_N, grav
     USE mo_base_constants,        ONLY: one_day
 
     ! Use of process memories
@@ -334,7 +334,11 @@ CONTAINS
     !> 4.0 update forcing variables based on 'read data'
     !!
     wind_10m(1)             = wind_air_r
-    ga(1)                   = 40.0_wp / drag_srf(1) * wind_10m(1)
+    ! neutral drag coefficient, assuminging a 12 metre tall forest
+    ! In JSBACH 4, this is divided by stepen and grav, so these are multiplied here... 
+    drag_srf(1)             = (( 0.41 / log( (22._wp - 2.0_wp/3._wp * 12._wp)/1.0_wp) )**2)
+    ga(1)                   = drag_srf(1) * wind_10m(1) 
+    drag_srf(1)             = drag_srf(1) * 1800._wp * grav 
     hlp1(1)                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
     co2_mixing_ratio_C13(1) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1(1))
     hlp1(1)                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C

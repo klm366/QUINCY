@@ -46,12 +46,19 @@ for (s in 1:nsite) {
    cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_daily.txt',sep=''),header=T)
    nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_daily.txt',sep=''),header=T)
    pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_daily.txt',sep=''),header=T)
-   
+   cnp_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpoolCNP_daily.txt',sep=''),header=T)
+   c13c14_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpooldCdN_daily.txt',sep=''),header=T)
+   cc13c14_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
+   np_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxNP_daily.txt',sep=''),header=T)  
+ 
    ntime<-dim(cpool)[1]
    ncpoolvar<-dim(cpool)[2]-1
    ncfluxvar<-dim(cflux)[2]-1
    nnfluxvar<-dim(nflux)[2]-1
    npfluxvar<-dim(pflux)[2]-1
+   ncnpsoilpoolvar<-dim(cnp_soilpool)[2]-1
+   ncsoilfluxvar<-dim(cc13c14_soilflux)[2]-1
+   nnpsoilfluxvar<-dim(np_soilflux)[2]-1
    nyear=ntime/365
    yearidx<- numeric(ntime)
    years<-numeric(nyear)
@@ -164,11 +171,44 @@ for (s in 1:nsite) {
      diag_std[s,which(colnames(diag_mean)==colnames(diags)[var])]<-sd(hlp1$x,na.rm=TRUE)
    }
 
+   # soil organic pools
+   if(s==1) { 
+      cnp_soilpool_mean<-array(NA,c(nsite,ncnpsoilpoolvar))
+      colnames(cnp_soilpool_mean)<-colnames(cnp_soilpool)[1+1:ncnpsoilpoolvar]
+      cnp_soilpool_std<-cnp_soilpool_mean
+   }
+   for (var in 1:ncnpsoilpoolvar) {
+     hlp1<-aggregate(cnp_soilpool[,var+1],list(yearidx),max) 
+     cnp_soilpool_mean[s,var]<-mean(hlp1$x)
+     cnp_soilpool_std[s,var]<-sd(hlp1$x)
+   }
+   # soil cfluxes pools
+   if(s==1) { 
+      cc13c14_soilflux_mean<-array(NA,c(nsite,ncsoilfluxvar))
+      colnames(cc13c14_soilflux_mean)<-colnames(cc13c14_soilflux)[1+1:ncsoilfluxvar]
+      cc13c14_soilflux_std<-cc13c14_soilflux_mean
+   }
+   for (var in 1:ncsoilfluxvar) {
+     hlp1<-aggregate(cc13c14_soilflux[,var+1],list(yearidx),sum) 
+     cc13c14_soilflux_mean[s,var]<-mean(hlp1$x)
+     cc13c14_soilflux_std[s,var]<-sd(hlp1$x)
+   }
+   # soil cfluxes pools
+   if(s==1) { 
+      np_soilflux_mean<-array(NA,c(nsite,nnpsoilfluxvar))
+      colnames(np_soilflux_mean)<-colnames(np_soilflux)[1+1:nnpsoilfluxvar]
+      np_soilflux_std<-np_soilflux_mean
+   }
+   for (var in 1:nnpsoilfluxvar) {
+     hlp1<-aggregate(np_soilflux[,var+1],list(yearidx),sum) 
+     np_soilflux_mean[s,var]<-mean(hlp1$x)
+     np_soilflux_std[s,var]<-sd(hlp1$x)
+   }
 }   
 
 # mean values:         slm_site_mean.csv
 # standard deviation:  slm_site_sd.csv
-out_mean<-cbind(site_str,cpool_mean,diag_mean,stoch_mean,cflux_mean,nflux_mean,pflux_mean,isotope_mean,soilwater_mean)
+out_mean<-cbind(site_str,cpool_mean,diag_mean,stoch_mean,cflux_mean,nflux_mean,pflux_mean,isotope_mean,soilwater_mean,cnp_soilpool_mean,cc13c14_soilflux_mean,np_soilflux_mean)
 write.csv(out_mean,file='slm_site_mean.csv',quote=F)
-out_std<-cbind(site_str,cpool_std,diag_std,stoch_std,cflux_std,nflux_std,pflux_std,isotope_std,soilwater_std)
+out_std<-cbind(site_str,cpool_std,diag_std,stoch_std,cflux_std,nflux_std,pflux_std,isotope_std,soilwater_std,cnp_soilpool_std,cc13c14_soilflux_std,np_soilflux_std)
 write.csv(out_std,file='slm_site_sd.csv',quote=F)

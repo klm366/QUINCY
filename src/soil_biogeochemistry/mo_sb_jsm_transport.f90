@@ -22,7 +22,7 @@ MODULE mo_sb_jsm_transport
   PRIVATE
   PUBLIC :: calc_particle_fluxrate, calc_bioturbation_rate, &
             calc_bioturbation_transport_wrapper, calc_liquid_phase_transport_wrapper , & 
-            calc_particle_transport_wrapper
+            calc_particle_transport_wrapper, calc_liquid_phase_transport
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
 
@@ -64,6 +64,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc)       :: leaching
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -82,29 +83,40 @@ CONTAINS
     !> 1.0 transport of DOM
     !!
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%carbon%ptr(ics:ice,:,iblk),transport_dom%carbon%ptr(ics:ice,:,iblk)) 
+                                        pool_dom%carbon%ptr(ics:ice,:,iblk),transport_dom%carbon%ptr(ics:ice,:,iblk), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%nitrogen%ptr(ics:ice,:,iblk),transport_dom%nitrogen%ptr(ics:ice,:,iblk)) 
+                                        pool_dom%nitrogen%ptr(ics:ice,:,iblk),transport_dom%nitrogen%ptr(ics:ice,:,iblk), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%phosphorus%ptr(ics:ice,:,iblk),transport_dom%phosphorus%ptr(ics:ice,:,iblk)) 
+                                        pool_dom%phosphorus%ptr(ics:ice,:,iblk),transport_dom%phosphorus%ptr(ics:ice,:,iblk), & 
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%carbon13%ptr(ics:ice,:,iblk),transport_dom%carbon13%ptr(ics:ice,:,iblk)) 
+                                        pool_dom%carbon13%ptr(ics:ice,:,iblk),transport_dom%carbon13%ptr(ics:ice,:,iblk), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%carbon14%ptr(ics:ice,:,iblk),transport_dom%carbon14%ptr(ics:ice,:,iblk)) 
+                                        pool_dom%carbon14%ptr(ics:ice,:,iblk),transport_dom%carbon14%ptr(ics:ice,:,iblk), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%nitrogen15%ptr(ics:ice,:,iblk),transport_dom%nitrogen15%ptr(ics:ice,:,iblk)) 
+                                        pool_dom%nitrogen15%ptr(ics:ice,:,iblk),transport_dom%nitrogen15%ptr(ics:ice,:,iblk), & 
+                                        leaching(:)) 
 
     !> 2.0 transport of other solutes (NH4, NO3, PO4, and their isotopes)
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        nh4_solute(:,:),transport_nh4_solute(:,:)) 
+                                        nh4_solute(:,:),transport_nh4_solute(:,:), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        no3_solute(:,:),transport_no3_solute(:,:)) 
+                                        no3_solute(:,:),transport_no3_solute(:,:), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        po4_solute(:,:),transport_po4_solute(:,:)) 
+                                        po4_solute(:,:),transport_po4_solute(:,:), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:)) 
+                                        nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:), &
+                                        leaching(:)) 
     CALL calc_liquid_phase_transport(options, nsoil, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        no3_n15_solute(:,:),transport_no3_n15_solute(:,:)) 
+                                        no3_n15_solute(:,:),transport_no3_n15_solute(:,:), & 
+                                        leaching(:)) 
 
   END SUBROUTINE calc_liquid_phase_transport_wrapper
 
@@ -773,7 +785,7 @@ CONTAINS
   !!
   !! Output: vertical transport rate (mol/m2/s) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_liquid_phase_transport(options,nsoil,percolation_sl,soil_depth_sl,pool,transport)
+  SUBROUTINE calc_liquid_phase_transport(options,nsoil,percolation_sl,soil_depth_sl,pool,transport,leaching)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -781,9 +793,11 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: percolation_sl         !< fraction of pool transported up or down per second
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl           !< depth of each soil layer [m] 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep 
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported [mol m-3]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep [mol m-3]
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: leaching               !< transport through the lower surface of the lowest 
+                                                                                   !! layer per timestep [mol m-3 timestep]
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: hlp1 
@@ -810,14 +824,15 @@ CONTAINS
     ENDDO
 
     !> 2.0 lower boundary condition,
-    !!  based on the assumption that there is no upward flux, and that all other 
-    !!  material is lost
+    !!  based on the assumption that there is no upward flux from below, 
+    !!  and that all other material is lost
     WHERE(percolation_sl(:,nsoil)>0.0_wp)
       hlp1(:) = percolation_sl(:,nsoil) * dtime/1000._wp * pool(:,nsoil) * soil_depth_sl(:,nsoil)
     ELSEWHERE
       hlp1(:) = 0.0_wp 
     ENDWHERE
     transport(:,nsoil) = transport(:,nsoil) - hlp1(:) / soil_depth_sl(:,nsoil)
+    leaching(:) = hlp1(:)
 
   END SUBROUTINE calc_liquid_phase_transport
 

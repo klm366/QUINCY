@@ -44,13 +44,16 @@ MODULE mo_shared_output
   REAL(wp), ALLOCATABLE, SAVE :: uptake_nh4_acc         
   REAL(wp), ALLOCATABLE, SAVE :: uptake_no3_acc         
   REAL(wp), ALLOCATABLE, SAVE :: n_fixation_acc         
-  REAL(wp), ALLOCATABLE, SAVE :: n_loss_acc         
   REAL(wp), ALLOCATABLE, SAVE :: recycling_n_acc     
   REAL(wp), ALLOCATABLE, SAVE :: res_use_n_acc        
   REAL(wp), ALLOCATABLE, SAVE :: uptake_po4_acc         
   REAL(wp), ALLOCATABLE, SAVE :: recycling_p_acc     
   REAL(wp), ALLOCATABLE, SAVE :: res_use_p_acc        
+  REAL(wp), ALLOCATABLE, SAVE :: precip_acc    
+  REAL(wp), ALLOCATABLE, SAVE :: evaporation_acc    
   REAL(wp), ALLOCATABLE, SAVE :: transpiration_acc    
+  REAL(wp), ALLOCATABLE, SAVE :: interception_acc    
+  REAL(wp), ALLOCATABLE, SAVE :: runoff_acc    
   REAL(wp), ALLOCATABLE, SAVE :: drainage_acc    
   REAL(wp), ALLOCATABLE, SAVE :: gc_acc               
   REAL(wp), ALLOCATABLE, SAVE :: ga_acc    
@@ -81,7 +84,14 @@ MODULE mo_shared_output
   REAL(wp), ALLOCATABLE, SAVE :: litterfallP_acc 
   REAL(wp), ALLOCATABLE, SAVE :: net_min_po4_acc 
   REAL(wp), ALLOCATABLE, SAVE :: leachingPorg_acc 
-
+  REAL(wp), ALLOCATABLE, SAVE :: nitrification_acc
+  REAL(wp), ALLOCATABLE, SAVE :: denitrification_acc
+  REAL(wp), ALLOCATABLE, SAVE :: emission_noy_acc
+  REAL(wp), ALLOCATABLE, SAVE :: emission_n2o_acc
+  REAL(wp), ALLOCATABLE, SAVE :: emission_n2_acc
+  REAL(wp), ALLOCATABLE, SAVE :: leaching_nh4_acc
+  REAL(wp), ALLOCATABLE, SAVE :: leaching_no3_acc
+  REAL(wp), ALLOCATABLE, SAVE :: leaching_po4_acc
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
@@ -113,11 +123,14 @@ CONTAINS
     ALLOCATE(recycling_n_acc)  
     ALLOCATE(res_use_n_acc)  
     ALLOCATE(n_fixation_acc)   
-    ALLOCATE(n_loss_acc)   
     ALLOCATE(uptake_po4_acc)
     ALLOCATE(recycling_p_acc)  
     ALLOCATE(res_use_p_acc)   
+    ALLOCATE(precip_acc) 
+    ALLOCATE(evaporation_acc) 
     ALLOCATE(transpiration_acc) 
+    ALLOCATE(interception_acc) 
+    ALLOCATE(runoff_acc) 
     ALLOCATE(drainage_acc) 
     ALLOCATE(gc_acc)
     ALLOCATE(ga_acc)
@@ -148,6 +161,15 @@ CONTAINS
     ALLOCATE(litterfallP_acc)
     ALLOCATE(net_min_po4_acc)
     ALLOCATE(leachingPorg_acc)
+    ALLOCATE(nitrification_acc)
+    ALLOCATE(denitrification_acc)
+    ALLOCATE(emission_noy_acc)
+    ALLOCATE(emission_n2o_acc)
+    ALLOCATE(emission_n2_acc)
+    ALLOCATE(leaching_nh4_acc)
+    ALLOCATE(leaching_no3_acc)
+    ALLOCATE(leaching_po4_acc)
+
 
   END SUBROUTINE allocate_slm_output_variables
 
@@ -182,11 +204,14 @@ CONTAINS
     recycling_n_acc     = 0.0_wp  
     res_use_n_acc       = 0.0_wp  
     n_fixation_acc      = 0.0_wp   
-    n_loss_acc          = 0.0_wp   
-    uptake_po4_acc        = 0.0_wp
+    uptake_po4_acc      = 0.0_wp
     recycling_p_acc     = 0.0_wp  
     res_use_p_acc       = 0.0_wp   
+    precip_acc          = 0.0_wp 
+    evaporation_acc     = 0.0_wp 
     transpiration_acc   = 0.0_wp 
+    interception_acc    = 0.0_wp 
+    runoff_acc          = 0.0_wp 
     drainage_acc        = 0.0_wp 
     gc_acc              = 0.0_wp
     ga_acc              = 0.0_wp
@@ -217,6 +242,14 @@ CONTAINS
     litterfallP_acc     = 0.0_wp
     net_min_po4_acc     = 0.0_wp
     leachingPorg_acc    = 0.0_wp
+    nitrification_acc   = 0.0_wp
+    denitrification_acc = 0.0_wp
+    emission_noy_acc    = 0.0_wp
+    emission_n2o_acc    = 0.0_wp
+    emission_n2_acc     = 0.0_wp
+    leaching_nh4_acc    = 0.0_wp
+    leaching_no3_acc    = 0.0_wp
+    leaching_po4_acc    = 0.0_wp
 
   END SUBROUTINE init_slm_output_variables
 
@@ -405,12 +438,12 @@ CONTAINS
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time StrLitterC StrLitterN StrLitterP WodLitterC WodLitterN WodLitterP', &
-                           ' FastC FastN FastP SlowC SlowN SlowP MineralNH4 MineralNO3 MineralP'
+                           ' FastC FastN FastP SlowC SlowN SlowP MineralNH4 MineralNO3 MineralP NOY N2O N2'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14'!, &
          !                 ' StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
-         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
+         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
          lun=lun+1
          WRITE(lun,'(2a)') &
          & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
@@ -736,7 +769,11 @@ CONTAINS
                                      SUM(sb%pool%residue%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))          , & 
                                      SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
                                      SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
-                                     SUM(sb%po4_solute%ptr(1,:,1)*soil_depth_sl(1,:))
+                                     SUM(sb%po4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
+                                     SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
+                                     SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
+                                     SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))                       
+                           
 
               dC13polymeric_litter(1,1) = calc_delta_C13(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                                          SUM(sb%pool%polymeric_litter%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
@@ -962,7 +999,7 @@ CONTAINS
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         fname = 'vegfluxN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -977,7 +1014,10 @@ CONTAINS
         fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxes'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxNP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
       CASE('canopy') ! subset of CASE('land','plant')
@@ -1043,15 +1083,18 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                           'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NDeposition NFixation Nloss'
+        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation'
         lun=lun+1
         WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
+        WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
-        WRITE(lun,'(a)') 'Time HetResp HetResp_dC13 HetResp_DC14 Net_Mineralisation_NH4 Net_Mineralisation_PO4' 
+        WRITE(lun,'(2a)') 'Time HetResp HetResp_dC13 HetResp_DC14'
+        lun=lun+1
+        WRITE(lun,'(2a)') 'Time NDeposition Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
+                          'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3 Net_Mineralisation_PO4 Leaching_PO4' 
 
       CASE('canopy') ! subset of CASE('land','plant')
         ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
@@ -1060,7 +1103,7 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                           'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
+        WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
 
@@ -1135,6 +1178,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: nhx_deposition
     dsl4jsb_Real2D_onChunk      :: noy_deposition
+    dsl4jsb_Real2D_onChunk      :: rain 
+    dsl4jsb_Real2D_onChunk      :: snow
     ! L2A_
     dsl4jsb_Real2D_onChunk      :: albedo
     dsl4jsb_Real2D_onChunk      :: net_radiation
@@ -1148,6 +1193,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: canopy_cond
     ! SOIL_ 2D
     dsl4jsb_Real2D_onChunk      :: drainage
+    dsl4jsb_Real2D_onChunk      :: runoff 
+    dsl4jsb_Real2D_onChunk      :: evaporation 
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
@@ -1173,6 +1220,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: transpiration
+    dsl4jsb_Real2D_onChunk      :: interception 
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1205,6 +1253,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow) 
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
     dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
@@ -1217,6 +1267,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, interception)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
     ! ---------------------------
@@ -1296,13 +1349,25 @@ CONTAINS
                                        recycling_fine_root_n(1) + recycling_heart_wood_n(1) )     * dtime_one *1000000._wp/dtime
              res_use_n_acc    = res_use_n_acc     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
              n_fixation_acc   = n_fixation_acc    + n_fixation(1)                   * dtime_one 
-             n_loss_acc       = n_loss_acc        + sb%volatilisation_n%ptr(1,1,1) * soil_depth_sl(1,1) * dtime_one 
              uptake_po4_acc     = uptake_po4_acc      + uptake_po4(1)                     * dtime_one
              recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + & 
                                        recycling_fine_root_p(1) + recycling_heart_wood_p(1) )     * dtime_one *1000000._wp/dtime
              res_use_p_acc    = res_use_p_acc     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
-             transpiration_acc= transpiration_acc + transpiration(1)                * dtime_one 
-             drainage_acc     = drainage_acc      + drainage(1)                     * dtime_one 
+             IF(output_interval_flux < 1.0_wp) THEN
+                precip_acc       = precip_acc        + (rain(1) + snow(1))  
+                interception_acc = interception_acc  + interception(1)       
+                evaporation_acc  = evaporation_acc   + evaporation(1)       
+                transpiration_acc= transpiration_acc + transpiration(1)      
+                runoff_acc       = runoff_acc        + runoff(1)              
+                drainage_acc     = drainage_acc      + drainage(1)             
+             ELSE
+                precip_acc       = precip_acc        + (rain(1) + snow(1))             * dtime
+                interception_acc = interception_acc  + interception(1)                 * dtime 
+                evaporation_acc  = evaporation_acc   + evaporation(1)                  * dtime
+                transpiration_acc= transpiration_acc + transpiration(1)                * dtime
+                runoff_acc       = runoff_acc        + runoff(1)                       * dtime
+                drainage_acc     = drainage_acc      + drainage(1)                     * dtime
+             ENDIF 
              gc_acc           = gc_acc            + canopy_cond(1)                                                      
              ga_acc           = ga_acc            + ga(1) 
              IF(sb_config%flag_n_deposition) THEN
@@ -1321,7 +1386,18 @@ CONTAINS
              het_respC14_acc = het_respC14_acc + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
              net_min_nh4_acc = net_min_nh4_acc + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
              net_min_po4_acc = net_min_po4_acc + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-       
+             nitrification_acc = nitrification_acc + & 
+                SUM((sb%nitrification_no3%ptr(ics:ice,:,iblk) + sb%nitrification_noy%ptr(ics:ice,:,iblk) + sb%nitrification_n2o%ptr(ics:ice,:,iblk)) * soil_depth_sl(:,:)) * & 
+                dtime_one
+             denitrification_acc = denitrification_acc + & 
+                SUM((sb%denitrification_n2%ptr(ics:ice,:,iblk) + sb%denitrification_noy%ptr(ics:ice,:,iblk) + sb%denitrification_n2o%ptr(ics:ice,:,iblk)) * soil_depth_sl(:,:)) * & 
+                dtime_one 
+             emission_noy_acc = emission_noy_acc + sb%emission_noy%ptr(1,iblk) * dtime_one
+             emission_n2o_acc = emission_n2o_acc + sb%emission_n2o%ptr(1,iblk) * dtime_one
+             emission_n2_acc  = emission_n2_acc  + sb%emission_n2%ptr(1,iblk) * dtime_one
+             leaching_nh4_acc = leaching_nh4_acc + sb%leaching_nh4_solute%ptr(1,iblk) * dtime_one
+             leaching_no3_acc = leaching_no3_acc + sb%leaching_no3_solute%ptr(1,iblk) * dtime_one
+             leaching_po4_acc = leaching_po4_acc + sb%leaching_po4_solute%ptr(1,iblk) * dtime_one
              !> 1.2 write fluxes and set to zero
              !!
              !!  
@@ -1351,11 +1427,12 @@ CONTAINS
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
                    write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
-                                          res_use_n_acc, n_deposition_acc, n_fixation_acc, n_loss_acc
+                                          res_use_n_acc, n_fixation_acc
                    lun=lun+1
                    write(lun,'(4F12.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                    lun=lun+1
-                   write(lun,'(12F16.8)') time_d, transpiration_acc, drainage_acc, gc_acc, ga_acc
+                   write(lun,'(12F16.8)') time_d, precip_acc, evaporation_acc, interception_acc, & 
+                                          transpiration_acc, runoff_acc, drainage_acc, gc_acc, ga_acc
                    lun=lun+1
                    IF(ppfd_acc>eps8) THEN
                       hlp1=appfd_acc/ppfd_acc
@@ -1366,8 +1443,12 @@ CONTAINS
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
                    lun=lun+1
                    dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
-                   write(lun,'(12F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
-                                          net_min_nh4_acc, net_min_po4_acc
+                   write(lun,'(20F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
+
+                   lun=lun+1
+                   write(lun,'(20F16.8)') time_d,n_deposition_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
+                                          emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
+                                          leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
 
                  CASE('canopy') ! subset of CASE('land','plant')
                    ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
@@ -1383,7 +1464,8 @@ CONTAINS
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
-                   write(lun,'(12F16.8)') time_d, transpiration_acc, drainage_acc, gc_acc, ga_acc
+                   write(lun,'(12F16.8)') time_d, precip_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
+                                          drainage_acc, gc_acc, ga_acc
                    lun=lun+1
                    IF(ppfd_acc>eps8) THEN
                       hlp1=appfd_acc/ppfd_acc
@@ -1413,12 +1495,15 @@ CONTAINS
                recycling_n_acc   = 0.0_wp
                res_use_n_acc     = 0.0_wp
                n_fixation_acc    = 0.0_wp
-               n_loss_acc        = 0.0_wp
-               uptake_po4_acc      = 0.0_wp
+               uptake_po4_acc    = 0.0_wp
                recycling_p_acc   = 0.0_wp
                res_use_p_acc     = 0.0_wp
+               precip_acc        = 0.0_wp
+               evaporation_acc   = 0.0_wp
+               interception_acc  = 0.0_wp
                transpiration_acc = 0.0_wp
                drainage_acc      = 0.0_wp
+               runoff_acc        = 0.0_wp
                gc_acc            = 0.0_wp
                ga_acc            = 0.0_wp
                n_deposition_acc  = 0.0_wp
@@ -1435,6 +1520,14 @@ CONTAINS
                het_respC14_acc   = 0.0_wp
                net_min_nh4_acc   = 0.0_wp
                net_min_po4_acc   = 0.0_wp
+               nitrification_acc = 0.0_wp
+               denitrification_acc = 0.0_wp
+               emission_noy_acc = 0.0_wp
+               emission_n2o_acc = 0.0_wp
+               emission_n2_acc = 0.0_wp
+               leaching_nh4_acc = 0.0_wp
+               leaching_no3_acc = 0.0_wp
+               leaching_po4_acc = 0.0_wp
              END IF
            END IF
         END IF  ! on/off switch specific to 'special case: fluxnet output'

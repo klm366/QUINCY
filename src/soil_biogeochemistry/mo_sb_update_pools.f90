@@ -90,7 +90,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
-    dsl4jsb_Real3D_onChunk :: nitrification 
+    dsl4jsb_Real3D_onChunk :: nitrification_no3 
+    dsl4jsb_Real3D_onChunk :: nitrification_noy 
+    dsl4jsb_Real3D_onChunk :: nitrification_n2o 
+    dsl4jsb_Real3D_onChunk :: denitrification_noy 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2o 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2 
     dsl4jsb_Real3D_onChunk :: volatilisation_n 
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
@@ -107,6 +112,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: transport_noy
+    dsl4jsb_Real3D_onChunk :: transport_n2o
+    dsl4jsb_Real3D_onChunk :: transport_n2
     dsl4jsb_Real3D_onChunk :: nh4_solute 
     dsl4jsb_Real3D_onChunk :: nh4_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
@@ -117,6 +125,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: noy 
+    dsl4jsb_Real3D_onChunk :: n2o 
+    dsl4jsb_Real3D_onChunk :: n2
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
@@ -156,7 +167,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)           ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)           ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)           ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o )        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! in 
     dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! in
@@ -173,6 +189,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       noy)                         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2o)                         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2)                          ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! in
@@ -183,6 +202,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2)                ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
@@ -235,17 +257,25 @@ CONTAINS
     !> 3.1 ecosystem internal processes  
     !!
     nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:) - & 
-                                                 volatilisation_n(:,:) - nitrification(:,:) + &
+                                                 nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
+                                                 volatilisation_n(:,:) + &
                                                  transport_nh4_solute(:,:)) * dtime/1.e6_wp
     nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:) + &
                                                  transport_nh4_n15_solute(:,:)) * dtime/1.e6_wp
     no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:) + &
-                                                 nitrification(:,:) + &
+                                                 nitrification_no3(:,:) - &
+                                                 denitrification_noy(:,:) - denitrification_n2o(:,:) - denitrification_n2(:,:) + &
                                                  transport_no3_solute(:,:)) * dtime/1.e6_wp
     no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:) + &
                                                  transport_no3_n15_solute(:,:)) * dtime/1.e6_wp
     po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) + &
                                                  transport_po4_solute(:,:)) * dtime/1.e6_wp
+
+    noy(:,:)            = noy(:,:)            + (nitrification_noy(:,:) + denitrification_noy(:,:) + & 
+                                                 transport_noy(:,:)) * dtime/1.e6_wp
+    n2o(:,:)            = n2o(:,:)            + (nitrification_n2o(:,:) + denitrification_n2o(:,:) + & 
+                                                 transport_n2o(:,:)) * dtime/1.e6_wp
+    n2(:,:)             = n2(:,:)             + (denitrification_n2(:,:) + transport_n2(:,:)) * dtime/1.e6_wp
 
     IF(sb_config%flag_sb_prescribe_nh4)THEN
        hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)

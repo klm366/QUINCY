@@ -43,7 +43,8 @@ CONTAINS
     USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def
     USE mo_phy_schemes
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2, drain_frac, fdrain_runoff, kdiff_theta, min_theta_wpot                                        
+    USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2, drain_frac, fdrain_runoff, max_infiltration_rate, & 
+                                        kdiff_theta, min_theta_wpot, InterceptionEfficiency,w_skin_max
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
 
     ! Use of process memories
@@ -66,8 +67,10 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: &                    ! 1D (nc)
                                              q_sat        , &
                                              q_sat_soil   , &
-                                             evaporation  , &
                                              infiltration , &
+                                             water_to_skin, &
+                                             water_to_soil, &
+                                             w_soil_root_old, &
                                              hlp1
     REAL(wp),DIMENSION(options%nc,soil_config%nsoil_water) :: &   ! 2D (nc,z-axis)  -> used for CASE("layer")
                                              ftranspiration , &
@@ -102,13 +105,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
     ! SOIL_
     dsl4jsb_Real2D_onChunk                :: root_depth
+    dsl4jsb_Real2D_onChunk                :: w_skin
     dsl4jsb_Real2D_onChunk                :: w_soil_root
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk                :: w_soil_root_fc
     dsl4jsb_Real2D_onChunk                :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pot
+    dsl4jsb_Real2D_onChunk                :: interception 
+    dsl4jsb_Real2D_onChunk                :: evaporation 
     dsl4jsb_Real2D_onChunk                :: runoff
     dsl4jsb_Real2D_onChunk                :: drainage
+    dsl4jsb_Real2D_onChunk                :: drainage_fraction
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk                :: heat_capa_sl
@@ -126,6 +133,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
     ! VEG_
     dsl4jsb_Real2D_onChunk                :: transpiration
+    dsl4jsb_Real2D_onChunk                :: lai 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -165,13 +173,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! out
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)          ! in
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_skin)              ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)         ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)     ! in
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)      ! in
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)   ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)     ! out
+    dsl4jsb_Get_var2D_onChunk(SOIL_, interception)        ! out
+    dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)         ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)              ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)            ! out
+    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage_fraction)   ! out
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)        ! in
@@ -189,6 +201,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)        ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in 
 
 
 
@@ -196,6 +209,7 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    w_soil_root_old(:) = w_soil_root(:)
 
     !> 1.0 Latent heat flux
     !!
@@ -218,25 +232,38 @@ CONTAINS
     !> 1.3 soil evaporation (kg / m2 / s)
     !! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil(:) = ga(:) / 10)
     !!
+    evaporation(:) = exp(-0.5*lai(:)) * press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
+                     (q_sat(:) - q_air(:)) / ( 10._wp / ga(:)) 
     SELECT CASE(soil_config%soil_moisture_scheme)
        CASE("bucket") ! ! Case of bucket water scheme
-          evaporation(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
-                        (q_sat(:) - q_air(:)) / ( 100._wp / ga(:)) * & 
-                        w_soil_root_theta(:)
-          WHERE(sw_srf_net(:) < eps8) evaporation(:) = 0.0_wp
+          evaporation(:) = evaporation(:) * w_soil_root_theta(:)
        
        CASE("layer") ! Case of layer scheme
-          evaporation(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
-                        (q_sat - q_air(:)) / ( 10._wp / ga(:)) * & 
-                        SUM(w_soil_sl(:,1:2)) / SUM(w_soil_fc_sl(:,1:2)) 
-          WHERE(evaporation(:) < eps8) evaporation(:) = 0.0_wp
-       CASE DEFAULT
-          evaporation(:) = 0.0_wp
+          evaporation(:) = evaporation(:) * & 
+                           SUM(w_soil_sl(:,1:2)-w_soil_pwp_sl(:,1:2), DIM=2) / & 
+                           SUM(w_soil_fc_sl(:,1:2) - w_soil_pwp_sl(:,1:2), DIM=2) 
     ENDSELECT
-
-    !> 1.4 calculate latent heat flux (W m-2) 
+    WHERE(evaporation(:) < eps8) evaporation(:) = 0.0_wp
+    
+    !> 1.4 Update skin reservoir and calculate interception loss
     !!
-    latent_heat_flx(:) = LatentHeatVaporization * (evaporation(:) + transpiration(:))
+    WHERE(w_skin_max * lai(:) > eps8)
+       ! m / timestep
+       interception(:) = MIN(MAX(press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
+                         (q_sat(:) - q_air(:)) / ( 1._wp / ga(:)) * & 
+                         w_skin(:) / (w_skin_max * lai(:)), 0.0), w_skin(:)*1000.0_wp / dtime)
+       water_to_skin(:) = MIN(InterceptionEfficiency * (rain(:) + snow(:)) / 1000.0_wp * dtime, & 
+                          MAX(interception(:) * dtime / 1000.0_wp + w_skin_max * lai(:) - w_skin(:), 0._wp))
+    ELSEWHERE
+       interception(:) = 0.0_wp
+       water_to_skin(:) = 0.0_wp
+    ENDWHERE
+    water_to_soil(:) = MAX(rain(:) + snow(:) - water_to_skin(:) / dtime * 1000.0_wp, 0.0)
+    w_skin(:) = w_skin(:) + water_to_skin(:) - interception(:) * dtime/1000.0_wp
+
+    !> 1.5 calculate latent heat flux (W m-2) 
+    !!
+    latent_heat_flx(:) = LatentHeatVaporization * (evaporation(:) + transpiration(:) + interception(:))
 
     !> 2.0 Estimate surface temperature and sensible heat flux 
     !!
@@ -278,18 +305,25 @@ CONTAINS
        CASE("bucket")
           !> 3.1.1 update soil moisture
           !! dS/dt = rain - transpiration - evaporation
-          w_soil_root(:) = w_soil_root(:) + (rain(:) + snow(:) &
+          infiltration(:) = MIN(water_to_soil(:),max_infiltration_rate)
+  
+          w_soil_root(:) = w_soil_root(:) + (infiltration(:) &
                - transpiration(:) - evaporation(:)) / 1000._wp * dtime
    
-          !> 3.1.2 calculate drainage if any [mm/s]
+          !> 3.1.2 calculate runoff and drainage if any [mm/s]
           !!
           WHERE(w_soil_root(:) > w_soil_root_fc(:))
-            drainage(:) = ( w_soil_root(:) - w_soil_root_fc(:) ) * 1000._wp/ dtime
+            runoff(:) = ( w_soil_root(:) - w_soil_root_fc(:) ) * 1000._wp/ dtime
           ELSEWHERE
-            drainage(:) = 0.0_wp
+            runoff(:) = 0.0_wp
           END WHERE
-          w_soil_root(:) = w_soil_root(:) - drainage(:) / 1000.0_wp * dtime
+          w_soil_root(:) = w_soil_root(:) - runoff(:) / 1000.0_wp * dtime
           w_soil_root(:) = MAX(w_soil_root(:),0.0_wp)
+          ! add surplus water to runoff
+          runoff(:) = runoff(:) + water_to_soil(:) - infiltration(:) 
+          ! partition runoff into drainage and runoff
+          drainage(:) = fdrain_runoff * runoff(:) 
+          runoff(:) = (1.0_wp - fdrain_runoff) * runoff(:)
    
           !> 3.1.3 calculate plant fractional water availability 
           !!
@@ -322,9 +356,12 @@ CONTAINS
           !> 3.2.1 determine fraction of evaporation per layer, limited to the first two soil layers
           !!
           fevaporation(:,:) = 0.0_wp
-          WHERE(w_soil_sl(:,1) > eps8)
-             fevaporation(:,1) = MAX(1.0_wp,evaporation(:)/w_soil_sl(:,1))
+          fevaporation(:,1) = 1.0_wp
+          WHERE(evaporation(:)*dtime/1000.0_wp > w_soil_sl(:,1)-w_soil_pwp_sl(:,1) .AND. & 
+                evaporation(:)*dtime/1000.0_wp > eps8)
+             fevaporation(:,1) = (w_soil_sl(:,1)-w_soil_pwp_sl(:,1))/(evaporation(:)*dtime/1000.0_wp)
           END WHERE
+          fevaporation(:,2) = 1.0_wp - fevaporation(:,1)         
 
           !> 3.2.2 determine fraction of transpiration per layer
           !!
@@ -349,8 +386,8 @@ CONTAINS
           !! a fraction of infiltration is leaked below the first layer (preferential flow) 
           ! first guess
           infiltration(:) = MAX(MIN(w_soil_fc_sl(:,1) - w_soil_sl(:,1), & 
-                         ( rain(:) + snow(:) ) / 1000._wp * dtime),0.0_wp)
-          runoff(:) = rain(:) + snow(:) - infiltration(:) * 1000._wp / dtime
+                         ( water_to_soil(:) ) / 1000._wp * dtime),0.0_wp)
+          runoff(:) = MAX(water_to_soil(:) - infiltration(:) * 1000._wp / dtime, 0.0_wp)
 
           ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
           drainage_sl(:,1) = drain_frac / soil_depth_sl(:,1) * infiltration(:) + fdrain_runoff * runoff(:)
@@ -358,13 +395,12 @@ CONTAINS
           infiltration(:) = ( 1.0_wp - drain_frac / soil_depth_sl(:,1) ) * infiltration(:)
 
           w_soil_sl(:,1) = w_soil_sl(:,1) + (infiltration(:) - &
-               evaporation(:) * fevaporation(:,1) + transpiration(:) * ftranspiration(:,1)) / 1000._wp * dtime
+               evaporation(:) * fevaporation(:,1) - transpiration(:) * ftranspiration(:,1)) / 1000._wp * dtime
 
           WHERE(w_soil_sl(:,1) > w_soil_fc_sl(:,1))
                runoff(:) = runoff(:) + (w_soil_sl(:,1) - w_soil_fc_sl(:,1))*1000._wp / dtime
                w_soil_sl(:,1) = w_soil_fc_sl(:,1) 
           END WHERE 
-
 
           !> 3.2.4 update deeper soil layers given infiltration, transpiration and evaporation
           !!
@@ -377,7 +413,7 @@ CONTAINS
                ! water balance of soil layer
                w_soil_sl(:,isoil) = w_soil_sl(:,isoil) + & 
                     (( 1.0_wp - drain_frac / soil_depth_sl(:,isoil) ) * drainage_sl(:,isoil-1) - & 
-                     evaporation(:) * fevaporation(:,isoil) + transpiration(:) * ftranspiration(:,isoil)) / 1000._wp * dtime
+                     evaporation(:) * fevaporation(:,isoil) - transpiration(:) * ftranspiration(:,isoil)) / 1000._wp * dtime
 
                ! drain surplus water to lower layer to keep water storage below field capacity
                WHERE(w_soil_sl(:,isoil) > w_soil_fc_sl(:,isoil))
@@ -399,11 +435,11 @@ CONTAINS
              hlp1 = kdiff_theta * theta_sl(:,isoil) * dtime * & 
                    (theta_sl(:,isoil-1) - theta_sl(:,isoil)) / &  
                    ((soil_depth_sl(:,isoil-1)+(soil_depth_sl(:,isoil)))/2.0_wp)
-
+          
              w_soil_sl(:,isoil-1) = w_soil_sl(:,isoil-1) - hlp1(:)
              w_soil_sl(:,isoil) = w_soil_sl(:,isoil) + hlp1(:) 
              drainage_sl(:,isoil-1) = drainage_sl(:,isoil-1) + hlp1(:) * 1000._wp / dtime 
-
+          
           ENDDO
 
           !> 3.2.6 calculate rooting zone water content and theta for compatability with bucket scheme and vegetation water stress
@@ -445,6 +481,13 @@ CONTAINS
 
     ENDSELECT
 
+    !! Diagnostic fraction of water mass lost from the soil colum per second, for SB module 
+    !!
+    WHERE(w_soil_root_old(:) > eps8)
+       drainage_fraction(:) = drainage(:) / 1000._wp / w_soil_root_old(:)
+    ELSEWHERE
+       drainage_fraction(:) = 0.0_wp 
+    ENDWHERE
 
   END SUBROUTINE update_soil_physics
 

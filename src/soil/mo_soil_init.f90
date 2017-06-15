@@ -61,6 +61,7 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk    :: soil_depth
     dsl4jsb_Real2D_onChunk    :: root_depth
+    dsl4jsb_Real2D_onChunk    :: w_skin
     dsl4jsb_Real2D_onChunk    :: w_soil_root
     dsl4jsb_Real2D_onChunk    :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk    :: w_soil_root_fc
@@ -94,6 +95,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, soil_depth)
     dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_skin)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)
@@ -136,6 +138,9 @@ CONTAINS
     ! rooting depth given by prescribed AWC
     root_depth(:) = MAX(soil_config%soil_depth_water(1), & 
                           ( soil_config%soil_awc_prescribe / 1000._wp )/ (theta_sat - theta_wilt)) 
+
+    ! water in the surface reservoir [m]
+    w_skin(:) = 0.0_wp
 
     ! soil water in the rooting zone [m]
     w_soil_root_pwp(:)    = theta_wilt * root_depth(:) 

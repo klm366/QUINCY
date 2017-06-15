@@ -80,8 +80,27 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: transport_noy
+    dsl4jsb_Real3D_onChunk :: transport_n2o
+    dsl4jsb_Real3D_onChunk :: transport_n2
+    dsl4jsb_Real3D_onChunk :: transport_noy_n15
+    dsl4jsb_Real3D_onChunk :: transport_n2o_n15
+    dsl4jsb_Real3D_onChunk :: transport_n2_n15
     dsl4jsb_Real3D_onChunk :: volatilisation_n
-    dsl4jsb_Real3D_onChunk :: nitrification
+    dsl4jsb_Real3D_onChunk :: nitrification_no3
+    dsl4jsb_Real3D_onChunk :: nitrification_noy
+    dsl4jsb_Real3D_onChunk :: nitrification_n2o
+    dsl4jsb_Real3D_onChunk :: denitrification_noy
+    dsl4jsb_Real3D_onChunk :: denitrification_n2o
+    dsl4jsb_Real3D_onChunk :: denitrification_n2
+    dsl4jsb_Real2D_onChunk :: emission_nh3
+    dsl4jsb_Real2D_onChunk :: emission_noy
+    dsl4jsb_Real2D_onChunk :: emission_n2o
+    dsl4jsb_Real2D_onChunk :: emission_n2
+    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
+    dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2_n15
 ! 2 be removed later: pointer to sb   *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -126,8 +145,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2)                ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! out
 
 
 ! 2 be removed  *slmtemp
@@ -167,8 +205,29 @@ CONTAINS
     transport_nh4_n15_solute(:,:)     = zero 
     transport_nh4_n15_assoc(:,:)      = zero 
     transport_no3_n15_solute(:,:)     = zero 
+    transport_noy(:,:)                = zero 
+    transport_n2o(:,:)                = zero 
+    transport_n2(:,:)                 = zero 
+    transport_noy_n15(:,:)            = zero 
+    transport_n2o_n15(:,:)            = zero 
+    transport_n2_n15(:,:)             = zero 
     volatilisation_n(:,:)             = zero
-    nitrification(:,:)                = zero
+    nitrification_no3(:,:)            = zero
+    nitrification_noy(:,:)            = zero
+    nitrification_n2o(:,:)            = zero
+    denitrification_noy(:,:)          = zero
+    denitrification_n2o(:,:)          = zero
+    denitrification_n2(:,:)           = zero
+  
+    ! 2D fields  
+    emission_nh3(:)              = zero
+    emission_noy(:)              = zero
+    emission_n2o(:)              = zero
+    emission_n2(:)               = zero
+    emission_nh3_n15(:)          = zero
+    emission_noy_n15(:)          = zero
+    emission_n2o_n15(:)          = zero
+    emission_n2_n15(:)           = zero
 
   END SUBROUTINE reset_sb_fluxes
 

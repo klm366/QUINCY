@@ -98,16 +98,47 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
- 
     SELECT CASE(TRIM(sb_config%sb_model_scheme))
 
+       ! Initial values for Soenke's four pool soil biogeochemical model
        CASE("simple_0d", "simple_1d")
 
-          ! Initial values for Soenke's four pool soil biogeochemical model
-          sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 500._wp / molar_mass_C / soil_config%dz_water(1)
-          sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = 1000._wp / molar_mass_C / soil_config%dz_water(1)
-          sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = 1000._wp / molar_mass_C / soil_config%dz_water(1)
-          sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = 5000._wp / molar_mass_C / soil_config%dz_water(1)
+          IF(sb_config%sb_model_scheme=="simple_0d")THEN
+             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 500._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = 1000._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = 2000._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = 5000._wp / molar_mass_C / soil_config%dz_water(1)
+
+             sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
+             sb%no3_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
+             sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+          ELSE 
+             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 400._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = 900._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = 1900._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = 4500._wp / molar_mass_C / soil_config%dz_water(1)
+             sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
+             sb%no3_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
+             sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+             DO isoil=2,soil_config%nsoil_water
+                WHERE(soil%root_depth%ptr(ics:ice,iblk) > soil_config%soil_depth_water(isoil-1))             
+                   sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = 100._wp / molar_mass_C * & 
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                   sb%pool%woody_litter%carbon%ptr(ics:ice,isoil,iblk) = 100._wp / molar_mass_C * &
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                   sb%pool%microbial%carbon%ptr(ics:ice,isoil,iblk) = 100._wp / molar_mass_C * &
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                   sb%pool%residue%carbon%ptr(ics:ice,isoil,iblk) = 500._wp / molar_mass_C * &
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                   sb%nh4_solute%ptr(ics:ice,isoil,iblk) = 0.1_wp * & 
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                   sb%no3_solute%ptr(ics:ice,isoil,iblk) = 0.1_wp * & 
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                   sb%po4_solute%ptr(ics:ice,isoil,iblk) = 0.01_wp * &
+                      exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1))
+                ENDWHERE
+             ENDDO
+          ENDIF
  
           ! non-woody litter all other elements
           sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
@@ -151,9 +182,8 @@ CONTAINS
           sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
-          sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
           sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-          sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+          sb%no3_n15_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
 
        CASE('jsm')
  

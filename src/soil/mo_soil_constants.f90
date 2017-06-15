@@ -23,8 +23,11 @@ MODULE mo_soil_constants
     k_soil_phi1, &              !< coefficient for calculating soil water potential from soil moisture
     k_soil_phi2, &              !< coefficient for calculating soil water potential from soil moisture 
 ! constants in simple multi-layer soil moisture scheme to describe the 
+    InterceptionEfficiency, &   !< Efficiency of interception of precipitation as rain
+    w_skin_max, &               !< maximum water storage per unit LAI (m)
     drain_frac, &               !< preferential flow fraction of infiltrating water per meter soil 
-    fdrain_runoff, &            !< preferential flow fraction of runoff 
+    fdrain_runoff, &            !< preferential flow fraction of runoff
+    max_infiltration_rate, &    !< maximum infiltration rate for bucket model 
     kdiff_theta, &              !< soil diffusivity for water [m-1]
     min_theta_wpot              !< minimum fractional water capacity for the calculation of soil water potential
 
@@ -50,9 +53,13 @@ CONTAINS
     theta_wilt      = 0.1_wp       ! based on Rawls et al 1982 for loam
     k_soil_phi1     = -0.0011_wp   ! based on Rawls et al 1982 for loam
     k_soil_phi2     = -4.55_wp     ! based on Rawls et al 1982 for loam
-    drain_frac      = 0.002_wp     ! tuned
-    fdrain_runoff   = 0.05_wp      ! ORCHIDEE
-    kdiff_theta     = 0.0000001_wp ! set 
+
+    InterceptionEfficiency = 0.25_wp ! JSBACH4 
+    w_skin_max = 0.0002_wp           ! JSBACH4 
+    drain_frac      = 0.01_wp      ! tuned
+    fdrain_runoff   = 0.95_wp      ! set from ORCHIDEE
+    max_infiltration_rate = 0.0025 ! mm / s (from 10 mm/hour according to FAO loam)
+    kdiff_theta     = 0.00000005_wp ! set 
     min_theta_wpot  = 0.1_wp       ! for numerical stability, implies minimim water potential of -39 MPa
 
   END SUBROUTINE init_soil_constants

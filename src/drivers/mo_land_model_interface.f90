@@ -626,7 +626,7 @@ CONTAINS
     q_bcoef(:)          = 0.0_wp
     pch(:)              = 0.0_wp
     cos_zenith_angle(:) = ref_cos_angle
-    ga(:)               = 0.4_wp / ( drag_srf(1) * wind_10m(1) )
+    ga(:)               = 0.4_wp / drag_srf(1) * wind_10m(1)
     !latitude                  = 50.0_wp
     !longitude                 = 0.0_wp
 

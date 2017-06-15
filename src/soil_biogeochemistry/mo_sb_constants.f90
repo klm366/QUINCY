@@ -80,7 +80,9 @@ MODULE mo_sb_constants
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
       microbial_nue, & 
-      microbial_pue
+      microbial_pue, & 
+      microbial_cue_max, &
+      microbial_cue_min
 
    ! nutrient uptake kinetics
    REAL(wp), SAVE :: &
@@ -95,10 +97,31 @@ MODULE mo_sb_constants
       vmax_mic_uptake_po4, &     !< maximum PO4 uptake capacity of microbes (mol N / mol biomass C / s)  
       km_mic_uptake_po4, &       !< half-saturation concentration (mol N / m3)
       vmax_plant_uptake_po4, &   !< maximum PO4 uptake capacity of fine roots (mol N / mol biomass C / s)
-      km_plant_uptake_po4, &     ! < half-saturation concentration (mol N / m3)
-      vmax_nitrification, &      !< maximum rate of nitrification per N uptake
-      vmax_denitirfication       !< maximum rate of denitrification per N uptake
+      km_plant_uptake_po4        ! < half-saturation concentration (mol N / m3)
 
+   ! nitrification, denitrification parameters
+   REAL(wp), SAVE :: & 
+      lambda_anvf, &             !< lambda in the Weibull function relating soil moisture to the anaerobic volume fraction
+      k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
+      vmax_nitrification, &      !< maximum nitrification rate [µmol mol-1 s-1] 
+      ea_nitrification, &        !< activation energy for nitrification [J mol-1] 
+      ed_nitrification, &        !< deactivation energy for nitrification [J mol-1]
+      t_opt_nitrification, &     !< optimum temperature for nitrification [K]
+      f_nit_noy, &               !< fraction of nitrification lost as NOy [--]
+      f_nit_n2o, &               !< fraction of nitrification lost as N2O [--]
+      vmax_denitrification, &    !< maximum denitrification rate [µmol mol-1 s-1]
+      km_denitrification_c, &    !< half-saturation constant for carbon-limited denitrification [mol C m-3]
+      km_denitrification_no3, &  !< half-saturation constant for nitrate-limited denitrifcation [mol N m-3]
+      ea_denitrification, &      !< activation energy for denitrification [J mol-1]
+      f_denit_noy, &             !< fraction of denitrification lost as NOy [--]
+      f_denit_n2o, &             !< fraction of denitrification lost as N2O [--]
+      ea_gasdiffusion            !< activation energy for denitrification [J mol-1]
+
+   ! Simple leaching parameterisation
+   REAL(wp), SAVE :: &
+      fleach_nh4, &              !< fraction of NH4 amenable to leaching
+      fleach_po4                 !< fraction of PO4 amenable to leaching
+ 
    ! isoptop stuff
    REAL(wp), SAVE :: & 
       eta_mic_uptake_nh4, &      !< fractionation of N15 due to microbial NH4 assimilation (per mill)
@@ -176,7 +199,9 @@ CONTAINS
     vmax_depolymerisation_litter = 0.369800811690762_wp / one_year / one_day 
     km_depolymerisation = 0.08876_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
     microbial_cue       = 0.392_wp !! COMISSION paper
-   
+    microbial_cue_max   = 0.6_wp 
+    microbial_cue_min   = 0.3_wp 
+
     f_soluable_leaf      = 0.5_wp
     f_soluable_fine_root = 0.5_wp
     f_soluable_fruit     = 0.5_wp
@@ -201,8 +226,27 @@ CONTAINS
     km_mic_uptake_po4     = 1.2_wp / molar_mass_N ! mol / m3 
     vmax_plant_uptake_po4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s 
     km_plant_uptake_po4   = 0.18_wp / molar_mass_N ! mol / m3 
-    vmax_nitrification    = 0.01_wp    
-    vmax_denitirfication  = 0.01_wp  
+
+    ! Nitrification, Denitrification parameters
+    lambda_anvf            = 1.8_wp         ! fitted from Zaehle et al. 2011, NatGeo 
+    k_anvf                 = 3.0_wp         ! fitted from Zaehle et al. 2011, NatGeo
+    ea_nitrification       = 80000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
+    ed_nitrification       = 200000._wp     ! Xu-Ri & Prentice, 2008, to fit their function
+    t_opt_nitrification    = 331.15_wp      ! Xu-Ri & Prentice, 2008, to fit their function 
+    f_nit_noy              = 0.02           ! Xu-Ri & Prentice, 2008
+    f_nit_n2o              = 0.002          ! Xu-Ri & Prentice, 2008
+    ea_denitrification     = 47000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
+    vmax_nitrification     = 0.1 / one_day * 1.e6             ! Xu-Ri & Prentice, 2008, 10% / day
+    vmax_denitrification   = 0.1_wp / one_day * 1.e6          ! Xu-Ri & Prentice, 2008, 10% / day
+    km_denitrification_c   = 0.017 * 1000.0_wp / molar_mass_C ! Xu-Ri & Prentice, 2008   
+    km_denitrification_no3 = 0.083 * 1000.0_wp / molar_mass_N ! Xu-Ri & Prentice, 2008
+    f_denit_noy            = 0.002          ! Xu-Ri & Prentice, 2008
+    f_denit_n2o            = 0.02           ! Xu-Ri & Prentice, 2008
+    ea_gasdiffusion        = 47000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
+
+    ! simple leaching
+    fleach_nh4 = 0.1_wp
+    fleach_po4 = 0.001_wp
 
     ! All values from Robinson 2001, TREE
     eta_mic_uptake_nh4     = 17._wp
@@ -219,7 +263,7 @@ CONTAINS
     nh4_solute_prescribe = 0.1_wp
     no3_solute_prescribe = 0.1_wp
     po4_solute_prescribe = 0.1_wp
- 
+
   END SUBROUTINE init_sb_constants
 
 END MODULE mo_sb_constants
