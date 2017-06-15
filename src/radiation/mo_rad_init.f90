@@ -54,6 +54,16 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(RAD_)
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc    
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
@@ -68,16 +78,21 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------    
-
-
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
+    
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
-
-    CALL message(TRIM(routine), 'Currently nothing to do for '//routine)
+    ppfd_sunlit_tfrac_mavg_cl(:,:)    = 150.0_wp
+    ppfd_sunlit_tcnl_mavg_cl(:,:)     = 150.0_wp
+    
+    ppfd_shaded_tfrac_mavg_cl(:,:)    = 10.0_wp
+    ppfd_shaded_tcnl_mavg_cl(:,:)     = 10.0_wp
 
 
   END SUBROUTINE rad_init
