@@ -52,6 +52,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_constants
     USE mo_shared_isotope,        ONLY: calc_fractionation
+    USE mo_assimi_constants
 
     ! Use of process memories
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
@@ -107,6 +108,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
     dsl4jsb_Real3D_onChunk      :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk      :: co2_conc_leaf_cl
+    dsl4jsb_Real3D_onChunk      :: jmax_cl
+    dsl4jsb_Real3D_onChunk      :: vcmax_cl
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
@@ -174,6 +177,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)   ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, canopy_cond_cl)              ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, co2_conc_leaf_cl)            ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, jmax_cl)                     ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, vcmax_cl)                    ! out
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
@@ -220,6 +225,7 @@ CONTAINS
    beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_theta(:), &
                                             lctlib%lambda_soil_gs   , &
                                             lctlib%weibull_k_soil_gs)
+
 
   !> 2.0 calculate photosynthesis per layer
   !!
@@ -283,6 +289,19 @@ CONTAINS
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
         WHERE(lai_cl(:,icanopy) > 0.0_wp) net_assimilation_boc(:) = net_assimilation_cl(:,icanopy)
+
+        ! diagnose jmax and vcmax
+        !> N specific rate of electron transport rate
+        jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * & 
+                             exp(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:))/lctlib%t_jmax_omega)**2)) * &
+                             beta_soil_ps(:) * beta_sinklim_ps(:) * & 
+                             leaf_nitrogen_cl(:,icanopy)
+
+        !> N specific rate of Rubisco turnover
+        vcmax_cl(:,icanopy) = vcmax2n * fn_rub_cl(:,icanopy) * exp(E0v - E1v/(r_gas * t_air(:))) * &
+                              beta_soil_ps(:) * beta_sinklim_ps(:) * & 
+                              leaf_nitrogen_cl(:,icanopy) 
+
   ENDDO
 
   ! get mean canopy CO2 concentration in the leaf

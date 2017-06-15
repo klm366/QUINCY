@@ -591,6 +591,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onChunk      :: jmax_cl
+    dsl4jsb_Real3D_onChunk      :: vcmax_cl
 !! *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
@@ -621,6 +623,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, jmax_cl)
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, vcmax_cl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
@@ -763,9 +767,10 @@ CONTAINS
               
               lun=lun+1
               DO icanopy=1, assimi_config%ncanopy
-                write(lun,'(8F12.6)') time_d, REAL(icanopy), fn_et_cl(1,icanopy), &
+                write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(1,icanopy), &
                                       fn_rub_cl(1,icanopy), fn_chl_cl(1,icanopy),&
-                                      fn_pepc_cl(1,icanopy), fn_oth_cl(1,icanopy),leaf_nitrogen_cl(1,icanopy)
+                                      fn_pepc_cl(1,icanopy), fn_oth_cl(1,icanopy),leaf_nitrogen_cl(1,icanopy), &
+                                      jmax_cl(1,icanopy), vcmax_cl(1,icanopy)
               END DO
        
               IF(lctlib%growthform == itree) THEN 

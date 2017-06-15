@@ -55,6 +55,11 @@ MODULE mo_assimi_memory_class
                               canopy_cond_cl            , &   !< conductance for water per canopy layer (m/s)
                               co2_conc_leaf_cl                !< internal leaf CO2 concentration per canopy layer (ppm)
 
+    ! diagnostics
+    TYPE(t_jsb_var_real3d)    :: &
+                              jmax_cl                   , &   !< maximum rate of electron transport (µmol CO2/m2/s)
+                              vcmax_cl                        !< maximum rate of carboxylation (µmol CO2/m2/s)
+
     TYPE(t_jsb_var_real2d)    :: &
                               beta_air_daytime          , &   !< average of the previous day
                               beta_air_daytime_dacc     , &   !< average of the previous day
@@ -178,6 +183,12 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'jmax_cl', mem%jmax_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'vcmax_cl', mem%vcmax_cl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
