@@ -33,6 +33,7 @@ MODULE mo_shared_output
   REAL(wp), ALLOCATABLE, SAVE :: maint_resp_acc       
   REAL(wp), ALLOCATABLE, SAVE :: n_transform_resp_acc
   REAL(wp), ALLOCATABLE, SAVE :: n_fixation_resp_acc
+  REAL(wp), ALLOCATABLE, SAVE :: exudationC_acc
   REAL(wp), ALLOCATABLE, SAVE :: npp_acc              
   REAL(wp), ALLOCATABLE, SAVE :: res_use_c_acc        
   REAL(wp), ALLOCATABLE, SAVE :: gpp_C13_acc             
@@ -110,6 +111,7 @@ CONTAINS
     ALLOCATE(maint_resp_acc)   
     ALLOCATE(n_transform_resp_acc)   
     ALLOCATE(n_fixation_resp_acc)   
+    ALLOCATE(exudationC_acc) 
     ALLOCATE(npp_acc)   
     ALLOCATE(res_use_c_acc)   
     ALLOCATE(gpp_C13_acc)
@@ -190,7 +192,8 @@ CONTAINS
     growth_resp_acc      = 0.0_wp
     maint_resp_acc       = 0.0_wp   
     n_transform_resp_acc = 0.0_wp   
-    n_fixation_resp_acc  = 0.0_wp   
+    n_fixation_resp_acc  = 0.0_wp 
+    exudationC_acc      = 0.0_wp  
     npp_acc             = 0.0_wp   
     res_use_c_acc       = 0.0_wp   
     gpp_C13_acc         = 0.0_wp
@@ -349,7 +352,13 @@ CONTAINS
          fname = 'vegpoolH2O'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpoolCNP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolOrg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolInOrg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'ecopoolCNP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'soilpooldCdN'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -438,9 +447,13 @@ CONTAINS
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time StrLitterC StrLitterN StrLitterP WodLitterC WodLitterN WodLitterP', &
-                           ' FastC FastN FastP SlowC SlowN SlowP MineralNH4 MineralNO3 MineralP NOY N2O N2'
+                           ' FastC FastN FastP SlowC SlowN SlowP MycC MycN MycP'
          lun=lun+1
-         WRITE(lun,'(2a)') 'Time StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14'!, &
+         WRITE(lun,'(a)') 'Time MineralNH4 MineralNO3 MineralP NOY N2O N2'
+         lun=lun+1
+         WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN'
+         lun=lun+1
+         WRITE(lun,'(2a)') 'Time StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14 MycDC14'!, &
          !                 ' StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
          WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
@@ -754,7 +767,7 @@ CONTAINS
               lun=lun+1
               write(lun,'(9F16.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
-              write(lun,'(20F12.6)') time_d, &
+              write(lun,'(30F16.6)') time_d, &
                                      SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     , & 
                                      SUM(sb%pool%polymeric_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))   , & 
                                      SUM(sb%pool%polymeric_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:)) , & 
@@ -767,13 +780,51 @@ CONTAINS
                                      SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:))              , & 
                                      SUM(sb%pool%residue%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))            , & 
                                      SUM(sb%pool%residue%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))          , & 
+                                     SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:))           , &
+                                     SUM(sb%pool%mycorrhiza%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))         , &
+                                     SUM(sb%pool%mycorrhiza%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))       
+              lun=lun+1
+              write(lun,'(30F16.6)') time_d, &
                                      SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
                                      SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
                                      SUM(sb%po4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
-                                     SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
-                                     SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
-                                     SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))                       
-                           
+                                     SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                              , &
+                                     SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                              , &
+                                     SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))  
+              lun=lun+1
+              write(lun,'(30F16.6)') time_d, &
+                                     SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     + & 
+                                      SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))         + &
+                                      SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:))            + &
+                                      SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:))              + & 
+                                      SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:))           , &
+                                     SUM(sb%pool%polymeric_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
+                                      SUM(sb%pool%woody_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))       + &
+                                      SUM(sb%pool%microbial%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))          + &
+                                      SUM(sb%pool%residue%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
+                                      SUM(sb%pool%mycorrhiza%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))         , &
+                                     SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + & 
+                                      SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + & 
+                                      SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
+                                      SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
+                                      SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))                               , &     
+                                     SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     + & 
+                                      SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))         + &
+                                      SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:))            + &
+                                      SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:))              + & 
+                                      SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:))           + &
+                                      veg%total_biomass%carbon%ptr                                           , &
+                                     SUM(sb%pool%polymeric_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
+                                      SUM(sb%pool%woody_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))       + &
+                                      SUM(sb%pool%microbial%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))          + &
+                                      SUM(sb%pool%residue%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
+                                      SUM(sb%pool%mycorrhiza%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))         + &
+                                      SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + & 
+                                      SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + &
+                                      SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
+                                      SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
+                                      SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))                               + &     
+                                      veg%total_biomass%nitrogen%ptr 
 
               dC13polymeric_litter(1,1) = calc_delta_C13(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                                          SUM(sb%pool%polymeric_litter%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
@@ -783,10 +834,16 @@ CONTAINS
                                                          SUM(sb%pool%microbial%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
               dC13residue(1,1)          = calc_delta_C13(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                                          SUM(sb%pool%residue%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
+              dC13mycorrhiza(1,1)       = calc_delta_C13(SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                                                         SUM(sb%pool%mycorrhiza%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
 
               lun=lun+1
               write(lun,'(20F14.6)') time_d, &
-                dC13polymeric_litter(1,1), dC13woody_litter(1,1), dC13microbial(1,1), dC13residue(1,1)                          , & 
+                dC13polymeric_litter(1,1), &
+                dC13woody_litter(1,1), &
+                dC13microbial(1,1), &
+                dC13residue(1,1), & 
+                dC13mycorrhiza(1,1), &
                 calc_delta_C14(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                SUM(sb%pool%polymeric_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13polymeric_litter(1,1)) , &
                 calc_delta_C14(SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
@@ -794,7 +851,9 @@ CONTAINS
                 calc_delta_C14(SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                SUM(sb%pool%microbial%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13microbial(1,1))               , &
                 calc_delta_C14(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                  !, &
+                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                   , &
+                calc_delta_C14(SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
+                               SUM(sb%pool%mycorrhiza%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)),dC13mycorrhiza(1,1))!, &
                 !calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
@@ -1078,7 +1137,7 @@ CONTAINS
     lun = 100 + 30
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse RootExudation'
         lun=lun+1   
         WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                           'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
@@ -1335,6 +1394,7 @@ CONTAINS
              maint_resp_acc   = maint_resp_acc    + maint_respiration(1)                * dtime_one
              n_transform_resp_acc = n_transform_resp_acc  + n_transform_respiration(1)  * dtime_one
              n_fixation_resp_acc  = n_fixation_resp_acc   + n_fixation_respiration(1)   * dtime_one
+             exudationC_acc       = exudationC_acc      + veg%exudation%carbon%ptr    * dtime_one *1000000._wp/dtime      
              npp_acc              = npp_acc               + npp(1)                      * dtime_one
              res_use_c_acc        = res_use_c_acc         + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(1) * dtime_one
@@ -1414,9 +1474,9 @@ CONTAINS
                lun = 100 + 30
                SELECT CASE(TRIM(base_config%slm_model_name))
                  CASE('land','plant')
-                   write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                   write(lun,'(10F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                          n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                         npp_acc, res_use_c_acc
+                                         npp_acc, res_use_c_acc, exudationC_acc
                    lun=lun+1
                    dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
                    dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
@@ -1482,6 +1542,7 @@ CONTAINS
                maint_resp_acc    = 0.0_wp
                n_transform_resp_acc = 0.0_wp
                n_fixation_resp_acc = 0.0_wp
+               exudationC_acc    = 0.0_wp
                npp_acc           = 0.0_wp
                res_use_c_acc     = 0.0_wp
                gpp_C13_acc       = 0.0_wp
