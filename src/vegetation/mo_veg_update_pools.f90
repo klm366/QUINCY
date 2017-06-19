@@ -35,8 +35,8 @@ CONTAINS
   SUBROUTINE update_veg_pools(tile, options)
 
     USE mo_jsb_class,           ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_base_memory,         ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,     ONLY: t_jsb_model
     USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
     USE mo_assimi_config_class, ONLY: assimi_config
@@ -106,9 +106,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: uptake_norg
     dsl4jsb_Real2D_onChunk      :: n_fixation
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
+    dsl4jsb_Real2D_onChunk      :: uptake_norg_n15
     dsl4jsb_Real2D_onChunk      :: n_fixation_n15
     dsl4jsb_Real2D_onChunk      :: uptake_po4
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
@@ -193,9 +195,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg_n15)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)          ! in
@@ -246,22 +250,24 @@ CONTAINS
        !! 
        !! 
        npp(:)      = gross_assimilation(:)     - & 
-           growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:)
+           growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
        npp_c13(:)  = gross_assimilation_C13(:) - &
-           growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:)
+           growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
        npp_c14(:)  = gross_assimilation_C14(:) - & 
            growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
        veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + npp(1)     * dtime / 1000000.0_wp
        veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + npp_c13(1) * dtime / 1000000.0_wp
        veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr  + npp_c14(1) * dtime / 1000000.0_wp
-   
+  
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
        veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr + & 
-                                            ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * dtime / 1000000.0_wp
+                                            ( uptake_nh4(1) + uptake_no3(1) + uptake_norg(1) + n_fixation(1)) * &
+                                            dtime / 1000000.0_wp
        veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
-                                            ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * dtime / 1000000.0_wp
+                                            ( uptake_nh4_n15(1) + uptake_no3_n15(1) + uptake_norg_n15(1) + n_fixation_n15(1)) * &
+                                            dtime / 1000000.0_wp
        veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
                                             uptake_po4(1) * dtime / 1000000.0_wp
    
@@ -289,6 +295,15 @@ CONTAINS
        veg%pool%leaf%nitrogen15%ptr       = veg%pool%leaf%nitrogen15%ptr       - recycling_leaf_n15(1)
        veg%pool%fine_root%nitrogen15%ptr  = veg%pool%fine_root%nitrogen15%ptr  - recycling_fine_root_n15(1)
        veg%pool%heart_wood%nitrogen15%ptr = veg%pool%heart_wood%nitrogen15%ptr - recycling_heart_wood_n15(1)
+
+       !> 1.5 update labile pool with fluxes to mycorrhiza
+       veg%pool%labile%carbon%ptr     = veg%pool%labile%carbon%ptr       - veg%exudation%carbon%ptr 
+       veg%pool%labile%nitrogen%ptr   = veg%pool%labile%nitrogen%ptr     - veg%exudation%nitrogen%ptr 
+       veg%pool%labile%phosphorus%ptr = veg%pool%labile%phosphorus%ptr   - veg%exudation%phosphorus%ptr 
+       veg%pool%labile%carbon13%ptr   = veg%pool%labile%carbon13%ptr     - veg%exudation%carbon13%ptr 
+       veg%pool%labile%carbon14%ptr   = veg%pool%labile%carbon14%ptr     - veg%exudation%carbon14%ptr 
+       veg%pool%labile%nitrogen15%ptr = veg%pool%labile%nitrogen15%ptr   - veg%exudation%nitrogen15%ptr 
+
    
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
        !! 

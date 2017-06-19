@@ -85,6 +85,9 @@ CONTAINS
     ! ..
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
+    dsl4jsb_Real3D_onChunk :: het_respiration
+    dsl4jsb_Real3D_onChunk :: het_respiration_c13
+    dsl4jsb_Real3D_onChunk :: het_respiration_c14
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
@@ -102,6 +105,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
@@ -134,6 +142,7 @@ CONTAINS
 
 ! 2 be removed?: pointers to sb *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
+    TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -162,6 +171,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
     ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! in
@@ -179,6 +191,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
@@ -212,6 +229,7 @@ CONTAINS
 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
+    veg  => veg__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -242,33 +260,54 @@ CONTAINS
     sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
        sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    * lambda_C14 * dtime 
 
-    !> 2.0 update of organic pools
+
+    !> 2.0 update mycorrhiza with flux due to exudation from vegetation
+    !!
+!@todo: make sure this works for all soil layers
+    sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
+      veg%exudation%carbon%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
+      veg%exudation%nitrogen%ptr / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
+      veg%exudation%phosphorus%ptr / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
+      veg%exudation%carbon13%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
+      veg%exudation%carbon14%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
+      veg%exudation%nitrogen15%ptr / soil_depth_sl(ics:ice,1)
+
+    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg%exudation%carbon%ptr / dtime * 1000000._wp                          
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon13%ptr / dtime * 1000000._wp
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon14%ptr / dtime * 1000000._wp
+
+    !> 3.0 update of organic pools
     !!
     CALL calc_organic_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
 
-    !> 2.1 update diagnostics and other state variables depending on organic matter content 
+    !> 3.1 update diagnostics and other state variables depending on organic matter content 
     !!
     bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
     qmax_org = calc_qmax_org(bulk_dens_corr_sl)
 
-    !> 3.0 update of inorganic pools
+    !> 4.0 update of inorganic pools
     !!
-    !> 3.1 ecosystem internal processes  
+    !> 4.1 ecosystem internal processes  
     !!
-    nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:) - & 
+    nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
                                                  nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
                                                  volatilisation_n(:,:) + &
                                                  transport_nh4_solute(:,:)) * dtime/1.e6_wp
-    nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:) + &
+    nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) + &
                                                  transport_nh4_n15_solute(:,:)) * dtime/1.e6_wp
-    no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:) + &
+    no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:) - mycorrhiza_uptake_no3_sl(:,:) + &
                                                  nitrification_no3(:,:) - &
                                                  denitrification_noy(:,:) - denitrification_n2o(:,:) - denitrification_n2(:,:) + &
                                                  transport_no3_solute(:,:)) * dtime/1.e6_wp
-    no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:) + &
+    no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:) - mycorrhiza_uptake_no3_n15_sl(:,:) + &
                                                  transport_no3_n15_solute(:,:)) * dtime/1.e6_wp
-    po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) + &
+    po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + &
                                                  transport_po4_solute(:,:)) * dtime/1.e6_wp
 
     noy(:,:)            = noy(:,:)            + (nitrification_noy(:,:) + denitrification_noy(:,:) + & 
@@ -294,7 +333,7 @@ CONTAINS
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-    !> 3.2 atmospheric deposition
+    !> 4.2 atmospheric deposition
     !!
     IF(sb_config%flag_n_deposition) THEN
       nh4_solute(:,1)     = nh4_solute(:,1) + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime

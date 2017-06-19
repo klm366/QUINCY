@@ -206,6 +206,11 @@ MODULE mo_sb_memory_class
                                     plant_uptake_no3_sl,     &  !< plant uptake of N    [mol m-3 s-1]
                                     plant_uptake_no3_n15_sl, &  !< plant uptake of N15  [mol m-3 s-1] 
                                     plant_uptake_po4_sl,   &  !< plant uptake of P  [mol m-3 s-1]
+                                    mycorrhiza_uptake_nh4_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
+                                    mycorrhiza_uptake_nh4_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
+                                    mycorrhiza_uptake_no3_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
+                                    mycorrhiza_uptake_no3_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
+                                    mycorrhiza_uptake_po4_sl,   &  !< mycorrhiza uptake of P  [mol m-3 s-1]
                                     volatilisation_n,       &  !< volatilisation of N  [µmol m-3 s-1]
                                     nitrification_no3, &         !< nitrification NO3 [µmol m-3 s-1]
                                     nitrification_noy, &         !< nitrification to NOy  [µmol m-3 s-1]
@@ -1051,8 +1056,23 @@ CONTAINS
   
       CALL slm_add_var(mem, 'plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL slm_add_var(mem, 'plant_uptake_po4_sl_sl', mem%plant_uptake_po4_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'volatilisation_n', mem%volatilisation_n, &

@@ -79,10 +79,13 @@ MODULE mo_sb_constants
    REAL(wp), SAVE :: &
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
-      microbial_nue, & 
-      microbial_pue, & 
-      microbial_cue_max, &
-      microbial_cue_min
+      microbial_nue, &           !< microbial nitrogen use efficiency
+      microbial_pue, &           !< microibal phosphorus use efficiency
+      microbial_cue_max, &       !< maximum microbial carbon-use efficiency
+      microbial_cue_min, &       !< minimum microbial carbon-use efficiency
+      mycorrhizal_cue, &         !< mycorrhizal carbon-use efficiency
+      cn_mycorrhiza, &           !< molar ratio of C:N of mycorrhizal fung
+      np_mycorrhiza              !< molar ratio of N:P of mycorrhizal fungi
 
    ! nutrient uptake kinetics
    REAL(wp), SAVE :: &
@@ -201,6 +204,9 @@ CONTAINS
     microbial_cue       = 0.392_wp !! COMISSION paper
     microbial_cue_max   = 0.6_wp 
     microbial_cue_min   = 0.3_wp 
+    mycorrhizal_cue     = 0.7_wp !! ??? SOURCE
+    cn_mycorrhiza       = 10.0_wp
+    np_mycorrhiza       = 14.0_wp !!??????!
 
     f_soluable_leaf      = 0.5_wp
     f_soluable_fine_root = 0.5_wp
