@@ -23,13 +23,14 @@ case `hostname` in
     #output_path=/work/mj0060/m212005/data/icon                                      # for local use
     ;;
   *)
-    basedir=/scratch/local1/m212005/ini_files/jsbach4/icon                          # for local use
-    output_path=/scratch/local1/m212005/data/icon                                   # for local use
+    basedir=/scratch/local1/m220053/ini_files/jsbach4/icon                          # for local use
+    output_path=/scratch/local1/m220053/ini_files/jsbach4                           # for local use
     ;;
 esac
 
 workdir=${basedir}/workdir
 
+pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
 old_r2b4_amip=false                                       # Temporary: old r2b4_amip grid (true) or new grids (false)
 [[ "${old_r2b4_amip}" != "true" ]] && \
   grid_path=/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids || \
@@ -37,21 +38,24 @@ old_r2b4_amip=false                                       # Temporary: old r2b4_
 
 bisections="0 1 2 3 4 5 6 7 8 9 10 11"
 #bisections="4"  # for testing
+ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
+#ggrids="T63"    # for testing
 
-remap_scheme=dis
+
+remap_scheme=con
 declare -A source_res_dict
-source_res_dict[0]=T31
-source_res_dict[1]=T31
-source_res_dict[2]=T31
-source_res_dict[3]=T63
-source_res_dict[4]=T63
-source_res_dict[5]=T63
-source_res_dict[6]=T127
-source_res_dict[7]=T127
-source_res_dict[8]=T127
-source_res_dict[9]=T255
-source_res_dict[10]=T255
-source_res_dict[11]=T255
+source_res_dict[0]=05 #vg T31
+source_res_dict[1]=05 #vg T31
+source_res_dict[2]=05 #vg T31
+source_res_dict[3]=05 #vg T63
+source_res_dict[4]=05 #vg T63
+source_res_dict[5]=05 #vg T63
+source_res_dict[6]=05 #vg T127
+source_res_dict[7]=05 #vg T127
+source_res_dict[8]=05 #vg T127
+source_res_dict[9]=05 #vg T255
+source_res_dict[10]=05 #vg T255
+source_res_dict[11]=05 #vg T255
 
 extpar_path=${rootdir}/private/mpim/icon_preprocessing/source/extpar.2016
 
@@ -99,13 +103,13 @@ set +u
 module unload cdo nco netcdf nag
 case `hostname` in
   mlogin*|mistralpp*)
-    module load cdo/1.8.0-magicsxx-gcc48
+    module load cdo/1.8.2-magicsxx-gcc48
     module load nco/4.5.0-gcc48
     module load netcdf_c/4.3.2-gcc48
     module load nag/6.0.1064
     ;;
    *)
-    module load cdo/1.8.0-gccsys
+    module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
     module load nco/4.5.2
     module load netcdf
     module load nag
@@ -122,71 +126,60 @@ function generate_gauss_data {
 
   res_atm=${source_res}
   case ${res_atm} in
-    T31) res_oce=TP10
+    T31) res_oce=GR30
          ;;
-    T63) res_oce=TP04
+    T63) res_oce=GR15
          ;;
     T127) res_oce=TP04
          ;;
     T255) res_oce=TP6M
          ;;
+    05) res_oce=""
+	 ;;
   esac
 
-  [[ -d initial_tarfiles ]] && rm -rf initial_tarfiles
-  svn -r 9074 checkout https://svn.zmaw.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
-  cd initial_tarfiles
-  sed -i '/export cplmod=asob/s/asob/s/' create_input_cosmos.ksh
-  sed -i "/export res_atm=T63/s/T63/$res_atm/" create_input_cosmos.ksh
-  sed -i "/export res_oce=TP10/s/TP10/$res_oce/" create_input_cosmos.ksh
-  sed -i '/cd input\/jsbach/aexport echam_fractional=true' create_input_cosmos.ksh
-  sed -i '/export pool_cpl=/aexport pool_cpl=\`pwd\`\/tarfiles' create_input_cosmos.ksh
-  sed -i '/export wrkdir=/aexport wrkdir=\`pwd\`/tarfiles/work\$\$' create_input_cosmos.ksh
-  sed -i '1,$s/800/0800/g' create_input_cosmos.ksh
-  sed -i -e '205,248d' -e '259,276d' create_input_cosmos.ksh
-  sed -i '/export dynveg=true/s/true/false/' create_input_cosmos.ksh
-  sed -i '/pool_atm_standalone=\/work\/mh0081\/prep\/echam6/d' create_input_cosmos.ksh
-  sed -i '/pool_atm_standalone=\/work\/im0454\/ECHAM6/d' create_input_cosmos.ksh
-  sed -i '216,224d' create_input_cosmos.ksh
-  sed -i '/pool_srf=\/work\/im0454\/JSBACH/d' create_input_cosmos.ksh
-
-  sed -i '/lcmip5_pasture=.true./a\[\[ ${lpasture} = true \]\] && lpasture=\.true\. \|\| lpasture=\.false\.' jsbach_init_file.ksh
-  sed -i '1,$s/^#vg//' jsbach_init_file.ksh
-  if [[ "${res_atm}" == "T255" ]]
-  then
-    sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
-    sed -i '/LUH_states=/s/=.*$/=LUH_states_T255.nc/' jsbach_init_file.ksh
+  if [[ ${jsb4icon} == true ]]; then
+      echam_fractional=false #vg true
   else
-    sed -i '/pool_land=/a pool_land=\$pool_srf\/prepare\/\$\{res_atm\}' jsbach_init_file.ksh
+      echam_fractional=false
   fi
-  sed -i '/pool=/a pool=\/pool\/data\/ECHAM6\/\$\{res_atm\}' jsbach_init_file.ksh
-  sed -i '/landcover_series=/a pasture_rule=\$cmip5_pasture' jsbach_init_file.ksh
-  sed -i '/landcover_series=/a lpasture=\$cmip5_pasture' jsbach_init_file.ksh
-  sed -i '/`uname -s` == AIX/s/`uname -s` == AIX/`hostname` == mistralpp*/' jsbach_init_file.ksh
-  sed -i '/F90=xlf_r/s/xlf_r/nagfor/' jsbach_init_file.ksh
-  sed -i '80a F90FLAGS="-colour -maxcontin=100 -wmismatch=define_var_new,nf_get_var_double,nf_copy_att,nf_get_var_real,nf_put_var_double,nf_def_var,nf_put_vara_double,dgemm,nfmpi_def_dim,nfmpi_put_vara_double,nfmpi_def_var -C=all -g -gline -nan -w=uep"' jsbach_init_file.ksh
-  sed -i '/qextname/d' jsbach_init_file.ksh
-  sed -i '/XLFRTEOPTS/d' jsbach_init_file.ksh
-  sed -i '/\/sw\/aix61\/netcdf-4.1.1/s/NETCDFROOT=.*$/NETCDFFROOT=\/sw\/rhel6-x64\/netcdf\/netcdf_fortran-4.4.2-static-nag60/' jsbach_init_file.ksh
-  sed -i '/netcdf_fortran-4.4.2-static-nag60/a NETCDFROOT=\/sw\/rhel6-x64\/netcdf\/netcdf_c-4.4.0-gcc48' jsbach_init_file.ksh
-  sed -i '/NETCDF_LIBDIR=/a NETCDFF_LIBDIR=-L\$\{NETCDFFROOT\}\/lib' jsbach_init_file.ksh
-  sed -i '/NETCDF_INCLUDE=/a NETCDFF_INCLUDE=-I\$\{NETCDFFROOT\}\/include' jsbach_init_file.ksh
-  sed -i '91a NETCDFF_LIB="-lnetcdff"' jsbach_init_file.ksh
-  sed -i '/hdf5-1.8.4-patch1/s/=.*$/=\/sw\/rhel6-x64\/hdf5\/hdf5-1.8.14-threadsafe-gcc48/' jsbach_init_file.ksh
-  sed -i '/HDF5_LIB="-lhdf5_hl -lhdf5"/s/hdf5\"$/hdf5 -ldl\"/' jsbach_init_file.ksh
-  sed -i '/aix61\/szip-2.1/s/=.*$/=\/sw\/rhel6-x64\/sys\/libaec-0.3.2-gcc48/' jsbach_init_file.ksh
-  sed -i '/aix61\/zlib-1.2.6/s/=.*$/=\/usr\/lib64/' jsbach_init_file.ksh
-  sed -i '/ZLIB_LIB=/s/-lz/-lz -ldl -lm -lnuma -Wl,--export-dynamic -lrt -lnsl -lutil -lm -ldl/' jsbach_init_file.ksh
-  sed -i '/ZLIB_LIB=/a export LD_LIBRARY_PATH=\"\/sw\/rhel6-x64\/hdf5\/hdf5-1.8.14-threadsafe-gcc48\/lib:\/sw\/rhel6-x64\/netcdf\/netcdf_c-4.4.0-gcc48\/lib:\/sw\/rhel6-x64\/sys\/libaec-0.3.2-gcc48\/lib\"' jsbach_init_file.ksh
 
-  [[ -d tarfiles ]] || mkdir ./tarfiles
+  [[ -d initial_tarfiles ]] && rm -rf initial_tarfiles
+  svn -r 9124 checkout https://svn.zmaw.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
+  cd initial_tarfiles
+  
+  export interactive_ctrl=1                    # 1: swich off interactive mode
+  export res_atm=${res_atm}                    # horizontal grid resolution
+  export res_oce=${res_oce}                    # ocean model grid (for a coupled setup)
+  export ntiles=11                             # number of jsbach tiles
+  export dynveg=false                          # setup for simulations with dynamic vegetation
+  export c3c4crop=true                         # differentiate between C3 and C4 crops
+  export read_pasture=LUH2v2h                  # LUH2v2h / LUH / false
+  export pasture_rule=true                     # allocate pastures primarily on grass lands
+  export lpasture=true                         # distinguish pastures from grasses
+  export year_ct=1976                          # year the cover_types are derived from (0000 for natural vegetation)
+  export year_cf=1976                          # year cover fractions are derived from (0000 for natural vegetation)
+  export landcover_series=false                # generate a series of files with cover_types of different years
+  export year_cf2=1859                         # only used with landcover_series
+  export echam_fractional=${echam_fractional}  # initial file for echam runs with fractional land sea mask
+  export pool=/pool/data/ECHAM6/input/r0005/${res_atm}     # directories with echam input data
+  export pool_land=${pool_prepare}/${res_atm}
+  export srcdir=.
+  if [[ ${res_atm} == 05 ]]; then
+      export read_pasture=LUH
+      export pool=/pool/data/JSBACH/prepare/${res_atm}/ECHAM6/
+      echo "----------"
+      echo " WARNING: LUH2v2h landuse data as used for CMIP6 is not yet available in 0.5 deg resolution."
+      echo "----------"
+      echo "          We use LUH crop and pasture fractions as in CMIP5, here." 
+      echo "          Switch to source grid resolution T127, T63 or T31 if you want LUH2v2h data." 
+  fi
+  
+  rm -f ../jsbach_*.nc
+  ./jsbach_init_file.ksh #vg >& /dev/null
+  mv jsbach_*.nc ../
 
-  ./create_input_cosmos.ksh >& /dev/null
-
-  tar xf tarfiles/cosmos-s/input_cosmos-s.tar
-  mv input/jsbach/jsbach_*.nc ../
-  rm -rf input tarfiles
   cd ..
-  rm -rf initial_tarfiles
 
 }
 
@@ -203,12 +196,14 @@ function generate_land_sea_mask {
             ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
         fi
     else
-        [[ "${old_r2b4_amip}" != "true" ]]                                                          && \
+        if [[ "${old_r2b4_amip}" != "true" ]]; then
             # Note: blend out some grid boxes which are land in FR_LAND_TOPO
-            ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -selvar,FR_LAND_TOPO    \
-                   ${extpar_file} ${grid_name}_notsea.nc                                            || \
+            ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -selvar,FR_LAND_TOPO  \
+                   ${extpar_file} ${grid_name}_notsea.nc
+        else
             ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
                    ${icon_grid_file} ${grid_name}_notsea.nc
+        fi
         ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
     fi
 
@@ -240,7 +235,7 @@ function extrapolate_var {
             ;;
         albedo )
             echo "Extrapolating $var ..."
-            ${cdo}  -setmissval,-9.e33 -fillmiss -setmissval,0.07 ${cdo_files}
+            ${cdo}  setmissval,-9.e33 -fillmiss -setmissval,0.07 ${cdo_files}
             ;;
         albedo_veg_vis | albedo_veg_nir | albedo_soil_vis | albedo_soil_nir | surf_temp )
             echo "Extrapolating $var ..."
@@ -248,7 +243,7 @@ function extrapolate_var {
             ;;
         maxmoist )
             echo "Extrapolating $var ..."
-            ${cdo}  -setmissval,-9.e33 -fillmiss -setmissval,1.e-13 ${cdo_files}
+            ${cdo}  setmissval,-9.e33 -fillmiss -setmissval,0 ${cdo_files}
             ;;
         forest_fract| snow )
             echo "Extrapolating $var ..."
@@ -306,7 +301,7 @@ function remap_var {
             echo "Remapping $var ..."
             temp=$(mktemp -u --tmpdir=.)
             ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
-            ${cdo} setvar,${var} -setmisstoc,0.07 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+            ${cdo} setvar,${var} ${temp} ${grid_name}_${var}_remap.nc
             rm ${temp}
             ;;
         elevation )
@@ -404,7 +399,7 @@ function remap_var {
             echo "Remapping $var ..."
             temp=$(mktemp -u --tmpdir=.)
             ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
-            ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+            ${cdo} setvar,${var} ${temp} ${grid_name}_${var}_remap.nc
             rm ${temp}
             ;;
         * )
@@ -435,6 +430,20 @@ function remap_var {
     [[ -f ${grid_name}_${var}_remap.nc ]] && debug_file ${grid_name}_${var}_remap.nc
 
     return 0
+}
+
+function pseudo_remap_var {
+
+    local var=$1     # Variable name
+
+    [[ ! -f ${grid_name}_notsea.nc ]] && cdo setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
+    if [[ ${var} == oro* ]]; then
+	VAR=$(echo ${var} | tr -s 'a-z' 'A-Z')
+	cdo -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
+    else 
+	ln -s gauss_${grid_name}_${var}.nc ${grid_name}_${var}_remap.nc
+    fi
+
 }
 
 function generate_fractions {
@@ -531,11 +540,12 @@ function crosscheck_vars {
 
 function copy_uuid {
 
-    local file=$1
+    if [[ ${jsb4icon} == true ]]; then
+       local file=$1
 
-    uuidOfHGrid=$(ncdump -h ${icon_grid_file} | grep ':uuidOfHGrid = ' | cut -f2 -d'"')
-    ncatted -a uuidOfHGrid,global,o,c,${uuidOfHGrid} ${file}
-
+       uuidOfHGrid=$(ncdump -h ${icon_grid_file} | grep ':uuidOfHGrid = ' | cut -f2 -d'"')
+       ncatted -a uuidOfHGrid,global,o,c,${uuidOfHGrid} ${file}
+    fi
 }
 
 function generate_output_files {
@@ -654,6 +664,8 @@ function generate_output_files {
 
 function debug_file {
 
+  if [[ ${jsb4icon} == "true" ]]
+  then
     local file=$1
     local target_res=${source_res_dict[${bisection}]}
     local debug_weights=wgt${debug_remap_scheme}_${grid_name}_to_${target_res}.nc
@@ -666,7 +678,7 @@ function debug_file {
         fi
         ${cdo} remap,${target_res}grid,${debug_weights} -setgrid,${icon_grid_file} -setmisstoc,0 ${file} debug_${file}
     fi
-
+  fi
 }
 #_____________________________________________________________________________
 #
@@ -685,53 +697,72 @@ rm -rf *
 
 [[ "${old_r2b4_amip}" == "true" ]] && bisections="4"
 
-for bisection in $bisections
+for bisection in $bisections $ggrids
 do
+  [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
   cdo="cdo -s -b F64"
   #cdo="cdo -b F64"
-  n0=$(printf "%2.2i" $bisection)
-  (( n1 = bisection + 1 ))
-  n1=$(printf "%2.2i" $n1)
-  if [[ $bisection -ge 8  ]]
-  then
-      cdo="${cdo} -f nc4 -P 8"
-      ulimit -s unlimited
-      ulimit -v unlimited
-      ulimit -m unlimited
-  fi
+  if [[ ${jsb4icon} == true ]]; then
+     n0=$(printf "%2.2i" $bisection)
+     (( n1 = bisection + 1 ))
+     n1=$(printf "%2.2i" $n1)
+     if [[ $bisection -ge 8  ]]
+     then
+        cdo="${cdo} -f nc4 -P 8"
+        ulimit -s unlimited
+        ulimit -v unlimited
+	ulimit -m unlimited
+     fi
 
-  if [[ "${old_r2b4_amip}" != "true" ]]
-  then
-     grid_name=R02B${n0}
-     source_res=${source_res_dict[${bisection}]}
-  else
-     grid_name=r2b4_amip
-     source_res=T63
+     if [[ "${old_r2b4_amip}" != "true" ]]
+     then
+        grid_name=R02B${n0}
+        source_res=${source_res_dict[${bisection}]}
+     else
+        grid_name=r2b4_amip
+        source_res=T63
+     fi
+  else         # jsbach4 on gaussian grid
+     grid_name=${bisection}
+     source_res=${grid_name}
+     icon_grid=${grid_name}
   fi
 
   echo "=============================================================="
   echo "===  Generating files for $grid_name from $source_res      ==="
   echo "=============================================================="
 
-  [[ "${old_r2b4_amip}" != "true" ]] && icon_grid=icon_grid_00${n1}_R02B${n0}_G.nc || icon_grid=${grid_name}.nc
+  if [[ ${jsb4icon} == true ]]; then
+     [[ "${old_r2b4_amip}" != "true" ]] && icon_grid=icon_grid_00${n1}_R02B${n0}_G.nc || icon_grid=${grid_name}.nc
 
-  remap_weights=wgt${remap_scheme}_${source_res}_to_${grid_name}.nc
+     remap_weights=wgt${remap_scheme}_${source_res}_to_${grid_name}.nc
 
-  if [[ "${coupled}" != "true" ]]
-  then
-    icon_grid_file=${grid_path}/${icon_grid}
-  else
-    icon_grid_file=${coupled_grid_file}
+     if [[ "${coupled}" != "true" ]]
+     then
+       icon_grid_file=${grid_path}/${icon_grid}
+     else
+       icon_grid_file=${coupled_grid_file}
+     fi
+
+     case ${source_res} in
+	 T* )
+	     source_grid=${source_res}grid
+	     ;;	 
+	 05 )
+	     ${cdo} griddes ${pool_prepare}/05/ECHAM6/05_jan_surf.nc > 0.5grid
+	     source_grid=0.5grid
+	     ;;
+     esac
+		     
+     command="${cdo} gen${remap_scheme},$icon_grid_file -setmissval,-9.e33 -random,${source_grid}  $remap_weights"
+     echo "Generating remap weights: $command"
+     time $command
+
+     [[ "${old_r2b4_amip}" != "true" ]] && \
+	 extpar_file=$(ls ${extpar_path}/icon_extpar_grid_00${n1}_${grid_name}_G_????????.nc) || \
+	 extpar_file=$(ls ${extpar_path}/icon_extpar_grid_0005_R02B04_G_????????.nc)
+     echo "extpar input file: $extpar_file"
   fi
-
-  command="${cdo} gen${remap_scheme},$icon_grid_file -setmissval,-9.e33 -random,${source_res}grid  $remap_weights"
-  echo "Generating remap weights: $command"
-  time $command
-
-  [[ "${old_r2b4_amip}" != "true" ]] && \
-      extpar_file=$(ls ${extpar_path}/icon_extpar_grid_00${n1}_${grid_name}_G_????????.nc) || \
-      extpar_file=$(ls ${extpar_path}/icon_extpar_grid_0005_R02B04_G_????????.nc)
-  echo "extpar input file: $extpar_file"
 
   echo Creating Gaussian input file ...
   generate_gauss_data
@@ -740,26 +771,40 @@ do
   #[[ $npfts -gt 0 ]] && \
   #    input_file=`ls ${input_root}/r0*/${source_res}/jsbach_${source_res}+(GR|TP)*_fractional_${npts}tiles_5layers_${year}.nc | tail -1` || \
   #    input_file=`ls ${input_root}/r0*/${source_res}/jsbach_${source_res}+(GR|TP)*_fractional_11tiles_5layers_${year}.nc | tail -1`
-  input_file=`ls jsbach_${source_res}TP*_fractional_11tiles_5layers_${year}_no-dynveg.nc`
+  input_file=`ls jsbach_${source_res}${res_oce}*_11tiles_5layers_${year}_no-dynveg.nc`
   shopt -u extglob
 
   echo "Extracting Gaussian variables from ${input_file}"
   ${cdo} splitname ${input_file} gauss_${source_res}_
-  ${cdo} setctomiss,0 gauss_${source_res}_slf.nc gauss_${source_res}_notsea_miss.nc
+  if [[ ${echam_fractional} == "true" ]]; then
+     ${cdo} setctomiss,0 gauss_${source_res}_slf.nc gauss_${source_res}_notsea_miss.nc
+  else
+     ${cdo} setctomiss,0 gauss_${source_res}_slm.nc gauss_${source_res}_notsea_miss.nc
+  fi
 
   echo Processing $icon_grid ...
 
-  generate_land_sea_mask
+  if [[ ${jsb4icon} == true ]]
+  then
 
-  for var in $varlist
-  do
-    extrapolate_var $var 
-  done
+     generate_land_sea_mask
 
-  for var in $varlist
-  do
-    remap_var $var
-  done
+     for var in $varlist
+     do
+       extrapolate_var $var 
+     done
+
+     for var in $varlist
+     do
+       remap_var $var
+     done
+
+  else
+     for var in $varlist
+     do
+       pseudo_remap_var $var
+     done
+  fi
 
   generate_fractions
 
@@ -768,7 +813,7 @@ do
   generate_output_files
 
   [[ "${old_r2b4_amip}" != "true" ]] && \
-    output_dir="${output_path}/R02B${n0}/land" || \
+    output_dir="${output_path}/${grid_name}/land" || \
     output_dir="${output_path}/r2b4_amip/lnd"
   mkdir -p ${output_dir} || true
 
