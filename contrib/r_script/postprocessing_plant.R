@@ -18,6 +18,7 @@ tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 flist_pool = Sys.glob(paste0("vegpool*","_",tstep_pool,"*.txt")) 
 flist_pool = c(flist_pool,Sys.glob(paste0("soilpool*","_",tstep_pool,"*.txt"))) 
 flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*","_",tstep_pool,"*.txt"))) 
+flist_pool = c(flist_pool,Sys.glob(paste0("ecopool*","_",tstep_pool,"*.txt")))  
 # get flux output files  
 flist_flux = Sys.glob(paste0("vegflux*","_",tstep_pool,"*.txt")) 
 

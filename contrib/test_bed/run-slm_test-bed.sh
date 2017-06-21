@@ -54,7 +54,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-siteDataSet="n"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
+siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
 siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
 soil_awc_prescribe=300.0        # float !
