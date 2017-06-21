@@ -136,7 +136,6 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_name        = kwargs.get ( "B4J_name" )
         self.B4J_name_orig   = kwargs.get ( "B4J_name_orig" )
         self.B4J_etype       = kwargs.get ( "B4J_etype", None )
-        #: this is a comment on B4J_path
         self.B4J_path        = kwargs.get ( "B4J_path", None )
         self.B4J_host        = kwargs.get ( "B4J_host", None )
         self.B4J_isref       = kwargs.get ( "B4J_isref", False )
@@ -149,8 +148,8 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_finalyear   = kwargs.get ( "B4J_finalyear", None )
         self.B4J_index       = {}
 
-        self.B4J_obj.logger.debug ( 'kwargs = { %s }' % ''.join("{!s} = {!r}, ".format(key,val) 
-                                                        for (key,val) in kwargs.items()))
+#        self.B4J_obj.logger.debug ( 'kwargs = { %s }' % ''.join("{!s} = {!r}, ".format(key,val) 
+#                                                       for (key,val) in kwargs.items()))
 
         
         if not self.B4J_path:

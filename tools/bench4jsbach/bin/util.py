@@ -9,11 +9,11 @@ log_message_newline = "\n  #\t"
 
 class WrappedFixedIndentingLog ( logging.Formatter ):
     def __init__ ( self, fmt = None, datefmt = None, width = 120,
-                   indent = 2 ):
+                   indent = 2, marker = '#' ):
         super ( WrappedFixedIndentingLog, self ).\
               __init__ ( fmt = fmt, datefmt = datefmt )
         self.wrapper = textwrap.TextWrapper ( width = width,
-                                              subsequent_indent = ' '*indent + '# ',
+                                              subsequent_indent = ' '*indent + '%s ' % marker,
                                               replace_whitespace = False )
 
     def format ( self, record ):
@@ -25,6 +25,8 @@ def setup_logger ( *args, **kwargs ):
 
     name     = kwargs.get ( 'name', default_logger_name )
     filename = kwargs.get ( 'filename', None )
+    marker   = kwargs.get ( 'marker', '#' )
+    indent   = kwargs.get ( 'indent', 2 )
 
     logger   = logging.getLogger ( name )
     logger.propagate = False
@@ -35,13 +37,42 @@ def setup_logger ( *args, **kwargs ):
         else:
             handler = logging.StreamHandler ( sys.stdout )
             
-        handler.setFormatter ( WrappedFixedIndentingLog (
-            """\n### %(name)s - %(levelname)s -  %(asctime)-8s - MODULE %(module)s - FUNCTION %(funcName)s - LINE %(lineno)d :
+        # handler.setFormatter ( WrappedFixedIndentingLog (
+        #     "\n%s %s - %s -  %-8s - MODULE %s - FUNCTION %s - LINE %s :\n\n\t%s\n%s" % (
+        #         3*marker,
+        #         "%(name)s",
+        #         "%(levelname)s",
+        #         "%(asctime)-8s",
+        #         "%(module)s",
+        #         "%(funcName)s",
+        #         "%(lineno)d",
+        #         "%(message)s",
+        #         3*marker ),
+        #     "%Y/%m/%d - %H:%M:%S",
+        #     indent=2,
+        #     marker=marker ))
+        
             
-            %(message)s\n###""",
+        handler.setFormatter ( WrappedFixedIndentingLog (
+"""
+%s %s - %s -  %-8s - MODULE %s - FUNCTION %s - LINE %s :
+%s%s
+%s
+""" % (
+    marker * ( indent + 1 ),
+    "%(name)s",
+    "%(levelname)s",
+    "%(asctime)-8s",
+    "%(module)s",
+    "%(funcName)s",
+    "%(lineno)d",
+    ' ' * indent + '%s ' % marker,
+    "%(message)s",
+    marker * ( indent + 1 )),
             "%Y/%m/%d - %H:%M:%S",
-            indent=2 )) 
-
+            indent=indent,
+            marker=marker ))
+        
         logger.addHandler ( handler )
         logger.setLevel ( logging.DEBUG )
     return logger
@@ -75,7 +106,7 @@ def print_item_or_list_rec ( something, indent ):
         return "[\n%s]" % ( ",\n".join ( '{!s}{!s}'.format ( nextind, print_item_or_list_rec ( i, nextindent + 3 ))\
                                        for i in something ))
     elif isinstance ( something, dict ):
-        return "{\n%s}" % ( ",\n".join ( '{!s}{!s}\t: {!s}'.format ( nextind, k, print_item_or_list_rec ( v, nextindent + 3 )) \
+        return '{ \n%s }' % ( ",\n ".join ( '{!s}{!s}\t: {!s}'.format ( nextind, k, print_item_or_list_rec ( v, nextindent + 3 )) \
                                        for k,v in something.iteritems ()))
     else:
         print "It's somthing different."

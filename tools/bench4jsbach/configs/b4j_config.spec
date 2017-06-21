@@ -23,7 +23,7 @@ reporting=boolean()			    # USER: write report for b4j run, default "True"
 name_orig=string()			    # USER: <A>: original infix/id
 type=option('CMIP5','MPIESM1','ICON')       # USER: <A>: experiment type
 path=string(default=None)		    # USER: <A>: location
-host=string(default=None)		    # USER: <A>: 
+host=string(default=None)	            # USER: <A>: 
 iscan=boolean()				    # USER: <A>: candidate role
 isref=boolean()				    # USER: <A>: reference role
 startyear=string()			    # USER: <A>: startyear of <A> in b4j run

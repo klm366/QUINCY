@@ -167,12 +167,17 @@ class Diagnostics ( object ):
             input_list = prepdict [ 'input' ]
             
             #arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
-            arglist = [ "fieldname:" + fieldname,
+            arglist = [ "proctype:" + "preprocessing",
+                        "fieldname:" + fieldname,
                         "suffix:" +  fielddict [ 'suffix' ],
                         "land_sea_mask:" + exp.land_sea_mask ]
-                            
-            for key in input_list:
-                arglist.append ( key + ':' + exp.B4J_index [ key ])
+
+            if len ( input_list ) == 1 and \
+               "default" in prepdict [ 'exec' ]:
+                arglist.append ( 'VAR_selcode' + ':' + exp.B4J_index [ input_list [ 0 ]])
+            else:
+                for key in input_list:
+                    arglist.append ( key + ':' + exp.B4J_index [ key ])
                 
             for output_item in  fielddict [ 'preprocessing' ][ 'output' ]:
                 exp.B4J_index [ output_item ] = self.path_template % { 
@@ -190,13 +195,10 @@ class Diagnostics ( object ):
 
             # Check written files:
             new_indices = [ output_item for output_item in  fielddict [ 'preprocessing' ][ 'output' ]]
-            print new_indices
             exp.index_check_output ( new_indices )
         
         self.logger.debug ( "Finished preprocessing with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
-
-        print "######################## PREPROCESSING FINISHED "
 
         ########### REMAPPING FOR CANDIDATES #############################
 
@@ -239,9 +241,7 @@ class Diagnostics ( object ):
                 new_indices = [ "%s_remap-%s" % ( output_item, remap_target ) \
                                 for output_item in fielddict [ 'preprocessing' ][ 'output' ] \
                                 for remap_target in remap_targets ]
-                print new_indices
                 can.index_check_output ( new_indices )
-
             
         self.logger.debug ( "Finished remapping." )
 
@@ -258,7 +258,8 @@ class Diagnostics ( object ):
                 executable = self.get_b4j_path (  prepdict [ 'exec' ], "scripts" )
                 input_list = prepdict [ 'input' ]
 
-                arglist = [ "fieldname:" + fieldname,
+                arglist = [ "proctype:" + "preprocessing remapped",
+                            "fieldname:" + fieldname,
                             "suffix:" +  fielddict [ 'suffix' ],
                             "land_sea_mask:" + exp.land_sea_mask ]
 
@@ -307,16 +308,13 @@ class Diagnostics ( object ):
 
         for can in self.experiments:
             if not can.B4J_iscan: continue
-            print
-            print print_item_or_list_rec (  can.B4J_index, 3 )
                                    
             for ref in self.experiments:
                 if not ref.B4J_isref:            continue
                 if ref.B4J_name == can.B4J_name: continue
-                print
-                print print_item_or_list_rec ( ref.B4J_index, 3 )
              
-                arglist = [ "fieldname:" + fieldname,
+                arglist = [ "proctype:" + "diagnostic",
+                            "fieldname:" + fieldname,
                             "suffix:" +  fielddict [ 'suffix' ],
                             "land_sea_mask:" + ref.land_sea_mask ]
                             
@@ -349,7 +347,6 @@ class Diagnostics ( object ):
                                 for output_item, output_dict in fielddict [ 'diagnose' ].iteritems () \
                                 if  isinstance ( output_dict, configobj.Section ) \
                                 for ref in self.experiments if ref.B4J_isref ]
-                print new_indices
                 #can.index_check_output ( new_indices )
                 
         self.logger.debug ( "Finished diagnostic with %s for field %s and all experiments successfully." %  \
@@ -371,7 +368,8 @@ class Diagnostics ( object ):
                         if not ref.B4J_isref:            continue
                         if ref.B4J_name == can.B4J_name: continue
 
-                        arglist = [ "fieldname:" + fieldname,
+                        arglist = [ "proctype:" + "plotting",
+                                    "fieldname:" + fieldname,
                                     "land_sea_mask:" + can.land_sea_mask,
                                     "can_name:" + can.B4J_name,
                                     "canno:%d" % can.B4J_canno, 
@@ -455,7 +453,8 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
-                    arglist = [ "fieldname:" + fieldname,
+                    arglist = [ "proctype:" + "plotting",
+                                "fieldname:" + fieldname,
                                 "land_sea_mask:" + can.land_sea_mask,
                                 "can_name:" + can.B4J_name,
                                 "canno:%d" % can.B4J_canno ]
@@ -522,7 +521,8 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
-                    arglist = [ "field_name:" + fielddict [ "field_name" ],
+                    arglist = [ "proctype:" + "plotting",
+                                "field_name:" + fielddict [ "field_name" ],
                                 "can_name:" + can.B4J_name,
                                 "canno:%d" % can.B4J_canno ]
 
@@ -579,7 +579,8 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
-                    arglist = [ "field_name:" + fielddict [ "field_name" ],
+                    arglist = [ "proctype:" + "plotting",
+                                "field_name:" + fielddict [ "field_name" ],
                                 "can_name:" + can.B4J_name,
                                 "canno:%d" % can.B4J_canno ]
 

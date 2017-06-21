@@ -8,6 +8,21 @@ import os,sys
 from optparse import OptionParser
 
 
+
+def bytes2humanreadable ( num ):
+    for x in [ 'bytes', 'KB', 'MB', 'GB', 'TB' ]:
+        if num < 1024.0:
+            return ( num, x )
+            #return "%3.1f %s" % ( num, x )
+        num /= 1024.0
+
+
+def get_filesize ( path ):
+    if os.path.isfile ( path ):
+        filestat = os.stat ( path )
+        return filestat.st_size
+
+    
 script_dir = os.path.dirname ( os.path.realpath ( __file__ ))
 bench4jsbach_base = os.path.dirname ( os.path.realpath ( script_dir ))
 bin_dir = os.path.join ( bench4jsbach_base, "bin" )
@@ -27,7 +42,7 @@ parser.add_option("-f", "--force",
                   action  = "store_true", 
                   dest    = "force", 
                   default = False,
-                  help    = "force cleaning of a b4j run environment, delete all files")
+                  help    = "force cleaning of a b4j run environment, delete all files except config file")
 ( options, args ) = parser.parse_args ()
 
 nargs = len ( args )
@@ -60,22 +75,24 @@ else:
 
     dirs2clean = [ b4j_obj.graphics_path,
                    b4j_obj.processed_path,
-                   b4j_obj.report_path ]
-    dirs2clean.append ( b4j_obj.interpolated_selected_path ) if options.force else None
+                   os.path.join ( b4j_obj.report_path, "sources" )]
+    dirs2clean.extend ([ b4j_obj.interpolated_selected_path, b4j_obj.report_path ]) if options.force else None
 
-    count = 0
+    sum = count = 0
     for dir in dirs2clean:
         for root, subdir, files in os.walk ( dir ):
             for f in files:
-                os.remove ( os.path.join ( root, f ))
+                fp     = os.path.join ( root, f )
+                sum   += get_filesize ( fp )
+                os.remove ( fp )
                 count += 1
-
+    hsum, unit = bytes2humanreadable ( sum )
     print "\n******************************************"
     print "* BENCH4JSBACH: "
     print "*"
     print "* >> %s %s" % ( __file__, args [ 0 ])
     print "*"
     print "* Finished successfully."
-    print "* Deleted %d files out of the directories:" % count
+    print "* Deleted %3.1f %s from %d files out of the directories:" % ( hsum, unit, count )
     print print_item_or_list_rec ( dirs2clean, 3 )
     print "******************************************"

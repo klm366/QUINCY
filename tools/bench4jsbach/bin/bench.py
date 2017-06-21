@@ -236,7 +236,7 @@ class Bench_Object ( Diagnostics, Report ):
             name_orig   = attr.get ( "name_orig", None )
             etype       = attr.get ( "type", "CMIP5" )
             path        = attr.get ( "path", None )
-            host        = attr.get ( "host", None )
+            host        = attr [ "host" ] or  gethostname ()
             iscan       = attr.get ( 'iscan', True )
             isref       = attr.get ( 'isref', False )
             startyear   = attr.get ( 'startyear', None )
