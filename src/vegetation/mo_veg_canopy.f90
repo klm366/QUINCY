@@ -198,11 +198,12 @@ CONTAINS
         END IF
         !> 2.3 N content of the canopy layer
         !!
-        IF(lai(ichunk) > assimi_config%canopy_layer_depth(1)) THEN
-          leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk) * exp(-kn * cumm_lai_cl(ichunk,icanopy))
-!@todo: check whether this causes leaf N in not existing layers
-        ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-          leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk)
+        IF(cumm_lai_cl(ichunk,icanopy) > eps12)THEN
+          IF(lai(ichunk) > assimi_config%canopy_layer_depth(1)) THEN
+            leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk) * exp(-kn * cumm_lai_cl(ichunk,icanopy))
+          ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+            leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk)
+          END IF
         END IF
       END IF ! lai(ichunk) > eps8
     END DO   ! loop ncanopy
@@ -244,6 +245,18 @@ CONTAINS
            fn_rub_cl(:,:)  = 0.0_wp
            fn_pepc_cl(:,:) = 0.0_wp
         ENDWHERE
+        
+        ! for canopy layer > 1
+        DO icanopy = 2,ncanopy
+           WHERE(lai_cl(:,icanopy) > eps8)
+              WHERE(ppfd_sunlit_cl(:,icanopy) < eps8) !no radiation, take from above
+                 ppfd_sunlit_cl(:,icanopy)   = ppfd_sunlit_cl(:,icanopy-1)
+                 ppfd_shaded_cl(:,icanopy)   = ppfd_shaded_cl(:,icanopy-1)
+                 fleaf_sunlit_cl(:,icanopy)  = fleaf_sunlit_cl(:,icanopy-1)
+              ENDWHERE
+           ENDWHERE
+        ENDDO
+                
      ELSE
         !> 3.2.1 optimal case
         ! for canopy layer = 1
@@ -767,22 +780,11 @@ CONTAINS
 
     !> 0.9 init some local variables
     !!
-!    fn_oth_new_cl(:,:)        = fn_oth_cl(:,:)
-!    fn_chl_new_cl(:,:)        = fn_chl_cl(:,:)
-!    fn_et_new_cl(:,:)         = fn_et_cl(:,:)
-!    fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
-!    fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
-
-    !! @todo calc_marginal_canopy_flux_increment: temporal (scientifically unreasonable) solution for ticket #210
-    fn_oth_new_cl(:,:)        = 1.0_wp
-    fn_chl_new_cl(:,:)        = 0.0_wp
-    fn_et_new_cl(:,:)         = 0.0_wp
-    fn_rub_new_cl(:,:)        = 0.0_wp
-    fn_pepc_new_cl(:,:)       = 0.0_wp
-
-    !! @todo calc_marginal_canopy_flux_increment: init leaf_nitrogen_new_cl with a value or leave un-initialized ?
-    !leaf_nitrogen_new_cl(:,:) = ...
-
+    fn_oth_new_cl(:,:)        = fn_oth_cl(:,:)
+    fn_chl_new_cl(:,:)        = fn_chl_cl(:,:)
+    fn_et_new_cl(:,:)         = fn_et_cl(:,:)
+    fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
+    fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -839,15 +841,6 @@ CONTAINS
     net_assimilation_new(:)  = 0.0_wp
     canopy_cond_new(:)       = 0.0_wp
     DO icanopy = 1,ncanopy
-       ! adjust N fractions for any changes in canopy N distribtuion
-       ! for optimal fractions this is only an aproximation
-       WHERE (lai(:)>eps8.AND.fn_oth_cl(:,icanopy)<1._wp)
-          fn_rub_new_cl(:,icanopy) = fn_rub_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
-          fn_et_new_cl(:,icanopy) = fn_et_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
-          fn_pepc_new_cl(:,icanopy) = fn_pepc_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
-          fn_chl_new_cl(:,icanopy) = fn_chl_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
-       END WHERE
-
       CALL calc_photosynthesis(     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
