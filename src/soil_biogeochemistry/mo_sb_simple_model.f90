@@ -69,6 +69,8 @@ CONTAINS
     CALL calc_sb_fluxes_simple(tile, options)
 
 
+!!    CALL calc_n15_fluxes(tile, options)
+
   END SUBROUTINE update_sb_simple_model
 
 
@@ -115,7 +117,9 @@ CONTAINS
                                              hlp1                 , &
                                              hlp2                 , &
                                              hlp3                 , &
-                                             mic_uptake_sl        , &
+                                             mic_uptake_nh4_sl    , &
+                                             mic_uptake_po4_sl    , &
+                                             biomineralisation_po4, &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
                                              rtm_depolymerisation_act, &
                                              rmm_depolymerisation_act, & 
@@ -535,22 +539,36 @@ CONTAINS
                      sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk))
     
     ! calculate potential microbial immobilisation rate as difference between maximal growth rate and N in litter 
-    mic_uptake_sl(:,:) = growth_c(:,:) / microbial_cn - & 
-                         (sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                          sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk))
+    mic_uptake_nh4_sl(:,:) = growth_c(:,:) / microbial_cn - & 
+                             (sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
+                             sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk))
 
     ! limit microbial and plant uptake, as well as nitrification to available NH4 minus transport losses
-    hlp1(:,:) = mic_uptake_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) 
-    hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
-    WHERE(hlp2(:,:) < hlp1(:,:)) 
-        WHERE(hlp1(:,:) > eps8)
-           mic_uptake_sl(:,:) = hlp2(:,:) * mic_uptake_sl(:,:) / hlp1(:,:) 
-           plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
-           nitrification_no3(:,:) = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
-        ELSEWHERE
-           mic_uptake_sl(:,:) = 0.0_wp 
-           plant_uptake_nh4_sl(:,:) = 0.0_wp 
-           nitrification_no3(:,:) = 0.0_wp 
+    WHERE(mic_uptake_nh4_sl(:,:)>=0.0_wp)
+       hlp1(:,:) = mic_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) 
+       hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
+       WHERE(hlp2(:,:) < hlp1(:,:)) 
+           WHERE(hlp1(:,:) > eps8)
+              mic_uptake_nh4_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_sl(:,:) / hlp1(:,:) 
+              plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
+              nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
+           ELSEWHERE
+              mic_uptake_nh4_sl(:,:) = 0.0_wp
+              plant_uptake_nh4_sl(:,:) = 0.0_wp 
+              nitrification_no3(:,:) = 0.0_wp 
+           ENDWHERE 
+        ENDWHERE
+    ELSEWHERE
+       hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) 
+       hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - mic_uptake_nh4_sl(:,:)
+       WHERE(hlp2(:,:) < hlp1(:,:)) 
+           WHERE(hlp1(:,:) > eps8)
+              plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
+              nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
+           ELSEWHERE
+              plant_uptake_nh4_sl(:,:) = 0.0_wp 
+              nitrification_no3(:,:) = 0.0_wp 
+           ENDWHERE 
         ENDWHERE
     ENDWHERE 
    
@@ -569,7 +587,7 @@ CONTAINS
     
     ! calculate C growth based on N availability
     growth_n(:,:) = microbial_cn * (sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                    sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + mic_uptake_sl(:,:))
+                                    sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + mic_uptake_nh4_sl(:,:))
 
     ! adjust carbon-use efficiency to match N availability by unchanged litter decomposition
     WHERE(growth_c(:,:) <= growth_n(:,:)) ! enough N is available -> constant CUE
@@ -587,9 +605,9 @@ CONTAINS
                       (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) - &
                       (sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk)))
     hlp2(:,:) = 1.0_wp
-    WHERE(mic_uptake_sl(:,:)<hlp1(:,:))
+    WHERE(mic_uptake_nh4_sl(:,:)<hlp1(:,:))
        WHERE(hlp1(:,:)>eps8)
-           hlp2(:,:) = mic_uptake_sl(:,:) / hlp1(:,:)
+           hlp2(:,:) = mic_uptake_nh4_sl(:,:) / hlp1(:,:)
        ELSEWHERE
            hlp2(:,:) = 0.0_wp
        ENDWHERE
@@ -608,6 +626,49 @@ CONTAINS
        sb%loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb%loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)
     ENDWHERE 
 
+    ! calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
+    biomineralisation_po4(:,:) = rtm_depolymerisation_act(:,:)*rmm_depolymerisation_act(:,:)/tau_fast * dtime * & 
+                                 sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) 
+
+    ! calculate potential microbial P uptake from soluable pool (mol /m3 / timestep) 
+    mic_uptake_po4_sl(:,:) =  apparent_mic_cue(:,:) / microbial_cn / microbial_np * & 
+                              (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
+                               sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) - & 
+                              (sb%loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
+                               sb%loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk))
+
+    ! constrain P uptake by microbes and plants to the available sum of P from P_soluable, biomineralisation and transport (mol /m3 / timestep)   
+    WHERE(mic_uptake_po4_sl(:,:)>0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
+       hlp1(:,:) = mic_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) 
+       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:)
+       WHERE(hlp2(:,:) < hlp1(:,:))
+          WHERE(hlp1(:,:) > eps8)
+             mic_uptake_po4_sl(:,:)   = hlp2(:,:) * mic_uptake_po4_sl(:,:) / hlp1(:,:) 
+             plant_uptake_po4_sl(:,:) = hlp2(:,:) * plant_uptake_po4_sl(:,:) / hlp1(:,:) 
+          ELSEWHERE
+             mic_uptake_po4_sl(:,:)   = 0.0_wp
+             plant_uptake_po4_sl(:,:) = 0.0_wp 
+          ENDWHERE
+       ENDWHERE
+    ELSEWHERE ! if microbes release P, constrain plant uptake to available P, note the negative sign of mic_uptake_po4_sl(:,:)
+       hlp1(:,:) = plant_uptake_po4_sl(:,:) 
+       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:) - mic_uptake_po4_sl(:,:)
+       WHERE(hlp2(:,:) < hlp1(:,:))
+          WHERE(hlp1(:,:) > eps8)
+             plant_uptake_po4_sl(:,:) = hlp2(:,:) * plant_uptake_po4_sl(:,:) / hlp1(:,:) 
+          ELSEWHERE
+             plant_uptake_po4_sl(:,:) = 0.0_wp 
+          ENDWHERE
+       ENDWHERE
+    ENDWHERE
+
+    ! limit biomineralisation to the actual rate of biomineralisation required to meet microbial and plant demands
+    ! and substract from slow=residue pool 
+    biomineralisation_po4(:,:) = MAX(mic_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) - & 
+                                     (po4_solute(:,:) + transport_po4_solute(:,:)),0.0_wp)
+    sb%loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb%loss%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                     biomineralisation_po4(:,:)
+
     !> 5.0 formation of SOM and associated respiration, net mineralisation fluxes
     !!
     !> 5.1 formation of fast SOM from litter 
@@ -616,17 +677,17 @@ CONTAINS
                                                         apparent_mic_cue(:,:) * & 
                                                         (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) 
     sb%formation%microbial%nitrogen%ptr(ics:ice,:,iblk) = sb%formation%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                          apparent_mic_cue(:,:) / microbial_cn * & 
-                                                          (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) 
+                                                          mic_uptake_nh4_sl(:,:) 
     sb%formation%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb%formation%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                            apparent_mic_cue(:,:) / microbial_cn / microbial_np * & 
-                                                            (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) 
+                                                            (sb%loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk)) + & 
+                                                            mic_uptake_po4_sl(:,:)
     sb%formation%microbial%carbon13%ptr(ics:ice,:,iblk) = sb%formation%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
                                                           apparent_mic_cue(:,:) * & 
                                                           (sb%loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon13%ptr(ics:ice,:,iblk)) 
     sb%formation%microbial%carbon14%ptr(ics:ice,:,iblk) = sb%formation%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
                                                           apparent_mic_cue(:,:) * & 
                                                           (sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)) 
+!! to be moved to N15 calculation
     WHERE(sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)+sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk)>eps8)
        sb%formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb%formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
                               (sb%loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)+sb%loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)) / & 
@@ -641,14 +702,8 @@ CONTAINS
                                (sb%loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon13%ptr(ics:ice,:,iblk)) 
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
                                (sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)) 
-    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + & 
-                                  (sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk)) - & 
-                                  apparent_mic_cue(:,:) / microbial_cn * & 
-                                  (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) 
-    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + & 
-                                  (sb%loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk)) - & 
-                                  apparent_mic_cue(:,:) / microbial_cn / microbial_np * & 
-                                  (sb%loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) 
+    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) - mic_uptake_nh4_sl(:,:)  
+    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) - mic_uptake_po4_sl(:,:)  
     WHERE(sb%loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)+sb%loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk)>eps8)
        net_mineralisation_nh4_n15(:,:)     = net_mineralisation_nh4_n15(:,:) + & 
                               sb%loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
@@ -721,24 +776,6 @@ CONTAINS
                                     sb%loss%residue%nitrogen15%ptr(ics:ice,:,iblk) - &
                                     sb%loss%residue%nitrogen15%ptr(ics:ice,:,iblk) / sb%loss%residue%nitrogen%ptr(ics:ice,:,iblk) * &  
                                     residue_cue / microbial_cn * sb%loss%residue%carbon%ptr(ics:ice,:,iblk)
-    ENDWHERE
-
-    !> 5.4 calculate biomineralisation
-    !! calculate potential P immobilisation rate 
-    hlp1(:,:) = ABS(net_mineralisation_po4(:,:))
-    hlp2(:,:) = hlp1(:,:) + plant_uptake_po4_sl(:,:) 
-    hlp3(:,:) = po4_solute + transport_po4_solute(:,:)
-    ! limit plant uptake to avaialble P 
-    WHERE(net_mineralisation_po4(:,:) < 0.0_wp .AND. & 
-          hlp2(:,:) > hlp3(:,:) .AND. hlp2(:,:) > 1.e-13)
-        plant_uptake_po4_sl(:,:) = hlp3(:,:) * plant_uptake_po4_sl(:,:) / hlp2(:,:)
-    ENDWHERE 
-    
-    ! limit to available P 
-    hlp1(:,:) = ABS(net_mineralisation_po4(:,:)) - (po4_solute(:,:) - plant_uptake_po4_sl(:,:))
-    WHERE(net_mineralisation_po4(:,:) < 0.0_wp .AND. hlp1(:,:) > 0.0_wp) 
-          net_mineralisation_po4(:,:) = - (po4_solute(:,:) - plant_uptake_po4_sl(:,:))
-          sb%loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb%loss%residue%phosphorus%ptr(ics:ice,:,iblk) + hlp1
     ENDWHERE
 
     !> 6.0 calculate N losses and nitrification
@@ -888,5 +925,261 @@ CONTAINS
 
 
   END SUBROUTINE calc_sb_fluxes_simple 
+
+!!!!  !-----------------------------------------------------------------------------------------------------
+!!  ! Sub Task
+!!  !
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> routine to calculate 15N fluxes, given N fluxes calculated by the simple soil model 
+!!  !!
+!!  !-----------------------------------------------------------------------------------------------------
+!!  SUBROUTINE calc_sb_simple_n15_fluxes(tile, options)
+!!
+!!    USE mo_jsb_class,             ONLY: Get_model
+!!    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+!!    USE mo_jsb_model_class,       ONLY: t_jsb_model
+!!    USE mo_base_constants,        ONLY: dtime, one_day
+!!    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+!!    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+!!    USE mo_soil_config_class,     ONLY: soil_config
+!!    USE mo_sb_config_class,       ONLY: sb_config
+!!    USE mo_sb_constants
+!!    USE mo_sb_jsm_transport
+!!
+!!    ! Use of process memories
+!!    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+!!    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+!!    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+!!
+!!    IMPLICIT NONE
+!!    ! ---------------------------
+!!    ! 0.1 InOut
+!!    TYPE(t_slm_tile),         INTENT(inout), TARGET    :: tile          !< one tile
+!!    TYPE(t_jsb_task_options), INTENT(in)               :: options       !< model options
+!!    ! ---------------------------
+!!    ! 0.2 Local
+!!    TYPE(t_jsb_model),      POINTER       :: model
+!!    TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
+!!    INTEGER                               :: isoil                !< loop over soil_config%nsoil_water
+!!    INTEGER                               :: iblk, ics, ice, nc
+!!    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) ::      &
+!!                                             apparent_mic_cue     , &
+!!                                             growth_c             , &
+!!                                             growth_n             , &
+!!                                             hlp1                 , &
+!!                                             hlp2                 , &
+!!                                             hlp3                 , &
+!!                                             mic_uptake_nh4_sl        , &
+!!                                             root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
+!!                                             rtm_depolymerisation_act, &
+!!                                             rmm_depolymerisation_act, & 
+!!                                             km1_plant_uptake_n, &
+!!                                             km2_plant_uptake_n, &
+!!                                             km1_plant_uptake_p, &
+!!                                             km2_plant_uptake_p, &
+!!                                             km_denitrification_c_act, &
+!!                                             km_denitrification_no3_act, &
+!!                                             rtm_nitrification_act, &
+!!                                             rtm_denitrification_act, &
+!!                                             rmm_nitrification_act, &
+!!                                             rtm_gasdiffusion_act, &
+!!                                             rmm_gasdiffusion_act, &
+!!                                             anaerobic_volume_fraction_act
+!!    REAL(wp), DIMENSION(options%nc) :: root_depth_avg
+!!    
+!!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_lesssimple'
+!!    ! ---------------------------
+!!    ! 0.3 Memory allocation
+!!    ! Declare process configuration and memory Pointers
+!!    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+!!    dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
+!!    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
+!!    ! Declare pointers to variables in memory
+!!    dsl4jsb_Real3D_onChunk :: percolation_sl
+!!    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
+!!    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
+!!    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
+!!    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
+!!    dsl4jsb_Real3D_onChunk :: nitrification_no3 
+!!    dsl4jsb_Real3D_onChunk :: nitrification_noy 
+!!    dsl4jsb_Real3D_onChunk :: nitrification_n2o
+!!    dsl4jsb_Real3D_onChunk :: denitrification_noy 
+!!    dsl4jsb_Real3D_onChunk :: denitrification_n2o 
+!!    dsl4jsb_Real3D_onChunk :: denitrification_n2 
+!!    dsl4jsb_Real3D_onChunk :: volatilisation_n
+!!    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
+!!    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
+!!    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
+!!    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
+!!    dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+!!    dsl4jsb_Real3D_onChunk :: transport_nh4_solute
+!!    dsl4jsb_Real3D_onChunk :: transport_no3_solute
+!!    dsl4jsb_Real3D_onChunk :: transport_po4_solute
+!!    dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
+!!    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
+!!    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
+!!    dsl4jsb_Real3D_onChunk :: transport_noy
+!!    dsl4jsb_Real3D_onChunk :: transport_n2o
+!!    dsl4jsb_Real3D_onChunk :: transport_n2 
+!!    dsl4jsb_Real3D_onChunk :: noy
+!!    dsl4jsb_Real3D_onChunk :: n2o
+!!    dsl4jsb_Real3D_onChunk :: n2 
+!!    dsl4jsb_Real3D_onChunk :: nh4_solute 
+!!    dsl4jsb_Real3D_onChunk :: no3_solute
+!!    dsl4jsb_Real3D_onChunk :: po4_solute 
+!!    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
+!!    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
+!!    dsl4jsb_Real2D_onChunk :: emission_noy
+!!    dsl4jsb_Real2D_onChunk :: emission_n2o
+!!    dsl4jsb_Real2D_onChunk :: emission_n2
+!!    ! Get local variables from options argument
+!!    iblk  = options%iblk
+!!    ics   = options%ics
+!!    ice   = options%ice
+!!    nc    = options%nc
+!!    ! ---------------------------
+!!    ! 0.4 Process Activity, Debug Option
+!!!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!!!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+!!    ! ---------------------------
+!!    ! 0.5 Get Memory
+!!    ! Get process config
+!!!    dsl4jsb_Get_config(xx_)
+!!    ! Get process memories
+!!    dsl4jsb_Get_memory(SOIL_)
+!!    dsl4jsb_Get_memory(SB_)
+!!    ! Get process variables (Set pointers to variables in memory)
+!!    model  => Get_model(tile%owner_model_id)
+!!    lctlib => model%lctlib(tile%lcts%lib_id)
+!!    ! ---------------------------
+!!    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       n2o) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       n2) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute) 
+!!    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
+!!    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute) 
+!!    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy) 
+!!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o) 
+!!
+!!    !> 1.0 potential 15N fluxes involving ammonium
+!!    !!
+!!    IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+!!       ! For the 0D soil model, loss is proportional to the fractional waterloss of the soil column
+!!       ! reduction of layer concentration in µmol m-3 s-1
+!!       transport_nh4_n15_solute(:,1) = - fleach_nh4 * nh4_n15_solute(:,1) * drainage_fraction(:) *1.e6_wp
+!!    ELSE 
+!!       IF(soil_config%soil_moisture_scheme=='layer')THEN
+!!         ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
+!!         ! reduction of layer concentration in µmol m-3 s-1, leaching rate in µmol m-2 s-1
+!!         CALL calc_liquid_phase_transport(options, soil_config%nsoil_water, percolation_sl(:,:), soil_depth_sl(:,:), &
+!!                                          fleach_nh4 * nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:),leaching_nh4_n15_solute(:))
+!!       ENDIF
+!!       transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) / dtime * 1.e6_wp
+!!       leaching_nh4_n15_solute(:,:) = leaching_nh4_n15_solute(:,:) / dtime * 1.e6_wp
+!!    ENDIF
+!!    plant_uptake_nh4_n15_sl(:,:) = plant_uptake_nh4_sl(:,:) * & 
+!!                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_plant_uptake_nh4) 
+!!    mic_uptake_nh4_n15_sl(:,:)   = mic_uptake_nh4_sl(:,:) * & 
+!!                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_mic_uptake_nh4)
+!!    nitrification_no3_n15(:,:)   = nitrification_no3(:,:) * &
+!!                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrate_production)
+!!    nitrification_noy_n15(:,:)   = nitrification_noy(:,:) * & 
+!!                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrification)
+!!    nitrification_n2o_n15(:,:)   = nitrification_n2o(:,:) * &
+!!                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrification) 
+!!
+!!    !> 1.1 contrain 15NH4 fluxes to available 15NH4
+!!    !!
+!!    hlp1(:,:) = plant_uptake_nh4_n15_sl(:,:) + mic_uptake_nh4_n15_sl(:,:) + nitrification_no3_n15(:,:) + & 
+!!                nitrification_noy_n15(:,:) + nitrification_n2o_n15(:,:)
+!!    hlp2(:,:) = nh14_n15_solute / dtime * 1.e6_wp
+!!    WHERE(hlp2 < hlp1(:,:))
+!!       WHERE(hlp1>eps8)
+!!          plant_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
+!!          mic_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
+!!          nitrification_no3_n15(:,:)   = hlp2(:,:) * nitrification_no3_n15(:,:) / hlp1(:,:)
+!!          nitrification_noy_n15(:,:)   = hlp2(:,:) * nitrification_noy_n15(:,:) / hlp1(:,:)
+!!          nitrification_n2o_n15(:,:)   = hlp2(:,:) * nitrification_n2o_n15(:,:) / hlp1(:,:)
+!!       ELSEWHERE
+!!          plant_uptake_nh4_n15_sl(:,:) = 0.0_wp 
+!!          mic_uptake_nh4_n15_sl(:,:)   = 0.0_wp
+!!          nitrification_no3_n15(:,:)   = 0.0_wp
+!!          nitrification_noy_n15(:,:)   = 0.0_wp
+!!          nitrification_n2o_n15(:,:)   = 0.0_wp
+!!       ENDWHERE
+!!    ENDWHERE
+!!
+!!    !> 2.0 potential 15N fluxes involving nitrate
+!!    !!
+!!    IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+!!       ! For the 0D soil model, loss is proportional to the fractional waterloss of the soil column
+!!       ! reduction of layer concentration in mol m-3 timestep-1
+!!       transport_nh4_solute(:,1) = - fleach_nh4 * nh4_solute(:,1) * drainage_fraction(:) * dtime
+!!       transport_no3_solute(:,1) = - no3_solute(:,1) * drainage_fraction(:) * dtime
+!!    ELSE 
+!!       IF(soil_config%soil_moisture_scheme=='layer')THEN
+!!         ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
+!!         ! reduction of layer concentration in mol m-3 timestep-1, leaching rate in mol m-2 timestep-1
+!!         CALL calc_liquid_phase_transport(options, soil_config%nsoil_water, percolation_sl(:,:), soil_depth_sl(:,:), &
+!!                                          fleach_nh4 * nh4_solute(:,:),transport_nh4_solute(:,:),leaching_nh4_solute(:))
+!!         CALL calc_liquid_phase_transport(options, soil_config%nsoil_water, percolation_sl(:,:), soil_depth_sl(:,:), &
+!!                                          no3_solute(:,:),transport_no3_solute(:,:),leaching_no3_solute(:))
+!!       ENDIF
+!!    ENDIF
+!!
+!!    plant_uptake_no3_n15_sl(:,:)    = plant_uptake_no3_sl(:,:) * & 
+!!                                      calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_plant_uptake_no3)
+!!    mic_uptake_no3_n15_sl(:,:)      = mic_uptake_no3_sl(:,:) * & 
+!!                                      calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_mic_uptake_no3) 
+!!    denitrification_noy_n15_sl(:,:) = denitrification_noy(:,:) * & 
+!!                                      calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification)
+!!    denitrification_n2o_n15_sl(:,:) = denitrification_n2o(:,:) * & 
+!!                                      calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification)
+!!    denitrification_n2_n15_sl(:,:)  = denitrification_n2(:,:) * & 
+!!                                      calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification) 
+!!
+!!    !> 2.1 contrain 15NO3 fluxes to available 15NO3
+!!    !!
+!!    hlp1(:,:) = plant_uptake_no3_n15_sl(:,:) + mic_uptake_no3_n15_sl(:,:) + & 
+!!                denitrification_noy_n15_sl(:,:) + denitrification_n2o_n15_sl(:,:) + denitrification_n2_n15_sl(:,:)
+!!    hlp2(:,:) = no3_n15_solute(:,:) / dtime * 1.e6_wp + transport_no3_n15(:,:)
+!!    WHERE(hlp2 < hlp1(:,:))
+!!       WHERE(hlp1>eps8)
+!!          plant_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
+!!          mic_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
+!!          nitrification_no3_n15(:,:)   = hlp2(:,:) * nitrification_no3_n15(:,:) / hlp1(:,:)
+!!          nitrification_noy_n15(:,:)   = hlp2(:,:) * nitrification_noy_n15(:,:) / hlp1(:,:)
+!!          nitrification_n2o_n15(:,:)   = hlp2(:,:) * nitrification_n2o_n15(:,:) / hlp1(:,:)
+!!       ELSEWHERE
+!!          plant_uptake_nh4_n15_sl(:,:) = 0.0_wp 
+!!          mic_uptake_nh4_n15_sl(:,:)   = 0.0_wp
+!!          nitrification_no3_n15(:,:)   = 0.0_wp
+!!          nitrification_noy_n15(:,:)   = 0.0_wp
+!!          nitrification_n2o_n15(:,:)   = 0.0_wp
+!!       ENDWHERE
+!!    ENDWHERE
+!!
+!!
+!!  END SUBROUTINE calc_sb_simple_n15_fluxes
 
 END MODULE mo_sb_simple_model
