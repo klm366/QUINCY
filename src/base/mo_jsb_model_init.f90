@@ -288,7 +288,7 @@ CONTAINS
     END IF
 
 
-    !! 11 run model-specific init routine  (land plant soil canopy test_canopy)
+    !! 11 run model-specific process init routine  (land plant soil canopy test_canopy)
     !! 
     !! 
     ! enable/ disable forcing
