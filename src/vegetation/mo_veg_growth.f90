@@ -104,6 +104,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
     ! SB_
     dsl4jsb_Real3D_onChunk      :: nh4_solute
+    dsl4jsb_Real3D_onChunk      :: no3_solute
     dsl4jsb_Real3D_onChunk      :: plant_uptake_nh4_sl 
     dsl4jsb_Real3D_onChunk      :: plant_uptake_nh4_n15_sl 
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_sl
@@ -191,6 +192,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3
     dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
+    dsl4jsb_Real2D_onChunk      :: uptake_norg
+    dsl4jsb_Real2D_onChunk      :: uptake_norg_n15
     dsl4jsb_Real2D_onChunk      :: uptake_po4
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: f_p_demand
@@ -218,6 +221,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -264,6 +268,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)          ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_, nh4_solute)                          ! in
+    dsl4jsb_Get_var3D_onChunk(SB_, no3_solute)                          ! in ?
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_nh4_sl)                 ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_nh4_n15_sl)             ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_no3_sl)                 ! inout
@@ -351,6 +356,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg)                        ! ?
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg_n15)                    ! ?
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)                         ! out
@@ -380,12 +387,12 @@ CONTAINS
 
 !! *slmtemp
     veg     => veg__mem 
+    sb      => sb__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
 
     !> 1.0 calculate potential growth rate relative to labile pool size
@@ -405,19 +412,21 @@ CONTAINS
                                      veg%pool%reserve%phosphorus%ptr,&
                                      f_n_demand(:), &
                                      f_p_demand(:))
-
     !> 1.2 calculate actual nutrient uptake and N fixation, as well as associated respiration
     !!
     CALL calc_actual_nutrient_uptake_rate(options, & 
                                           soil_config%nsoil_water, & 
                                           lctlib, &
+                                          kstar_labile(:), &
                                           t_air(:), &
                                           veg%pool%fine_root%carbon%ptr, & 
                                           veg%pool%fine_root%nitrogen%ptr, & 
                                           veg%pool%labile%carbon%ptr, & 
                                           veg%pool%labile%nitrogen%ptr, & 
                                           veg%pool%labile%phosphorus%ptr, & 
+                                          sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), & 
                                           nh4_solute(:,:), &
+                                          no3_solute(:,:), &
                                           soil_depth_sl(:,:), &
                                           demand_uptake_n_tuptake_mavg(:), &
                                           demand_uptake_p_tuptake_mavg(:), &
@@ -432,6 +441,7 @@ CONTAINS
                                           plant_uptake_no3_sl(:,:), &
                                           plant_uptake_no3_n15_sl(:,:), &
                                           plant_uptake_po4_sl(:,:), &
+                                          uptake_norg(:), &
                                           uptake_nh4(:), &
                                           uptake_nh4_n15(:), &
                                           uptake_no3(:), &
@@ -445,7 +455,8 @@ CONTAINS
                                           cost_n_fixation(:), &
                                           n_transform_respiration(:), &
                                           n_fixation_respiration(:), &
-                                          n_processing_respiration(:))
+                                          n_processing_respiration(:), &
+                                          veg%exudation%carbon%ptr)
 
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
@@ -648,10 +659,11 @@ CONTAINS
                            n_processing_respiration_c13(1)  , &
                            n_processing_respiration_c14(1)  , &
                            veg%growth                       , &
+                           veg%exudation                    , &
                            maint_respiration_pot(1)         , & ! out
                            maint_respiration(1)             , &
                            growth_respiration(1)  )  
-
+  
   END SUBROUTINE update_veg_growth 
 
 
@@ -776,13 +788,16 @@ CONTAINS
   SUBROUTINE calc_actual_nutrient_uptake_rate(options, & 
                                               nsoil, & 
                                               lctlib, &
+                                              kstar_labile, &
                                               t_air, &                                              
                                               fine_root_carbon, & 
                                               fine_root_nitrogen, & 
                                               labile_carbon, & 
                                               labile_nitrogen, & 
                                               labile_phosphorus, & 
+                                              mycorrhiza_carbon, & 
                                               nh4_solute, & 
+                                              no3_solute, & 
                                               soil_depth_sl, &
                                               demand_uptake_n_tuptake_mavg, &
                                               demand_uptake_p_tuptake_mavg, &
@@ -797,6 +812,7 @@ CONTAINS
                                               plant_uptake_no3_sl, &
                                               plant_uptake_no3_n15_sl, &
                                               plant_uptake_po4_sl, &
+                                              uptake_norg, &
                                               uptake_nh4, &
                                               uptake_nh4_n15, &
                                               uptake_no3, &
@@ -810,15 +826,18 @@ CONTAINS
                                               cost_n_fixation, &
                                               n_transform_respiration, &
                                               n_fixation_respiration, &
-                                              n_processing_respiration)
+                                              n_processing_respiration, &
+                                              exudation_carbon)
                        
     USE mo_base_config_class,       ONLY: base_config
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
-    USE mo_shared_constants,        ONLY: Tzero
+    USE mo_shared_constants,        ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
+    USE mo_sb_config_class,         ONLY: sb_config
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf
+    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
 
     IMPLICIT NONE
     
@@ -826,13 +845,16 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options                  !< model options
     INTEGER,                               INTENT(in)    :: nsoil                    !< number of soil layers
     TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: kstar_labile             !< meristem turnover rate  
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: t_air                    !< air temperature (K) !! should be soil temperature!
     REAL(wp),                              INTENT(in)    :: fine_root_carbon         !< fine root carbon (mol C / m2)
     REAL(wp),                              INTENT(in)    :: fine_root_nitrogen       !< fine root nitrogen (mol N / m2)
     REAL(wp),                              INTENT(in)    :: labile_carbon            !< labile pool carbon (mol C / m2)
     REAL(wp),                              INTENT(in)    :: labile_nitrogen          !< labile pool nitrogen (mol N / m2)
     REAL(wp),                              INTENT(in)    :: labile_phosphorus        !< labile pool phosphorus (mol P / m2)
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: mycorrhiza_carbon        !< mycorrhiza biomass (mol C /m3)
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_solute               !< soil solution ammonium (mol N /m3)
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: no3_solute               !< soil solution nitrate (mol N /m3)
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl            !< depth of soil layers (m)
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: demand_uptake_n_tuptake_mavg !< time-averaged N demand scalar (unitless) 
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: demand_uptake_p_tuptake_mavg !< time-averaged P demand scalar (unitless)
@@ -847,6 +869,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
+    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: uptake_norg              !< total plant N uptake from mycorrhiza (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4               !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4_n15           !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_no3               !< total plant NO3 uptake (mu mol N / m2 / s)
@@ -860,7 +883,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: cost_n_fixation          !< C costs for N fixation (mol C / mol N)
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: n_transform_respiration  !< respiration associated with N transformation (mu mol C / m2 / s)     
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: n_fixation_respiration   !< respiration associated with N fixation (mu mol C / m2 / s)     
-    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: n_processing_respiration !< respiration associated with N transformation and fixation (mu mol C / m2 / s)   
+    REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: n_processing_respiration !< respiration associated with N transformation and fixation (mu mol C / m2 / s)  
+    REAL(wp),                              INTENT(out)   :: exudation_carbon         !< C investment into mycorrhizal fungi (mol C / m2 / timestep) 
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: dcost, &          ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
                                        n_demand, &       ! N demand of plants (mu mol N /m2 / s) 
@@ -872,6 +896,10 @@ CONTAINS
                                        fresp_maint, &    ! fractional cost of maintenance respiration
                                        gain_c, &         ! marginal carbon gain per leaf investment
                                        gain_n, &         ! marginal nitrogen gain per root investment
+                                       f_exudate_max, &
+                                       f_exudate, &
+                                       f_myc_opt, &
+                                       fexu, &
                                        scal, &  
                                        hlp1, &
                                        hlp2 
@@ -929,7 +957,8 @@ CONTAINS
     ELSE
         fresp_maint(:) = 0.0_wp
     ENDIF
-    gain_n(:) = unit_uptake_n_troot_mavg(:) /(1._wp+fresp_growth+fresp_maint(:))
+    gain_n(:) = unit_uptake_n_troot_mavg(:) /(1._wp+fresp_growth+fresp_maint(:)) !+ uptake_norg / veg_exudation%carbon%ptr
+    !! ToDo!! Ide for coupling BNF and Mycos... Somewhere in the future
  
     ! transformation costs depend on NH4 and NO3 uptake rates   
     WHERE(uptake_nh4(:) + uptake_no3(:) > eps8)
@@ -997,6 +1026,40 @@ CONTAINS
          END WHERE
            
     ENDSELECT 
+
+    !> 4.0 Determine C use for Root Exudates
+    !! 
+    IF(veg_config%myc_scheme == 'am' .OR. veg_config%myc_scheme == 'ecm') THEN
+
+       f_exudate(:) = 0.5_wp   
+       WHERE(uptake_norg(:) > eps8) 
+          f_exudate(:) = MIN(f_exudate(:), &
+                             uptake_norg(:) / (uptake_norg(:) + (uptake_nh4(:)+uptake_no3(:)))) ! Mycofon
+       ENDWHERE 
+!! Shorter for trunk!!!
+       ! mol/m3 * m -> mol/m2
+       ! mol/m2 * g/mol -> g/m2
+       ! g/m2 / g/kg -> kg/m2
+       ! kg/m2 / m -> kg/m3
+       ! kg/m3 / kg/m3 -> 1 = kg/kg
+       IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+          hlp1(:) = (nh4_solute(:,1)+no3_solute(:,1)) * soil_depth_sl(:,1) * & 
+                  molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
+       ELSE
+          hlp1(:) = SUM((nh4_solute(:,:)+no3_solute(:,:)) * soil_depth_sl(:,:),DIM=2) * & 
+                  molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
+       ENDIF
+       f_exudate_max(:) = 0.2_wp
+       WHERE (hlp1(:) > 0.01_wp) !Threshold for soil N -> Mycofon...
+          f_exudate_max(:) = MIN(0.2_wp,1 - (1-exp((-50.0_wp * hlp1)**3)))
+       ENDWHERE
+
+       f_myc_opt(:) = 0.3_wp ! mycofon; needs to be flexible?!
+       ! exudation rate (mol / m2 / timestep)
+       exudation_carbon = MAX(0.0_wp, & 
+                              MIN(f_exudate_max(1) * labile_carbon * kstar_labile(1) * dtime / one_day, &
+                                  f_exudate(1) * (f_myc_opt(1) * fine_root_carbon - SUM(mycorrhiza_carbon(1,:) * soil_depth_sl(1,:))))) 
+    ENDIF
 
     !> 4.0 Determine C use for N uptake, and constrain this to available carbon
     !!
@@ -1916,18 +1979,22 @@ CONTAINS
                                 n_processing_respiration_c13  , &
                                 n_processing_respiration_c14  , &
                                 veg_growth                    , &
+                                veg_exudation                 , &
                                 maint_respiration_pot         , &
                                 maint_respiration             , &
                                 growth_respiration  )  
 
+
     USE mo_veg_respiration,         ONLY: calc_maintenance_respiration
     USE mo_veg_config_class,        ONLY: veg_config
-    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool
-
+    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool, t_slm_struct_veg_element
+    USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element
+    USE mo_soil_config_class,       ONLY: soil_config
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
+
     ! 0.1 InOut
     REAL(wp),                     INTENT(in)    :: t_air                        , & !< air temperature
                                                    t_air_tacclim_mavg           , & !< .. 
@@ -1936,7 +2003,7 @@ CONTAINS
                                                    growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                    growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
     TYPE(t_slm_struct_veg_pool),  INTENT(in)    :: veg_falloc                   , & !< fractional allocation to pools
-                                                   veg_pool                         !< pools of the plant
+                                                   veg_pool                         !< pools of the plant 
     REAL(wp),                     INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                    maint_respiration_c13        , & !< maintenance respiration
                                                    maint_respiration_c14        , & !< maintenance respiration
@@ -1945,12 +2012,13 @@ CONTAINS
                                                    n_processing_respiration_c13 , & !< respiration associated with N processing
                                                    n_processing_respiration_c14     !< respiration associated with N processing
     TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
+    TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_exudation                  !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
     REAL(wp),                     INTENT(out)   :: maint_respiration_pot        , & !< potential maintenance respiration
                                                    maint_respiration            , & !< maintenance respiration
                                                    growth_respiration               !< growth respiration
+
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
-
 
     !> 1.0 Determine C use for maintenance 
     !! 
@@ -1981,9 +2049,9 @@ CONTAINS
     !! growth does not empty the labile pool
     veg_growth%labile%carbon%ptr = (veg_pool%labile%carbon%ptr * kstar_labile / one_day - &
                                     &  (maint_respiration + n_processing_respiration) / 1.e6_wp ) * & 
-                                    &   dtime /  (1._wp + fresp_growth) 
-    IF(veg_growth%labile%carbon%ptr < eps8) veg_growth%labile%carbon%ptr = 0.0_wp
+                                    &   dtime /  (1._wp + fresp_growth)
 
+    IF(veg_growth%labile%carbon%ptr < eps8) veg_growth%labile%carbon%ptr = 0.0_wp
     !> 2.2 Elemental limitation of growth by N & P (mol [N|P] / m2 / timestep)
     !! is determined by the minimum turnover of the labile N and P pools and the stoichiometric growth requirement
     !! given the potential growth rate of C
@@ -1996,7 +2064,6 @@ CONTAINS
       IF(veg_growth%labile%nitrogen%ptr > veg_growth%labile%phosphorus%ptr / growth_req_p) & 
         veg_growth%labile%nitrogen%ptr = veg_growth%labile%phosphorus%ptr / growth_req_p
     END IF
-
     ! adjust C growth rate to N growth rate if N is limiting 
     IF(growth_req_n > eps8) THEN
       IF(veg_growth%labile%carbon%ptr > veg_growth%labile%nitrogen%ptr / growth_req_n) & 
@@ -2006,12 +2073,20 @@ CONTAINS
     ! Diagnose growth respiration (µmol C / m2 / s)
     growth_respiration = fresp_growth * veg_growth%labile%carbon%ptr * 1.e6_wp / dtime
 
-    !> 3.0 Calculate isotopic signature of respiration fluxes, and growth
+    !> 3.0 Adjust exudation rate to available carbon (mol C / m2 / timestep)
+    veg_exudation%carbon%ptr = MIN(veg_exudation%carbon%ptr, MAX(0.0_wp, & 
+                                   0.2_wp * veg_pool%labile%carbon%ptr - veg_growth%labile%carbon%ptr - &
+                                   (growth_respiration + maint_respiration + n_processing_respiration) * dtime / 1.e6_wp )) 
+
+    !> 4.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
     IF(veg_pool%labile%carbon%ptr > eps8) THEN
        ! growth (in mol C / m2 / timestep)
        veg_growth%labile%carbon13%ptr = veg_growth%labile%carbon%ptr * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
        veg_growth%labile%carbon14%ptr = veg_growth%labile%carbon%ptr * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
+       ! exudation (in mol C / m2 / timestep)
+       veg_exudation%carbon13%ptr = veg_exudation%carbon%ptr * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
+       veg_exudation%carbon14%ptr = veg_exudation%carbon%ptr * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
        ! respiration (in µmol C / m2 / s)
        maint_respiration_c13  = maint_respiration    * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
        maint_respiration_c14  = maint_respiration    * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
@@ -2022,13 +2097,14 @@ CONTAINS
        n_processing_respiration_c14 = n_processing_respiration * & 
                                                   veg_pool%labile%carbon14%ptr / veg_pool%labile%carbon%ptr 
     ENDIF
+
     IF(veg_pool%labile%nitrogen%ptr > eps8) THEN
        ! growth (in mol  / m2 / timestep)
        veg_growth%labile%nitrogen15%ptr = veg_growth%labile%nitrogen%ptr * &
                                               veg_pool%labile%nitrogen15%ptr/veg_pool%labile%nitrogen%ptr
     ENDIF
 
-    !> 4.0 partition growth to tissue types
+    !> 5.0 partition growth to tissue types
     !! 
     veg_growth%leaf        = veg_growth%leaf        + veg_falloc%leaf        * veg_growth%labile
     veg_growth%fine_root   = veg_growth%fine_root   + veg_falloc%fine_root   * veg_growth%labile 
@@ -2036,7 +2112,7 @@ CONTAINS
     veg_growth%sap_wood    = veg_growth%sap_wood    + veg_falloc%sap_wood    * veg_growth%labile
     veg_growth%fruit       = veg_growth%fruit       + veg_falloc%fruit       * veg_growth%labile
 
-    !> 4.1 invert flux of labile to be out of the labile pool
+    !> 5.1 invert flux of labile to be out of the labile pool
     !! 
     !! essentially, this calculation makes veg_growth%labile INTENT(in)
     veg_growth%labile%carbon     = veg_growth%labile%carbon     * (-1.0_wp)

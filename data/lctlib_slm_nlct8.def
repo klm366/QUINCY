@@ -160,6 +160,9 @@ tau_seed_litter 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
 #tau_seed_est: turnover time of the seed bed to establishment (years)        
 tau_seed_est 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0
         
+#tau_mycorrhiza: turnover time of mycorrhizal fungi (years)        
+tau_mycorrhiza 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7
+        
 #         
 # N uptake parameters        
 #         

@@ -113,6 +113,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: uptake_norg_n15
     dsl4jsb_Real2D_onChunk      :: n_fixation_n15
     dsl4jsb_Real2D_onChunk      :: uptake_po4
+    dsl4jsb_Real2D_onChunk      :: uptake_porg
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n15
@@ -202,6 +203,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg_n15)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_porg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)        ! in
@@ -269,7 +271,7 @@ CONTAINS
                                             ( uptake_nh4_n15(1) + uptake_no3_n15(1) + uptake_norg_n15(1) + n_fixation_n15(1)) * &
                                             dtime / 1000000.0_wp
        veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
-                                            uptake_po4(1) * dtime / 1000000.0_wp
+                                            (uptake_po4(1) + uptake_porg(1) ) * dtime / 1000000.0_wp
    
        !> 1.3 update labile pool and reserve 
        !! 

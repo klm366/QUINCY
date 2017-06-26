@@ -74,7 +74,8 @@ MODULE mo_jsb_lctlib_class
                 tau_sap_wood      , &
                 tau_fruit         , &
                 tau_seed_litter   , &
-                tau_seed_est
+                tau_seed_est      , &
+                tau_mycorrhiza
 
 ! N uptake parameters    
     REAL(wp) :: vmax_uptake_n     , &
@@ -330,6 +331,8 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_litter
           CASE ('tau_seed_est')
             READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_est
+          CASE ('tau_mycorrhiza')
+            READ(line(pos:length),*) lctlib(1:nlct)%tau_mycorrhiza
 
           CASE ('vmax_uptake_n')
             READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_n
@@ -406,7 +409,7 @@ CONTAINS
        CLOSE(unit=lctlib_file_unit) !! Closing access to lctlib file
 
         !------------------------------------------------------------------------------------------
-        !> Modify the input values of some lictlib parameters
+        !> Modify the input values of some lctlib parameters
         !! SLM specific code !!
 
         !! sla
@@ -442,9 +445,15 @@ CONTAINS
           DO i=1,nlct
             lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
           END DO
+        !! tau_mycorrhiza
+          DO i=1,nlct
+            lctlib(i)%tau_mycorrhiza = lctlib(i)%tau_mycorrhiza / 12.0_wp
+          END DO
         !! bnf_base
           DO i=1,nlct
-            lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
+            IF (lctlib(i)%bnf_base > 0.0_wp) THEN
+              lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
+            END IF
           END DO
         !! gdd_t_air_threshold
           DO i=1,nlct

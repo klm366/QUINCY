@@ -81,6 +81,7 @@ CONTAINS
     CALL veg%uptake_no3%init(flux_zero)                    !< NO3 uptake (µmol N m-2 s-1)
     CALL veg%uptake_no3_n15%init(flux_zero)                !< 15NO3 uptake (µmol N m-2 s-1)
     CALL veg%uptake_norg%init(flux_zero)                   !< orgN uptake (µmol N m-2 s-1)
+    CALL veg%uptake_porg%init(flux_zero)                   !< orgN uptake (µmol N m-2 s-1)
     CALL veg%uptake_norg_n15%init(flux_zero)               !< org15N uptake (µmol N m-2 s-1)
     CALL veg%n_fixation%init(flux_zero)                    !< ??
     CALL veg%n_fixation_n15%init(flux_zero)                !< ??

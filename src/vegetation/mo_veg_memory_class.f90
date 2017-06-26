@@ -213,7 +213,8 @@ MODULE mo_veg_memory_class
                                     uptake_nh4_n15            , & !< 15NH4 uptake from soil (µmol N m-2 s-1)
                                     uptake_no3                , & !< NO3 uptake from soil (µmol N m-2 s-1)
                                     uptake_no3_n15            , & !< 15NO3 uptake from soil (µmol N m-2 s-1)
-									uptake_norg               , & !< organic N provided by mycorrhiza (µmol N m-2 s-1)
+                                    uptake_norg               , & !< organic N provided by mycorrhiza (µmol N m-2 s-1)
+                                    uptake_porg               , & !< organic P provided by mycorrhiza (µmol P m-2 s-1)
                                     uptake_norg_n15           , & !< organic 15N provided by mycorrhiza (µmol N m-2 s-1)
                                     uptake_po4                , & !< PO4 uptake from soil (µmol P m-2 s-1) 
                                     n_fixation                , & !< symbiontic N fixation (µmol N m-2 s-1)
@@ -1528,7 +1529,10 @@ CONTAINS
       CALL slm_add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
             initval_r=0.0_wp) ! initvalue
 
-	  CALL slm_add_var(mem, 'uptake_norg', mem%uptake_norg, &
+      CALL slm_add_var(mem, 'uptake_norg', mem%uptake_norg, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'uptake_porg', mem%uptake_porg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'uptake_norg_n15', mem%uptake_norg_n15, &

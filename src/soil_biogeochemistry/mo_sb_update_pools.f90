@@ -68,7 +68,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
 !!
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1,root_fraction_act_sl
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
@@ -85,6 +85,7 @@ CONTAINS
     ! ..
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl 
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
@@ -170,6 +171,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
@@ -263,20 +265,28 @@ CONTAINS
 
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation
     !!
-!@todo: make sure this works for all soil layers
-    sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
-      veg%exudation%carbon%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
-      veg%exudation%nitrogen%ptr / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
-      veg%exudation%phosphorus%ptr / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
-      veg%exudation%carbon13%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
-      veg%exudation%carbon14%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
-      veg%exudation%nitrogen15%ptr / soil_depth_sl(ics:ice,1)
-
+    IF(sb_config%sb_model_scheme == 'simple_0d') THEN
+       root_fraction_act_sl(:,1)                         = 1.0_wp
+       root_fraction_act_sl(:,2:soil_config%nsoil_water) = 0.0_wp
+    ELSE
+       root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
+    ENDIF
+    DO isoil = 1,soil_config%nsoil_water
+       sb%formation%mycorrhiza%carbon%ptr(ics:ice,isoil,iblk)     = sb%formation%mycorrhiza%carbon%ptr(ics:ice,isoil,iblk)     + &
+          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%carbon%ptr     / soil_depth_sl(:,isoil)
+       sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,isoil,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,isoil,iblk)   + &
+          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%nitrogen%ptr   / soil_depth_sl(:,isoil)
+       sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,isoil,iblk) = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,isoil,iblk) + &
+          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%phosphorus%ptr / soil_depth_sl(:,isoil)
+       sb%formation%mycorrhiza%carbon13%ptr(ics:ice,isoil,iblk)   = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,isoil,iblk)   + &
+          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%carbon13%ptr   / soil_depth_sl(:,isoil)
+       sb%formation%mycorrhiza%carbon14%ptr(ics:ice,isoil,iblk)   = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,isoil,iblk)   + &
+          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%carbon14%ptr   / soil_depth_sl(:,isoil)
+       sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,isoil,iblk) + &
+          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%nitrogen15%ptr / soil_depth_sl(:,isoil)
+    ENDDO
+    !> 2.1 update respiration associated with growth and maintenance of mycorrhiza
+    !!
     het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg%exudation%carbon%ptr / dtime * 1000000._wp                          
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon13%ptr / dtime * 1000000._wp
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon14%ptr / dtime * 1000000._wp

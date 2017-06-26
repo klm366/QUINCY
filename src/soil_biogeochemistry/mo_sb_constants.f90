@@ -205,8 +205,8 @@ CONTAINS
     microbial_cue_max   = 0.6_wp 
     microbial_cue_min   = 0.3_wp 
     mycorrhizal_cue     = 0.7_wp !! ??? SOURCE
-    cn_mycorrhiza       = 10.0_wp
-    np_mycorrhiza       = 14.0_wp !!??????!
+    cn_mycorrhiza       = 10.0_wp * molar_mass_N / molar_mass_C
+    np_mycorrhiza       = 14.0_wp * molar_mass_P / molar_mass_N
 
     f_soluable_leaf      = 0.5_wp
     f_soluable_fine_root = 0.5_wp
