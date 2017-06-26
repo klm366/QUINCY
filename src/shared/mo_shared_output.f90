@@ -93,6 +93,18 @@ MODULE mo_shared_output
   REAL(wp), ALLOCATABLE, SAVE :: leaching_nh4_acc
   REAL(wp), ALLOCATABLE, SAVE :: leaching_no3_acc
   REAL(wp), ALLOCATABLE, SAVE :: leaching_po4_acc
+  REAL(wp), SAVE :: sb_delta_pools_carbon_acc
+  REAL(wp), SAVE :: sb_delta_pools_nitrogen_acc
+  REAL(wp), SAVE :: sb_delta_pools_phosphorus_acc
+  REAL(wp), SAVE :: sb_delta_pools_carbon13_acc
+  REAL(wp), SAVE :: sb_delta_pools_carbon14_acc
+  REAL(wp), SAVE :: sb_delta_pools_nitrogen15_acc
+  REAL(wp), SAVE :: sb_total_flux_carbon_acc
+  REAL(wp), SAVE :: sb_total_flux_nitrogen_acc
+  REAL(wp), SAVE :: sb_total_flux_phosphorus_acc
+  REAL(wp), SAVE :: sb_total_flux_carbon13_acc
+  REAL(wp), SAVE :: sb_total_flux_carbon14_acc
+  REAL(wp), SAVE :: sb_total_flux_nitrogen15_acc
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
@@ -253,6 +265,18 @@ CONTAINS
     leaching_nh4_acc    = 0.0_wp
     leaching_no3_acc    = 0.0_wp
     leaching_po4_acc    = 0.0_wp
+    sb_delta_pools_carbon_acc     = 0.0_wp
+    sb_delta_pools_nitrogen_acc   = 0.0_wp
+    sb_delta_pools_phosphorus_acc = 0.0_wp
+    sb_delta_pools_carbon13_acc   = 0.0_wp
+    sb_delta_pools_carbon14_acc   = 0.0_wp
+    sb_delta_pools_nitrogen15_acc = 0.0_wp
+    sb_total_flux_carbon_acc      = 0.0_wp
+    sb_total_flux_nitrogen_acc    = 0.0_wp
+    sb_total_flux_phosphorus_acc  = 0.0_wp
+    sb_total_flux_carbon13_acc    = 0.0_wp
+    sb_total_flux_carbon14_acc    = 0.0_wp
+    sb_total_flux_nitrogen15_acc  = 0.0_wp
 
   END SUBROUTINE init_slm_output_variables
 
@@ -1078,6 +1102,9 @@ CONTAINS
         lun=lun+1
         fname = 'soilfluxNP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
       CASE('canopy') ! subset of CASE('land','plant')
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -1154,6 +1181,10 @@ CONTAINS
         lun=lun+1
         WRITE(lun,'(2a)') 'Time NDeposition Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
                           'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3 Net_Mineralisation_PO4 Leaching_PO4' 
+        lun=lun+1
+        ! sb_massBalance_..txt
+        WRITE(lun,'(2a)') 'Time sb_dPoolC sb_dPoolN sb_dPoolP sb_dPoolC13 sb_dPoolC14 sb_dPoolN15 ', &
+                          'sb_totalFluxC sb_totalFluxN sb_totalFluxP sb_totalFluxC13 sb_totalFluxC14 sb_totalFluxN15'
 
       CASE('canopy') ! subset of CASE('land','plant')
         ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
@@ -1280,6 +1311,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: interception 
+    ! SB_ 2D
+    dsl4jsb_Real2D_onChunk      :: total_flux_carbon
+    dsl4jsb_Real2D_onChunk      :: total_flux_nitrogen
+    dsl4jsb_Real2D_onChunk      :: total_flux_phosphorus
+    dsl4jsb_Real2D_onChunk      :: total_flux_carbon13
+    dsl4jsb_Real2D_onChunk      :: total_flux_carbon14
+    dsl4jsb_Real2D_onChunk      :: total_flux_nitrogen15
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1354,7 +1392,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
-
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon)    
+    dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_nitrogen)  
+    dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_phosphorus)
+    dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon13)  
+    dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon14)  
+    dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_nitrogen15)
+    
+    
 
 !! *slmtemp
     veg     => veg__mem 
@@ -1458,6 +1504,20 @@ CONTAINS
              leaching_nh4_acc = leaching_nh4_acc + sb%leaching_nh4_solute%ptr(1,iblk) * dtime_one
              leaching_no3_acc = leaching_no3_acc + sb%leaching_no3_solute%ptr(1,iblk) * dtime_one
              leaching_po4_acc = leaching_po4_acc + sb%leaching_po4_solute%ptr(1,iblk) * dtime_one
+             ! for mass balance checks in SB_
+              sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + SUM(sb%delta_pools%carbon%ptr(ics:ice,:,iblk))
+              sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + SUM(sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk))
+              sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + SUM(sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk))
+              sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + SUM(sb%delta_pools%carbon13%ptr(ics:ice,:,iblk))
+              sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + SUM(sb%delta_pools%carbon14%ptr(ics:ice,:,iblk))
+              sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + SUM(sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk))
+              sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(1)
+              sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(1)
+              sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(1)
+              sb_total_flux_carbon13_acc    = sb_total_flux_carbon13_acc    + total_flux_carbon13(1)
+              sb_total_flux_carbon14_acc    = sb_total_flux_carbon14_acc    + total_flux_carbon14(1)
+              sb_total_flux_nitrogen15_acc  = sb_total_flux_nitrogen15_acc  + total_flux_nitrogen15(1)
+
              !> 1.2 write fluxes and set to zero
              !!
              !!  
@@ -1509,6 +1569,13 @@ CONTAINS
                    write(lun,'(20F16.8)') time_d,n_deposition_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
                                           leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
+                   lun=lun+1
+                   ! sb_massBalance_..txt
+                   write(lun,'(13F16.8)') time_d, &
+                                        sb_delta_pools_carbon_acc, sb_delta_pools_nitrogen_acc, sb_delta_pools_phosphorus_acc, &
+                                        sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
+                                        sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
+                                        sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
 
                  CASE('canopy') ! subset of CASE('land','plant')
                    ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
@@ -1589,6 +1656,18 @@ CONTAINS
                leaching_nh4_acc = 0.0_wp
                leaching_no3_acc = 0.0_wp
                leaching_po4_acc = 0.0_wp
+               sb_delta_pools_carbon_acc     = 0.0_wp
+               sb_delta_pools_nitrogen_acc   = 0.0_wp
+               sb_delta_pools_phosphorus_acc = 0.0_wp
+               sb_delta_pools_carbon13_acc   = 0.0_wp
+               sb_delta_pools_carbon14_acc   = 0.0_wp
+               sb_delta_pools_nitrogen15_acc = 0.0_wp
+               sb_total_flux_carbon_acc      = 0.0_wp
+               sb_total_flux_nitrogen_acc    = 0.0_wp
+               sb_total_flux_phosphorus_acc  = 0.0_wp
+               sb_total_flux_carbon13_acc    = 0.0_wp
+               sb_total_flux_carbon14_acc    = 0.0_wp
+               sb_total_flux_nitrogen15_acc  = 0.0_wp
              END IF
            END IF
         END IF  ! on/off switch specific to 'special case: fluxnet output'

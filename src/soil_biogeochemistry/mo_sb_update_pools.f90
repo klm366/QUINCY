@@ -68,7 +68,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
 !!
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1,root_fraction_act_sl
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
@@ -82,10 +82,30 @@ CONTAINS
     ! A2L
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
-    ! ..
+    ! SOIL
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl 
+    ! SB_ 2D
+    dsl4jsb_Real2D_onChunk :: total_flux_carbon
+    dsl4jsb_Real2D_onChunk :: total_flux_nitrogen
+    dsl4jsb_Real2D_onChunk :: total_flux_phosphorus
+    dsl4jsb_Real2D_onChunk :: total_flux_carbon13
+    dsl4jsb_Real2D_onChunk :: total_flux_carbon14
+    dsl4jsb_Real2D_onChunk :: total_flux_nitrogen15
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
+    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    dsl4jsb_Real2D_onChunk :: emission_nh3
+    dsl4jsb_Real2D_onChunk :: emission_noy
+    dsl4jsb_Real2D_onChunk :: emission_n2o
+    dsl4jsb_Real2D_onChunk :: emission_n2
+    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
+    dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2_n15
+    ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
@@ -137,6 +157,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: noy 
     dsl4jsb_Real3D_onChunk :: n2o 
     dsl4jsb_Real3D_onChunk :: n2
+    dsl4jsb_Real3D_onChunk :: noy_n15
+    dsl4jsb_Real3D_onChunk :: n2o_n15
+    dsl4jsb_Real3D_onChunk :: n2_n15
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
@@ -171,11 +194,29 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_phosphorus)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon13)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon14)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen15)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! in
@@ -211,6 +252,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       noy)                         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       n2o)                         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       n2)                          ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2o_n15)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2_n15)                      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! in
@@ -237,6 +281,51 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
+    !> 0.9 infrastructure for mass balance checks
+    !!
+    !! fluxes are calculated at the end of this routine (to include het_respiration)
+    !!   
+    !! changes in pools per time step are calculated here AND at the end of this routine
+    sb%delta_pools%carbon%ptr(ics:ice,:,iblk) = &
+       sb%pool%dom%carbon%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
+    sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) = &
+       sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
+       nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:)
+    sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) = &
+       sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
+       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:)
+    sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) = &
+       sb%pool%dom%carbon13%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk)
+    sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = &
+       sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)
+    sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = &
+       sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
+       nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:)
 
 
     !> 1.0 loss of C14 due to radioactive decay
@@ -265,28 +354,20 @@ CONTAINS
 
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation
     !!
-    IF(sb_config%sb_model_scheme == 'simple_0d') THEN
-       root_fraction_act_sl(:,1)                         = 1.0_wp
-       root_fraction_act_sl(:,2:soil_config%nsoil_water) = 0.0_wp
-    ELSE
-       root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
-    ENDIF
-    DO isoil = 1,soil_config%nsoil_water
-       sb%formation%mycorrhiza%carbon%ptr(ics:ice,isoil,iblk)     = sb%formation%mycorrhiza%carbon%ptr(ics:ice,isoil,iblk)     + &
-          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%carbon%ptr     / soil_depth_sl(:,isoil)
-       sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,isoil,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,isoil,iblk)   + &
-          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%nitrogen%ptr   / soil_depth_sl(:,isoil)
-       sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,isoil,iblk) = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,isoil,iblk) + &
-          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%phosphorus%ptr / soil_depth_sl(:,isoil)
-       sb%formation%mycorrhiza%carbon13%ptr(ics:ice,isoil,iblk)   = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,isoil,iblk)   + &
-          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%carbon13%ptr   / soil_depth_sl(:,isoil)
-       sb%formation%mycorrhiza%carbon14%ptr(ics:ice,isoil,iblk)   = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,isoil,iblk)   + &
-          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%carbon14%ptr   / soil_depth_sl(:,isoil)
-       sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,isoil,iblk) + &
-          mycorrhizal_cue * root_fraction_act_sl(:,isoil) * veg%exudation%nitrogen15%ptr / soil_depth_sl(:,isoil)
-    ENDDO
-    !> 2.1 update respiration associated with growth and maintenance of mycorrhiza
-    !!
+!@todo: make sure this works for all soil layers
+    sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
+      veg%exudation%carbon%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
+      veg%exudation%nitrogen%ptr / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
+      veg%exudation%phosphorus%ptr / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
+      veg%exudation%carbon13%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
+      veg%exudation%carbon14%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
+      veg%exudation%nitrogen15%ptr / soil_depth_sl(ics:ice,1)
+
     het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg%exudation%carbon%ptr / dtime * 1000000._wp                          
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon13%ptr / dtime * 1000000._wp
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon14%ptr / dtime * 1000000._wp
@@ -353,6 +434,101 @@ CONTAINS
       no3_n15_solute(:,1) = no3_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
                             ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
     END IF
+
+    !> 5.0 infrastructure for mass balance checks (see also section 0.9)
+    !!
+    
+    !! pools: calc the difference to what was calculated at the beginning of this routine
+    sb%delta_pools%carbon%ptr(ics:ice,:,iblk) = sb%delta_pools%carbon%ptr(ics:ice,:,iblk) - &
+       (sb%pool%dom%carbon%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk))
+    sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) = sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) - &
+       (sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
+       nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:))
+    sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) = sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) - &
+       (sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
+       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:))
+    sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) = sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) - &
+       (sb%pool%dom%carbon13%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
+    sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) - &
+       (sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk))
+    sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) - &
+       (sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
+       nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:))
+
+    !! fluxes
+    total_flux_carbon(:) =                  veg%litterfall%leaf%carbon%ptr        + &
+      veg%litterfall%fine_root%carbon%ptr - veg%litterfall%coarse_root%carbon%ptr + &
+      veg%litterfall%sap_wood%carbon%ptr  - veg%litterfall%heart_wood%carbon%ptr  + &
+      veg%litterfall%labile%carbon%ptr    - veg%litterfall%reserve%carbon%ptr     + &
+      veg%litterfall%fruit%carbon%ptr     - veg%litterfall%seed_bed%carbon%ptr    - &
+      SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2)                           ! DIM=2: sum only over dimension 2, i.e., soil layers
+    total_flux_nitrogen(:) =                  veg%litterfall%leaf%nitrogen%ptr        + &
+      veg%litterfall%fine_root%nitrogen%ptr - veg%litterfall%coarse_root%nitrogen%ptr + &
+      veg%litterfall%sap_wood%nitrogen%ptr  - veg%litterfall%heart_wood%nitrogen%ptr  + &
+      veg%litterfall%labile%nitrogen%ptr    - veg%litterfall%reserve%nitrogen%ptr     + &
+      veg%litterfall%fruit%nitrogen%ptr     - veg%litterfall%seed_bed%nitrogen%ptr    - &
+      leaching_nh4_solute(:) - leaching_no3_solute(:)                                 - &
+      emission_nh3(:) - emission_noy(:) - emission_n2o(:) - emission_n2(:)            + &
+      SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
+      SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
+      SUM(mycorrhiza_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                  + &
+      SUM(mycorrhiza_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+    total_flux_phosphorus(:) =                  veg%litterfall%leaf%phosphorus%ptr        + &
+      veg%litterfall%fine_root%phosphorus%ptr - veg%litterfall%coarse_root%phosphorus%ptr + &
+      veg%litterfall%sap_wood%phosphorus%ptr  - veg%litterfall%heart_wood%phosphorus%ptr  + &
+      veg%litterfall%labile%phosphorus%ptr    - veg%litterfall%reserve%phosphorus%ptr     + &
+      veg%litterfall%fruit%phosphorus%ptr     - veg%litterfall%seed_bed%phosphorus%ptr    - &
+      leaching_po4_solute(:)                                                              + &
+      SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                           + &
+      SUM(mycorrhiza_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+    total_flux_carbon13(:) =                  veg%litterfall%leaf%carbon13%ptr        + &
+      veg%litterfall%fine_root%carbon13%ptr - veg%litterfall%coarse_root%carbon13%ptr + &
+      veg%litterfall%sap_wood%carbon13%ptr  - veg%litterfall%heart_wood%carbon13%ptr  + &
+      veg%litterfall%labile%carbon13%ptr    - veg%litterfall%reserve%carbon13%ptr     + &
+      veg%litterfall%fruit%carbon13%ptr     - veg%litterfall%seed_bed%carbon13%ptr    - &
+      SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2)
+    total_flux_carbon14(:) =                  veg%litterfall%leaf%carbon14%ptr        + &
+      veg%litterfall%fine_root%carbon14%ptr - veg%litterfall%coarse_root%carbon14%ptr + &
+      veg%litterfall%sap_wood%carbon14%ptr  - veg%litterfall%heart_wood%carbon14%ptr  + &
+      veg%litterfall%labile%carbon14%ptr    - veg%litterfall%reserve%carbon14%ptr     + &
+      veg%litterfall%fruit%carbon14%ptr     - veg%litterfall%seed_bed%carbon14%ptr    - &
+      SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2)
+    total_flux_nitrogen15(:) =                  veg%litterfall%leaf%nitrogen15%ptr          + &
+      veg%litterfall%fine_root%nitrogen15%ptr - veg%litterfall%coarse_root%nitrogen15%ptr   + &
+      veg%litterfall%sap_wood%nitrogen15%ptr  - veg%litterfall%heart_wood%nitrogen15%ptr    + &
+      veg%litterfall%labile%nitrogen15%ptr    - veg%litterfall%reserve%nitrogen15%ptr       + &
+      veg%litterfall%fruit%nitrogen15%ptr     - veg%litterfall%seed_bed%nitrogen15%ptr      - &
+      leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                               - &
+      emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:)  + &
+      SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                         + &
+      SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                         + &
+      SUM(mycorrhiza_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                    + &
+      SUM(mycorrhiza_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+
 
   END SUBROUTINE update_sb_pools
 

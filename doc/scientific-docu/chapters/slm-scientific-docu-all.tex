@@ -256,7 +256,7 @@ For making pools available in the scientific code currently no such "statements"
 \end{enumerate}
 ~\\
 
-\textbf{Dimensionality:} variables in veg pools are SCALAR (t{\_}jsb{\_}var{\_}real1d -> 1D is incorrect and means scalar) where variables in sb pools are 3D (t{\_}jsb{\_}var{\_}real3d). In result: variables from veg pools need to end with \%ptr (e.g., veg\%pool\%leaf\%carbon\%ptr) where variables from sb pools need to end with \%variable{\_}name(ics:ice,layer,iblk) (note: "layer" can be replace by ":" when all layers should be addressed). Importantly, all variables of sb pools are 3D even though the do not end with {\_}sl (soil layer).\\
+\textbf{Dimensionality:} variables in veg pools are SCALAR (t{\_}jsb{\_}var{\_}real1d -> 1D is incorrect and means scalar) where variables in sb pools are 3D (t{\_}jsb{\_}var{\_}real3d). In result: variables from veg pools need to end with \%ptr (e.g., veg\%pool\%leaf\%carbon\%ptr) where variables from sb pools need to end with \%variable{\_}name\%ptr(ics:ice,layer,iblk) (note: "layer" can be replace by ":" when all layers should be addressed). Importantly, all variables of sb pools are 3D even though the do not end with {\_}sl (soil layer). And many variables of sb memory are actually 3D although they do not end with {\_}sl (see ticket #225).\\
 
 \textbf{Operator overload:} is currently available for all veg pools but not for sb pools. An example:
 \begin{itemize}

@@ -235,21 +235,30 @@ MODULE mo_sb_memory_class
                                     emission_n2o_n15, &         !< land to atmosphere flux of 15N2O [µmol m-2 s-1]
                                     emission_n2_n15             !< land to atmosphere flux of 15N2 [µmol m-2 s-1]
                        
-    
+    ! 3D 
     TYPE(t_jsb_var_real3d)          :: &
-      qmax_org, &                       !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
-      k_bioturb, &                      !< diffusion rate resulting from bioturbation 
-      bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
-      bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
-      particle_fluxrate, &              !< burial rate due to organic matter fall and decay [s-1?] 
-      anaerobic_volume_fraction_sl      !< anaerobic volume fraction [--]
+                                    qmax_org, &                   !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
+                                    k_bioturb, &                  !< diffusion rate resulting from bioturbation 
+                                    bulk_dens_corr_sl, &          !< organic fraction corrected bulk-density of the soil [kg m-3]
+                                    bulk_soil_carbon_sl, &        !< bulk soil density of carbon [kg m-3] 
+                                    particle_fluxrate, &          !< burial rate due to organic matter fall and decay [s-1?] 
+                                    anaerobic_volume_fraction_sl  !< anaerobic volume fraction [--]
 
-!    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
-!                                    test_sb_element   !< test ...
+    ! 2D total fluxes for mass balance checks in soil_biogeochemistry model
+    TYPE(t_jsb_var_real2d)          :: & 
+                                    total_flux_carbon, &          !< carbon mass balance checks in soil_biogeochemistry model
+                                    total_flux_nitrogen, &        !< nitrogen mass balance checks in soil_biogeochemistry model
+                                    total_flux_phosphorus, &      !< phosphorus mass balance checks in soil_biogeochemistry model
+                                    total_flux_carbon13, &        !< carbon13 mass balance checks in soil_biogeochemistry model
+                                    total_flux_carbon14, &        !< carbon14 mass balance checks in soil_biogeochemistry model
+                                    total_flux_nitrogen15         !< nitrogen15 mass balance checks in soil_biogeochemistry model
+
+   TYPE(t_slm_struct_sb_element)    :: &   ! simple structure for elements: t_jsb_struct
+                                    delta_pools                 !< for mass balance checks in soil_biogeochemistry model
 
 
-    TYPE(t_slm_struct_sb_pool)    :: &   ! nested pool TYPE t_jsb_n_struct
-                                    pool, &                !< pools of the sb
+    TYPE(t_slm_struct_sb_pool)      :: &   ! nested pool TYPE t_jsb_n_struct
+                                    pool, &                     !< pools of the sb
                                     formation, & 
                                     loss, & 
                                     transport
@@ -1153,11 +1162,30 @@ CONTAINS
       CALL slm_add_var(mem, 'emission_n2_n15', mem%emission_n2_n15, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'total_flux_carbon', mem%total_flux_carbon, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'total_flux_nitrogen', mem%total_flux_nitrogen, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'total_flux_phosphorus', mem%total_flux_phosphorus, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'total_flux_carbon13', mem%total_flux_carbon13, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'total_flux_carbon14', mem%total_flux_carbon14, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'total_flux_nitrogen15', mem%total_flux_nitrogen15, &
+            initval_r=0.0_wp) ! initvalue
+
+
       !> simple TYPE (t_jsb_struct)
       !! 
       !! slm_add_var -> slm_add_struct()
       !! 
-!      CALL slm_add_var(mem, 'soil_test_soil_element',          mem%test_soil_element)
+      CALL slm_add_var(mem, 'sb_delta_pools', mem%delta_pools)
 
 
       !> nested TYPE (t_jsb_n_struct)
@@ -1744,6 +1772,19 @@ CONTAINS
       CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon14', mem%transport%residue_assoc%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_nitrogen15', mem%transport%residue_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+
+      CALL slm_add_var(mem%delta_pools, 'sb_delta_pools_carbon', mem%delta_pools%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%delta_pools, 'sb_delta_pools_nitrogen', mem%delta_pools%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%delta_pools, 'sb_delta_pools_phosphorus', mem%delta_pools%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%delta_pools, 'sb_delta_pools_carbon13', mem%delta_pools%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%delta_pools, 'sb_delta_pools_carbon14', mem%delta_pools%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%delta_pools, 'sb_delta_pools_nitrogen15', mem%delta_pools%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
 
     END IF

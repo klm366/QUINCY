@@ -56,7 +56,22 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    ! SB_
+    ! 2D SB_
+    dsl4jsb_Real2D_onChunk :: total_flux_carbon
+    dsl4jsb_Real2D_onChunk :: total_flux_nitrogen
+    dsl4jsb_Real2D_onChunk :: total_flux_phosphorus
+    dsl4jsb_Real2D_onChunk :: total_flux_carbon13
+    dsl4jsb_Real2D_onChunk :: total_flux_carbon14
+    dsl4jsb_Real2D_onChunk :: total_flux_nitrogen15
+    dsl4jsb_Real2D_onChunk :: emission_nh3
+    dsl4jsb_Real2D_onChunk :: emission_noy
+    dsl4jsb_Real2D_onChunk :: emission_n2o
+    dsl4jsb_Real2D_onChunk :: emission_n2
+    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
+    dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2_n15
+    ! 3D SB_
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
@@ -98,14 +113,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_noy
     dsl4jsb_Real3D_onChunk :: denitrification_n2o
     dsl4jsb_Real3D_onChunk :: denitrification_n2
-    dsl4jsb_Real2D_onChunk :: emission_nh3
-    dsl4jsb_Real2D_onChunk :: emission_noy
-    dsl4jsb_Real2D_onChunk :: emission_n2o
-    dsl4jsb_Real2D_onChunk :: emission_n2
-    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
-    dsl4jsb_Real2D_onChunk :: emission_noy_n15
-    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
-    dsl4jsb_Real2D_onChunk :: emission_n2_n15
 ! 2 be removed later: pointer to sb   *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -127,6 +134,20 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     !lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_phosphorus)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon13)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon14)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen15)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
@@ -168,14 +189,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! out
 
 
 ! 2 be removed  *slmtemp
@@ -189,9 +202,28 @@ CONTAINS
 
     !> 1.0 initialise/reset fluxes
     !!
+    ! 2D fields  
+    total_flux_carbon(:)         = zero
+    total_flux_nitrogen(:)       = zero
+    total_flux_phosphorus(:)     = zero
+    total_flux_carbon13(:)       = zero
+    total_flux_carbon14(:)       = zero
+    total_flux_nitrogen15(:)     = zero
+    emission_nh3(:)              = zero
+    emission_noy(:)              = zero
+    emission_n2o(:)              = zero
+    emission_n2(:)               = zero
+    emission_nh3_n15(:)          = zero
+    emission_noy_n15(:)          = zero
+    emission_n2o_n15(:)          = zero
+    emission_n2_n15(:)           = zero
+
+    ! pools
     CALL sb%loss%init(zero)
     CALL sb%formation%init(zero)
     CALL sb%transport%init(zero)
+
+    ! 3D fields
     het_respiration(:,:)              = zero
     het_respiration_c13(:,:)          = zero
     het_respiration_c14(:,:)          = zero
@@ -234,16 +266,6 @@ CONTAINS
     denitrification_n2o(:,:)          = zero
     denitrification_n2(:,:)           = zero
   
-    ! 2D fields  
-    emission_nh3(:)              = zero
-    emission_noy(:)              = zero
-    emission_n2o(:)              = zero
-    emission_n2(:)               = zero
-    emission_nh3_n15(:)          = zero
-    emission_noy_n15(:)          = zero
-    emission_n2o_n15(:)          = zero
-    emission_n2_n15(:)           = zero
-
   END SUBROUTINE reset_sb_fluxes
 
 
