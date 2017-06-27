@@ -65,8 +65,8 @@ flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="T"
-ncanopy=20                          # number of canopy layers
-canopy_layer_scheme="standard"      # canopy layer depth calculation options: standard fapar
+ncanopy=10                          # number of canopy layers
+canopy_layer_scheme="fapar"      # canopy layer depth calculation options: standard fapar
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"

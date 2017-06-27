@@ -83,7 +83,7 @@ CONTAINS
     INTEGER  :: nml_handler, nml_unit, istat
 
     ! extinction coefficient for canopy layer depth calculation
-    k_canopy_layer = 0.5_wp
+    k_canopy_layer = 0.7_wp
 
 
     CALL message(TRIM(routine), 'Starting assimi configuration')
