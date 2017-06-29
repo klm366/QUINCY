@@ -31,13 +31,13 @@ flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="T"
-ncanopy=20                          # number of canopy layers
-canopy_layer_scheme="standard"      # canopy layer depth calculation options: standard fapar
+ncanopy=10                      # number of canopy layers
+canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"          # does also set "start_bareground"
+flag_tile_veg_dynamics="T"      # does also set "start_bareground"
 # soil model options
 soil_depth=5.7                  # meter
 
@@ -58,7 +58,7 @@ siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of
 siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
 soil_awc_prescribe=300.0        # float !
-soil_theta_prescribe=1.0      # float !
+soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
 latitude=50.0                   # float !
 

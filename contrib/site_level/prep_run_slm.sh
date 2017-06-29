@@ -117,13 +117,14 @@ if [ $flag_generate_soil_forcing == "T" ]
   myc_scheme="no"
   soil_moisture_scheme="layer"
   sb_model_scheme="simple_0d"
+  sb_nloss_scheme="fixed"
   
   flag_t_resp_acclimation="T"
   flag_t_jmax_acclimation="T"
   flag_optimal_Nfraction="F"
   flag_heterogeneous_canopy="T"
-  ncanopy=20 
-  canopy_layer_scheme="standard"
+  ncanopy=10 
+  canopy_layer_scheme="fapar"
   flag_optimal_Nleaf="F"
   flag_optimal_allocation="F"
   flag_tile_veg_dynamics="T" 
