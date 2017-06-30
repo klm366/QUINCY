@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Sönke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
 !! Second version by Sönke Zaehle (20170331): added a 4 pool model 
-!! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines
+!! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines and rename to update_sb_simple_model()
 !!
 MODULE mo_sb_simple_model
 
@@ -33,62 +33,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> update soil biogeochemical pools 
   !! 
-  !! 
+  !! routine to update soil litter and mineral pools (simple version for vegetation model testing)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_sb_simple_model(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
-
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout), TARGET  :: tile         !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)             :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local
-    !TYPE(t_jsb_model),      POINTER       :: model
-    !TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    !INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ...
-
-
-
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-    CALL calc_sb_fluxes_simple(tile, options)
-
-
-!!    CALL calc_n15_fluxes(tile, options)
-
-  END SUBROUTINE update_sb_simple_model
-
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> routine to update soil litter and mineral pools (simple version for vegetation model testing)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_sb_fluxes_simple(tile, options)
-
-    USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_constants,        ONLY: dtime
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_sb_config_class,       ONLY: sb_config
@@ -141,7 +94,7 @@ CONTAINS
                                              anaerobic_volume_fraction_act
     REAL(wp), DIMENSION(options%nc)       :: root_depth_avg
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sb_fluxes_simple'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ---------------------------
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
@@ -579,11 +532,11 @@ CONTAINS
     emission_n2o(:) = emission_n2o(:) / dtime * 1000000._wp
     emission_n2(:) = emission_n2(:) / dtime * 1000000._wp
 
-  END SUBROUTINE calc_sb_fluxes_simple 
+  END SUBROUTINE update_sb_simple_model 
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_vertical_profile  differentiate between simple_0d and simple_1d (1 and many soil layers)
@@ -737,7 +690,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_potential_plant_uptake_rate, Plant nutrient uptake rates
@@ -876,7 +829,7 @@ CONTAINS
   
   
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_potential_nloss_rate, Loss pathways for the dynamic loss calculation scheme
@@ -990,7 +943,7 @@ CONTAINS
   
   
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_potential_decomposition_rate, Calculate decomposition of pools
@@ -1117,7 +1070,7 @@ CONTAINS
 
   
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_actual_flux_rate, formation of SOM resulting from the decomposition
@@ -1350,7 +1303,7 @@ CONTAINS
   
   
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_actual_SOM_formation, formation of SOM and associated respiration, net mineralisation fluxes
@@ -1512,7 +1465,7 @@ CONTAINS
   
   
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_actual_nloss_rate, calculate N losses and nitrification
@@ -1641,7 +1594,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_litter_partitioning, Update soil litter pools with litter fall
@@ -1748,7 +1701,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to calc_sb_fluxes_simple
+  ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
   !> calc_mycorrhiza_dynamics, nutrient uptake and flux, and litter formation
