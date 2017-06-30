@@ -1210,9 +1210,9 @@ CONTAINS
                              (sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
                              sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk))
 
-    ! limit microbial and plant uptake, as well as nitrification to available NH4 minus transport losses
+    ! limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
     WHERE(mic_uptake_nh4_sl(:,:)>=0.0_wp)
-       hlp1(:,:) = mic_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:)  + mycorrhiza_uptake_nh4_sl(:,:)
+       hlp1(:,:) = mic_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
        hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:)) 
            WHERE(hlp1(:,:) > eps8)
@@ -1228,15 +1228,17 @@ CONTAINS
            ENDWHERE 
         ENDWHERE
     ELSEWHERE
-       hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) 
+       hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
        hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - mic_uptake_nh4_sl(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:)) 
            WHERE(hlp1(:,:) > eps8)
               plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
               nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
+              mycorrhiza_uptake_nh4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_sl(:,:) / hlp1(:,:)
            ELSEWHERE
               plant_uptake_nh4_sl(:,:) = 0.0_wp 
               nitrification_no3(:,:) = 0.0_wp 
+              mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
            ENDWHERE 
         ENDWHERE
     ENDWHERE 
