@@ -48,6 +48,7 @@ mo_atmland_forcing.o: \
   mo_base_constants.o \
   mo_jsb_model_class.o \
   mo_base_memory.o \
+  mo_jsb4_forcing.o \
   mo_shared_isotope.o \
   mo_shared_constants.o \
   mo_atmland_util.o \
@@ -56,3 +57,10 @@ mo_atmland_forcing.o: \
   mo_soil_memory_class.o \
   mo_veg_memory_class.o
 
+mo_jsb4_forcing.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_namelist.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o
+    

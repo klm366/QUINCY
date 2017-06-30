@@ -426,14 +426,12 @@ CONTAINS
 
     !> 4.2 atmospheric deposition
     !!
-    IF(sb_config%flag_n_deposition) THEN
-      nh4_solute(:,1)     = nh4_solute(:,1) + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-      no3_solute(:,1)     = no3_solute(:,1) + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-      nh4_n15_solute(:,1) = nh4_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
-                            ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
-      no3_n15_solute(:,1) = no3_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
-                            ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
-    END IF
+    nh4_solute(:,1)     = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_solute(:,1)     = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    nh4_n15_solute(:,1) = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
+                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+    no3_n15_solute(:,1) = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
+                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
 
     !> 5.0 infrastructure for mass balance checks (see also section 0.9)
     !!

@@ -14,6 +14,8 @@ MODULE mo_jsb_model_init
 
     USE mo_kind
     USE mo_exception,                       ONLY: finish, message, message_text
+    ! driver
+    USE mo_jsb4_forcing,                    ONLY: Init_forcing
     ! base
     USE mo_base_constants                     ! e.g. dtime, init_base_constants
     USE mo_jsb_class,                       ONLY: Get_model, jsbach
@@ -126,14 +128,14 @@ CONTAINS
     no_of_models = 1            ! *slmtemp 
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
-    current => new_model(1, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! id, name, shortname, description, namelist_filename
+    current => new_model(1, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! model_id, name, shortname, description, namelist_filename
     ! "current" is used for looping if no_of_models > 1 ; but looping would need to include process configs per model (see section 2)
     jsbach%models(1)%m => current
     ! point model to jsbach%models(1)%m
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
 
 
-    !! 2 Config init, run PROC_config%Init routines
+    !! 2 Config init, run PROC_config%Init routines and Forcing init
     !!
     !!  
     base_config%namelist_filename       = model%namelist_filename
@@ -148,6 +150,7 @@ CONTAINS
     CALL soil_config%Init
     CALL sb_config%Init
     CALL pheno_config%Init
+    CALL Init_forcing(1)          ! the model_id is passed a argument (model_id = 1, see above new_model() )
 
 
     !! 3 Set model options

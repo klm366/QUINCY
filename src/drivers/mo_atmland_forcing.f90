@@ -92,6 +92,7 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_shared_constants,      ONLY: molar_mass_N, grav
     USE mo_base_constants,        ONLY: one_day
+    USE mo_jsb4_forcing,          ONLY: forcing_options
 
     ! Use of process memories
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
@@ -374,9 +375,14 @@ CONTAINS
     co2_mixing_ratio(nc)      =         co2_mixing_ratio_r
     co2_mixing_ratio_C13(nc)  =         co2_mixing_ratio_C13(1) 
     co2_mixing_ratio_C14(nc)  =         co2_mixing_ratio_C14(1) 
-    ga(nc)                    =         ga(1)                   
-    nhx_deposition(nc)  =         nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-    noy_deposition(nc)  =         noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+    ga(nc)                    =         ga(1)         
+    IF (forcing_options%flag_n_deposition) THEN          
+      nhx_deposition(nc)      =         nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+      noy_deposition(nc)      =         noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+    ELSE  
+      nhx_deposition(nc)      =         0.0_wp
+      noy_deposition(nc)      =         0.0_wp
+    END IF
     ! For lakes:    
     albedo_lwtr(nc)     =         albedo_lwtr(1)    
     drag_wtr(nc)        =         drag_wtr(1)       

@@ -18,7 +18,7 @@ MODULE mo_shared_output
   USE mo_base_config_class,     ONLY: base_config
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_soil_config_class,     ONLY: soil_config
-  USE mo_sb_config_class,       ONLY: sb_config
+  USE mo_jsb4_forcing,          ONLY: forcing_options
   USE mo_assimi_config_class,   ONLY: assimi_config
 
 
@@ -1476,7 +1476,7 @@ CONTAINS
              ENDIF 
              gc_acc           = gc_acc            + canopy_cond(1)                                                      
              ga_acc           = ga_acc            + ga(1) 
-             IF(sb_config%flag_n_deposition) THEN
+             IF(forcing_options%flag_n_deposition) THEN
                 n_deposition_acc = n_deposition_acc  + (nhx_deposition(1) + noy_deposition(1)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
              ENDIF
              albedo_acc       = albedo_acc        + albedo(1)

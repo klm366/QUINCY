@@ -31,7 +31,6 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
-    LOGICAL               :: flag_n_deposition
 
     CONTAINS
       PROCEDURE :: Init => Init_sb_config
@@ -63,7 +62,6 @@ CONTAINS
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
-    LOGICAL               :: flag_n_deposition
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
@@ -71,8 +69,7 @@ CONTAINS
                       sb_nloss_scheme,        &
                       flag_sb_prescribe_nh4,  &
                       flag_sb_prescribe_no3,  &
-                      flag_sb_prescribe_po4,  &
-                      flag_n_deposition
+                      flag_sb_prescribe_po4
      
 
     ! variables for reading model-options from namelist
@@ -86,7 +83,6 @@ CONTAINS
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
-    flag_n_deposition           = .FALSE.
 
     ! read the namelist
     ! 
@@ -115,7 +111,6 @@ CONTAINS
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
-    config%flag_n_deposition               = flag_n_deposition
 
 
   END SUBROUTINE Init_sb_config

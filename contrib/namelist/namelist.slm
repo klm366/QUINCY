@@ -47,7 +47,6 @@
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.
   flag_sb_prescribe_po4=.FALSE.
-  flag_n_deposition=.FALSE.
 /
 &BASE_CTL
   ! basic model config
@@ -73,4 +72,8 @@
   set_parameter_values_from_file=.FALSE.
   ! use only the 1st year of climate input [FALSE TRUE]
   flag_climate_forcing_one_year=.FALSE.
+/
+&JSB_FORCING_CTL
+  ! flags for mo_jsb4_forcing
+  flag_n_deposition=.FALSE.
 /
