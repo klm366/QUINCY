@@ -27,9 +27,7 @@ PROGRAM land_model_driver
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
                                         
   ! vegetation
-  USE mo_shared_output,           ONLY: allocate_slm_output_variables, &
-                                        init_slm_output_variables, &
-                                        open_pool_output_files, &
+  USE mo_shared_output,           ONLY: open_pool_output_files, &
                                         open_flux_output_files, &
                                         open_output_files_soil_forcing, &
                                         close_output_files, &
@@ -199,8 +197,6 @@ PROGRAM land_model_driver
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','plant','soil','canopy')
-      CALL allocate_slm_output_variables ! mo_shared_output
-      CALL init_slm_output_variables     ! mo_shared_output
       CALL open_pool_output_files
       CALL open_flux_output_files
       IF (base_config%flag_generate_soil_forcing) THEN

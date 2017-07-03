@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-03-14)
+!! Second version by Jan Engel (20170630): remove ALLOCATE (only one tile is used), and init *_acc VAR and pools within its routines
 !!
 MODULE mo_shared_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
@@ -21,283 +22,40 @@ MODULE mo_shared_output
   USE mo_jsb4_forcing,          ONLY: forcing_options
   USE mo_assimi_config_class,   ONLY: assimi_config
 
-
   IMPLICIT NONE
 
-  REAL(wp), SAVE                   :: output_interval_pool   ! equals 'dtime/one_day' or is a mulitple of it
-  REAL(wp), SAVE                   :: output_interval_flux   ! equals 'dtime/one_day' or is a mulitple of it
-  ! flux accumulation, see write_output_flux
-  ! these are set to zero frequently in section 1.2 of write_output_flux()
-  REAL(wp), ALLOCATABLE, SAVE :: gpp_acc             
-  REAL(wp), ALLOCATABLE, SAVE :: growth_resp_acc      
-  REAL(wp), ALLOCATABLE, SAVE :: maint_resp_acc       
-  REAL(wp), ALLOCATABLE, SAVE :: n_transform_resp_acc
-  REAL(wp), ALLOCATABLE, SAVE :: n_fixation_resp_acc
-  REAL(wp), ALLOCATABLE, SAVE :: exudationC_acc
-  REAL(wp), ALLOCATABLE, SAVE :: npp_acc              
-  REAL(wp), ALLOCATABLE, SAVE :: res_use_c_acc        
-  REAL(wp), ALLOCATABLE, SAVE :: gpp_C13_acc             
-  REAL(wp), ALLOCATABLE, SAVE :: growth_resp_C13_acc      
-  REAL(wp), ALLOCATABLE, SAVE :: maint_resp_C13_acc       
-  REAL(wp), ALLOCATABLE, SAVE :: gpp_C14_acc             
-  REAL(wp), ALLOCATABLE, SAVE :: growth_resp_C14_acc      
-  REAL(wp), ALLOCATABLE, SAVE :: maint_resp_C14_acc       
-  REAL(wp), ALLOCATABLE, SAVE :: uptake_nh4_acc         
-  REAL(wp), ALLOCATABLE, SAVE :: uptake_no3_acc         
-  REAL(wp), ALLOCATABLE, SAVE :: n_fixation_acc         
-  REAL(wp), ALLOCATABLE, SAVE :: recycling_n_acc     
-  REAL(wp), ALLOCATABLE, SAVE :: res_use_n_acc        
-  REAL(wp), ALLOCATABLE, SAVE :: uptake_po4_acc         
-  REAL(wp), ALLOCATABLE, SAVE :: recycling_p_acc     
-  REAL(wp), ALLOCATABLE, SAVE :: res_use_p_acc        
-  REAL(wp), ALLOCATABLE, SAVE :: precip_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: evaporation_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: transpiration_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: interception_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: runoff_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: drainage_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: gc_acc               
-  REAL(wp), ALLOCATABLE, SAVE :: ga_acc    
-  REAL(wp), ALLOCATABLE, SAVE :: n_deposition_acc
-  REAL(wp), ALLOCATABLE, SAVE :: ppfd_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: rnet_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: qh_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: qle_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: qg_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: albedo_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: appfd_acc 
-  INTEGER,  ALLOCATABLE, SAVE :: ndat_acc ! number of accumulated data points
+  PUBLIC  ! all is public
 
-  ! soil stuff
-  REAL(wp), ALLOCATABLE, SAVE :: litterfallC_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: het_respC_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: leachingCorg_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: litterfallC13_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: het_respC13_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: leachingC13org_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: litterfallC14_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: het_respC14_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: leachingC14org_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: litterfallN_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: net_min_nh4_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: net_min_no3_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: leachingNorg_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: litterfallP_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: net_min_po4_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: leachingPorg_acc 
-  REAL(wp), ALLOCATABLE, SAVE :: nitrification_acc
-  REAL(wp), ALLOCATABLE, SAVE :: denitrification_acc
-  REAL(wp), ALLOCATABLE, SAVE :: emission_noy_acc
-  REAL(wp), ALLOCATABLE, SAVE :: emission_n2o_acc
-  REAL(wp), ALLOCATABLE, SAVE :: emission_n2_acc
-  REAL(wp), ALLOCATABLE, SAVE :: leaching_nh4_acc
-  REAL(wp), ALLOCATABLE, SAVE :: leaching_no3_acc
-  REAL(wp), ALLOCATABLE, SAVE :: leaching_po4_acc
-  REAL(wp), SAVE :: sb_delta_pools_carbon_acc
-  REAL(wp), SAVE :: sb_delta_pools_nitrogen_acc
-  REAL(wp), SAVE :: sb_delta_pools_phosphorus_acc
-  REAL(wp), SAVE :: sb_delta_pools_carbon13_acc
-  REAL(wp), SAVE :: sb_delta_pools_carbon14_acc
-  REAL(wp), SAVE :: sb_delta_pools_nitrogen15_acc
-  REAL(wp), SAVE :: sb_total_flux_carbon_acc
-  REAL(wp), SAVE :: sb_total_flux_nitrogen_acc
-  REAL(wp), SAVE :: sb_total_flux_phosphorus_acc
-  REAL(wp), SAVE :: sb_total_flux_carbon13_acc
-  REAL(wp), SAVE :: sb_total_flux_carbon14_acc
-  REAL(wp), SAVE :: sb_total_flux_nitrogen15_acc
+  !-----------------------------------------------------------------------------------------------------
+  !> Define local variables
+  !! 
+  !! output interval for pools and fluxes
+  !-----------------------------------------------------------------------------------------------------
+  REAL(wp), SAVE :: output_interval_pool   ! equals 'dtime/one_day' or is a mulitple of it
+  REAL(wp), SAVE :: output_interval_flux   ! equals 'dtime/one_day' or is a mulitple of it
+
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize variables for interval length and flux accumulation
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE allocate_slm_output_variables
-    IMPLICIT NONE
-
-    ALLOCATE(gpp_acc)
-    ALLOCATE(growth_resp_acc)
-    ALLOCATE(maint_resp_acc)   
-    ALLOCATE(n_transform_resp_acc)   
-    ALLOCATE(n_fixation_resp_acc)   
-    ALLOCATE(exudationC_acc) 
-    ALLOCATE(npp_acc)   
-    ALLOCATE(res_use_c_acc)   
-    ALLOCATE(gpp_C13_acc)
-    ALLOCATE(growth_resp_C13_acc)
-    ALLOCATE(maint_resp_C13_acc)
-    ALLOCATE(gpp_C14_acc)
-    ALLOCATE(growth_resp_C14_acc)
-    ALLOCATE(maint_resp_C14_acc)
-    ALLOCATE(uptake_nh4_acc)   
-    ALLOCATE(uptake_no3_acc)   
-    ALLOCATE(recycling_n_acc)  
-    ALLOCATE(res_use_n_acc)  
-    ALLOCATE(n_fixation_acc)   
-    ALLOCATE(uptake_po4_acc)
-    ALLOCATE(recycling_p_acc)  
-    ALLOCATE(res_use_p_acc)   
-    ALLOCATE(precip_acc) 
-    ALLOCATE(evaporation_acc) 
-    ALLOCATE(transpiration_acc) 
-    ALLOCATE(interception_acc) 
-    ALLOCATE(runoff_acc) 
-    ALLOCATE(drainage_acc) 
-    ALLOCATE(gc_acc)
-    ALLOCATE(ga_acc)
-    ALLOCATE(n_deposition_acc)
-    ALLOCATE(ppfd_acc)
-    ALLOCATE(rnet_acc)
-    ALLOCATE(qh_acc)
-    ALLOCATE(qle_acc)
-    ALLOCATE(qg_acc)
-    ALLOCATE(albedo_acc)
-    ALLOCATE(appfd_acc)
-    ALLOCATE(ndat_acc)      ! integer
-
-    ! soil stuff
-    ALLOCATE(litterfallC_acc)
-    ALLOCATE(het_respC_acc)
-    ALLOCATE(leachingCorg_acc)
-    ALLOCATE(litterfallC13_acc)
-    ALLOCATE(het_respC13_acc)
-    ALLOCATE(leachingC13org_acc)
-    ALLOCATE(litterfallC14_acc)
-    ALLOCATE(het_respC14_acc)
-    ALLOCATE(leachingC14org_acc)
-    ALLOCATE(litterfallN_acc)
-    ALLOCATE(net_min_nh4_acc)
-    ALLOCATE(net_min_no3_acc)
-    ALLOCATE(leachingNorg_acc)
-    ALLOCATE(litterfallP_acc)
-    ALLOCATE(net_min_po4_acc)
-    ALLOCATE(leachingPorg_acc)
-    ALLOCATE(nitrification_acc)
-    ALLOCATE(denitrification_acc)
-    ALLOCATE(emission_noy_acc)
-    ALLOCATE(emission_n2o_acc)
-    ALLOCATE(emission_n2_acc)
-    ALLOCATE(leaching_nh4_acc)
-    ALLOCATE(leaching_no3_acc)
-    ALLOCATE(leaching_po4_acc)
-
-
-  END SUBROUTINE allocate_slm_output_variables
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> initialize variables for interval length and flux accumulation
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_output_variables
-    IMPLICIT NONE
-    ! interval variables
-    output_interval_pool = 0.0_wp  ! equals 'dtime/one_day' or is a mulitple of it
-    output_interval_flux = 0.0_wp  ! equals 'dtime/one_day' or is a mulitple of it
-    ! flux accumulation , see write_output_flux
-    ! these are set to zero frequently in section 1.2 of write_output_flux()
-    gpp_acc              = 0.0_wp
-    growth_resp_acc      = 0.0_wp
-    maint_resp_acc       = 0.0_wp   
-    n_transform_resp_acc = 0.0_wp   
-    n_fixation_resp_acc  = 0.0_wp 
-    exudationC_acc      = 0.0_wp  
-    npp_acc             = 0.0_wp   
-    res_use_c_acc       = 0.0_wp   
-    gpp_C13_acc         = 0.0_wp
-    growth_resp_C13_acc = 0.0_wp
-    maint_resp_C13_acc  = 0.0_wp
-    gpp_C14_acc         = 0.0_wp
-    growth_resp_C14_acc = 0.0_wp
-    maint_resp_C14_acc  = 0.0_wp
-    uptake_nh4_acc      = 0.0_wp   
-    uptake_no3_acc      = 0.0_wp   
-    recycling_n_acc     = 0.0_wp  
-    res_use_n_acc       = 0.0_wp  
-    n_fixation_acc      = 0.0_wp   
-    uptake_po4_acc      = 0.0_wp
-    recycling_p_acc     = 0.0_wp  
-    res_use_p_acc       = 0.0_wp   
-    precip_acc          = 0.0_wp 
-    evaporation_acc     = 0.0_wp 
-    transpiration_acc   = 0.0_wp 
-    interception_acc    = 0.0_wp 
-    runoff_acc          = 0.0_wp 
-    drainage_acc        = 0.0_wp 
-    gc_acc              = 0.0_wp
-    ga_acc              = 0.0_wp
-    n_deposition_acc    = 0.0_wp
-    ppfd_acc            = 0.0_wp
-    rnet_acc            = 0.0_wp
-    qh_acc              = 0.0_wp
-    qle_acc             = 0.0_wp
-    qg_acc              = 0.0_wp
-    albedo_acc          = 0.0_wp
-    appfd_acc           = 0.0_wp
-    ndat_acc            = 0       ! integer
-
-    ! soil stuff
-    litterfallC_acc     = 0.0_wp
-    het_respC_acc       = 0.0_wp
-    leachingCorg_acc    = 0.0_wp
-    litterfallC13_acc   = 0.0_wp
-    het_respC13_acc     = 0.0_wp
-    leachingC13org_acc  = 0.0_wp
-    litterfallC14_acc   = 0.0_wp
-    het_respC14_acc     = 0.0_wp
-    leachingC14org_acc  = 0.0_wp
-    litterfallN_acc     = 0.0_wp
-    net_min_nh4_acc     = 0.0_wp
-    net_min_no3_acc     = 0.0_wp
-    leachingNorg_acc    = 0.0_wp
-    litterfallP_acc     = 0.0_wp
-    net_min_po4_acc     = 0.0_wp
-    leachingPorg_acc    = 0.0_wp
-    nitrification_acc   = 0.0_wp
-    denitrification_acc = 0.0_wp
-    emission_noy_acc    = 0.0_wp
-    emission_n2o_acc    = 0.0_wp
-    emission_n2_acc     = 0.0_wp
-    leaching_nh4_acc    = 0.0_wp
-    leaching_no3_acc    = 0.0_wp
-    leaching_po4_acc    = 0.0_wp
-    sb_delta_pools_carbon_acc     = 0.0_wp
-    sb_delta_pools_nitrogen_acc   = 0.0_wp
-    sb_delta_pools_phosphorus_acc = 0.0_wp
-    sb_delta_pools_carbon13_acc   = 0.0_wp
-    sb_delta_pools_carbon14_acc   = 0.0_wp
-    sb_delta_pools_nitrogen15_acc = 0.0_wp
-    sb_total_flux_carbon_acc      = 0.0_wp
-    sb_total_flux_nitrogen_acc    = 0.0_wp
-    sb_total_flux_phosphorus_acc  = 0.0_wp
-    sb_total_flux_carbon13_acc    = 0.0_wp
-    sb_total_flux_carbon14_acc    = 0.0_wp
-    sb_total_flux_nitrogen15_acc  = 0.0_wp
-
-  END SUBROUTINE init_slm_output_variables
-
-
-  !-----------------------------------------------------------------------------------------------------
   !> the input interval string is transformed into a number, which is used for timely model output
   !! 
   !! applied for pools and flux output
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_output_time_interval(interval_string) RESULT(interval_number)
+  FUNCTION calc_output_time_interval() RESULT(interval_number)
 
-    USE mo_base_constants,     ONLY: one_day, dtime
+    USE mo_base_constants,          ONLY: one_day, dtime
+    USE mo_base_config_class,       ONLY: base_config
 
     IMPLICIT NONE
     ! 0.1 InOut
-    CHARACTER(8), INTENT(in) :: interval_string      !< string input
     REAL(wp)                 :: interval_number      !< number output
 
     !> 1.0 create interval_number depending on pool/flux
     !!
-    SELECT CASE( TRIM(interval_string) )
+    SELECT CASE( TRIM(base_config%output_interval_pool) )
       CASE('timestep')
         interval_number = dtime/one_day  ! length of one time step as advanced in 'time' 
       CASE('daily')
@@ -339,12 +97,11 @@ CONTAINS
 
     !> 1.0 init
     opt = " "
+    output_interval_pool = 0.0_wp
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
-    !! it is not necessary to pass 'base_config%output_interval_pool' as argument to open_pool_output_files
-    !! as 'base_config' is global & defined with SAVE and initialized before this function is called
-    output_interval_pool = calc_output_time_interval(base_config%output_interval_pool)
+    output_interval_pool = calc_output_time_interval()
 
 
     !> 2.1 get options (opt) for filenames
@@ -608,25 +365,26 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(in), TARGET  :: tile   !< one tile
-    TYPE(t_jsb_task_options), INTENT(in) :: options         !< model options
+    TYPE(t_slm_tile), INTENT(in), TARGET :: tile        !< one tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options     !< model options
     REAL(wp), INTENT(in)                 :: time_d      !< time in days
     INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                          :: lun            ! locical unit number
-    INTEGER                          :: icanopy         ! loop over ncanopy
-    REAL(wp)                         :: hlp1           ! helper variable
-    REAL(wp)                         :: l2r, s2c, bcf  !helper ratio variables
-    REAl(wp)                         :: growing_season_float !output variable for growing season
-    REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
-                                        dC13fruit,dC13labile,dC13reserve,dC13seed_bed
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water)  :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
-                                                                dC13dom,dC13dom_assoc,dC13fungi,dC13mycorrhiza,dC13microbial, & 
-                                                                dC13residue,dC13residue_assoc
-    INTEGER                          :: iblk, ics, ice, nc
+    INTEGER                              :: lun            ! locical unit number
+    INTEGER                              :: icanopy         ! loop over ncanopy
+    REAL(wp)                             :: hlp1           ! helper variable
+    REAL(wp)                             :: l2r, s2c, bcf  !helper ratio variables
+    REAl(wp)                             :: growing_season_float !output variable for growing season
+    REAL(wp)                             :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
+                                            dC13fruit,dC13labile,dC13reserve,dC13seed_bed
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) & 
+                                         :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
+                                            dC13dom,dC13dom_assoc,dC13fungi,dC13mycorrhiza,dC13microbial, & 
+                                            dC13residue,dC13residue_assoc
+    INTEGER                              :: iblk, ics, ice, nc
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -636,13 +394,18 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk   :: growing_season     ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: beta_soil_gs       ! ASSIMI_
+    ! PHENO_
+    dsl4jsb_Logical2D_onChunk   :: growing_season
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
-    dsl4jsb_Real2D_onChunk      :: w_soil_root        ! SOIL_
+    ! SOIL_ 2D
+    dsl4jsb_Real2D_onChunk      :: w_soil_root 
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    dsl4jsb_Real2D_onChunk      :: lai                ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: diameter
     dsl4jsb_Real2D_onChunk      :: dens_ind
@@ -655,6 +418,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
@@ -663,6 +427,22 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
+    ! SB_ 3D
+    dsl4jsb_Real3D_onChunk      :: nh4_solute
+    dsl4jsb_Real3D_onChunk      :: no3_solute
+    dsl4jsb_Real3D_onChunk      :: po4_solute
+    dsl4jsb_Real3D_onChunk      :: noy
+    dsl4jsb_Real3D_onChunk      :: n2o
+    dsl4jsb_Real3D_onChunk      :: n2
+    dsl4jsb_Real3D_onChunk      :: nh4_n15_solute
+    dsl4jsb_Real3D_onChunk      :: no3_n15_solute
+    dsl4jsb_Real3D_onChunk      :: nh4_assoc
+    dsl4jsb_Real3D_onChunk      :: nh4_n15_assoc
+    dsl4jsb_Real3D_onChunk      :: po4_assoc_fast
+    dsl4jsb_Real3D_onChunk      :: po4_assoc_slow
+    dsl4jsb_Real3D_onChunk      :: po4_occluded
+    dsl4jsb_Real3D_onChunk      :: qmax_org
+    dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
 !! *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
@@ -719,6 +499,22 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,  nh4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  no3_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  noy)
+    dsl4jsb_Get_var3D_onChunk(SB_,  n2o)
+    dsl4jsb_Get_var3D_onChunk(SB_,  n2)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nh4_n15_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  no3_n15_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nh4_assoc)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nh4_n15_assoc)
+    dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_fast)
+    dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_slow)
+    dsl4jsb_Get_var3D_onChunk(SB_,  po4_occluded)
+    dsl4jsb_Get_var3D_onChunk(SB_,  qmax_org)
+    dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
 
 
 !! *slmtemp
@@ -809,12 +605,12 @@ CONTAINS
                                      SUM(sb%pool%mycorrhiza%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))       
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
-                                     SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
-                                     SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , & 
-                                     SUM(sb%po4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       , &
-                                     SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                              , &
-                                     SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                              , &
-                                     SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))  
+                                     SUM(nh4_solute(1,:)*soil_depth_sl(1,:))                       , & 
+                                     SUM(no3_solute(1,:)*soil_depth_sl(1,:))                       , & 
+                                     SUM(po4_solute(1,:)*soil_depth_sl(1,:))                       , &
+                                     SUM(noy(1,:)*soil_depth_sl(1,:))                              , &
+                                     SUM(n2o(1,:)*soil_depth_sl(1,:))                              , &
+                                     SUM(n2(1,:)*soil_depth_sl(1,:))  
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
                                      SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     + & 
@@ -827,11 +623,11 @@ CONTAINS
                                       SUM(sb%pool%microbial%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))          + &
                                       SUM(sb%pool%residue%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
                                       SUM(sb%pool%mycorrhiza%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))         , &
-                                     SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + & 
-                                      SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + & 
-                                      SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
-                                      SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
-                                      SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))                               , &     
+                                     SUM(nh4_solute(1,:)*soil_depth_sl(1,:))                                + & 
+                                      SUM(no3_solute(1,:)*soil_depth_sl(1,:))                                + & 
+                                      SUM(noy(1,:)*soil_depth_sl(1,:))                                       + &
+                                      SUM(n2o(1,:)*soil_depth_sl(1,:))                                       + &
+                                      SUM(n2(1,:)*soil_depth_sl(1,:))                                        , &     
                                      SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))     + & 
                                       SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:))         + &
                                       SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:))            + &
@@ -843,11 +639,11 @@ CONTAINS
                                       SUM(sb%pool%microbial%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))          + &
                                       SUM(sb%pool%residue%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
                                       SUM(sb%pool%mycorrhiza%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))         + &
-                                      SUM(sb%nh4_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + & 
-                                      SUM(sb%no3_solute%ptr(1,:,1)*soil_depth_sl(1,:))                       + &
-                                      SUM(sb%noy%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
-                                      SUM(sb%n2o%ptr(1,:,1)*soil_depth_sl(1,:))                              + &
-                                      SUM(sb%n2%ptr(1,:,1)*soil_depth_sl(1,:))                               + &     
+                                      SUM(nh4_solute(1,:)*soil_depth_sl(1,:))                                + & 
+                                      SUM(no3_solute(1,:)*soil_depth_sl(1,:))                                + &
+                                      SUM(noy(1,:)*soil_depth_sl(1,:))                                       + &
+                                      SUM(n2o(1,:)*soil_depth_sl(1,:))                                       + &
+                                      SUM(n2(1,:)*soil_depth_sl(1,:))                                        + &     
                                       veg%total_biomass%nitrogen%ptr 
 
               dC13polymeric_litter(1,1) = calc_delta_C13(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
@@ -882,8 +678,8 @@ CONTAINS
                 !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%residue%nitrogen%ptr(1,1,1),sb%pool%residue%nitrogen15%ptr(1,1,1)), &
-                !calc_delta_N15(sb%nh4_solute%ptr(1,1,1),sb%nh4_n15_solute%ptr(1,1,1)), &
-                !calc_delta_N15(sb%no3_solute%ptr(1,1,1),sb%no3_n15_solute%ptr(1,1,1))
+                !calc_delta_N15(nh4_solute(1,1),nh4_n15_solute(1,1)), &
+                !calc_delta_N15(no3_solute(1,1),no3_n15_solute(1,1))
               
               lun=lun+1
               DO icanopy=1, assimi_config%ncanopy
@@ -1012,18 +808,17 @@ CONTAINS
                                   sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
              lun=lun+1
 
-             write(lun,'(100F12.6)') time_d,sb%nh4_solute%ptr(ics:ice,:,iblk),sb%no3_solute%ptr(ics:ice,:,iblk), &
-!                                  calc_delta_N15(sb%nh4_solute%ptr(ics:ice,:,iblk),sb%nh4_n15_solute%ptr(ics:ice,:,iblk)), &            
-!                                  calc_delta_N15(sb%no3_solute%ptr(ics:ice,:,iblk),sb%no3_n15_solute%ptr(ics:ice,:,iblk)), &            
-                                  sb%nh4_assoc%ptr(ics:ice,:,iblk) !, &
-!                                  calc_delta_N15(sb%nh4_assoc%ptr(ics:ice,:,iblk),sb%nh4_n15_assoc%ptr(ics:ice,:,iblk))
+             write(lun,'(100F12.6)') time_d,nh4_solute(:,:),no3_solute(:,:), &
+!                                  calc_delta_N15(nh4_solute(:,:),nh4_n15_solute(:,:)), &            
+!                                  calc_delta_N15(no3_solute(:,:),no3_n15_solute(:,:)), &            
+                                  nh4_assoc(:,:) !, &
+!                                  calc_delta_N15(nh4_assoc(:,:),nh4_n15_assoc(:,:))
              lun=lun+1
 
-             write(lun,'(100F12.6)') time_d,sb%po4_solute%ptr(ics:ice,:,iblk),sb%po4_assoc_fast%ptr(ics:ice,:,iblk), & 
-                                            sb%po4_assoc_slow%ptr(ics:ice,:,iblk), sb%po4_occluded%ptr(ics:ice,:,iblk)
+             write(lun,'(100F12.6)') time_d,po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:)
              lun=lun+1
 
-             write(lun,'(100F12.6)') time_d,sb%qmax_org%ptr(ics:ice,:,iblk),sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)
+             write(lun,'(100F12.6)') time_d, qmax_org(:,:), bulk_dens_corr_sl(:,:)
              
           ENDIF
        ENDIF 
@@ -1058,12 +853,11 @@ CONTAINS
 
     !> 1.0 init
     opt = " "
+    output_interval_flux = 0.0_wp
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
-    !! it is not necessary to pass 'base_config%output_interval_pool' as argument to open_pool_output_files
-    !! as 'base_config' is global & defined with SAVE and initialized before this function is called
-    output_interval_flux = calc_output_time_interval(base_config%output_interval_flux)
+    output_interval_flux = calc_output_time_interval()
 
 
     !> 2.1 get options (opt) for filenames
@@ -1246,22 +1040,101 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                      :: lun             ! locical unit number
-    REAL(wp), SAVE               :: dtime_one = 1.0_wp ! just 1.0
-    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,hlp1,dC13litterfall,dC13het_resp,dC13leaching
+    TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
+    INTEGER                               :: lun                ! locical unit number
+    REAL(wp)                              :: dC13gpp,dC13rg,dC13rm,hlp1,dC13litterfall,dC13het_resp,dC13leaching
+    ! local accumulation variables
+    REAL(wp), SAVE                        :: gpp_acc   = 0.0_wp ! Note: gpp_acc is initialized only the first time the subroutine is called. 
+                                                                ! On subsequent calls the old value of gpp_acc is retained.
+                                                                ! To avoid confusion the SAVE attribute is added, even though this is redundant.
+    REAL(wp), SAVE                        :: growth_resp_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: maint_resp_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: n_transform_resp_acc = 0.0_wp   
+    REAL(wp), SAVE                        :: n_fixation_resp_acc = 0.0_wp 
+    REAL(wp), SAVE                        :: exudationC_acc      = 0.0_wp  
+    REAL(wp), SAVE                        :: npp_acc             = 0.0_wp   
+    REAL(wp), SAVE                        :: res_use_c_acc       = 0.0_wp   
+    REAL(wp), SAVE                        :: gpp_C13_acc         = 0.0_wp
+    REAL(wp), SAVE                        :: growth_resp_C13_acc = 0.0_wp
+    REAL(wp), SAVE                        :: maint_resp_C13_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: gpp_C14_acc         = 0.0_wp
+    REAL(wp), SAVE                        :: growth_resp_C14_acc = 0.0_wp
+    REAL(wp), SAVE                        :: maint_resp_C14_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: uptake_nh4_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: uptake_no3_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: recycling_n_acc     = 0.0_wp  
+    REAL(wp), SAVE                        :: res_use_n_acc       = 0.0_wp  
+    REAL(wp), SAVE                        :: n_fixation_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: uptake_po4_acc      = 0.0_wp
+    REAL(wp), SAVE                        :: recycling_p_acc     = 0.0_wp  
+    REAL(wp), SAVE                        :: res_use_p_acc       = 0.0_wp   
+    REAL(wp), SAVE                        :: precip_acc          = 0.0_wp 
+    REAL(wp), SAVE                        :: evaporation_acc     = 0.0_wp 
+    REAL(wp), SAVE                        :: transpiration_acc   = 0.0_wp 
+    REAL(wp), SAVE                        :: interception_acc    = 0.0_wp 
+    REAL(wp), SAVE                        :: runoff_acc          = 0.0_wp 
+    REAL(wp), SAVE                        :: drainage_acc        = 0.0_wp 
+    REAL(wp), SAVE                        :: gc_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: ga_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: n_deposition_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: ppfd_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: rnet_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: qh_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: qle_acc             = 0.0_wp
+    REAL(wp), SAVE                        :: qg_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: albedo_acc          = 0.0_wp
+    REAL(wp), SAVE                        :: appfd_acc           = 0.0_wp
+    INTEGER,  SAVE                        :: ndat_acc            = 0 
+    ! soil - local accumulation variables
+    REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: het_respC_acc       = 0.0_wp
+    REAL(wp), SAVE                        :: leachingCorg_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: het_respC13_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: leachingC13org_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: litterfallC14_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: het_respC14_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: leachingC14org_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: litterfallN_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_nh4_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_no3_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: leachingNorg_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: litterfallP_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_po4_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: leachingPorg_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: nitrification_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: denitrification_acc = 0.0_wp
+    REAL(wp), SAVE                        :: emission_noy_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: emission_n2o_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: emission_n2_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: leaching_nh4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: leaching_no3_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: leaching_po4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: sb_delta_pools_carbon_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: sb_delta_pools_nitrogen_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: sb_delta_pools_phosphorus_acc = 0.0_wp
+    REAL(wp), SAVE                        :: sb_delta_pools_carbon13_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: sb_delta_pools_carbon14_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: sb_delta_pools_nitrogen15_acc = 0.0_wp
+    REAL(wp), SAVE                        :: sb_total_flux_carbon_acc      = 0.0_wp
+    REAL(wp), SAVE                        :: sb_total_flux_nitrogen_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: sb_total_flux_phosphorus_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: sb_total_flux_carbon13_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: dtime_one = 1.0_wp ! just 1.0    
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
-    dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
-    dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
-    dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
-    dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
+    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory),    POINTER :: a2l__mem
+    dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory),    POINTER :: l2a__mem
+    dsl4jsb_Def_memory(ASSIMI_)                !     TYPE(t_assimi_memory), POINTER :: assimi__mem
+    dsl4jsb_Def_memory(VEG_)                   !     TYPE(t_veg_memory),    POINTER :: veg__mem
+    dsl4jsb_Def_memory(RAD_)                   !     TYPE(t_rad_memory),    POINTER :: rad__mem
+    dsl4jsb_Def_memory(SOIL_)                  !     TYPE(t_soil_memory),   POINTER :: soil__mem
+    dsl4jsb_Def_memory(SB_)                    !     TYPE(t_sb_memory),     POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: ga
@@ -1318,6 +1191,25 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: total_flux_carbon13
     dsl4jsb_Real2D_onChunk      :: total_flux_carbon14
     dsl4jsb_Real2D_onChunk      :: total_flux_nitrogen15
+    dsl4jsb_Real2D_onChunk      :: emission_noy
+    dsl4jsb_Real2D_onChunk      :: emission_n2o
+    dsl4jsb_Real2D_onChunk      :: emission_n2
+    dsl4jsb_Real2D_onChunk      :: leaching_nh4_solute
+    dsl4jsb_Real2D_onChunk      :: leaching_no3_solute
+    dsl4jsb_Real2D_onChunk      :: leaching_po4_solute
+    ! SB_ 2D
+    dsl4jsb_Real3D_onChunk      :: het_respiration
+    dsl4jsb_Real3D_onChunk      :: het_respiration_c13
+    dsl4jsb_Real3D_onChunk      :: het_respiration_c14
+    dsl4jsb_Real3D_onChunk      :: net_mineralisation_nh4
+    dsl4jsb_Real3D_onChunk      :: net_mineralisation_no3
+    dsl4jsb_Real3D_onChunk      :: net_mineralisation_po4
+    dsl4jsb_Real3D_onChunk      :: nitrification_no3
+    dsl4jsb_Real3D_onChunk      :: nitrification_noy
+    dsl4jsb_Real3D_onChunk      :: nitrification_n2o
+    dsl4jsb_Real3D_onChunk      :: denitrification_n2
+    dsl4jsb_Real3D_onChunk      :: denitrification_noy
+    dsl4jsb_Real3D_onChunk      :: denitrification_n2o
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1399,9 +1291,25 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon13)  
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon14)  
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_nitrogen15)
+    dsl4jsb_Get_var2D_onChunk(SB_,  emission_noy)
+    dsl4jsb_Get_var2D_onChunk(SB_,  emission_n2o)
+    dsl4jsb_Get_var2D_onChunk(SB_,  emission_n2)
+    dsl4jsb_Get_var2D_onChunk(SB_,  leaching_nh4_solute)
+    dsl4jsb_Get_var2D_onChunk(SB_,  leaching_no3_solute)
+    dsl4jsb_Get_var2D_onChunk(SB_,  leaching_po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration)
+    dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration_c13)
+    dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration_c14)
+    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_nh4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_no3)
+    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_no3)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_noy)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_n2o)
+    dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_n2)
+    dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_noy)
+    dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_n2o)
     
-    
-
 !! *slmtemp
     veg     => veg__mem 
     sb      => sb__mem
@@ -1410,7 +1318,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
 
     SELECT CASE(TRIM(base_config%slm_model_name))
@@ -1440,7 +1347,7 @@ CONTAINS
              maint_resp_acc   = maint_resp_acc    + maint_respiration(1)                * dtime_one
              n_transform_resp_acc = n_transform_resp_acc  + n_transform_respiration(1)  * dtime_one
              n_fixation_resp_acc  = n_fixation_resp_acc   + n_fixation_respiration(1)   * dtime_one
-             exudationC_acc       = exudationC_acc      + veg%exudation%carbon%ptr    * dtime_one *1000000._wp/dtime      
+             exudationC_acc       = exudationC_acc        + veg%exudation%carbon%ptr    * dtime_one *1000000._wp/dtime      
              npp_acc              = npp_acc               + npp(1)                      * dtime_one
              res_use_c_acc        = res_use_c_acc         + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(1) * dtime_one
@@ -1451,13 +1358,13 @@ CONTAINS
              maint_resp_C14_acc   = maint_resp_C14_acc    + maint_respiration_c14(1)  * dtime_one
              uptake_nh4_acc       = uptake_nh4_acc        + uptake_nh4(1)             * dtime_one
              uptake_no3_acc       = uptake_no3_acc        + uptake_no3(1)             * dtime_one
-             recycling_n_acc  = recycling_n_acc   + ( recycling_leaf_n(1) + &
-                                       recycling_fine_root_n(1) + recycling_heart_wood_n(1) )     * dtime_one *1000000._wp/dtime
+             recycling_n_acc  = recycling_n_acc   + ( recycling_leaf_n(1) + recycling_fine_root_n(1) + recycling_heart_wood_n(1)) &
+                                                                                    * dtime_one *1000000._wp/dtime
              res_use_n_acc    = res_use_n_acc     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
              n_fixation_acc   = n_fixation_acc    + n_fixation(1)                   * dtime_one 
-             uptake_po4_acc     = uptake_po4_acc      + uptake_po4(1)                     * dtime_one
-             recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + & 
-                                       recycling_fine_root_p(1) + recycling_heart_wood_p(1) )     * dtime_one *1000000._wp/dtime
+             uptake_po4_acc   = uptake_po4_acc    + uptake_po4(1)                   * dtime_one
+             recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + recycling_fine_root_p(1) + recycling_heart_wood_p(1)) &
+                                                                                    * dtime_one *1000000._wp/dtime
              res_use_p_acc    = res_use_p_acc     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
              IF(output_interval_flux < 1.0_wp) THEN
                 precip_acc       = precip_acc        + (rain(1) + snow(1))  
@@ -1487,23 +1394,23 @@ CONTAINS
              qg_acc           = qg_acc            + ground_heat_flx(1)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(1)                      * dtime_one               
              ndat_acc         = ndat_acc          + 1 
-             het_respC_acc   = het_respC_acc   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             het_respC13_acc = het_respC13_acc + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             het_respC14_acc = het_respC14_acc + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             net_min_nh4_acc = net_min_nh4_acc + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             net_min_po4_acc = net_min_po4_acc + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             nitrification_acc = nitrification_acc + & 
-                SUM((sb%nitrification_no3%ptr(ics:ice,:,iblk) + sb%nitrification_noy%ptr(ics:ice,:,iblk) + sb%nitrification_n2o%ptr(ics:ice,:,iblk)) * soil_depth_sl(:,:)) * & 
-                dtime_one
+             het_respC_acc   = het_respC_acc   + SUM(het_respiration(:,:) * soil_depth_sl(:,:)) * dtime_one
+             het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:)) * dtime_one
+             het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:)) * dtime_one
+             net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(:,:) * soil_depth_sl(:,:)) * dtime_one
+             net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(:,:) * soil_depth_sl(:,:)) * dtime_one
+             nitrification_acc   = nitrification_acc + & 
+                                    SUM((nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) * &
+                                    soil_depth_sl(:,:)) * dtime_one
              denitrification_acc = denitrification_acc + & 
-                SUM((sb%denitrification_n2%ptr(ics:ice,:,iblk) + sb%denitrification_noy%ptr(ics:ice,:,iblk) + sb%denitrification_n2o%ptr(ics:ice,:,iblk)) * soil_depth_sl(:,:)) * & 
-                dtime_one 
-             emission_noy_acc = emission_noy_acc + sb%emission_noy%ptr(1,iblk) * dtime_one
-             emission_n2o_acc = emission_n2o_acc + sb%emission_n2o%ptr(1,iblk) * dtime_one
-             emission_n2_acc  = emission_n2_acc  + sb%emission_n2%ptr(1,iblk) * dtime_one
-             leaching_nh4_acc = leaching_nh4_acc + sb%leaching_nh4_solute%ptr(1,iblk) * dtime_one
-             leaching_no3_acc = leaching_no3_acc + sb%leaching_no3_solute%ptr(1,iblk) * dtime_one
-             leaching_po4_acc = leaching_po4_acc + sb%leaching_po4_solute%ptr(1,iblk) * dtime_one
+                                    SUM((denitrification_n2(:,:) + denitrification_noy(:,:) + denitrification_n2o(:,:)) * &
+                                    soil_depth_sl(:,:)) * dtime_one 
+             emission_noy_acc = emission_noy_acc + emission_noy(1) * dtime_one
+             emission_n2o_acc = emission_n2o_acc + emission_n2o(1) * dtime_one
+             emission_n2_acc  = emission_n2_acc  + emission_n2(1) * dtime_one
+             leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(1) * dtime_one
+             leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(1) * dtime_one
+             leaching_po4_acc = leaching_po4_acc + leaching_po4_solute(1) * dtime_one
              ! for mass balance checks in SB_
               sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + SUM(sb%delta_pools%carbon%ptr(ics:ice,:,iblk))
               sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + SUM(sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk))
@@ -1713,18 +1620,18 @@ CONTAINS
                                       veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
                                       veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) * 1000000.0_wp * dtime_one/dtime
              
-             het_respC_acc   = het_respC_acc   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             het_respC13_acc = het_respC13_acc + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             het_respC14_acc = het_respC14_acc + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             net_min_nh4_acc = net_min_nh4_acc + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             net_min_no3_acc = net_min_no3_acc + SUM(sb%net_mineralisation_no3%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
-             net_min_po4_acc = net_min_po4_acc + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             het_respC_acc   = het_respC_acc   + SUM(het_respiration(:,:) * soil_depth_sl(:,:)) * dtime_one
+             het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:)) * dtime_one
+             het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:)) * dtime_one
+             net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(:,:) * soil_depth_sl(:,:)) * dtime_one
+             net_min_no3_acc = net_min_no3_acc + SUM(net_mineralisation_no3(:,:) * soil_depth_sl(:,:)) * dtime_one
+             net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(:,:) * soil_depth_sl(:,:)) * dtime_one
 
-             leachingCorg_acc = leachingCorg_acc - sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
              leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
              leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingNorg_acc = leachingNorg_acc - sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingPorg_acc = leachingPorg_acc - sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
@@ -1799,21 +1706,17 @@ CONTAINS
     !> 1.0 init
     opt = " "
 
-!    !> 1.1 transform interval string to interval number 
-!    !! 
-!    !! output interval will be always timestep
-!    output_interval_litterfall_soilphysics = calc_output_time_interval('timestep')
-
-
-    !> 2.1 get options (opt) for filenames
     !! 
+    !! output interval will be always timestep !
+    !! 
+
+    !> 2.0 get options (opt) for filenames
     !! 
     IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
-    !> 2.2 define open() statements for file output
-    !! 
+    !> 2.1 define open() statements for file output
     !! 
     lun = 100 + 60
     fname = 'soilphysics'//'_timestep'//TRIM(opt)//'.txt'
@@ -1823,7 +1726,6 @@ CONTAINS
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
     !> 3.0 write column headers into output files
-    !! 
     !! 
     CALL init_output_files_soil_forcing
 
