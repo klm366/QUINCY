@@ -590,6 +590,7 @@ CONTAINS
        fn_et_opt_cl = fn_rub_opt_cl * m_rub/hlp2
        ! fraction in PEPc
        fn_pepc_opt_cl = fn_rub_opt_cl * m_rub/hlp1
+       IF (fn_pepc_opt_cl < eps8) fn_pepc_opt_cl = eps8
     ELSE
        ! fraction in Rubisco
        fn_rub_opt_cl = (1._wp - fn_chl_cl)/(1._wp + (m_rub)/(hlp2))
@@ -598,6 +599,8 @@ CONTAINS
        ! fraction in PEPc
        fn_pepc_opt_cl = 0._wp
     ENDIF
+    IF (fn_rub_opt_cl < eps8) fn_rub_opt_cl = eps8
+    IF (fn_et_opt_cl < eps8)  fn_et_opt_cl = eps8
 
   END SUBROUTINE calc_coordination_n_fractions
 
