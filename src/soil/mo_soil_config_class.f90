@@ -18,7 +18,7 @@ MODULE mo_soil_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: soil_config
+  PUBLIC :: soil_config, t_soil_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil process, derived from t_jsb_config

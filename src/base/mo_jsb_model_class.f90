@@ -70,7 +70,7 @@ MODULE mo_jsb_model_class
     ! PROCEDURE :: Print_actions
     ! PROCEDURE :: Process_message
     ! Extensions:
-!    PROCEDURE :: Configure_processes => Configure_model_processes
+    PROCEDURE :: Configure_processes => Configure_model_processes
 !    PROCEDURE :: Get_shortname       => Get_model_shortname
 !    PROCEDURE :: Get_top_tile
 !    PROCEDURE :: Goto_next_tile
@@ -172,18 +172,18 @@ CONTAINS
 
 !!  END SUBROUTINE Queue_task
 
-!!  SUBROUTINE Configure_model_processes(this)
+  SUBROUTINE Configure_model_processes(this)
 
-!!    CLASS(t_jsb_model), INTENT(inout) :: this
+   CLASS(t_jsb_model), INTENT(inout) :: this
 
-!!    INTEGER :: iproc
+   INTEGER :: iproc
 
-!!    DO iproc=1,SIZE(this%processes)
-!!      IF (ASSOCIATED(this%processes(iproc)%p)) &
-!!        & CALL this%processes(iproc)%p%Configure(this%namelist_filename)
-!!    END DO
+   DO iproc=1,SIZE(this%processes)
+     IF (ASSOCIATED(this%processes(iproc)%p)) &
+       & CALL this%processes(iproc)%p%Configure(this%namelist_filename)
+   END DO
 
-!!  END SUBROUTINE Configure_model_processes
+  END SUBROUTINE Configure_model_processes
 
 !!!!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
 !!!!$

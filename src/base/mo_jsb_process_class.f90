@@ -62,22 +62,22 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_process_name'
-
+ 
     SELECT CASE(iproc)
     CASE (A2L_)
       return_value = 'a2l'
     CASE (L2A_)
       return_value = 'l2a'
-!!    CASE (SEB_)
-!!      return_value = 'seb'
-!!    CASE (TURB_)
-!!      return_value = 'turb'
+   CASE (SEB_)
+     return_value = 'seb'
+   CASE (TURB_)
+     return_value = 'turb'
     CASE (SOIL_)
       return_value = 'soil'
     CASE (SB_)
       return_value = 'soil_biogeochemistry'
-!!    CASE (HYDRO_)
-!!      return_value = 'hydro'
+   CASE (HYDRO_)
+     return_value = 'hydro'
     CASE (VEG_)
       return_value = 'veg'
     CASE (RAD_)
@@ -86,10 +86,10 @@ CONTAINS
       return_value = 'assimi'
     CASE (PHENO_)
       return_value = 'pheno'      
-!!#ifndef __NO_JSBACH_HD__
-!!    CASE (HD_)
-!!      return_value = 'hd'
-!!#endif
+#ifndef __NO_JSBACH_HD__
+   CASE (HD_)
+     return_value = 'hd'
+#endif
     CASE DEFAULT
       return_value = ''
     END SELECT

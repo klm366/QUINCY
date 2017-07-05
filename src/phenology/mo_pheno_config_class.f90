@@ -17,8 +17,7 @@ MODULE mo_pheno_config_class
 
   IMPLICIT NONE
   PRIVATE
-!  PUBLIC :: t_pheno_config
-  PUBLIC :: pheno_config
+  PUBLIC :: t_pheno_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the phenology process, derived from t_jsb_config
@@ -32,8 +31,7 @@ MODULE mo_pheno_config_class
     PROCEDURE :: Init => Init_pheno_config
   END Type t_pheno_config
 
-  TYPE(t_pheno_config), SAVE :: pheno_config
-
+  
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_config_class'
 
 CONTAINS

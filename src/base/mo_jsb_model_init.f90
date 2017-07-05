@@ -26,7 +26,7 @@ MODULE mo_jsb_model_init
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
                                                   PHENO_, SB_, Get_process_name
-    USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
+    USE mo_jsb_process_factory,             ONLY: Create_process, Create_process_memory, max_no_of_processes
     ! shared
     USE mo_shared_constants,                ONLY: init_shared_constants
     USE mo_shared_set_parameters,           ONLY: parameters_from_file    !< TYPE t_parameters_from_file
@@ -41,7 +41,6 @@ MODULE mo_jsb_model_init
     USE mo_assimi_init,                     ONLY: assimi_init
     ! phenology
     USE mo_pheno_constants,                 ONLY: init_pheno_constants
-    USE mo_pheno_config_class,              ONLY: pheno_config
     USE mo_pheno_init,                      ONLY: pheno_init
     ! vegetation
     USE mo_veg_constants,                   ONLY: init_veg_constants
@@ -111,7 +110,8 @@ CONTAINS
     INTEGER                                     :: iproc          !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: prefix         !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: suffix         !! for Memory init and alloc
-    INTEGER                                     :: no_of_models
+    INTEGER                                     :: no_of_models,& !! SLM: we use just one model
+                                                   model_id       !! SLM: per default model_id should be 1
     TYPE(t_jsb_model), POINTER                  :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
     TYPE(t_jsb_model), POINTER                  :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm'
@@ -122,34 +122,41 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !! 1 Model init 
+    !! 1 Model and Process init 
     !!
     !! 
+    !! model
     no_of_models = 1            ! *slmtemp 
+    model_id     = 1            ! *slmtemp 
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
-    current => new_model(1, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! model_id, name, shortname, description, namelist_filename
+    current => new_model(model_id, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! model_id, name, shortname, description, namelist_filename
     ! "current" is used for looping if no_of_models > 1 ; but looping would need to include process configs per model (see section 2)
-    jsbach%models(1)%m => current
+    jsbach%models(model_id)%m => current
     ! point model to jsbach%models(1)%m
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    model => Get_model(model_id)  !     model => Get_model(model_id)   *slmtemp hardcoded model_id !!!
+    !! processes
+    ALLOCATE(model%processes(max_no_of_processes))
+    DO iproc=1,max_no_of_processes      ! *slmtmp currently only creating: SOIL_ VEG_ ASSIMI_ PHENO_ SB_  (mo_jsb_process_factory:Create_process)
+      model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
+    END DO
 
 
     !! 2 Config init, run PROC_config%Init routines and Forcing init
     !!
     !!  
     base_config%namelist_filename       = model%namelist_filename
+    CALL model%Configure_processes()    ! mo_jsb_model_class:Configure_model_processes CALL mo_jsb_process_class:Configure_process CALL config%Init()
+
     assimi_config%namelist_filename     = model%namelist_filename
     veg_config%namelist_filename        = model%namelist_filename
     soil_config%namelist_filename       = model%namelist_filename
     sb_config%namelist_filename         = model%namelist_filename
-    pheno_config%namelist_filename      = model%namelist_filename
     CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL assimi_config%Init
     CALL veg_config%Init
     CALL soil_config%Init
     CALL sb_config%Init
-    CALL pheno_config%Init
     CALL Init_forcing(1)          ! the model_id is passed a argument (model_id = 1, see above new_model() )
 
 

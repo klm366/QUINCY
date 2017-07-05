@@ -39,15 +39,17 @@ MODULE mo_jsb_process_factory
 !!  USE mo_turb_interface,       ONLY: Register_turb_tasks
 !!  USE mo_turb_config_class,    ONLY: t_turb_config
 !!  USE mo_soil_interface,       ONLY: Register_soil_tasks
-!!  USE mo_soil_config_class,    ONLY: t_soil_config
+  USE mo_soil_config_class,    ONLY: t_soil_config
 !!  USE mo_hydro_interface,      ONLY: Register_hydro_tasks
 !!  USE mo_hydro_config_class,   ONLY: t_hydro_config
 !!  USE mo_veg_interface,        ONLY: Register_veg_tasks
-!!  USE mo_veg_config_class,     ONLY: t_veg_config
+  USE mo_veg_config_class,     ONLY: t_veg_config
 !!  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
-!!  USE mo_assimi_config_class,  ONLY: t_assimi_config
+  USE mo_assimi_config_class,  ONLY: t_assimi_config
 !!  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
-!!  USE mo_pheno_config_class,   ONLY: t_pheno_config  
+  USE mo_pheno_config_class,   ONLY: t_pheno_config  
+!!  USE mo_sb_interface,         ONLY: Register_sb_tasks
+  USE mo_sb_config_class,      ONLY: t_sb_config  
 !!#ifndef __NO_JSBACH_HD__
 !!  USE mo_hd_interface,         ONLY: Register_hd_tasks
 !!  USE mo_hd_config_class,      ONLY: t_hd_config
@@ -58,8 +60,7 @@ MODULE mo_jsb_process_factory
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Create_process_memory
-!  PUBLIC :: Create_process, max_no_of_processes                                           *slmtemp
-  PUBLIC :: max_no_of_processes     ! not using Create_process for compatibility with SLM  *slmtemp
+  PUBLIC :: Create_process, max_no_of_processes  
 
   INTEGER, PARAMETER :: max_no_of_processes = 20
 
@@ -67,58 +68,61 @@ MODULE mo_jsb_process_factory
 
 CONTAINS
 
-!!  FUNCTION Create_process(iproc, model_id, namelist_filename) RESULT(return_ptr)
+ FUNCTION Create_process(iproc, model_id, namelist_filename) RESULT(return_ptr)
 
-!!    INTEGER, INTENT(in) :: iproc
-!!    INTEGER, INTENT(in) :: model_id
-!!    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
-!!    CLASS(t_jsb_process), POINTER :: return_ptr
+   INTEGER, INTENT(in) :: iproc
+   INTEGER, INTENT(in) :: model_id
+   CHARACTER(LEN=*), INTENT(in) :: namelist_filename
+   CLASS(t_jsb_process), POINTER :: return_ptr
 
-!!    ALLOCATE(t_jsb_process::return_ptr)
+   ALLOCATE(t_jsb_process::return_ptr)
 
-!!    return_ptr%id             = iproc
-!!    return_ptr%name           = Get_process_name(iproc)
-!!    return_ptr%owner_model_id = model_id
+   return_ptr%id             = iproc
+   return_ptr%name           = Get_process_name(iproc)
+   return_ptr%owner_model_id = model_id
 
-!!    SELECT CASE (iproc)
-!!    CASE (RAD_)
-!!      CALL Register_rad_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_rad_config::return_ptr%config)
-!!    CASE (SEB_)
-!!      CALL Register_seb_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_seb_config::return_ptr%config)
-!!    CASE (TURB_)
-!!      CALL Register_turb_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_turb_config::return_ptr%config)
-!!    CASE (SOIL_)
-!!      CALL Register_soil_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_soil_config::return_ptr%config)
-!!    CASE (HYDRO_)
-!!      CALL Register_hydro_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_hydro_config::return_ptr%config)
-!!    CASE (VEG_)
-!!      CALL Register_veg_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_veg_config::return_ptr%config)
-!!    CASE (ASSIMI_)
-!!      CALL Register_assimi_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_assimi_config::return_ptr%config)
-!!    CASE (PHENO_)
-!!      CALL Register_pheno_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_pheno_config::return_ptr%config)
-!!#ifndef __NO_JSBACH_HD__
-!!    CASE (HD_)
-!!      CALL Register_hd_tasks(return_ptr, model_id)
-!!      ALLOCATE(t_hd_config::return_ptr%config)
-!!#endif
-!!    CASE DEFAULT
-!!      return_ptr => NULL()
-!!    END SELECT
+   SELECT CASE (iproc)
+!   CASE (RAD_)
+!     CALL Register_rad_tasks(return_ptr, model_id)
+!     ALLOCATE(t_rad_config::return_ptr%config)
+  !  CASE (SEB_)
+  !    CALL Register_seb_tasks(return_ptr, model_id)
+  !    ALLOCATE(t_seb_config::return_ptr%config)
+  !  CASE (TURB_)
+  !    CALL Register_turb_tasks(return_ptr, model_id)
+  !    ALLOCATE(t_turb_config::return_ptr%config)
+   CASE (SOIL_)
+!     CALL Register_soil_tasks(return_ptr, model_id)
+     ALLOCATE(t_soil_config::return_ptr%config)
+  !  CASE (HYDRO_)
+  !    CALL Register_hydro_tasks(return_ptr, model_id)
+  !    ALLOCATE(t_hydro_config::return_ptr%config)
+   CASE (VEG_)
+!     CALL Register_veg_tasks(return_ptr, model_id)
+     ALLOCATE(t_veg_config::return_ptr%config)
+   CASE (ASSIMI_)
+!     CALL Register_assimi_tasks(return_ptr, model_id)
+     ALLOCATE(t_assimi_config::return_ptr%config)
+   CASE (PHENO_)
+!     CALL Register_pheno_tasks(return_ptr, model_id)
+     ALLOCATE(t_pheno_config::return_ptr%config)
+   CASE (SB_)
+!     CALL Register_sb_tasks(return_ptr, model_id)
+     ALLOCATE(t_sb_config::return_ptr%config)
+! #ifndef __NO_JSBACH_HD__
+!    CASE (HD_)
+!      CALL Register_hd_tasks(return_ptr, model_id)
+!      ALLOCATE(t_hd_config::return_ptr%config)
+! #endif
+   CASE DEFAULT
+     return_ptr => NULL()
+   END SELECT
 
-!!    IF (ASSOCIATED(return_ptr)) THEN
-!!      return_ptr%config%namelist_filename = TRIM(namelist_filename)
-!!    END IF
+   IF (ASSOCIATED(return_ptr)) THEN
+     return_ptr%config%namelist_filename = TRIM(namelist_filename)
+   END IF
 
-!!  END FUNCTION Create_process
+ END FUNCTION Create_process
 
   FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 

@@ -18,7 +18,7 @@ MODULE mo_sb_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: sb_config
+  PUBLIC :: sb_config, t_sb_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config

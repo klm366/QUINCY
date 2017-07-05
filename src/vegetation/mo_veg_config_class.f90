@@ -19,8 +19,7 @@ MODULE mo_veg_config_class
 
   IMPLICIT NONE
   PRIVATE
-!  PUBLIC :: t_veg_config
-  PUBLIC :: veg_config
+  PUBLIC :: veg_config, t_veg_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config

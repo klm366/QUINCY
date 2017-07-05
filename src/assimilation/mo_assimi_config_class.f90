@@ -18,8 +18,7 @@ MODULE mo_assimi_config_class
 
   IMPLICIT NONE
   PRIVATE
-!  PUBLIC :: t_assimi_config
-  PUBLIC :: assimi_config
+  PUBLIC :: assimi_config, t_assimi_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the assimilation process, derived from t_jsb_config
