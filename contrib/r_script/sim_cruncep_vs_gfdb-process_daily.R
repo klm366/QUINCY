@@ -46,7 +46,7 @@ for (s in 1:nsite) {
    cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_daily.txt',sep=''),header=T)
    nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_daily.txt',sep=''),header=T)
    pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_daily.txt',sep=''),header=T)
-   cnp_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpoolCNP_daily.txt',sep=''),header=T)
+   cnp_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpoolOrg_daily.txt',sep=''),header=T)
    c13c14_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpooldCdN_daily.txt',sep=''),header=T)
    cc13c14_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
    np_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxNP_daily.txt',sep=''),header=T)  

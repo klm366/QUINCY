@@ -12,41 +12,63 @@
 ####### simulation specific options you might want to change ###########################################
 ########################################################################################################
 
-# folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
-# specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
-slmModel="land"        # land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant), canopy
+## folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
+# set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
+experimentalID=""
+## specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
+# land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant), canopy
+slmModel="land"
 
 
 ##>> sites <<###########################################################################################
-# select sites: FLUXNET or CRUNCEPv5
-siteDataSet="f"           # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
-# want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="F"        # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
-customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
-# run only a single site? then provide a site name, else write: singleSiteName=""
-singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
+## select set of sites: FLUXNET or CRUNCEPv5
+# forcing data and all_site_list.dat for the two set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
+# f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteDataSet="f"           
+# all sites or just some sites: specify a local custom site list if you want only some sites"
+# T (True) or F (False) [large caps]
+customSiteList="F"
+# default siteList fileName: "my_site_list.dat" >> must be located in same folder as this script (usually "contrib/site_level/")
+# you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteListFileName=""
+## run a single site: provide the Site-ID 
+# note: this option must be empty (i.e., singleSiteName="" ) to run multiple sites
+# Site-ID must be consistent with the siteDataSet option above; get the Site-ID from the 1st column of the particular all_site_list.dat, e.g. "DE-Hai" "ZA-Kru"
+singleSiteName=""
 
 
 ##>> special runs <<####################################################################################
-# (1) run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
+##(1) run Fluxnet simulations with data output at each timestep for the last complete forcing period at the end of the "simulation_length_number" you specify below
+# T (True) or F (False) [large caps]
+# when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
+# scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
+specialFluxnetOutput="F"
 
-# (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
-# started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
-compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" defaults are: siteDataSet="c", output_interval_pool/flux="daily", paramSensitivitySim="F"
-spinupLengthGFDB=300         # years of spin-up before output is saved
+##(2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
+# T (True) or F (False) [large caps]
+# when set to "T" options are set to: siteDataSet="c", output_interval_pool/flux="daily", paramSensitivitySim="F", flag_generate_soil_forcing="F", specialFluxnetOutput="F"
+# the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
+# you can run simulations for all CRUNCEPv5 sites or for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
+compareSimCRUNCEPvsGFDB="F"
+# years of spin-up before output is saved
+spinupLengthGFDB=300 
 
-# (3) parameter sensitivity simulations
+##(3) parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
-# please provide the line number of the site you want to use in your "customSiteListFileName"
-paramSensitivitySim="F"         # T (True) or F (False) [large caps]
-paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
+# T (True) or F (False) [large caps]
+paramSensitivitySim="F"
+# please provide the line number of the site you want to use in your "customSiteListFileName" >> line 2 to ...  (there is a header at line 1)
+paramSensitivitySiteNumber=5 
 
-# (4) generate forcing for stand alone soil model
-flag_generate_soil_forcing="F"  # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
-spinupLengthSoilForcing=200       # total length of run to produce soil forcing
-yearsSoilForcing=1              # number of years of forcing to be generated    
+##(4) generate forcing for stand alone soil model
+# create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
+# T (True) or F (False) [large caps]
+flag_generate_soil_forcing="F"
+# years of spin-up before output is generated and saved
+spinupLengthSoilForcing=200 
+# number of years of forcing to be generated and saved after spin-up
+yearsSoilForcing=1 
+
 
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
@@ -60,18 +82,21 @@ flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
+
 # canopy model options
-flag_t_resp_acclimation="T"
-flag_t_jmax_acclimation="T"
-flag_optimal_Nfraction="F"
-flag_heterogeneous_canopy="T"
-ncanopy=10                          # number of canopy layers
-canopy_layer_scheme="fapar"      # canopy layer depth calculation options: standard fapar
+flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
+flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
+flag_optimal_Nfraction="F"      # optimal N fraction
+flag_heterogeneous_canopy="T"   # simulate leaf clumping and stems
+ncanopy=10                      # number of canopy layers
+canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+
 # plant growth model options
-flag_optimal_Nleaf="F"
-flag_optimal_allocation="F"
+flag_optimal_Nleaf="F"          # optimal N leaf
+flag_optimal_allocation="F"     # optimal allocation
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"          # does also set "start_bareground"
+flag_tile_veg_dynamics="T"      # does also set "start_bareground"
+
 # soil model options
 soil_depth=5.7                  # meters
 
@@ -79,19 +104,18 @@ soil_depth=5.7                  # meters
 simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
+output_start_first_day_year=1   # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
+output_end_last_day_year=30     # equal with or larger than option: output_start_first_day_year
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
-soil_theta_prescribe=1.0      # float !
+soil_theta_prescribe=1.0        # float !
 
 
 ##>> details about the HPC, if unsure stick with these defaults <<################################
-queue="BTM"                  # available queues: all io BTM mpi_large
-fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
+queue="all"                  # available queues: all BTM io mpi_large  (for information on the queues run at pc026/28: bqueues -l)
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000                  # memory per job you may need [mega byte]; here provided in MB but recalculated to KB which is what OpenLava needs
 numberCpuMax=80              # maximum number of simulations started in parallel
@@ -104,6 +128,8 @@ if [ $flag_generate_soil_forcing == "T" ]
   echo " flag_generate_soil_forcing == T, applying special settings to some options"
   echo " please run the simulations (prep_run_slm.sh) for both FLUXNET and CRUNCEPv5"
   echo " afterwards, please run additional_scripts/copy_soil_forcing.sh when all jobs have finished"
+  echo "   (this script updates the forcing for FLUXNET and CRUNCEPv5, "
+  echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
   echo " "
   experimentalID="create_soil_forc_""$siteDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
   slmModel="plant"
@@ -131,7 +157,8 @@ if [ $flag_generate_soil_forcing == "T" ]
   soil_depth=5.7  
 
   simulation_length_number=${spinupLengthSoilForcing}
-  output_interval_pool="weekly"  # write_soil_forcing() is called per timestep independent of the output_interval_.. settings
+  # forcing output is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
+  output_interval_pool="weekly"
   output_interval_flux="weekly"
   let fd=spinupLengthSoilForcing-yearsSoilForcing+1
   output_start_first_day_year=${fd}
@@ -312,6 +339,7 @@ validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validateOptionForcing="constant generate readfile"
 
+
 ## set and create basic folders and files ##
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
@@ -333,6 +361,7 @@ slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"           ## just the R-
 slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"  ## just the R-Script for FLUXNET diagnostics 
 slmRscriptCompCruncepGfdb1="../r_script/sim_cruncep_vs_gfdb-process_daily.R"  ## just the R-Script for postprocessing simulation data for CRUNCEP vs GFDB
 slmRscriptCompCruncepGfdb2="../r_script/sim_cruncep_vs_gfdb-create_figs.R"    ## just the R-Script for creating comparision figures CRUNCEP vs GFDB
+
 
 ## experimental ID & simulation specific folders at scratch ##
 # if experimental ID is empty, use date as: YYYYMMDD_HHMMSS
@@ -413,7 +442,6 @@ validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearFo
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
-validateUserConfigValues "$fastNodes" "$validateFlags" "fastNodes"
 
 
 ## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
@@ -422,6 +450,8 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   gfdbFile="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv"
   siteDataSet="c"
   paramSensitivitySim="F"
+  flag_generate_soil_forcing="F"
+  specialFluxnetOutput="F"
   let simulation_length_number=spinupLengthGFDB+simulation_length_number
   output_interval_pool="daily"
   output_interval_flux="daily"
@@ -433,10 +463,12 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
     echo " File location & name should be: ""$gfdbFile"
     exit
    else
-    echo " Note: compareSimCRUNCEPvsGFDB was set to T."
-    echo "  You aim for daily SLM simulation output across "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years."
+    echo " "
+    echo " You started simulations to compare CRUNCEP with GFDB data using a spin-up time of ""$spinupLengthGFDB"" years."
+    echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years after the spin-up."
   fi
 fi
+
 
 ## set and create additional basic folders (within the basic simulation folder) ##
 mkdir -p "$simFold"
@@ -446,6 +478,7 @@ mkdir -p "$simFoldErr"
 if [ $paramSensitivitySim == "T" ]; then
   mkdir -p "$simFoldParamSensiFiles"
 fi
+
 
 ## site data-set: FLUXNET or CRUNCEPv5 ##
 if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
@@ -478,6 +511,9 @@ esac
 ## test site list: default or custom ##
 # parameter sensitivity: set customSiteList to "T" and delete any name in singleSiteName (see the IF[] for starting the job very below)
 if [ $paramSensitivitySim == "T" ]; then
+  echo ""
+  echo " You aim at parameter sensitivity simulations for one specific site from your customSiteList."
+  echo " Simulations will be done for the parameter combinations you specified in contrib/parameter_list/param_table.txt"
   customSiteList="T"
   singleSiteName=""
 fi
@@ -524,12 +560,14 @@ if [ $customSiteList == "T" ]
   siteList="$siteDataFold""$siteListFileName"
 fi
 
+
 ## validate experimental ID for alphanumeric only ##
 if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if removing alphanum _ - from jobName returns an non-empty string" then exit
  then
   echo "EXIT! Please use an experimental ID that is alphanumeric, i.e. without any special characters (_ and - are ok though)."
   exit
 fi
+
 
 ## validate options linked with specialFluxnetOutput ##
 if [ $specialFluxnetOutput == "T" ]
@@ -540,14 +578,25 @@ if [ $specialFluxnetOutput == "T" ]
         echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
         rm -r "$simFold"  # deleting the already created simulation folder
         exit
+      else
+        echo " "
+        echo "You just started simulations to generate FLUXNET diagnostics using the last full forcing period after ""$simulation_length_number"" years."
+        #if $singleSiteName is not empty
+        if [ ! -z "$singleSiteName" ]
+         then
+           echo "Simulation is done for one site: ""$singleSiteName"
+         else
+           echo "Simulations are done for all sites listed in: ""$siteListFileName"
+        fi
     fi
     # check site data set
     if [ $siteDataSet != "f" ] 
       then
-        echo "EXIT! You may use a FLUXNET site when you enable special FLUXNET-Simulation output :) ."
+        echo "EXIT! You may use (a) FLUXNET site(s) when you enable special FLUXNET-Simulation output :) ."
         exit
     fi
 fi
+
 
 ## validate allocated memory ##
 lowestMem=10       # 10 Mb
@@ -619,18 +668,6 @@ emailSwitch=""
 if [ "$emailNotification" == "yes" ]
   then
     emailSwitch="-N"
-fi
-
-## set fastNodes option for BTM queue ##
-if [ $fastNodes == "T" ]
-  then
-    if [ $queue == "BTM" ] || [ $queue == "io" ]  # BTM or io
-      then
-        fN="iof iog ioh ioi ioj"
-      else
-        echo "Note: the fast nodes [iof iog ioh ioi ioj] are available only for the BTM and io queue. I switch to fastNodes = F."
-        fastNodes="F"
-    fi
 fi
 
 ## test if namelist binary siteList R-Script (and param.listD + param_table.txt) exists ##
@@ -885,20 +922,10 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
   # submit job array starting at 2 because first line is the header
-  if [ $fastNodes == "T" ]
-    then
-      bsub -q "$queue" -m "$fN" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
-    else
-      bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
-  fi
- else # job with individual site #
+  bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+else # job with individual site #
   array="F"   # needed by cleanup_slm_hpc_run.sh
-  if [ $fastNodes == "T" ]
-    then
-      bsub -q "$queue" -m "$fN" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
-    else
-      bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
-  fi
+  bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
 fi
 
 
@@ -906,6 +933,10 @@ fi
 # this job is pending until the above started $jobName has ended
 sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
-bsub -w "ended($jobName)" -q "$queue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" ./cleanup_slm_hpc_run.sh "$jobName" "$array" "$singleSiteName"
+cleanQueue="BTM all"
+if [ $compareSimCRUNCEPvsGFDB == "T" ]; then cleanQueue="io BTM"; fi
+bsub -w "ended($jobName)" -q "$cleanQueue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" ./cleanup_slm_hpc_run.sh "$jobName" "$array" "$singleSiteName"
+
+
 
 ## end prep_run_slm.sh ##

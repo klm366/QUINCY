@@ -108,7 +108,7 @@ if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "
     then
       ((count++))
 
-      cp ./"$siteBase"/postprocessing/*.pdf  ./pdftmp/"$count"b.pdf
+      cp ./"$siteBase"/postprocessing/*plots.pdf  ./pdftmp/"$count"b.pdf
 
       echo "$jobName"        > ./pdftmp/temp.txt
       echo " "              >> ./pdftmp/temp.txt

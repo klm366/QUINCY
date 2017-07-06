@@ -60,10 +60,11 @@ col_site[obs4mod$Climatic.region=="Tropical Humid"|obs4mod$Climatic.region=="Tro
 
 plot_mod2obs<-function(xvar,yvar,label) {
   vmax<-max(xvar,yvar,na.rm=TRUE)
+  vmax<-vmax+(vmax*0.2)  # add 20% to create space for the legend
   plot(xvar,yvar,xlim=c(0,vmax),ylim=c(0,vmax),pch=pch_site,col=col_site,
        xlab=paste('observed',label),ylab=paste('modelled',label))
   abline(0,1)
-  legend('bottomright',legend=c(pchleg,colleg),pch=c(pchidx,rep(19,4)),col=c(rep('grey',6),colidx))
+  legend('bottomright',legend=c(pchleg,colleg),pch=c(pchidx,rep(19,4)),col=c(rep('grey',6),colidx),cex=0.7)
 }
 
 plot_sitelocs<-function(lon,lat,pchx,colx) {
