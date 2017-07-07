@@ -25,9 +25,11 @@ MODULE mo_sse_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_sse_config
     INTEGER  :: nsnow           !< Maximum number of snow layers
     LOGICAL  :: l_snow          !< T: Consider snow layers in soil thermal calculations
+    ! l_dynsnow, l_heat_cap_dyn and l_heat_cond_dyn are only effective for l_snow=.true.
     LOGICAL  :: l_dynsnow       !< T: Calculate snow parameters heat cond. and heat cap. dynamically (depending on snow density)
     LOGICAL  :: l_heat_cap_dyn  !< T: Use dynamic calculation of soil heat capacity, F: use mineral soil map
     LOGICAL  :: l_heat_cond_dyn !< T: Use dynamic calculation of soil heat conductivity, F: use mineral soil map
+    !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: USe soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing in thermal soil calculations
@@ -124,9 +126,24 @@ CONTAINS
       CALL message(TRIM(routine), 'Not using multi-layer snow model')
     END IF
 
-    config%l_dynsnow       = l_dynsnow
-    config%l_heat_cap_dyn  = l_heat_cap_dyn
-    config%l_heat_cond_dyn = l_heat_cond_dyn
+    IF (.NOT. l_snow .AND. l_dynsnow) THEN
+      config%l_dynsnow = .FALSE.
+      CALL message(TRIM(routine), 'l_dynsnow not in effect for l_snow=.false.')
+    ELSE
+      config%l_dynsnow       = l_dynsnow
+    END IF
+    IF (.NOT. l_snow .AND. l_heat_cap_dyn) THEN
+      config%l_heat_cap_dyn = .FALSE.
+      CALL message(TRIM(routine), 'l_heat_cap_dyn not in effect for l_snow=.false.')
+    ELSE
+      config%l_heat_cap_dyn  = l_heat_cap_dyn
+    END IF
+    IF (.NOT. l_snow .AND. l_heat_cond_dyn) THEN
+      config%l_heat_cond_dyn = .FALSE.
+      CALL message(TRIM(routine), 'l_heat_cond_dyn not in effect for l_snow=.false.')
+    ELSE
+      config%l_heat_cond_dyn = l_heat_cond_dyn
+    END IF
     config%l_heat_cap_map  = l_heat_cap_map
     config%l_heat_cond_map = l_heat_cond_map
     config%l_freeze        = l_freeze

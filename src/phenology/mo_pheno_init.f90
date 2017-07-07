@@ -114,7 +114,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-    input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%grid_id)     ! Temporary
+    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
 
     ! Maximum foliage projected cover
     ptr_2D => input_file%Read_2d(        &

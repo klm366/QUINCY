@@ -52,8 +52,7 @@ MODULE mo_hydro_constants
     & vol_p_wilt_org      = 0.255_wp,  & !< volumetricwilting point of organic layer [m/m]
     & hyd_cond_sat_org    = 0.0002_wp, & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org          = 4._wp,     & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
-    ! @todo: matrix_pot_org is 0.0102 in jsbach3, but according to Beringer, 2001 it's about 10x
-    & matrix_pot_org      = 0.102_wp,  & !< Matrix potential of organic part of soil layer [m]
+    & matrix_pot_org      = 0.12_wp,   & !< Matrix potential of organic part of soil layer [m] (value for peat from Beringer, 2001)
     & pore_size_index_org = 0.7_wp       !< Pore size distribution index of organic part of soil layer []
 
 #endif
