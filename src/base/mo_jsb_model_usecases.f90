@@ -138,11 +138,11 @@ CONTAINS
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
+          & fract_varname='fract_glac')
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_veg')
+          & fract_varname='fract_veg')
 
     NULLIFY(box_tile)
 
@@ -176,15 +176,15 @@ CONTAINS
         & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile, &
-        & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
+        & fract_varname='fract_land')
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
+          & fract_varname='fract_glac')
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_veg')
+          & fract_varname='fract_veg')
 
     NULLIFY(box_tile)
 
@@ -217,11 +217,11 @@ CONTAINS
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
+          & fract_varname='fract_glac')
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_veg')
+          & fract_varname='fract_veg')
 
     NULLIFY(box_tile)
 
