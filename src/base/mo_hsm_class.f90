@@ -540,12 +540,12 @@ CONTAINS
 
     ALLOCATE(self%actions(MAX_ACTIONS))
     !NULLIFY(action)
-    !DO i=1,MAX_ACTIONS
-      !self%actions(i) = t_Action("")     ! This generates an internal compiler error with gfortran
+    DO i=1,MAX_ACTIONS
+      self%actions(i) = t_Action("")
       !action => t_Action("")
       !self%actions(i) = t_Action("")
       !DEALLOCATE(action)
-    !END DO
+    END DO
     CALL self%Register_action(t_Action("ENTER"), l_debug)
     CALL self%Register_action(t_Action("EXIT"),  l_debug)
     CALL self%Register_action(t_Action("START"), l_debug)
