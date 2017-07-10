@@ -17,8 +17,12 @@ MODULE mo_assimi_config_class
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
+  
+  INTEGER :: assimi_ncanopy
+  
   PRIVATE
-  PUBLIC :: assimi_config, t_assimi_config
+  PUBLIC :: t_assimi_config
+  PUBLIC :: assimi_ncanopy                  ! used in mo_slm_varlist  *slmtemp
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the assimilation process, derived from t_jsb_config
@@ -27,18 +31,16 @@ MODULE mo_assimi_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
     LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
-    LOGICAL                 :: flag_heterogeneous_canopy  !< whether or not to simulate leaf clumping and stems
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
     INTEGER                 :: ncanopy                    !< number of canopy layer simulated by the model
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate depth of each single canopy layer
                                                           ! "standard|fapar"           
-    REAL(wp), ALLOCATABLE   :: canopy_layer_depth(:)      !< depth of each single canopy layer (assimi_config\%ncanopy)
+    REAL(wp), ALLOCATABLE   :: canopy_layer_depth(:)      !< depth of each single canopy layer
   CONTAINS
     PROCEDURE :: Init => Init_assimi_config
   END Type t_assimi_config
 
-  TYPE(t_assimi_config), SAVE :: assimi_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_config_class'
 
@@ -59,7 +61,6 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL         :: active
     LOGICAL         :: flag_optimal_Nfraction     , &
-                       flag_heterogeneous_canopy  , &
                        flag_t_resp_acclimation    , &
                        flag_t_jmax_acclimation
     CHARACTER(15)   :: canopy_layer_scheme
@@ -71,7 +72,6 @@ CONTAINS
 
     NAMELIST /assimilation_ctl/       & 
         flag_optimal_Nfraction          , &
-        flag_heterogeneous_canopy       , &
         flag_t_resp_acclimation         , &
         flag_t_jmax_acclimation         , &
         ncanopy                         , &
@@ -89,7 +89,6 @@ CONTAINS
 
     ! Set defaults
     flag_optimal_Nfraction         = .FALSE.      ! .TRUE. .FALSE.
-    flag_heterogeneous_canopy      = .FALSE.      ! .TRUE. .FALSE.
     flag_t_resp_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     ncanopy                        = 20           ! (default for FAPAR based canopy layers would be 10)
@@ -105,10 +104,10 @@ CONTAINS
 
     ! pass values as read from file
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
-    config%flag_heterogeneous_canopy     = flag_heterogeneous_canopy
     config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
     config%ncanopy                       = ncanopy
+    assimi_ncanopy                       = ncanopy      ! *slmtemp
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
 
 

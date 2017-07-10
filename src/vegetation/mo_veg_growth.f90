@@ -47,8 +47,10 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_respiration,         ONLY: temperature_response_respiration
     USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
-    USE mo_assimi_config_class,     ONLY: assimi_config
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
+    
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -74,7 +76,8 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
@@ -233,8 +236,10 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -244,9 +249,6 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                              ! in
@@ -465,9 +467,11 @@ CONTAINS
     !! 
     IF (veg_config%flag_optimal_Nleaf) THEN
       CALL calc_dir_optimal_cn_leaf( &
-                                        nc                               , & ! in
-                                        assimi_config%ncanopy            , &
-                                        lctlib                           , &
+                                        nc                                             , & ! in
+                                        lctlib                                         , &
+                                        dsl4jsb_Config(ASSIMI_)%ncanopy                , &
+                                        dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
+                                        dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                                         growing_season(:)                , &
                                         veg%pool%leaf%carbon%ptr         , &  
                                         veg%pool%leaf%nitrogen%ptr       , & 
@@ -519,9 +523,11 @@ CONTAINS
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
     CALL calc_marginal_canopy_flux_increment( &
-                                              options%nc                  , & ! in
-                                              assimi_config%ncanopy       , &
-                                              lctlib                      , &
+                                              options%nc                                      , & ! in
+                                              lctlib                                          , &
+                                              dsl4jsb_Config(ASSIMI_)%ncanopy                 , &
+                                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction  , &
+                                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)   , &
                                               t_air(:)                    , &
                                               press_srf(:)                , &
                                               q_air(:)                    , &

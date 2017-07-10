@@ -37,7 +37,6 @@ MODULE mo_jsb_model_init
     USE mo_rad_init,                        ONLY: rad_init
     ! assimilation (photosynthesis)
     USE mo_assimi_constants,                ONLY: init_assimi_constants
-    USE mo_assimi_config_class,             ONLY: assimi_config
     USE mo_assimi_init,                     ONLY: assimi_init
     ! phenology
     USE mo_pheno_constants,                 ONLY: init_pheno_constants
@@ -95,7 +94,7 @@ CONTAINS
   !! @todo mo_jsb_model_init: move to default JSBACH4 init style
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm(tile, l_forcing, iblk, ics, ice) !(model_id, model_name)
+  SUBROUTINE init_slm(tile, l_forcing, iblk, ics, ice, nc)  !(model_id, model_name)
 
 
     IMPLICIT NONE
@@ -103,7 +102,10 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)              :: tile           !< data structure for dynamic vegetation and soil variables
     LOGICAL,INTENT(out)                         :: l_forcing      !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    INTEGER,INTENT(in)                          :: iblk, ics, ice !< iBlock, iChunkStart, iChunkEnd
+    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+                                                   ics, &
+                                                   ice, &
+                                                   nc 
     ! 0.2 Local
     CLASS(t_jsb_memory), POINTER                :: tmp_ptr        !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: process_name   !! for Memory init and alloc
@@ -146,14 +148,12 @@ CONTAINS
     !!
     !!  
     base_config%namelist_filename       = model%namelist_filename
+    CALL base_config%Init               ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL model%Configure_processes()    ! mo_jsb_model_class:Configure_model_processes CALL mo_jsb_process_class:Configure_process CALL config%Init()
 
-    assimi_config%namelist_filename     = model%namelist_filename
     veg_config%namelist_filename        = model%namelist_filename
     soil_config%namelist_filename       = model%namelist_filename
     sb_config%namelist_filename         = model%namelist_filename
-    CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
-    CALL assimi_config%Init
     CALL veg_config%Init
     CALL soil_config%Init
     CALL sb_config%Init
@@ -168,7 +168,7 @@ CONTAINS
     model%options%iblk    = iblk               ! Number of current chunk that consists of multiple grid boxes
     model%options%ics     = ics                ! Index of chunk start
     model%options%ice     = ice                ! Index of chunk end
-    model%options%nc      = ice - ics + 1      ! Length of chunk  (end-number - start-number + 1)
+    model%options%nc      = nc                 ! Length of chunk  (end-number - start-number + 1)
     !model%lctlib => Read_lctlib()             ! not possible here - need init constants init !!
 
 
@@ -258,7 +258,7 @@ CONTAINS
     !!
     !! Important! Read_lctlib() needs config and constants init to be finished !
     !! 
-    model%lctlib => Read_lctlib("lctlib_slm_nlct8.def")   
+    model%lctlib => Read_lctlib("lctlib_slm_nlct8.def")
 
 
     !! 9 Time init

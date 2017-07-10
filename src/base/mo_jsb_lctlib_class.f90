@@ -164,8 +164,6 @@ CONTAINS
     USE mo_base_constants,          ONLY: one_day, one_year
     USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
-    USE mo_assimi_config_class,     ONLY: assimi_config  ! flag_heterogeneous_canopy
-
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     TYPE(t_lctlib_element), POINTER    :: return_value(:)
@@ -415,10 +413,6 @@ CONTAINS
         !! sla
           DO i=1,nlct
               lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
-          END DO
-        !! omega_clumping
-          DO i=1,nlct
-            IF(.NOT.assimi_config%flag_heterogeneous_canopy) lctlib(i)%omega_clumping = 1.0_wp
           END DO
         !! cn_leaf
           DO i=1,nlct

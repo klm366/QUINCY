@@ -220,9 +220,6 @@ CONTAINS
     struct, name, var, &
     initval_r) 
 
-    USE mo_soil_config_class,               ONLY: soil_config
-    USE mo_assimi_config_class,             ONLY: assimi_config
-
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
@@ -269,7 +266,7 @@ CONTAINS
     initval_r) 
 
     USE mo_soil_config_class,               ONLY: soil_config
-    USE mo_assimi_config_class,             ONLY: assimi_config
+    USE mo_assimi_config_class,             ONLY: assimi_ncanopy
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -294,7 +291,7 @@ CONTAINS
       CASE(5, 12) ! soil, sb
         nlevel = soil_config%nsoil_water
       CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
-        nlevel = assimi_config%ncanopy
+        nlevel = assimi_ncanopy
       CASE DEFAULT
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT
@@ -332,9 +329,6 @@ CONTAINS
   SUBROUTINE slm_add_var_list_element_r2d( &
     mem, name, var, &
     initval_r) 
-
-    USE mo_soil_config_class,               ONLY: soil_config
-    USE mo_assimi_config_class,             ONLY: assimi_config
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -383,7 +377,7 @@ CONTAINS
     initval_r) 
 
     USE mo_soil_config_class,               ONLY: soil_config
-    USE mo_assimi_config_class,             ONLY: assimi_config
+    USE mo_assimi_config_class,             ONLY: assimi_ncanopy
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -408,7 +402,7 @@ CONTAINS
       CASE(5, 12) ! soil, sb
         nlevel = soil_config%nsoil_water
       CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
-        nlevel = assimi_config%ncanopy
+        nlevel = assimi_ncanopy
       CASE DEFAULT
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT

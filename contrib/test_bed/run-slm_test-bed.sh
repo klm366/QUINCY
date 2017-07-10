@@ -30,7 +30,6 @@ flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition &
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
-flag_heterogeneous_canopy="T"
 ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 # plant growth model options
@@ -232,7 +231,6 @@ validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_v
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
-validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_heterogeneous_canopy"
 validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
@@ -426,12 +424,6 @@ if [ $flag_optimal_Nfraction == T ]
     changeNamelistValue flag_optimal_Nfraction ".TRUE."
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
-fi
-if [ $flag_heterogeneous_canopy == T ]
-  then
-    changeNamelistValue flag_heterogeneous_canopy ".TRUE."
-  else
-    changeNamelistValue flag_heterogeneous_canopy ".FALSE."
 fi
 if [ $flag_oneYearForcing == T ]
   then

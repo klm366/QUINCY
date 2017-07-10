@@ -14,7 +14,7 @@ MODULE mo_veg_respiration
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: calc_maintenance_respiration,temperature_response_respiration
+  PUBLIC :: calc_maintenance_respiration, temperature_response_respiration
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_respiration'
 
@@ -31,24 +31,20 @@ CONTAINS
   PURE ELEMENTAL FUNCTION temperature_response_respiration(temp, temp_mavg) RESULT(temp_response)
 
     USE mo_veg_constants,           ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero
-    USE mo_assimi_config_class,     ONLY: assimi_config
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: temp          !< instantaneous temperature (K)
-    REAL(wp), INTENT(in) :: temp_mavg      !< average temperature for acclimation (K) 
-    REAL(wp) :: temp_response             !< temperature response of respiration (1 at 10°C)
+    REAL(wp), INTENT(in) :: temp                      !< instantaneous temperature (K)
+    REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K) 
+    REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10°C)
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
 
 
-    IF (assimi_config%flag_t_resp_acclimation) THEN
-      temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * & 
-                      exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
-    ELSE
-      temp_response = exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
-    END IF
+    ! IF flag_t_resp_acclimation is false: temp_mavg == t_acclim_zero
+    temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
+                     exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
 
   END FUNCTION temperature_response_respiration
 

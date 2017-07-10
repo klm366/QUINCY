@@ -119,7 +119,7 @@ PROGRAM land_model_driver
   ics     = 1
   ice     = 1
   nc      = ice - ics + 1                                   ! (end-number - start-number + 1)
-  CALL init_model(tile, l_forcing, iblk, ics, ice)       !< model init : mo_jsb_model_init 
+  CALL init_model(tile, l_forcing, iblk, ics, ice, nc)      !< model init : mo_jsb_model_init 
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------
@@ -197,10 +197,10 @@ PROGRAM land_model_driver
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','plant','soil','canopy')
-      CALL open_pool_output_files
-      CALL open_flux_output_files
+      CALL open_pool_output_files(tile, iblk, ics, ice, nc)
+      CALL open_flux_output_files(tile, iblk, ics, ice, nc)
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL open_output_files_soil_forcing
+        CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
       END IF
     CASE('test_canopy')
       ntimestep = 1
@@ -357,8 +357,8 @@ PROGRAM land_model_driver
           CALL close_output_files 
           base_config%output_interval_pool   = 'timestep' 
           base_config%output_interval_flux   = 'timestep' 
-          CALL open_pool_output_files
-          CALL open_flux_output_files
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc)
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc)
 
       ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
           fluxnet_output_status = 3                       ! status update: writing output data finished

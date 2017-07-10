@@ -20,7 +20,6 @@ MODULE mo_shared_output
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_soil_config_class,     ONLY: soil_config
   USE mo_jsb4_forcing,          ONLY: forcing_options
-  USE mo_assimi_config_class,   ONLY: assimi_config
 
   IMPLICIT NONE
 
@@ -84,15 +83,37 @@ CONTAINS
   !! 
   !! lun: start at 100
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_pool_output_files
+  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc)
+
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
 
     IMPLICIT NONE
     ! 0.1 InOut
-    ! 
+    TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
+    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+                                                   ics, &
+                                                   ice, &
+                                                   nc 
     ! 0.2 Local
+    TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
     CHARACTER(30)  :: opt           ! option according to namlist parameters
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_pool_output_files'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
+    ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    ! Get process config
+    dsl4jsb_Get_config(ASSIMI_)
 
 
     !> 1.0 init
@@ -107,7 +128,7 @@ CONTAINS
     !> 2.1 get options (opt) for filenames
     !! 
     !! 
-    IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
      
@@ -351,10 +372,11 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
-    USE mo_assimi_config_class,   ONLY: assimi_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -388,6 +410,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
@@ -457,8 +480,10 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
@@ -466,9 +491,6 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
     dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
@@ -682,7 +704,7 @@ CONTAINS
                 !calc_delta_N15(no3_solute(1,1),no3_n15_solute(1,1))
               
               lun=lun+1
-              DO icanopy=1, assimi_config%ncanopy
+              DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
                 write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(1,icanopy), &
                                       fn_rub_cl(1,icanopy), fn_chl_cl(1,icanopy),&
                                       fn_pepc_cl(1,icanopy), fn_oth_cl(1,icanopy),leaf_nitrogen_cl(1,icanopy), &
@@ -840,15 +862,38 @@ CONTAINS
   !! 
   !! lun: start at 100 + 30
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_flux_output_files
+  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc)
+
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
 
     IMPLICIT NONE
     ! 0.1 InOut
-    ! 
+    TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
+    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+                                                   ics, &
+                                                   ice, &
+                                                   nc 
     ! 0.2 Local
+    TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
     CHARACTER(30)  :: opt           ! option according to namlist parameters
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_flux_output_files'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
+    ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    ! Get process config
+    dsl4jsb_Get_config(ASSIMI_)
+
 
 
     !> 1.0 init
@@ -863,7 +908,7 @@ CONTAINS
     !> 2.1 get options (opt) for filenames
     !! 
     !! 
-    IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
@@ -1693,15 +1738,39 @@ CONTAINS
   !! 
   !! lun: start at 100 + 60
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_output_files_soil_forcing
+  SUBROUTINE open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
+
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
 
     IMPLICIT NONE
     ! 0.1 InOut
-    ! 
+    TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
+    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+                                                   ics, &
+                                                   ice, &
+                                                   nc 
     ! 0.2 Local
+    TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
     CHARACTER(30)  :: opt           ! option according to namlist parameters
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_output_files_soil_forcing'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
+    ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    ! Get process config
+    dsl4jsb_Get_config(ASSIMI_)
+
+
 
     !> 1.0 init
     opt = " "
@@ -1712,7 +1781,7 @@ CONTAINS
 
     !> 2.0 get options (opt) for filenames
     !! 
-    IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 

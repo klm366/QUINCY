@@ -87,7 +87,6 @@ flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition &
 flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
 flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
 flag_optimal_Nfraction="F"      # optimal N fraction
-flag_heterogeneous_canopy="T"   # simulate leaf clumping and stems
 ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
@@ -148,7 +147,6 @@ if [ $flag_generate_soil_forcing == "T" ]
   flag_t_resp_acclimation="T"
   flag_t_jmax_acclimation="T"
   flag_optimal_Nfraction="F"
-  flag_heterogeneous_canopy="T"
   ncanopy=10 
   canopy_layer_scheme="fapar"
   flag_optimal_Nleaf="F"
@@ -434,7 +432,6 @@ validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jma
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
 validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
-validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_heterogeneous_canopy"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$flag_generate_soil_forcing" "$validateFlags" "flag_generate_soil_forcing"
@@ -879,12 +876,6 @@ if [ $flag_optimal_Nfraction == T ]
     changeNamelistValue flag_optimal_Nfraction ".TRUE."
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
-fi
-if [ $flag_heterogeneous_canopy == T ]
-  then
-    changeNamelistValue flag_heterogeneous_canopy ".TRUE."
-  else
-    changeNamelistValue flag_heterogeneous_canopy ".FALSE."
 fi
 if [ $flag_oneYearForcing == T ]
   then

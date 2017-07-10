@@ -95,11 +95,13 @@ CONTAINS
   SUBROUTINE calc_daytime_averages(tile, options, time_day, timestep_prop_day)
 
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_assimi_config_class,     ONLY: assimi_config
+
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
 
@@ -121,7 +123,8 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
@@ -180,17 +183,16 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
@@ -270,7 +272,7 @@ CONTAINS
 
     !> 1.2 2D variables
     !!
-    DO icanopy=1,assimi_config%ncanopy
+    DO icanopy=1,dsl4jsb_Config(ASSIMI_)%ncanopy
       WHERE(swpar_srf_down(:) > eps8)
         ! 1.2.2 add values and count number of values
         ppfd_sunlit_daytime_dacc_cl(:,icanopy)  = ppfd_sunlit_daytime_dacc_cl(:,icanopy)  + ppfd_sunlit_cl(:,icanopy)
@@ -316,7 +318,7 @@ CONTAINS
 
     !> 2.2 2D variables
     !!
-    DO icanopy=1,assimi_config%ncanopy
+    DO icanopy=1,dsl4jsb_Config(ASSIMI_)%ncanopy
       WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
             (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
         WHERE(daytime_counter(:) > eps8)
@@ -433,11 +435,13 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_shared_constants           ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
     USE mo_veg_config_class,        ONLY: veg_config
-    use mo_assimi_config_class,     ONLY: assimi_config
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
+    
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
@@ -458,7 +462,8 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
@@ -585,8 +590,10 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -594,9 +601,6 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(RAD_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
@@ -756,11 +760,11 @@ CONTAINS
     !> 1.4 averages at the time-scale of within-leaf N allocation fractions
     !!
     ppfd_sunlit_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
-                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     ppfd_shaded_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
-                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     fleaf_sunlit_tfrac_mavg_cl(:,:)   = calc_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
-                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     t_air_tfrac_mavg(:)               = calc_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
                                                   mavg_period_tfrac)
     press_srf_tfrac_mavg(:)           = calc_mavg(press_srf_tfrac_mavg(:), press_srf_daytime(:), &
@@ -781,11 +785,11 @@ CONTAINS
     !> 1.5 averages at the time-scale of leaf N allocation fractions
     !!
     ppfd_sunlit_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
-                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     ppfd_shaded_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
-                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     fleaf_sunlit_tcnl_mavg_cl(:,:)     = calc_mavg(fleaf_sunlit_tcnl_mavg_cl(:,:), fleaf_sunlit_cl(:,:), &
-                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,assimi_config%ncanopy) )
+                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     t_air_tcnl_mavg(:)               = calc_mavg(t_air_tcnl_mavg(:), t_air(:), &
                                                   mavg_period_tcnl, do_calc=growing_season(:))
     press_srf_tcnl_mavg(:)           = calc_mavg(press_srf_tcnl_mavg(:), press_srf(:), &
@@ -900,7 +904,11 @@ CONTAINS
     an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
                                           do_calc=(veg%pool%leaf%carbon%ptr > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
-    t_air_tacclim_mavg(:)    = calc_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
+    !! t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
+    !! this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration
+    IF (dsl4jsb_Config(ASSIMI_)%flag_t_resp_acclimation) THEN
+      t_air_tacclim_mavg(:)    = calc_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
+    END IF
     !> 1.10 averages with a weekly, monthly timescale
     !!
     t_air_week_mavg(:)       = calc_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)

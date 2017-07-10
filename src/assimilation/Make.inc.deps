@@ -19,8 +19,8 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_respiration.o \
-  mo_assimi_config_class.o \
   mo_assimi_constants.o \
+  mo_assimi_config_class.o \
   mo_assimi_memory_class.o
 
 mo_assimi_constants.o: \
@@ -51,6 +51,5 @@ mo_assimi_init.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_assimi_config_class.o \
   mo_assimi_memory_class.o
-
-

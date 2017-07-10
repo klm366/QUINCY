@@ -389,7 +389,7 @@ CONTAINS
     ga_tcnl_mavg(:)                   = 0.2_wp
     leaf2root_troot_mavg(:)           = 1.0_wp
     an_boc_tvegdyn_mavg(:)            = 5.0_wp
-    t_air_tacclim_mavg(:)             = 283.15_wp
+    t_air_tacclim_mavg(:)             = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
     t_air_week_mavg(:)                = 283.15_wp
     t_air_month_mavg(:)               = 283.15_wp
     t_jmax_opt_mavg(:)                = 17.0_wp

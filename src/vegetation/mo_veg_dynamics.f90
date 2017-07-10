@@ -41,6 +41,9 @@ CONTAINS
     USE mo_veg_config_class,      ONLY: veg_config
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
+
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
@@ -60,6 +63,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
@@ -90,16 +94,15 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)       ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)     ! in
@@ -142,7 +145,8 @@ CONTAINS
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
-      CALL calc_veg_establishment(lctlib                  , & ! in
+      CALL calc_veg_establishment(lctlib                        , & ! in
+                                 dsl4jsb_Config(ASSIMI_)%ncanopy, &
                                  w_soil_root_theta(1)     , &
                                  growing_season(1)        , &
                                  t_air_week_mavg(1)       , &
@@ -250,6 +254,7 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_veg_establishment(lctlib              , &
+                                    ncanopy             , &
                                     w_soil_root_theta   , &
                                     growing_season      , &
                                     t_air_week_mavg     , &
@@ -261,7 +266,6 @@ CONTAINS
 
 
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
-    USE mo_assimi_config_class,   ONLY: assimi_config         ! ncanopy
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_constants,      ONLY: Tzero
@@ -272,6 +276,7 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
+    INTEGER,                        INTENT(in)    :: ncanopy            !< number of canopy layer
     REAL(wp),                       INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
     LOGICAL,                        INTENT(in)    :: growing_season     !< growing season 
     REAL(wp),                       INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
@@ -297,7 +302,7 @@ CONTAINS
     !> 1.1 light limitation
     !! depending on the red to far-red ratio of the light at the bottom of the canopy
     tc = 0.0_wp
-    DO icanopy=1,assimi_config%ncanopy
+    DO icanopy=1,ncanopy
        tc = tc + leaf_nitrogen_cl(icanopy) * fn_chl_cl(icanopy) * lai_cl(icanopy)
     ENDDO
     rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 

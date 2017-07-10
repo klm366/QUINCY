@@ -41,12 +41,14 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_assimi_config_class,   ONLY: assimi_config   ! e.g. ncanopy
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, &
                                         rho2sbeta, k_csf, min_cos_zenith_angle_rad
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)    
+    
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
     dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
@@ -69,6 +71,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
@@ -123,17 +126,16 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
@@ -189,7 +191,7 @@ CONTAINS
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
-    CALL calc_sw_srf_net(options%nc,assimi_config%ncanopy,swvis_srf_down(:), & 
+    CALL calc_sw_srf_net(options%nc,dsl4jsb_Config(ASSIMI_)%ncanopy,swvis_srf_down(:), & 
                      swpar_fdiffuse(:), cos_zenith_angle(:), & 
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:),& 
                      lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
@@ -202,7 +204,7 @@ CONTAINS
     !! 
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR 
     !! diffuse radiation are very similar 
-    CALL calc_sw_srf_net(options%nc,assimi_config%ncanopy,swnir_srf_down(:), & 
+    CALL calc_sw_srf_net(options%nc,dsl4jsb_Config(ASSIMI_)%ncanopy,swnir_srf_down(:), & 
                      swpar_fdiffuse(:), cos_zenith_angle(:), & 
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
                      lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
@@ -235,7 +237,7 @@ CONTAINS
        appfd(:) = 0.0_wp
     ENDWHERE
    
-    DO icanopy=1,assimi_config%ncanopy 
+    DO icanopy=1,dsl4jsb_Config(ASSIMI_)%ncanopy 
       WHERE(swvis_srf_down(:) > eps8) 
          ppfd_sunlit_cl(:,icanopy) = arad_sunlit_vis_cl(:,icanopy) * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd
          ppfd_shaded_cl(:,icanopy) = arad_shaded_vis_cl(:,icanopy) * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd
@@ -266,6 +268,10 @@ CONTAINS
   !! 
   !! @par Spitters Eq. 12 is wrong
   !!  accordingly to Wang2003, "radf4" was replaced by "-kbl" when calculating "idrdra"
+  !! 
+  !! @par canopy clumping factor
+  !!  to disable clumping set lctlib(:)%omega_clumping = 1.0_wp
+  !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sw_srf_net( nc                  , &   ! in
                               ncanopy             , &   ! in  

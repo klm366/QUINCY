@@ -35,9 +35,11 @@ CONTAINS
   !!                                   allocation to photosynthetic functioning)
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_canopy_layers(nc                , &
-                                ncanopy           , &
-                                lctlib            , &
+  SUBROUTINE calc_canopy_layers(nc                    , &
+                                lctlib                , &
+                                ncanopy               , &
+                                flag_optimal_Nfraction, &
+                                canopy_layer_depth, &
                                 leaf_nitrogen     , &
                                 lai               , &
                                 ppfd_sunlit_cl    , &
@@ -65,16 +67,17 @@ CONTAINS
 
     USE mo_assimi_constants
     USE mo_veg_constants
-    USE mo_assimi_config_class,     ONLY: assimi_config     ! e.g. ncanopy, canopy_layer_depth, flag_optimal_Nfraction
 
 
     IMPLICIT NONE
     ! 0.1 InOut
-    INTEGER,               INTENT(in)            :: nc                    !< number of chunks
-    INTEGER,               INTENT(in)            :: ncanopy               !< number of canopy layers
-    TYPE(t_lctlib_element),INTENT(in)            :: lctlib                !< land-cover-type library
-    REAL(wp),              INTENT(in)            :: leaf_nitrogen         !< total canopy N (mol/m2)
-    REAL(wp),DIMENSION(nc),INTENT(in)            :: lai                   !< total leaf area index
+    INTEGER,                    INTENT(in)       :: nc                    !< number of chunks
+    TYPE(t_lctlib_element),     INTENT(in)       :: lctlib                !< land-cover-type library
+    INTEGER,                    INTENT(in)       :: ncanopy               !< number of canopy layers
+    LOGICAL,                    INTENT(in)       :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
+    REAL(wp),DIMENSION(ncanopy),INTENT(in)       :: canopy_layer_depth    !< depth of each single canopy layer
+    REAL(wp),                   INTENT(in)       :: leaf_nitrogen         !< total canopy N (mol/m2)
+    REAL(wp),DIMENSION(nc),     INTENT(in)       :: lai                   !< total leaf area index
     REAL(wp),DIMENSION(nc),INTENT(in),OPTIONAL   :: t_air                 !< air temperature (avg)
     REAL(wp),DIMENSION(nc),INTENT(in),OPTIONAL   :: t_acclim              !< acclimation temperature (avg)
     REAL(wp),DIMENSION(nc),INTENT(in),OPTIONAL   :: press_srf             !< air pressure (avg)
@@ -131,11 +134,11 @@ CONTAINS
     ENDIF
 
     ! configure options for fractions optimisation
-    optimise_n_fractions = assimi_config%flag_optimal_Nfraction
+    optimise_n_fractions = flag_optimal_Nfraction
     IF (PRESENT(inquire_n_fractions)) optimise_n_fractions = .NOT.inquire_n_fractions
 
     ! check if all input is available to run optimal fractions
-    IF(assimi_config%flag_optimal_Nfraction)THEN
+    IF(flag_optimal_Nfraction)THEN
        IF(.NOT.PRESENT(ppfd_sunlit_cl).OR..NOT.PRESENT(ppfd_shaded_cl).OR..NOT.PRESENT(fleaf_sunlit_cl)) THEN
           WRITE(message_text,'(a)') 'called with fractional optimisation flag, but without par[sunlit|shaded]_cl'
           CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
@@ -160,7 +163,7 @@ CONTAINS
 
     !> 1.0 calculate top of the canopy N
     !!
-    WHERE(lai(:) > assimi_config%canopy_layer_depth(1))
+    WHERE(lai(:) > canopy_layer_depth(1))
        leaf_nitrogen_tc(:) = leaf_nitrogen * 1000._wp * kn / (1._wp - exp(-kn * lai(:)))
     ELSEWHERE(lai(:) > eps8)  ! if LAI does not fill the first canopy layer, top canopy N = leaf N
        leaf_nitrogen_tc(:) = leaf_nitrogen * 1000._wp /lai(:)
@@ -174,17 +177,17 @@ CONTAINS
       IF(lai(ichunk) > eps8) THEN ! avoid any calculation if there are no leaves
         !> 2.1 LAI of canopy layer
         !!
-        IF(lc(ichunk)+assimi_config%canopy_layer_depth(icanopy) < lai(ichunk)) THEN
+        IF(lc(ichunk)+canopy_layer_depth(icanopy) < lai(ichunk)) THEN
           ! if canopy layer is fully developed
-          lai_cl(ichunk,icanopy) = assimi_config%canopy_layer_depth(icanopy)
-        ELSEIF(lc(ichunk) < lai(ichunk) .AND. lc(ichunk)+assimi_config%canopy_layer_depth(icanopy) >= lai(ichunk)) THEN
+          lai_cl(ichunk,icanopy) = canopy_layer_depth(icanopy)
+        ELSEIF(lc(ichunk) < lai(ichunk) .AND. lc(ichunk)+canopy_layer_depth(icanopy) >= lai(ichunk)) THEN
           ! if canopy layer is only partially filled assign difference between full LAI and lc to canopy layer
           lai_cl(ichunk,icanopy) = lai(ichunk) - lc(ichunk)
         END IF
         lc(ichunk) = lc(ichunk) + lai_cl(ichunk,icanopy)
         ! make sure all LAI is represented by letting last layer go to the end of the canopy
-        IF(icanopy==assimi_config%ncanopy .AND. lc(ichunk) < lai(ichunk) ) THEN
-          lai_cl(ichunk,assimi_config%ncanopy) = lai_cl(ichunk,assimi_config%ncanopy) + lai(ichunk) - lc(ichunk)
+        IF(icanopy==ncanopy .AND. lc(ichunk) < lai(ichunk) ) THEN
+          lai_cl(ichunk,ncanopy) = lai_cl(ichunk,ncanopy) + lai(ichunk) - lc(ichunk)
         END IF
 
         !> 2.2 cummulative LAI above mid-point of canopy layer
@@ -199,7 +202,7 @@ CONTAINS
         !> 2.3 N content of the canopy layer
         !!
         IF(cumm_lai_cl(ichunk,icanopy) > eps12)THEN
-          IF(lai(ichunk) > assimi_config%canopy_layer_depth(1)) THEN
+          IF(lai(ichunk) > canopy_layer_depth(1)) THEN
             leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk) * exp(-kn * cumm_lai_cl(ichunk,icanopy))
           ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
             leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk)
@@ -223,8 +226,8 @@ CONTAINS
 
 
     !> 3.2 photosynthetic fractions
-    !! prescribed, or dynamically calculated if assimi_config%flag_optimal_Nfraction = .TRUE.
-    IF (.NOT.assimi_config%flag_optimal_Nfraction) THEN
+    !! prescribed, or dynamically calculated if flag_optimal_Nfraction = .TRUE.
+    IF (.NOT.flag_optimal_Nfraction) THEN
         !> 3.2.1 case of presribed fractions
         WHERE(lai_cl(:,:) > eps8) ! canopy layers with leaves
            ! fraction in chlorophyll
@@ -682,9 +685,11 @@ CONTAINS
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_marginal_canopy_flux_increment( &
-                                                  nc                , &
-                                                  ncanopy           , &
-                                                  lctlib            , &
+                                                  nc                    , &
+                                                  lctlib                , &
+                                                  ncanopy               , &
+                                                  flag_optimal_Nfraction, &
+                                                  canopy_layer_depth    , &
                                                   t_air             , &
                                                   press_srf         , &
                                                   q_air             , &
@@ -725,6 +730,8 @@ CONTAINS
     INTEGER,                        INTENT(in) :: nc                     !< number of chunks
     INTEGER,                        INTENT(in) :: ncanopy                !< number of canopy layers
     TYPE(t_lctlib_element),         INTENT(in) :: lctlib                 !< land-cover-type library - parameters for one pft
+    LOGICAL,                        INTENT(in) :: flag_optimal_Nfraction !< on/off optimise leaf internal N allocation
+    REAL(wp),DIMENSION(ncanopy),    INTENT(in) :: canopy_layer_depth     !< depth of each single canopy layer
     REAL(wp),DIMENSION(nc),         INTENT(in) :: t_air            , &   !< air temperature (K)
                                                   press_srf        , &   !< air pressure (Pa)
                                                   q_air            , &   !< air specific humidity (--)
@@ -816,8 +823,10 @@ CONTAINS
     ! recompute canopy layer LAI and foliar N with new numbers
     CALL calc_canopy_layers( &
                             nc                  = nc                          , & ! in
-                            ncanopy             = ncanopy                     , &
                             lctlib              = lctlib                      , &
+                            ncanopy             = ncanopy                     , &
+                            flag_optimal_Nfraction = flag_optimal_Nfraction   , &
+                            canopy_layer_depth  = canopy_layer_depth(:)       , &
                             leaf_nitrogen       = leaf_nitrogen_new           , &
                             lai                 = lai_new(:)                  , &
                             ppfd_sunlit_cl      = loc_ppfd_sunlit_cl(:,:)     , &
@@ -913,8 +922,10 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_dir_optimal_cn_leaf(  &
                                         nc                            , &
-                                        ncanopy                       , &
                                         lctlib                        , &
+                                        ncanopy                       , &
+                                        flag_optimal_Nfraction        , &
+                                        canopy_layer_depth            , &
                                         growing_season                , &
                                         veg_pool_leaf_carbon          , & ! veg%pool%leaf%carbon%ptr
                                         veg_pool_leaf_nitrogen        , & ! veg%pool%leaf%nitrogen%ptr
@@ -945,15 +956,15 @@ CONTAINS
 
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants,         ONLY: delta_n_leaf !, root2leaf_cn, wood2leaf_cn
-    USE mo_veg_respiration,       ONLY: calc_maintenance_respiration
-    USE mo_assimi_config_class,   ONLY: assimi_config
 
 
     IMPLICIT NONE
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc           !< number of chunks
-    INTEGER,                          INTENT(in)    :: ncanopy      !< number of canopy layers
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
+    INTEGER,                          INTENT(in)    :: ncanopy      !< number of canopy layers
+    LOGICAL,                          INTENT(in)    :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
+    REAL(wp),DIMENSION(ncanopy),      INTENT(in)    :: canopy_layer_depth    !< depth of each single canopy layer
     LOGICAL,DIMENSION(nc),            INTENT(in)    :: growing_season
     REAL(wp),                         INTENT(in)    :: veg_pool_leaf_carbon       , &
                                                        veg_pool_leaf_nitrogen
@@ -1029,11 +1040,13 @@ CONTAINS
 
         ! update N distribution in the canopy
         CALL calc_canopy_layers( &
-                          nc                  = nc                                      , &
-                          ncanopy             = ncanopy                                 , &
-                          lctlib              = lctlib                                  , &
-                          leaf_nitrogen       = leaf_nitrogen_new                       , &
-                          lai                 = lai(ichunk)                             , &
+                          nc                  = nc                            , & ! in
+                          lctlib              = lctlib                        , &
+                          ncanopy             = ncanopy                       , &
+                          flag_optimal_Nfraction = flag_optimal_Nfraction     , &
+                          canopy_layer_depth  = canopy_layer_depth(:)         , &
+                          leaf_nitrogen       = leaf_nitrogen_new             , &
+                          lai                 = lai(ichunk)                   , &
                           ppfd_sunlit_cl      = loc_ppfd_sunlit_cl(ichunk,:)  , &
                           ppfd_shaded_cl      = loc_ppfd_shaded_cl(ichunk,:)  , &
                           fleaf_sunlit_cl     = loc_fleaf_sunlit_cl(ichunk,:) , &
