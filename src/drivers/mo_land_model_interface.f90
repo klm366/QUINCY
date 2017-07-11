@@ -100,10 +100,10 @@ CONTAINS
 
 
     USE mo_jsb_class,                     ONLY: Get_model
-    USE mo_base_memory,                   ONLY: t_slm_tile
+    USE mo_base_memory,                   ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,               ONLY: t_jsb_model
+    USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_config_class,             ONLY: base_config
-    USE mo_sb_config_class,               ONLY: sb_config
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
@@ -118,6 +118,8 @@ CONTAINS
     USE mo_sb_interface
     USE mo_pheno_interface
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -193,10 +195,14 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER     :: model
     CHARACTER(len=*),       PARAMETER   :: routine = TRIM(modname)//':land_model_interface'
     ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SB_)    
+    ! ---------------------------
     ! 0.5 Get Memory
-    !
-    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
+    ! Get process config
+    dsl4jsb_Get_config(SB_)
 
 
 
@@ -273,7 +279,7 @@ CONTAINS
       CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
-      SELECT CASE(TRIM(sb_config%sb_model_scheme))
+      SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE("simple_0d", "simple_1d")
           CALL update_sb_simple_model (tile, model%options)
         CASE('jsm')
@@ -353,7 +359,7 @@ CONTAINS
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
       CALL update_sb_rate_modifier    (tile, model%options)
-      SELECT CASE(TRIM(sb_config%sb_model_scheme))
+      SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE("simple_0d", "simple_1d")
           CALL update_sb_simple_model (tile, model%options)
         CASE('jsm')

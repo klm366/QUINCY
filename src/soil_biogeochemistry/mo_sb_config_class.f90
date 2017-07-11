@@ -18,7 +18,7 @@ MODULE mo_sb_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: sb_config, t_sb_config
+  PUBLIC :: t_sb_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config
@@ -35,8 +35,6 @@ MODULE mo_sb_config_class
     CONTAINS
       PROCEDURE :: Init => Init_sb_config
   END Type t_sb_config
-
-  TYPE(t_sb_config), SAVE :: sb_config
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'

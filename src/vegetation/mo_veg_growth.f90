@@ -49,6 +49,7 @@ CONTAINS
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(SB_)
     
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
@@ -77,6 +78,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -241,6 +243,7 @@ CONTAINS
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -422,6 +425,7 @@ CONTAINS
                                           lctlib, &
                                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                                           TRIM(dsl4jsb_Config(VEG_)%myc_scheme), &
+                                          TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                           kstar_labile(:), &
                                           t_air(:), &
                                           veg%pool%fine_root%carbon%ptr, & 
@@ -803,6 +807,7 @@ CONTAINS
                                               lctlib, &
                                               bnf_scheme, &
                                               myc_scheme, &
+                                              sb_model_scheme, &
                                               kstar_labile, &
                                               t_air, &                                              
                                               fine_root_carbon, & 
@@ -848,11 +853,10 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_shared_constants,        ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
-    USE mo_sb_config_class,         ONLY: sb_config
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf
-    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
+    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
 
     IMPLICIT NONE
     
@@ -860,8 +864,9 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options                  !< model options
     INTEGER,                               INTENT(in)    :: nsoil                    !< number of soil layers
     TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*),                      INTENT(in)    :: bnf_scheme, &            !< from veg_config 
-                                                            myc_scheme               !< from veg_config 
+    CHARACTER(len=*),                      INTENT(in)    :: bnf_scheme               !< from veg config 
+    CHARACTER(len=*),                      INTENT(in)    :: myc_scheme               !< from veg config 
+    CHARACTER(len=*),                      INTENT(in)    :: sb_model_scheme          !< from sb config
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: kstar_labile             !< meristem turnover rate  
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: t_air                    !< air temperature (K) !! should be soil temperature!
     REAL(wp),                              INTENT(in)    :: fine_root_carbon         !< fine root carbon (mol C / m2)
@@ -1059,7 +1064,7 @@ CONTAINS
        ! g/m2 / g/kg -> kg/m2
        ! kg/m2 / m -> kg/m3
        ! kg/m3 / kg/m3 -> 1 = kg/kg
-       IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+       IF(sb_model_scheme == 'simple_0d')THEN
           hlp1(:) = (nh4_solute(:,1)+no3_solute(:,1)) * soil_depth_sl(:,1) * & 
                   molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
        ELSE
@@ -1175,7 +1180,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),   INTENT(in)    :: lctlib                    !< land-cover-type library - parameter across pft's
-    LOGICAL,                  INTENT(in)    :: flag_optimal_Nleaf        !< from veg_config
+    LOGICAL,                  INTENT(in)    :: flag_optimal_Nleaf        !< from veg config
     LOGICAL,                  INTENT(in)    :: growing_season            !< 
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
                                                target_np_leaf            !< 
@@ -1282,8 +1287,8 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib                   !< land-cover-type library - parameters for one pft
-    LOGICAL,               INTENT(in) :: flag_optimal_allocation  !< from veg_config
-    CHARACTER(len=*),      INTENT(in) :: bnf_scheme       !< from veg_config
+    LOGICAL,               INTENT(in) :: flag_optimal_allocation  !< from veg config
+    CHARACTER(len=*),      INTENT(in) :: bnf_scheme       !< from veg config
     REAL(wp), INTENT(in)  :: height                       !< height (m)
     REAL(wp), INTENT(in)  :: veg_pool_sap_wood_carbon     !< woody biomass of an individual tree (mol C/m2)
     REAL(wp), INTENT(in)  :: veg_pool_heart_wood_carbon   !< woody biomass of an individual tree (mol C/m2)
@@ -1732,7 +1737,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
-    LOGICAL,                      INTENT(in)    :: flag_optimal_allocation    !< from veg_config
+    LOGICAL,                      INTENT(in)    :: flag_optimal_allocation    !< from veg config
     REAL(wp),                     INTENT(in)    :: dheight                    !< derivative of height per unit sapwood mass change 
     REAL(wp),                     INTENT(in)    :: kstar_labile               !< potential labile pool turnover rate (1/day) without stoichiometric limit
     REAL(wp),                     INTENT(in)    :: leaf_carbon                !< carbon in leaves (mol/individual)

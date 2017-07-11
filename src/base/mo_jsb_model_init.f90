@@ -21,7 +21,7 @@ MODULE mo_jsb_model_init
     USE mo_jsb_class,                       ONLY: Get_model, jsbach
     USE mo_base_memory,                     ONLY: t_slm_tile, grid
     USE mo_jsb_model_class,                 ONLY: t_jsb_model, new_model
-    USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
+    USE mo_base_config_class,               ONLY: base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, Read_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
@@ -51,7 +51,6 @@ MODULE mo_jsb_model_init
     USE mo_soil_init,                       ONLY: soil_init
     ! soil_biogeochemistry
     USE mo_sb_constants,                    ONLY: init_sb_constants
-    USE mo_sb_config_class,                 ONLY: sb_config
     USE mo_sb_init,                         ONLY: sb_init
 
   IMPLICIT NONE
@@ -151,12 +150,11 @@ CONTAINS
     base_config%namelist_filename       = model%namelist_filename
     CALL base_config%Init               ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL model%Configure_processes()    ! mo_jsb_model_class:Configure_model_processes CALL mo_jsb_process_class:Configure_process CALL config%Init()
+      !> @todo ticket #230
       soil_config%namelist_filename       = model%namelist_filename
-      sb_config%namelist_filename         = model%namelist_filename
       CALL soil_config%Init
-      CALL sb_config%Init
     !! forcing config
-    CALL Init_forcing(1)          ! the model_id is passed a argument (model_id = 1, see above new_model() )
+    CALL Init_forcing(model_id)         ! model_id = 1, see above new_model()
     !! get process configs
     dsl4jsb_Get_config(VEG_)
 

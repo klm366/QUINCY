@@ -45,10 +45,12 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
-    USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_org
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_N15N14
+
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SB_)
  
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -74,9 +76,10 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(VEG_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
     ! A2L
@@ -178,17 +181,16 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
     ! Get process config
-!    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_deposition)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_deposition)              ! in
     ! ---------------------------
@@ -407,17 +409,17 @@ CONTAINS
                                                  transport_n2o(:,:)) * dtime/1.e6_wp
     n2(:,:)             = n2(:,:)             + (denitrification_n2(:,:) + transport_n2(:,:)) * dtime/1.e6_wp
 
-    IF(sb_config%flag_sb_prescribe_nh4)THEN
+    IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
        hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
        nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
        nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
     ENDIF
-    IF(sb_config%flag_sb_prescribe_no3)THEN
+    IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_no3)THEN
        hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
        no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
        no3_n15_solute(:,:) = no3_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
     ENDIF
-    IF(sb_config%flag_sb_prescribe_po4)THEN
+    IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_po4)THEN
        po4_solute(:,:) = po4_solute_prescribe 
     ENDIF
     !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)

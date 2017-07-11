@@ -38,10 +38,12 @@ CONTAINS
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14
     USE mo_shared_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_jsm_processes
     USE mo_sb_jsm_transport
     USE mo_sb_constants
+
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SB_)
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SB_)
@@ -62,6 +64,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SOIL_)
 !! *slmtemp    
@@ -78,15 +81,15 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
+    ! ...
 
 
 !! *slmtemp
@@ -98,12 +101,12 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    SELECT CASE(TRIM(sb_config%sb_model_scheme))
+    SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
 
        ! Initial values for Soenke's four pool soil biogeochemical model
        CASE("simple_0d", "simple_1d")
 
-          IF(sb_config%sb_model_scheme=="simple_0d")THEN
+          IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
              sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 500._wp / molar_mass_C / soil_config%dz_water(1)
              sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = 1000._wp / molar_mass_C / soil_config%dz_water(1)
              sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = 2000._wp / molar_mass_C / soil_config%dz_water(1)

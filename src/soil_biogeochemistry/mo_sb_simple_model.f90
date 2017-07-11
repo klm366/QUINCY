@@ -44,7 +44,9 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_sb_config_class,       ONLY: sb_config
+
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SB_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -98,6 +100,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
@@ -187,16 +190,15 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_,      uptake_norg)
     dsl4jsb_Get_var2D_onChunk(VEG_,      uptake_norg_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_,      uptake_porg)
@@ -283,6 +285,7 @@ CONTAINS
     CALL calc_vertical_profile(lctlib, &
                                nc, &
                                soil_config%nsoil_water, &
+                               TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                root_fraction_act_sl(:,:), &
                                root_depth_avg(:), &
                                root_fraction_sl(:,:), &
@@ -340,6 +343,8 @@ CONTAINS
     CALL calc_potential_nloss_rate(options, &
                                    nc, &
                                    soil_config%nsoil_water, &
+                                   TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme), &
+                                   TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                    sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
                                    nitrification_no3(:,:), &
                                    rtm_nitrification_act(:,:), &
@@ -432,6 +437,8 @@ CONTAINS
     !! 
     CALL calc_actual_nloss_rate(nc, &
                                 soil_config%nsoil_water, &
+                                TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme), &
+                                TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                 soil_depth_sl(:,:), &
                                 net_mineralisation_nh4(:,:), &
                                 volatilisation_n(:,:), &
@@ -552,6 +559,7 @@ CONTAINS
   SUBROUTINE calc_vertical_profile(lctlib, &
                                     nc, &
                                     nsoil_water, &
+                                    sb_model_scheme, &
                                     root_fraction_act_sl, &
                                     root_depth_avg, &
                                     root_fraction_sl, &
@@ -579,7 +587,6 @@ CONTAINS
                                     rmm_gasdiffusion_act, &
                                     anaerobic_volume_fraction_act )
 
-    USE mo_sb_config_class,         ONLY: sb_config
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_sb_constants,            ONLY: km_denitrification_c, km_denitrification_no3
 
@@ -588,6 +595,7 @@ CONTAINS
     TYPE(t_lctlib_element),               INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     INTEGER,                              INTENT(in)    :: nc                         !< number of chunks [ics:ice]
     INTEGER,                              INTENT(in)    :: nsoil_water                !< number of soil layers
+    CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme            !< from sb config
     REAL(wp), DIMENSION(nc,nsoil_water),  INTENT(inout) :: root_fraction_act_sl, &
                                                            root_fraction_sl, &
                                                            soil_depth_sl, &
@@ -623,7 +631,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     
 
-    IF(sb_config%sb_model_scheme == 'simple_0d') THEN
+    IF(sb_model_scheme == 'simple_0d') THEN
       root_fraction_act_sl(:,1)                         = 1.0_wp
       root_fraction_act_sl(:,2:nsoil_water) = 0.0_wp
       ! set to default values to avoid division by zero below (2:nsoil_water are unused in 0D)
@@ -838,6 +846,8 @@ CONTAINS
   SUBROUTINE calc_potential_nloss_rate(options, &
                                        nc, &
                                        nsoil_water, &
+                                       sb_nloss_scheme, &
+                                       sb_model_scheme, &
                                        sb_pool_microbial_carbon, &
                                        nitrification_no3, &
                                        rtm_nitrification_act, &
@@ -861,7 +871,6 @@ CONTAINS
                                        leaching_po4_solute  )
 
     USE mo_base_memory,             ONLY: t_jsb_task_options
-    USE mo_sb_config_class,         ONLY: sb_config
     USE mo_soil_config_class,       ONLY: soil_config
     USE mo_base_constants,          ONLY: dtime
     USE mo_sb_constants,            ONLY: vmax_nitrification, vmax_denitrification, fleach_nh4, fleach_po4
@@ -872,6 +881,8 @@ CONTAINS
     TYPE(t_jsb_task_options),             INTENT(in)    :: options
     INTEGER,                              INTENT(in)    :: nc                         !< number of chunks [ics:ice]
     INTEGER,                              INTENT(in)    :: nsoil_water                !< number of soil layers
+    CHARACTER(len=*),                     INTENT(in)    :: sb_nloss_scheme            !< from sb config
+    CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme            !< from sb config
     REAL(wp), DIMENSION(nc,nsoil_water),  INTENT(in)    :: sb_pool_microbial_carbon
     REAL(wp), DIMENSION(nc,nsoil_water),  INTENT(inout) :: nitrification_no3, &
                                                            rtm_nitrification_act, &
@@ -904,7 +915,7 @@ CONTAINS
 
     !> 2.0 Loss pathways for the dynamic loss calculation scheme 
     !!
-    IF(sb_config%sb_nloss_scheme == 'dynamic') THEN
+    IF(sb_nloss_scheme == 'dynamic') THEN
        !> 2.1 Potential nitrification and denitrification rates (according to Zaehle et al. 2011)
        !! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
        nitrification_no3(:,:)   = vmax_nitrification * rtm_nitrification_act(:,:) * rmm_nitrification_act(:,:) * & 
@@ -918,7 +929,7 @@ CONTAINS
 
        !> 2.2. Leaching rate
        !!
-       IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+       IF(sb_model_scheme == 'simple_0d')THEN
           ! For the 0D soil model, loss is proportional to the fractional waterloss of the soil column
           ! reduction of layer concentration in mol m-3 timestep-1
           transport_nh4_solute(:,1) = - fleach_nh4 * nh4_solute(:,1) * drainage_fraction(:) * dtime
@@ -1473,6 +1484,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_actual_nloss_rate(nc, &
                                     nsoil_water, &
+                                    sb_nloss_scheme, &
+                                    sb_model_scheme, &
                                     soil_depth_sl, &
                                     net_mineralisation_nh4, &
                                     volatilisation_n, &
@@ -1501,7 +1514,6 @@ CONTAINS
                                     leaching_no3_solute, &
                                     leaching_po4_solute )
 
-    USE mo_sb_config_class,         ONLY: sb_config
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_sb_constants,            ONLY: floss_nmin, fnit_nmin, f_nit_noy, f_nit_n2o, f_denit_noy, f_denit_n2o
   
@@ -1509,7 +1521,10 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                              INTENT(in)    :: nc                         !< number of chunks [ics:ice]
     INTEGER,                              INTENT(in)    :: nsoil_water                !< number of soil layers
-    REAL(wp), DIMENSION(nc,nsoil_water),  INTENT(inout) :: net_mineralisation_nh4, &
+    CHARACTER(len=*),                     INTENT(in)    :: sb_nloss_scheme            !< from sb config
+    CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme            !< from sb config
+    REAL(wp), DIMENSION(nc,nsoil_water),  INTENT(inout) :: soil_depth_sl, &
+                                                           net_mineralisation_nh4, &
                                                            volatilisation_n, &
                                                            nitrification_no3, &
                                                            nitrification_noy, &
@@ -1528,8 +1543,7 @@ CONTAINS
                                                            transport_po4_solute, &
                                                            rtm_denitrification_act, &
                                                            rtm_gasdiffusion_act, &
-                                                           rmm_gasdiffusion_act, &
-                                                           soil_depth_sl
+                                                           rmm_gasdiffusion_act
     REAL(wp), DIMENSION(nc),              INTENT(inout) :: emission_noy, &
                                                            emission_n2o, &
                                                            emission_n2, &
@@ -1547,7 +1561,7 @@ CONTAINS
   
     !> 6.0 calculate N losses and nitrification
     !! 
-    IF(sb_config%sb_nloss_scheme == 'fixed') THEN
+    IF(sb_nloss_scheme == 'fixed') THEN
        !> 6.1 case of fixed N losses: N loss proportional to net mineralisation
        WHERE(net_mineralisation_nh4(:,:)>0.0_wp)
           ! N lost to atmosphere during processing of net mineralisation [mol m-3 timestep-1]
@@ -1583,7 +1597,7 @@ CONTAINS
        emission_n2(:)  = SUM(-transport_n2(:,:)  * soil_depth_sl(:,:),DIM=2)
 
        ! record leaching losses for simple_0d model as [mol m-2 timestep-1] (simple_1d has already been calculated in 2.)
-       IF(sb_config%sb_model_scheme=='simple_0d')THEN
+       IF(sb_model_scheme == 'simple_0d') THEN
           leaching_nh4_solute(:) = -transport_nh4_solute(:,1) * soil_depth_sl(:,1)
           leaching_no3_solute(:) = -transport_no3_solute(:,1) * soil_depth_sl(:,1)
           leaching_po4_solute(:) = -transport_po4_solute(:,1) * soil_depth_sl(:,1)
@@ -1886,9 +1900,11 @@ CONTAINS
 !!    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 !!    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
 !!    USE mo_soil_config_class,     ONLY: soil_config
-!!    USE mo_sb_config_class,       ONLY: sb_config
 !!    USE mo_sb_constants
 !!    USE mo_sb_jsm_transport
+!!
+!!    ! Use of process configurations (t_PROC_config)
+!!    dsl4jsb_Use_config(SB_)
 !!
 !!    ! Use of process memories
 !!    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -1935,6 +1951,7 @@ CONTAINS
 !!    ! ---------------------------
 !!    ! 0.3 Memory allocation
 !!    ! Declare process configuration and memory Pointers
+!!    dsl4jsb_Def_config(SB_)
 !!    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
 !!    dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
 !!    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
@@ -1987,16 +2004,16 @@ CONTAINS
 !!!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 !!    ! ---------------------------
 !!    ! 0.5 Get Memory
+!!    model  => Get_model(tile%owner_model_id)
+!!    lctlib => model%lctlib(tile%lcts%lib_id)
 !!    ! Get process config
-!!!    dsl4jsb_Get_config(xx_)
+!!    dsl4jsb_Get_config(SB_)
 !!    ! Get process memories
 !!    dsl4jsb_Get_memory(SOIL_)
 !!    dsl4jsb_Get_memory(SB_)
 !!    ! Get process variables (Set pointers to variables in memory)
-!!    model  => Get_model(tile%owner_model_id)
-!!    lctlib => model%lctlib(tile%lcts%lib_id)
-!!    ! ---------------------------
 !!    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)
+!!    ! ---------------------------
 !!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)
 !!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)
 !!    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)
@@ -2025,9 +2042,12 @@ CONTAINS
 !!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy) 
 !!    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o) 
 !!
+!!
+!!
+!!
 !!    !> 1.0 potential 15N fluxes involving ammonium
 !!    !!
-!!    IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+!!    IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'simple_0d')THEN
 !!       ! For the 0D soil model, loss is proportional to the fractional waterloss of the soil column
 !!       ! reduction of layer concentration in µmol m-3 s-1
 !!       transport_nh4_n15_solute(:,1) = - fleach_nh4 * nh4_n15_solute(:,1) * drainage_fraction(:) *1.e6_wp
@@ -2075,7 +2095,7 @@ CONTAINS
 !!
 !!    !> 2.0 potential 15N fluxes involving nitrate
 !!    !!
-!!    IF(sb_config%sb_model_scheme == 'simple_0d')THEN
+!!    IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'simple_0d')THEN
 !!       ! For the 0D soil model, loss is proportional to the fractional waterloss of the soil column
 !!       ! reduction of layer concentration in mol m-3 timestep-1
 !!       transport_nh4_solute(:,1) = - fleach_nh4 * nh4_solute(:,1) * drainage_fraction(:) * dtime
