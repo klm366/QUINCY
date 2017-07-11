@@ -265,7 +265,7 @@ CONTAINS
     struct, name, var, &
     initval_r) 
 
-    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_soil_config_class,               ONLY: soil_nsoil_water
     USE mo_assimi_config_class,             ONLY: assimi_ncanopy
 
     IMPLICIT NONE
@@ -289,7 +289,7 @@ CONTAINS
     ! select nlevel according to process id 
     SELECT CASE(struct%owner_proc_id)
       CASE(5, 12) ! soil, sb
-        nlevel = soil_config%nsoil_water
+        nlevel = soil_nsoil_water
       CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
         nlevel = assimi_ncanopy
       CASE DEFAULT
@@ -376,7 +376,7 @@ CONTAINS
     mem, name, var, &
     initval_r) 
 
-    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_soil_config_class,               ONLY: soil_nsoil_water
     USE mo_assimi_config_class,             ONLY: assimi_ncanopy
 
     IMPLICIT NONE
@@ -400,7 +400,7 @@ CONTAINS
     ! select nlevel according to process id 
     SELECT CASE(mem%owner_proc_id)
       CASE(5, 12) ! soil, sb
-        nlevel = soil_config%nsoil_water
+        nlevel = soil_nsoil_water
       CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
         nlevel = assimi_ncanopy
       CASE DEFAULT

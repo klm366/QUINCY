@@ -43,7 +43,7 @@ MODULE mo_jsb_model_init
     USE mo_pheno_init,                      ONLY: pheno_init
     ! vegetation
     USE mo_veg_constants,                   ONLY: init_veg_constants
-    USE mo_veg_config_class,                ONLY: veg_config
+    USE mo_veg_config_class,                ONLY: t_veg_config
     USE mo_veg_init,                        ONLY: veg_init
     ! soil
     USE mo_soil_constants,                  ONLY: init_soil_constants
@@ -116,6 +116,7 @@ CONTAINS
                                                    model_id       !! SLM: per default model_id should be 1
     TYPE(t_jsb_model), POINTER                  :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
     TYPE(t_jsb_model), POINTER                  :: model
+    dsl4jsb_Def_config(VEG_)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm'
 
 
@@ -143,21 +144,21 @@ CONTAINS
       model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
     END DO
 
-
     !! 2 Config init, run PROC_config%Init routines and Forcing init
     !!
     !!  
+    !! process config
     base_config%namelist_filename       = model%namelist_filename
     CALL base_config%Init               ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL model%Configure_processes()    ! mo_jsb_model_class:Configure_model_processes CALL mo_jsb_process_class:Configure_process CALL config%Init()
-
-    veg_config%namelist_filename        = model%namelist_filename
-    soil_config%namelist_filename       = model%namelist_filename
-    sb_config%namelist_filename         = model%namelist_filename
-    CALL veg_config%Init
-    CALL soil_config%Init
-    CALL sb_config%Init
+      soil_config%namelist_filename       = model%namelist_filename
+      sb_config%namelist_filename         = model%namelist_filename
+      CALL soil_config%Init
+      CALL sb_config%Init
+    !! forcing config
     CALL Init_forcing(1)          ! the model_id is passed a argument (model_id = 1, see above new_model() )
+    !! get process configs
+    dsl4jsb_Get_config(VEG_)
 
 
     !! 3 Set model options
@@ -176,12 +177,12 @@ CONTAINS
     !! 
     !! 
     !! @todo model_init -> init lcts of the tile via PROCEDURE Construct_jsb_lct  *slmtemp
-    tile%owner_model_id = current%id         ! *slmtemp
+    tile%owner_model_id = current%id                    ! *slmtemp
     ! lcts
-    tile%lcts%id        = 2                  ! VEG_TYPE     2 == Vegetated
-    tile%lcts%name      = "veg"              ! Short name for lct
-    tile%lcts%long_name = "slm vegetation"   ! Long name for lct
-    tile%lcts%lib_id    = veg_config%pft_id  ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
+    tile%lcts%id        = 2                             ! VEG_TYPE     2 == Vegetated
+    tile%lcts%name      = "veg"                         ! Short name for lct
+    tile%lcts%long_name = "slm vegetation"              ! Long name for lct
+    tile%lcts%lib_id    = dsl4jsb_Config(VEG_)%pft_id   ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
 
 
     !! 5 Grid init

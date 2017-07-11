@@ -31,7 +31,6 @@ CONTAINS
   SUBROUTINE veg_init(tile, options)
 
     USE mo_base_config_class,               ONLY: base_config
-    USE mo_veg_config_class,                ONLY: veg_config
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_base_memory,                     ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
@@ -46,6 +45,9 @@ CONTAINS
     USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np
+
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(VEG_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -67,6 +69,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
     ! VEG_ 2D
@@ -154,14 +157,13 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)    
     ! Get process config
-!    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     ! 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
@@ -256,7 +258,7 @@ CONTAINS
         target_cn_fine_root(:)        = target_cn_leaf(:) / root2leaf_cn
         target_np_fine_root(:)        = target_np_leaf(:) / root2leaf_np
 
-        IF(veg_config%flag_tile_veg_dynamics)THEN
+        IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics)THEN
            veg%init_pool%carbon%ptr    = lctlib%seed_size * 10.0_wp
            dens_ind(:)                 = 0.0_wp
         ELSE
@@ -286,7 +288,7 @@ CONTAINS
         veg%init_pool%nitrogen15 = veg%init_pool%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
         ! IF start bareground with vegetation dynamics switched on
-        IF(veg_config%flag_tile_veg_dynamics)THEN
+        IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics)THEN
            veg%pool%seed_bed = veg%init_pool
         ELSE
            veg%pool%reserve  = veg%init_pool
@@ -299,7 +301,7 @@ CONTAINS
         ref_nleaf = 2.0_wp
         lai(:)    = ref_lai
         !leaf_nitrogen
-        IF(veg_config%pft_id==0) THEN
+        IF(dsl4jsb_Config(VEG_)%pft_id==0) THEN
           veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * lai(1)
         ELSE
           veg%pool%leaf%nitrogen%ptr   = lai(1) / lctlib%sla / lctlib%cn_leaf

@@ -38,11 +38,11 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(VEG_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -64,6 +64,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
@@ -98,6 +99,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
@@ -117,10 +119,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                 ! in
 
 
-
 !! *slmtemp
     veg     => veg__mem 
-
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -133,15 +133,16 @@ CONTAINS
     !! 
     !! retruns constant mortality_rate if flag_tile_veg_dynamics == false \n
     !! but calcs mortality_rate dynamically if flag_tile_veg_dynamics == true
-    CALL calc_veg_mortality(lctlib                  , & ! in
-                            an_boc_tvegdyn_mavg(1)  , &
-                            veg%pool                , &
-                            veg%litterfall          , & ! inout
-                            mortality_rate(1)       )   ! out
+    CALL calc_veg_mortality(lctlib                                      , & ! in
+                            dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics , &
+                            an_boc_tvegdyn_mavg(1)                      , &
+                            veg%pool                                    , &
+                            veg%litterfall                              , & ! inout
+                            mortality_rate(1)                           )   ! out
 
     !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
     !! 
-    IF(veg_config%flag_tile_veg_dynamics) THEN 
+    IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics) THEN 
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
@@ -164,7 +165,7 @@ CONTAINS
                                           veg%establishment%carbon%ptr  , &
                                           delta_dens_ind(:)             )   ! out
 
-    END IF  ! veg_config%flag_tile_veg_dynamics
+    END IF  ! dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics
 
   END SUBROUTINE update_veg_dynamics
 
@@ -178,6 +179,7 @@ CONTAINS
   !! veg\%litterfall
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_veg_mortality(lctlib                    , &
+                                flag_tile_veg_dynamics    , &
                                 an_boc_tvegdyn_mavg       , &
                                 veg_pool                  , &
                                 veg_litterfall            , &
@@ -186,7 +188,6 @@ CONTAINS
     USE mo_base_constants
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_config_class,      ONLY: veg_config
     ! veg memory
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
 
@@ -194,6 +195,7 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
+    LOGICAL,                      INTENT(in)    :: flag_tile_veg_dynamics
     REAL(wp),                     INTENT(in)    :: an_boc_tvegdyn_mavg      !< moving average ...
     TYPE(t_slm_struct_veg_pool),  INTENT(in)    :: veg_pool                 !< vegetation pool
     TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_litterfall           !< vegetation litterfall
@@ -213,7 +215,7 @@ CONTAINS
          mortality_rate = ((background_mort_rate_grass / one_year) / one_day) * dtime
     ENDSELECT 
 
-    IF(veg_config%flag_tile_veg_dynamics) THEN 
+    IF(flag_tile_veg_dynamics) THEN 
 
        !> 2.0 self-thinning related mortality
        !! 

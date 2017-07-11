@@ -23,6 +23,7 @@ mo_shared_update_time_averages.o: \
   mo_jsb_model_class.o \
   mo_base_memory.o \
   mo_veg_memory_class.o \
+  mo_veg_config_class.o \
   mo_pheno_memory_class.o \
   mo_a2l_memory_class.o \
   mo_assimi_memory_class.o \

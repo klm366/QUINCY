@@ -16,7 +16,6 @@ MODULE mo_veg_growth
   USE mo_base_constants
   USE mo_base_memory,           ONLY: t_jsb_task_options
   USE mo_soil_config_class,     ONLY: soil_config
-  USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_constants
 
 
@@ -42,14 +41,14 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_veg_config_class,        ONLY: veg_config
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_respiration,         ONLY: temperature_response_respiration
     USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(VEG_)
     
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
@@ -77,6 +76,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -240,6 +240,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -419,6 +420,8 @@ CONTAINS
     CALL calc_actual_nutrient_uptake_rate(options, & 
                                           soil_config%nsoil_water, & 
                                           lctlib, &
+                                          dsl4jsb_Config(VEG_)%bnf_scheme, &
+                                          dsl4jsb_Config(VEG_)%myc_scheme, &
                                           kstar_labile(:), &
                                           t_air(:), &
                                           veg%pool%fine_root%carbon%ptr, & 
@@ -465,7 +468,7 @@ CONTAINS
     !! runs only IF (growing_season(ichunk) .AND. veg_pool_leaf_nitrogen > eps4 ) \n
     !! loops internally over: ichunk=1,nc
     !! 
-    IF (veg_config%flag_optimal_Nleaf) THEN
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) THEN
       CALL calc_dir_optimal_cn_leaf( &
                                         nc                                             , & ! in
                                         lctlib                                         , &
@@ -501,9 +504,10 @@ CONTAINS
                                         growth_cn_tcnl_mavg              , &
                                         npp_tcnl_mavg                    , &
                                         leaf_cn_direction(:)             )    ! out
-    END IF ! veg_config%flag_optimal_Nleaf
+    END IF ! dsl4jsb_Config(VEG_)%flag_optimal_Nleaf
 
-    CALL calc_stoichiometry_changes(lctlib                        , & ! in
+    CALL calc_stoichiometry_changes(lctlib                                    , & ! in
+                                      dsl4jsb_Config(VEG_)%flag_optimal_Nleaf , &
                                       growing_season(:)           , &
                                       leaf_cn_direction(:)        , &
                                       target_np_leaf(:)           , &
@@ -561,7 +565,9 @@ CONTAINS
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(lctlib                           , &  ! in
+    CALL calc_allometry(lctlib                                        , &  ! in
+                        dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
+                        dsl4jsb_Config(VEG_)%bnf_scheme  , &
                         height(:)                        , &
                         veg%pool%sap_wood%carbon%ptr     , &
                         veg%pool%heart_wood%carbon%ptr   , &
@@ -618,7 +624,8 @@ CONTAINS
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
     !! 
-    CALL calc_allocation_fraction(lctlib                          , & ! in
+    CALL calc_allocation_fraction(lctlib                                        , & ! in
+                                  dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                                   dheight(1)                      , &
                                   kstar_labile(1)                 , &
                                   veg%pool%leaf%carbon%ptr        , &
@@ -794,6 +801,8 @@ CONTAINS
   SUBROUTINE calc_actual_nutrient_uptake_rate(options, & 
                                               nsoil, & 
                                               lctlib, &
+                                              bnf_scheme, &
+                                              myc_scheme, &
                                               kstar_labile, &
                                               t_air, &                                              
                                               fine_root_carbon, & 
@@ -851,6 +860,8 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options                  !< model options
     INTEGER,                               INTENT(in)    :: nsoil                    !< number of soil layers
     TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*),                      INTENT(in)    :: bnf_scheme, &            !< from veg_config 
+                                                            myc_scheme               !< from veg_config 
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: kstar_labile             !< meristem turnover rate  
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: t_air                    !< air temperature (K) !! should be soil temperature!
     REAL(wp),                              INTENT(in)    :: fine_root_carbon         !< fine root carbon (mol C / m2)
@@ -937,7 +948,7 @@ CONTAINS
    
     !> 1.3 apply demand driven reduction in uptake
     !! (note that this is done differently in the resistance scheme)
-    SELECT CASE (veg_config%bnf_scheme)
+    SELECT CASE (bnf_scheme)
       CASE ("resistance")
          uptake_nh4(:) = uptake_nh4_pot(:)
          uptake_no3(:) = uptake_no3_pot(:)
@@ -992,7 +1003,7 @@ CONTAINS
 
     !> 3.0 N fixation
     !!
-    SELECT CASE (veg_config%bnf_scheme)
+    SELECT CASE (bnf_scheme)
       !> 3.1 Case 1: N fixation based on default lctlib parameter (Zaehle et al. 2010, GBC)
       !!
       CASE("standard","std_plus_costs")
@@ -1035,7 +1046,7 @@ CONTAINS
 
     !> 4.0 Determine C use for Root Exudates
     !! 
-    IF(veg_config%myc_scheme == 'am' .OR. veg_config%myc_scheme == 'ecm') THEN
+    IF(myc_scheme == 'am' .OR. myc_scheme == 'ecm') THEN
 
        f_exudate(:) = 0.5_wp   
        WHERE(uptake_norg(:) > eps8) 
@@ -1069,7 +1080,7 @@ CONTAINS
 
     !> 4.0 Determine C use for N uptake, and constrain this to available carbon
     !!
-    IF(veg_config%bnf_scheme == 'optimal' .OR. veg_config%bnf_scheme == 'resistance' .OR. veg_config%bnf_scheme == 'std_plus_costs') THEN
+    IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'resistance' .OR. bnf_scheme == 'std_plus_costs') THEN
        hlp1(:) = uptake_nh4(:) * transform_cost_nh4 + & 
                  uptake_no3(:) * transform_cost_no3 + & 
                  n_fixation(:) * cost_n_fixation(:)
@@ -1140,6 +1151,7 @@ CONTAINS
   !! output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_stoichiometry_changes(lctlib                  , &   ! in
+                                                  flag_optimal_Nleaf      , &
                                                   growing_season          , &
                                                   leaf_cn_direction       , &
                                                   target_np_leaf          , &
@@ -1154,7 +1166,6 @@ CONTAINS
                                                   target_np_fruit  )         
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants          ! e.g. delta_n_leaf
 
@@ -1164,6 +1175,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),   INTENT(in)    :: lctlib                    !< land-cover-type library - parameter across pft's
+    LOGICAL,                  INTENT(in)    :: flag_optimal_Nleaf        !< from veg_config
     LOGICAL,                  INTENT(in)    :: growing_season            !< 
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
                                                target_np_leaf            !< 
@@ -1182,7 +1194,7 @@ CONTAINS
 
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (veg_config%flag_optimal_Nleaf .AND. growing_season) THEN
+    IF (flag_optimal_Nleaf .AND. growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
     ELSE
@@ -1232,6 +1244,8 @@ CONTAINS
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE calc_allometry(lctlib                         , &
+                                            flag_optimal_allocation       , &
+                                            bnf_scheme                    , &
                                             height                        , &
                                             veg_pool_sap_wood_carbon      , &
                                             veg_pool_heart_wood_carbon    , &
@@ -1261,14 +1275,15 @@ CONTAINS
                                             k2_opt )                    
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_veg_config_class,        ONLY: veg_config    
     USE mo_base_constants,          ONLY: pi
     USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in) :: lctlib           !< land-cover-type library - parameters for one pft
+    TYPE(t_lctlib_element),INTENT(in) :: lctlib                   !< land-cover-type library - parameters for one pft
+    LOGICAL,               INTENT(in) :: flag_optimal_allocation  !< from veg_config
+    CHARACTER(len=*),      INTENT(in) :: bnf_scheme       !< from veg_config
     REAL(wp), INTENT(in)  :: height                       !< height (m)
     REAL(wp), INTENT(in)  :: veg_pool_sap_wood_carbon     !< woody biomass of an individual tree (mol C/m2)
     REAL(wp), INTENT(in)  :: veg_pool_heart_wood_carbon   !< woody biomass of an individual tree (mol C/m2)
@@ -1335,13 +1350,13 @@ CONTAINS
           target_lai = 0.0_wp
         END IF
 
-        IF (veg_config%flag_optimal_allocation) THEN
+        IF (flag_optimal_allocation) THEN
            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
            !! NPP = gN * R * growth_cn
            !! Or similar relationships for P
            !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
-           SELECT CASE (veg_config%bnf_scheme)
+           SELECT CASE (bnf_scheme)
            CASE("optimal")
               k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
                    (labile_carbon + reserve_carbon - &
@@ -1414,8 +1429,8 @@ CONTAINS
          ! leaf to stem mass ratio
          leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
          ! leaf:root ratio
-         IF (veg_config%flag_optimal_allocation) THEN
-            SELECT CASE (veg_config%bnf_scheme)
+         IF (flag_optimal_allocation) THEN
+            SELECT CASE (bnf_scheme)
               CASE("optimal")
                  k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
                       (labile_carbon + reserve_carbon - &
@@ -1682,6 +1697,7 @@ CONTAINS
   !!        Needs to be adjusted to better match prescriebed allometry and to account for falloc_fruit
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_allocation_fraction(lctlib                      , &
+                                      flag_optimal_allocation     , &
                                       dheight                     , &
                                       kstar_labile                , &
                                       leaf_carbon                 , &
@@ -1711,12 +1727,12 @@ CONTAINS
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool     ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
-    USE mo_veg_config_class,        ONLY: veg_config
     USE mo_veg_constants,           ONLY: itree, igrass, lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
+    LOGICAL,                      INTENT(in)    :: flag_optimal_allocation    !< from veg_config
     REAL(wp),                     INTENT(in)    :: dheight                    !< derivative of height per unit sapwood mass change 
     REAL(wp),                     INTENT(in)    :: kstar_labile               !< potential labile pool turnover rate (1/day) without stoichiometric limit
     REAL(wp),                     INTENT(in)    :: leaf_carbon                !< carbon in leaves (mol/individual)
@@ -1795,8 +1811,8 @@ CONTAINS
           wood_carbon = sap_wood_carbon + coarse_root_carbon
 
           !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> 
-          !! rewrite "IF (veg_config\%flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
-          IF (veg_config%flag_optimal_allocation) THEN
+          !! rewrite "IF (flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
+          IF (flag_optimal_allocation) THEN
 
              !> 1.2a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
              !! 
@@ -1847,7 +1863,7 @@ CONTAINS
       !> 1.2 grass
       !!
       CASE(igrass)
-         IF (veg_config%flag_optimal_allocation) THEN
+         IF (flag_optimal_allocation) THEN
             leaf_carbon_inc = MAX((b_inc - k1_opt - leaf_carbon/leaf2sapwood_mass_ratio + root_carbon + &
                  sap_wood_carbon) / (1.0_wp + k2_opt + 1.0_wp/leaf2sapwood_mass_ratio), 0.0_wp)
             root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
@@ -1992,10 +2008,10 @@ CONTAINS
 
 
     USE mo_veg_respiration,         ONLY: calc_maintenance_respiration
-    USE mo_veg_config_class,        ONLY: veg_config
     USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool, t_slm_struct_veg_element
     USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element
     USE mo_soil_config_class,       ONLY: soil_config
+
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 

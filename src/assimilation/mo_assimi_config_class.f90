@@ -18,7 +18,7 @@ MODULE mo_assimi_config_class
 
   IMPLICIT NONE
   
-  INTEGER :: assimi_ncanopy
+  INTEGER, SAVE :: assimi_ncanopy
   
   PRIVATE
   PUBLIC :: t_assimi_config

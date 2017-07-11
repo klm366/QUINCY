@@ -17,8 +17,12 @@ MODULE mo_soil_config_class
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
+  
+  INTEGER, SAVE :: soil_nsoil_water
+  
   PRIVATE
-  PUBLIC :: soil_config, t_soil_config
+  PUBLIC :: t_soil_config, soil_config
+  PUBLIC :: soil_nsoil_water                 ! used in mo_slm_varlist  *slmtemp
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil process, derived from t_jsb_config
@@ -144,6 +148,7 @@ CONTAINS
     ! pass values as read from file
     config%nsoil_energy              = nsoil_energy
     config%nsoil_water               = nsoil_water
+    soil_nsoil_water                 = nsoil_water          ! *slmtemp
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
     config%soil_moisture_scheme      = soil_moisture_scheme

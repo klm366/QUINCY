@@ -17,7 +17,6 @@ MODULE mo_shared_output
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
   USE mo_base_config_class,     ONLY: base_config
-  USE mo_veg_config_class,      ONLY: veg_config
   USE mo_soil_config_class,     ONLY: soil_config
   USE mo_jsb4_forcing,          ONLY: forcing_options
 
@@ -91,7 +90,8 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(VEG_)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -110,10 +110,12 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
 
 
     !> 1.0 init
@@ -129,8 +131,8 @@ CONTAINS
     !! 
     !! 
     IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
      
 
     !> 2.2 define open() statements for file output
@@ -870,7 +872,8 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(VEG_)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -889,10 +892,12 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
 
 
 
@@ -909,8 +914,8 @@ CONTAINS
     !! 
     !! 
     IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
     !> 2.2 define open() statements for file output
     !! 
@@ -1746,7 +1751,8 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(VEG_)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -1765,10 +1771,12 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
 
 
 
@@ -1782,8 +1790,8 @@ CONTAINS
     !> 2.0 get options (opt) for filenames
     !! 
     IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
     !> 2.1 define open() statements for file output
     !! 
@@ -1851,7 +1859,6 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
 
     ! Use of process memories

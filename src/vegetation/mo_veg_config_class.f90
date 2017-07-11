@@ -19,7 +19,7 @@ MODULE mo_veg_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: veg_config, t_veg_config
+  PUBLIC :: t_veg_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
@@ -39,7 +39,6 @@ MODULE mo_veg_config_class
       PROCEDURE :: Init => Init_veg_config
   END Type t_veg_config
 
-  TYPE(t_veg_config), SAVE :: veg_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_config_class'
 

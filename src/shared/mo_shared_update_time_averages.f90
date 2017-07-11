@@ -434,10 +434,10 @@ CONTAINS
 
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_shared_constants           ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
-    USE mo_veg_config_class,        ONLY: veg_config
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(VEG_)
     
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -463,6 +463,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -594,6 +595,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -826,7 +828,7 @@ CONTAINS
     !!
     npp_talloc_mavg(:)                  = calc_mavg(npp_talloc_mavg(:), npp(:), &
          mavg_period_talloc, do_calc=growing_season(:))
-    SELECT CASE (veg_config%bnf_scheme)
+    SELECT CASE (dsl4jsb_Config(VEG_)%bnf_scheme)
       CASE("optimal")
          WHERE (n_fixation(:)>0._wp)
             hlp=n_fixation/ veg%pool%fine_root%carbon%ptr
