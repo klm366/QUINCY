@@ -420,8 +420,8 @@ CONTAINS
     CALL calc_actual_nutrient_uptake_rate(options, & 
                                           soil_config%nsoil_water, & 
                                           lctlib, &
-                                          dsl4jsb_Config(VEG_)%bnf_scheme, &
-                                          dsl4jsb_Config(VEG_)%myc_scheme, &
+                                          TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
+                                          TRIM(dsl4jsb_Config(VEG_)%myc_scheme), &
                                           kstar_labile(:), &
                                           t_air(:), &
                                           veg%pool%fine_root%carbon%ptr, & 
@@ -567,7 +567,7 @@ CONTAINS
     !!
     CALL calc_allometry(lctlib                                        , &  ! in
                         dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
-                        dsl4jsb_Config(VEG_)%bnf_scheme  , &
+                        TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)         , &
                         height(:)                        , &
                         veg%pool%sap_wood%carbon%ptr     , &
                         veg%pool%heart_wood%carbon%ptr   , &

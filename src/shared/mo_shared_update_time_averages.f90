@@ -828,7 +828,7 @@ CONTAINS
     !!
     npp_talloc_mavg(:)                  = calc_mavg(npp_talloc_mavg(:), npp(:), &
          mavg_period_talloc, do_calc=growing_season(:))
-    SELECT CASE (dsl4jsb_Config(VEG_)%bnf_scheme)
+    SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
          WHERE (n_fixation(:)>0._wp)
             hlp=n_fixation/ veg%pool%fine_root%carbon%ptr

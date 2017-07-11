@@ -115,7 +115,7 @@ CONTAINS
     !! 
     ALLOCATE(config%canopy_layer_depth(ncanopy))
 
-    SELECT CASE(config%canopy_layer_scheme)
+    SELECT CASE(TRIM(config%canopy_layer_scheme))
       CASE ("standard")
         config%canopy_layer_depth(:) = 0.5_wp
 
