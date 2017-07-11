@@ -1371,6 +1371,7 @@ CONTAINS
                                                         apparent_mic_cue(:,:) * & 
                                                         (sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk)) 
     sb_formation%microbial%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                            (sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk)) + & 
                                                           mic_uptake_nh4_sl(:,:) 
     sb_formation%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                             (sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + sb_loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk)) + & 
