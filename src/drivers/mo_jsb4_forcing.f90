@@ -16,6 +16,7 @@
 !!   -- After revision 304 (https://svn.zmaw.de/svn/jsbach/branches/jsbach-jn r304): removed currently not required functions:
 !!      several sw schemes (shortwave_from_cloudcover, shortwave_from_fpar_orig, shortwave_from_fpar_ccdas, shortwave_from_fsw,
 !!      shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
+!! Adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 -- r8893  by Julia Nabel (2017-07)
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -42,7 +43,7 @@ MODULE mo_jsb4_forcing
   USE mo_kind,                 ONLY: wp
   USE mo_exception,            ONLY: message, message_text, finish
   USE mo_util_string,          ONLY: tolower, int2string
-  USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, cpd, vtmpc1, rdv
+  USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
   USE mo_echam_convect_tables, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit,                ONLY: inquire_declination
 
@@ -79,12 +80,8 @@ MODULE mo_jsb4_forcing
   REAL(wp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_wp  !  28.970e-3_wp   -  Mass of 1 mol of dry air in kg
   REAL(wp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_wp   ! 44.0095e-3_wp   -  Mass of 1 mol CO2 in kg
 
-  !in jsb3: originally set in mo_jsbalone_forcing init_forcing to this constant
-  REAL(wp), PARAMETER :: HeightWind = -1._wp
-  REAL(wp), PARAMETER :: HeightHumidity = 10._wp
-
-  !contained in jsb3 interface but (currently not in jsb4)
-  REAL(wp), PARAMETER :: Veg_height = 10._wp
+  REAL(wp), PARAMETER :: defHeightWind = -1._wp        ! -1: for ECHAM lowest layer values
+  REAL(wp), PARAMETER :: defHeightHumidity = -1._wp    ! -1: for ECHAM lowest layer values
 
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
   REAL(wp), PARAMETER :: cb = 5._wp
@@ -129,7 +126,10 @@ MODULE mo_jsb4_forcing
   ! --- Namelist parameters
   LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
                                                              !! false: forcing is expected for all variables and cells (e.g. echam)
+  REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+  REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
 
+                                                             !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
   CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
   CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
   REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
@@ -186,6 +186,8 @@ MODULE mo_jsb4_forcing
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
     LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
     REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
+    REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
+    REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
   TYPE(forcing_options_type), SAVE :: forcing_options
 
@@ -229,7 +231,7 @@ CONTAINS
   !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
   !!
   SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
-    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
+    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
     & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
     & swnir_srf_down, swpar_srf_down, frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
 
@@ -242,6 +244,7 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
     REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
     REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)
+    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
 
     REAL(wp), INTENT(OUT) :: CO2_concentration(:,:)
@@ -434,7 +437,7 @@ CONTAINS
 
     ! --- compute remaining required input for jsb4 interface
     CALL get_remaining_input_for_jsb4_interface(nblks, ice, t_air_K, press_srf, q_air, wind_air, &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, &
+      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
     ! ---- clean up
@@ -465,7 +468,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/    forcing_set_ocean_to_constants,                                                             &
+    NAMELIST /jsb_forcing_nml/    forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,               &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
         & forcing_temp_unit,                                                                                                  &
       & forcing_precip_file_prefix, forcing_precip_frequ, forcing_precip_const_precip,                                        &
@@ -485,6 +488,8 @@ CONTAINS
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
       forcing_set_ocean_to_constants = .TRUE.
+      forcing_height_wind = defHeightWind
+      forcing_height_humidity = defHeightHumidity
 
       forcing_temp_file_prefix = 'climate_'
       forcing_temp_frequ = 'DAILY'
@@ -536,7 +541,9 @@ CONTAINS
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
-      ! ----- derive options
+      ! ----- derive options - forcing heights: as in jsb3 it is expected that "HeightHumidity and HeightTemperature have to be equal"
+      forcing_options%heightWind = forcing_height_wind
+      forcing_options%heightHumidity = forcing_height_humidity
       ! --- Temperature timestep (if daily two variables - max and min - need to be read)
       forcing_options%air_temperature_as_timestep &
         & = (frequency_key_to_constant_val('temperature', forcing_temp_frequ) .EQ. TIMESTEP_)
@@ -595,6 +602,8 @@ CONTAINS
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io)
       CALL p_bcast(forcing_options%type_of_qair_forcing, p_io)
       CALL p_bcast(forcing_options%conv_CO2_2_MassRatio, p_io)
+      CALL p_bcast(forcing_options%heightWind, p_io)
+      CALL p_bcast(forcing_options%heightHumidity, p_io)
 
       ! other namelist parameters
       CALL p_bcast(forcing_temp_file_prefix, p_io)
@@ -1036,7 +1045,7 @@ CONTAINS
   !! Copied required parts from jsbach3: mo_jsbalone: update_driving and adapted for jsb4   by Julia Nabel
   !!
   SUBROUTINE get_remaining_input_for_jsb4_interface(nblks, ice, temp_air, pressure, qair, wind, &
-      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, &
+      & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
     INTEGER,  INTENT(IN)  :: nblks, ice
@@ -1048,6 +1057,7 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
     REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
     REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)
+    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)
 
     REAL(wp), INTENT(OUT) :: drag_srf(ice,nblks)
     REAL(wp), INTENT(OUT) :: t_acoef(ice,nblks)
@@ -1057,11 +1067,11 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: pch(ice,nblks)
 
     INTEGER  :: iblk
-    REAL(wp) :: zcons8, zcons9, zcons11, zcons12, zkappa
-    REAL(wp), DIMENSION(ice):: zdu2, ztvd, qsat_surf, ztvs, zg, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
+    REAL(wp) :: zcons9, zcons11, zcons12, zkappa, zsigma
+    REAL(wp), DIMENSION(ice):: air_pressure, zdu2, ztvd, ztvir, qsat_surf
+    REAL(wp), DIMENSION(ice):: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
 
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
-    zcons8 = 2._wp * cb
     zcons9 = 3._wp * cb
     zcons11 = 3._wp * cb * cc
     zcons12 = cvdifts * time_step_len * grav / rd
@@ -1080,7 +1090,10 @@ CONTAINS
       ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
       ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
       ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * qair) ! virtual potential temperature
-      ztvd(:) = ( temp_air(:,iblk) * ( 100000._wp/pressure(:,iblk))**zkappa ) * ( 1._wp + vtmpc1 * qair(:, iblk))
+      zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
+      air_pressure(:) = zsigma * pressure(:, iblk)
+      ztvd(:) = ( temp_air(:, iblk) * ( 100000._wp/air_pressure(:))**zkappa ) * ( 1._wp + vtmpc1 * qair(:, iblk))
+      ztvir(:) = temp_air(:, iblk) * ( 1._wp + vtmpc1 * qair(:, iblk) )
 
       ! virtual potential surface temperature
       CALL sat_specific_humidity(ice, t_srf_proc(:,iblk), pressure(:,iblk), qsat_surf(:))
@@ -1088,26 +1101,27 @@ CONTAINS
         & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(:,iblk) * qsat_surf(:) + ( 1._wp - fact_q_air_proc(:,iblk) ) * qair(:,iblk)))
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-      ! If HeightWind is set, then the measurement height + an offset from the average vegetation height
-      ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
-      IF(HeightWind > 0._wp) THEN
-        zg(:) = (0.75_wp * Veg_height + HeightWind) * grav
+      ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
+      IF(forcing_options%heightWind > 0._wp) THEN
+        zg(:) = forcing_options%heightWind * grav
+        zgh(:) = forcing_options%heightHumidity * grav ! jsb3: "HeightHumidity and HeightTemperature have to be equal"
       ELSE
-        zg(:) = ztvd(:) *  rd * LOG(1._wp / ( 1._wp - 0.0025_wp ))
+        zg(:) = ztvir(:) * rd * LOG(1._wp / zsigma)
+        zgh(:) = zg(:)
       ENDIF
 
       ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
       ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-      zril(:) = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * ztvd(:) )
-      zril(:) = MAX(MIN(zril(:), 5._wp), -5._wp)
+      zril(:) = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:))/2._wp )
 
       ! Neutral drag coefficient for momentum and heat
-      zchnl(:) = (ckap / LOG(1._wp + zg(:) / (grav * rough_h_srf_proc(:,iblk) )))**2
+      zchnl(:) = ckap**2 / (LOG(1._wp + zg(:) / (grav * rough_m_srf_proc(:,iblk) )) &
+                * LOG( ( grav * rough_m_srf_proc(:,iblk) + zgh(:) ) / (grav * rough_h_srf_proc(:,iblk) )))
 
       ! account for stable/unstable case: helper variables
-      zscfl(:) = SQRT ( 1._wp + ABS(zril(:)))
+      zscfl(:) = SQRT ( 1._wp + 5._wp * ABS(zril(:)))
       zucfhl(:) = 1._wp / (1._wp + zcons11 * zchnl(:) * SQRT(ABS(zril(:)) * (1._wp &
-        & + zg(:) / (grav * rough_h_srf_proc(:,iblk)))))
+        & + zgh(:) / (grav * rough_h_srf_proc(:,iblk)))))
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
       zcons(:) = zcons12 * pressure(:,iblk) / ( temp_air(:,iblk) * (1._wp + vtmpc1 * qair(:,iblk)))
@@ -1115,7 +1129,7 @@ CONTAINS
 
       ! Stable / Unstable case
       WHERE ( zril(:) .GT. 0._wp )
-        zcfhl(:) = zcfnchl(:) / (1._wp + zcons8 * zril(:) * zscfl(:))
+        zcfhl(:) = zcfnchl(:) / (1._wp + zcons9 * zril(:) * zscfl(:))
       ELSEWHERE
         zcfhl(:) = zcfnchl(:) * (1._wp - zcons9 * zril(:) * zucfhl(:))
       END WHERE
@@ -1123,16 +1137,16 @@ CONTAINS
       drag_srf(:,iblk) = zcfhl(:)
       pch(:,iblk) = zcfhl(:) / zcfnchl(:) * zchnl(:)
 
-    ENDDO
+      !---------------------------------------------------------------------------------------------------------------
+      ! Computation of Richtmeyr-Morton Coefficients
+      ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
+      !---------------------------------------------------------------------------------------------------------------
+      t_acoef = 0.0_wp
+      t_bcoef(:,iblk) = cpd * (1 + vtmpc2 * qair(:,iblk)) * temp_air(:,iblk) + zgh(:)
+      q_acoef = 0.0_wp
+      q_bcoef(:,iblk) = qair(:,iblk)
 
-    !---------------------------------------------------------------------------------------------------------------
-    ! Computation of Richtmeyr-Morton Coefficients
-    ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
-    !---------------------------------------------------------------------------------------------------------------
-    t_acoef = 0.0_wp
-    t_bcoef = cpd * temp_air + HeightHumidity * grav
-    q_acoef = 0.0_wp
-    q_bcoef = qair
+    ENDDO
 
   END SUBROUTINE get_remaining_input_for_jsb4_interface
 
@@ -1336,7 +1350,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sat_specific_humidity'
 
     INTEGER :: i
-    REAL(wp) :: vtmpc1
+!    REAL(wp) :: vtmpc1           ! in jsb3 this is set in this function, but it is also already calculated in mo_physical_constants!
     INTEGER  :: it(1:temp_dim)
     REAL(wp) :: tluc(1:temp_dim)
 
@@ -1350,7 +1364,7 @@ CONTAINS
       ENDIF
     ENDDO
 
-    vtmpc1 = 0.6077686814143877_wp
+    ! vtmpc1 = 0.6077686814143877_wp"   ! copied from jsb3 ... however it is already calculated in mo_physical_constants as 0.607824693423?!
     it = NINT(temp*1000._wp)
     tluc = tlucua(it)
 
