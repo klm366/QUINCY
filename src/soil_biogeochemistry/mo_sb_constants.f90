@@ -14,18 +14,17 @@ MODULE mo_sb_constants
   IMPLICIT NONE
   PUBLIC
 
-  ! parameters for simple soil biogeochemical model
+  ! turnover times (mostly for simple model) 
   REAL(wp), SAVE :: & 
-      floss_nmin, &             !< fractional loss of N per unit N mineralisation 
-      fnit_nmin, &              !< fractional nitrification per unit N mineralisation 
-      tau_slow, &               !< ..
-      tau_fast, &               !< ..
-      tau_non_woody_litter, &   !< ..
-      residue_cue               !< ..
+      tau_soluable_litter, &    !< turnover time of soluable litter [s]
+      tau_metabolic_litter, &   !< turnover time of metabolic litter pool [s]
+      tau_structural_litter, &  !< turnover time of structural litter pool [s]
+      tau_woody_litter, &       !< turnover time of woody litter [s]
+      tau_fast, &               !< turnover time of fast SOM pool [s] 
+      tau_slow, &               !< turnover time of slow SOM pool [s] 
+      tau_biomineralisation     !< turnover time of slow SOM pool for biomineralisation [s]
 
-  ! parameter for JSM implementation
-
-  ! rate modifiers
+  ! temperature and moisture rate modifiers
   REAL(wp), SAVE :: &
       t_ref_tresponse, &      !< reference temperature for temperature response function [K]
       ea_depolymerisation, &  !< activation energy for depolymerisation [J mol-1]
@@ -40,10 +39,11 @@ MODULE mo_sb_constants
 
   ! transport and sorption parameters
   REAL(wp), SAVE :: &
-      k_diff_org, &         !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]                       
-      rho_bulk_org, &       !< bulk density of organic material [kg m-3]
-      sorp_cap_org, &       !< sorption capacity of organic matter [kg C kg-1 OM]
-      qmax_org_mineral_default, & !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
+      k_diff_org, &                !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]                       
+      rho_bulk_org, &              !< bulk density of organic material [kg m-3]
+      carbon_per_dryweight_SOM, &  !< C per unit dryweight SOM [gC / gOM] 
+      sorp_cap_org, &              !< sorption capacity of organic matter [kg C kg-1 OM]
+      qmax_org_mineral_default, &  !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
       k_adsorpt_dom, & 
       k_desorpt_dom, &
       k_adsorpt_det, &
@@ -54,40 +54,64 @@ MODULE mo_sb_constants
       k_desorpt_po4
 
   ! microbial parameters
-  REAL(wp), SAVE :: & 
-      k_mort_microbial , &       !< mortality rate of microbes [s-1]
-      f_soluable_residue, &      !< fraction of microbial residue entering the DOM pool
-      min_mic_biomass, &         !< minimum microbial biomass density (stopping mortality) [mol C/m3]
-      vmax_mic_uptake, &         !< maximum uptake rates of microbes [s-1] 
-      km_mic_uptake, &           !< half-saturation DOM density for microbial DOM consumption 
-      km_depolymerisation, &     !< half-saturation microbial biomass density for depolymerisation
-      tau_soluable_litter, &     !< turnover time of soluable litter
-      tau_woody_litter, &        !< turnover time of woody litter
-      vmax_depolymerisation_residue, & !< maximum depolymerisation rate of residue
-      vmax_depolymerisation_litter, &  !< maximum depolymerisation rate of polymeric litter
-      microbial_cue              !< microbial carbon-use efficiency
-
-   REAL(wp), SAVE :: & 
-      f_soluable_leaf, &         !< fraction of leaf litter that becomes DOM
-      f_soluable_fine_root, &    !< fraction of fine root litter that becomes DOM
-      f_soluable_fruit, &        !< fraction of fruit litter that becomes DOM
-      f_soluable_seed_bed        !< fraction of seed bed litter that becomes DOM
-
-   REAL(wp), SAVE :: & 
-     carbon_per_dryweight_SOM    !< C per unit dryweight SOM [gC / gOM] 
-
    REAL(wp), SAVE :: &
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
       microbial_nue, &           !< microbial nitrogen use efficiency
       microbial_pue, &           !< microibal phosphorus use efficiency
+      microbial_cue, &           !< microbial carbon-use efficiency
       microbial_cue_max, &       !< maximum microbial carbon-use efficiency
       microbial_cue_min, &       !< minimum microbial carbon-use efficiency
+      residue_cue                !< carbon-use efficiency of residue formation
+
+  ! additional microbial parameters for JSM implementation
+  REAL(wp), SAVE :: & 
+      k_mort_microbial , &       !< mortality rate of microbes [s-1]
+      min_mic_biomass, &         !< minimum microbial biomass density (stopping mortality) [mol C/m3]
+      vmax_mic_uptake, &         !< maximum uptake rates of microbes [s-1] 
+      km_mic_uptake, &           !< half-saturation DOM density for microbial DOM consumption 
+      km_depolymerisation, &     !< half-saturation microbial biomass density for depolymerisation
+      vmax_depolymerisation_residue, & !< maximum depolymerisation rate of residue
+      vmax_depolymerisation_litter     !< maximum depolymerisation rate of polymeric litter
+
+   ! parameters controlliong litter partitioning
+   REAL(wp), SAVE :: & 
+      f_soluable_residue, &      !< fraction of microbial residue entering the DOM pool
+      f_soluable_leaf, &         !< fraction of leaf litter that becomes DOM
+      f_soluable_fine_root, &    !< fraction of fine root litter that becomes DOM
+      f_soluable_fruit, &        !< fraction of fruit litter that becomes DOM
+      f_soluable_seed_bed, &     !< fraction of seed bed litter that becomes DOM
+      fc_soluable_max, &         !< maximum fraction of soluable litter formation
+      k_fc_soluable, &           !< slope of soluable fraction with lignin to N ratio
+      k_fn_soluable, &           !< proportionality factor controlling C:N of solubable vs. polymeric pool 
+      k_fp_soluable, &           !< proportionality factor controlling C:P of solubable vs. polymeric pool
+      lc_leaf_max, &             !< maximum lignin content of leaves [1/mol]
+      lc_leaf2sla, &             !< slope of lignin to sla relationship [1/m2]
+      lc_fine_root, &            !< lignin content of fine roots [1/mol]
+      lc_coarse_root, &          !< lignin content of coarse roots [1/mol]
+      lc_woody_litter, &         !< lignin content of woody litter [1/mol]
+      lc_fruit, &                !< lignin content of fruits [1/mol]
+      lc_seed_bed                !< lignin content of seed bed [1/mol]
+
+   ! mycorrhizal parameters
+   REAL(wp), SAVE :: & 
       mycorrhizal_cue, &         !< mycorrhizal carbon-use efficiency
-      cn_mycorrhiza, &           !< molar ratio of C:N of mycorrhizal fung
-      np_mycorrhiza              !< molar ratio of N:P of mycorrhizal fungi
+      mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fung
+      mycorrhiza_np, &           !< molar ratio of N:P of mycorrhizal fungi
+      f_maxresp_myc, &           !< maximum fraction of mycorrhizal carbon used for N transformation [1/day]
+      f_surface_myc2fineroot     !< ratio of surface to mass relationship between mycorrhizal fungi and fine roots
 
    ! nutrient uptake kinetics
+   ! simple model
+   REAL(wp), SAVE :: & 
+      km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+
+   ! jsm parameters
    REAL(wp), SAVE :: &
       vmax_mic_uptake_nh4, &     !< maximum NH4 uptake capacity of microbes (mol N / mol biomass C / s)  
       km_mic_uptake_nh4, &       !< half-saturation concentration (mol N / m3)
@@ -102,30 +126,32 @@ MODULE mo_sb_constants
       vmax_plant_uptake_po4, &   !< maximum PO4 uptake capacity of fine roots (mol N / mol biomass C / s)
       km_plant_uptake_po4        ! < half-saturation concentration (mol N / m3)
 
-   ! nitrification, denitrification parameters
+   ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
    REAL(wp), SAVE :: & 
-      lambda_anvf, &             !< lambda in the Weibull function relating soil moisture to the anaerobic volume fraction
-      k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
-      vmax_nitrification, &      !< maximum nitrification rate [µmol mol-1 s-1] 
       ea_nitrification, &        !< activation energy for nitrification [J mol-1] 
       ed_nitrification, &        !< deactivation energy for nitrification [J mol-1]
       t_opt_nitrification, &     !< optimum temperature for nitrification [K]
-      f_nit_noy, &               !< fraction of nitrification lost as NOy [--]
-      f_nit_n2o, &               !< fraction of nitrification lost as N2O [--]
+      ea_denitrification, &      !< activation energy for denitrification [J mol-1]
+      ea_gasdiffusion, &         !< activation energy for denitrification [J mol-1]
+      lambda_anvf, &             !< lambda in the Weibull function relating soil moisture to the anaerobic volume fraction
+      k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
+      vmax_nitrification, &      !< maximum nitrification rate [µmol mol-1 s-1] 
       vmax_denitrification, &    !< maximum denitrification rate [µmol mol-1 s-1]
       km_denitrification_c, &    !< half-saturation constant for carbon-limited denitrification [mol C m-3]
       km_denitrification_no3, &  !< half-saturation constant for nitrate-limited denitrifcation [mol N m-3]
-      ea_denitrification, &      !< activation energy for denitrification [J mol-1]
+      f_nit_noy, &               !< fraction of nitrification lost as NOy [--]
+      f_nit_n2o, &               !< fraction of nitrification lost as N2O [--]
       f_denit_noy, &             !< fraction of denitrification lost as NOy [--]
-      f_denit_n2o, &             !< fraction of denitrification lost as N2O [--]
-      ea_gasdiffusion            !< activation energy for denitrification [J mol-1]
+      f_denit_n2o                !< fraction of denitrification lost as N2O [--]
 
-   ! Simple leaching parameterisation
+   ! Simple-model fixed loss and simple leaching parameterisation
    REAL(wp), SAVE :: &
+      floss_nmin, &              !< fractional loss of N per unit N mineralisation 
+      fnit_nmin, &               !< fractional nitrification per unit N mineralisation 
       fleach_nh4, &              !< fraction of NH4 amenable to leaching
       fleach_po4                 !< fraction of PO4 amenable to leaching
- 
-   ! isoptop stuff
+
+   ! Isoptope stuff
    REAL(wp), SAVE :: & 
       eta_mic_uptake_nh4, &      !< fractionation of N15 due to microbial NH4 assimilation (per mill)
       eta_mic_uptake_no3, &      !< fractionation of N15 due to microbial NO3 assimilation (per mill)
@@ -158,28 +184,31 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_sb_constants'
 
-    ! parameters for simple soil biogeochemical model 
-    floss_nmin = 0.05_wp
-    fnit_nmin  = 0.1_wp
-    tau_slow = 50._wp * one_year * one_day
-    tau_fast = 5._wp * one_year * one_day
-    tau_non_woody_litter = 0.7_wp * one_year * one_day
-    residue_cue = 0.1_wp
+    ! turnover times
+    tau_soluable_litter   = 30._wp * one_day ! 30 days 
+    tau_metabolic_litter  = 0.066_wp * one_year * one_day
+    tau_structural_litter = 0.245_wp * one_year * one_day
+    tau_woody_litter      = 10._wp * one_year * one_day ! 10 years 
+    tau_fast              = 5._wp * one_year * one_day
+    tau_slow              = 50._wp * one_year * one_day
+    tau_biomineralisation = 5._wp * one_year * one_day
 
-    ! parameter for JSM implementation
-    t_ref_tresponse = 293.15_wp   ! Wang, G., et al. 2012., Soil Biology and Biochemistry 48, 28-38.
+    ! temperature and moisture rate modifiers 
+    t_ref_tresponse     = 293.15_wp   ! Wang, G., et al. 2012., Soil Biology and Biochemistry 48, 28-38.
     ea_depolymerisation = 53000._wp   ! B. Ahrens, pers. comm. 2016
     ea_mic_uptake       = 47000._wp   ! B. Ahrens, pers. comm. 2016
-    ea_sorption         = 5000._wp   ! B. Ahrens, pers. comm. 2016
+    ea_sorption         = 5000._wp    ! B. Ahrens, pers. comm. 2016
     ea_desorption       = 20000._wp   ! B. Ahrens, pers. comm. 2016
     ea_hsc              = 30000._wp   ! B. Ahrens, pers. comm. 2016
     k1_afps             = 4._wp / 3._wp ! B. Ahrens, pers. comm. 2016
     kmr_depolymerisation= 0.001_wp
     kmr_mic_uptake      = 0.001_wp
-    kmr_hsc             = 0.0_wp
+    kmr_hsc             = 0.001_wp
 
+    ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
     k_diff_org          = 0.286933_wp / 8.0_wp / one_year / one_day
     rho_bulk_org        = 150.3935_wp 
+    carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
     sorp_cap_org        = 0.0_wp
     qmax_org_mineral_default = 0.055_wp / molar_mass_C * 1000._wp 
     k_adsorpt_dom       = 843.391_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s
@@ -191,35 +220,60 @@ CONTAINS
     k_adsorpt_po4       = 0.0_wp
     k_desorpt_po4       = 0.0_wp
 
+    ! microbial parameters
+    microbial_cn        = 9._wp * molar_mass_N / molar_mass_C    ! textbook knowledge
+    microbial_np        = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
+    microbial_nue       = 0.8_wp                                 ! Manzoni et al. 2008
+    microbial_pue       = 0.8_wp                                 ! Manzoni et al. 2008
+    microbial_cue       = 0.392_wp                               ! COMISSION paper
+    microbial_cue_max   = 0.6_wp                                 ! Manzoni et al. 2008
+    microbial_cue_min   = 0.3_wp                                 ! Manzoni et al. 2008
+    residue_cue         = 0.1_wp                                 ! made-up
+   
+    ! additional microbial parameters for JSM implementation
     k_mort_microbial    = 7.48_wp * 1E-8
-    f_soluable_residue  = 0.172_wp
     min_mic_biomass     = 0.01_wp
     vmax_mic_uptake     = 3495.18053_wp / one_year / one_day * 1000000._wp
     km_mic_uptake       = 1.02404788_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
-    tau_soluable_litter = 30._wp * one_day ! 30 days 
-    tau_woody_litter    = 20._wp * one_year * one_day ! 20 years 
     vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day
     vmax_depolymerisation_litter = 0.369800811690762_wp / one_year / one_day 
     km_depolymerisation = 0.08876_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
-    microbial_cue       = 0.392_wp !! COMISSION paper
-    microbial_cue_max   = 0.6_wp 
-    microbial_cue_min   = 0.3_wp 
-    mycorrhizal_cue     = 0.7_wp !! ??? SOURCE
-    cn_mycorrhiza       = 10.0_wp * molar_mass_N / molar_mass_C
-    np_mycorrhiza       = 14.0_wp * molar_mass_P / molar_mass_N
 
+    ! parameters controlliong litter partitioning
+    f_soluable_residue  = 0.172_wp
     f_soluable_leaf      = 0.5_wp
     f_soluable_fine_root = 0.5_wp
     f_soluable_fruit     = 0.5_wp
     f_soluable_seed_bed  = 0.5_wp
+    fc_soluable_max      = 0.85_wp  ! Century
+    k_fc_soluable        = 0.018_wp ! Century
+    k_fn_soluable        = 5.0_wp   ! Century
+    k_fp_soluable        = 5.0_wp   ! Century
+    lc_leaf_max          = 0.295_wp / molar_mass_C * molar_mass_N
+    lc_leaf2sla          = -0.3712_wp / molar_mass_C * molar_mass_N
+    lc_fine_root         = 0.22_wp / molar_mass_C * molar_mass_N
+    lc_coarse_root       = 0.7_wp / molar_mass_C * molar_mass_N
+    lc_woody_litter      = 0.7_wp / molar_mass_C * molar_mass_N
+    lc_fruit             = 0.22_wp / molar_mass_C * molar_mass_N 
+    lc_seed_bed          = 0.22_wp / molar_mass_C * molar_mass_N
 
-    carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
+    ! mycorrhizal parameters
+    mycorrhizal_cue     = 0.7_wp !! ??? SOURCE
+    mycorrhiza_cn       = 10.0_wp * molar_mass_N / molar_mass_C
+    mycorrhiza_np       = 14.0_wp * molar_mass_P / molar_mass_N
+    f_maxresp_myc       = 0.4_wp !! ??? SOURCE
+    f_surface_myc2fineroot = 10.0_wp !! ??? SOURCE
 
-    microbial_cn = 9._wp * molar_mass_N / molar_mass_C
-    microbial_np = 14._wp * molar_mass_P / molar_mass_N
-    microbial_nue = 0.8_wp
-    microbial_pue = 0.8_wp
- 
+    ! nutrient uptake kinetics
+    ! simple model
+    km1_up_nh4 = 0.0416_wp
+    km2_up_nh4 = 1.0_wp 
+    km1_up_no3 = 0.0416_wp
+    km2_up_no3 = 1.0_wp
+    km1_up_po4 = 0.0416_wp
+    km2_up_po4 = 1.0_wp
+
+    ! additional jsm parameters 
     vmax_mic_uptake_nh4   = 48.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein 
     km_mic_uptake_nh4     = 1.2_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein    
     vmax_mic_uptake_no3   = 39.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein 
@@ -242,7 +296,7 @@ CONTAINS
     f_nit_noy              = 0.02           ! Xu-Ri & Prentice, 2008
     f_nit_n2o              = 0.002          ! Xu-Ri & Prentice, 2008
     ea_denitrification     = 47000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
-    vmax_nitrification     = 0.1 / one_day * 1.e6             ! Xu-Ri & Prentice, 2008, 10% / day
+    vmax_nitrification     = 0.1_wp / one_day * 1.e6             ! Xu-Ri & Prentice, 2008, 10% / day
     vmax_denitrification   = 0.1_wp / one_day * 1.e6          ! Xu-Ri & Prentice, 2008, 10% / day
     km_denitrification_c   = 0.017 * 1000.0_wp / molar_mass_C ! Xu-Ri & Prentice, 2008   
     km_denitrification_no3 = 0.083 * 1000.0_wp / molar_mass_N ! Xu-Ri & Prentice, 2008
@@ -250,6 +304,9 @@ CONTAINS
     f_denit_n2o            = 0.02           ! Xu-Ri & Prentice, 2008
     ea_gasdiffusion        = 47000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
 
+    ! parameters for simple soil biogeochemical model 
+    floss_nmin = 0.05_wp
+    fnit_nmin  = 0.1_wp
     ! simple leaching
     fleach_nh4 = 0.1_wp
     fleach_po4 = 0.001_wp
@@ -269,6 +326,7 @@ CONTAINS
     nh4_solute_prescribe = 0.1_wp
     no3_solute_prescribe = 0.1_wp
     po4_solute_prescribe = 0.1_wp
+
 
   END SUBROUTINE init_sb_constants
 

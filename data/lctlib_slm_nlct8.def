@@ -175,22 +175,6 @@ vmax_uptake_n 0.14 0.14 0.14 0.14 0.14 0.14 0.14 0.14
 # tuned from OCN's 1.5 gN/gC/1800s        
 vmax_uptake_p 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428
         
-#soil_n_aff1: low-affinity uptake (m3/mol)         
-# tuned from OCN's 0.05 m2/gN        
-soil_n_aff1 0.0416 0.0416 0.0416 0.0416 0.0416 0.0416 0.0416 0.0416
-        
-#soil_n_aff2: half saturation of high-affinity uptake (mol/m3)        
-# tuned from OCN's 0.84 gN/m2         
-soil_n_aff2 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
-        
-#soil_p_aff1: low-affinity uptake (m3/mol)         
-# tuned from OCN's 0.05 m2/gN         
-soil_p_aff1 0.0416 0.0416 0.0416 0.0416 0.0416 0.0416 0.0416 0.0416
-        
-#soil_p_aff2: half saturation of high-affinity uptake (mol/m3)        
-# tuned from OCN's 0.84 gN/m2         
-soil_p_aff2 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
-        
 #bnf_base: placeholder constant BNf rate, required to keep soil NH4 at constant levels mumol N s-1        
 bnf_base 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
         

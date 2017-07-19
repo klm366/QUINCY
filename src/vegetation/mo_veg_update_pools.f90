@@ -109,14 +109,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_no3
-    dsl4jsb_Real2D_onChunk      :: uptake_norg
     dsl4jsb_Real2D_onChunk      :: n_fixation
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
-    dsl4jsb_Real2D_onChunk      :: uptake_norg_n15
     dsl4jsb_Real2D_onChunk      :: n_fixation_n15
     dsl4jsb_Real2D_onChunk      :: uptake_po4
-    dsl4jsb_Real2D_onChunk      :: uptake_porg
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n15
@@ -198,14 +195,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg_n15)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_porg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)        ! in
@@ -259,21 +253,30 @@ CONTAINS
            growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
        npp_c14(:)  = gross_assimilation_C14(:) - & 
            growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
-       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + npp(1)     * dtime / 1000000.0_wp
-       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + npp_c13(1) * dtime / 1000000.0_wp
-       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr  + npp_c14(1) * dtime / 1000000.0_wp
+       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr   + & 
+                                        veg%mycorrhiza_export%carbon%ptr      + &
+                                        npp(1)     * dtime / 1000000.0_wp
+       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr + & 
+                                        veg%mycorrhiza_export%carbon%ptr      + &
+                                        npp_c13(1) * dtime / 1000000.0_wp
+       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr + & 
+                                        veg%mycorrhiza_export%carbon%ptr      + &
+                                        npp_c14(1) * dtime / 1000000.0_wp
   
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
        veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr + & 
-                                            ( uptake_nh4(1) + uptake_no3(1) + uptake_norg(1) + n_fixation(1)) * &
+                                            veg%mycorrhiza_export%nitrogen%ptr + &
+                                            ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * &
                                             dtime / 1000000.0_wp
        veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
-                                            ( uptake_nh4_n15(1) + uptake_no3_n15(1) + uptake_norg_n15(1) + n_fixation_n15(1)) * &
+                                            veg%mycorrhiza_export%nitrogen15%ptr + &
+                                            ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * &
                                             dtime / 1000000.0_wp
        veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
-                                            (uptake_po4(1) + uptake_porg(1) ) * dtime / 1000000.0_wp
+                                            veg%mycorrhiza_export%phosphorus%ptr + &
+                                            uptake_po4(1) * dtime / 1000000.0_wp
    
        !> 1.3 update labile pool and reserve 
        !! 

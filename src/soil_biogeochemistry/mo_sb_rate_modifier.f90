@@ -64,6 +64,7 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
     ! SB_
+    dsl4jsb_Real3D_onChunk :: rtm_decomposition 
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rtm_sorption
@@ -72,6 +73,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rtm_nitrification
     dsl4jsb_Real3D_onChunk :: rtm_denitrification
     dsl4jsb_Real3D_onChunk :: rtm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: rmm_decomposition 
     dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rmm_sorption
@@ -105,6 +107,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)                ! out
@@ -113,6 +116,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_nitrification)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_denitrification)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_gasdiffusion)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! out
@@ -140,18 +144,26 @@ CONTAINS
     rtm_sorption         = calc_temperature_rate_modifier(t_soil_sl,ea_sorption) 
     rtm_desorption       = calc_temperature_rate_modifier(t_soil_sl,ea_desorption) 
     rtm_hsc              = calc_temperature_rate_modifier(t_soil_sl,ea_hsc) 
-    rtm_nitrification    = calc_peaked_temperature_rate_modifier(t_soil_sl,ea_nitrification,ed_nitrification,t_opt_nitrification) 
-    rtm_denitrification  = calc_temperature_rate_modifier(t_soil_sl,ea_denitrification) 
-    rtm_gasdiffusion     = calc_temperature_rate_modifier(t_soil_sl,ea_gasdiffusion) 
      
     rmm_depolymerisation = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) 
     rmm_mic_uptake       = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_mic_uptake)
     rmm_sorption         = calc_convert_bulk_to_liquid(w_soil_sl)
     rmm_desorption       = calc_convert_bulk_to_liquid(w_soil_sl) 
     rmm_hsc              = calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_hsc) 
+
+    !> 2.0 simple soil model 
+    !!
+    rtm_decomposition    = calc_temperature_rate_modifier(t_soil_sl,ea_depolymerisation) 
+    rmm_decomposition    = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) * &
+                           calc_moisture_modifier(w_soil_sl,w_soil_fc_sl)
+
+    !> 3.0 nitrification-denitrification model
+    !!
+    rtm_nitrification    = calc_peaked_temperature_rate_modifier(t_soil_sl,ea_nitrification,ed_nitrification,t_opt_nitrification) 
+    rtm_denitrification  = calc_temperature_rate_modifier(t_soil_sl,ea_denitrification) 
+    rtm_gasdiffusion     = calc_temperature_rate_modifier(t_soil_sl,ea_gasdiffusion) 
     rmm_nitrification    = calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) 
     rmm_gasdiffusion     = 1.0_wp - calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) 
-
     anaerobic_volume_fraction_sl = calc_anaerobic_volume_fraction(w_soil_sl,w_soil_fc_sl,lambda_anvf,k_anvf) 
 
   END SUBROUTINE update_sb_rate_modifier
@@ -335,15 +347,15 @@ CONTAINS
     REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless] 
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)              :: air_filled_pore_space
+    REAL(wp)              :: hlp1 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
 
     IF(param>eps8.AND.w_soil_fc_sl > eps8) THEN
-       air_filled_pore_space = (w_soil_sl - w_soil_fc_sl ) / w_soil_fc_sl
-       IF(air_filled_pore_space > eps4) THEN
-          rate_modifier = 1._wp / air_filled_pore_space
+       hlp1 = (w_soil_sl / w_soil_fc_sl)**3
+       IF(hlp1 > param) THEN
+          rate_modifier = 1._wp / hlp1 
        ELSE 
-          rate_modifier = 1._wp / eps4
+          rate_modifier = 1._wp / param 
        ENDIF
     ELSE
        rate_modifier = 1._wp

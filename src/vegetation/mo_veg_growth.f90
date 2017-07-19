@@ -197,8 +197,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3
     dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
-    dsl4jsb_Real2D_onChunk      :: uptake_norg
-    dsl4jsb_Real2D_onChunk      :: uptake_norg_n15
     dsl4jsb_Real2D_onChunk      :: uptake_po4
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: f_p_demand
@@ -362,8 +360,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                     ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg)                        ! ?
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_norg_n15)                    ! ?
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)                         ! out
@@ -450,7 +446,7 @@ CONTAINS
                                           plant_uptake_no3_sl(:,:), &
                                           plant_uptake_no3_n15_sl(:,:), &
                                           plant_uptake_po4_sl(:,:), &
-                                          uptake_norg(:), &
+                                          veg%mycorrhiza_export, &
                                           uptake_nh4(:), &
                                           uptake_nh4_n15(:), &
                                           uptake_no3(:), &
@@ -832,7 +828,7 @@ CONTAINS
                                               plant_uptake_no3_sl, &
                                               plant_uptake_no3_n15_sl, &
                                               plant_uptake_po4_sl, &
-                                              uptake_norg, &
+                                              veg_mycorrhiza_export, &
                                               uptake_nh4, &
                                               uptake_nh4_n15, &
                                               uptake_no3, &
@@ -891,7 +887,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
-    REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: uptake_norg              !< total plant N uptake from mycorrhiza (mu mol N / m2 / s)  
+    TYPE(t_slm_struct_veg_element),        INTENT(in)    :: veg_mycorrhiza_export    !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4               !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4_n15           !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_no3               !< total plant NO3 uptake (mu mol N / m2 / s)
@@ -1054,10 +1050,10 @@ CONTAINS
     IF(myc_scheme == 'am' .OR. myc_scheme == 'ecm') THEN
 
        f_exudate(:) = 0.5_wp   
-       WHERE(uptake_norg(:) > eps8) 
+       IF(veg_mycorrhiza_export%nitrogen%ptr > eps8)THEN 
           f_exudate(:) = MIN(f_exudate(:), &
-                             uptake_norg(:) / (uptake_norg(:) + (uptake_nh4(:)+uptake_no3(:)))) ! Mycofon
-       ENDWHERE 
+                             veg_mycorrhiza_export%nitrogen%ptr / (veg_mycorrhiza_export%nitrogen%ptr + dtime/1.e6_wp * (uptake_nh4(:)+uptake_no3(:)))) ! Mycofon
+       ENDIF 
 !! Shorter for trunk!!!
        ! mol/m3 * m -> mol/m2
        ! mol/m2 * g/mol -> g/m2

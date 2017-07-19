@@ -22,7 +22,8 @@ MODULE mo_sb_jsm_transport
   PRIVATE
   PUBLIC :: calc_particle_fluxrate, calc_bioturbation_rate, &
             calc_bioturbation_transport_wrapper, calc_liquid_phase_transport_wrapper , & 
-            calc_particle_transport_wrapper, calc_liquid_phase_transport
+            calc_particle_transport_wrapper, & 
+            calc_bioturbation_transport, calc_liquid_phase_transport
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
 

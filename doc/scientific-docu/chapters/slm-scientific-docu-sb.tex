@@ -1,13 +1,321 @@
 \chapter{Soil Biogeochemistry}\label{ch:soil_biogeochemistry}
 
+\section{Simple Model}\label{sec:sb:simple_model}
 
-\section{Simple Model}\label{sec:simple_model}
+\subsection{Overview}\label{sec:sb:simple_overview}
+
+Soil biogeochemistry is represented by five range of organic pools (met, str and wl: metabolic, structural and and woody litter; fast, slow: fast and slow overturning soil organic matter). Each of these pools contains carbon (C), nitrogen (N) and phosphorus (P), as well as (in the isotope enabled version) \chem{^{13}C}, \chem{^{14}C}, and \chem{^{15}N}. The unit of the pools is \unit{mol m^{-3}}. In addition, the model represents inorganic pools (\chem{NH_4},\chem{NO_3}, NO\chem{_y}, \chem{N_2O}, \chem{N_2}, and \chem{PO_4}), with similar units. 
+
+The model can be run either as zero-dimensional model (\texttt{simple\_0d}), implying that all soil state-variables (temperature, moisture, rate-constants and affinities), are integrated over the soil column, and all model equations are evaluated for only this average layer, or as a one-dimensional (\texttt{simple\_1d}), by which all calculations occur for all soil-depths independently, and additional transport processes between the layers apply.
+
+The dynamics of the soil organic pools ($X$) are described in general as 
+
+\begin{subequations}\label{eq:sb:simple_om_dynamics}
+\begin{align}
+\frac{\partial}{\partial t} X_{met} &= \sum(f_{vp \rightarrow met} F_{L_{vp}}) + f_{wl \rightarrow met} \eta_{wl \rightarrow met} \frac{X_{wl}}{\tau_{wl}} - \frac{X_{met}}{\tau_{met}}\\
+\frac{\partial}{\partial t} X_{str} &= \sum(f_{vp \rightarrow str} F_{L_{vp}}) + f_{wl \rightarrow str} \eta_{wl \rightarrow str} \frac{X_{wl}}{\tau_{wl}}- \frac{X_{str}}{\tau_{str}}\\
+\frac{\partial}{\partial t} X_{wl} &= \sum(f_{vp \rightarrow wl} F_{L_{vp}}) - \frac{X_{wl}}{\tau_{wl}}\\
+\frac{\partial}{\partial t} X_{f} &= \eta_{l \rightarrow f} (\frac{X_{met}}{\tau_{met}} + \frac{X_{str}}{\tau_{str}}) + \eta_{s \rightarrow f} \frac{X_{s}}{\tau_{s}} - \frac{X_{f}}{\tau_{f}} + \Phi_{l \rightarrow f} + \Phi_{s \rightarrow f} + \frac{\partial}{\partial z} (D_b \frac{\partial X_{f}}{\partial z}) \\
+\frac{\partial}{\partial t} X_{s} &= \eta_{f \rightarrow s} \frac{X_{f}}{\tau_{f}} - \frac{X_{s}}{\tau_{s}}  + \Phi_{f \rightarrow s} - F_{biomin,PO_4} + \frac{\partial}{\partial z} (D_b \frac{\partial X_{s}}{\partial z})
+\end{align}
+\end{subequations}
+
+where $F_{L_{vp}}$ is the litter fall of the various plant tissue types, $f_{vp \rightarrow i}$ are the coefficients determining the partitioning of this litter fall to the litter pools (see \ref{sec:sb:litter_partitioning}), $\tau_i$ are temperature and moisture adjusted, nitrogen-limited turnover times of the respective pools (X; i = met, str, wl, f, s; \ref{sec:sb:turnover}), the effective uptake-use efficiencies ($\eta_{i \rightarrow j }$) are the mass released during transformation from pool $i$ to $j$ (see Section \ref{sec:sb:formation}), $\Phi$ is a net mineralisation term for nitrogen and phosphorus, required to match C:N:P stoichiometry of the fast and slow SOM pool, and $F_{biomin,PO_4}$ is the biomineralisation flux (see Section \ref{sec:sb:formation}). In the \texttt{simple\_1d} mode, the transfer of soil organic matter through bioturbation is considered with a prescribed diffusion constant $D_b$.
+
+The dynamics of the inorganic pools ($NH_4$, $NO_3$, and $PO_4$) are described as 
+
+\begin{subequations}\label{eq:sb:simple_im_dynamics}
+\begin{align}
+\frac{\partial}{\partial t} NH_4 &= F_{NH_4,dep} - U_{plant,NH_4} - U_{myc,NH_4} - \sum(\Phi_{i,NH_4}) - U_{nit} - \frac{\partial v_{NH_4} NH_4}{\partial z}\\
+\frac{\partial}{\partial t} NO_3 &= F_{dep,NO_3} + F_{nit,NO3} - U_{plant,NO_3} - U_{myc,NO_3} - \sum(\Phi_{i,NO_3}) - U_{denit} - \frac{\partial v_{NO_3} NO_3}{\partial z}\\
+\frac{\partial}{\partial t} NO_y &= F_{nit,NO_y} + F_{denit,NO_y} - E_{NO_y} \\
+\frac{\partial}{\partial t} N_2O &= F_{nit,N_2O} + F_{denit,N_2O} - E_{N_2O} \\
+\frac{\partial}{\partial t} N_2 &=  F_{nit,N_2} + F_{denit,N_2} - E_{N_2}\\
+\frac{\partial}{\partial t} PO_4 &= F_{dep,PO_4} + F_{biomin,PO_4} - U_{plant,PO_4} - U_{myc,PO_4} - \sum(\Phi_{i,PO_4}) -  \frac{\partial v_{PO_4} PO_4}{\partial z} 
+\end{align}
+\end{subequations}
+
+where $U$ are the uptake rates of plants, mycorrhiza or (de-)nitrifying bacteria, respectively (see Section \ref{sec:sb:simple_uptake} and \ref{sec:sb:nitrification_denitrification}, respectively); the $F_{dep}$ are the atmospheric deposition fluxes; the $F_{nit,i}$, and $F_{denit,i}$ are the production of \chem{NO_y}, \chem{N_2O} and \chem{N_2} by nitrification and denitrification, respectively, and $\frac{\partial v_{x} X}{\partial z}$ the vertical transport loss term, with species specific flow velocities to account for their different mobility in the soil.
+
+\subsection{Partitioning of litterfall to litter pools}\label{sec:sb:litter_partitioning}
+
+Litter fall is partitioned to the metabolic, structural and woody litter according to the idea of the CENTURY approach \cite{Parton:1993ud}. Litter from labile and reserve pools are assumed to enter the metabolic pools, litter from sap- and heartwood is entering the woody pool. The metabolic fraction of litter fall from leaves, fine and coarse roots, fruits and seed-bed is determined as 
+
+\begin{equation}\label{eq:sb:simple_litterpartitioning_c}
+f_{vp \rightarrow met,C} = f_{met,max,C} - k_{met,C} \times LC_{vp} \frac{C_{vp}}{N_{vp}}
+\end{equation}
+
+where $f_{vp \rightarrow met,C}$ is constrained to positive solutions, $f_{met,max,C}$ is the maximum fraction allocated to the metabolic pool, $k_{met,C}$ the slope of the metabolic fraction to the lignin to nitrogen ratio, $LC_{vp}$ the tissue-specific fraction of the lignin-content of that tissue type, and the $\frac{C_{vp}}{N_{vp}}$ the C:N ratio of litter fall from that tissue. The lignin-content is assumed constant for all but the leaf tissues. For the latter, an empirical dependency between lignin-content and specific leaf-area ($sla$) in the White-data set \cite{White:2000vl} is used.
+
+\begin{equation}\label{eq:sb:simple_leaf_lc}
+LC_{leaf} = LC_{leaf,max} + k_{leaf2sla} \times sla
+\end{equation}
+
+The remainder of litter fall is allocated to the structural pool. For nitrogen and phosphorus, the partitioning assumes that the relative proportion of C:N and N:P are preserved in the partitioning according to 
+
+\begin{equation}\label{eq:sb:simple_litterpartitioning_np}
+f_{vp \rightarrow met,X} = \frac{1}{1+\frac{1-f_{vp \rightarrow met,C}}{k_{met,vp,X} \times f_{vp \rightarrow met,C}}}
+\end{equation}
+
+\subsection{SOM and litter turnover rates}\label{sec:sb:turnover}
+
+The standard turnover times of the litter and SOM pools are modified by temperature ($f(T_{soil})$) and moisture $g(\Theta)$ modifiers),
+
+\begin{subequations}\label{eq:simple_som_turnover}
+\begin{align}
+\tau^{*}_i &= \tau^{base}_i \times f(T_{soil}) \times g(\Theta), where\\
+f(T_{soil}) &= e^{-\frac{Ea}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}, and\\
+g(\theta) &= \frac{afps^{1+k1_{afps}}}{k2_{afps} \times afps^{k1_{afps}}}, where\\
+afps &= \frac{\theta_{fc}-\theta}{\theta_{fc}}
+\end{align}
+\end{subequations}
+
+where is an Arrhenius-type temperature response function based on soil temperature $T_{soil}$, and $g(\theta)$ a moisture response function, taking account of both moisture limitation in a dry soil, and oxygen limitation in a wet soil.
+
+\subsection{Plant and mycorrhizal uptake rates}\label{sec:sb:simple_uptake}
+
+The potential uptake rates of plants and mycorrhiza for X= \chem{NH_4}, \chem{NO_3}, and \chem{PO_4} follow an extended Michaelis-Menten Kinetics
+
+\begin{subequations}\label{eq:sb:simple_potential_uptake}
+\begin{align}
+U^{*}_X &= v_{max,X} \times f_1(T_{soil}) \times X \times (\frac{K_{m1,X}}{f_2(T_{soil}) \times g(\theta)}+ \frac{X}{K_{m2,X} \times f_2(T_{soil}) \times g(\theta) +X}) \times C\\
+f_1(T_{soil}) &= e^{-\frac{Ea,vmax,uptake}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}, and\\
+f_2(T_{soil}) &= e^{-\frac{Ea,hsc}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}, and\\
+g(\theta) &= (\frac{\theta}{\theta_{fc}})^{k_{hsc}}
+\end{align}
+\end{subequations}
+
+where $v_{max,X}$ is the temperature-sensitive plant/mycorrhiza-specific maximum uptake rate per unit biomass, $C$ is the biomass density of fine roots or mycorrhiza (\unit{mol Cm^{-3}}), respectively, and the $K_m$ are constants (see Table \ref{TabSBParam}, which are adjusted with temperature and soil moisture to account of the varying efficiency and transport of the nutrients within the soil.
+
+\subsection{Woody litter decomposition}\label{sec:sb:woody_litter}
+
+Woody litter decomposition is assumed to be a two-stage process, in which the first step implies physical destabilisation and a first level of processing, which releases a fraction of carbon, assumed to be one minus the minimum microbial carbon-use efficiency, to heterotrophic respiration and fraction of nutrients leached, assumed to be one minus the microbial nutrient use efficiencies, respectively. The remainder is assumed to enter the  metabolic and structural litter, subject to the rules layed out in Section \ref{sec:sb:litter_partitioning} 
+
+\subsection{SOM formation}\label{sec:sb:formation}
+
+Matter entering the fast and slow SOM pool (Eq. \ref{eq:sb:simple_om_dynamics}) are required to fulfill the prescribed, fixed stoichiometry of the SOM pools ($\chi_{SOM}$), leading to the estimate of the potential immobilisation flux
+
+\begin{equation}\label{eq:sb:simple_pot_n_immobilisation}
+\Phi^{*}_{l \rightarrow f, NH_4} = \frac{\eta_{max,C}}{\chi_{SOM}^{C:N}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})
+\end{equation} 
+
+where $\tau^{*}_i$ are the temperature and moisture constrained turnover times (Eq. \ref{eq:simple_som_turnover}). The actual immobilisation rate is limited to the amount of ammonium (\chem{NH_4} available, subject to co-occurring potential N uptake from plants and mycorrhiza ($U^{*}_{NH_4,plant}$; $U^{*}_{NH_4,myc}$, respectively, Eq. \ref{eq:sb:simple_potential_uptake}), and nitrifiers ($U^{*}_{nit}$; Eq. \ref{eq:sb:simple_nitrification}).
+
+\begin{equation}\label{eq:sb:simple_act_n_immobilisation}
+\Phi_{l \rightarrow f, NH_4} = \frac{\Phi^{*}_{l \rightarrow f, NH_4} \times NH_4}{max(NH_4, U^{*}_{NH_4,plant} + U^{*}_{NH_4,myc} + U^{*}_{nit} + \Phi^{*}_{l \rightarrow f, NH_4})}   
+\end{equation}
+
+The co-occurring uptake rates of plants, mycorrhiza and nitrifiers are adjusted to their actual values in a similar fashion. In the case that $\Phi_{l \rightarrow f, NH_4}$ is insufficient to match the stoichiometrically required N demand, the carbon-use efficiency of fast SOM formation is assumed to decline within the range given by [$\eta_{min,C}$,$\eta_{max,C}$]
+
+\begin{equation}\label{eq:sb:simple_mic_cue}
+\eta_{l \rightarrow f,C} = max(\eta_{min,C},\frac{\chi_{SOM}^{C:N} \times (\eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}}) + \Phi_{NH_4,l \rightarrow f})}{\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}})
+\end{equation}
+
+In the case that the combination of $\eta_{l \rightarrow f, C}$ and $\Phi_{l \rightarrow f, NH_4}$ is insufficient to ensure that the newly formed fast SOM has a C:N ratio of $\chi_{SOM}^{C:N}$, the turnover times of the woody and non-woody litter pool is increased to match the N available for immobilisation
+
+\begin{equation}
+ \tau_{met|str} = \tau^{*}_{met|str} \frac{\frac{\eta_{l \rightarrow f,C}}{\chi_{SOM}^{C:N}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})}{\Phi_{l \rightarrow f,NH_4}}
+\end{equation}
+
+The potential immobilisation flux of phosphorus ($PO_4$) is defined in a similar manner than potential $NH_4$ immobilisation, but now considering the actual turnover time of the litter pools and the actual litter uptake carbon-use efficiency.
+
+\begin{equation}
+\Phi^{*}_{P,l \rightarrow f} = \frac{\eta_{C,l \rightarrow f}}{\chi_{SOM}^{C:N}\chi_{SOM}^{N:P}} (\frac{C_{met}}{\tau_{met}} + \frac{C_{str}}{\tau_{str}}) - \eta_P (\frac{P_{met}}{\tau_{met}} + \frac{P_{str}}{\tau_{str}})
+\end{equation} 
+
+In the case that the available $PO_4$ is lower than the sum of the P demand from plants, mycorrhiza, and microbes, biomineralisation of P bound in the slow SOM pool is assumed to occur 
+
+\begin{subequations}\label{eq:sb:simple_pot_p_immobilisation}
+\begin{align}
+\Phi_{P,l \rightarrow f} &= \frac{\Phi^{*}_{P,l \rightarrow f} \times (PO_4 + F^{*}_{P,biomin})}{MAX(PO_4 + F^{*}_{P,biomin}, U^{*}_{PO_4,plant} + U^{*}_{PO_4,myc} + \Phi^{*}_{P,l \rightarrow f})}, where \\
+F^{*}_{P,biomin} &= \frac{P_{slow}}{\tau^{*}_{biomin}}  
+\end{align}
+\end{subequations}
+
+The actual amount of bio-mineralisation is then determined as 
+
+\begin{equation}
+F_{P,biomin} = max(U_{PO_4,plant} + U_{PO_4,myc} + \Phi_{P,l \rightarrow f} - PO_4, 0.0)
+\end{equation}
+
+Because the C:N:P stoichiometry and uptake use-efficiencies are organised such that decomposition of these pools are always leading to net mineralisation of nutrients, the $\Phi_{s <-> f}$ are negative and do not require special treatment to affect the carbon-use efficiency or turnover rates. Because the processing of fast and slow SOM is assumed to also include higher-order trophic levels of heterotrophic respiration, the $\eta_{s}$ are assumed to be only 10\% and $\eta_{f}$ the minimum carbon-use efficiencies, such that
+
+ \begin{subequations}
+\begin{align}
+\Phi_{f \rightarrow s,NH_4} &= \frac{\frac{\eta_{s,C}}{\chi_{SOM}^{C:N}} C_{f} - N_{f}}{\tau_{f}} \\
+\Phi_{s \rightarrow f,NH_4} &= \frac{\frac{\eta_{min,C}}{\chi_{SOM}^{C:N}} C_{s} - P_{s}}{\tau_{s}} \\
+\Phi_{f \rightarrow s,PO_4} &= \frac{\frac{\eta_{s,C}}{\chi_{SOM}^{C:N}\chi_{SOM}^{N:P}} C_{f} - P_{f}}{\tau_{f}} \\
+\Phi_{s\rightarrow f,PO_4} &= \frac{\frac{\eta_{min,C}}{\chi_{SOM}^{C:N}\chi_{SOM}^{N:P}} C_{s} - P_{s}}{\tau_{s}} \\
+\end{align}
+\end{subequations}
+ 
+\subsection{Nitrification and Denitrification}\label{sec:sb:nitrification_denitrification}
+
+The \texttt{fixed} option follows the CASA model \cite{Wang:2010ba} and assumes that a fixed proportion net mineralisation is lost from the ecosystem ($F^{\uparrow}_{N_2}$), and that a further constant fraction is nitrified to \chem{NO_3}
+
+\begin{subequations}\label{eq:sb:simple_fixed_loss}
+\begin{align}
+F^{\uparrow}_{N_2} &= f_{nloss} \times max(\sum(\Phi_{NH_4}),0.0) \\
+U_{nit} &= f_{nit} \times max(\sum(\Phi_{NH_4})-E_{N_2},0.0) 
+\end{align}
+\end{subequations} 
+
+Since for \texttt{fixed}, the N losses are calculated from the net mineralisation flux, there is no need to calculate the potential N uptake by nitrifiers, such that $U^{*}_{nit}$ is set to zero in Eq. \ref{eq:sb:simple_act_n_immobilisation}. 
+
+The \texttt{dynamic} option follows the O-CN model \cite{Zaehle:2010cz}, which relies on the separation of the soil into aerobic and anaerobic volume fractions:
+
+\begin{equation}\label{eq:sb:simple_anaerobic_vf}
+anvf = e^{-(\lambda_{anvf} * (1-afps))^{k_{anvf}}}
+\end{equation}
+
+where $\lambda_{anvf}$ and $k_{anvf}$ are parameters and $afps$ is the air filled pore space, as defined in equation \ref{eq:simple_som_turnover}d, respectively. 
+
+Nitrification is assumed to occur in the aerobic fraction of the soil, and is modified by temperature and soil moisture.  
+ 
+\begin{subequations}\label{eq:sb:simple_dynamic_nitrification}
+\begin{align}
+U^{*}_{nit} &= v_{max,nit} \times f(T) \times g(\theta) \times (1 - anvf) \times NH_4, where\\
+f(T_{soil}) &= E_{d,nit} \frac{e^{\frac{E_{a,nit}\times kt}{R_{gas}}}}{E_{d,nit}-E_{a,nit}\times (1 - e^{\frac{E_{d,nit} \times kt}{R_{gas}}})} \\
+kt & = \frac{T_{soil}-T_{opt,nit}}{T_{soil} \times T_{opt,nit}}\\
+g(\theta) &= 1-afps
+\end{align}
+\end{subequations}
+
+Nitrification is fractionated into its products according to
+
+\begin{subequations}\label{eq:sb:simple_dynamic_nitrification_prod}
+\begin{align}
+F_{nit,NO_3} &= (1 - f_{nit,NO_y} -  f_{nit,N_2O}) \times U_{nit}\\
+F_{nit,NO_y} &= f_{nit,NO_y}  \times U_{nit}\\
+F_{nit,N_2O} &= f_{nit,N_2O}  \times U_{nit}
+\end{align}
+\end{subequations}
+
+Denitrification is assumed to occur in the anaerobic fraction of the soil, and is modified by temperature and soil moisture.  
+ 
+\begin{subequations}\label{eq:sb:simple_dynamic_denitrification}
+\begin{align}
+U^{*}_{denit} &= anvf \times f(T) \frac{C_{mic}}{km_{denit,mic} + C_{mic}} \frac{NO_3}{km_{denit,NO_3} + NO_3}, where\\
+f(T_{soil}) &= e^{-\frac{Ea_{denit}}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}\\
+\end{align}
+\end{subequations}
+
+Denitrification is fractionated into its products according to
+
+\begin{subequations}\label{eq:sb:simple_dynamic_denitrification_prod}
+\begin{align}
+F_{denit,NO_y} &= f_{denit,NO_y}  \times U_{denit}\\
+F_{denit,N_2O} &= f_{denit,N_2O}  \times U_{denit}\\
+F_{denit,N_2} &= (1 - f_{denit,NO_y} - f_{denit,N_2O})  \times U_{denit}
+\end{align}
+\end{subequations}
+ 
+\subsection{Soil in- and outfluxes}\label{sec:sb:simple_netbalance}
+
+Currently, gas diffusion is not modelled explicitly. Instead, \chem{CO_2} is assumed to be directly released to the atmosphere. The carbon efflux per soil layer is described as 
+\begin{equation}
+F^{\uparrow}_{CO_2} = ( (1-\eta_{C,l \rightarrow f}) (\frac{C_{met}}{\tau_{met}} + \frac{C_{str}}{\tau_{str}}) + (1 - \eta_{C,wl \rightarrow met|str}) \frac{C_{wl}}{\tau_{wl}} + (1 - \eta_{C,f \rightarrow s}) \frac{C_{f}}{\tau_{f}} + (1 - \eta_{C,s \rightarrow f}) \frac{C_{s}}{\tau_{s}} ) \Delta t,
+\end{equation} 
+
+and similar for \chem{^{13}C} and \chem{^{14}C} fluxes.
+
+Slightly differently from that, the emission of gaseous N species is assumed to follow \cite{XURI:2008jq}, which considers the effect of temperature and moisture on gas loss. However, transfer between soil layers is equally not treated explicitly. 
+
+\begin{subequations}\label{eq:sb:simple_ngasloss}
+\begin{align}
+F^{\uparrow}_{X} &= f(T) \times g(\theta) \times X, where \\
+f(T_{soil}) &= e^{-\frac{Ea_{gas,diffusion}}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}, and \\
+g(\theta) &= afps 
+\end{align}
+\end{subequations}
+
+%\newpage
+\begin{sidewaystable}
+\section{Simple model parameters}\label{TabSBParam}
 
 
-simple model 0d and 1d ...
+% PARAMETER LIST - Start %
+Parameter List and Information according to mo\_sb\_constants from SLM r640s. \\
+
+%\resizebox{\textwidth}{!}{  % to resize table to fit the page, needs \usepackage{graphicx}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+$f_{met,max,C}$ & maximum fraction of litterfall to metabolic litter & \texttt{fc\_max\_soluable} & & \ref{eq:sb:simple_litterpartitioning_c} &  0.85 & \cite{Parton:1993ud}\\
+$k_{met,C}$ & slope of lignin to metabolic fraction partitioning & \texttt{k\_fc\_soluable} & & \ref{eq:sb:simple_litterpartitioning_c} &  0.85 & \cite{Parton:1993ud}\\
+$k_{met,N}$ & maximum fraction of litterfall to metabolic litter & \texttt{k\_fn\_soluable} & & \ref{eq:sb:simple_litterpartitioning_np} &  5 & \cite{Parton:1993ud}\\
+$k_{met,P}$ & maximum fraction of litterfall to metabolic litter & \texttt{k\_fp\_soluable} & & \ref{eq:sb:simple_litterpartitioning_np} &  5 & \cite{Parton:1993ud}\\
+$LC_{leaf,max}$ & maximum lignin fraction of leaves & \texttt{lc\_leaf\_max} & mol-1 &  \ref{eq:sb:simple_leaf_lc} &  0.295 & \cite{White:2000vl}\\
+$k_{leaf2sla}$ & slope of lignin to sla relationship & \texttt{lc\_leaf2sla} & m2-1 &  \ref{eq:sb:simple_leaf_lc} &  -0.3712 & \cite{White:2000vl}\\
+$LC_{fine\_root}$ & lignin fraction of fine root & \texttt{lc\_fine\_root} & mol-1 &  \ref{eq:sb:simple_litterpartitioning_c} &  0.22 & \cite{White:2000vl}\\
+$LC_{woody\_litter}$ & lignin fraction of woody litter & \texttt{lc\_woody\_litter} & mol-1 &  \ref{eq:sb:simple_litterpartitioning_c} &  0.7 & \cite{White:2000vl}\\
+$LC_{coarse\_root}$ & lignin fraction of coarse roots & \texttt{lc\_coarse\_root} & mol-1 &  \ref{eq:sb:simple_litterpartitioning_c} &  0.7 & assuming woody values\\
+$LC_{fruit}$ & lignin fraction of fine root & \texttt{lc\_fruit} & mol-1 &  \ref{eq:sb:simple_litterpartitioning_c} &  0.22 & set to fine roots\\
+$LC_{seed\_bed}$ & lignin fraction of fine root & \texttt{lc\_fruit} & mol-1 &  \ref{eq:sb:simple_litterpartitioning_c} &  0.22 & set to fine-roots\\
+$\tau^{base}_{met}$ & turnover time of metabolic litter & \texttt{tau\_metabolic\_litter} & years & \ref{eq:simple_som_turnover}  &  0.066 & \cite{Parton:1993ud}  \\ 
+$\tau^{base}_{str}$ & turnover time of structural litter & \texttt{tau\_structural\_litter} & years & \ref{eq:simple_som_turnover}  &  0.246 & \cite{Parton:1993ud} \\ 
+$\tau^{base}_{wl}$ & turnover time of woody litter & \texttt{tau\_woody\_litter} & years & \ref{eq:simple_som_turnover}  &  10 &  \\ 
+$\tau^{base}_{fast}$ & turnover time of fast SOM pool & \texttt{tau\_fast} & years & \ref{eq:simple_som_turnover}  &  5 &  \\ 
+$\tau^{base}_{som}$ & turnover time of slow SOM pool & \texttt{tau\_slow} & years & \ref{eq:simple_som_turnover}  & 50 &  \\ 
+$E_{a,depolymerisation}$ & activation energy for decay & \texttt{ea\_depolymerisation} & \chem{J mol^{-1}} & \ref{eq:simple_som_turnover}  & 53000 & \cite{Ahrens:2015ie} \\
+$T^{\tau}_{ref}$ & reference temperature for turnover times & \texttt{t\_ref\_tresponse} & K & \ref{eq:simple_som_turnover}  & 293.15 & \cite{Ahrens:2015ie} \\
+$\eta_{C,min}$ & minimum carbon-use efficiency of microbial growth & \texttt{microbial\_cue\_min} & & \ref{eq:sb:simple_mic_cue} & 0.3 & \cite{Manzoni:2008hw}\\
+$\eta_{C,max}$ & maximum carbon-use efficiency of microbial growth & \texttt{microbial\_cue\_max} & & \ref{eq:sb:simple_pot_n_immobilisation} &  0.6 & \cite{Manzoni:2008hw}\\
+$\eta_{N}$ & nitrogen-use efficiency of microbial growth & \texttt{microbial\_nue} & & \ref{eq:sb:simple_pot_n_immobilisation} &  0.8 & \cite{Manzoni:2008hw}\\
+$\eta_{P}$ & phosphorus-use efficiency of microbial growth & \texttt{microbial\_pue} & & \ref{eq:sb:simple_pot_p_immobilisation} &  0.8 & \cite{Manzoni:2008hw}\\
+$\chi_{SOM}^{C:N}$ & C:N ratio of SOM pools & \texttt{microbial\_cn} & mol / mol & \ref{eq:sb:simple_pot_n_immobilisation} & 11.6 & \\
+$\chi_{SOM}^{N:P}$ & N:P ratio of SOM pools & \texttt{microbial\_np} & mol / mol & \ref{eq:sb:simple_pot_p_immobilisation} & 31.0 & \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
 
 
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+$K_{m1,NH_4}$ & affinity parameter for low-affinity uptake & \texttt{km1\_up\_nh4} & m3 / mol & \ref{eq:sb:simple_potential_uptake} & 0.0416 &  \\
+$K_{m2,NH_4}$ & affinity parameter for high-affinity uptake & \texttt{km2\_up\_nh4} & mol / m3 & \ref{eq:sb:simple_potential_uptake} & 1 & \\
+$K_{m1,NO_3}$ & affinity parameter for low-affinity uptake & \texttt{km1\_up\_no3} & m3 / mol & \ref{eq:sb:simple_potential_uptake} & 0.0416   & \\
+$K_{m2,NO_3}$ & affinity parameter for high-affinity uptake & \texttt{km2\_up\_no3} & mol / m3 & \ref{eq:sb:simple_potential_uptake} & 1 & \\
+$K_{m1,PO_4}$ & affinity parameter for low-affinity uptake & \texttt{km1\_up\_po4} & m3 / mol & \ref{eq:sb:simple_potential_uptake} & 0.0416  &  \\
+$K_{m2,PO_4}$ & affinity parameter for high-affinity uptake & \texttt{km2\_up\_po4} & mol / m3 & \ref{eq:sb:simple_potential_uptake} & 1 &  \\
+$Ea,vmax,uptake$ & activation energy of uptake & \texttt{ea\_depolymerisation} & \unit{J mol^{-1}} & \ref{eq:sb:simple_potential_uptake} & 53000 & assumed same as decomposition \\
+$Ea,hsc$ & activation energy of half-saturation point & \texttt{ea\_hsc} & \unit{J mol^{-1}} & \ref{eq:sb:simple_potential_uptake} & 30000 & \cite{Ahrens:2015ie} \\
+$k_{hsc}$ & curvature factor in half-saturation response to moisture & \texttt{kmr\_hsc} &  & \ref{eq:sb:simple_potential_uptake} & -3 & \cite{Davidson:2012dk} \\
+$f_{nloss}$ & fixed fraction of net N mineralisation lost & \texttt{f\_loss\_nmin} & & \ref{eq:sb:simple_fixed_loss} & 0.05 & assumed\\
+$f_{nit}$ & fixed fraction of net N mineralisation lost & \texttt{f\_loss\_nmin} & & \ref{eq:sb:simple_fixed_loss} & 0.1 & assumed\\ 
+\hline 
+\end{tabularx}
+\end{sidewaystable}
 
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+$\lambda_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & \texttt{lambda\_anvf} & & \ref{eq:sb:simple_dynamic_nitrification} & 1.8 & calibrated from \cite{Zaehle:2010cz} \\
+$k_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & \texttt{k\_anvf} & & \ref{eq:sb:simple_dynamic_nitrification} & 3 &  calibrated from \cite{Zaehle:2010cz} \\
+$v_{max,nit}$ & maximum nitrification rate & \texttt{vmax\_nitrification} & \unit{day^|{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & 0.1 & \cite{XURI:2008jq} \\
+$f_{nit,noy}$ & fraction of nitrification lost to \chem{NO_y} & \texttt{f\_nit\_noy} &  & \ref{eq:sb:simple_dynamic_nitrification_prod} & 0.02 & \cite{XURI:2008jq} \\
+$f_{nit,n2o}$ & fraction of nitrification lost to \chem{N_2O} & \texttt{f\_nit\_n2o} &  & \ref{eq:sb:simple_dynamic_nitrification_prod} & 0.002 & \cite{XURI:2008jq} \\
+$E_{a,nit}$ & activation energy of nitrification & \texttt{ea\_nitrification} & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & 80000 & calibrated after \cite{XURI:2008jq} \\
+$E_{d,nit}$ & de-activation energy of nitrification & \texttt{ed\_nitrification} & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & 220000 & calibrated after \cite{XURI:2008jq}\\
+$T_{opt,nit}$ & optimum temperature for nitrification & \texttt{t\_opt\_nit} & K & \ref{eq:sb:simple_dynamic_nitrification} & 331.15 & \cite{XURI:2008jq} \\
+$v_{max,denit}$ & maximum denitrification rate & \texttt{vmax\_denitrification} & \unit{day^|{-1}} & \ref{eq:sb:simple_dynamic_denitrification} & 0.1 & \cite{XURI:2008jq} \\
+$km_{denit,mic}$ & half-saturation constant C of denitrification & \texttt{km\_denitrification\_c} & mol / m3 &  \ref{eq:sb:simple_dynamic_denitrification_prod}  & 1.416 & \cite{XURI:2008jq} \\
+$km_{denit,NO_3}$ & half-saturation constant \chem{NO_3} of denitrification & \texttt{km\_denitrification\_no3} & mol / m3 &  \ref{eq:sb:simple_dynamic_denitrification_prod}  & 0.6916  & \cite{XURI:2008jq} \\
+$f_{denit,noy}$ & fraction of denitrification lost to \chem{NO_y} & \texttt{f\_denit\_noy} &  & \ref{eq:sb:simple_dynamic_denitrification_prod} & 0.002 & \cite{XURI:2008jq} \\
+$f_{denit,n2o}$ & fraction of denitrification lost to \chem{N_2O} & \texttt{f\_denit\_n2o} &  & \ref{eq:sb:simple_dynamic_denitrification_prod} & 0.02 & \cite{XURI:2008jq} \\
+$E_{a,denit}$ & activation energy of nitrification & \texttt{ed\_denitrification} & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_denitrification} & 47000 & calibrated after \cite{XURI:2008jq}\\
+$E_{a,gas,diffusion}$ & activation energy of gas diffusion & \texttt{ed\_gasdiffusion} & \unit{J mol^{-1}} & \ref{eq:sb:simple_ngasloss} & 47000 & calibrated after \cite{XURI:2008jq}\\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+ 
+ 
 \section{JSM}\label{sec:jsm}
 
 

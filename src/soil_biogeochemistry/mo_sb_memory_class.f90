@@ -173,6 +173,7 @@ MODULE mo_sb_memory_class
 
     ! temperature response functions
     TYPE(t_jsb_var_real3d)          :: &
+                                    rtm_decomposition, &    !< rate modifier for decomposition processes [--]
                                     rtm_depolymerisation, & !< rate modifier for depolymerisation processes [--]
                                     rtm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
                                     rtm_sorption, &         !< rate modifier for sorption [--]
@@ -184,6 +185,7 @@ MODULE mo_sb_memory_class
 
     ! moisture response functions
     TYPE(t_jsb_var_real3d)          :: &
+                                    rmm_decomposition, &    !< rate modifier for decomposition processes [--]
                                     rmm_depolymerisation, & !< rate modifier for depolymerisation processes [--]
                                     rmm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
                                     rmm_sorption, &         !< rate modifier for sorption [--]
@@ -985,6 +987,9 @@ CONTAINS
       CALL slm_add_var(mem, 'transport_po4_solute', mem%transport_po4_solute, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'rtm_decomposition', mem%rtm_decomposition, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'rtm_depolymerisation', mem%rtm_depolymerisation, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1007,6 +1012,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'rtm_gasdiffusion', mem%rtm_gasdiffusion, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_decomposition', mem%rmm_decomposition, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'rmm_depolymerisation', mem%rmm_depolymerisation, &

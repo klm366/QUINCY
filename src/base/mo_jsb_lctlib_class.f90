@@ -80,10 +80,6 @@ MODULE mo_jsb_lctlib_class
 ! N uptake parameters    
     REAL(wp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
-                soil_n_aff1       , &
-                soil_n_aff2       , &
-                soil_p_aff1       , &
-                soil_p_aff2       , &
                 bnf_base
 
 ! Vegetation dynamics parameters
@@ -336,14 +332,6 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_n
           CASE ('vmax_uptake_p')
             READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_p
-          CASE ('soil_n_aff1')
-            READ(line(pos:length),*) lctlib(1:nlct)%soil_n_aff1
-          CASE ('soil_n_aff2')
-            READ(line(pos:length),*) lctlib(1:nlct)%soil_n_aff2
-          CASE ('soil_p_aff1')
-            READ(line(pos:length),*) lctlib(1:nlct)%soil_p_aff1
-          CASE ('soil_p_aff2')
-            READ(line(pos:length),*) lctlib(1:nlct)%soil_p_aff2
           CASE ('bnf_base')
             READ(line(pos:length),*) lctlib(1:nlct)%bnf_base
 

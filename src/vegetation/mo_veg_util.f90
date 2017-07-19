@@ -57,6 +57,7 @@ CONTAINS
     CALL veg%reserve_use%init(flux_zero)
     CALL veg%establishment%init(flux_zero)
     CALL veg%exudation%init(flux_zero)
+    CALL veg%mycorrhiza_export%init(flux_zero)
     ! t_slm_struct_veg_pool
     CALL veg%growth%init(flux_zero)
     CALL veg%litterfall%init(flux_zero)
@@ -80,9 +81,6 @@ CONTAINS
     CALL veg%uptake_nh4_n15%init(flux_zero)                !< 15NH4 uptake (µmol N m-2 s-1)
     CALL veg%uptake_no3%init(flux_zero)                    !< NO3 uptake (µmol N m-2 s-1)
     CALL veg%uptake_no3_n15%init(flux_zero)                !< 15NO3 uptake (µmol N m-2 s-1)
-    CALL veg%uptake_norg%init(flux_zero)                   !< orgN uptake (µmol N m-2 s-1)
-    CALL veg%uptake_porg%init(flux_zero)                   !< orgN uptake (µmol N m-2 s-1)
-    CALL veg%uptake_norg_n15%init(flux_zero)               !< org15N uptake (µmol N m-2 s-1)
     CALL veg%n_fixation%init(flux_zero)                    !< ??
     CALL veg%n_fixation_n15%init(flux_zero)                !< ??
     CALL veg%uptake_po4%init(flux_zero)                    !< ??

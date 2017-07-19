@@ -213,9 +213,6 @@ MODULE mo_veg_memory_class
                                     uptake_nh4_n15            , & !< 15NH4 uptake from soil (µmol N m-2 s-1)
                                     uptake_no3                , & !< NO3 uptake from soil (µmol N m-2 s-1)
                                     uptake_no3_n15            , & !< 15NO3 uptake from soil (µmol N m-2 s-1)
-                                    uptake_norg               , & !< organic N provided by mycorrhiza (µmol N m-2 s-1)
-                                    uptake_porg               , & !< organic P provided by mycorrhiza (µmol P m-2 s-1)
-                                    uptake_norg_n15           , & !< organic 15N provided by mycorrhiza (µmol N m-2 s-1)
                                     uptake_po4                , & !< PO4 uptake from soil (µmol P m-2 s-1) 
                                     n_fixation                , & !< symbiontic N fixation (µmol N m-2 s-1)
                                     n_fixation_n15            , & !< symbiontic N fixation (µmol 15N m-2 s-1)
@@ -355,6 +352,7 @@ MODULE mo_veg_memory_class
     !!
     TYPE(t_slm_struct_veg_element)  :: &
                                     exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
+                                    mycorrhiza_export, &  !< flux between mycorrhiza and fine roots (mol m-2 timestep-1)
                                     establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
                                     reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
                                     init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_tile_veg_dynamics
@@ -1529,16 +1527,6 @@ CONTAINS
       CALL slm_add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'uptake_norg', mem%uptake_norg, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'uptake_porg', mem%uptake_porg, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'uptake_norg_n15', mem%uptake_norg_n15, &
-            initval_r=0.0_wp) ! initvalue
-
-  
       CALL slm_add_var(mem, 'uptake_po4', mem%uptake_po4, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1829,6 +1817,7 @@ CONTAINS
       !! slm_add_var -> slm_add_struct()
       !! 
       CALL slm_add_var(mem, 'veg_exudation',              mem%exudation)
+      CALL slm_add_var(mem, 'veg_mycorrhiza_export',      mem%mycorrhiza_export)
       CALL slm_add_var(mem, 'veg_establishment',          mem%establishment)
       CALL slm_add_var(mem, 'veg_reserve_use',            mem%reserve_use)
       CALL slm_add_var(mem, 'veg_init_pool',              mem%init_pool)
@@ -2621,6 +2610,19 @@ CONTAINS
       CALL slm_add_var(mem%exudation, 'veg_exudation_carbon14', mem%exudation%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%exudation, 'veg_exudation_nitrogen15', mem%exudation%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_carbon', mem%mycorrhiza_export%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_nitrogen', mem%mycorrhiza_export%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_phosphorus', mem%mycorrhiza_export%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_carbon13', mem%mycorrhiza_export%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_carbon14', mem%mycorrhiza_export%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_nitrogen15', mem%mycorrhiza_export%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
       CALL slm_add_var(mem%establishment, 'veg_establishment_carbon', mem%establishment%carbon, &
