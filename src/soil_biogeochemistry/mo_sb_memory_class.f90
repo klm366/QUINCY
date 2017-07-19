@@ -219,7 +219,8 @@ MODULE mo_sb_memory_class
                                     nitrification_n2o, &         !< nitrification to N2O [µmol m-3 s-1]
                                     denitrification_noy, &       !< nitrification NOy [µmol m-3 s-1]
                                     denitrification_n2o, &       !< nitrification to N2O  [µmol m-3 s-1]
-                                    denitrification_n2           !< denitrification to N2  [µmol m-3 s-1]
+                                    denitrification_n2, &        !< denitrification to N2  [µmol m-3 s1]
+                                    asymb_n_fixation             !< asymboitic N fixation [µmol m-3 s-1]
 
     ! 2D transport fluxes for communication with groundwater and atmosphere
     TYPE(t_jsb_var_real2d)          :: & 
@@ -1111,6 +1112,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'denitrification_n2', mem%denitrification_n2, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'asymb_n_fixation', mem%asymb_n_fixation, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'qmax_org', mem%qmax_org, &

@@ -1035,7 +1035,7 @@ CONTAINS
         lun=lun+1
         WRITE(lun,'(2a)') 'Time HetResp HetResp_dC13 HetResp_DC14'
         lun=lun+1
-        WRITE(lun,'(2a)') 'Time NDeposition Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
+        WRITE(lun,'(2a)') 'Time NDeposition Nfix_asymb Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
                           'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3 Net_Mineralisation_PO4 Leaching_PO4' 
         lun=lun+1
         ! sb_massBalance_..txt
@@ -1172,6 +1172,7 @@ CONTAINS
     REAL(wp), SAVE                        :: leaching_nh4_acc    = 0.0_wp
     REAL(wp), SAVE                        :: leaching_no3_acc    = 0.0_wp
     REAL(wp), SAVE                        :: leaching_po4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: asymb_n_fixation_acc = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_carbon_acc     = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_nitrogen_acc   = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_phosphorus_acc = 0.0_wp
@@ -1259,7 +1260,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: leaching_nh4_solute
     dsl4jsb_Real2D_onChunk      :: leaching_no3_solute
     dsl4jsb_Real2D_onChunk      :: leaching_po4_solute
-    ! SB_ 2D
+    ! SB_ 3D
     dsl4jsb_Real3D_onChunk      :: het_respiration
     dsl4jsb_Real3D_onChunk      :: het_respiration_c13
     dsl4jsb_Real3D_onChunk      :: het_respiration_c14
@@ -1272,6 +1273,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: denitrification_n2
     dsl4jsb_Real3D_onChunk      :: denitrification_noy
     dsl4jsb_Real3D_onChunk      :: denitrification_n2o
+    dsl4jsb_Real3D_onChunk      :: asymb_n_fixation 
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1371,6 +1373,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_n2)
     dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_noy)
     dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_n2o)
+    dsl4jsb_Get_var3D_onChunk(SB_,  asymb_n_fixation)
     
 !! *slmtemp
     veg     => veg__mem 
@@ -1456,11 +1459,11 @@ CONTAINS
              qg_acc           = qg_acc            + ground_heat_flx(1)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(1)                      * dtime_one               
              ndat_acc         = ndat_acc          + 1 
-             het_respC_acc   = het_respC_acc   + SUM(het_respiration(:,:) * soil_depth_sl(:,:)) * dtime_one
-             het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:)) * dtime_one
-             het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:)) * dtime_one
-             net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(:,:) * soil_depth_sl(:,:)) * dtime_one
-             net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(:,:) * soil_depth_sl(:,:)) * dtime_one
+             het_respC_acc   = het_respC_acc   + SUM(het_respiration(1,:) * soil_depth_sl(1,:)) * dtime_one
+             het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(1,:) * soil_depth_sl(1,:)) * dtime_one
+             het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(1,:) * soil_depth_sl(1,:)) * dtime_one
+             net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(1,:) * soil_depth_sl(1,:)) * dtime_one
+             net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(1,:) * soil_depth_sl(1,:)) * dtime_one
              nitrification_acc   = nitrification_acc + & 
                                     SUM((nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) * &
                                     soil_depth_sl(:,:)) * dtime_one
@@ -1473,6 +1476,7 @@ CONTAINS
              leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(1) * dtime_one
              leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(1) * dtime_one
              leaching_po4_acc = leaching_po4_acc + leaching_po4_solute(1) * dtime_one
+             asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(1,:)*soil_depth_sl(1,:)) * dtime_one
              ! for mass balance checks in SB_
               sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + SUM(sb%delta_pools%carbon%ptr(ics:ice,:,iblk))
               sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + SUM(sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk))
@@ -1535,7 +1539,7 @@ CONTAINS
                    write(lun,'(20F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
 
                    lun=lun+1
-                   write(lun,'(20F16.8)') time_d,n_deposition_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
+                   write(lun,'(20F16.8)') time_d,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
                                           leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
                    lun=lun+1
@@ -1625,6 +1629,7 @@ CONTAINS
                leaching_nh4_acc = 0.0_wp
                leaching_no3_acc = 0.0_wp
                leaching_po4_acc = 0.0_wp
+               asymb_n_fixation_acc = 0.0_wp
                sb_delta_pools_carbon_acc     = 0.0_wp
                sb_delta_pools_nitrogen_acc   = 0.0_wp
                sb_delta_pools_phosphorus_acc = 0.0_wp

@@ -1005,15 +1005,7 @@ CONTAINS
     !> 3.0 N fixation
     !!
     SELECT CASE (bnf_scheme)
-      !> 3.1 Case 1: N fixation based on default lctlib parameter (Zaehle et al. 2010, GBC)
-      !!
-      CASE("standard","std_plus_costs")
-        WHERE(nh4_solute(:,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND. &
-              spread(fine_root_carbon,1,options%nc) > eps8) 
-          n_fixation(:) = lctlib%bnf_base 
-        END WHERE
-
-      !> 3.2 Case 2: optimal N fixation
+      !> 3.1 Case 1: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
         WHERE(cost_n_fixation_tuptake_mavg(:) <= cost_n_uptake_root(:))
@@ -1023,7 +1015,7 @@ CONTAINS
            n_fixation(:) = 0.0_wp
         END WHERE
 
-      !> 3.3 Case 3: Ohm's law analogy 
+      !> 3.1 Case 2: Ohm's law analogy 
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
          ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
@@ -1081,7 +1073,7 @@ CONTAINS
 
     !> 4.0 Determine C use for N uptake, and constrain this to available carbon
     !!
-    IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'resistance' .OR. bnf_scheme == 'std_plus_costs') THEN
+    IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'resistance' .OR. bnf_scheme == 'standard') THEN
        hlp1(:) = uptake_nh4(:) * transform_cost_nh4 + & 
                  uptake_no3(:) * transform_cost_no3 + & 
                  n_fixation(:) * cost_n_fixation(:)

@@ -77,7 +77,7 @@ CONTAINS
 
     ! Set defaults
     sb_model_scheme             = "simple_0d"       ! simple_0d simple_1d jsm
-    sb_nloss_scheme             = "fixed"           ! fixed dynamic 
+    sb_nloss_scheme             = "fixed"           ! none fixed dynamic 
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.

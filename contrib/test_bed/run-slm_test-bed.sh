@@ -17,11 +17,11 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-bnf_scheme="standard"           # standard std_plus_costs optimal resistance
+bnf_scheme="standard"           # none fixed standard optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
 soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
-sb_nloss_scheme="fixed"         # fixed dynamic 
+sb_nloss_scheme="fixed"         # none fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -120,13 +120,17 @@ while getopts ":p:m:y:o:b:h" opt; do
     ;;
   "b")
     case "$OPTARG" in
+    "none")
+      echo "   bnf_scheme=none"
+      bnf_scheme="none"
+     ;;
+    "fix")
+      echo "   bnf_scheme=fixed"
+      bnf_scheme="fixed"
+    ;;
     "std")
       echo "   bnf_scheme=standard"
       bnf_scheme="standard"
-      ;;
-    "stdp")
-      echo "   bnf_scheme=std_plus_costs"
-      bnf_scheme="std_plus_costs"
       ;;
     "opt")
       echo "   bnf_scheme=optimal"
@@ -202,12 +206,12 @@ return 0
 }
 # lists to validate against
 validateSlmModel="land plant soil canopy test_canopy"
-validateBNFScheme="standard std_plus_costs optimal resistance"
+validateBNFScheme="none fixed standard optimal resistance"
 validateMycScheme="no am ecm"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
 validateSBModelScheme="simple_0d simple_1d jsm"
-validateSBNLossScheme="fixed dynamic"
+validateSBNLossScheme="none fixed dynamic"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"

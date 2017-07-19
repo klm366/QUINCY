@@ -29,7 +29,7 @@ MODULE mo_veg_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
     CHARACTER(15)    :: bnf_scheme       , &       !< select scheme to simulate BNF (biological nitrogen fixation)
-                                                   ! "standard|std_plus_costs|resistance|optimal"   
+                                                   ! "none|fixed|standard|resistance|optimal"   
                         myc_scheme                 !< select scheme to simulate mycorrhiza
                                                    !< "no|am|ecm"
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
@@ -97,7 +97,7 @@ CONTAINS
 
     ! check input for BNF scheme
     SELECT CASE (TRIM(bnf_scheme))
-     CASE ("standard","std_plus_costs","resistance","optimal")
+     CASE ("none","fixed","standard","resistance","optimal")
      CASE DEFAULT
        WRITE(message_text,'(2a)') 'invalid bnf_scheme',bnf_scheme
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 

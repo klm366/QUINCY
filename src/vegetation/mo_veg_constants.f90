@@ -101,9 +101,7 @@ MODULE mo_veg_constants
       k_bnf                , &
       ! factor for BNF response in resistance approach (mol C / mol N)
       offset_bnf           , &
-      ! maximum soil N at which BNF occurs in standard scheme (mol N / m2)
-      soil_n_threshold_bnf, & 
-      eta_nfixation              !< fractionation of N15 due to N fixation (per mill)
+      eta_nfixation           !< fractionation of N15 due to N fixation (per mill)
 
   ! parameters used for phenology calculations
   REAL(wp), SAVE :: & 
@@ -229,7 +227,6 @@ CONTAINS
       vmax_bnf            = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
       k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
       offset_bnf          = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
-      soil_n_threshold_bnf = 0.04 ! mol N == 0.56 g N /m2
       eta_nfixation       = 3.0_wp ! Robinson, Tree 2001       
 
   ! parameters used for phenology calculations

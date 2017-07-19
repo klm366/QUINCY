@@ -50,6 +50,7 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(VEG_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -94,6 +95,7 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
@@ -166,6 +168,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: k_bioturb 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
+    dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
 !! *slmtemp    
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
@@ -184,6 +187,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
@@ -256,6 +260,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
 
 
 !! *slmtemp
@@ -518,6 +523,7 @@ CONTAINS
                                   het_respiration_c14(:,:), &
                                   veg%mycorrhiza_export)
 
+
     !> 6.0 Update soil litter pools with litter fall
     !!
     CALL calc_litter_partitioning(lctlib, &  
@@ -527,7 +533,17 @@ CONTAINS
                                   root_fraction_act_sl(:,:), &
                                   veg%litterfall, &
                                   sb%formation )
-
+  
+    CALL calc_asymbiontic_n_fixation(lctlib, &
+                                     options, &
+                                     soil_config%nsoil_water, &
+                                     TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), & 
+                                     nh4_solute(:,:), &
+                                     no3_solute(:,:), &
+                                     sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
+                                     root_fraction_act_sl(:,:), &
+                                     asymb_n_fixation(:,:))
+                    
     !> 7.0 convert rates to µmol/ m3 / s (µmol / m2 / s for surface fluxes)
     !!
     het_respiration(:,:) = het_respiration(:,:) / dtime * 1000000._wp
@@ -1903,7 +1919,8 @@ CONTAINS
     
     !> 1.0 calculate N losses and nitrification
     !! 
-    IF(sb_nloss_scheme == 'fixed') THEN
+    SELECT CASE(TRIM(sb_nloss_scheme))
+    CASE ('fixed') 
        !> 1.1 case of fixed N losses: N loss proportional to net mineralisation
        !!
        WHERE(net_mineralisation_nh4(:,:)>0.0_wp)
@@ -1914,7 +1931,7 @@ CONTAINS
        ENDWHERE
        ! report volatilisation losses as N2 emission [mol m-2 timestep-1]
        emission_n2(:) = SUM(volatilisation_n(:,:) * soil_depth_sl(:,:),DIM=2)
-    ELSE
+    CASE ('dynamic') 
        !> 1.2 case of dynamic N loss calculations, following Zaehle et al. 2011
        !!
        ! nitrification rate to produce NO3, NOy and N2O from NH4 [mol m-3 timestep-1]
@@ -1945,7 +1962,7 @@ CONTAINS
           leaching_no3_solute(:) = -transport_no3_solute(:,1) * soil_depth_sl(:,1)
           leaching_po4_solute(:) = -transport_po4_solute(:,1) * soil_depth_sl(:,1)
        ENDIF
-    ENDIF
+    END SELECT
  
   END SUBROUTINE calc_actual_nloss_rate
 
@@ -2423,7 +2440,49 @@ CONTAINS
 
   END SUBROUTINE calc_mycorrhiza_dynamics
 
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to update_sb_simple_model
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculates the rate of asymbiontic N fixation, wherever there is a bit of soil carbon 
+  !! declines within the soil profile according to the distribution of roots as a proxy for litter input
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_asymbiontic_n_fixation(lctlib, &                                      ! in
+                                         options, &
+                                         nsoil, &
+                                         veg_bnf_scheme, &
+                                         nh4_solute, &
+                                         no3_solute, &
+                                         sb_pool_microbial_carbon, &
+                                         root_fraction_act_sl, & 
+                                         asymb_n_fixation)                              ! out
+
+    USE mo_sb_constants,       ONLY: soil_n_threshold_bnf
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                      !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_task_options),              INTENT(in)    :: options
+    INTEGER,                               INTENT(in)    :: nsoil                       !< number of soil layers
+    CHARACTER(len=*),                      INTENT(in)    :: veg_bnf_scheme              !< veg n fixation scheme  
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_solute, &               !< NH4 concentration [mol m-3] 
+                                                            no3_solute, &               !< NO3 concentration [mol m-3]
+                                                            sb_pool_microbial_carbon, & !< microbial carbon pool [mol m-3]
+                                                            root_fraction_act_sl        !< fraction of roots per root layer [m-3] 
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: asymb_n_fixation            !< asymbiontic rate of N fixation [umol m-3 s-1]
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_asymbiontic_n_fixation'
   
+    SELECT CASE(TRIM(veg_bnf_scheme))
+      CASE("fixed", "standard")
+        WHERE(nh4_solute(:,:) + no3_solute < soil_n_threshold_bnf .AND. & 
+          sb_pool_microbial_carbon(:,:) > eps4)
+          asymb_n_fixation(:,:) = root_fraction_act_sl(:,:) * lctlib%bnf_base 
+        END WHERE
+    END SELECT
+
+  END SUBROUTINE calc_asymbiontic_n_fixation
 
 !!!!  !-----------------------------------------------------------------------------------------------------
 !!  ! Sub Task

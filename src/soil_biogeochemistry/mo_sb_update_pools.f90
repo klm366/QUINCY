@@ -124,6 +124,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_n2o 
     dsl4jsb_Real3D_onChunk :: denitrification_n2 
     dsl4jsb_Real3D_onChunk :: volatilisation_n 
+    dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
@@ -231,6 +232,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o )        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! in 
     dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! in
@@ -390,7 +392,7 @@ CONTAINS
     !!
     nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
                                                  nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
-                                                 volatilisation_n(:,:) + &
+                                                 volatilisation_n(:,:) + asymb_n_fixation(:,:) + &
                                                  transport_nh4_solute(:,:)) * dtime/1.e6_wp
     nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) + &
                                                  transport_nh4_n15_solute(:,:)) * dtime/1.e6_wp
@@ -409,6 +411,15 @@ CONTAINS
                                                  transport_n2o(:,:)) * dtime/1.e6_wp
     n2(:,:)             = n2(:,:)             + (denitrification_n2(:,:) + transport_n2(:,:)) * dtime/1.e6_wp
 
+    !> 4.2 atmospheric deposition
+    !!
+    nh4_solute(:,1)     = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_solute(:,1)     = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    nh4_n15_solute(:,1) = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
+                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+    no3_n15_solute(:,1) = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
+                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
        hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
        nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
@@ -425,15 +436,6 @@ CONTAINS
     !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
-
-    !> 4.2 atmospheric deposition
-    !!
-    nh4_solute(:,1)     = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    no3_solute(:,1)     = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    nh4_n15_solute(:,1) = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
-                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
-    no3_n15_solute(:,1) = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
-                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
 
     !> 5.0 infrastructure for mass balance checks (see also section 0.9)
     !!

@@ -113,6 +113,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_noy
     dsl4jsb_Real3D_onChunk :: denitrification_n2o
     dsl4jsb_Real3D_onChunk :: denitrification_n2
+    dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
 ! 2 be removed later: pointer to sb   *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -189,6 +190,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
 
 
 ! 2 be removed  *slmtemp
@@ -265,6 +267,7 @@ CONTAINS
     denitrification_noy(:,:)          = zero
     denitrification_n2o(:,:)          = zero
     denitrification_n2(:,:)           = zero
+    asymb_n_fixation(:,:)             = zero
   
   END SUBROUTINE reset_sb_fluxes
 
