@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20161212
+#########
 ## Where: you can start this script from anywhere (no need to cd into a specific directory), when logged into a cluster node such as pc028
 ## What:  this script starts the SLM binary land.x , the specific model may be specified via the "slmModel" option
 ## HowTo: specify the below options as suitable for you
@@ -21,7 +21,7 @@ bnf_scheme="standard"           # none fixed standard optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
 soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
-sb_nloss_scheme="fixed"         # none fixed dynamic 
+sb_nloss_scheme="dynamic"       # none fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -170,11 +170,11 @@ while getopts ":p:m:y:o:b:h" opt; do
     echo "       nf: using only optimal Nfraction"
     echo "       nl: using only optimal Nleaf"
     echo "       al: using only optimal allocation"
-    echo " -b set the BNF scheme"
+    echo " -b set the N uptake scheme"
     echo "    Arguments to -b:"
-    echo "       pre : prescribed"
-    echo "       std : standard"
-    echo "       stdp: standard plus transformation costs"
+    echo "       none: no BNF"
+    echo "       fix : fixed BNF"
+    echo "       std : standard (includes costs)"
     echo "       opt : optimal"
     echo "       res : resistance"
     exit 1

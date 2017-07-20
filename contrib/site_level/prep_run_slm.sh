@@ -77,7 +77,7 @@ bnf_scheme="standard"           # none fixed standard optimal resistance
 myc_scheme="no"                 # mycchoriza scheme: no am ecm
 soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
-sb_nloss_scheme="fixed"         # none fixed dynamic
+sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -142,7 +142,7 @@ if [ $flag_generate_soil_forcing == "T" ]
   myc_scheme="no"
   soil_moisture_scheme="layer"
   sb_model_scheme="simple_0d"
-  sb_nloss_scheme="fixed"
+  sb_nloss_scheme="dynamic"
   
   flag_t_resp_acclimation="T"
   flag_t_jmax_acclimation="T"
@@ -294,11 +294,11 @@ while getopts ":e:s:c:m:y:o:b:h" opt; do
     echo "       nf: using only optimal Nfraction"
     echo "       nl: using only optimal Nleaf"
     echo "       al: using only optimal allocation"
-    echo " -n set the N uptake scheme"
-    echo "    Arguments to -n:"
-    echo "       pre : prescribed"
-    echo "       std : standard"
-    echo "       stdp: standard plus transformation costs"
+    echo " -b set the N uptake scheme"
+    echo "    Arguments to -b:"
+    echo "       none: no BNF"
+    echo "       fix : fixed BNF"
+    echo "       std : standard (includes costs)"
     echo "       opt : optimal"
     echo "       res : resistance"
     exit 1

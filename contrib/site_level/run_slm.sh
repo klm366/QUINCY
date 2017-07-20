@@ -181,9 +181,13 @@ return 0                                                         # get return va
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 122.7
 
-changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"
-changeNamelistValue latitude  "$(awk '{print $3}' <<< "$siteData")"
+changeNamelistValue longitude "$(awk '{print $2}'  <<< "$siteData")"
+changeNamelistValue latitude  "$(awk '{print $3}'  <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
+changeNamelistValue soil_sand "$(awk '{print $10}' <<< "$siteData")"
+changeNamelistValue soil_silt "$(awk '{print $9}'  <<< "$siteData")"
+changeNamelistValue soil_clay "$(awk '{print $8}'  <<< "$siteData")"
+changeNamelistValue soil_ph   "$(awk '{print $12}' <<< "$siteData")"
 [ $useSiteSpecificAWC == "T" ] && \
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi
 # special fluxnet output #

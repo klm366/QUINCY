@@ -11,7 +11,7 @@
 MODULE mo_soil_config_class
 !#ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: wp, eps8
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -41,6 +41,10 @@ MODULE mo_soil_config_class
     REAL(wp)              :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
     REAL(wp)              :: soil_awc_prescribe, &
                              soil_theta_prescribe
+    REAL(wp)              :: soil_sand            !< soil sand proportion - site specific from forcing info file
+    REAL(wp)              :: soil_silt            !< soil silt proportion - site specific from forcing info file
+    REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(wp)              :: soil_ph              !< soil pH - site specific from forcing info file
     CHARACTER(15)         :: soil_moisture_scheme       !< soil moisture "prescribed|bucke|layer"
     CONTAINS
       PROCEDURE :: Init => Init_soil_config
@@ -76,6 +80,10 @@ CONTAINS
                 soil_depth   
     REAL(wp) :: soil_awc_prescribe    , &
                 soil_theta_prescribe
+    REAL(wp) :: soil_sand       , &
+                soil_silt       , &
+                soil_clay       , &
+                soil_ph
     CHARACTER(15)  :: soil_moisture_scheme
     INTEGER  :: i   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
@@ -90,6 +98,10 @@ CONTAINS
                           soil_depth      , &
                           soil_awc_prescribe        , &
                           soil_theta_prescribe      , &
+                          soil_sand       , &
+                          soil_silt       , &
+                          soil_clay       , &
+                          soil_ph         , &
                           soil_moisture_scheme  
      
 
@@ -110,6 +122,10 @@ CONTAINS
     soil_depth                    = 5.7_wp 
     soil_awc_prescribe            = 300.0_wp
     soil_theta_prescribe          = 1.0_wp 
+    soil_sand                     = 0.4_wp
+    soil_silt                     = 0.3_wp
+    soil_clay                     = 0.3_wp
+    soil_ph                       = 6.0_wp
     soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
 
     ! read the namelist
@@ -152,6 +168,7 @@ CONTAINS
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
     config%soil_moisture_scheme      = soil_moisture_scheme
+
     config%soil_depth_energy(1)      = dz_energy(1)
     DO i=2,nsoil_energy
       config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)
@@ -166,6 +183,16 @@ CONTAINS
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
     config%soil_depth                = soil_depth 
+
+    config%soil_sand                 = soil_sand
+    config%soil_silt                 = soil_silt
+    !config%soil_clay                 = soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
+    config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
+    IF(config%soil_clay < eps8) THEN
+       WRITE(message_text,'(2a)') 'invalid proportion of soil_claysoil_moisture_scheme (value < eps8)',routine
+       CALL finish("mo_soil_config_class:init_soil_config",message_text)
+    END IF
+    config%soil_ph                   = soil_ph
 
   END SUBROUTINE Init_soil_config
 
