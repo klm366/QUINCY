@@ -111,8 +111,8 @@ CONTAINS
           hlp1 = 100._wp ! g C m-2 metabolic litter
           hlp2 = 100._wp ! g C m-2 structural litter
           hlp3 = 1000._wp ! g C m-2 woody litter
-          hlp4 = 500._wp ! g C m-2 fast SOM
-          hlp5 = 0._wp ! g C m-2 slow SOM
+          hlp4 = 4500._wp ! g C m-2 fast SOM
+          hlp5 = 4500._wp ! g C m-2 slow SOM
           hlp6 = 0.6_wp   ! fraction of production not roots 
 
           IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN

@@ -533,11 +533,14 @@ CONTAINS
                                   root_fraction_act_sl(:,:), &
                                   veg%litterfall, &
                                   sb%formation )
-  
+
+    !> 6.1 Add asymbiontic N fixation to NH4 pool 
+    !! 
     CALL calc_asymbiontic_n_fixation(lctlib, &
                                      options, &
                                      soil_config%nsoil_water, &
                                      TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), & 
+                                     soil_depth_sl(:,:), &
                                      nh4_solute(:,:), &
                                      no3_solute(:,:), &
                                      sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
@@ -2452,6 +2455,7 @@ CONTAINS
                                          options, &
                                          nsoil, &
                                          veg_bnf_scheme, &
+                                         soil_depth_sl, &
                                          nh4_solute, &
                                          no3_solute, &
                                          sb_pool_microbial_carbon, &
@@ -2466,20 +2470,21 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil                       !< number of soil layers
     CHARACTER(len=*),                      INTENT(in)    :: veg_bnf_scheme              !< veg n fixation scheme  
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_solute, &               !< NH4 concentration [mol m-3] 
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl, &            !< soil depth per layer [m] 
+                                                            nh4_solute, &               !< NH4 concentration [mol m-3]
                                                             no3_solute, &               !< NO3 concentration [mol m-3]
                                                             sb_pool_microbial_carbon, & !< microbial carbon pool [mol m-3]
                                                             root_fraction_act_sl        !< fraction of roots per root layer [m-3] 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: asymb_n_fixation            !< asymbiontic rate of N fixation [umol m-3 s-1]
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_asymbiontic_n_fixation'
-  
+ 
     SELECT CASE(TRIM(veg_bnf_scheme))
       CASE("fixed", "standard")
-        WHERE(nh4_solute(:,:) + no3_solute < soil_n_threshold_bnf .AND. & 
-          sb_pool_microbial_carbon(:,:) > eps4)
-          asymb_n_fixation(:,:) = root_fraction_act_sl(:,:) * lctlib%bnf_base 
-        END WHERE
+        WHERE((nh4_solute(:,:) + no3_solute) * soil_depth_sl(:,:) < soil_n_threshold_bnf .AND. & 
+               sb_pool_microbial_carbon(:,:) > eps4 .AND. soil_depth_sl(:,:)>eps8)
+                 asymb_n_fixation(:,:) = root_fraction_act_sl(:,:) * lctlib%bnf_base / soil_depth_sl(:,:) 
+        ENDWHERE
     END SELECT
 
   END SUBROUTINE calc_asymbiontic_n_fixation
