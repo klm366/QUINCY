@@ -37,7 +37,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14
     USE mo_shared_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
-    USE mo_soil_config_class,     ONLY: soil_config
     USE mo_sb_jsm_processes
     USE mo_sb_jsm_transport
     USE mo_veg_constants,         ONLY: itree
@@ -45,6 +44,7 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(SOIL_)
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SB_)
@@ -67,6 +67,7 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SOIL_)
 !! *slmtemp    
@@ -87,6 +88,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(SOIL_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
@@ -116,35 +118,35 @@ CONTAINS
           hlp6 = 0.6_wp   ! fraction of production not roots 
 
           IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-             sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk) = hlp1 / molar_mass_C / soil_config%dz_water(1)
-             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = hlp2 / molar_mass_C / soil_config%dz_water(1)
+             sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk) = hlp1 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
              IF(lctlib%growthform==itree) &
-                sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = hlp3 / molar_mass_C / soil_config%dz_water(1)
-             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = hlp4 / molar_mass_C / soil_config%dz_water(1)
-             sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = hlp5 / molar_mass_C / soil_config%dz_water(1)
+                sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
 
-             sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
-             sb%no3_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
-             sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+             sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb%no3_solute%ptr(ics:ice,1,iblk) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
           ELSE 
-             sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk)  = hlp1 /  molar_mass_C / soil_config%dz_water(1) * &
+             sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
-             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = hlp2 / molar_mass_C / soil_config%dz_water(1) * &
+             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
              IF(lctlib%growthform==itree) &
-                sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk)  = hlp3 / molar_mass_C / soil_config%dz_water(1)
-             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk)        = hlp4 / molar_mass_C / soil_config%dz_water(1) * &
+                sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
-             sb%pool%residue%carbon%ptr(ics:ice,1,iblk)          = hlp5 / molar_mass_C / soil_config%dz_water(1) * & 
+             sb%pool%residue%carbon%ptr(ics:ice,1,iblk)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
-             DO isoil=2,soil_config%nsoil_water
-                sb%pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk)  = hlp1 /  molar_mass_C / soil_config%dz_water(isoil) * &
+             DO isoil=2,options%nsoil_sb
+                sb%pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
-                sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = hlp2 / molar_mass_C / soil_config%dz_water(isoil) * &
+                sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
-                sb%pool%microbial%carbon%ptr(ics:ice,isoil,iblk)        = hlp4 / molar_mass_C / soil_config%dz_water(isoil) * &
+                sb%pool%microbial%carbon%ptr(ics:ice,isoil,iblk)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
-                sb%pool%residue%carbon%ptr(ics:ice,isoil,iblk)          = hlp5 / molar_mass_C / soil_config%dz_water(isoil) * & 
+                sb%pool%residue%carbon%ptr(ics:ice,isoil,iblk)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * & 
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk)
 
                 sb%nh4_solute%ptr(ics:ice,isoil,iblk) = 0.1_wp
@@ -227,13 +229,13 @@ CONTAINS
          sb%po4_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
 
          ! inital Qmax based on current soil carbon content
-         sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
+         sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options, sb%pool)
          sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk) = calc_bulk_density_correction(sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk), & 
                                                                          soil%bulk_dens_sl%ptr(ics:ice,:,iblk))
          sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax_org(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk))
  
          ! initialise diffusion by bioturbation
-         sb%k_bioturb%ptr(ics:ice,:,iblk) = calc_bioturbation_rate(options,soil_config%nsoil_water,sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)) 
+         sb%k_bioturb%ptr(ics:ice,:,iblk) = calc_bioturbation_rate(options,sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)) 
 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')

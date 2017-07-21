@@ -54,7 +54,6 @@ mo_sb_jsm_main.o: \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
   mo_shared_isotope.o \
-  mo_soil_config_class.o \
   mo_sb_constants.o \
   mo_sb_jsm_processes.o \
   mo_sb_jsm_transport.o \

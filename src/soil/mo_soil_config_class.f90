@@ -21,7 +21,7 @@ MODULE mo_soil_config_class
   INTEGER, SAVE :: soil_nsoil_water
   
   PRIVATE
-  PUBLIC :: t_soil_config, soil_config
+  PUBLIC :: t_soil_config
   PUBLIC :: soil_nsoil_water                 ! used in mo_slm_varlist  *slmtemp
 
   !-----------------------------------------------------------------------------------------------------
@@ -30,8 +30,8 @@ MODULE mo_soil_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_soil_config
-    INTEGER               :: nsoil_energy         !< number of layers
-    INTEGER               :: nsoil_water
+    INTEGER               :: nsoil_energy         !< number of soil layers for soil energy calculations
+    INTEGER               :: nsoil_water          !< number of soil layers for soil moisture calculations
     REAL(wp)              :: soil_depth           !< actual soil and rooting depth
     REAL(wp), ALLOCATABLE :: soil_depth_energy(:) !< soil depth of the layers (lower bound)
     REAL(wp), ALLOCATABLE :: soil_depth_water(:)
@@ -50,7 +50,6 @@ MODULE mo_soil_config_class
       PROCEDURE :: Init => Init_soil_config
   END Type t_soil_config
 
-  TYPE(t_soil_config), SAVE :: soil_config
 
   INTEGER, PARAMETER :: max_soil_layers = 20  ! consistent with JSBACH4
 

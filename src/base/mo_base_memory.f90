@@ -45,6 +45,9 @@ MODULE mo_base_memory
     INTEGER  :: ics     = -1      !< Index of chunk start
     INTEGER  :: ice     = -1      !< Index of chunk end
     INTEGER  :: nc      = -1      !< Length of chunk; nc = ice - ics + 1
+    INTEGER  :: nsoil_energy = -1 !< number of soil layers for soil energy calculations
+    INTEGER  :: nsoil_water  = -1 !< number of soil layers for soil moisture calculations
+    INTEGER  :: nsoil_sb     = -1 !< currently this value equals nsoil_water
   END TYPE t_jsb_task_options
 
   !-----------------------------------------------------------------------------------------------------

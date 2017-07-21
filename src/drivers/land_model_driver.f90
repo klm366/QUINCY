@@ -43,6 +43,8 @@ PROGRAM land_model_driver
   !! 
   LOGICAL                       :: l_forcing  ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
   INTEGER                       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
+  INTEGER                       :: nsoil_sb             !< necessary for open_pool_output_files() & init_output_writing_pool()
+                                                        !!  number of soil layers used in SB_ - equal to nsoil_water
   REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -114,12 +116,13 @@ PROGRAM land_model_driver
   !! Create Tile & Model init & Define iblk, ics, ice
   !! 
   TYPE(t_slm_tile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
-                                                            !! in jsbach4 tile is created in mo_jsb_model_usecases
-  iblk    = 1
-  ics     = 1
-  ice     = 1
-  nc      = ice - ics + 1                                   ! (end-number - start-number + 1)
-  CALL init_model(tile, l_forcing, iblk, ics, ice, nc)      !< model init : mo_jsb_model_init 
+                                           !! in jsbach4 tile is created in mo_jsb_model_usecases
+  iblk     = 1
+  ics      = 1
+  ice      = 1
+  nc       = ice - ics + 1                                       ! (end-number - start-number + 1)
+  nsoil_sb = -1
+  CALL init_model(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)  !< model init : mo_jsb_model_init 
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------
@@ -197,7 +200,7 @@ PROGRAM land_model_driver
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','plant','soil','canopy')
-      CALL open_pool_output_files(tile, iblk, ics, ice, nc)
+      CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
       CALL open_flux_output_files(tile, iblk, ics, ice, nc)
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
@@ -236,6 +239,7 @@ PROGRAM land_model_driver
                             ics     , &
                             ice     , &
                             nc      , &
+                            nsoil_sb, &
                             time_day, & 
                                   !! forcing (read from file and passed to a2l memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
@@ -357,7 +361,7 @@ PROGRAM land_model_driver
           CALL close_output_files 
           base_config%output_interval_pool   = 'timestep' 
           base_config%output_interval_flux   = 'timestep' 
-          CALL open_pool_output_files(tile, iblk, ics, ice, nc)
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
           CALL open_flux_output_files(tile, iblk, ics, ice, nc)
 
       ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway

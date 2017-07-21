@@ -42,7 +42,7 @@ CONTAINS
   !!
   !! Output: increase in soluable, polymeric, and woody litter
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_transfer_litterfall_pools(options,nsoil,soil_depth_sl,root_fraction_sl,litterfall, &
+  SUBROUTINE calc_transfer_litterfall_pools(options,soil_depth_sl,root_fraction_sl,litterfall, &
                                   formation_soluable_litter,formation_polymeric_litter,formation_woody_litter)
                                  
 
@@ -52,19 +52,18 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options           !< model options
-    INTEGER,                               INTENT(in)    :: nsoil             !< number of soil layers 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl      !< depth of soil layer [m]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: root_fraction_sl   !< fraction of roots per layer 
-    TYPE(t_slm_struct_veg_pool),           INTENT(in)    :: litterfall        !< litter input from vegetation [mol/m2/time step] 
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_soluable_litter
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_polymeric_litter
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_woody_litter
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                    !< model options
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl              !< depth of soil layer [m]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: root_fraction_sl           !< fraction of roots per layer 
+    TYPE(t_slm_struct_veg_pool),                      INTENT(in)    :: litterfall                 !< litter input from vegetation [mol/m2/time step] 
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_soluable_litter
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_polymeric_litter
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_woody_litter
     ! ---------------------------
     ! 0.2 Local 
     INTEGER                                                 :: isoil
     REAL(wp), DIMENSION(options%nc)                         :: hlp1
-    REAL(wp), DIMENSION(options%nc,nsoil)                   :: hlp2
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)        :: hlp2
     INTEGER                                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_transfer_litterfall_pools'
     ! ---------------------------
@@ -183,7 +182,7 @@ CONTAINS
 
     !> 3.0 roots
     !!
-    DO isoil = 1,nsoil
+    DO isoil = 1,options%nsoil_sb
        !> 3.1 fine roots
        !! still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
        hlp1 = f_soluable_fine_root 
@@ -260,25 +259,24 @@ CONTAINS
   !!        turnover time at standard conditions 
   !! Output: transfer of litter to its sink pool (soluable -> DOM; woody -> polymeric litter) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_litter_turnover(options,nsoil,tau_litter_pool,rtm_depolymerisation,rmm_depolymerisation, & 
+  SUBROUTINE calc_litter_turnover(options,tau_litter_pool,rtm_depolymerisation,rmm_depolymerisation, & 
                                   pool_litter,loss_litter,formation_sink)
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options               !< model options
-    INTEGER,                               INTENT(in)    :: nsoil                 !< number of soil layers 
-    REAL(wp),                              INTENT(in)    :: tau_litter_pool       !< turnover time of the litter pool [1/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier [-]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_litter           !< litter pool to decompose [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_litter           !< reduction in litter pool [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_sink        !< formation of SOM pool [mol/m3/timestep]
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options               !< model options
+    REAL(wp),                                         INTENT(in)    :: tau_litter_pool       !< turnover time of the litter pool [1/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier [-]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_litter           !< litter pool to decompose [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_litter           !< reduction in litter pool [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_sink        !< formation of SOM pool [mol/m3/timestep]
     ! ---------------------------
     ! 0.2 Local 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1 , &
-                                             decay_rate
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1 , &
+                                                        decay_rate
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_turnover'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -393,7 +391,7 @@ CONTAINS
   !!
   !! Output: transfer of microbial biomass to its sink pools (soluable -> DOM; polymeric -> residue) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_microbial_turnover(options,nsoil,pool_microbial,loss_microbial,formation_dom,formation_residue)
+  SUBROUTINE calc_microbial_turnover(options,pool_microbial,loss_microbial,formation_dom,formation_residue)
 
     USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue
 
@@ -401,16 +399,15 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),       INTENT(in)    :: options            !< model options
-    INTEGER,                        INTENT(in)    :: nsoil              !< number of soil layers 
     TYPE(t_slm_struct_sb_element),  INTENT(in)    :: pool_microbial     !< microbial biomass [mol/m3]
     TYPE(t_slm_struct_sb_element),  INTENT(inout) :: loss_microbial     !< microbial death [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),  INTENT(inout) :: formation_dom      !< DOM formation from microbial death [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),  INTENT(inout) :: formation_residue  !< residue formation from microbial death [mol/m3/timestep]
     ! ---------------------------
     ! 0.2 Local 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1 , &
-                                             mortality_rate
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1 , &
+                                                        mortality_rate
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -497,7 +494,7 @@ CONTAINS
   !!
   !! Output: DOM consumption, microbial growth, hetertrophic respiration and net mineralisation
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_microbial_growth(options,nsoil,pool_dom,pool_microbial, & 
+  SUBROUTINE calc_microbial_growth(options,pool_dom,pool_microbial, & 
                                    rtm_mic_uptake,rmm_mic_uptake,rtm_hsc,rmm_hsc, &
                                    mic_uptake_nh4,mic_uptake_nh4_n15, &
                                    mic_uptake_no3,mic_uptake_no3_n15,mic_uptake_po4, &
@@ -513,38 +510,37 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options             !< model options
-    INTEGER,                               INTENT(in)    :: nsoil               !< number of soil layers 
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_dom            !< DOM [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_microbial      !< microbial biomass [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_mic_uptake      !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_mic_uptake      !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_hsc             !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_hsc             !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_nh4      !< microbial uptake rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_nh4_n15  !< microbial uptake rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_no3      !< microbial uptake rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_no3_n15  !< microbial uptake rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: mic_uptake_po4      !< microbial uptake rate [µmol P/m3/s]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_dom            !< microbial death [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_microbial !< DOM formation from microbial death [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration     !< respiration rate [µmol C/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c13 !< respiration rate [µmol 13C/m3/s] 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c14 !< respiration rate [µmol 14C/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4     !< net mineralisation rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4_n15 !< net mineralisation rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3     !< net mineralisation rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_po4     !< net mineralisation rate [µmol P/m3/s]
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options             !< model options
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_dom            !< DOM [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_microbial      !< microbial biomass [mol/m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_mic_uptake      !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_mic_uptake      !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_hsc             !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_hsc             !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mic_uptake_nh4      !< microbial uptake rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mic_uptake_nh4_n15  !< microbial uptake rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mic_uptake_no3      !< microbial uptake rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mic_uptake_no3_n15  !< microbial uptake rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mic_uptake_po4      !< microbial uptake rate [µmol P/m3/s]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_dom            !< microbial death [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_microbial !< DOM formation from microbial death [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration     !< respiration rate [µmol C/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration_c13 !< respiration rate [µmol 13C/m3/s] 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration_c14 !< respiration rate [µmol 14C/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_nh4     !< net mineralisation rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_nh4_n15 !< net mineralisation rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_no3     !< net mineralisation rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_po4     !< net mineralisation rate [µmol P/m3/s]
     ! ---------------------------
     ! 0.2 Local 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1             , &
-                                             f_uptake         , &
-                                             uptake_dom  
-    REAL(wp), DIMENSION(options%nc,nsoil) :: growth_c,growth_n,growth_p,growth,uptake_c,uptake_n,uptake_p 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: scal,microbial_cue_eff,microbial_nue_eff,microbial_pue_eff 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: gross_mineralisation_nh4,gross_mineralisation_nh4_n15,gross_mineralisation_po4 
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1             , &
+                                                        f_uptake         , &
+                                                        uptake_dom  
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: growth_c,growth_n,growth_p,growth,uptake_c,uptake_n,uptake_p 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: scal,microbial_cue_eff,microbial_nue_eff,microbial_pue_eff 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: gross_mineralisation_nh4,gross_mineralisation_nh4_n15,gross_mineralisation_po4 
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -701,7 +697,7 @@ CONTAINS
   !!
   !! Output: transfer of residue/polymeric pool to DOM 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_depolymerisation(options,nsoil,vmax_depolymerisation,rtm_depolymerisation,rmm_depolymerisation, & 
+  SUBROUTINE calc_depolymerisation(options,vmax_depolymerisation,rtm_depolymerisation,rmm_depolymerisation, & 
                                    rtm_hsc,rmm_hsc,microbial_carbon,pool_polymeric,loss_polymeric,formation_dom)
 
     USE mo_sb_constants,          ONLY: km_depolymerisation
@@ -709,23 +705,22 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options               !< model options
-    INTEGER,                               INTENT(in)    :: nsoil                 !< number of soil layers 
-    REAL(wp),                              INTENT(in)    :: vmax_depolymerisation !< maximum depolymerisation rate
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier for depolymerisation
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier for depolymerisation
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_hsc               !< temperature rate modifier for half-saturation constants
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_hsc               !< moisture rate modifier for half-saturation constants
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: microbial_carbon      !< microbial biomass carbon [mol C/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_polymeric        !< polymeric/residue pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_polymeric        !< loss of polymeric/residue pool [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_dom         !< formation of DOM [mol/m3/timestep]
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options               !< model options
+    REAL(wp),                                         INTENT(in)    :: vmax_depolymerisation !< maximum depolymerisation rate
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier for depolymerisation
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier for depolymerisation
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_hsc               !< temperature rate modifier for half-saturation constants
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_hsc               !< moisture rate modifier for half-saturation constants
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: microbial_carbon      !< microbial biomass carbon [mol C/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_polymeric        !< polymeric/residue pool [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_polymeric        !< loss of polymeric/residue pool [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_dom         !< formation of DOM [mol/m3/timestep]
     ! ---------------------------
     ! 0.2 Local 
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1                   , &
-                                             hlp2                   , &
-                                             depolymerisation_rate
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1                   , &
+                                                        hlp2                   , &
+                                                        depolymerisation_rate
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -868,15 +863,14 @@ CONTAINS
   !!
   !! Output: total_bulk_soil_carbon 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_bulk_soil_carbon(options,nsoil,sb_pool) RESULT (bulk_soil_carbon_sl)
+  FUNCTION calc_bulk_soil_carbon(options,sb_pool) RESULT (bulk_soil_carbon_sl)
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    INTEGER,                               INTENT(in)    :: nsoil
     TYPE(t_slm_struct_sb_pool),            INTENT(in)    :: sb_pool                 !< pools [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil)                :: bulk_soil_carbon_sl
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)     :: bulk_soil_carbon_sl
     ! ---------------------------
     ! 0.2 Local
     INTEGER                     :: isoil
@@ -890,7 +884,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
 
-    DO isoil = 1,nsoil
+    DO isoil = 1,options%nsoil_sb
        bulk_soil_carbon_sl(:,isoil) = &
             sb_pool%microbial%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%residue%carbon%ptr(ics:ice,isoil,iblk) + &
@@ -919,7 +913,7 @@ CONTAINS
   !!
   !! Output: sorption and desorption rate (mol/m2/timestep) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_om_sorption(options,nsoil,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
+  SUBROUTINE calc_om_sorption(options,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
                               rmm_desorption,pool_dom,pool_dom_assoc,pool_residue, & 
                               pool_residue_assoc,formation_dom,formation_dom_assoc,formation_residue, &
                               formation_residue_assoc,loss_dom,loss_dom_assoc,loss_residue,loss_residue_assoc)
@@ -929,32 +923,31 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    INTEGER,                               INTENT(in)    :: nsoil
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: qmax_org 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_sorption            !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_sorption            !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_desorption          !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_desorption          !< moisture rate modifier [-]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_dom                !< DOM pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_residue            !< DOM pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_dom_assoc          !< DOM pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_residue_assoc      !< DOM pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_dom           !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_dom_assoc     !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_residue       !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_residue_assoc !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_dom                !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_dom_assoc          !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_residue            !< rate of DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_residue_assoc      !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: qmax_org 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_sorption            !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_sorption            !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_desorption          !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_desorption          !< moisture rate modifier [-]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_dom                !< DOM pool [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_residue            !< DOM pool [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_dom_assoc          !< DOM pool [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_residue_assoc      !< DOM pool [mol/m3]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_dom           !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_dom_assoc     !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_residue       !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_residue_assoc !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_dom                !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_dom_assoc          !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_residue            !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: loss_residue_assoc      !< rate of DOM transport [mol/m3/timestep]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1                   , &
-                                             avail_sorption_sites   , &
-                                             sorption_rate          , &
-                                             desorption_rate        
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1                   , &
+                                                        avail_sorption_sites   , &
+                                                        sorption_rate          , &
+                                                        desorption_rate        
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_om_sorption'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -963,6 +956,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
 
     !> 1.0 Determine available sorption sites [mol C m-3]
     !!

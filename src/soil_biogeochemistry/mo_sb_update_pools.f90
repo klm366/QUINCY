@@ -42,7 +42,6 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_constants,        ONLY: dtime
     USE mo_base_config_class,     ONLY: base_config
-    USE mo_soil_config_class,     ONLY: soil_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_constants
@@ -70,7 +69,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
 !!
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon,hlp1
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
@@ -407,7 +406,7 @@ CONTAINS
 
     !> 3.1 update diagnostics and other state variables depending on organic matter content 
     !!
-    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
+    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb%pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
     qmax_org = calc_qmax_org(bulk_dens_corr_sl)
 

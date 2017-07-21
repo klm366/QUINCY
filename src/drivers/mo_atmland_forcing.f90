@@ -44,6 +44,7 @@ CONTAINS
                                   ics                , &  ! in
                                   ice                , &  ! in
                                   nc                 , &  ! in
+                                  nsoil_sb           , &  ! in
                                   time               , &  ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
@@ -89,7 +90,6 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, grid  ! grid is used for calc_solar_angle()
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config
-    USE mo_soil_config_class,     ONLY: soil_config
     USE mo_shared_constants,      ONLY: molar_mass_N, grav
     USE mo_base_constants,        ONLY: one_day
     USE mo_jsb4_forcing,          ONLY: forcing_options
@@ -101,7 +101,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile)  , INTENT(inout) :: tile     !< one tile
-    INTEGER           , INTENT(in)    :: iblk, ics, ice, nc
+    INTEGER           , INTENT(in)    :: iblk, ics, ice, nc, nsoil_sb
     REAL(wp)          , INTENT(in)    :: time     !< current time (not timestep !)
     REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory
                                       t_air(:)              , &    !< ..
@@ -168,7 +168,7 @@ CONTAINS
                      fruit_dC13_r, fruit_DC14_r, fruit_dN15_r , &
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_dC13_r, seed_bed_DC14_r, seed_bed_dN15_r
-    REAL(wp), DIMENSION(soil_config%nsoil_water) :: & 
+    REAL(wp), DIMENSION(nsoil_sb) :: & 
                      t_soil_sl_r, w_soil_sl_r, &
                      percolation_sl_r, root_fraction_sl_r
     REAL(wp) ::      veg_pool_fine_root_carbon_r
@@ -403,7 +403,7 @@ CONTAINS
     !!#######################
     CASE('soil')
 
-    nlevel_soil = soil_config%nsoil_water
+    nlevel_soil = nsoil_sb
 
     !> 1.0 read data
     !!

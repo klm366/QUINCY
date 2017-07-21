@@ -35,7 +35,6 @@ mo_veg_growth.o: \
   mo_veg_canopy.o \
   mo_veg_respiration.o \
   mo_pheno_memory_class.o \
-  mo_soil_config_class.o \
   mo_sb_memory_class.o
 
 mo_veg_respiration.o: \

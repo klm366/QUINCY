@@ -47,7 +47,7 @@ MODULE mo_jsb_model_init
     USE mo_veg_init,                        ONLY: veg_init
     ! soil
     USE mo_soil_constants,                  ONLY: init_soil_constants
-    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_soil_config_class,               ONLY: t_soil_config
     USE mo_soil_init,                       ONLY: soil_init
     ! soil_biogeochemistry
     USE mo_sb_constants,                    ONLY: init_sb_constants
@@ -93,7 +93,7 @@ CONTAINS
   !! @todo mo_jsb_model_init: move to default JSBACH4 init style
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm(tile, l_forcing, iblk, ics, ice, nc)  !(model_id, model_name)
+  SUBROUTINE init_slm(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)  !(model_id, model_name)
 
 
     IMPLICIT NONE
@@ -101,6 +101,8 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)              :: tile           !< data structure for dynamic vegetation and soil variables
     LOGICAL,INTENT(out)                         :: l_forcing      !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+    INTEGER,INTENT(out)                         :: nsoil_sb       !< number of soil layers used in SB_ - equal to nsoil_water
+                                                                  !!  necessary for open_pool_output_files() & init_output_writing_pool()
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
                                                    ics, &
                                                    ice, &
@@ -116,6 +118,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                  :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
     TYPE(t_jsb_model), POINTER                  :: model
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SOIL_)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm'
 
 
@@ -150,24 +153,26 @@ CONTAINS
     base_config%namelist_filename       = model%namelist_filename
     CALL base_config%Init               ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL model%Configure_processes()    ! mo_jsb_model_class:Configure_model_processes CALL mo_jsb_process_class:Configure_process CALL config%Init()
-      !> @todo ticket #230
-      soil_config%namelist_filename       = model%namelist_filename
-      CALL soil_config%Init
     !! forcing config
     CALL Init_forcing(model_id)         ! model_id = 1, see above new_model()
-    !! get process configs
+    !! get process configs needed for model_init
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SOIL_)
 
 
     !! 3 Set model options
     !!
     !! 
-    model%options%dtime   = base_config%dtime  ! length of one time step
-    model%options%steplen = base_config%dtime  ! .. 
-    model%options%iblk    = iblk               ! Number of current chunk that consists of multiple grid boxes
-    model%options%ics     = ics                ! Index of chunk start
-    model%options%ice     = ice                ! Index of chunk end
-    model%options%nc      = nc                 ! Length of chunk  (end-number - start-number + 1)
+    model%options%dtime         = base_config%dtime  ! length of one time step
+    model%options%steplen       = base_config%dtime  ! .. 
+    model%options%iblk          = iblk               ! Number of current chunk that consists of multiple grid boxes
+    model%options%ics           = ics                ! Index of chunk start
+    model%options%ice           = ice                ! Index of chunk end
+    model%options%nc            = nc                 ! Length of chunk  (end-number - start-number + 1)
+    model%options%nsoil_energy  = dsl4jsb_Config(SOIL_)%nsoil_energy  ! number of soil layers for soil energy calculations
+    model%options%nsoil_water   = dsl4jsb_Config(SOIL_)%nsoil_water   ! number of soil layers for soil moisture calculations
+    model%options%nsoil_sb      = dsl4jsb_Config(SOIL_)%nsoil_water   ! number of soil layers used in SB_ - equals nsoil_water
+    nsoil_sb                    = dsl4jsb_Config(SOIL_)%nsoil_water   ! SUBROUTINE output for land_model_driver -> open_pool_output_files()
     !model%lctlib => Read_lctlib()             ! not possible here - need init constants init !!
 
 

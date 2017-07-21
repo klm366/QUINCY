@@ -17,7 +17,6 @@ MODULE mo_shared_output
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
   USE mo_base_config_class,     ONLY: base_config
-  USE mo_soil_config_class,     ONLY: soil_config
   USE mo_jsb4_forcing,          ONLY: forcing_options
 
   IMPLICIT NONE
@@ -82,7 +81,7 @@ CONTAINS
   !! 
   !! lun: start at 100
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc)
+  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile
@@ -99,7 +98,8 @@ CONTAINS
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
                                                    ics, &
                                                    ice, &
-                                                   nc 
+                                                   nc, &
+                                                   nsoil_sb
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
@@ -210,7 +210,7 @@ CONTAINS
     !> 3.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_writing_pool
+    CALL init_output_writing_pool(nsoil_sb)
 
   END SUBROUTINE open_pool_output_files
 
@@ -220,15 +220,15 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_writing_pool
+  SUBROUTINE init_output_writing_pool(nsoil_sb)
 
     IMPLICIT NONE
     ! 0.1 InOut
-    ! 
+    INTEGER, INTENT(in)       :: nsoil_sb
     ! 0.2 Local
-    INTEGER :: lun,isoil
-    CHARACTER(2) :: layerstr
-    CHARACTER(200) :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
+    INTEGER                   :: lun,isoil
+    CHARACTER(2)              :: layerstr
+    CHARACTER(200)            :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
 
     !> 1.0 write headers
     !!
@@ -283,7 +283,7 @@ CONTAINS
          p8str=''
          p9str=''
          p10str=''
-         DO isoil = 1,soil_config%nsoil_water
+         DO isoil = 1,nsoil_sb
             IF(isoil<10) THEN 
               WRITE(layerstr,'(I1)') isoil
             ELSE
@@ -319,7 +319,7 @@ CONTAINS
          p4str=''
          p5str=''
          p6str=''
-         DO isoil = 1,soil_config%nsoil_water
+         DO isoil = 1,nsoil_sb
             IF(isoil<10) THEN 
               WRITE(layerstr,'(I1)') isoil
             ELSE
@@ -337,7 +337,7 @@ CONTAINS
 
          p1str=''
          p2str=''
-         DO isoil = 1,soil_config%nsoil_water
+         DO isoil = 1,nsoil_sb
             IF(isoil<10) THEN 
               WRITE(layerstr,'(I1)') isoil
             ELSE
@@ -353,7 +353,7 @@ CONTAINS
 
          p1str=''
          p2str=''
-         DO isoil = 1,soil_config%nsoil_water
+         DO isoil = 1,nsoil_sb
             IF(isoil<10) THEN 
               WRITE(layerstr,'(I1)') isoil
             ELSE
@@ -410,7 +410,7 @@ CONTAINS
     REAl(wp)                             :: growing_season_float !output variable for growing season
     REAL(wp)                             :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                             dC13fruit,dC13labile,dC13reserve,dC13seed_bed
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) & 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) & 
                                          :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
                                             dC13dom,dC13dom_assoc,dC13fungi,dC13mycorrhiza,dC13microbial, & 
                                             dC13residue,dC13residue_assoc
@@ -1776,11 +1776,11 @@ CONTAINS
              net_min_no3_acc = net_min_no3_acc + SUM(net_mineralisation_no3(:,:) * soil_depth_sl(:,:)) * dtime_one
              net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(:,:) * soil_depth_sl(:,:)) * dtime_one
 
-             leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
@@ -2039,7 +2039,7 @@ CONTAINS
       lun = 100 + 60
       write(lun,'(66F12.6)') time_d         , &
         ! per variable values per soil layer is written out
-        ! number of soil layers == soil_config%nsoil_water  (default = 5)
+        ! number of soil layers == options%nsoil_sb  (default = 5)
         t_soil_sl(1,:)                      , &
         w_soil_sl(1,:)                      , &
         percolation_sl(1,:)                 , &

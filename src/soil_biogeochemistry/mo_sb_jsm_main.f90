@@ -41,7 +41,6 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_soil_config_class,     ONLY: soil_config
     USE mo_shared_isotope,        ONLY: calc_fractionation
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_litter_turnover, calc_depolymerisation, &
@@ -68,8 +67,8 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
 !!
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon
-    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: mic_uptake_nh4, mic_uptake_nh4_n15, & 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: mic_uptake_nh4, mic_uptake_nh4_n15, & 
                                                                mic_uptake_no3, mic_uptake_no3_n15, & 
                                                                mic_uptake_po4
 !!
@@ -147,6 +146,8 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
     ! Get process config
 !    dsl4jsb_Get_config(SB_)
     ! Get process memories
@@ -154,9 +155,6 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
-    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
@@ -220,7 +218,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 !BLARPP
-!percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
+!percolation_sl(:,options%nsoil_sb) = 0.0_wp
 rmm_mic_uptake = 1.0_wp
 rmm_depolymerisation = 1.0_wp
 rmm_hsc = 1.0_wp
@@ -258,19 +256,19 @@ rmm_desorption = 1.0_wp
     !!
     !> 2.1 decay of soluable litter
     !!
-    CALL calc_litter_turnover(options,soil_config%nsoil_water,tau_soluable_litter, &
+    CALL calc_litter_turnover(options,tau_soluable_litter, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                               sb%pool%soluable_litter,sb%loss%soluable_litter,sb%formation%dom)
 
     !> 2.1 decay of woody litter
     !!
-    CALL calc_litter_turnover(options,soil_config%nsoil_water,tau_woody_litter, &
+    CALL calc_litter_turnover(options,tau_woody_litter, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                               sb%pool%woody_litter,sb%loss%woody_litter,sb%formation%polymeric_litter)
 
     !> 2.3 co-metabolisation of polymeric litter 
     !! 
-    CALL calc_depolymerisation(options,soil_config%nsoil_water,vmax_depolymerisation_litter, &
+    CALL calc_depolymerisation(options,vmax_depolymerisation_litter, &
                                rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                                rtm_hsc(:,:),rmm_hsc(:,:), &
                                sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), & 
@@ -278,14 +276,14 @@ rmm_desorption = 1.0_wp
 
     !> 2.4 co-metabolisation of polymeric residues
     !! 
-    CALL calc_depolymerisation(options,soil_config%nsoil_water,vmax_depolymerisation_residue, &
+    CALL calc_depolymerisation(options,vmax_depolymerisation_residue, &
                                rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                                rtm_hsc(:,:),rmm_hsc(:,:), &
                                sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), & 
                                sb%pool%residue,sb%loss%residue,sb%formation%dom)
 
     !> 2.5 update litter pools with recent litter fall
-    CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_sl, & 
+    CALL calc_transfer_litterfall_pools(options,soil_depth_sl, & 
                                         root_fraction_sl,veg%litterfall,sb%formation%soluable_litter, & 
                                         sb%formation%polymeric_litter,sb%formation%woody_litter)
                                              
@@ -294,7 +292,7 @@ rmm_desorption = 1.0_wp
     !!
     !> 3.1 microbial growth
     !! 
-    CALL calc_microbial_growth(options,soil_config%nsoil_water,sb%pool%dom,sb%pool%microbial, & 
+    CALL calc_microbial_growth(options,sb%pool%dom,sb%pool%microbial, & 
                                rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:), &
                                mic_uptake_nh4(:,:),mic_uptake_nh4_n15(:,:), & 
                                mic_uptake_no3(:,:),mic_uptake_no3_n15(:,:), mic_uptake_po4(:,:), &
@@ -306,14 +304,14 @@ rmm_desorption = 1.0_wp
 
     !> 3.2 microbial death
     !! determine mortality rate, constrained by to avoiding a complete death of the community
-    CALL calc_microbial_turnover(options,soil_config%nsoil_water,sb%pool%microbial,sb%loss%microbial,& 
+    CALL calc_microbial_turnover(options,sb%pool%microbial,sb%loss%microbial,& 
                                  sb%formation%dom,sb%formation%residue)
 
     !> 4.0 mineral stabilisation
     !!
     !> 4.1 mineral stabilisation of organic matter
     !!
-    CALL calc_om_sorption(options,soil_config%nsoil_water,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
+    CALL calc_om_sorption(options,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
                           rmm_desorption,sb%pool%dom,sb%pool%dom_assoc,sb%pool%residue, & 
                           sb%pool%residue_assoc,sb%formation%dom,sb%formation%dom_assoc,sb%formation%residue, &
                           sb%formation%residue_assoc,sb%loss%dom,sb%loss%dom_assoc,sb%loss%residue,sb%loss%residue_assoc)
@@ -322,7 +320,7 @@ rmm_desorption = 1.0_wp
     !!
     !> 5.1 liquid phase transport
     !!
-    CALL calc_liquid_phase_transport_wrapper(options,soil_config%nsoil_water, & 
+    CALL calc_liquid_phase_transport_wrapper(options, & 
                                    percolation_sl(:,:), soil_depth_sl(:,:), &
                                    sb%pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                    nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
@@ -332,8 +330,8 @@ rmm_desorption = 1.0_wp
 
     !> 5.2 transport due to bioturbation
     !!
-    k_bioturb(:,:) = calc_bioturbation_rate(options, soil_config%nsoil_water, bulk_dens_corr_sl(:,:))
-    CALL calc_bioturbation_transport_wrapper(options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_sl(:,:), &
+    k_bioturb(:,:) = calc_bioturbation_rate(options, bulk_dens_corr_sl(:,:))
+    CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
                                     sb%pool%polymeric_litter, sb%pool%dom_assoc, sb%pool%fungi, & 
                                     sb%pool%microbial, sb%pool%residue, sb%pool%residue_assoc, & 
                                     nh4_assoc(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), & 
@@ -346,10 +344,10 @@ rmm_desorption = 1.0_wp
 
     !> 5.3 particle transport
     !!
-    particle_fluxrate(:,:) = calc_particle_fluxrate(options,soil_config%nsoil_water, & 
+    particle_fluxrate(:,:) = calc_particle_fluxrate(options, & 
                                     soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), & 
                                     sb%formation,sb%loss) 
-    CALL calc_particle_transport_wrapper(options, soil_config%nsoil_water, particle_fluxrate(:,:), soil_depth_sl(:,:), &
+    CALL calc_particle_transport_wrapper(options, particle_fluxrate(:,:), soil_depth_sl(:,:), &
                                     sb%pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                     po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), & 
                                     nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 

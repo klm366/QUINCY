@@ -42,10 +42,12 @@ CONTAINS
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def
     USE mo_phy_schemes
-    USE mo_soil_config_class,     ONLY: soil_config
     USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2, drain_frac, fdrain_runoff, max_infiltration_rate, & 
                                         kdiff_theta, min_theta_wpot, InterceptionEfficiency,w_skin_max
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
+
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SOIL_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -72,7 +74,7 @@ CONTAINS
                                              water_to_soil, &
                                              w_soil_root_old, &
                                              hlp1
-    REAL(wp),DIMENSION(options%nc,soil_config%nsoil_water) :: &   ! 2D (nc,z-axis)  -> used for CASE("layer")
+    REAL(wp),DIMENSION(options%nc,options%nsoil_sb) :: &   ! 2D (nc,z-axis)  -> used for CASE("layer")
                                              ftranspiration , &
                                              fevaporation   , &
                                              theta_sl
@@ -82,6 +84,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
@@ -145,8 +148,10 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(SOIL_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
@@ -155,9 +160,6 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)            ! in
@@ -234,7 +236,7 @@ CONTAINS
     !!
     evaporation(:) = exp(-0.5*lai(:)) * press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
                      (q_sat(:) - q_air(:)) / ( 10._wp / ga(:)) 
-    SELECT CASE(soil_config%soil_moisture_scheme)
+    SELECT CASE(TRIM(dsl4jsb_Config(SOIL_)%soil_moisture_scheme))
        CASE("bucket") ! ! Case of bucket water scheme
           evaporation(:) = evaporation(:) * w_soil_root_theta(:)
        
@@ -279,7 +281,7 @@ CONTAINS
     !! working upwards to estimate net transfer implied by previous temperature profile 
     !! (ignores interaction of diffusion with water or ice)
     !!
-    DO isoil = soil_config%nsoil_water,2,-1
+    DO isoil = options%nsoil_sb,2,-1
       WHERE(soil_depth_sl(:,isoil) > eps8)
            ground_heat_flx(:) = (t_soil_sl(:,isoil-1)-t_soil_sl(:,isoil)) * therm_cond_sl(:,isoil) / & 
                       (soil_depth_sl(:,isoil)/2.0_wp+soil_depth_sl(:,isoil-1)/2.0_wp)
@@ -299,7 +301,7 @@ CONTAINS
 
     !> 3.0 update soil moisture
     !!
-    SELECT CASE(soil_config%soil_moisture_scheme)
+    SELECT CASE(TRIM(dsl4jsb_Config(SOIL_)%soil_moisture_scheme))
        !> 3.1 bucket soil water scheme
        !!
        CASE("bucket")
@@ -339,7 +341,7 @@ CONTAINS
           !! using mean theta of the rooting zone for those layer that contain roots
           !! note that for ease of computation this is not 100% mass conserving and not meant to be!
           !!
-          DO isoil = 1,soil_config%nsoil_water
+          DO isoil = 1,options%nsoil_sb
              WHERE(root_fraction_sl(:,isoil) > eps8)
                 w_soil_sl(:,isoil) = w_soil_pwp_sl(:,isoil) + & 
                    w_soil_root_theta(:) * (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
@@ -366,7 +368,7 @@ CONTAINS
           !> 3.2.2 determine fraction of transpiration per layer
           !!
           ftranspiration(:,:) = 0.0_wp
-          DO isoil = 1,soil_config%nsoil_water
+          DO isoil = 1,options%nsoil_sb
              WHERE(w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil) > eps8)
                 hlp1(:) = (w_soil_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) / & 
                        (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
@@ -404,7 +406,7 @@ CONTAINS
 
           !> 3.2.4 update deeper soil layers given infiltration, transpiration and evaporation
           !!
-          DO isoil = 2,soil_config%nsoil_water
+          DO isoil = 2,options%nsoil_sb
 
                ! drainage from this layer due to preferential flow of infiltering water flux
                drainage_sl(:,isoil) = drain_frac / soil_depth_sl(:,isoil) * & 
@@ -429,7 +431,7 @@ CONTAINS
           WHERE(w_soil_fc_sl(:,:) > eps8)
              theta_sl(:,:) = w_soil_sl(:,:) / w_soil_fc_sl(:,:)
           END WHERE          
-          DO isoil = 2,soil_config%nsoil_water
+          DO isoil = 2,options%nsoil_sb
              ! diffusivity is taken here as linerarily dependent on the fractional water content of a layer
              ! diffusion is taken to be proportional to the fractional water content difference 
              hlp1 = kdiff_theta * theta_sl(:,isoil) * dtime * & 
@@ -445,14 +447,14 @@ CONTAINS
           !> 3.2.6 calculate rooting zone water content and theta for compatability with bucket scheme and vegetation water stress
           !!
           w_soil_root(:) = w_soil_sl(:,1) 
-          DO isoil=2,soil_config%nsoil_water
-             WHERE(root_depth(:) > soil_config%soil_depth_water(isoil-1))
-                WHERE(root_depth(:) >= soil_config%soil_depth_water(isoil))
+          DO isoil=2,options%nsoil_sb
+             WHERE(root_depth(:) > dsl4jsb_Config(SOIL_)%soil_depth_water(isoil-1))
+                WHERE(root_depth(:) >= dsl4jsb_Config(SOIL_)%soil_depth_water(isoil))
                     w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) 
                 ELSEWHERE
                     w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) * &  
-                       (root_depth(:)-soil_config%soil_depth_water(isoil-1)) / & 
-                       (soil_config%soil_depth_water(isoil)-soil_config%soil_depth_water(isoil-1))
+                       (root_depth(:)-dsl4jsb_Config(SOIL_)%soil_depth_water(isoil-1)) / & 
+                       (dsl4jsb_Config(SOIL_)%soil_depth_water(isoil)-dsl4jsb_Config(SOIL_)%soil_depth_water(isoil-1))
                 ENDWHERE
              ENDWHERE
           ENDDO
@@ -463,7 +465,7 @@ CONTAINS
           !> 3.2.7. calculate root zone water potential
           !!
           w_soil_root_pot(:) = 0.0_wp
-          DO isoil=1,soil_config%nsoil_water
+          DO isoil=1,options%nsoil_sb
              WHERE(w_soil_fc_sl(:,isoil) > eps8)
                  w_soil_root_pot(:) = w_soil_root_pot(:) + root_fraction_sl(:,isoil) * &
                           k_soil_phi1 * ( MAX(min_theta_wpot,w_soil_sl(:,isoil) / w_soil_fc_sl(:,isoil)) )**k_soil_phi2
@@ -472,7 +474,7 @@ CONTAINS
 
           !> 3.2.8. diagnose deep drainage
           !!
-          drainage(:) = drainage_sl(:,soil_config%nsoil_water) 
+          drainage(:) = drainage_sl(:,options%nsoil_sb) 
           WHERE(percolation_sl(:,:) > eps8)
              percolation_sl(:,:) = MIN(MAX((drainage_sl(:,:)/1000_wp * dtime )/ percolation_sl(:,:),-1.0_wp),1.0_wp)*1000._wp/dtime
           ELSEWHERE

@@ -15,7 +15,6 @@ MODULE mo_veg_growth
   USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
   USE mo_base_memory,           ONLY: t_jsb_task_options
-  USE mo_soil_config_class,     ONLY: soil_config
   USE mo_veg_constants
 
 
@@ -417,7 +416,6 @@ CONTAINS
     !> 1.2 calculate actual nutrient uptake and N fixation, as well as associated respiration
     !!
     CALL calc_actual_nutrient_uptake_rate(options, & 
-                                          soil_config%nsoil_water, & 
                                           lctlib, &
                                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                                           TRIM(dsl4jsb_Config(VEG_)%myc_scheme), &
@@ -799,7 +797,6 @@ CONTAINS
   !! output: actual uptake rates and associated respiration costs 
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_actual_nutrient_uptake_rate(options, & 
-                                              nsoil, & 
                                               lctlib, &
                                               bnf_scheme, &
                                               myc_scheme, &
@@ -858,7 +855,6 @@ CONTAINS
     
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options                  !< model options
-    INTEGER,                               INTENT(in)    :: nsoil                    !< number of soil layers
     TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                      INTENT(in)    :: bnf_scheme               !< from veg config 
     CHARACTER(len=*),                      INTENT(in)    :: myc_scheme               !< from veg config 
@@ -870,10 +866,10 @@ CONTAINS
     REAL(wp),                              INTENT(in)    :: labile_carbon            !< labile pool carbon (mol C / m2)
     REAL(wp),                              INTENT(in)    :: labile_nitrogen          !< labile pool nitrogen (mol N / m2)
     REAL(wp),                              INTENT(in)    :: labile_phosphorus        !< labile pool phosphorus (mol P / m2)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: mycorrhiza_carbon        !< mycorrhiza biomass (mol C /m3)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_solute               !< soil solution ammonium (mol N /m3)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: no3_solute               !< soil solution nitrate (mol N /m3)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl            !< depth of soil layers (m)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: mycorrhiza_carbon        !< mycorrhiza biomass (mol C /m3)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute               !< soil solution ammonium (mol N /m3)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: no3_solute               !< soil solution nitrate (mol N /m3)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl            !< depth of soil layers (m)
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: demand_uptake_n_tuptake_mavg !< time-averaged N demand scalar (unitless) 
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: demand_uptake_p_tuptake_mavg !< time-averaged P demand scalar (unitless)
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: fmaint_rate_troot_mavg   !< time-averaged N-speficic root maintentance respiration rate (µmol C/mol N / s)
@@ -882,11 +878,11 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: cost_n_fixation_tuptake_mavg !< time-averaged C costs for N fixation (mol C / mol N)
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: unit_uptake_n_pot        !< potential N uptake per unit root mass (mu mol N / mol C / s)
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: unit_uptake_p_pot        !< potential P uptake per unit root mass (mu mol P / mol C / s)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_nh4_sl      !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_nh4_n15_sl  !< plant NH4-N15 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_nh4_sl      !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_nh4_n15_sl  !< plant NH4-N15 uptake per soil layer (mu mol N / m3 / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
     TYPE(t_slm_struct_veg_element),        INTENT(in)    :: veg_mycorrhiza_export    !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4               !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4_n15           !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
@@ -941,7 +937,7 @@ CONTAINS
     uptake_nh4_pot = 0.0_wp
     uptake_no3_pot = 0.0_wp 
     uptake_po4_pot = 0.0_wp
-    DO isoil = 1,nsoil
+    DO isoil = 1,options%nsoil_sb
        uptake_nh4_pot(:) = uptake_nh4_pot(:) + plant_uptake_nh4_sl(:,isoil) * soil_depth_sl(:,isoil)
        uptake_no3_pot(:) = uptake_no3_pot(:) + plant_uptake_no3_sl(:,isoil) * soil_depth_sl(:,isoil)
        uptake_po4_pot(:) = uptake_po4_pot(:) + plant_uptake_po4_sl(:,isoil) * soil_depth_sl(:,isoil)
@@ -1105,7 +1101,7 @@ CONTAINS
 
     !> 5.2 apply actual uptake rates to soil layers
     !!
-    DO isoil = 1,nsoil
+    DO isoil = 1,options%nsoil_sb
        WHERE(uptake_nh4_pot(:) > eps8 .AND. uptake_nh4_pot(:) > uptake_nh4(:))
           plant_uptake_nh4_sl(:,isoil) = plant_uptake_nh4_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:) 
           plant_uptake_nh4_n15_sl(:,isoil) = plant_uptake_nh4_n15_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:) 
@@ -1123,7 +1119,7 @@ CONTAINS
     !!
     uptake_nh4_n15 = 0.0_wp
     uptake_no3_n15 = 0.0_wp 
-    DO isoil = 1,nsoil
+    DO isoil = 1,options%nsoil_sb
        uptake_nh4_n15(:) = uptake_nh4_n15(:) + plant_uptake_nh4_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
        uptake_no3_n15(:) = uptake_no3_n15(:) + plant_uptake_no3_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
     ENDDO
@@ -2003,7 +1999,6 @@ CONTAINS
     USE mo_veg_respiration,         ONLY: calc_maintenance_respiration
     USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool, t_slm_struct_veg_element
     USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element
-    USE mo_soil_config_class,       ONLY: soil_config
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -2027,7 +2022,7 @@ CONTAINS
                                                    n_processing_respiration_c13 , & !< respiration associated with N processing
                                                    n_processing_respiration_c14     !< respiration associated with N processing
     TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
-    TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_exudation                  !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
+    TYPE(t_slm_struct_veg_element),INTENT(inout):: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
     REAL(wp),                     INTENT(out)   :: maint_respiration_pot        , & !< potential maintenance respiration
                                                    maint_respiration            , & !< maintenance respiration
                                                    growth_respiration               !< growth respiration
