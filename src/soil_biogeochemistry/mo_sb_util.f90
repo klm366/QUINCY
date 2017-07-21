@@ -63,14 +63,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: total_flux_carbon13
     dsl4jsb_Real2D_onChunk :: total_flux_carbon14
     dsl4jsb_Real2D_onChunk :: total_flux_nitrogen15
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
+    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
     dsl4jsb_Real2D_onChunk :: emission_nh3
     dsl4jsb_Real2D_onChunk :: emission_noy
     dsl4jsb_Real2D_onChunk :: emission_n2o
     dsl4jsb_Real2D_onChunk :: emission_n2
-    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
-    dsl4jsb_Real2D_onChunk :: emission_noy_n15
-    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
-    dsl4jsb_Real2D_onChunk :: emission_n2_n15
     ! 3D SB_
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
@@ -106,7 +105,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_noy_n15
     dsl4jsb_Real3D_onChunk :: transport_n2o_n15
     dsl4jsb_Real3D_onChunk :: transport_n2_n15
-    dsl4jsb_Real3D_onChunk :: volatilisation_n
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
+    dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2_n15
+    dsl4jsb_Real3D_onChunk :: volatilisation_nh4
     dsl4jsb_Real3D_onChunk :: nitrification_no3
     dsl4jsb_Real3D_onChunk :: nitrification_noy
     dsl4jsb_Real3D_onChunk :: nitrification_n2o
@@ -114,6 +119,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_n2o
     dsl4jsb_Real3D_onChunk :: denitrification_n2
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
+    dsl4jsb_Real3D_onChunk :: volatilisation_nh4_n15
+    dsl4jsb_Real3D_onChunk :: nitrification_no3_n15
+    dsl4jsb_Real3D_onChunk :: nitrification_noy_n15
+    dsl4jsb_Real3D_onChunk :: nitrification_n2o_n15
+    dsl4jsb_Real3D_onChunk :: denitrification_noy_n15
+    dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15
+    dsl4jsb_Real3D_onChunk :: denitrification_n2_n15
+    dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15
 ! 2 be removed later: pointer to sb   *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -141,31 +154,24 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon13)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon14)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen15)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
@@ -174,16 +180,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2)                ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15)            ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4)          ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)           ! out
@@ -191,6 +191,32 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4_n15)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy_n15)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o_n15)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2_n15)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)        ! out
 
 
 ! 2 be removed  *slmtemp
@@ -211,14 +237,13 @@ CONTAINS
     total_flux_carbon13(:)       = zero
     total_flux_carbon14(:)       = zero
     total_flux_nitrogen15(:)     = zero
+    leaching_nh4_solute(:)       = zero
+    leaching_no3_solute(:)       = zero
+    leaching_po4_solute(:)       = zero
     emission_nh3(:)              = zero
     emission_noy(:)              = zero
     emission_n2o(:)              = zero
     emission_n2(:)               = zero
-    emission_nh3_n15(:)          = zero
-    emission_noy_n15(:)          = zero
-    emission_n2o_n15(:)          = zero
-    emission_n2_n15(:)           = zero
 
     ! pools
     CALL sb%loss%init(zero)
@@ -260,7 +285,7 @@ CONTAINS
     transport_noy_n15(:,:)            = zero 
     transport_n2o_n15(:,:)            = zero 
     transport_n2_n15(:,:)             = zero 
-    volatilisation_n(:,:)             = zero
+    volatilisation_nh4(:,:)           = zero
     nitrification_no3(:,:)            = zero
     nitrification_noy(:,:)            = zero
     nitrification_n2o(:,:)            = zero
@@ -268,6 +293,20 @@ CONTAINS
     denitrification_n2o(:,:)          = zero
     denitrification_n2(:,:)           = zero
     asymb_n_fixation(:,:)             = zero
+    volatilisation_nh4_n15(:,:)       = zero
+    nitrification_no3_n15(:,:)        = zero
+    nitrification_noy_n15(:,:)        = zero
+    nitrification_n2o_n15(:,:)        = zero
+    denitrification_noy_n15(:,:)      = zero
+    denitrification_n2o_n15(:,:)      = zero
+    denitrification_n2_n15(:,:)       = zero
+    leaching_nh4_n15_solute(:)        = zero
+    leaching_no3_n15_solute(:)        = zero
+    emission_nh3_n15(:)               = zero
+    emission_noy_n15(:)               = zero
+    emission_n2o_n15(:)               = zero
+    emission_n2_n15(:)                = zero
+    asymb_n_fixation_n15(:,:)         = zero
   
   END SUBROUTINE reset_sb_fluxes
 

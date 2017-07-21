@@ -195,32 +195,40 @@ MODULE mo_sb_memory_class
                                     rmm_gasdiffusion        !< rate modifier for gasdiffusion [--] 
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    het_respiration    ,    &  !< heterotrophic respiration  [mol m-3 s-1]
-                                    het_respiration_c13,    &  !< c13 heterotrophic respiration   [mol m-3 s-1]
-                                    het_respiration_c14,    &  !< c14 heterotrophic respiration   [mol m-3 s-1]
-                                    net_mineralisation_nh4,     &  !< net mineralisation of N    [mol m-3 s-1]
-                                    net_mineralisation_nh4_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
-                                    net_mineralisation_no3,     &  !< net mineralisation of N    [mol m-3 s-1]
-                                    net_mineralisation_no3_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
-                                    net_mineralisation_po4,   &  !< net mineralisation of P  [mol m-3 s-1]
-                                    plant_uptake_nh4_sl,     &  !< plant uptake of N    [mol m-3 s-1]
-                                    plant_uptake_nh4_n15_sl, &  !< plant uptake of N15  [mol m-3 s-1] 
-                                    plant_uptake_no3_sl,     &  !< plant uptake of N    [mol m-3 s-1]
-                                    plant_uptake_no3_n15_sl, &  !< plant uptake of N15  [mol m-3 s-1] 
-                                    plant_uptake_po4_sl,   &  !< plant uptake of P  [mol m-3 s-1]
+                                    het_respiration    ,          &  !< heterotrophic respiration  [mol m-3 s-1]
+                                    het_respiration_c13,          &  !< c13 heterotrophic respiration   [mol m-3 s-1]
+                                    het_respiration_c14,          &  !< c14 heterotrophic respiration   [mol m-3 s-1]
+                                    net_mineralisation_nh4,       &  !< net mineralisation of N    [mol m-3 s-1]
+                                    net_mineralisation_nh4_n15,   &  !< net mineralisation of N15  [mol m-3 s-1] 
+                                    net_mineralisation_no3,       &  !< net mineralisation of N    [mol m-3 s-1]
+                                    net_mineralisation_no3_n15,   &  !< net mineralisation of N15  [mol m-3 s-1] 
+                                    net_mineralisation_po4,       &  !< net mineralisation of P  [mol m-3 s-1]
+                                    plant_uptake_nh4_sl,          &  !< plant uptake of N    [mol m-3 s-1]
+                                    plant_uptake_nh4_n15_sl,      &  !< plant uptake of N15  [mol m-3 s-1] 
+                                    plant_uptake_no3_sl,          &  !< plant uptake of N    [mol m-3 s-1]
+                                    plant_uptake_no3_n15_sl,      &  !< plant uptake of N15  [mol m-3 s-1] 
+                                    plant_uptake_po4_sl,          &  !< plant uptake of P  [mol m-3 s-1]
                                     mycorrhiza_uptake_nh4_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
                                     mycorrhiza_uptake_nh4_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
                                     mycorrhiza_uptake_no3_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
                                     mycorrhiza_uptake_no3_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
-                                    mycorrhiza_uptake_po4_sl,   &  !< mycorrhiza uptake of P  [mol m-3 s-1] 
-                                    volatilisation_n,       &  !< volatilisation of N  [µmol m-3 s-1]
+                                    mycorrhiza_uptake_po4_sl,     &  !< mycorrhiza uptake of P  [mol m-3 s-1] 
+                                    volatilisation_nh4,       &  !< volatilisation of NH4  [µmol m-3 s-1]
+                                    volatilisation_nh4_n15, &    !< volatilisation of 15NH4  [µmol m-3 s-1]
                                     nitrification_no3, &         !< nitrification NO3 [µmol m-3 s-1]
+                                    nitrification_no3_n15, &     !< nitrification 15NO3 [µmol m-3 s-1]
                                     nitrification_noy, &         !< nitrification to NOy  [µmol m-3 s-1]
+                                    nitrification_noy_n15, &     !< nitrification to 15NOy  [µmol m-3 s-1]
                                     nitrification_n2o, &         !< nitrification to N2O [µmol m-3 s-1]
+                                    nitrification_n2o_n15, &     !< nitrification to 15N2O [µmol m-3 s-1]
                                     denitrification_noy, &       !< nitrification NOy [µmol m-3 s-1]
+                                    denitrification_n2o_n15, &   !< nitrification to 15N2O  [µmol m-3 s-1]
                                     denitrification_n2o, &       !< nitrification to N2O  [µmol m-3 s-1]
+                                    denitrification_noy_n15, &   !< nitrification 15NOy [µmol m-3 s-1]
                                     denitrification_n2, &        !< denitrification to N2  [µmol m-3 s1]
-                                    asymb_n_fixation             !< asymboitic N fixation [µmol m-3 s-1]
+                                    denitrification_n2_n15, &    !< denitrification to 15N2  [µmol m-3 s1]
+                                    asymb_n_fixation, &          !< asymboitic N fixation [µmol m-3 s-1]
+                                    asymb_n_fixation_n15         !< asymboitic 15N fixation [µmol m-3 s-1]
 
     ! 2D transport fluxes for communication with groundwater and atmosphere
     TYPE(t_jsb_var_real2d)          :: & 
@@ -1093,28 +1101,52 @@ CONTAINS
       CALL slm_add_var(mem, 'mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'volatilisation_n', mem%volatilisation_n, &
+      CALL slm_add_var(mem, 'volatilisation_nh4', mem%volatilisation_nh4, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'nitrification_no3', mem%nitrification_no3, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'nitrification_no3_n15', mem%nitrification_no3_n15, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'nitrification_noy', mem%nitrification_noy, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'nitrification_noy_n15', mem%nitrification_noy_n15, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'nitrification_n2o', mem%nitrification_n2o, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'nitrification_n2o_n15', mem%nitrification_n2o_n15, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'denitrification_noy', mem%denitrification_noy, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'denitrification_noy_n15', mem%denitrification_noy_n15, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'denitrification_n2o', mem%denitrification_n2o, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'denitrification_n2o_n15', mem%denitrification_n2o_n15, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'denitrification_n2', mem%denitrification_n2, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'denitrification_n2_n15', mem%denitrification_n2_n15, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'asymb_n_fixation', mem%asymb_n_fixation, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'qmax_org', mem%qmax_org, &
@@ -1138,37 +1170,37 @@ CONTAINS
       CALL slm_add_var(mem, 'leaching_nh4_solute', mem%leaching_nh4_solute, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'leaching_no3_solute', mem%leaching_no3_solute, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL slm_add_var(mem, 'leaching_po4_solute', mem%leaching_po4_solute, &
-            initval_r=0.0_wp) ! initvalue
-
       CALL slm_add_var(mem, 'leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'leaching_no3_solute', mem%leaching_no3_solute, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'leaching_po4_solute', mem%leaching_po4_solute, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'emission_nh3', mem%emission_nh3, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL slm_add_var(mem, 'emission_noy', mem%emission_noy, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL slm_add_var(mem, 'emission_n2o', mem%emission_n2o, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL slm_add_var(mem, 'emission_n2', mem%emission_n2, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'emission_nh3_n15', mem%emission_nh3_n15, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'emission_noy', mem%emission_noy, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'emission_noy_n15', mem%emission_noy_n15, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'emission_n2o', mem%emission_n2o, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'emission_n2o_n15', mem%emission_n2o_n15, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'emission_n2', mem%emission_n2, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'emission_n2_n15', mem%emission_n2_n15, &

@@ -153,6 +153,9 @@ CONTAINS
          fname = 'vegpoolP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         fname = 'vegpoold15N'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
          fname = 'vegpoolH2O'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
@@ -243,10 +246,13 @@ CONTAINS
                           'Reserve_DC14 SeedBank_DC14'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
-                          'Fruit_N Labile_N Reserve_N SeedBank_N Total_N Total_N15'
+                          'Fruit_N Labile_N Reserve_N SeedBank_N Total_N'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                           'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
+         lun=lun+1
+         WRITE(lun,'(2a)') 'Time Leaf_d15N FineRoot_d15N SapWood_d15N HeartWood_d15N CoarseRoot_d15N ', & 
+                          'Fruit_d15N Labile_d15N Reserve_d15N SeedBank_d15N Total_d15N'
          lun=lun+1
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
          lun=lun+1
@@ -258,7 +264,7 @@ CONTAINS
          WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14 MycDC14'!, &
-         !                 ' StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
+         !                  ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
          WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
          lun=lun+1
@@ -601,13 +607,26 @@ CONTAINS
                 veg%pool%heart_wood%nitrogen%ptr,veg%pool%coarse_root%nitrogen%ptr,&
                 veg%pool%fruit%nitrogen%ptr,veg%pool%labile%nitrogen%ptr,&
                 veg%pool%reserve%nitrogen%ptr,veg%pool%seed_bed%nitrogen%ptr,&
-                veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr
+                veg%total_biomass%nitrogen%ptr
               lun=lun+1
               write(lun,'(11F12.6)') time_d,veg%pool%leaf%phosphorus%ptr,&
                 veg%pool%fine_root%phosphorus%ptr,veg%pool%sap_wood%phosphorus%ptr,&
                 veg%pool%heart_wood%phosphorus%ptr,veg%pool%coarse_root%phosphorus%ptr,&
                 veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
-                veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
+                veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,& 
+                veg%total_biomass%phosphorus%ptr
+              lun=lun+1
+                !write(lun,'(12F12.6)') time_d, &
+                !calc_delta_N15(veg%pool%leaf%nitrogen%ptr,veg%pool%leaf%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%fine_root%nitrogen%ptr,veg%pool%fine_root%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%sap_wood%nitrogen%ptr,veg%pool%sap_wood%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%heart_wood%nitrogen%ptr,veg%pool%heart_wood%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%coarse_root%nitrogen%ptr,veg%pool%coarse_root%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%fruit%nitrogen%ptr,veg%pool%fruit%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%labile%nitrogen%ptr,veg%pool%labile%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%reserve%nitrogen%ptr,veg%pool%reserve%nitrogen15%ptr), &
+                !calc_delta_N15(veg%pool%seed_bed%nitrogen%ptr,veg%pool%seed_bed%nitrogen15%ptr), &
+                !calc_delta_N15(veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr)
               lun=lun+1
               write(lun,'(9F16.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
@@ -710,6 +729,7 @@ CONTAINS
                                SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                   , &
                 calc_delta_C14(SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                SUM(sb%pool%mycorrhiza%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)),dC13mycorrhiza(1,1))!, &
+                !calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(1,1,1),sb%pool%soluable_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
                 !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
@@ -959,6 +979,9 @@ CONTAINS
         fname = 'soilfluxNP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
         fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
@@ -1037,6 +1060,9 @@ CONTAINS
         lun=lun+1
         WRITE(lun,'(2a)') 'Time NDeposition Nfix_asymb Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
                           'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3 Net_Mineralisation_PO4 Leaching_PO4' 
+        lun=lun+1
+        WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb d15Net_Mineralisation_NH4 Emission_d15NOY ', &
+                          'Emission_d15N2O Emission_d15N2 Leaching_d15NH4 Leaching_d15NO3 PlantUptake_d15NH4 PlantUptake_d15NO3'
         lun=lun+1
         ! sb_massBalance_..txt
         WRITE(lun,'(2a)') 'Time sb_dPoolC sb_dPoolN sb_dPoolP sb_dPoolC13 sb_dPoolC14 sb_dPoolN15 ', &
@@ -1123,7 +1149,9 @@ CONTAINS
     REAL(wp), SAVE                        :: growth_resp_C14_acc = 0.0_wp
     REAL(wp), SAVE                        :: maint_resp_C14_acc  = 0.0_wp
     REAL(wp), SAVE                        :: uptake_nh4_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: uptake_nh4_n15_acc  = 0.0_wp   
     REAL(wp), SAVE                        :: uptake_no3_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: uptake_no3_n15_acc  = 0.0_wp   
     REAL(wp), SAVE                        :: recycling_n_acc     = 0.0_wp  
     REAL(wp), SAVE                        :: res_use_n_acc       = 0.0_wp  
     REAL(wp), SAVE                        :: n_fixation_acc      = 0.0_wp   
@@ -1139,6 +1167,7 @@ CONTAINS
     REAL(wp), SAVE                        :: gc_acc              = 0.0_wp
     REAL(wp), SAVE                        :: ga_acc              = 0.0_wp
     REAL(wp), SAVE                        :: n_deposition_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: n_deposition_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: ppfd_acc            = 0.0_wp
     REAL(wp), SAVE                        :: rnet_acc            = 0.0_wp
     REAL(wp), SAVE                        :: qh_acc              = 0.0_wp
@@ -1149,30 +1178,38 @@ CONTAINS
     INTEGER,  SAVE                        :: ndat_acc            = 0 
     ! soil - local accumulation variables
     REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: het_respC_acc       = 0.0_wp
-    REAL(wp), SAVE                        :: leachingCorg_acc    = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: het_respC13_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: leachingC13org_acc  = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC14_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: het_respC14_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: leachingC14org_acc  = 0.0_wp
     REAL(wp), SAVE                        :: litterfallN_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: net_min_nh4_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: net_min_no3_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: leachingNorg_acc    = 0.0_wp
     REAL(wp), SAVE                        :: litterfallP_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: net_min_po4_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: het_respC_acc       = 0.0_wp
+    REAL(wp), SAVE                        :: het_respC13_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: het_respC14_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: leachingCorg_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: leachingC13org_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: leachingC14org_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: leachingNorg_acc    = 0.0_wp
     REAL(wp), SAVE                        :: leachingPorg_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_nh4_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_nh4_n15_acc = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_no3_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_no3_n15_acc = 0.0_wp
+    REAL(wp), SAVE                        :: net_min_po4_acc     = 0.0_wp
     REAL(wp), SAVE                        :: nitrification_acc   = 0.0_wp
     REAL(wp), SAVE                        :: denitrification_acc = 0.0_wp
+    REAL(wp), SAVE                        :: emission_noy_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: emission_noy_acc    = 0.0_wp
     REAL(wp), SAVE                        :: emission_n2o_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: emission_n2o_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: emission_n2_acc     = 0.0_wp
+    REAL(wp), SAVE                        :: emission_n2_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: leaching_nh4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: leaching_nh4_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: leaching_no3_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: leaching_no3_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: leaching_po4_acc    = 0.0_wp
     REAL(wp), SAVE                        :: asymb_n_fixation_acc = 0.0_wp
+    REAL(wp), SAVE                        :: asymb_n_fixation_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_carbon_acc     = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_nitrogen_acc   = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_phosphorus_acc = 0.0_wp
@@ -1255,17 +1292,24 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: total_flux_carbon14
     dsl4jsb_Real2D_onChunk      :: total_flux_nitrogen15
     dsl4jsb_Real2D_onChunk      :: emission_noy
+    dsl4jsb_Real2D_onChunk      :: emission_noy_n15
     dsl4jsb_Real2D_onChunk      :: emission_n2o
+    dsl4jsb_Real2D_onChunk      :: emission_n2o_n15
     dsl4jsb_Real2D_onChunk      :: emission_n2
+    dsl4jsb_Real2D_onChunk      :: emission_n2_n15
     dsl4jsb_Real2D_onChunk      :: leaching_nh4_solute
+    dsl4jsb_Real2D_onChunk      :: leaching_nh4_n15_solute
     dsl4jsb_Real2D_onChunk      :: leaching_no3_solute
+    dsl4jsb_Real2D_onChunk      :: leaching_no3_n15_solute
     dsl4jsb_Real2D_onChunk      :: leaching_po4_solute
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk      :: het_respiration
     dsl4jsb_Real3D_onChunk      :: het_respiration_c13
     dsl4jsb_Real3D_onChunk      :: het_respiration_c14
     dsl4jsb_Real3D_onChunk      :: net_mineralisation_nh4
+    dsl4jsb_Real3D_onChunk      :: net_mineralisation_nh4_n15
     dsl4jsb_Real3D_onChunk      :: net_mineralisation_no3
+    dsl4jsb_Real3D_onChunk      :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk      :: net_mineralisation_po4
     dsl4jsb_Real3D_onChunk      :: nitrification_no3
     dsl4jsb_Real3D_onChunk      :: nitrification_noy
@@ -1274,6 +1318,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: denitrification_noy
     dsl4jsb_Real3D_onChunk      :: denitrification_n2o
     dsl4jsb_Real3D_onChunk      :: asymb_n_fixation 
+    dsl4jsb_Real3D_onChunk      :: asymb_n_fixation_n15 
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1356,16 +1401,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon14)  
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_nitrogen15)
     dsl4jsb_Get_var2D_onChunk(SB_,  emission_noy)
+    dsl4jsb_Get_var2D_onChunk(SB_,  emission_noy_n15)
     dsl4jsb_Get_var2D_onChunk(SB_,  emission_n2o)
+    dsl4jsb_Get_var2D_onChunk(SB_,  emission_n2o_n15)
     dsl4jsb_Get_var2D_onChunk(SB_,  emission_n2)
+    dsl4jsb_Get_var2D_onChunk(SB_,  emission_n2_n15)
     dsl4jsb_Get_var2D_onChunk(SB_,  leaching_nh4_solute)
+    dsl4jsb_Get_var2D_onChunk(SB_,  leaching_nh4_n15_solute)
     dsl4jsb_Get_var2D_onChunk(SB_,  leaching_no3_solute)
+    dsl4jsb_Get_var2D_onChunk(SB_,  leaching_no3_n15_solute)
     dsl4jsb_Get_var2D_onChunk(SB_,  leaching_po4_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration)
     dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration_c13)
     dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration_c14)
     dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_nh4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_nh4_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_no3)
+    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_no3_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_no3)
     dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_noy)
@@ -1374,6 +1426,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_noy)
     dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_n2o)
     dsl4jsb_Get_var3D_onChunk(SB_,  asymb_n_fixation)
+    dsl4jsb_Get_var3D_onChunk(SB_,  asymb_n_fixation_n15)
     
 !! *slmtemp
     veg     => veg__mem 
@@ -1463,6 +1516,7 @@ CONTAINS
              het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(1,:) * soil_depth_sl(1,:)) * dtime_one
              het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(1,:) * soil_depth_sl(1,:)) * dtime_one
              net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(1,:) * soil_depth_sl(1,:)) * dtime_one
+             net_min_nh4_n15_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4_n15(1,:) * soil_depth_sl(1,:)) * dtime_one
              net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(1,:) * soil_depth_sl(1,:)) * dtime_one
              nitrification_acc   = nitrification_acc + & 
                                     SUM((nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) * &
@@ -1471,19 +1525,25 @@ CONTAINS
                                     SUM((denitrification_n2(:,:) + denitrification_noy(:,:) + denitrification_n2o(:,:)) * &
                                     soil_depth_sl(:,:)) * dtime_one 
              emission_noy_acc = emission_noy_acc + emission_noy(1) * dtime_one
+             emission_noy_n15_acc = emission_noy_n15_acc + emission_noy_n15(1) * dtime_one
              emission_n2o_acc = emission_n2o_acc + emission_n2o(1) * dtime_one
+             emission_n2o_n15_acc = emission_n2o_n15_acc + emission_n2o_n15(1) * dtime_one
              emission_n2_acc  = emission_n2_acc  + emission_n2(1) * dtime_one
+             emission_n2_n15_acc  = emission_n2_n15_acc  + emission_n2_n15(1) * dtime_one
              leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(1) * dtime_one
+             leaching_nh4_n15_acc = leaching_nh4_n15_acc + leaching_nh4_n15_solute(1) * dtime_one
              leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(1) * dtime_one
+             leaching_no3_n15_acc = leaching_no3_n15_acc + leaching_no3_n15_solute(1) * dtime_one
              leaching_po4_acc = leaching_po4_acc + leaching_po4_solute(1) * dtime_one
              asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(1,:)*soil_depth_sl(1,:)) * dtime_one
+             asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(1,:)*soil_depth_sl(1,:)) * dtime_one
              ! for mass balance checks in SB_
-              sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + SUM(sb%delta_pools%carbon%ptr(ics:ice,:,iblk))
-              sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + SUM(sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk))
-              sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + SUM(sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk))
-              sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + SUM(sb%delta_pools%carbon13%ptr(ics:ice,:,iblk))
-              sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + SUM(sb%delta_pools%carbon14%ptr(ics:ice,:,iblk))
-              sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + SUM(sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk))
+              sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + SUM(sb%delta_pools%carbon%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + SUM(sb%delta_pools%nitrogen%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + SUM(sb%delta_pools%phosphorus%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + SUM(sb%delta_pools%carbon13%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + SUM(sb%delta_pools%carbon14%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + SUM(sb%delta_pools%nitrogen15%ptr(1,:,iblk)*soil_depth_sl(1,:))
               sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(1)
               sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(1)
               sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(1)
@@ -1543,8 +1603,20 @@ CONTAINS
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
                                           leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
                    lun=lun+1
+                   !write(lun,'(20F16.8)') time_d, & 
+                   !      calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
+                   !      calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
+                   !      calc_delta_N15(net_min_nh4_acc, net_min_nh4_n15_acc),&
+                   !      calc_delta_N15(emission_noy_acc,emission_noy_n15_acc), &
+                   !      calc_delta_N15(emission_n2o_acc,emission_n2o_n15_acc), &
+                   !      calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
+                   !      calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
+                   !      calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc), &
+                   !      calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
+                   !      calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
+                   lun=lun+1
                    ! sb_massBalance_..txt
-                   write(lun,'(13F16.8)') time_d, &
+                   write(lun,'(13F24.12)') time_d, &
                                         sb_delta_pools_carbon_acc, sb_delta_pools_nitrogen_acc, sb_delta_pools_phosphorus_acc, &
                                         sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
                                         sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
@@ -1592,7 +1664,9 @@ CONTAINS
                growth_resp_C14_acc = 0.0_wp
                maint_resp_C14_acc = 0.0_wp
                uptake_nh4_acc     = 0.0_wp
+               uptake_nh4_n15_acc = 0.0_wp
                uptake_no3_acc     = 0.0_wp
+               uptake_no3_n15_acc = 0.0_wp
                recycling_n_acc   = 0.0_wp
                res_use_n_acc     = 0.0_wp
                n_fixation_acc    = 0.0_wp
@@ -1608,6 +1682,7 @@ CONTAINS
                gc_acc            = 0.0_wp
                ga_acc            = 0.0_wp
                n_deposition_acc  = 0.0_wp
+               n_deposition_n15_acc = 0.0_wp
                ppfd_acc          = 0.0_wp
                rnet_acc          = 0.0_wp
                qh_acc            = 0.0_wp
@@ -1620,16 +1695,23 @@ CONTAINS
                het_respC13_acc   = 0.0_wp
                het_respC14_acc   = 0.0_wp
                net_min_nh4_acc   = 0.0_wp
+               net_min_nh4_n15_acc = 0.0_wp
                net_min_po4_acc   = 0.0_wp
                nitrification_acc = 0.0_wp
                denitrification_acc = 0.0_wp
                emission_noy_acc = 0.0_wp
+               emission_noy_n15_acc = 0.0_wp
                emission_n2o_acc = 0.0_wp
+               emission_n2o_n15_acc = 0.0_wp
                emission_n2_acc = 0.0_wp
+               emission_n2_n15_acc = 0.0_wp
                leaching_nh4_acc = 0.0_wp
+               leaching_nh4_n15_acc = 0.0_wp
                leaching_no3_acc = 0.0_wp
+               leaching_no3_n15_acc = 0.0_wp
                leaching_po4_acc = 0.0_wp
                asymb_n_fixation_acc = 0.0_wp
+               asymb_n_fixation_n15_acc = 0.0_wp
                sb_delta_pools_carbon_acc     = 0.0_wp
                sb_delta_pools_nitrogen_acc   = 0.0_wp
                sb_delta_pools_phosphorus_acc = 0.0_wp

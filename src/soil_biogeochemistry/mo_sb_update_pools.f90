@@ -96,17 +96,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: total_flux_carbon14
     dsl4jsb_Real2D_onChunk :: total_flux_nitrogen15
     dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
-    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
-    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
     dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
     dsl4jsb_Real2D_onChunk :: emission_nh3
-    dsl4jsb_Real2D_onChunk :: emission_noy
-    dsl4jsb_Real2D_onChunk :: emission_n2o
-    dsl4jsb_Real2D_onChunk :: emission_n2
     dsl4jsb_Real2D_onChunk :: emission_nh3_n15
+    dsl4jsb_Real2D_onChunk :: emission_noy
     dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o
     dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2
     dsl4jsb_Real2D_onChunk :: emission_n2_n15
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: het_respiration
@@ -117,14 +117,22 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: volatilisation_nh4 
+    dsl4jsb_Real3D_onChunk :: volatilisation_nh4_n15
     dsl4jsb_Real3D_onChunk :: nitrification_no3 
+    dsl4jsb_Real3D_onChunk :: nitrification_no3_n15 
     dsl4jsb_Real3D_onChunk :: nitrification_noy 
+    dsl4jsb_Real3D_onChunk :: nitrification_noy_n15 
     dsl4jsb_Real3D_onChunk :: nitrification_n2o 
+    dsl4jsb_Real3D_onChunk :: nitrification_n2o_n15
     dsl4jsb_Real3D_onChunk :: denitrification_noy 
+    dsl4jsb_Real3D_onChunk :: denitrification_noy_n15 
     dsl4jsb_Real3D_onChunk :: denitrification_n2o 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15 
     dsl4jsb_Real3D_onChunk :: denitrification_n2 
-    dsl4jsb_Real3D_onChunk :: volatilisation_n 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2_n15 
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
+    dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15 
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
@@ -136,33 +144,36 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
+    dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_po4_solute 
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
     dsl4jsb_Real3D_onChunk :: transport_po4_occluded
-    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
-    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
-    dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_noy
+    dsl4jsb_Real3D_onChunk :: transport_noy_n15
     dsl4jsb_Real3D_onChunk :: transport_n2o
+    dsl4jsb_Real3D_onChunk :: transport_n2o_n15
     dsl4jsb_Real3D_onChunk :: transport_n2
+    dsl4jsb_Real3D_onChunk :: transport_n2_n15 
     dsl4jsb_Real3D_onChunk :: nh4_solute 
+    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: nh4_assoc 
+    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
+    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: po4_solute 
     dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk :: po4_occluded
-    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
-    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
-    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: noy 
-    dsl4jsb_Real3D_onChunk :: n2o 
-    dsl4jsb_Real3D_onChunk :: n2
     dsl4jsb_Real3D_onChunk :: noy_n15
+    dsl4jsb_Real3D_onChunk :: n2o 
     dsl4jsb_Real3D_onChunk :: n2o_n15
+    dsl4jsb_Real3D_onChunk :: n2
     dsl4jsb_Real3D_onChunk :: n2_n15
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
@@ -205,17 +216,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon14)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen15)       ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! in
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! in
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! in
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! in
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! in
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! in
@@ -226,13 +237,21 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)           ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3_n15)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)           ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy_n15)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)           ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o_n15)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! in 
-    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o )        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy_n15)     ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o_n15)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! in 
-    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_n)            ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2_n15)      ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4)          ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4_n15)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! in
@@ -243,38 +262,42 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute)                  ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)              ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)              ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded)                ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       noy)                         ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       n2o)                         ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       n2)                          ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       n2o_n15)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       n2_n15)                      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15)           ! in 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15)           ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2)                ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15)            ! in 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded)                ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       noy)                         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15)                     ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2o)                         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2o_n15)                     ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2)                          ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2_n15)                      ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
+
 
 
 ! 2 be removed  *slmtemp
@@ -317,12 +340,14 @@ CONTAINS
        sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) + &
        sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk)
+    ! for mass balance purposes, already reduce by radioactive decay, since this is not a reported flux
     sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = &
-       sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
+       (sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)
+       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)) * &
+       (1._wp - lambda_C14 * dtime)
     sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = &
        sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
@@ -392,24 +417,36 @@ CONTAINS
     !!
     nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
                                                  nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
-                                                 volatilisation_n(:,:) + asymb_n_fixation(:,:) + &
+                                                 volatilisation_nh4(:,:) + asymb_n_fixation(:,:) + &
                                                  transport_nh4_solute(:,:)) * dtime/1.e6_wp
     nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) + &
-                                                 transport_nh4_n15_solute(:,:)) * dtime/1.e6_wp
+                                                 nitrification_no3_n15(:,:) - nitrification_noy_n15(:,:) - nitrification_n2o_n15(:,:) - &
+                                                 transport_nh4_n15_solute(:,:) + asymb_n_fixation_n15(:,:)) * dtime/1.e6_wp
     no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:) - mycorrhiza_uptake_no3_sl(:,:) + &
                                                  nitrification_no3(:,:) - &
                                                  denitrification_noy(:,:) - denitrification_n2o(:,:) - denitrification_n2(:,:) + &
                                                  transport_no3_solute(:,:)) * dtime/1.e6_wp
     no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:) - mycorrhiza_uptake_no3_n15_sl(:,:) + &
+                                                 nitrification_no3_n15(:,:) - &
+                                                 denitrification_noy_n15(:,:) - denitrification_n2o_n15(:,:) - denitrification_n2_n15(:,:) + &
                                                  transport_no3_n15_solute(:,:)) * dtime/1.e6_wp
     po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + &
                                                  transport_po4_solute(:,:)) * dtime/1.e6_wp
 
     noy(:,:)            = noy(:,:)            + (nitrification_noy(:,:) + denitrification_noy(:,:) + & 
                                                  transport_noy(:,:)) * dtime/1.e6_wp
+    noy_n15(:,:)        = noy_n15(:,:)        + (nitrification_noy_n15(:,:) + denitrification_noy_n15(:,:) + & 
+                                                 transport_noy_n15(:,:)) * dtime/1.e6_wp
     n2o(:,:)            = n2o(:,:)            + (nitrification_n2o(:,:) + denitrification_n2o(:,:) + & 
                                                  transport_n2o(:,:)) * dtime/1.e6_wp
+    n2o_n15(:,:)        = n2o_n15(:,:)        + (nitrification_n2o_n15(:,:) + denitrification_n2o_n15(:,:) + & 
+                                                 transport_n2o_n15(:,:)) * dtime/1.e6_wp
     n2(:,:)             = n2(:,:)             + (denitrification_n2(:,:) + transport_n2(:,:)) * dtime/1.e6_wp
+    n2_n15(:,:)         = n2_n15(:,:)         + (denitrification_n2_n15(:,:) + transport_n2_n15(:,:)) * dtime/1.e6_wp
+
+    !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
+    !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
+    !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
     !> 4.2 atmospheric deposition
     !!
@@ -433,103 +470,109 @@ CONTAINS
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_po4)THEN
        po4_solute(:,:) = po4_solute_prescribe 
     ENDIF
-    !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
-    !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
-    !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
     !> 5.0 infrastructure for mass balance checks (see also section 0.9)
     !!
     
     !! pools: calc the difference to what was calculated at the beginning of this routine
-    sb%delta_pools%carbon%ptr(ics:ice,:,iblk) = sb%delta_pools%carbon%ptr(ics:ice,:,iblk) - &
+    sb%delta_pools%carbon%ptr(ics:ice,:,iblk) = &
        (sb%pool%dom%carbon%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk))
-    sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) = sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) - &
+       sb%pool%residue%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)) - & 
+       sb%delta_pools%carbon%ptr(ics:ice,:,iblk)
+    sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) = &
        (sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + &
        sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
-       nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:))
-    sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) = sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) - &
+       nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:)) - &
+       sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk)
+    sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) = &
        (sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + &
        sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
-       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:))
-    sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) = sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) - &
+       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:)) - &
+       sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk)
+    sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) = &
        (sb%pool%dom%carbon13%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
-    sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) - &
+       sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk)) - &
+       sb%delta_pools%carbon13%ptr(ics:ice,:,iblk)
+    sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = &
        (sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk))
-    sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) - &
+       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)) - &
+       sb%delta_pools%carbon14%ptr(ics:ice,:,iblk)
+    sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = &
        (sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
        sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
        sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + &
        sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + &
        sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
-       nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:))
+       nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:)) - &
+       sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk)
 
     !! fluxes
     total_flux_carbon(:) =                  veg%litterfall%leaf%carbon%ptr        + &
-      veg%litterfall%fine_root%carbon%ptr - veg%litterfall%coarse_root%carbon%ptr + &
-      veg%litterfall%sap_wood%carbon%ptr  - veg%litterfall%heart_wood%carbon%ptr  + &
-      veg%litterfall%labile%carbon%ptr    - veg%litterfall%reserve%carbon%ptr     + &
-      veg%litterfall%fruit%carbon%ptr     - veg%litterfall%seed_bed%carbon%ptr    - &
-      SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2)                           ! DIM=2: sum only over dimension 2, i.e., soil layers
+      veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
+      veg%litterfall%sap_wood%carbon%ptr  + veg%litterfall%heart_wood%carbon%ptr  + &
+      veg%litterfall%labile%carbon%ptr    + veg%litterfall%reserve%carbon%ptr     + &
+      veg%litterfall%fruit%carbon%ptr     + veg%litterfall%seed_bed%carbon%ptr    - &
+      veg%mycorrhiza_export%carbon%ptr                                            - &
+      SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
     total_flux_nitrogen(:) =                  veg%litterfall%leaf%nitrogen%ptr        + &
-      veg%litterfall%fine_root%nitrogen%ptr - veg%litterfall%coarse_root%nitrogen%ptr + &
-      veg%litterfall%sap_wood%nitrogen%ptr  - veg%litterfall%heart_wood%nitrogen%ptr  + &
-      veg%litterfall%labile%nitrogen%ptr    - veg%litterfall%reserve%nitrogen%ptr     + &
-      veg%litterfall%fruit%nitrogen%ptr     - veg%litterfall%seed_bed%nitrogen%ptr    - &
-      leaching_nh4_solute(:) - leaching_no3_solute(:)                                 - &
-      emission_nh3(:) - emission_noy(:) - emission_n2o(:) - emission_n2(:)            + &
-      SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
-      SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
-      SUM(mycorrhiza_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                  + &
-      SUM(mycorrhiza_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+      veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
+      veg%litterfall%sap_wood%nitrogen%ptr  + veg%litterfall%heart_wood%nitrogen%ptr  + &
+      veg%litterfall%labile%nitrogen%ptr    + veg%litterfall%reserve%nitrogen%ptr     + &
+      veg%litterfall%fruit%nitrogen%ptr     + veg%litterfall%seed_bed%nitrogen%ptr    + &
+      SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp           - &
+      veg%mycorrhiza_export%nitrogen%ptr                                              - &
+      (leaching_nh4_solute(:) + leaching_no3_solute(:)                                + &
+       emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)            + &
+       SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
+       SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                       
     total_flux_phosphorus(:) =                  veg%litterfall%leaf%phosphorus%ptr        + &
-      veg%litterfall%fine_root%phosphorus%ptr - veg%litterfall%coarse_root%phosphorus%ptr + &
-      veg%litterfall%sap_wood%phosphorus%ptr  - veg%litterfall%heart_wood%phosphorus%ptr  + &
-      veg%litterfall%labile%phosphorus%ptr    - veg%litterfall%reserve%phosphorus%ptr     + &
-      veg%litterfall%fruit%phosphorus%ptr     - veg%litterfall%seed_bed%phosphorus%ptr    - &
-      leaching_po4_solute(:)                                                              + &
-      SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                           + &
-      SUM(mycorrhiza_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+      veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
+      veg%litterfall%sap_wood%phosphorus%ptr  + veg%litterfall%heart_wood%phosphorus%ptr  + &
+      veg%litterfall%labile%phosphorus%ptr    + veg%litterfall%reserve%phosphorus%ptr     + &
+      veg%litterfall%fruit%phosphorus%ptr     + veg%litterfall%seed_bed%phosphorus%ptr    - &
+      veg%mycorrhiza_export%phosphorus%ptr                                                - &
+      (leaching_po4_solute(:)                                                             + &
+       SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
     total_flux_carbon13(:) =                  veg%litterfall%leaf%carbon13%ptr        + &
-      veg%litterfall%fine_root%carbon13%ptr - veg%litterfall%coarse_root%carbon13%ptr + &
-      veg%litterfall%sap_wood%carbon13%ptr  - veg%litterfall%heart_wood%carbon13%ptr  + &
-      veg%litterfall%labile%carbon13%ptr    - veg%litterfall%reserve%carbon13%ptr     + &
-      veg%litterfall%fruit%carbon13%ptr     - veg%litterfall%seed_bed%carbon13%ptr    - &
-      SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2)
+      veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
+      veg%litterfall%sap_wood%carbon13%ptr  + veg%litterfall%heart_wood%carbon13%ptr  + &
+      veg%litterfall%labile%carbon13%ptr    + veg%litterfall%reserve%carbon13%ptr     + &
+      veg%litterfall%fruit%carbon13%ptr     + veg%litterfall%seed_bed%carbon13%ptr    - &
+      veg%mycorrhiza_export%carbon13%ptr                                              - &
+      SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
     total_flux_carbon14(:) =                  veg%litterfall%leaf%carbon14%ptr        + &
-      veg%litterfall%fine_root%carbon14%ptr - veg%litterfall%coarse_root%carbon14%ptr + &
-      veg%litterfall%sap_wood%carbon14%ptr  - veg%litterfall%heart_wood%carbon14%ptr  + &
-      veg%litterfall%labile%carbon14%ptr    - veg%litterfall%reserve%carbon14%ptr     + &
-      veg%litterfall%fruit%carbon14%ptr     - veg%litterfall%seed_bed%carbon14%ptr    - &
-      SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2)
+      veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
+      veg%litterfall%sap_wood%carbon14%ptr  + veg%litterfall%heart_wood%carbon14%ptr  + &
+      veg%litterfall%labile%carbon14%ptr    + veg%litterfall%reserve%carbon14%ptr     + &
+      veg%litterfall%fruit%carbon14%ptr     + veg%litterfall%seed_bed%carbon14%ptr    - &
+      veg%mycorrhiza_export%carbon14%ptr                                              - &
+      SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
     total_flux_nitrogen15(:) =                  veg%litterfall%leaf%nitrogen15%ptr          + &
-      veg%litterfall%fine_root%nitrogen15%ptr - veg%litterfall%coarse_root%nitrogen15%ptr   + &
-      veg%litterfall%sap_wood%nitrogen15%ptr  - veg%litterfall%heart_wood%nitrogen15%ptr    + &
-      veg%litterfall%labile%nitrogen15%ptr    - veg%litterfall%reserve%nitrogen15%ptr       + &
-      veg%litterfall%fruit%nitrogen15%ptr     - veg%litterfall%seed_bed%nitrogen15%ptr      - &
-      leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                               - &
-      emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:)  + &
-      SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                         + &
-      SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                         + &
-      SUM(mycorrhiza_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                    + &
-      SUM(mycorrhiza_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+      veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr   + &
+      veg%litterfall%sap_wood%nitrogen15%ptr  + veg%litterfall%heart_wood%nitrogen15%ptr    + &
+      veg%litterfall%labile%nitrogen15%ptr    + veg%litterfall%reserve%nitrogen15%ptr       + &
+      veg%litterfall%fruit%nitrogen15%ptr     + veg%litterfall%seed_bed%nitrogen15%ptr      + &
+      SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp             - &
+      veg%mycorrhiza_export%nitrogen15%ptr                                                  - &
+      (leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                              - &
+       emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:) + &
+       SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                        + &
+       SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
 
   END SUBROUTINE update_sb_pools
