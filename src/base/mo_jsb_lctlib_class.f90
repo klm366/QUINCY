@@ -429,7 +429,7 @@ CONTAINS
           END DO
         !! tau_mycorrhiza
           DO i=1,nlct
-            lctlib(i)%tau_mycorrhiza = lctlib(i)%tau_mycorrhiza / 12.0_wp
+            lctlib(i)%tau_mycorrhiza = lctlib(i)%tau_mycorrhiza
           END DO
         !! bnf_base
           DO i=1,nlct
