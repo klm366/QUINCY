@@ -64,6 +64,7 @@ MODULE mo_a2l_memory_class
                               ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                               nhx_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
                               noy_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
+                              p_deposition       , &    ! mumol/m2/sec  - new with r... ticket #261
                               ! For lakes:
                               albedo_lwtr        , &
                               drag_wtr           , &
@@ -352,6 +353,8 @@ CONTAINS
     CALL slm_add_var( mem, 'noy_deposition', mem%noy_deposition,&
             & initval_r=0.0_wp )
 
+    CALL slm_add_var( mem, 'p_deposition', mem%p_deposition,&
+            & initval_r=0.0_wp )
 
 !    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 

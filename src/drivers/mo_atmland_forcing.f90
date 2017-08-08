@@ -71,6 +71,7 @@ CONTAINS
                                   ga                   , &! out
                                   nhx_deposition     , &  ! out
                                   noy_deposition     , &  ! out
+                                  p_deposition       , &  ! out
                                   ! For lakes:
                                   albedo_lwtr        , &  ! out
                                   drag_wtr           , &  ! out
@@ -90,7 +91,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, grid  ! grid is used for calc_solar_angle()
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config
-    USE mo_shared_constants,      ONLY: molar_mass_N, grav
+    USE mo_shared_constants,      ONLY: molar_mass_N, molar_mass_P, grav
     USE mo_base_constants,        ONLY: one_day
     USE mo_jsb4_forcing,          ONLY: forcing_options
 
@@ -129,6 +130,7 @@ CONTAINS
                                       ga(:)                   , &  !< ..
                                       nhx_deposition(:)     , &    !< ..
                                       noy_deposition(:)     , &    !< ..
+                                      p_deposition(:)       , &    !< ..
                                       ! For lakes:
                                       albedo_lwtr(:)        , &    !< ..
                                       drag_wtr(:)           , &    !< ..
@@ -144,11 +146,11 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER     :: model                  ! the model structure
-    ! READ() input variables for: land plant canopy
+    ! READ() input variables for: land plant canopy (this variable names can differ from column names in forcing files)
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
-                     co2_mixing_ratio_r,                                           &
-                     nhx_deposition_r, noy_deposition_r   ! variables reading nhx_srf_down & noy_srf_down from the climate forcing file (maybe rename there to)
+                     co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
+                     nhx_deposition_r, noy_deposition_r, p_deposition_r 
     ! READ() input variables for: soil
     REAL(wp) ::      leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
                      leaf_dC13_r, leaf_DC14_r, leaf_dN15_r  , &
@@ -207,15 +209,14 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+!    lctlib => model%lctlib(tile%lcts%lib_id) 
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-!    lctlib => model%lctlib(tile%lcts%lib_id) 
-    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
@@ -259,6 +260,7 @@ CONTAINS
     ga(nc)                    = 0.0_wp
     nhx_deposition(nc)        = 0.0_wp
     noy_deposition(nc)        = 0.0_wp
+    p_deposition(nc)    = 0.0_wp
     ! For lakes:
     albedo_lwtr(nc)     = 0.0_wp
     drag_wtr(nc)        = 0.0_wp
@@ -299,8 +301,8 @@ CONTAINS
     READ(lun,*, IOSTAT=stat) year, day, hour, & 
                      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
-                     co2_mixing_ratio_r,                                        &
-                     nhx_deposition_r, noy_deposition_r
+                     co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
+                     nhx_deposition_r, noy_deposition_r, p_deposition_r 
 
     ! day of the year: current time step
     doy_new = day 
@@ -321,8 +323,8 @@ CONTAINS
       READ(lun,*) year, day, hour, &
                      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
-                     co2_mixing_ratio_r,                                        &
-                     nhx_deposition_r, noy_deposition_r
+                     co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
+                     nhx_deposition_r, noy_deposition_r, p_deposition_r 
     END IF
 
     !> 3.0 parameter units are re-scaled
@@ -340,12 +342,19 @@ CONTAINS
     drag_srf(1)             = (( 0.41 / log( (22._wp - 2.0_wp/3._wp * 12._wp)/1.0_wp) )**2)
     ga(1)                   = drag_srf(1) * wind_10m(1) 
     drag_srf(1)             = drag_srf(1) * 1800._wp * grav 
-    hlp1(1)                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
+    IF (forcing_options%flag_read_dC13) THEN
+      hlp1(1)               = calc_mixing_ratio_C13C12(co2_dc13_r)
+    ELSE
+      hlp1(1)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
+    END IF
     co2_mixing_ratio_C13(1) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1(1))
-    hlp1(1)                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C
+    IF (forcing_options%flag_read_DC14) THEN
+      hlp1(1)               = calc_mixing_ratio_C14C(co2_dc13_r, co2_dc14_r)
+    ELSE
+      hlp1(1)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
+    END IF
     co2_mixing_ratio_C14(1) = hlp1(1) * co2_mixing_ratio_r
-
-    cos_zenith_angle(1) = calc_solar_angle(grid%lat,grid%lon,time)                       ! function: calc_solar_angle
+    cos_zenith_angle(1) = calc_solar_angle(grid%lat,grid%lon,time)                      
     swnir_srf_down(1)   = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
     swvis_srf_down_r    = frac_vis_swtot_srf * swvis_srf_down_r 
     swpar_srf_down(1)   = frac_par_swvis_srf * swvis_srf_down_r
@@ -371,18 +380,30 @@ CONTAINS
     q_acoef(nc)         =         q_acoef(1)        
     q_bcoef(nc)         =         q_bcoef(1)        
     pch(nc)             =         pch(1)            
-    cos_zenith_angle(nc)      =         cos_zenith_angle(1)     
-    co2_mixing_ratio(nc)      =         co2_mixing_ratio_r
-    co2_mixing_ratio_C13(nc)  =         co2_mixing_ratio_C13(1) 
-    co2_mixing_ratio_C14(nc)  =         co2_mixing_ratio_C14(1) 
-    ga(nc)                    =         ga(1)         
-    IF (forcing_options%flag_n_deposition) THEN          
-      nhx_deposition(nc)      =         nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-      noy_deposition(nc)      =         noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-    ELSE  
-      nhx_deposition(nc)      =         0.0_wp
-      noy_deposition(nc)      =         0.0_wp
-    END IF
+    cos_zenith_angle(nc)      =   cos_zenith_angle(1)     
+    co2_mixing_ratio(nc)      =   co2_mixing_ratio_r
+    co2_mixing_ratio_C13(nc)  =   co2_mixing_ratio_C13(1) 
+    co2_mixing_ratio_C14(nc)  =   co2_mixing_ratio_C14(1) 
+    ga(nc)                    =   ga(1)         
+    SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
+      CASE ("none")
+        nhx_deposition(nc)    =   0.0_wp
+        noy_deposition(nc)    =   0.0_wp
+      CASE ("constant")
+        nhx_deposition(nc)    =   def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        noy_deposition(nc)    =   def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+      CASE ("dynamic")
+        nhx_deposition(nc)    =   nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        noy_deposition(nc)    =   noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+    ENDSELECT
+    SELECT CASE (TRIM(forcing_options%p_deposition_scheme))
+      CASE ("none")
+        p_deposition(nc)      =   0.0_wp
+      CASE ("constant")
+        p_deposition(nc)      =   def_p_deposition / molar_mass_P * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+      CASE ("dynamic")
+        p_deposition(nc)      =   p_deposition_r / molar_mass_P * 1000.0_wp / one_day      ! mg/m2/day -> mumol/m2/sec
+    ENDSELECT
     ! For lakes:    
     albedo_lwtr(nc)     =         albedo_lwtr(1)    
     drag_wtr(nc)        =         drag_wtr(1)       

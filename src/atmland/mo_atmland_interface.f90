@@ -86,6 +86,7 @@ CONTAINS
       ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
       nhx_deposition     , &
       noy_deposition     , &
+      p_deposition       , &
       ! For lakes:
       albedo_lwtr        , &
       drag_wtr           , &
@@ -135,6 +136,7 @@ CONTAINS
                                       ga(:)                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                                       nhx_deposition(:)     , &    ! added with r506
                                       noy_deposition(:)     , &    ! added with r506
+                                      p_deposition(:)       , &    ! added with r... ticket #261
                                       ! For lakes:
                                       drag_wtr(:)           , &
                                       drag_ice(:)           , &
@@ -210,6 +212,7 @@ CONTAINS
     IF (PRESENT(ga))                dsl4jsb_var2D_onChunk(A2L_,ga)                 = ga               (:)
     IF (PRESENT(nhx_deposition))    dsl4jsb_var2D_onChunk(A2L_,nhx_deposition)    = nhx_deposition    (:)
     IF (PRESENT(noy_deposition))    dsl4jsb_var2D_onChunk(A2L_,noy_deposition)    = noy_deposition    (:)
+    IF (PRESENT(p_deposition))      dsl4jsb_var2D_onChunk(A2L_,p_deposition)      = p_deposition      (:)
 
     ! For lakes:
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN

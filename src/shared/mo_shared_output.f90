@@ -1501,7 +1501,7 @@ CONTAINS
              ENDIF 
              gc_acc           = gc_acc            + canopy_cond(1)                                                      
              ga_acc           = ga_acc            + ga(1) 
-             IF(forcing_options%flag_n_deposition) THEN
+             IF(forcing_options%n_deposition_scheme == "constant" .OR. forcing_options%n_deposition_scheme == "dynamic") THEN
                 n_deposition_acc = n_deposition_acc  + (nhx_deposition(1) + noy_deposition(1)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
              ENDIF
              albedo_acc       = albedo_acc        + albedo(1)

@@ -23,8 +23,16 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select set of sites: FLUXNET or CRUNCEPv5
 # forcing data and all_site_list.dat for the two set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# f: FLUXNET or c: CRUNCEPv5  (use small caps!)
-siteDataSet="f"           
+# options: fluxnet cruncep face
+forcingDataSet="fluxnet"
+# forcing with or without a transient (like spinup) phase before the actual simulation starts
+# options: static tansient
+forcingMode="static"
+# set the specific set of sites of the forcingDataSet you want to use
+#  fluxnet:  (currently no options)
+#  cruncep: all cue spp
+#  face:     (currently no options)
+siteSelection="all"
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
 customSiteList="F"
@@ -33,7 +41,9 @@ customSiteList="F"
 customSiteListFileName=""
 ## run a single site: provide the Site-ID 
 # note: this option must be empty (i.e., singleSiteName="" ) to run multiple sites
-# Site-ID must be consistent with the siteDataSet option above; get the Site-ID from the 1st column of the particular all_site_list.dat, e.g. "DE-Hai" "ZA-Kru"
+# Site-ID must be consistent with the forcingDataSet option above
+# get the Site-ID from the 1st column of the particular "site list .dat"
+# examples: [FLUX] "DE-Hai" "ZA-Kru" [CRUN] "BHS_01" "ILO_05" [FACE] "DK-AMB" "OR-ELE"
 singleSiteName=""
 
 
@@ -46,12 +56,12 @@ specialFluxnetOutput="F"
 
 ##(2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
-# when set to "T" options are set to: siteDataSet="c", output_interval_pool/flux="daily", paramSensitivitySim="F", flag_generate_soil_forcing="F", specialFluxnetOutput="F"
+# when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", flag_generate_soil_forcing="F", specialFluxnetOutput="F"
 # the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
-# you can run simulations for all CRUNCEPv5 sites or for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
+# you can run simulations for all/some CRUNCEPv7 sites of the "cue" set (cue_gfdb_sites*.dat) ; for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
 compareSimCRUNCEPvsGFDB="F"
 # years of spin-up before output is saved
-spinupLengthGFDB=300 
+spinupLengthGFDB=300
 
 ##(3) parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
@@ -81,7 +91,8 @@ sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
-flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
+n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # canopy model options
 flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
@@ -111,9 +122,11 @@ flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeate
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0        # float !
+flag_read_dC13="F"              # either use forcing dC13 or the prescribed default value
+flag_read_dC14="F"              # either use forcing dC14 or the prescribed default value
 
 
-##>> details about the HPC, if unsure stick with these defaults <<################################
+##>> details about the HPC, if unsure stick with the defaults <<################################
 queue="all"                  # available queues: all BTM io mpi_large  (for information on the queues run at pc026/28: bqueues -l)
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000                  # memory per job you may need [mega byte]; here provided in MB but recalculated to KB which is what OpenLava needs
@@ -130,7 +143,7 @@ if [ $flag_generate_soil_forcing == "T" ]
   echo "   (this script updates the forcing for FLUXNET and CRUNCEPv5, "
   echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
   echo " "
-  experimentalID="create_soil_forc_""$siteDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
+  experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
   slmModel="plant"
 
   customSiteList="F"
@@ -179,20 +192,27 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":e:s:c:m:y:o:b:h" opt; do
+while getopts ":e:f:c:m:y:o:b:h" opt; do
   case "$opt" in
   "e")
     echo "   experimentalID=""$OPTARG"
     experimentalID="$OPTARG"
     ;;
-  "s")
-    if [ "$OPTARG" == "f" ]
-     then
-      echo "   siteDataSet=f (FLUXNET)"
-     else
-      echo "   siteDataSet=c (CRUNCEPv5)"
-    fi
-    siteDataSet="$OPTARG"
+  "f")
+    case "$OPTARG" in
+    "fl")
+      echo "   forcingDataSet=fluxnet"
+      forcingDataSet="fluxnet"
+      ;;
+    "cr")
+      echo "   forcingDataSet=cruncep"
+      forcingDataSet="cruncep"
+      ;;
+    "fa")
+      echo "   forcingDataSet=face"
+      forcingDataSet="face"
+      ;;
+    esac
     ;;
   "c")
     echo "   customSiteList=""$OPTARG"
@@ -242,11 +262,11 @@ while getopts ":e:s:c:m:y:o:b:h" opt; do
     "none")
       echo "   bnf_scheme=none"
       bnf_scheme="none"
-     ;;
+      ;;
     "fix")
       echo "   bnf_scheme=fixed"
       bnf_scheme="fixed"
-    ;;
+      ;;
     "std")
       echo "   bnf_scheme=standard"
       bnf_scheme="standard"
@@ -273,10 +293,11 @@ while getopts ":e:s:c:m:y:o:b:h" opt; do
   "h")  # help #
     echo "Valid options are:"
     echo " -e set the experimentalID"
-    echo " -s set the siteDataSet"
-    echo "    Arguments to -s:"
-    echo "       f: FLUXNET"
-    echo "       c: CRUNCEPv5"
+    echo " -f set the forcingDataSet"
+    echo "    Arguments to -f:"
+    echo "       fl: FLUXNET"
+    echo "       cr: CRUNCEPv7"
+    echo "       fa: FACE sites"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -327,10 +348,14 @@ fi
 return 0
 }
 # lists to validate against
-validatesiteDataSet="f c"
+validateForcingDataSet="fluxnet cruncep face"
+validateForcingMode="static transient"
+validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
 validateBNFScheme="none fixed standard optimal resistance"
 validateMycScheme="no am ecm"
+validateNDepositionScheme="none constant dynamic"
+validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
 validateSBNLossScheme="none fixed dynamic"
@@ -414,7 +439,9 @@ fi
 
 
 ## validate user-defined model-options ##
-validateUserConfigValues "$siteDataSet" "$validatesiteDataSet" "siteDataSet"
+validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
+validateUserConfigValues "$forcingMode" "$validateForcingMode" "forcingMode"
+validateUserConfigValues "$siteSelection" "$validateSiteSelection" "siteSelection"
 validateUserConfigValues "$customSiteList" "$validateFlags" "customSiteList"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
@@ -422,6 +449,8 @@ validateUserConfigValues "$emailNotification" "$validateEmailNotification" "emai
 validateUserConfigValues "$specialFluxnetOutput" "$validateFlags" "specialFluxnetOutput"
 validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
 validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
+validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
+validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_scheme"
@@ -429,7 +458,6 @@ validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_s
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
-validateUserConfigValues "$flag_n_deposition" "$validateFlags" "flag_n_deposition"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
@@ -440,6 +468,8 @@ validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "outp
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$flag_generate_soil_forcing" "$validateFlags" "flag_generate_soil_forcing"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
+validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
+validateUserConfigValues "$flag_read_dC14" "$validateFlags" "flag_read_dC14"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
@@ -448,8 +478,10 @@ validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSim
 ## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
 # this may overwrite some options specifies above !
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
-  gfdbFile="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv"
-  siteDataSet="c"
+  gfdbFile="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_cue_sites_01082017.csv"
+  forcingDataSet="cruncep"
+  forcingMode="static"
+  siteSelection="cue"
   paramSensitivitySim="F"
   flag_generate_soil_forcing="F"
   specialFluxnetOutput="F"
@@ -481,15 +513,22 @@ if [ $paramSensitivitySim == "T" ]; then
 fi
 
 
-## site data-set: FLUXNET or CRUNCEPv5 ##
-if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
- then
-  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET/"
+## site data-set: FLUXNET / CRUNCEPv7 / FACE ##
+case "$forcingDataSet" in
+"fluxnet")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/"
+  #siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET2/"
   siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"
- else 
-  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv5/"  # 64 sites, direct copy of 'sv_sites' but symlinks removed 
-  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/CRUNCEPv5/"
-fi
+  ;;
+"cruncep")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv7/"
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/CRUNCEPv7/"
+  ;;
+"face")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FACE/"
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FACE/"
+  ;;
+esac
 
 
 ## SLM model forcing: land/plant/canopy/soil 
@@ -546,9 +585,15 @@ if [ $customSiteList == "T" ]
   for (( a=2; a<=$siteList_lineNumber; a++ )) # line number 2 to ... excluding the header at line 1
     do
       siteName=$(sed -n "$a"p "$siteListFileName" | awk '{print $1}')  # -n  == quiet/silent
+      # for CRUNCEPv7 sites one forcing file is used for multiple sites differentiated with a number e.g. SITE_01, remove number for site test
+      if [ $forcingDataSet == "cruncep" ]
+       then
+        siteName=$(cut -c1-3  <<< "$siteName")
+      fi
+      # test if a forcing file for this site is available
       if ! ls -la $siteDataFoldForcing | grep $siteName > /dev/null  # if forcing file not found
         then
-          echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the siteDataSet folder (f [FLUXNET], c [CRUNCEPv5]): ""$siteDataSet"" !"
+          echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the forcingDataSet folder of: ""$forcingDataSet"" !"
           rm -r "$simFold"  # deleting the already created simulation folder
           exit
       fi
@@ -556,10 +601,81 @@ if [ $customSiteList == "T" ]
   # copy custom site-list and set link to file accordingly
   cp "$siteListFileName" "$simFoldDefaultFiles"
   siteList="$simFoldDefaultFiles""$siteListFileName"
- else # the default case: use the fluxnet or cruncepv5 all_site_list.dat
-  siteListFileName="all_site_list.dat"
+else # the default case: $customSiteList == "F"
+  ## select the correct site information file (a.k.a. "all_site_list.dat")
+  ## file names differ across forcingDataSets & forcingModes
+  case "$forcingDataSet" in
+  "fluxnet")
+    siteListFileName="all_sites_list.dat"
+    ;;
+  "cruncep")
+    case "$siteSelection" in
+    "all")
+      if [ $forcingMode == "static" ]
+       then
+        siteListFileName="all_gfdb_sites_1984-2013_list.dat"
+      else
+        siteListFileName="all_gfdb_sites_1901-2015_list.dat"
+      fi
+      ;;
+    "cue")
+      if [ $forcingMode == "static" ]
+       then
+        siteListFileName="cue_gfdb_sites_1984-2013_list.dat"
+      else
+        siteListFileName="cue_gfdb_sites_1901-2015_list.dat"
+      fi
+      ;;
+    "spp")
+      if [ $forcingMode == "static" ]
+       then
+        siteListFileName="spp_sites_1984-2013_list.dat"
+      else
+        siteListFileName="spp_sites_1901-2015_list.dat"
+      fi
+      ;;
+    *)
+      echo "EXIT!  The >forcingMode< you selected is not available for the forcingDataSet: ""$forcingDataSet"
+      exit
+      ;;
+    esac
+    ;;
+  "face")
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="all_sites_1996-2008_list.dat"
+    else
+      siteListFileName="all_sites_1901-2015_list.dat"
+    fi
+    ;;
+  esac
   siteList="$siteDataFold""$siteListFileName"
 fi
+
+
+## an additional identifier (ID) for static and transient forcing files -> passed to (via config file) and used in run_slm.sh
+forcingModeFileID="0"
+case "$forcingDataSet" in
+"fluxnet")
+  forcingModeFileID="_"
+  ;;
+"cruncep")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_1984"
+  else
+    forcingModeFileID="_1901"
+  fi
+  ;;
+"face")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_199"
+  else
+    forcingModeFileID="_190"
+  fi
+  ;;
+esac
 
 
 ## validate experimental ID for alphanumeric only ##
@@ -591,9 +707,9 @@ if [ $specialFluxnetOutput == "T" ]
         fi
     fi
     # check site data set
-    if [ $siteDataSet != "f" ] 
+    if [ $forcingDataSet != "fluxnet" ] 
       then
-        echo "EXIT! You may use (a) FLUXNET site(s) when you enable special FLUXNET-Simulation output :) ."
+        echo "EXIT! You might want to use (a) FLUXNET site(s) when enabling special FLUXNET-Simulation output :) ."
         exit
     fi
 fi
@@ -743,6 +859,8 @@ fi
 echo "$siteList"                                    >  "$simFoldDefaultFiles""config.txt"
 echo "$siteDataFoldForcing"                         >> "$simFoldDefaultFiles""config.txt"
 echo "$slmModel"                                    >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingDataSet"                              >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingModeFileID"                           >> "$simFoldDefaultFiles""config.txt"
 echo "$specialFluxnetOutput"                        >> "$simFoldDefaultFiles""config.txt"
 echo "$siteDataObsFold"                             >> "$simFoldDefaultFiles""config.txt"
 echo "$useSiteSpecificAWC"                          >> "$simFoldDefaultFiles""config.txt"
@@ -760,7 +878,7 @@ if [ $paramSensitivitySim == "T" ]; then
   #echo "$"                  >>  "$simFoldParamSensiFiles""param_config.txt"
 fi
 
-## copy namelist binary R-Scripts to simulation folder ##
+## copy namelist binary R-Scripts to simulation folder (i.e., at the scratch drive) ##
 cp "$slmBinary"     "$simFoldDefaultFiles"
 cp "$slmNamelist"   "$simFoldDefaultFiles"
 cp "$slmLctlib"     "$simFoldDefaultFiles"
@@ -801,9 +919,12 @@ return 0                                                         # get return va
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 1.
 
+# change values in the namelist copied to the simulation folder at the scratch drive
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
-changeNamelistValue myc_scheme "$myc_scheme" 
+changeNamelistValue myc_scheme "$myc_scheme"
+changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
+changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme" 
@@ -826,12 +947,6 @@ if [ $flag_sb_prescribe_po4 == T ]
     changeNamelistValue flag_sb_prescribe_po4 ".TRUE."
   else
     changeNamelistValue flag_sb_prescribe_po4 ".FALSE."
-fi
-if [ $flag_n_deposition == T ]
-  then
-    changeNamelistValue flag_n_deposition ".TRUE."
-  else
-    changeNamelistValue flag_n_deposition ".FALSE."
 fi
 if [ "$specialFluxnetOutput" == "T" ]
   then
@@ -881,6 +996,19 @@ if [ $flag_optimal_Nfraction == T ]
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
 fi
+
+if [ $flag_read_dC13 == T ]
+  then
+    changeNamelistValue flag_read_dC13 ".TRUE."
+  else
+    changeNamelistValue flag_read_dC13 ".FALSE."
+fi
+if [ $flag_read_dC14 == T ]
+  then
+    changeNamelistValue flag_read_dC14 ".TRUE."
+  else
+    changeNamelistValue flag_read_dC14 ".FALSE."
+fi
 if [ $flag_oneYearForcing == T ]
   then
     changeNamelistValue flag_climate_forcing_one_year ".TRUE."
@@ -903,12 +1031,11 @@ changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 changeNamelistValue soil_depth "$soil_depth"
 
 
-
 ## start job with simulations by starting the job(array) -> run_slm.sh ##
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
  then # job array #
   array="T"   # needed by cleanup_slm_hpc_run.sh
-  # get number of lines in the file (number of sites stored in the $siteList = $siteNumber -1)
+  # get number of lines in the file (number of sites stored in the $siteList = $siteNumber -1 and starts at line 2, see jobArray below)
   siteNumber=$(wc -l "$siteList" | awk '{print $1}')
   # overwrite siteNumber with number of parameter combinations for parameter sensitivity
   if [ $paramSensitivitySim == "T" ]; then

@@ -79,5 +79,8 @@
 /
 &JSB_FORCING_CTL
   ! flags for mo_jsb4_forcing
-  flag_n_deposition=.FALSE.
+  n_deposition_scheme="none"
+  p_deposition_scheme="none"
+  flag_read_dC13=.FALSE.
+  flag_read_dC14=.FALSE.
 /

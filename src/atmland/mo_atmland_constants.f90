@@ -52,7 +52,8 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
   REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2 
   REAL(wp),SAVE :: def_wind                    !< wind in m/s
-
+  REAL(wp),SAVE :: def_n_deposition            !< default deposition of N in mg/m2/day (converted to mumol/m2/sec in mo_atmland_forcing)
+  REAL(wp),SAVE :: def_p_deposition            !< default deposition of P in mg/m2/day (converted to mumol/m2/sec in mo_atmland_forcing)
 
   PUBLIC
 
@@ -126,6 +127,8 @@ CONTAINS
     def_co2_deltaC14 = -14.9_wp
     def_co2_mixing_ratio_C14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio 
     def_wind = 1.0_wp         
+    def_p_deposition = 0.8_wp
+    def_p_deposition = 0.015_wp
 
   END SUBROUTINE init_atmland_constants
 

@@ -33,10 +33,12 @@ jobIndex=$LSB_JOBINDEX            # index number of the job (in the job array: 2
 siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")    # -n  == quiet/silent
 siteDataFoldForcing=$(sed -n 2p "$simFoldDefaultFiles""config.txt")   # folder at the Server containing the forcing files
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
-specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")  # T/F
-siteDataObsFold=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
-useSiteSpecificAWC=$(sed -n 6p "$simFoldDefaultFiles""config.txt")    # T/F
-doParamSensitivitySim=$(sed -n 7p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')  # T/F
+forcingDataSet=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
+forcingModeFileID=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
+specialFluxnetOutput=$(sed -n 6p "$simFoldDefaultFiles""config.txt")  # T/F
+siteDataObsFold=$(sed -n 7p "$simFoldDefaultFiles""config.txt")
+useSiteSpecificAWC=$(sed -n 8p "$simFoldDefaultFiles""config.txt")    # T/F
+doParamSensitivitySim=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')  # T/F
  # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 8 but necessary only for the cleanup_slm_hpc_run.sh
 
 ## model forcing - define input file-names as expected by the model (see mo_atmland_forcing.f90)
@@ -48,7 +50,7 @@ forceLandMetFile="climate.dat"
 # read extra config-file for parameter sensitivity simulations created by prep_run_slm.sh if applicable ##
 if [ $doParamSensitivitySim == "T" ]
   then
-    simParamSensiFiles=$(sed -n 7p "$simFoldDefaultFiles""config.txt" | awk '{print $2}') # name of folder containing files
+    simParamSensiFiles=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{print $2}') # name of folder containing files
     lineNumberOfSite=$(sed -n 1p "$simFold""$simParamSensiFiles""param_config.txt")
     slmParameterListDefault=$(sed -n 2p "$simFold""$simParamSensiFiles""param_config.txt")
     slmParameterSensiTable=$(sed -n 3p "$simFold""$simParamSensiFiles""param_config.txt")
@@ -67,10 +69,11 @@ slmRscript4fluxdiag="generate_FLUXNET_diagnostics.R"  ## just the R-Script for F
 ##############################################################################
 ## get job / site specific data ##############################################
 ##############################################################################
-siteData=0             # containing all data of the site as presented in the "$siteList" / all_site_list.dat
-# 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 11:awc 12:pH 13:LAI 14:Nleaf 15:SLA 16:Height 17:PlantYear
-# access via: "$(awk '{print $1}' <<< "$siteData")"
-if [ -z "$singleSiteName" ]  # if unset (i.e. if $3 is not provided because a job array should be run)
+siteData=0             # "vector" containing all data of the site as presented in the "$siteList" / all_site_list.dat
+ # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand
+ # 11:awc 12:bd 13:pH 14:taxusda 15:taxnwrb 16:lith_glim 17:LAI 18:Nleaf 19:SLA 20:Height 21:PlantYear
+ # access via: "$(awk '{print $1}' <<< "$siteData")"
+if [ -z "$singleSiteName" ]  # if unset (i.e. if argument $3 is not provided because a job array should be run)
   then  # normal or parameter-sensitivity simulations
     if [ $doParamSensitivitySim == T ]
       then # parameter sensitivity - a site from customSiteList
@@ -79,7 +82,7 @@ if [ -z "$singleSiteName" ]  # if unset (i.e. if $3 is not provided because a jo
 	      siteData=$(sed -n "$jobIndex"p "$siteList")         # get all data of the specific site (using line number)
     fi
   else  # a single site
-	siteData=$(grep "$singleSiteName" "$siteList")            # get all data of the specific site (using site name, e.g. DE-Bay)
+	siteData=$(grep "$singleSiteName" "$siteList")            # get all data of the specific site using site name, e.g., [FLUX] "DE-Hai" "ZA-Kru" [CRUN] "BHS_01" "ILO_05" [FACE] "DK-AMB" "OR-ELE"
 fi
 
 
@@ -111,19 +114,24 @@ if [ $specialFluxnetOutput == "T" ];then
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
 fi
 # forcing file(s)
+forcingSiteFileID="$(awk '{print $1}' <<< $siteData)"
+if [ $forcingDataSet == "cruncep" ]
+ then
+  forcingSiteFileID=$(cut -c1-3 <<< $forcingSiteFileID) 
+fi
 case "$slmModel" in
 "land")
-  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  cp "$siteDataFoldForcing""$forcingSiteFileID""$forcingModeFileID"*.dat      ./"$forceLandMetFile"
   ;;
 "plant")
-  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  cp "$siteDataFoldForcing""$forcingSiteFileID""$forcingModeFileID"*.dat      ./"$forceLandMetFile"
   ;;
 "canopy")
-  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  cp "$siteDataFoldForcing""$forcingSiteFileID""$forcingModeFileID"*.dat      ./"$forceLandMetFile"
   ;;
 "soil")
-  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*_lit.dat      ./"$forceSoilLitterFile"
-  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*_sph.dat      ./"$forceSoilPhysicFile"
+  cp "$siteDataFoldForcing""$forcingSiteFileID""$forcingModeFileID"*_lit.dat      ./"$forceSoilLitterFile"
+  cp "$siteDataFoldForcing""$forcingSiteFileID""$forcingModeFileID"*_sph.dat      ./"$forceSoilPhysicFile"
   ;;
 esac
 # parameter sensitivity files
@@ -161,7 +169,7 @@ case "$pftName" in
   TrC)
     pftID=8 ;;
   *)
-    echo "EXIT!  no such PFT is known by the run_slm.sh script"
+    echo "EXIT!  no such PFT is known by the run_slm.sh script: ""$pftName"
     exit 
 esac
 
@@ -181,13 +189,14 @@ return 0                                                         # get return va
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 122.7
 
+# 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 11:awc 12:bd 13:pH 14:taxusda 15:taxnwrb 16:lith_glim 17:LAI 18:Nleaf 19:SLA 20:Height 21:PlantYear
 changeNamelistValue longitude "$(awk '{print $2}'  <<< "$siteData")"
 changeNamelistValue latitude  "$(awk '{print $3}'  <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
 changeNamelistValue soil_sand "$(awk '{print $10}' <<< "$siteData")"
 changeNamelistValue soil_silt "$(awk '{print $9}'  <<< "$siteData")"
 changeNamelistValue soil_clay "$(awk '{print $8}'  <<< "$siteData")"
-changeNamelistValue soil_ph   "$(awk '{print $12}' <<< "$siteData")"
+changeNamelistValue soil_ph   "$(awk '{print $13}' <<< "$siteData")"
 [ $useSiteSpecificAWC == "T" ] && \
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi
 # special fluxnet output #
@@ -220,13 +229,11 @@ if [ $doParamSensitivitySim == "T" ]; then
 fi
 
 
+## sync all data with the filesystem ##
 sync
-
 
 ## run the simulation ##
 ./"$slmBinary"
-
-## sync all written data with file system ##
 sync
 
 ## run the postprocessing R Script ##
@@ -243,11 +250,13 @@ rm ./*.dat  # forcing file(s)
 rm ./"$slmRscript"
 rm ./"$slmBinary"
 [ $specialFluxnetOutput == "T" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
+sync
 
 ## sort job specific files ##
 mkdir -p ./input
 mkdir -p ./output
 mkdir -p ./postprocessing
+sync
 mv ./"$slmNamelist"         ./input
 mv ./"$slmLctlib"           ./input
 if [ $doParamSensitivitySim == "T" ]; then

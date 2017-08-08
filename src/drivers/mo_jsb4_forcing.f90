@@ -25,15 +25,20 @@ MODULE mo_jsb4_forcing
   !> Namelist parameters
   !! 
   !-----------------------------------------------------------------------------------------------------
-  LOGICAL       :: flag_n_deposition
-
+  CHARACTER(15) :: n_deposition_scheme
+  CHARACTER(15) :: p_deposition_scheme
+  LOGICAL       :: flag_read_dC13
+  LOGICAL       :: flag_read_dC14
 
   !-----------------------------------------------------------------------------------------------------
   !> Structure for handling input data
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE forcing_options_type
-    LOGICAL       :: flag_n_deposition
+    CHARACTER(15) :: n_deposition_scheme
+    CHARACTER(15) :: p_deposition_scheme
+    LOGICAL       :: flag_read_dC13
+    LOGICAL       :: flag_read_dC14
 
   END TYPE forcing_options_type
   TYPE(forcing_options_type), SAVE :: forcing_options
@@ -64,8 +69,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model
     CHARACTER(len=*), PARAMETER         :: routine = TRIM(modname)//':Init_forcing'
 
-    NAMELIST /jsb_forcing_ctl/       & 
-                      flag_n_deposition
+    NAMELIST /jsb_forcing_ctl/                  & 
+                      n_deposition_scheme     , &
+                      p_deposition_scheme     , &
+                      flag_read_dC13          , &
+                      flag_read_dC14
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -79,7 +87,10 @@ CONTAINS
     !! 
 
     ! Set defaults
-    flag_n_deposition           = .FALSE.
+    n_deposition_scheme         = "none"
+    p_deposition_scheme         = "none"
+    flag_read_dC13              = .FALSE.
+    flag_read_dC14              = .FALSE.
 
     ! read the namelist
     ! 
@@ -89,10 +100,28 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_forcing_ctl)
     CALL close_nml(nml_handler)
 
+    ! test some input values
+    SELECT CASE (TRIM(n_deposition_scheme))
+      CASE ("none","constant","dynamic")
+        ! do nothing 
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid n_deposition_scheme: ',n_deposition_scheme
+        CALL finish(routine,message_text)
+    ENDSELECT
+    SELECT CASE (TRIM(p_deposition_scheme))
+      CASE ("none","constant","dynamic")
+        ! do nothing 
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid p_deposition_scheme: ',p_deposition_scheme
+        CALL finish(routine,message_text)
+    ENDSELECT
+
 
     ! pass values as read from file
-    forcing_options%flag_n_deposition       = flag_n_deposition
-
+    forcing_options%n_deposition_scheme     = n_deposition_scheme
+    forcing_options%p_deposition_scheme     = p_deposition_scheme
+    forcing_options%flag_read_dC13          = flag_read_dC13
+    forcing_options%flag_read_dC14          = flag_read_dC14
 
     !> 2.0 Modify .. Configure ..
     !! 

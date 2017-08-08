@@ -14,7 +14,7 @@
 ## arguments passed to cleanup_slm_hpc_run.sh ##
 jobName=$1                        # a user specific alphanumeric string
 array=$2                          # was an job array or just one job simulated  T/F
-# $3 == singleSiteName provided only if just one single site was run
+# $3 == singleSiteName provided only if just one single site was run; see below
 
 
 ## basic folders ##
@@ -22,8 +22,8 @@ username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
 slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                    # SLM model: land plant soil canopy
-paramSensitivitySim=$(sed -n 7p "$simFold""default_files/config.txt" | awk '{print $1}')      # T/F  -> parameter sensitivity
-compareSimCRUNCEPvsGFDB=$(sed -n 8p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
+paramSensitivitySim=$(sed -n 9p "$simFold""default_files/config.txt" | awk '{print $1}')      # T/F  -> parameter sensitivity
+compareSimCRUNCEPvsGFDB=$(sed -n 10p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
 
 
 ## move job specific error file into the particular job folder ##
@@ -104,7 +104,7 @@ if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "
 
     siteBase=$(basename $site)  # just: HAR_01 SAS_04 TAP_67
 
-    if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ]
+    if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ] && [ $siteBase != "parameter_list" ]
     then
       ((count++))
 

@@ -25,7 +25,8 @@ sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
-flag_n_deposition="F"           # enable/disable T/F the use of nhx_deposition & noy_deposition
+n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -53,9 +54,9 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
-siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
-                                # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
+forcingDataSet="fluxnet"        # options: fluxnet cruncep face none  (in case of 'none' a test_bed/climate.dat is expected)
+siteName="DE-Hai_2000-2006"     # provide filename (without the trailing '.dat') of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET2/ or CRUNCEPv7/ or FACE/ 
+                                # e.g. [FLUX] DE-Hai_2000-2006, AT-Neu_2002-2005 [CRUN] HOW_1984-2013, KAN_1984-2013 [FACE] DK-AMB_1996-2007, OR-AMB_1998-2008
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -208,6 +209,8 @@ return 0
 validateSlmModel="land plant soil canopy test_canopy"
 validateBNFScheme="none fixed standard optimal resistance"
 validateMycScheme="no am ecm"
+validateNDepositionScheme="none constant dynamic"
+validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
 validateSBModelScheme="simple_0d simple_1d jsm"
@@ -217,12 +220,14 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateSiteDataSet="f c n"
+validateForcingDataSet="fluxnet cruncep face none"
 
 ## validate user-defined model-options ##
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
 validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
+validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
+validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
@@ -230,7 +235,6 @@ validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_s
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
-validateUserConfigValues "$flag_n_deposition" "$validateFlags" "flag_n_deposition"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
@@ -242,7 +246,7 @@ validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "outp
 validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "setPFTAutomatically"
 validateUserConfigValues "$plant_functional_type_id" "$validatePlantFunctionalTypeID" "plant_functional_type_id"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
-validateUserConfigValues "$siteDataSet" "$validateSiteDataSet" "siteDataSet"
+validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
 # not validated: simulation_length_number, output_start_first_day_year, output_end_last_day_year, soil_awc_prescribe, soil_theta_prescribe, latitude, longitude 
 
 
@@ -255,36 +259,42 @@ forceLandMetFile="climate.dat"
 ## test if forcing data exist in testbed/ or in the fluxnet/cruncep site-list-folder [if model is not test_canopy] ##
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for all models but test_canopy
   then
-    if [ "$siteDataSet" == "n" ]  # if forcing data are neither Fluxnet nor Cruncep dataset
+    if [ "$forcingDataSet" == "none" ]  # if forcing data are neither Fluxnet nor Cruncep dataset
     then  # local forcing file
       if [ $slmModel == "soil" ]
         then
           if [ ! -e ./"$forceSoilLitterFile" ] # if file not exists
             then
-              echo "EXIT!  the test_bed/""$forceSoilLitterFile"" does not exist, but the option siteDataSet is set to n !"
+              echo "EXIT!  the test_bed/""$forceSoilLitterFile"" does not exist, but the option forcingDataSet is set to none !"
               exit
           fi
           if [ ! -e ./"$forceSoilPhysicFile" ] # if file not exists
             then
-              echo "EXIT!  the test_bed/""$forceSoilPhysicFile"" does not exist, but the option siteDataSet is set to n !"
+              echo "EXIT!  the test_bed/""$forceSoilPhysicFile"" does not exist, but the option forcingDataSet is set to none !"
               exit
           fi
         else # land plant canopy
           if [ ! -e ./"$forceLandMetFile" ] # if file not exists
             then
-              echo "EXIT!  the test_bed/""$forceLandMetFile"" does not exist, but the option siteDataSet is set to n !"
+              echo "EXIT!  the test_bed/""$forceLandMetFile"" does not exist, but the option forcingDataSet is set to none !"
               exit
           fi
       fi 
       setPFTAutomatically="no"
-      echo -e '\n' "Info: the option setPFTAutomatically is used with 'no', as you are using the test_bed/climate.dat, which does not provide PFT information. "
+      echo -e '\n' "  Info: the option setPFTAutomatically is used with 'no', as you are using the test_bed/climate.dat, which does not provide PFT information. "
+      echo "   PFT is set to: ""$plant_functional_type_id"
     else  # fluxnet/cruncep forcing file
-      if [ $siteDataSet == "f" ]
-        then
-          siteDataSetFull="FLUXNET"
-        else
-          siteDataSetFull="CRUNCEPv5"
-      fi 
+      case "$forcingDataSet" in
+      "fluxnet")
+        siteDataSetFull="FLUXNET2"
+        ;;
+      "cruncep")
+        siteDataSetFull="CRUNCEPv7"
+        ;;
+      "face")
+        siteDataSetFull="FACE"
+        ;;
+      esac
 
       if [ $slmModel == "soil" ]
         then
@@ -292,41 +302,43 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
         else # land plant canopy
           forcing="met_forcing"
       fi 
+
       siteFolderBasic="/Net/Groups/BGI/data/Model/SLM1/input/point/"
       siteFolder="$siteFolderBasic""$siteDataSetFull"
       siteFolderForcing="$siteFolder""/""$forcing"
       if ! ls -la $siteFolderForcing | grep $siteName > /dev/null  # if forcing file not found
         then
-          echo "EXIT! The site ""$siteName"" you selected for forcing input does not exist in the site data-set folder !"
+          echo "EXIT! The site ""$siteName"" you selected for forcing input does not exist in the forcingDataSet folder !"
           exit
       fi
-  fi  # ["$siteDataSet" == "n"]
+  fi  # ["$forcingDataSet" == "none"]
 else  # in case: $slmModel == "test_canopy"
   setPFTAutomatically="no"
 fi    # [$slmModel != "test_canopy"]
 
 
-## create folder, and copy some file there ##
+## create folder, and copy some files there ##
 # postprocessing R scripts
 # namelist
 # lctlib_slm_nlct8.def
 # forcing (climate/ soil)
 mkdir -p ./"$slmModel"
+rm -rf   ./"$slmModel"/*  # delete all in this folder if the folder existed before
 cp ../r_script/postprocessing_"$slmModel".R   ./"$slmModel"
 cp ../namelist/namelist.slm                   ./"$slmModel"
 cp ../../data/lctlib_slm_nlct8.def            ./"$slmModel"
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
   then
-    if [ "$siteDataSet" == "n" ]
+    if [ "$forcingDataSet" == "none" ]
       then
         if [ $slmModel == "soil" ]
           then
             cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilLitterFile"
             cp ./"$forceSoilPhysicFile" ./"$slmModel"/"$forceSoilPhysicFile"
           else # land plant canopy
-            cp ./"$forceLandMetFile" ./"$slmModel"/"$forceLandMetFile"
+            cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
         fi 
-      else # $siteDataSet == f / c
+      else # $forcingDataSet == fluxnet / cruncep / face
         if [ $slmModel == "soil" ]
           then
             cp "$siteFolderForcing"/"$siteName"_lit.dat ./"$slmModel"/"$forceSoilLitterFile"
@@ -364,6 +376,8 @@ return 0                                                                        
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
 changeNamelistValue myc_scheme "$myc_scheme" 
+changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
+changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
@@ -386,12 +400,6 @@ if [ $flag_sb_prescribe_po4 == T ]
     changeNamelistValue flag_sb_prescribe_po4 ".TRUE."
   else
     changeNamelistValue flag_sb_prescribe_po4 ".FALSE."
-fi
-if [ $flag_n_deposition == T ]
-  then
-    changeNamelistValue flag_n_deposition ".TRUE."
-  else
-    changeNamelistValue flag_n_deposition ".FALSE."
 fi
 if [ $flag_tile_veg_dynamics == T ]
   then
@@ -444,19 +452,36 @@ changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 changeNamelistValue soil_depth "$soil_depth"
 changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
-# get the PFT & lon & lat according to the site selected (reading the all_site_list.dat)
-if [ "$setPFTAutomatically" == "yes" ]
+
+# forcingDataSet
+if [ "$forcingDataSet" != "none" ]
   then
-    allSiteDatFile="$siteFolder"/all_site_list.dat
-    if [ $siteDataSet == "f" ]
-      then  # fluxnet sites
-        siteNameShort=$(echo "$siteName" | cut -c1-5)             # shortens file name provided, e.g.: CA-Man_1999-2003 -> CA-Man
-      else  # cruncep sites
-        siteNameShort=$(echo "$siteName" | rev | cut -c11- | rev) # shortens file name provided, e.g.: DOO_00_1984-2013 -> DOO_00
-    fi 
-    pftName=$( grep "$siteNameShort" "$allSiteDatFile" | awk '{print $4}')
-    longitude=$( grep "$siteNameShort" "$allSiteDatFile" | awk '{print $2}')
-    latitude=$( grep "$siteNameShort" "$allSiteDatFile" | awk '{print $3}')
+    case "$forcingDataSet" in
+    "fluxnet")
+      allSiteDatFile="$siteFolder"/all_sites_list.dat
+      siteNameShort=$(echo "$siteName" | cut -c1-6)             # shortens file name provided, e.g.: CA-Man_1999-2003 -> CA-Man
+      ;;
+    "cruncep")
+      allSiteDatFile="$siteFolder"/all_gfdb_sites_1984-2013_list.dat
+      siteNameShort=$(echo "$siteName" | cut -c1-3)             # shortens file name provided, e.g.: KAD_1901-2015 -> KAD
+      siteNameShort="$siteNameShort""_01"                       # KAD -> KAD_01
+      ;;
+    "face")
+      allSiteDatFile="$siteFolder"/all_sites_1996-2008_list.dat
+      siteNameShort=$(echo "$siteName" | cut -c1-6)             # shortens file name provided, e.g.: DK-AMB_1996-2007 -> DK-AMB
+      ;;
+    esac
+
+    # get data of the particular site
+    siteData=$(grep "$siteNameShort" "$allSiteDatFile")
+    # change namelist values accordingly
+    changeNamelistValue longitude "$(awk '{print $2}'  <<< "$siteData")"
+    changeNamelistValue latitude  "$(awk '{print $3}'  <<< "$siteData")"    
+    pftName="$(awk '{print $4}' <<< "$siteData")"
+    changeNamelistValue soil_sand "$(awk '{print $10}' <<< "$siteData")"
+    changeNamelistValue soil_silt "$(awk '{print $9}'  <<< "$siteData")"
+    changeNamelistValue soil_clay "$(awk '{print $8}'  <<< "$siteData")"
+    changeNamelistValue soil_ph   "$(awk '{print $13}' <<< "$siteData")"
     pftID=0
     case "$pftName" in
       TrBE)
@@ -487,13 +512,19 @@ if [ "$setPFTAutomatically" == "yes" ]
         echo "EXIT!  no such PFT is known (failure during trying to automatically grep the PFT ID)."
         exit 
     esac
-    changeNamelistValue plant_functional_type_id "$pftID"
+    # set PFT
+    if [ "$setPFTAutomatically" == "yes" ]
+     then
+      changeNamelistValue plant_functional_type_id "$pftID"
+    else   
+      changeNamelistValue plant_functional_type_id "$plant_functional_type_id"
+    fi
 
-  else  # if 'setPFTAutomatically == no' or 'siteDataSet == n'
+  else  # forcingDataSet == none
     changeNamelistValue plant_functional_type_id "$plant_functional_type_id"
+    changeNamelistValue longitude "$longitude"
+    changeNamelistValue latitude "$latitude"
 fi
-changeNamelistValue longitude "$longitude"
-changeNamelistValue latitude "$latitude"
 
 
 ## confirmation of finishing this script & starting SLM ##

@@ -18,7 +18,7 @@ setwd(ipath)
 
 ## get observational data - absolute path
 obs_path<-'/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/'
-obs_file<-'global_forest_database_21092016.csv'
+obs_file<-'global_forest_database_cue_sites_01082017.csv'
 obs<-read.csv(paste0(obs_path,obs_file),stringsAsFactors=F)
 obsdim<-dim(obs)
 

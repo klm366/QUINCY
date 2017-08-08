@@ -71,6 +71,7 @@ PROGRAM land_model_driver
                                   ga                   , &
                                   nhx_deposition     , &
                                   noy_deposition     , &
+                                  p_deposition       , &
                                   ! For lakes:
                                   albedo_lwtr        , &
                                   drag_wtr           , &
@@ -155,7 +156,8 @@ PROGRAM land_model_driver
   ALLOCATE(co2_mixing_ratio_C14(nc))                              
   ALLOCATE(ga(nc))                                                
   ALLOCATE(nhx_deposition(nc))                                                
-  ALLOCATE(noy_deposition(nc))                                                
+  ALLOCATE(noy_deposition(nc))      
+  ALLOCATE(p_deposition(nc))                                          
   ! For lakes:
   ALLOCATE(albedo_lwtr(nc))                                     
   ALLOCATE(drag_wtr(nc))                                        
@@ -268,6 +270,7 @@ PROGRAM land_model_driver
                                   ga                      = ga(:)                   , &
                                   nhx_deposition          = nhx_deposition(:)     , &
                                   noy_deposition          = noy_deposition(:)     , &
+                                  p_deposition            = p_deposition(:)       , &
                                   ! For lakes:
                                   albedo_lwtr             = albedo_lwtr(:)        , &
                                   drag_wtr                = drag_wtr(:)           , &
@@ -315,6 +318,7 @@ PROGRAM land_model_driver
                                   ga(:)                   , &
                                   nhx_deposition(:)     , &
                                   noy_deposition(:)     , &
+                                  p_deposition(:)       , &
                                   ! For lakes:
                                   albedo_lwtr(:)        , &
                                   drag_wtr(:)           , &
