@@ -134,6 +134,7 @@ CONTAINS
     CALL calc_nutrient_recycling( &
                                   veg%pool%leaf%carbon%ptr              , & ! in
                                   veg%pool%leaf%nitrogen%ptr            , &
+                                  veg%pool%leaf%nitrogen15%ptr          , &
                                   veg%pool%leaf%phosphorus%ptr          , &
                                   veg%pool%fine_root%carbon%ptr         , &
                                   veg%pool%fine_root%nitrogen%ptr       , &
@@ -187,6 +188,7 @@ CONTAINS
   PURE ELEMENTAL SUBROUTINE calc_nutrient_recycling( &
                                                     veg_pool_leaf_carbon              , &
                                                     veg_pool_leaf_nitrogen            , &
+                                                    veg_pool_leaf_nitrogen15          , &
                                                     veg_pool_leaf_phosphorus          , &
                                                     veg_pool_fine_root_carbon         , &
                                                     veg_pool_fine_root_nitrogen       , &
@@ -215,6 +217,7 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp),           INTENT(in)    :: veg_pool_leaf_carbon              , &
                                          veg_pool_leaf_nitrogen            , &
+                                         veg_pool_leaf_nitrogen15          , &
                                          veg_pool_leaf_phosphorus          , &
                                          veg_pool_fine_root_carbon         , &
                                          veg_pool_fine_root_nitrogen       , &
@@ -261,7 +264,30 @@ CONTAINS
        ENDIF
        recycling_leaf_n      = recycling_leaf_n      + recycling_leaf
        recycling_fine_root_n = recycling_fine_root_n + recycling_fine_root
-   
+
+       !> 1.2 calculate signature of N transfer from labile to leaf or inverse
+       !!  
+       IF(recycling_leaf >=0.0_wp) THEN
+          IF(veg_pool_leaf_nitrogen > eps8) THEN 
+             recycling_leaf_n15 = recycling_leaf_n15 + & 
+               recycling_leaf/veg_pool_leaf_nitrogen * veg_pool_leaf_nitrogen15
+          ENDIF
+          IF(veg_pool_labile_nitrogen > eps8) THEN 
+             recycling_leaf_n15 = recycling_leaf_n15 + & 
+               recycling_leaf/veg_pool_labile_nitrogen * veg_pool_labile_nitrogen15
+          ENDIF
+       ENDIF
+       IF(recycling_fine_root >=0.0_wp) THEN
+          IF(veg_pool_fine_root_nitrogen > eps8) THEN 
+             recycling_fine_root_n15 = recycling_fine_root_n15 + & 
+                recycling_fine_root/veg_pool_fine_root_nitrogen * veg_pool_fine_root_nitrogen15
+          ENDIF
+          IF(veg_pool_labile_nitrogen > eps8) THEN 
+             recycling_fine_root_n15 = recycling_fine_root_n15 + & 
+                recycling_fine_root/veg_pool_labile_nitrogen * veg_pool_labile_nitrogen15
+          ENDIF
+       ENDIF 
+
        !> 2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
        !!
        recycling_leaf      = ( veg_pool_leaf_phosphorus - & 
@@ -281,31 +307,6 @@ CONTAINS
        recycling_leaf_p        = recycling_leaf_p        + recycling_leaf
        recycling_fine_root_p   = recycling_fine_root_p   + recycling_fine_root
    
-       !> 3.0 replace overturning 15N from leaves and roots by new 15N from the labile pool using the target C:N
-       !! and the labile pool's 15N molar mixing ratio
-       !!
-       IF(veg_pool_labile_nitrogen > eps8) THEN
-          labile_dn15 = veg_pool_labile_nitrogen15 /veg_pool_labile_nitrogen
-       ELSE 
-          labile_dn15 = 0.0_wp
-       ENDIF
-       recycling_leaf      = ( labile_dn15 * veg_pool_leaf_carbon / target_cn_leaf - & 
-                               labile_dn15 * veg_pool_leaf_carbon ) / tau_nutrient_recycling/one_day * dtime 
-       recycling_fine_root = ( veg_pool_fine_root_nitrogen15 - & 
-                               labile_dn15 * veg_pool_fine_root_carbon / target_cn_fine_root ) / &
-                               tau_nutrient_recycling/one_day * dtime 
-       !> 3.1 if N is addded to leaves or fine root, make sure there is enough labile N to support this
-       !! 
-       IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
-          scal = -1.0_wp * ( 1.0_wp/tau_labile/one_day * veg_pool_labile_nitrogen15 * dtime ) / & 
-                           ( recycling_leaf + recycling_fine_root ) 
-          IF(scal < 1.0_wp) THEN
-             recycling_leaf       = recycling_leaf * scal
-             recycling_fine_root  = recycling_fine_root * scal
-          ENDIF
-       ENDIF
-       recycling_leaf_n15      = recycling_leaf_n15      + recycling_leaf
-       recycling_fine_root_n15 = recycling_fine_root_n15 + recycling_fine_root
     ENDIF
 
   END SUBROUTINE calc_nutrient_recycling

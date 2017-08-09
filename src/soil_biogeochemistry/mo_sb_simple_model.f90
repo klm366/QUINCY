@@ -70,6 +70,9 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
                                              apparent_mic_cue     , &
                                              mic_uptake_nh4_sl    , &
+                                             mic_uptake_nh4_n15_sl, &
+                                             mic_uptake_no3_sl    , &
+                                             mic_uptake_no3_n15_sl, &
                                              mic_uptake_po4_sl    , &
                                              biomineralisation_po4, &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
@@ -316,7 +319,7 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
+    mic_uptake_no3_sl = 0.0_wp
     !> 1.0 Set values of soil profile variables to allow switching between simple_0d and simple1d in the 
     !!     following routines 
     !! 
@@ -511,12 +514,45 @@ CONTAINS
                                                                  denitrification_noy(:,:), &
                                                                  denitrification_n2o(:,:))
     ENDIF
+
+    CALL calc_sb_inorganic_n15_fluxes(options, & 
+                                          nh4_solute, &
+                                          nh4_n15_solute, &
+                                          no3_solute, &
+                                          no3_n15_solute, &
+                                          plant_uptake_nh4_sl, & 
+                                          plant_uptake_no3_sl, &      
+                                          mycorrhiza_uptake_nh4_sl, & 
+                                          mycorrhiza_uptake_no3_sl, & 
+                                          mic_uptake_nh4_sl, &        
+                                          mic_uptake_no3_sl, &        
+                                          nitrification_no3, &        
+                                          nitrification_noy, &        
+                                          nitrification_n2o, &        
+                                          denitrification_noy, &      
+                                          denitrification_n2o, &      
+                                          denitrification_n2, &       
+                                          transport_nh4_n15_solute, & 
+                                          transport_no3_n15_solute, &    
+                                          plant_uptake_nh4_n15_sl, &      
+                                          plant_uptake_no3_n15_sl, &      
+                                          mycorrhiza_uptake_nh4_n15_sl, & 
+                                          mycorrhiza_uptake_no3_n15_sl, & 
+                                          mic_uptake_nh4_n15_sl, &        
+                                          mic_uptake_no3_n15_sl, &        
+                                          nitrification_no3_n15, &        
+                                          nitrification_noy_n15, &        
+                                          nitrification_n2o_n15, &        
+                                          denitrification_noy_n15, &      
+                                          denitrification_n2o_n15, &      
+                                          denitrification_n2_n15) 
     
     !> 3.2 formation of SOM and associated respiration, net mineralisation fluxes
     !!          
     CALL calc_SOM_formation(options, &
                             apparent_mic_cue(:,:), &
                             mic_uptake_nh4_sl(:,:), &
+                            mic_uptake_nh4_n15_sl, &        
                             mic_uptake_po4_sl(:,:), &
                             sb%loss, &
                             het_respiration(:,:), &
@@ -586,7 +622,8 @@ CONTAINS
                                      no3_solute(:,:), &
                                      sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
                                      root_fraction_act_sl(:,:), &
-                                     asymb_n_fixation(:,:))
+                                     asymb_n_fixation(:,:), &
+                                     asymb_n_fixation_n15(:,:))
                     
     !> 6.1 For sb_model = fixed, estimate N losses
     !! 
@@ -608,15 +645,16 @@ CONTAINS
     het_respiration(:,:) = het_respiration(:,:) / dtime * 1000000._wp
     het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._wp
     het_respiration_c14(:,:) = het_respiration_c14(:,:) / dtime * 1000000._wp
+
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) / dtime * 1000000._wp
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) / dtime * 1000000._wp
-    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._wp
     plant_uptake_nh4_sl(:,:) = plant_uptake_nh4_sl(:,:) / dtime * 1000000._wp 
     plant_uptake_no3_sl(:,:) = plant_uptake_no3_sl(:,:) / dtime * 1000000._wp 
     plant_uptake_po4_sl(:,:) = plant_uptake_po4_sl(:,:) / dtime * 1000000._wp 
     mycorrhiza_uptake_nh4_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) / dtime * 1000000._wp 
     mycorrhiza_uptake_no3_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._wp
     mycorrhiza_uptake_po4_sl(:,:) = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._wp 
+
     volatilisation_nh4(:,:) = volatilisation_nh4(:,:) / dtime * 1000000._wp
     nitrification_no3(:,:) = nitrification_no3(:,:) / dtime * 1000000._wp 
     nitrification_noy(:,:) = nitrification_noy(:,:) / dtime * 1000000._wp 
@@ -624,18 +662,46 @@ CONTAINS
     denitrification_noy(:,:) = denitrification_noy(:,:) / dtime * 1000000._wp 
     denitrification_n2o(:,:) = denitrification_n2o(:,:) / dtime * 1000000._wp 
     denitrification_n2(:,:) = denitrification_n2(:,:) / dtime * 1000000._wp 
+
     transport_nh4_solute(:,:) = transport_nh4_solute(:,:) / dtime * 1000000._wp
     transport_no3_solute(:,:) = transport_no3_solute(:,:) / dtime * 1000000._wp
     transport_po4_solute(:,:) = transport_po4_solute(:,:) / dtime * 1000000._wp
-    leaching_nh4_solute(:) = leaching_nh4_solute(:) / dtime * 1000000._wp
-    leaching_no3_solute(:) = leaching_no3_solute(:) / dtime * 1000000._wp
-    leaching_po4_solute(:) = leaching_po4_solute(:) / dtime * 1000000._wp
     transport_noy(:,:) = transport_noy(:,:) / dtime * 1000000._wp
     transport_n2o(:,:) = transport_n2o(:,:) / dtime * 1000000._wp
     transport_n2(:,:) = transport_n2(:,:) / dtime * 1000000._wp
+
+    leaching_nh4_solute(:) = leaching_nh4_solute(:) / dtime * 1000000._wp
+    leaching_no3_solute(:) = leaching_no3_solute(:) / dtime * 1000000._wp
+    leaching_po4_solute(:) = leaching_po4_solute(:) / dtime * 1000000._wp
     emission_noy(:) = emission_noy(:) / dtime * 1000000._wp
     emission_n2o(:) = emission_n2o(:) / dtime * 1000000._wp
     emission_n2(:) = emission_n2(:) / dtime * 1000000._wp
+
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._wp
+    plant_uptake_nh4_n15_sl(:,:) = plant_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp 
+    plant_uptake_no3_n15_sl(:,:) = plant_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp 
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp 
+    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
+
+    volatilisation_nh4_n15(:,:) = volatilisation_nh4_n15(:,:) / dtime * 1000000._wp
+    nitrification_no3_n15(:,:) = nitrification_no3_n15(:,:) / dtime * 1000000._wp 
+    nitrification_noy_n15(:,:) = nitrification_noy_n15(:,:) / dtime * 1000000._wp 
+    nitrification_n2o_n15(:,:) = nitrification_n2o_n15(:,:) / dtime * 1000000._wp 
+    denitrification_noy_n15(:,:) = denitrification_noy_n15(:,:) / dtime * 1000000._wp 
+    denitrification_n2o_n15(:,:) = denitrification_n2o_n15(:,:) / dtime * 1000000._wp 
+    denitrification_n2_n15(:,:) = denitrification_n2_n15(:,:) / dtime * 1000000._wp 
+
+    transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) / dtime * 1000000._wp
+    transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:) / dtime * 1000000._wp
+    transport_noy_n15(:,:) = transport_noy_n15(:,:) / dtime * 1000000._wp
+    transport_n2o_n15(:,:) = transport_n2o_n15(:,:) / dtime * 1000000._wp
+    transport_n2_n15(:,:) = transport_n2_n15(:,:) / dtime * 1000000._wp
+
+    leaching_nh4_n15_solute(:) = leaching_nh4_n15_solute(:) / dtime * 1000000._wp
+    leaching_no3_n15_solute(:) = leaching_no3_n15_solute(:) / dtime * 1000000._wp
+    emission_noy_n15(:) = emission_noy_n15(:) / dtime * 1000000._wp
+    emission_n2o_n15(:) = emission_n2o_n15(:) / dtime * 1000000._wp
+    emission_n2_n15(:) = emission_n2_n15(:) / dtime * 1000000._wp
 
   END SUBROUTINE update_sb_simple_model 
 
@@ -1662,7 +1728,9 @@ CONTAINS
   ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
-  !> Calculates the N15 fluxes based on the fractionation of the inorganic NH4 / NO3 pool 
+  !> Calculates the N15 fluxes based on uptake or transformation of the inorganic NH4 / NO3 pools
+  !! according to the framework proposed by Robinson, 2001, TREE. Includes a representation of the 
+  !! Rayleigh model to account for the change in fractionation with increasing consumption  
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sb_inorganic_n15_fluxes(options, & 
@@ -1737,38 +1805,55 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1,hlp2 
 
 
-    !> 0.9 set to zero two INTENT(out) variables
-    mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_wp
+    !> 2.0 calculate the actual discrimination for NH4, 
+    !!     which depends on the fraction of the source consumed f = (sum of fluxes)/stock = hlp1. 
+    !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
+    ! fraction of NH4 that is consumed
+    WHERE(nh4_solute(:,:)>eps8)
+       hlp1(:,:) = MAX((plant_uptake_nh4_sl(:,:) + mycorrhiza_uptake_nh4_sl(:,:) + mic_uptake_nh4_sl(:,:) + & 
+                    nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) / nh4_solute(:,:),eps8)
+    ELSEWHERE
+       hlp1(:,:) = 1.0_wp
+    ENDWHERE
 
+    ! calculate reduction factor for discrimination 
+    WHERE(hlp1(:,:)<1.0_wp-eps8)
+       hlp2(:,:) = (hlp1(:,:) - 1.0_wp) * log ( 1.0_wp - hlp1(:,:)) / hlp1(:,:)
+    ELSEWHERE
+       hlp2(:,:) = 0.0_wp
+    ENDWHERE
 
-    !> 1.0 potential 15N fluxes involving ammonium
+    !> 1.1 15N fluxes involving ammonium
     !!
-    plant_uptake_nh4_n15_sl(:,:) = plant_uptake_nh4_sl(:,:) * & 
-                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_plant_uptake_nh4) 
+    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_sl(:,:) * & 
+                                        calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_plant_uptake_nh4*hlp2(:,:)) 
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * & 
+                                        calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_plant_uptake_nh4*hlp2(:,:)) 
     mic_uptake_nh4_n15_sl(:,:)   = mic_uptake_nh4_sl(:,:) * & 
-                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_mic_uptake_nh4)
+                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_mic_uptake_nh4*hlp2(:,:))
     nitrification_no3_n15(:,:)   = nitrification_no3(:,:) * &
-                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrate_production)
+                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrate_production*hlp2(:,:))
     nitrification_noy_n15(:,:)   = nitrification_noy(:,:) * & 
-                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrification)
+                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrification*hlp2(:,:))
     nitrification_n2o_n15(:,:)   = nitrification_n2o(:,:) * &
-                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrification) 
+                                   calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrification*hlp2(:,:)) 
 
-    !> 1.1 contrain 15NH4 fluxes to available 15NH4
+    !> 1.2 contrain 15NH4 fluxes to available 15NH4
     !!
-    hlp1(:,:) = plant_uptake_nh4_n15_sl(:,:) + mic_uptake_nh4_n15_sl(:,:) + nitrification_no3_n15(:,:) + & 
-                nitrification_noy_n15(:,:) + nitrification_n2o_n15(:,:)
+    hlp1(:,:) = plant_uptake_nh4_n15_sl(:,:) + mycorrhiza_uptake_nh4_n15_sl(:,:) + mic_uptake_nh4_n15_sl(:,:) + & 
+                nitrification_no3_n15(:,:) + nitrification_noy_n15(:,:) + nitrification_n2o_n15(:,:)
     hlp2(:,:) = nh4_n15_solute + transport_nh4_n15_solute(:,:) 
     WHERE(hlp2 < hlp1(:,:))
        WHERE(hlp1>eps8)
           plant_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
+          mycorrhiza_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
           mic_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
           nitrification_no3_n15(:,:)   = hlp2(:,:) * nitrification_no3_n15(:,:) / hlp1(:,:)
           nitrification_noy_n15(:,:)   = hlp2(:,:) * nitrification_noy_n15(:,:) / hlp1(:,:)
           nitrification_n2o_n15(:,:)   = hlp2(:,:) * nitrification_n2o_n15(:,:) / hlp1(:,:)
        ELSEWHERE
           plant_uptake_nh4_n15_sl(:,:) = 0.0_wp 
+          mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_wp 
           mic_uptake_nh4_n15_sl(:,:)   = 0.0_wp
           nitrification_no3_n15(:,:)   = 0.0_wp
           nitrification_noy_n15(:,:)   = 0.0_wp
@@ -1776,37 +1861,57 @@ CONTAINS
        ENDWHERE
     ENDWHERE
 
-    !> 2.0 potential 15N fluxes involving nitrate
-    !!
-    plant_uptake_no3_n15_sl(:,:) = plant_uptake_no3_sl(:,:) * & 
-                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_plant_uptake_no3)
-    mic_uptake_no3_n15_sl(:,:)   = mic_uptake_no3_sl(:,:) * & 
-                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_mic_uptake_no3) 
-    denitrification_noy_n15(:,:) = denitrification_noy(:,:) * & 
-                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification)
-    denitrification_n2o_n15(:,:) = denitrification_n2o(:,:) * & 
-                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification)
-    denitrification_n2_n15(:,:)  = denitrification_n2(:,:) * & 
-                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification) 
+    !> 2.0 calculate the actual discrimination for NO3, 
+    !!     which depends on the fraction of the source consumed f = (sum of fluxes)/stock = hlp1. 
+    !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
+    ! fraction of NO3 that is consumed
+    WHERE(no3_solute(:,:)>eps8)
+       hlp1(:,:) = MAX((plant_uptake_no3_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + mic_uptake_no3_sl(:,:) + & 
+                    denitrification_noy(:,:) + denitrification_n2o(:,:) + denitrification_n2(:,:)) / no3_solute(:,:),eps8)
+    ELSEWHERE
+       hlp1(:,:) = 1.0_wp
+    ENDWHERE
+    WHERE(hlp1(:,:)<1.0_wp-eps8)
+       hlp2(:,:) = (hlp1(:,:) - 1.0_wp) * log ( 1.0_wp - hlp1(:,:)) / hlp1(:,:)
+    ELSEWHERE
+       hlp2(:,:) = 0.0_wp
+    ENDWHERE
 
-    !> 2.1 contrain 15NO3 fluxes to available 15NO3
+    !> 2.1 N15 fluxes involving NO3
     !!
-    hlp1(:,:) = plant_uptake_no3_n15_sl(:,:) + mic_uptake_no3_n15_sl(:,:) + & 
+    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_sl(:,:) * & 
+                                        calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_plant_uptake_no3*hlp2(:,:))
+    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) * & 
+                                        calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_plant_uptake_no3*hlp2(:,:))
+    mic_uptake_no3_n15_sl(:,:)   = mic_uptake_no3_sl(:,:) * & 
+                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_mic_uptake_no3*hlp2(:,:)) 
+    denitrification_noy_n15(:,:) = denitrification_noy(:,:) * & 
+                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification*hlp2(:,:))
+    denitrification_n2o_n15(:,:) = denitrification_n2o(:,:) * & 
+                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification*hlp2(:,:))
+    denitrification_n2_n15(:,:)  = denitrification_n2(:,:) * & 
+                                   calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification*hlp2(:,:)) 
+
+    !> 2.2 contrain 15NO3 fluxes to available 15NO3
+    !!
+    hlp1(:,:) = plant_uptake_no3_n15_sl(:,:) + mycorrhiza_uptake_no3_n15_sl(:,:) + mic_uptake_no3_n15_sl(:,:) + & 
                 denitrification_noy_n15(:,:) + denitrification_n2o_n15(:,:) + denitrification_n2_n15(:,:)
     hlp2(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
     WHERE(hlp2 < hlp1(:,:))
        WHERE(hlp1>eps8)
-          plant_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
-          mic_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
-          nitrification_no3_n15(:,:)   = hlp2(:,:) * nitrification_no3_n15(:,:) / hlp1(:,:)
-          nitrification_noy_n15(:,:)   = hlp2(:,:) * nitrification_noy_n15(:,:) / hlp1(:,:)
-          nitrification_n2o_n15(:,:)   = hlp2(:,:) * nitrification_n2o_n15(:,:) / hlp1(:,:)
+          plant_uptake_no3_n15_sl(:,:) = hlp2(:,:) * plant_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
+          mycorrhiza_uptake_no3_n15_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
+          mic_uptake_no3_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
+          denitrification_noy_n15(:,:)   = hlp2(:,:) * denitrification_noy_n15(:,:) / hlp1(:,:)
+          denitrification_n2o_n15(:,:)   = hlp2(:,:) * denitrification_n2o_n15(:,:) / hlp1(:,:)
+          denitrification_n2_n15(:,:)   = hlp2(:,:) * denitrification_n2_n15(:,:) / hlp1(:,:)
        ELSEWHERE
-          plant_uptake_nh4_n15_sl(:,:) = 0.0_wp 
-          mic_uptake_nh4_n15_sl(:,:)   = 0.0_wp
-          nitrification_no3_n15(:,:)   = 0.0_wp
-          nitrification_noy_n15(:,:)   = 0.0_wp
-          nitrification_n2o_n15(:,:)   = 0.0_wp
+          plant_uptake_no3_n15_sl(:,:) = 0.0_wp 
+          mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_wp 
+          mic_uptake_no3_n15_sl(:,:)   = 0.0_wp
+          denitrification_noy_n15(:,:)   = 0.0_wp
+          denitrification_n2o_n15(:,:)   = 0.0_wp
+          denitrification_n2_n15(:,:)   = 0.0_wp
        ENDWHERE
     ENDWHERE
 
@@ -1827,6 +1932,7 @@ CONTAINS
   SUBROUTINE calc_SOM_formation(options, &                       ! in 
                                 apparent_mic_cue, &
                                 mic_uptake_nh4_sl, &
+                                mic_uptake_nh4_n15_sl, &
                                 mic_uptake_po4_sl, &
                                 sb_loss, &
                                 het_respiration, &               ! out
@@ -1836,14 +1942,17 @@ CONTAINS
                                 net_mineralisation_po4, &
                                 net_mineralisation_nh4_n15, &
                                 sb_formation  )
-  
-    USE mo_sb_constants,        ONLY: residue_cue, microbial_cue_min, microbial_np, microbial_cn, microbial_nue, microbial_pue
+ 
+    USE mo_shared_isotope,      ONLY: calc_fractionation
+    USE mo_sb_constants,        ONLY: residue_cue, microbial_cue_min, microbial_np, microbial_cn, microbial_nue, microbial_pue, & 
+                                      eta_ammonification
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: apparent_mic_cue, &           !< apparent carbon-use efficiency of microbial uptake
                                                                        mic_uptake_nh4_sl, &          !< microbial NH4 uptake [mol / m3 / timestep]
+                                                                       mic_uptake_nh4_n15_sl, &      !< microbial 15NH4 uptake [mol / m3 / timestep]
                                                                        mic_uptake_po4_sl             !< microbial PO4 uptake [mol / m3 / timestep]
     TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
@@ -1856,8 +1965,9 @@ CONTAINS
     
     ! 0.2 Local
     ! 
-    INTEGER                     :: ics, ice, iblk         !< chunks [ics:ice] and block numbers
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_SOM_formation'
+    INTEGER                                          :: ics, ice, iblk         !< chunks [ics:ice] and block numbers
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1
+    CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_SOM_formation'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -1887,17 +1997,11 @@ CONTAINS
                                                         apparent_mic_cue(:,:) * & 
                                                         (sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + &  
                                                          sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk))
-!! to be moved to N15 calculation
-    WHERE(sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk)+sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)>eps8)
-       sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                              (sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                               sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)) / & 
-                              (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                               sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)) *  & 
-                              apparent_mic_cue(:,:) / microbial_cn * & 
-                              (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &  
-                               sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk))
-    ENDWHERE
+    sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                          microbial_nue * &
+                                                          (sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + &  
+                                                           sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)) + &
+                                                           mic_uptake_nh4_n15_sl(:,:) 
 
     het_respiration(:,:)     = het_respiration(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
                                                       (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &  
@@ -1916,19 +2020,11 @@ CONTAINS
                                                                 (1.0_wp - microbial_pue) * &
                                                                 (sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + &  
                                                                  sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk))
- 
-    WHERE(sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk)+sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)>eps8)
-       net_mineralisation_nh4_n15(:,:)     = net_mineralisation_nh4_n15(:,:) + & 
-                              sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
-                              sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                              (sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                               sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)) / & 
-                              (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                               sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)) *  & 
-                              apparent_mic_cue(:,:) / microbial_cn * & 
-                              (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &  
-                               sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk))
-    ENDWHERE
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) - mic_uptake_nh4_n15_sl(:,:) + & 
+                                                                (1.0_wp - microbial_nue) * &
+                                                                (sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + &  
+                                                                 sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk))
+
 
     !> 2.0 formation of slow SOM (=residue pool) from fast SOM decay
     !! 
@@ -1942,12 +2038,12 @@ CONTAINS
                                                         residue_cue * sb_loss%microbial%carbon13%ptr(ics:ice,:,iblk)
     sb_formation%residue%carbon14%ptr(ics:ice,:,iblk) = sb_formation%residue%carbon14%ptr(ics:ice,:,iblk) + & 
                                                         residue_cue * sb_loss%microbial%carbon14%ptr(ics:ice,:,iblk)
-    WHERE(sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) > eps8)
-       sb_formation%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%residue%nitrogen15%ptr(ics:ice,:,iblk) + &
-                                                             sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) / &  
-                                                             sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) * & 
-                                                             residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    ENDWHERE
+    hlp1(:,:) = (sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) - residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)) * & 
+                calc_fractionation(sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk), &
+                                   sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk),eta_ammonification)
+    sb_formation%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%residue%nitrogen15%ptr(ics:ice,:,iblk) + &
+                                                             sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) - hlp1(:,:) 
+
     het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - residue_cue) * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon13%ptr(ics:ice,:,iblk)
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon14%ptr(ics:ice,:,iblk)
@@ -1955,12 +2051,8 @@ CONTAINS
                                                                 residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%microbial%phosphorus%ptr(ics:ice,:,iblk) - &
                                                                 residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    WHERE(sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) > eps8)
-       net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + & 
-                                    sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) - &
-                                    sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) / sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) * & 
-                                    residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    ENDWHERE
+
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:) 
 
     !> 3.0 formation of fast SOM (=microbial pool) from slow SOM decay 
     !! 
@@ -1974,12 +2066,11 @@ CONTAINS
                                                           microbial_cue_min * sb_loss%residue%carbon13%ptr(ics:ice,:,iblk)
     sb_formation%microbial%carbon14%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
                                                           microbial_cue_min * sb_loss%residue%carbon14%ptr(ics:ice,:,iblk)
-    WHERE(sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk)>eps8)
-       sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                               sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) / &  
-                                                               sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) * &  
-                                                               microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    ENDWHERE
+    hlp1(:,:) = (sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) - microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)) * & 
+                calc_fractionation(sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk), &
+                                   sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk),eta_ammonification)
+    sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                            sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) - hlp1(:,:) 
 
     het_respiration(:,:)      = het_respiration(:,:)     + (1._wp - microbial_cue_min) * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
     het_respiration_c13(:,:)  = het_respiration_c13(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon13%ptr(ics:ice,:,iblk)
@@ -1988,13 +2079,8 @@ CONTAINS
                                                                 microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) - &
                                                                 microbial_cue_min / microbial_cn / microbial_np * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    WHERE(sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk)>eps8)
-       net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + & 
-                                    sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) - &
-                                    sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) / sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) * &  
-                                    microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    ENDWHERE  
-    
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:)
+
   END SUBROUTINE calc_SOM_formation  
   
   !-----------------------------------------------------------------------------------------------------
@@ -2727,9 +2813,12 @@ CONTAINS
                                          no3_solute, &
                                          sb_pool_microbial_carbon, &
                                          root_fraction_act_sl, & 
-                                         asymb_n_fixation)                              ! out
+                                         asymb_n_fixation, &                                ! out
+                                         asymb_n_fixation_n15)                              ! out
 
+    USE mo_shared_isotope,     ONLY: calc_mixing_ratio_N15N14
     USE mo_sb_constants,       ONLY: soil_n_threshold_bnf
+    USe mo_veg_constants,      ONLY: eta_nfixation
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -2741,10 +2830,13 @@ CONTAINS
                                                                        no3_solute, &               !< NO3 concentration [mol m-3]
                                                                        sb_pool_microbial_carbon, & !< microbial carbon pool [mol m-3]
                                                                        root_fraction_act_sl        !< fraction of roots per root layer [m-3] 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: asymb_n_fixation            !< asymbiontic rate of N fixation [umol m-3 s-1]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: asymb_n_fixation, &         !< asymbiontic rate of N fixation [umol m-3 s-1]
+                                                                       asymb_n_fixation_n15        !< asymbiontic rate of 15N fixation [umol m-3 s-1]
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_asymbiontic_n_fixation'
  
+    !> 1.0 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
+    !!
     SELECT CASE(TRIM(veg_bnf_scheme))
       CASE("fixed", "standard")
         WHERE((nh4_solute(:,:) + no3_solute) * soil_depth_sl(:,:) < soil_n_threshold_bnf .AND. & 
@@ -2752,6 +2844,11 @@ CONTAINS
                  asymb_n_fixation(:,:) = root_fraction_act_sl(:,:) * lctlib%bnf_base / soil_depth_sl(:,:) 
         ENDWHERE
     END SELECT
+
+    !> 1.1 calculate 15N flux associated with asymbiontic N fixation, which is identical to the 
+    !!     atmospheric dN15 minus the discrimination of the nitrogenase (Robinson, 2001, TREE)
+    !! 
+    asymb_n_fixation_n15(:,:) = asymb_n_fixation(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
 
   END SUBROUTINE calc_asymbiontic_n_fixation
 

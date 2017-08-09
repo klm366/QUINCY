@@ -71,6 +71,8 @@ CONTAINS
                                   ga                   , &! out
                                   nhx_deposition     , &  ! out
                                   noy_deposition     , &  ! out
+                                  nhx_n15_deposition , &  ! out
+                                  noy_n15_deposition , &  ! out
                                   p_deposition       , &  ! out
                                   ! For lakes:
                                   albedo_lwtr        , &  ! out
@@ -130,6 +132,8 @@ CONTAINS
                                       ga(:)                   , &  !< ..
                                       nhx_deposition(:)     , &    !< ..
                                       noy_deposition(:)     , &    !< ..
+                                      nhx_n15_deposition(:) , &    !< ..
+                                      noy_n15_deposition(:) , &    !< ..
                                       p_deposition(:)       , &    !< ..
                                       ! For lakes:
                                       albedo_lwtr(:)        , &    !< ..
@@ -150,7 +154,9 @@ CONTAINS
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
-                     nhx_deposition_r, noy_deposition_r, p_deposition_r 
+                     nhx_deposition_r, noy_deposition_r, &   ! variables reading nhx_srf_down & noy_srf_down from the climate forcing file (maybe rename there to)
+                     nhx_dn15_deposition_r, noy_dn15_deposition_r, & 
+                     p_deposition_r 
     ! READ() input variables for: soil
     REAL(wp) ::      leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
                      leaf_dC13_r, leaf_DC14_r, leaf_dN15_r  , &
@@ -260,6 +266,8 @@ CONTAINS
     ga(nc)                    = 0.0_wp
     nhx_deposition(nc)        = 0.0_wp
     noy_deposition(nc)        = 0.0_wp
+    nhx_n15_deposition(nc)        = 0.0_wp
+    noy_n15_deposition(nc)        = 0.0_wp
     p_deposition(nc)    = 0.0_wp
     ! For lakes:
     albedo_lwtr(nc)     = 0.0_wp
@@ -396,6 +404,9 @@ CONTAINS
         nhx_deposition(nc)    =   nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
         noy_deposition(nc)    =   noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
     ENDSELECT
+    nhx_n15_deposition(nc)    =   nhx_deposition(nc) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+    noy_n15_deposition(nc)    =   noy_deposition(nc) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+
     SELECT CASE (TRIM(forcing_options%p_deposition_scheme))
       CASE ("none")
         p_deposition(nc)      =   0.0_wp
@@ -482,7 +493,9 @@ CONTAINS
     READ(lun,*, IOSTAT=stat) time_hlp, & 
                      t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil), &
                      percolation_sl_r(1:nlevel_soil), root_fraction_sl_r(1:nlevel_soil), &
-                     veg_pool_fine_root_carbon_r
+                     veg_pool_fine_root_carbon_r, &
+                     nhx_deposition_r, noy_deposition_r, &
+                     nhx_dn15_deposition_r, noy_dn15_deposition_r
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
@@ -491,7 +504,9 @@ CONTAINS
       READ(lun,*) time_hlp, &
                      t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil), &
                      percolation_sl_r(1:nlevel_soil), root_fraction_sl_r(1:nlevel_soil), &
-                     veg_pool_fine_root_carbon_r
+                     veg_pool_fine_root_carbon_r, &
+                     nhx_deposition_r, noy_deposition_r, &
+                     nhx_dn15_deposition_r, noy_dn15_deposition_r
     END IF
 
     !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
@@ -568,6 +583,10 @@ CONTAINS
     ENDDO
     veg%pool%fine_root%carbon%ptr                      = veg_pool_fine_root_carbon_r
 
+    nhx_deposition(:)    = nhx_deposition_r
+    noy_deposition(:)    = noy_deposition_r
+    nhx_n15_deposition(:) = nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(nhx_dn15_deposition_r))
+    nhx_n15_deposition(:) = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(noy_dn15_deposition_r))
 
     END SELECT  ! land plant canopy vs soil
 

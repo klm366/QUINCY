@@ -261,10 +261,10 @@ CONTAINS
          lun=lun+1
          WRITE(lun,'(a)') 'Time MineralNH4 MineralNO3 MineralP NOY N2O N2'
          lun=lun+1
-         WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN'
+         WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN EcoP EcoN15'
          lun=lun+1
-         WRITE(lun,'(2a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14 MycDC14'!, &
-         !                  ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
+         WRITE(lun,'(2a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14 MycDC14', &
+                           ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
          WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
          lun=lun+1
@@ -460,13 +460,16 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk      :: nh4_solute
+    dsl4jsb_Real3D_onChunk      :: nh4_n15_solute
     dsl4jsb_Real3D_onChunk      :: no3_solute
+    dsl4jsb_Real3D_onChunk      :: no3_n15_solute
     dsl4jsb_Real3D_onChunk      :: po4_solute
     dsl4jsb_Real3D_onChunk      :: noy
+    dsl4jsb_Real3D_onChunk      :: noy_n15
     dsl4jsb_Real3D_onChunk      :: n2o
+    dsl4jsb_Real3D_onChunk      :: n2o_n15
     dsl4jsb_Real3D_onChunk      :: n2
-    dsl4jsb_Real3D_onChunk      :: nh4_n15_solute
-    dsl4jsb_Real3D_onChunk      :: no3_n15_solute
+    dsl4jsb_Real3D_onChunk      :: n2_n15
     dsl4jsb_Real3D_onChunk      :: nh4_assoc
     dsl4jsb_Real3D_onChunk      :: nh4_n15_assoc
     dsl4jsb_Real3D_onChunk      :: po4_assoc_fast
@@ -531,13 +534,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,  nh4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  nh4_n15_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,  no3_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  no3_n15_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,  noy)
+    dsl4jsb_Get_var3D_onChunk(SB_,  noy_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  n2o)
+    dsl4jsb_Get_var3D_onChunk(SB_,  n2o_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  n2)
-    dsl4jsb_Get_var3D_onChunk(SB_,  nh4_n15_solute)
-    dsl4jsb_Get_var3D_onChunk(SB_,  no3_n15_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  n2_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  nh4_assoc)
     dsl4jsb_Get_var3D_onChunk(SB_,  nh4_n15_assoc)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_fast)
@@ -616,17 +622,17 @@ CONTAINS
                 veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,& 
                 veg%total_biomass%phosphorus%ptr
               lun=lun+1
-                !write(lun,'(12F12.6)') time_d, &
-                !calc_delta_N15(veg%pool%leaf%nitrogen%ptr,veg%pool%leaf%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%fine_root%nitrogen%ptr,veg%pool%fine_root%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%sap_wood%nitrogen%ptr,veg%pool%sap_wood%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%heart_wood%nitrogen%ptr,veg%pool%heart_wood%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%coarse_root%nitrogen%ptr,veg%pool%coarse_root%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%fruit%nitrogen%ptr,veg%pool%fruit%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%labile%nitrogen%ptr,veg%pool%labile%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%reserve%nitrogen%ptr,veg%pool%reserve%nitrogen15%ptr), &
-                !calc_delta_N15(veg%pool%seed_bed%nitrogen%ptr,veg%pool%seed_bed%nitrogen15%ptr), &
-                !calc_delta_N15(veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr)
+                write(lun,'(12F12.6)') time_d, &
+                calc_delta_N15(veg%pool%leaf%nitrogen%ptr,veg%pool%leaf%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%fine_root%nitrogen%ptr,veg%pool%fine_root%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%sap_wood%nitrogen%ptr,veg%pool%sap_wood%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%heart_wood%nitrogen%ptr,veg%pool%heart_wood%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%coarse_root%nitrogen%ptr,veg%pool%coarse_root%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%fruit%nitrogen%ptr,veg%pool%fruit%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%labile%nitrogen%ptr,veg%pool%labile%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%reserve%nitrogen%ptr,veg%pool%reserve%nitrogen15%ptr), &
+                calc_delta_N15(veg%pool%seed_bed%nitrogen%ptr,veg%pool%seed_bed%nitrogen15%ptr), &
+                calc_delta_N15(veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr)
               lun=lun+1
               write(lun,'(9F16.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
@@ -694,7 +700,28 @@ CONTAINS
                                       SUM(noy(1,:)*soil_depth_sl(1,:))                                       + &
                                       SUM(n2o(1,:)*soil_depth_sl(1,:))                                       + &
                                       SUM(n2(1,:)*soil_depth_sl(1,:))                                        + &     
-                                      veg%total_biomass%nitrogen%ptr 
+                                      veg%total_biomass%nitrogen%ptr, &
+                                     SUM(sb%pool%soluable_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
+                                      SUM(sb%pool%polymeric_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
+                                      SUM(sb%pool%woody_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))       + &
+                                      SUM(sb%pool%microbial%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))          + &
+                                      SUM(sb%pool%residue%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
+                                      SUM(sb%pool%mycorrhiza%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))         + &
+                                      SUM(po4_solute(1,:)*soil_depth_sl(1,:))                                + & 
+                                      veg%total_biomass%phosphorus%ptr, &
+                                     SUM(sb%pool%soluable_litter%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
+                                      SUM(sb%pool%polymeric_litter%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
+                                      SUM(sb%pool%woody_litter%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))       + &
+                                      SUM(sb%pool%microbial%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))          + &
+                                      SUM(sb%pool%residue%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
+                                      SUM(sb%pool%mycorrhiza%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))         + &
+                                      SUM(nh4_n15_solute(1,:)*soil_depth_sl(1,:))                                + & 
+                                      SUM(no3_n15_solute(1,:)*soil_depth_sl(1,:))                                + &
+                                      SUM(noy_n15(1,:)*soil_depth_sl(1,:))                                       + &
+                                      SUM(n2o_n15(1,:)*soil_depth_sl(1,:))                                       + &
+                                      SUM(n2_n15(1,:)*soil_depth_sl(1,:))                                        + &     
+                                      veg%total_biomass%nitrogen15%ptr
+ 
 
               dC13soluable_litter(1,1)  = calc_delta_C13(SUM(sb%pool%soluable_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                                          SUM(sb%pool%soluable_litter%carbon13%ptr(1,:,1)*soil_depth_sl(1,:)))
@@ -728,14 +755,14 @@ CONTAINS
                 calc_delta_C14(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                   , &
                 calc_delta_C14(SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%mycorrhiza%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)),dC13mycorrhiza(1,1))!, &
-                !calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(1,1,1),sb%pool%soluable_litter%nitrogen15%ptr(1,1,1)), &
-                !calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
-                !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
-                !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
-                !calc_delta_N15(sb%pool%residue%nitrogen%ptr(1,1,1),sb%pool%residue%nitrogen15%ptr(1,1,1)), &
-                !calc_delta_N15(nh4_solute(1,1),nh4_n15_solute(1,1)), &
-                !calc_delta_N15(no3_solute(1,1),no3_n15_solute(1,1))
+                               SUM(sb%pool%mycorrhiza%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)),dC13mycorrhiza(1,1)), &
+                calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(1,1,1),sb%pool%soluable_litter%nitrogen15%ptr(1,1,1)), &
+                calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
+                calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
+                calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
+                calc_delta_N15(sb%pool%residue%nitrogen%ptr(1,1,1),sb%pool%residue%nitrogen15%ptr(1,1,1)), &
+                calc_delta_N15(nh4_solute(1,1),nh4_n15_solute(1,1)), &
+                calc_delta_N15(no3_solute(1,1),no3_n15_solute(1,1))
               
               lun=lun+1
               DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
@@ -1048,7 +1075,7 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                           'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation'
+        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation dN15Fixation PlantUptake_d15NH4 PlantUptake_d15NO3'
         lun=lun+1
         WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
         lun=lun+1
@@ -1061,8 +1088,8 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time NDeposition Nfix_asymb Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
                           'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3 Net_Mineralisation_PO4 Leaching_PO4' 
         lun=lun+1
-        WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb d15Net_Mineralisation_NH4 Emission_d15NOY ', &
-                          'Emission_d15N2O Emission_d15N2 Leaching_d15NH4 Leaching_d15NO3 PlantUptake_d15NH4 PlantUptake_d15NO3'
+        WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2', &
+                          ' Leaching_d15NH4 Leaching_d15NO3'
         lun=lun+1
         ! sb_massBalance_..txt
         WRITE(lun,'(2a)') 'Time sb_dPoolC sb_dPoolN sb_dPoolP sb_dPoolC13 sb_dPoolC14 sb_dPoolN15 ', &
@@ -1155,6 +1182,7 @@ CONTAINS
     REAL(wp), SAVE                        :: recycling_n_acc     = 0.0_wp  
     REAL(wp), SAVE                        :: res_use_n_acc       = 0.0_wp  
     REAL(wp), SAVE                        :: n_fixation_acc      = 0.0_wp   
+    REAL(wp), SAVE                        :: n_fixation_n15_acc  = 0.0_wp   
     REAL(wp), SAVE                        :: uptake_po4_acc      = 0.0_wp
     REAL(wp), SAVE                        :: recycling_p_acc     = 0.0_wp  
     REAL(wp), SAVE                        :: res_use_p_acc       = 0.0_wp   
@@ -1191,9 +1219,7 @@ CONTAINS
     REAL(wp), SAVE                        :: leachingNorg_acc    = 0.0_wp
     REAL(wp), SAVE                        :: leachingPorg_acc    = 0.0_wp
     REAL(wp), SAVE                        :: net_min_nh4_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: net_min_nh4_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: net_min_no3_acc     = 0.0_wp
-    REAL(wp), SAVE                        :: net_min_no3_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: net_min_po4_acc     = 0.0_wp
     REAL(wp), SAVE                        :: nitrification_acc   = 0.0_wp
     REAL(wp), SAVE                        :: denitrification_acc = 0.0_wp
@@ -1241,6 +1267,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: nhx_deposition
     dsl4jsb_Real2D_onChunk      :: noy_deposition
+    dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk      :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk      :: rain 
     dsl4jsb_Real2D_onChunk      :: snow
     ! L2A_
@@ -1273,11 +1301,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_respiration_c14
     dsl4jsb_Real2D_onChunk      :: maint_respiration_c14
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
     dsl4jsb_Real2D_onChunk      :: recycling_leaf_n
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
     dsl4jsb_Real2D_onChunk      :: n_fixation
+    dsl4jsb_Real2D_onChunk      :: n_fixation_n15
     dsl4jsb_Real2D_onChunk      :: uptake_po4
     dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
@@ -1307,9 +1338,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: het_respiration_c13
     dsl4jsb_Real3D_onChunk      :: het_respiration_c14
     dsl4jsb_Real3D_onChunk      :: net_mineralisation_nh4
-    dsl4jsb_Real3D_onChunk      :: net_mineralisation_nh4_n15
     dsl4jsb_Real3D_onChunk      :: net_mineralisation_no3
-    dsl4jsb_Real3D_onChunk      :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk      :: net_mineralisation_po4
     dsl4jsb_Real3D_onChunk      :: nitrification_no3
     dsl4jsb_Real3D_onChunk      :: nitrification_noy
@@ -1351,6 +1380,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow) 
     ! ---------------------------
@@ -1383,11 +1414,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
@@ -1415,9 +1449,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration_c13)
     dsl4jsb_Get_var3D_onChunk(SB_,  het_respiration_c14)
     dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_nh4)
-    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_nh4_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_no3)
-    dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_no3_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  net_mineralisation_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_no3)
     dsl4jsb_Get_var3D_onChunk(SB_,  nitrification_noy)
@@ -1475,11 +1507,14 @@ CONTAINS
              growth_resp_C14_acc  = growth_resp_C14_acc   + growth_respiration_c14(1) * dtime_one
              maint_resp_C14_acc   = maint_resp_C14_acc    + maint_respiration_c14(1)  * dtime_one
              uptake_nh4_acc       = uptake_nh4_acc        + uptake_nh4(1)             * dtime_one
+             uptake_nh4_n15_acc   = uptake_nh4_n15_acc    + uptake_nh4_n15(1)         * dtime_one
              uptake_no3_acc       = uptake_no3_acc        + uptake_no3(1)             * dtime_one
+             uptake_no3_n15_acc   = uptake_no3_n15_acc    + uptake_no3_n15(1)         * dtime_one
              recycling_n_acc  = recycling_n_acc   + ( recycling_leaf_n(1) + recycling_fine_root_n(1) + recycling_heart_wood_n(1)) &
                                                                                     * dtime_one *1000000._wp/dtime
              res_use_n_acc    = res_use_n_acc     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
              n_fixation_acc   = n_fixation_acc    + n_fixation(1)                   * dtime_one 
+             n_fixation_n15_acc = n_fixation_n15_acc + n_fixation_n15(1)            * dtime_one 
              uptake_po4_acc   = uptake_po4_acc    + uptake_po4(1)                   * dtime_one
              recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + recycling_fine_root_p(1) + recycling_heart_wood_p(1)) &
                                                                                     * dtime_one *1000000._wp/dtime
@@ -1501,9 +1536,8 @@ CONTAINS
              ENDIF 
              gc_acc           = gc_acc            + canopy_cond(1)                                                      
              ga_acc           = ga_acc            + ga(1) 
-             IF(forcing_options%n_deposition_scheme == "constant" .OR. forcing_options%n_deposition_scheme == "dynamic") THEN
-                n_deposition_acc = n_deposition_acc  + (nhx_deposition(1) + noy_deposition(1)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
-             ENDIF
+             n_deposition_acc = n_deposition_acc  + (nhx_deposition(1) + noy_deposition(1)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
+             n_deposition_n15_acc = n_deposition_n15_acc  + (nhx_n15_deposition(1) + noy_n15_deposition(1)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
              albedo_acc       = albedo_acc        + albedo(1)
              ppfd_acc         = ppfd_acc          + swpar_srf_down(1) * rad2ppfd  * dtime_one               
              rnet_acc         = rnet_acc          + net_radiation(1)              * dtime_one               
@@ -1516,7 +1550,6 @@ CONTAINS
              het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(1,:) * soil_depth_sl(1,:)) * dtime_one
              het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(1,:) * soil_depth_sl(1,:)) * dtime_one
              net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(1,:) * soil_depth_sl(1,:)) * dtime_one
-             net_min_nh4_n15_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4_n15(1,:) * soil_depth_sl(1,:)) * dtime_one
              net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(1,:) * soil_depth_sl(1,:)) * dtime_one
              nitrification_acc   = nitrification_acc + & 
                                     SUM((nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) * &
@@ -1580,7 +1613,11 @@ CONTAINS
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
                    write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
-                                          res_use_n_acc, n_fixation_acc
+                                          res_use_n_acc, n_fixation_acc, & 
+                                          calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
+                                          calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
+                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
+
                    lun=lun+1
                    write(lun,'(4F12.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                    lun=lun+1
@@ -1603,17 +1640,14 @@ CONTAINS
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
                                           leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
                    lun=lun+1
-                   !write(lun,'(20F16.8)') time_d, & 
-                   !      calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
-                   !      calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
-                   !      calc_delta_N15(net_min_nh4_acc, net_min_nh4_n15_acc),&
-                   !      calc_delta_N15(emission_noy_acc,emission_noy_n15_acc), &
-                   !      calc_delta_N15(emission_n2o_acc,emission_n2o_n15_acc), &
-                   !      calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
-                   !      calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
-                   !      calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc), &
-                   !      calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
-                   !      calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
+                   write(lun,'(20F16.8)') time_d, & 
+                         calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
+                         calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
+                         calc_delta_N15(emission_noy_acc,emission_noy_n15_acc), &
+                         calc_delta_N15(emission_n2o_acc,emission_n2o_n15_acc), &
+                         calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
+                         calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
+                         calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc)
                    lun=lun+1
                    ! sb_massBalance_..txt
                    write(lun,'(13F24.12)') time_d, &
@@ -1670,6 +1704,7 @@ CONTAINS
                recycling_n_acc   = 0.0_wp
                res_use_n_acc     = 0.0_wp
                n_fixation_acc    = 0.0_wp
+               n_fixation_n15_acc = 0.0_wp
                uptake_po4_acc    = 0.0_wp
                recycling_p_acc   = 0.0_wp
                res_use_p_acc     = 0.0_wp
@@ -1695,7 +1730,6 @@ CONTAINS
                het_respC13_acc   = 0.0_wp
                het_respC14_acc   = 0.0_wp
                net_min_nh4_acc   = 0.0_wp
-               net_min_nh4_n15_acc = 0.0_wp
                net_min_po4_acc   = 0.0_wp
                nitrification_acc = 0.0_wp
                denitrification_acc = 0.0_wp
@@ -1958,9 +1992,10 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
+    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
 
     ! Use of process memories
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -1979,15 +2014,23 @@ CONTAINS
                                              dC13_reserve,dC13_fruit,dC13_seed_bed
     REAL(wp)                              :: DC14_leaf,DC14_fine_root,DC14_coarse_root,DC14_sap_wood,DC14_heart_wood,DC14_labile, & 
                                              DC14_reserve,DC14_fruit,DC14_seed_bed
+    REAL(wp)                              :: dN15_leaf,dN15_fine_root,dN15_coarse_root,dN15_sap_wood,dN15_heart_wood,dN15_labile, & 
+                                             dN15_reserve,dN15_fruit,dN15_seed_bed
     INTEGER                               :: lun          ! logical unit number
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_soil_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(A2L_)                        ! TYPE(t_a2l_memory),     POINTER :: a2l__mem
     dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),    POINTER :: soil__mem
     ! Declare pointers to variables in memory
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition 
+    dsl4jsb_Real2D_onChunk      :: noy_deposition 
+    dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition 
+    dsl4jsb_Real2D_onChunk      :: noy_n15_deposition 
     ! SOIL_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
@@ -2009,12 +2052,17 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)                         
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
@@ -2037,14 +2085,18 @@ CONTAINS
     IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 + 60
-      write(lun,'(66F12.6)') time_d         , &
+      write(lun,'(70F12.6)') time_d         , &
         ! per variable values per soil layer is written out
         ! number of soil layers == options%nsoil_sb  (default = 5)
         t_soil_sl(1,:)                      , &
         w_soil_sl(1,:)                      , &
         percolation_sl(1,:)                 , &
         root_fraction_sl(1,:)               , &
-        veg%pool%fine_root%carbon%ptr
+        veg%pool%fine_root%carbon%ptr       , &
+        nhx_deposition(1)                   , &
+        noy_deposition(1)                   , &
+        calc_delta_N15(nhx_deposition(1),nhx_n15_deposition(1)), &
+        calc_delta_N15(noy_deposition(1),noy_n15_deposition(1))
 
 
       !> convert 13C and 14C in delta notation
@@ -2069,35 +2121,45 @@ CONTAINS
       DC14_fruit       = calc_delta_C14(veg%litterfall%fruit%carbon%ptr,veg%litterfall%fruit%carbon14%ptr,dC13_fruit)
       DC14_seed_bed    = calc_delta_C14(veg%litterfall%seed_bed%carbon%ptr,veg%litterfall%seed_bed%carbon14%ptr,dC13_seed_bed)
 
+      dN15_leaf        = calc_delta_N15(veg%litterfall%leaf%nitrogen%ptr,veg%litterfall%leaf%nitrogen15%ptr)
+      dN15_fine_root   = calc_delta_N15(veg%litterfall%fine_root%nitrogen%ptr,veg%litterfall%fine_root%nitrogen15%ptr)
+      dN15_coarse_root = calc_delta_N15(veg%litterfall%coarse_root%nitrogen%ptr,veg%litterfall%coarse_root%nitrogen15%ptr)
+      dN15_sap_wood    = calc_delta_N15(veg%litterfall%sap_wood%nitrogen%ptr,veg%litterfall%sap_wood%nitrogen15%ptr)
+      dN15_heart_wood  = calc_delta_N15(veg%litterfall%heart_wood%nitrogen%ptr,veg%litterfall%heart_wood%nitrogen15%ptr)
+      dN15_labile      = calc_delta_N15(veg%litterfall%labile%nitrogen%ptr,veg%litterfall%labile%nitrogen15%ptr)
+      dN15_reserve     = calc_delta_N15(veg%litterfall%reserve%nitrogen%ptr,veg%litterfall%reserve%nitrogen15%ptr)
+      dN15_fruit       = calc_delta_N15(veg%litterfall%fruit%nitrogen%ptr,veg%litterfall%fruit%nitrogen15%ptr)
+      dN15_seed_bed    = calc_delta_N15(veg%litterfall%seed_bed%nitrogen%ptr,veg%litterfall%seed_bed%nitrogen15%ptr)
+
       lun=lun+1
       write(lun,'(55F12.6)') time_d, &
         ! leaf
         veg%litterfall%leaf%carbon%ptr*1000._wp, veg%litterfall%leaf%nitrogen%ptr*1000000._wp, veg%litterfall%leaf%phosphorus%ptr*1000000._wp    , &
-        dC13_leaf, DC14_leaf, veg%litterfall%leaf%nitrogen15%ptr*1000000._wp  , &
+        dC13_leaf, DC14_leaf, dN15_leaf, & 
         ! fine_root
         veg%litterfall%fine_root%carbon%ptr*1000._wp, veg%litterfall%fine_root%nitrogen%ptr*1000000._wp, veg%litterfall%fine_root%phosphorus%ptr*1000000._wp   , &
-        dC13_fine_root, DC14_fine_root, veg%litterfall%fine_root%nitrogen15%ptr*1000000._wp , &
+        dC13_fine_root, DC14_fine_root, dN15_fine_root, & 
         ! coarse_root
         veg%litterfall%coarse_root%carbon%ptr*1000._wp, veg%litterfall%coarse_root%nitrogen%ptr*1000000._wp, veg%litterfall%coarse_root%phosphorus%ptr*1000000._wp   , &
-        dC13_coarse_root, DC14_coarse_root, veg%litterfall%coarse_root%nitrogen15%ptr*1000000._wp , &
+        dC13_coarse_root, DC14_coarse_root, dN15_coarse_root, & 
         ! sap_wood
         veg%litterfall%sap_wood%carbon%ptr*1000._wp, veg%litterfall%sap_wood%nitrogen%ptr*1000000._wp, veg%litterfall%sap_wood%phosphorus%ptr*1000000._wp    , &
-        dC13_sap_wood, DC14_sap_wood, veg%litterfall%sap_wood%nitrogen15%ptr*1000000._wp  , &
+        dC13_sap_wood, DC14_sap_wood, dN15_sap_wood, & 
         ! heart_wood
         veg%litterfall%heart_wood%carbon%ptr*1000._wp, veg%litterfall%heart_wood%nitrogen%ptr*1000000._wp, veg%litterfall%heart_wood%phosphorus%ptr*1000000._wp    , &
-        dC13_heart_wood, DC14_heart_wood, veg%litterfall%heart_wood%nitrogen15%ptr*1000000._wp  , &
+        dC13_heart_wood, DC14_heart_wood, dN15_heart_wood, & 
         ! labile
         veg%litterfall%labile%carbon%ptr*1000._wp, veg%litterfall%labile%nitrogen%ptr*1000000._wp, veg%litterfall%labile%phosphorus%ptr*1000000._wp    , &
-        dC13_labile, DC14_labile, veg%litterfall%labile%nitrogen15%ptr*1000000._wp  , &
+        dC13_labile, DC14_labile, dN15_labile, & 
         ! reserve
         veg%litterfall%reserve%carbon%ptr*1000._wp, veg%litterfall%reserve%nitrogen%ptr*1000000._wp, veg%litterfall%reserve%phosphorus%ptr*1000000._wp   , &
-        dC13_reserve, DC14_reserve, veg%litterfall%reserve%nitrogen15%ptr*1000000._wp , &
+        dC13_reserve, DC14_reserve, dN15_reserve, & 
         ! fruit
         veg%litterfall%fruit%carbon%ptr*1000._wp, veg%litterfall%fruit%nitrogen%ptr*1000000._wp, veg%litterfall%fruit%phosphorus%ptr*1000000._wp   , &
-        dC13_fruit, DC14_fruit, veg%litterfall%fruit%nitrogen15%ptr*1000._wp , &
+        dC13_fruit, DC14_fruit, dN15_fruit, & 
         ! seed_bed
         veg%litterfall%seed_bed%carbon%ptr*1000._wp, veg%litterfall%seed_bed%nitrogen%ptr*1000000._wp, veg%litterfall%seed_bed%phosphorus%ptr*1000000._wp  , &
-        dC13_seed_bed, DC14_seed_bed, veg%litterfall%seed_bed%nitrogen15%ptr*1000000._wp
+        dC13_seed_bed, DC14_seed_bed, dN15_seed_bed 
 
     END IF 
   END SUBROUTINE write_soil_forcing 

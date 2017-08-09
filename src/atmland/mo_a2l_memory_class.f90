@@ -32,7 +32,7 @@ MODULE mo_a2l_memory_class
   PRIVATE
   PUBLIC :: t_a2l_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
@@ -64,6 +64,8 @@ MODULE mo_a2l_memory_class
                               ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                               nhx_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
                               noy_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
+                              nhx_n15_deposition , &    ! mumol/m2/sec 
+                              noy_n15_deposition , &    ! mumol/m2/sec
                               p_deposition       , &    ! mumol/m2/sec  - new with r... ticket #261
                               ! For lakes:
                               albedo_lwtr        , &
@@ -351,6 +353,12 @@ CONTAINS
             & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'noy_deposition', mem%noy_deposition,&
+            & initval_r=0.0_wp )
+
+    CALL slm_add_var( mem, 'nhx_n15_deposition', mem%nhx_n15_deposition,&
+            & initval_r=0.0_wp )
+
+    CALL slm_add_var( mem, 'noy_n15_deposition', mem%noy_n15_deposition,&
             & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'p_deposition', mem%p_deposition,&

@@ -1124,9 +1124,10 @@ CONTAINS
        uptake_no3_n15(:) = uptake_no3_n15(:) + plant_uptake_no3_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
     ENDDO
  
-    !> 5.4i calculate 15N flux associated with symbiontic N fixation 
+    !> 5.4 calculate 15N flux associated with symbiontic N fixation, which is identical to the 
+    !!     atmospheric dN15 minus the discrimination of the nitrogenase (Robinson, 2001, TREE)
     !! 
-    n_fixation_n15(:) = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_nfixation))
+    n_fixation_n15(:) = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
 
   END SUBROUTINE calc_actual_nutrient_uptake_rate
  

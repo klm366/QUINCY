@@ -60,6 +60,8 @@ CONTAINS
                                   ga                   , &
                                   nhx_deposition     , &
                                   noy_deposition     , &
+                                  nhx_n15_deposition , &
+                                  noy_n15_deposition , &
                                   p_deposition       , &
                                   ! For lakes:
                                   albedo_lwtr        , &
@@ -156,6 +158,8 @@ CONTAINS
                                   ga(:)                   , &
                                   nhx_deposition(:)     , &
                                   noy_deposition(:)     , &
+                                  nhx_n15_deposition(:) , &
+                                  noy_n15_deposition(:) , &
                                   p_deposition(:)       , &
                                   ! For lakes:
                                   albedo_lwtr(:)        , &
@@ -245,6 +249,8 @@ CONTAINS
       ga                      = ga(:)                   , &
       nhx_deposition          = nhx_deposition(:)     , &
       noy_deposition          = noy_deposition(:)     , &
+      nhx_n15_deposition      = nhx_n15_deposition(:) , &
+      noy_n15_deposition      = noy_n15_deposition(:) , &
       p_deposition            = p_deposition(:)       , &
       ! For lakes:
       albedo_lwtr             = albedo_lwtr(:)        , &

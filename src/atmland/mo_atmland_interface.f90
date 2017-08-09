@@ -86,6 +86,8 @@ CONTAINS
       ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
       nhx_deposition     , &
       noy_deposition     , &
+      nhx_n15_deposition , &
+      noy_n15_deposition , &
       p_deposition       , &
       ! For lakes:
       albedo_lwtr        , &
@@ -136,6 +138,8 @@ CONTAINS
                                       ga(:)                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                                       nhx_deposition(:)     , &    ! added with r506
                                       noy_deposition(:)     , &    ! added with r506
+                                      nhx_n15_deposition(:)     , &    ! added with r702
+                                      noy_n15_deposition(:)     , &    ! added with r702
                                       p_deposition(:)       , &    ! added with r... ticket #261
                                       ! For lakes:
                                       drag_wtr(:)           , &
@@ -212,6 +216,8 @@ CONTAINS
     IF (PRESENT(ga))                dsl4jsb_var2D_onChunk(A2L_,ga)                 = ga               (:)
     IF (PRESENT(nhx_deposition))    dsl4jsb_var2D_onChunk(A2L_,nhx_deposition)    = nhx_deposition    (:)
     IF (PRESENT(noy_deposition))    dsl4jsb_var2D_onChunk(A2L_,noy_deposition)    = noy_deposition    (:)
+    IF (PRESENT(nhx_n15_deposition))    dsl4jsb_var2D_onChunk(A2L_,nhx_n15_deposition)    = nhx_n15_deposition    (:)
+    IF (PRESENT(noy_n15_deposition))    dsl4jsb_var2D_onChunk(A2L_,noy_n15_deposition)    = noy_n15_deposition    (:)
     IF (PRESENT(p_deposition))      dsl4jsb_var2D_onChunk(A2L_,p_deposition)      = p_deposition      (:)
 
     ! For lakes:

@@ -71,6 +71,8 @@ PROGRAM land_model_driver
                                   ga                   , &
                                   nhx_deposition     , &
                                   noy_deposition     , &
+                                  nhx_n15_deposition , &
+                                  noy_n15_deposition , &
                                   p_deposition       , &
                                   ! For lakes:
                                   albedo_lwtr        , &
@@ -158,6 +160,8 @@ PROGRAM land_model_driver
   ALLOCATE(nhx_deposition(nc))                                                
   ALLOCATE(noy_deposition(nc))      
   ALLOCATE(p_deposition(nc))                                          
+  ALLOCATE(nhx_n15_deposition(nc))                                                
+  ALLOCATE(noy_n15_deposition(nc))                                                
   ! For lakes:
   ALLOCATE(albedo_lwtr(nc))                                     
   ALLOCATE(drag_wtr(nc))                                        
@@ -270,6 +274,8 @@ PROGRAM land_model_driver
                                   ga                      = ga(:)                   , &
                                   nhx_deposition          = nhx_deposition(:)     , &
                                   noy_deposition          = noy_deposition(:)     , &
+                                  nhx_n15_deposition      = nhx_n15_deposition(:) , &
+                                  noy_n15_deposition      = noy_n15_deposition(:) , &
                                   p_deposition            = p_deposition(:)       , &
                                   ! For lakes:
                                   albedo_lwtr             = albedo_lwtr(:)        , &
@@ -318,6 +324,8 @@ PROGRAM land_model_driver
                                   ga(:)                   , &
                                   nhx_deposition(:)     , &
                                   noy_deposition(:)     , &
+                                  nhx_n15_deposition(:) , &
+                                  noy_n15_deposition(:) , &
                                   p_deposition(:)       , &
                                   ! For lakes:
                                   albedo_lwtr(:)        , &
