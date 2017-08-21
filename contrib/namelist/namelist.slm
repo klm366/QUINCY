@@ -45,12 +45,19 @@
   soil_ph=6.0
 /
 &SOIL_BIOGEOCHEMISTRY_CTL
-  ! flags for the soil biogeochemistry process
+  ! the soil biogeochemistry process
+  ! options
   sb_model_scheme="simple_0d"
   sb_nloss_scheme="fixed"
+  ! flags
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.
   flag_sb_prescribe_po4=.FALSE.
+  ! parameter values
+  bulk_density=1500.0
+  usda_taxonomy_class=1
+  nwrb_taxonomy_class=1
+  glim_lithology_class=1
 /
 &BASE_CTL
   ! basic model config

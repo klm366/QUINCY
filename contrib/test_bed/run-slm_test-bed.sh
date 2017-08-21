@@ -475,13 +475,17 @@ if [ "$forcingDataSet" != "none" ]
     # get data of the particular site
     siteData=$(grep "$siteNameShort" "$allSiteDatFile")
     # change namelist values accordingly
-    changeNamelistValue longitude "$(awk '{print $2}'  <<< "$siteData")"
-    changeNamelistValue latitude  "$(awk '{print $3}'  <<< "$siteData")"    
+    changeNamelistValue longitude             "$(awk '{print $2}'  <<< "$siteData")"
+    changeNamelistValue latitude              "$(awk '{print $3}'  <<< "$siteData")"
     pftName="$(awk '{print $4}' <<< "$siteData")"
-    changeNamelistValue soil_sand "$(awk '{print $10}' <<< "$siteData")"
-    changeNamelistValue soil_silt "$(awk '{print $9}'  <<< "$siteData")"
-    changeNamelistValue soil_clay "$(awk '{print $8}'  <<< "$siteData")"
-    changeNamelistValue soil_ph   "$(awk '{print $13}' <<< "$siteData")"
+    changeNamelistValue soil_clay             "$(awk '{print $8}'  <<< "$siteData")"
+    changeNamelistValue soil_silt             "$(awk '{print $9}'  <<< "$siteData")"
+    changeNamelistValue soil_sand             "$(awk '{print $10}' <<< "$siteData")"
+    changeNamelistValue bulk_density          "$(awk '{print $12}' <<< "$siteData")"
+    changeNamelistValue soil_ph               "$(awk '{print $13}' <<< "$siteData")"
+    changeNamelistValue usda_taxonomy_class   "$(awk '{print $14}' <<< "$siteData")"
+    changeNamelistValue nwrb_taxonomy_class   "$(awk '{print $15}' <<< "$siteData")"
+    changeNamelistValue glim_lithology_class  "$(awk '{print $16}' <<< "$siteData")"
     pftID=0
     case "$pftName" in
       TrBE)

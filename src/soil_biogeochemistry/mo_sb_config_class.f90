@@ -31,6 +31,10 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
+    REAL(wp)              :: bulk_density
+    INTEGER               :: usda_taxonomy_class
+    INTEGER               :: nwrb_taxonomy_class
+    INTEGER               :: glim_lithology_class
 
     CONTAINS
       PROCEDURE :: Init => Init_sb_config
@@ -54,20 +58,28 @@ CONTAINS
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    LOGICAL       :: active
-    CHARACTER(15) :: sb_model_scheme
-    CHARACTER(15) :: sb_nloss_scheme
+    LOGICAL               :: active
+    CHARACTER(15)         :: sb_model_scheme
+    CHARACTER(15)         :: sb_nloss_scheme
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
+    REAL(wp)              :: bulk_density
+    INTEGER               :: usda_taxonomy_class
+    INTEGER               :: nwrb_taxonomy_class
+    INTEGER               :: glim_lithology_class
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
-                      sb_model_scheme,        &
-                      sb_nloss_scheme,        &
+                      sb_model_scheme      ,  &
+                      sb_nloss_scheme      ,  &
                       flag_sb_prescribe_nh4,  &
                       flag_sb_prescribe_no3,  &
-                      flag_sb_prescribe_po4
+                      flag_sb_prescribe_po4,  &
+                      bulk_density         ,  &
+                      usda_taxonomy_class  ,  &
+                      nwrb_taxonomy_class  ,  &
+                      glim_lithology_class
      
 
     ! variables for reading model-options from namelist
@@ -81,6 +93,10 @@ CONTAINS
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
+    bulk_density                = 1500.0_wp
+    usda_taxonomy_class         = 1
+    nwrb_taxonomy_class         = 1
+    glim_lithology_class        = 1
 
     ! read the namelist
     ! 
@@ -109,7 +125,10 @@ CONTAINS
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
-
+    config%bulk_density                    = bulk_density
+    config%usda_taxonomy_class             = usda_taxonomy_class
+    config%nwrb_taxonomy_class             = nwrb_taxonomy_class
+    config%glim_lithology_class            = glim_lithology_class
 
   END SUBROUTINE Init_sb_config
 
