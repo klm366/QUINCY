@@ -137,13 +137,20 @@ numberCpuMax=80              # maximum number of simulations started in parallel
 ## these option-values apply specifically to the generation of soil forcing ##########################################
 if [ $flag_generate_soil_forcing == "T" ]
  then
+  echo " Simulation runs for soil_forcing creation:"
   echo " flag_generate_soil_forcing == T, applying special settings to some options"
-  echo " please run the simulations (prep_run_slm.sh) for both FLUXNET and CRUNCEPv5"
-  echo " afterwards, please run additional_scripts/copy_soil_forcing.sh when all jobs have finished"
-  echo "   (this script updates the forcing for FLUXNET and CRUNCEPv5, "
+  echo " please run the simulations (prep_run_slm.sh) for FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
+  echo " "
+  echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
+  echo "   (this script updates the soil forcing for FLUXNET and CRUNCEPv7, "
   echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
   echo " "
   experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
+  if [ $forcingDataSet == "cruncep" ]
+   then
+    experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
+  fi
+  forcingMode="static"
   slmModel="plant"
 
   customSiteList="F"
@@ -156,6 +163,8 @@ if [ $flag_generate_soil_forcing == "T" ]
   soil_moisture_scheme="layer"
   sb_model_scheme="simple_0d"
   sb_nloss_scheme="dynamic"
+  n_deposition_scheme="none"
+  p_deposition_scheme="none"
   
   flag_t_resp_acclimation="T"
   flag_t_jmax_acclimation="T"
@@ -166,6 +175,9 @@ if [ $flag_generate_soil_forcing == "T" ]
   flag_optimal_allocation="F"
   flag_tile_veg_dynamics="T" 
   soil_depth=5.7  
+
+  flag_read_dC13="F"
+  flag_read_dC14="F"
 
   simulation_length_number=${spinupLengthSoilForcing}
   # forcing output is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
