@@ -251,14 +251,15 @@ PROGRAM land_model_driver
   DO
     IF (itimestep .GT. ntimestep) EXIT
     
-    !! 4.1 advance timer and check timer for new year (year counter)
+    !! 4.1 advance simulation-timer and check timer for new year (year counter)
     !! 
+    !! for timing data of the forcing input see forcing_options\%forcing_*
+    !!
     !! Note: \n 
     !!  for each timestep the model simulates what happens during the period:
     !!  time_day (end of prevous timestep)  -->  time_day  + timestep_prop_day
     !! 
     time_day  = time_day  + timestep_prop_day         ! time in days
-
     IF(time_day > one_year) THEN
       time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_base_constants
       time_year = time_year + 1

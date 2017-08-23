@@ -377,7 +377,11 @@ CONTAINS
     swpar_fdiffuse(1)   = calc_sw_fdiffuse(swvis_srf_down_r + swnir_srf_down(1), sw_toa_down(1), cos_zenith_angle(1)) ! function: calc_sw_fdiffuse
 
     !> 5.0 pass values read from file (i.e. scalar values) to ics-ice
-    !!
+    !! 
+    !! forcing timing data and actual forcing values
+    forcing_options%forcing_year  = NINT(year)
+    forcing_options%forcing_doy   = NINT(day)
+    forcing_options%forcing_hour  = hour
     t_air(nc)           =         t_air_r
     q_air(nc)           =         q_air_r
     rain(nc)            =         rain_r

@@ -39,8 +39,13 @@ MODULE mo_base_config_class
                                                           !! at period: base_config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
+    LOGICAL           :: flag_stand_harvest
+    INTEGER           :: stand_replacing_year
     ! GRID_CTL
     REAL(wp)          :: lat, lon                           !< latitude longitude currently stored in mo_base_memory:t_slm_grid
+    
+    ! other parameters than namelist parameters
+    LOGICAL           :: l_do_stand_replacing_harvest
   CONTAINS
     PROCEDURE :: Init => Init_base_config
   END Type t_base_config
@@ -76,12 +81,14 @@ CONTAINS
     LOGICAL           :: flag_generate_soil_forcing                     !< all litterfall pools + some soilphysics
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
+    LOGICAL           :: flag_stand_harvest
+    INTEGER           :: stand_replacing_year
     ! GRID_CTL
     REAL(wp)          :: latitude
     REAL(wp)          :: longitude
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_base_config'
 
-    NAMELIST /base_ctl/                       &  
+    NAMELIST /base_ctl/                         &  
         dtime_step_length_sec                 , &
         slm_model_name                        , &
         output_interval_pool                  , &
@@ -92,9 +99,11 @@ CONTAINS
         fluxnet_output_length                 , &
         flag_generate_soil_forcing            , &
         set_parameter_values_from_file        , &
-        flag_climate_forcing_one_year
+        flag_climate_forcing_one_year         , &
+        flag_stand_harvest                    , &
+        stand_replacing_year
 
-    NAMELIST /grid_ctl/                       &  
+    NAMELIST /grid_ctl/                         &  
         latitude                              , &
         longitude
 
@@ -118,6 +127,8 @@ CONTAINS
     flag_generate_soil_forcing              = .FALSE.     ! .TRUE. .FALSE.
     set_parameter_values_from_file          = .FALSE.     ! .TRUE. .FALSE.
     flag_climate_forcing_one_year           = .FALSE.     ! .TRUE. .FALSE.
+    flag_stand_harvest                      = .FALSE.     ! .TRUE. .FALSE.
+    stand_replacing_year                    = 1500        ! the year 1500
     ! GRID_CTL
     latitude                                = 50.91       ! about the MPI-BGC Jena
     longitude                               = 11.56       ! about the MPI-BGC Jena
@@ -150,9 +161,23 @@ CONTAINS
     config%flag_generate_soil_forcing             = flag_generate_soil_forcing
     config%set_parameter_values_from_file         = set_parameter_values_from_file
     config%flag_climate_forcing_one_year          = flag_climate_forcing_one_year
+    config%flag_stand_harvest                     = flag_stand_harvest              ! might be modified below IF (config%stand_replacing_year .LT. 1901)
+    config%stand_replacing_year                   = stand_replacing_year
+    
     ! GRID_CTL
     config%lat                                    = latitude
     config%lon                                    = longitude
+    
+    
+    ! limit the stand replacement functionality to years after 1900
+    ! i.e., if there was stand replacement before 1901 this may not be considered by SLM (see site_list.dat column 21: PlantYear)
+    IF (config%stand_replacing_year .LT. 1901) THEN
+      config%flag_stand_harvest = .FALSE.
+    END IF
+    
+    ! set default for other config% parameter that are changed during runtime not via namelist
+    config%l_do_stand_replacing_harvest           = .FALSE.
+    
   END SUBROUTINE Init_base_config
 
 

@@ -21,7 +21,7 @@ slmModel="land"
 
 
 ##>> sites <<###########################################################################################
-## select set of sites: FLUXNET or CRUNCEPv5
+## select set of sites: FLUXNET or CRUNCEPv7
 # forcing data and all_site_list.dat for the two set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
 # options: fluxnet cruncep face
 forcingDataSet="fluxnet"
@@ -106,6 +106,7 @@ flag_optimal_Nleaf="F"          # optimal N leaf
 flag_optimal_allocation="F"     # optimal allocation
 # vegetation dynamics options
 flag_tile_veg_dynamics="T"      # does also set "start_bareground"
+flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
 soil_depth=5.7                  # meters
@@ -1045,6 +1046,12 @@ if [ $flag_tile_veg_dynamics == T ]
     changeNamelistValue flag_tile_veg_dynamics ".TRUE."
   else
     changeNamelistValue flag_tile_veg_dynamics ".FALSE."
+fi
+if [ $flag_stand_harvest == T ]
+  then
+    changeNamelistValue flag_stand_harvest ".TRUE."
+  else
+    changeNamelistValue flag_stand_harvest ".FALSE."
 fi
 if [ $flag_t_resp_acclimation == T ]
   then

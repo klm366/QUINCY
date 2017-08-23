@@ -60,6 +60,10 @@ MODULE mo_jsb4_forcing
     INTEGER           :: transient_spinup_timesteps_all     !< number of timesteps for spinup with forcing_mode=='transient': calculated from transient_spinup_years
     INTEGER           :: transient_spinup_timesteps_repeat  !< number of timesteps of the forcing period repeatedly simulated for spinup
 
+    ! read from forcing files
+    INTEGER           :: forcing_year
+    INTEGER           :: forcing_doy
+    REAL(wp)          :: forcing_hour       ! e.g. 0, 0.5, 1.0, 1.5, ... 23.5  for 30 min timesteps
   CONTAINS
     PROCEDURE :: Timesteps => Get_timstep_number
   END TYPE t_forcing_options
@@ -175,7 +179,9 @@ CONTAINS
 
     !> 3.0 Init forcing input 
     !! 
-
+    forcing_options%forcing_year    = 0
+    forcing_options%forcing_doy     = 0
+    forcing_options%forcing_hour    = 0.0_wp
 
 
   END SUBROUTINE Init_forcing

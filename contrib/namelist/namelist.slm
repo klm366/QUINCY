@@ -79,6 +79,9 @@
   set_parameter_values_from_file=.FALSE.
   ! use only the 1st year of climate input [FALSE TRUE]
   flag_climate_forcing_one_year=.FALSE.
+  ! site specific stand harvest
+  flag_stand_harvest=.FALSE.
+  stand_replacing_year=1500
 /
 &JSB_FORCING_CTL
   ! mo_jsb4_forcing

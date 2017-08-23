@@ -109,6 +109,7 @@ CONTAINS
     USE mo_jsb_model_class,               ONLY: t_jsb_model
     USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_config_class,             ONLY: base_config
+    USE mo_jsb4_forcing,                  ONLY: forcing_options
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
@@ -131,8 +132,8 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)      :: tile              !< data structure for dynamic vegetation and soil variables
     LOGICAL,INTENT(in)                  :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real time' in days; time_day == 1.0 after one day has passed
-    INTEGER,INTENT(in)                  :: time_year         !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
+    REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
+    INTEGER,INTENT(in)                  :: time_year         !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
     REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
     LOGICAL,INTENT(in)                  :: l_transient_spinup!< spinup phase of the transient forcing_mode
     REAL(wp),INTENT(in)           :: &               !! a2l memory - INTENT(in) - start
@@ -268,6 +269,20 @@ CONTAINS
       q_acoef_ice             = q_acoef_ice(:)        , &
       q_bcoef_ice             = q_bcoef_ice(:)          &
       & )
+    END IF
+
+
+    !> check stand harvest year (if this functionality is enabled: base_config\%flag_stand_harvest)
+    !! 
+    IF (base_config%flag_stand_harvest) THEN
+      IF (base_config%l_do_stand_replacing_harvest) THEN
+        base_config%l_do_stand_replacing_harvest = .FALSE.    ! per default this flag is FALSE
+      END IF
+      IF (forcing_options%forcing_year .EQ. base_config%stand_replacing_year .AND. &
+          forcing_options%forcing_doy  .EQ. 1                                .AND. &
+          forcing_options%forcing_hour .LT. eps4                                    ) THEN
+        base_config%l_do_stand_replacing_harvest = .TRUE.     ! TRUE only for this specific timestep, per default this flag is FALSE
+      END IF
     END IF
 
 
