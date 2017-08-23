@@ -25,23 +25,45 @@ MODULE mo_jsb4_forcing
   !> Namelist parameters
   !! 
   !-----------------------------------------------------------------------------------------------------
-  CHARACTER(15) :: n_deposition_scheme
-  CHARACTER(15) :: p_deposition_scheme
-  LOGICAL       :: flag_read_dC13
-  LOGICAL       :: flag_read_dC14
+  CHARACTER(15)     :: n_deposition_scheme
+  CHARACTER(15)     :: p_deposition_scheme
+  CHARACTER(15)     :: forcing_mode                 !< static / transient
+  LOGICAL           :: flag_read_dC13
+  LOGICAL           :: flag_read_dC14
+  CHARACTER(1)      :: simulation_length_unit       !< d days, w weeks, y years
+  INTEGER           :: simulation_length_number
+  INTEGER           :: transient_spinup_start_year
+  INTEGER           :: transient_spinup_end_year
+  INTEGER           :: transient_spinup_years
+  INTEGER           :: transient_simulation_start_year
+
 
   !-----------------------------------------------------------------------------------------------------
-  !> Structure for handling input data
+  !> Structure for handling forcing/input data
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE forcing_options_type
-    CHARACTER(15) :: n_deposition_scheme
-    CHARACTER(15) :: p_deposition_scheme
-    LOGICAL       :: flag_read_dC13
-    LOGICAL       :: flag_read_dC14
+  TYPE t_forcing_options
+    ! namelist
+    CHARACTER(15)     :: n_deposition_scheme
+    CHARACTER(15)     :: p_deposition_scheme
+    CHARACTER(15)     :: forcing_mode
+    LOGICAL           :: flag_read_dC13
+    LOGICAL           :: flag_read_dC14
+    CHARACTER(1)      :: simulation_length_unit
+    INTEGER           :: simulation_length_number
+    INTEGER           :: transient_spinup_start_year
+    INTEGER           :: transient_spinup_end_year
+    INTEGER           :: transient_spinup_years
+    INTEGER           :: transient_simulation_start_year
 
-  END TYPE forcing_options_type
-  TYPE(forcing_options_type), SAVE :: forcing_options
+    ! calculated
+    INTEGER           :: transient_spinup_timesteps_all     !< number of timesteps for spinup with forcing_mode=='transient': calculated from transient_spinup_years
+    INTEGER           :: transient_spinup_timesteps_repeat  !< number of timesteps of the forcing period repeatedly simulated for spinup
+
+  CONTAINS
+    PROCEDURE :: Timesteps => Get_timstep_number
+  END TYPE t_forcing_options
+  TYPE(t_forcing_options), SAVE :: forcing_options
 
 
 
@@ -69,11 +91,19 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model
     CHARACTER(len=*), PARAMETER         :: routine = TRIM(modname)//':Init_forcing'
 
-    NAMELIST /jsb_forcing_ctl/                  & 
-                      n_deposition_scheme     , &
-                      p_deposition_scheme     , &
-                      flag_read_dC13          , &
-                      flag_read_dC14
+    NAMELIST /jsb_forcing_ctl/                        & 
+                      n_deposition_scheme           , &
+                      p_deposition_scheme           , &
+                      forcing_mode                  , &
+                      flag_read_dC13                , &
+                      flag_read_dC14                , &
+                      simulation_length_unit        , &
+                      simulation_length_number      , &
+                      transient_spinup_start_year   , &
+                      transient_spinup_end_year     , &
+                      transient_spinup_years        , &
+                      transient_simulation_start_year         
+
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -87,10 +117,17 @@ CONTAINS
     !! 
 
     ! Set defaults
-    n_deposition_scheme         = "none"
-    p_deposition_scheme         = "none"
-    flag_read_dC13              = .FALSE.
-    flag_read_dC14              = .FALSE.
+    n_deposition_scheme                 = "none"
+    p_deposition_scheme                 = "none"
+    forcing_mode                        = "static"    ! static / transient
+    flag_read_dC13                      = .FALSE.
+    flag_read_dC14                      = .FALSE.
+    simulation_length_unit              = 'y'         ! y (years), w (weeks), d (days)
+    simulation_length_number            = 30 
+    transient_spinup_start_year         = 1901
+    transient_spinup_end_year           = 1930
+    transient_spinup_years              = 500
+    transient_simulation_start_year     = 1901
 
     ! read the namelist
     ! 
@@ -118,10 +155,17 @@ CONTAINS
 
 
     ! pass values as read from file
-    forcing_options%n_deposition_scheme     = n_deposition_scheme
-    forcing_options%p_deposition_scheme     = p_deposition_scheme
-    forcing_options%flag_read_dC13          = flag_read_dC13
-    forcing_options%flag_read_dC14          = flag_read_dC14
+    forcing_options%n_deposition_scheme               = n_deposition_scheme
+    forcing_options%p_deposition_scheme               = p_deposition_scheme
+    forcing_options%forcing_mode                      = forcing_mode
+    forcing_options%flag_read_dC13                    = flag_read_dC13
+    forcing_options%flag_read_dC14                    = flag_read_dC14
+    forcing_options%simulation_length_unit            = simulation_length_unit
+    forcing_options%simulation_length_number          = simulation_length_number
+    forcing_options%transient_spinup_start_year       = transient_spinup_start_year
+    forcing_options%transient_spinup_end_year         = transient_spinup_end_year
+    forcing_options%transient_spinup_years            = transient_spinup_years
+    forcing_options%transient_simulation_start_year   = transient_simulation_start_year
 
     !> 2.0 Modify .. Configure ..
     !! 
@@ -135,5 +179,52 @@ CONTAINS
 
 
   END SUBROUTINE Init_forcing
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates the number of timesteps the model may run based on config-options set in the namelist
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Get_timstep_number(this) RESULT(timesteps)
+
+    USE mo_base_constants,                  ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
+    USE mo_base_config_class,               ONLY: base_config
+
+    IMPLICIT NONE 
+    ! 0.1 InOut
+    CLASS(t_forcing_options), INTENT(inout)  :: this 
+    ! 0.2 Local
+    INTEGER                               :: timesteps   
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_timstep_number' 
+
+    !< 1.0
+    !! timesteps of the simulation length
+    SELECT CASE(this%simulation_length_unit)
+      CASE('y') ! years
+        timesteps = NINT(this%simulation_length_number * one_year   * one_day / base_config%dtime)
+      CASE('w') ! weeks
+        timesteps = NINT(this%simulation_length_number * 7.0_wp     * one_day / base_config%dtime)
+      CASE('d') ! days
+        timesteps = NINT(this%simulation_length_number              * one_day / base_config%dtime)
+      CASE DEFAULT
+        timesteps = 1
+    END SELECT 
+
+    !< 2.0
+    !! timing of transient spinup simulations, 
+    !! namelist values are provided in unit: years
+    this%transient_spinup_timesteps_all     = 1
+    this%transient_spinup_timesteps_repeat  = 1
+    IF ( TRIM(this%forcing_mode) == "transient" ) THEN
+      this%transient_spinup_timesteps_all     = NINT(this%transient_spinup_years * one_year * one_day / base_config%dtime)
+      this%transient_spinup_timesteps_repeat  = NINT( (this%transient_spinup_end_year - this%transient_spinup_start_year + 1 ) * &
+                                                     one_year * one_day / base_config%dtime)
+      
+    END IF
+
+
+  END FUNCTION Get_timstep_number
+
   
 END MODULE mo_jsb4_forcing

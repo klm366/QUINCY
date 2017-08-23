@@ -33,7 +33,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE land_model_interface(tile, &                ! one tile
                                   l_forcing, &           ! forcing on/off
-                                  time_day, time_year, timestep_prop_day, &
+                                  time_day, time_year, &
+                                  timestep_prop_day  , &
+                                  l_transient_spinup , &
                                   !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -132,6 +134,7 @@ CONTAINS
     REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real time' in days; time_day == 1.0 after one day has passed
     INTEGER,INTENT(in)                  :: time_year         !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
     REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
+    LOGICAL,INTENT(in)                  :: l_transient_spinup!< spinup phase of the transient forcing_mode
     REAL(wp),INTENT(in)           :: &               !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
@@ -306,18 +309,18 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
+      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !!
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
+      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
 
       !! output litterfall and soilphysics: usually this would be output at each timstep
       !!
       !!
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year)
+        CALL write_soil_forcing(tile, model%options, time_day, time_year, l_transient_spinup)
       END IF
 
     CASE('plant')
@@ -346,18 +349,18 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
+      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !!
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
+      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
 
       !! output litterfall and soilphysics: usually this would be output at each timstep
       !!
       !!
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year)
+        CALL write_soil_forcing(tile, model%options, time_day, time_year, l_transient_spinup)
       END IF
 
     CASE('soil')
@@ -381,12 +384,12 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
+      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !!
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
+      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
@@ -409,7 +412,7 @@ CONTAINS
       !! output flux: write output in certain intervals, see mo_shared_output
       !! ! only some flux files are written, see CASE statements in shared_output
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
+      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
 
     CASE('test_canopy')
     !! test_canopy --------------------------------------------------------------------------------

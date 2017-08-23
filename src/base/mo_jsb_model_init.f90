@@ -12,46 +12,46 @@ MODULE mo_jsb_model_init
 
 #include "dsl_jsbach.inc"
 
-    USE mo_kind
-    USE mo_exception,                       ONLY: finish, message, message_text
-    ! driver
-    USE mo_jsb4_forcing,                    ONLY: Init_forcing
-    ! base
-    USE mo_base_constants                     ! e.g. dtime, init_base_constants
-    USE mo_jsb_class,                       ONLY: Get_model, jsbach
-    USE mo_base_memory,                     ONLY: t_slm_tile, grid
-    USE mo_jsb_model_class,                 ONLY: t_jsb_model, new_model
-    USE mo_base_config_class,               ONLY: base_config
-    USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, Read_lctlib
-    USE mo_jsb_memory_class,                ONLY: t_jsb_memory
-    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
-                                                  PHENO_, SB_, Get_process_name
-    USE mo_jsb_process_factory,             ONLY: Create_process, Create_process_memory, max_no_of_processes
-    ! shared
-    USE mo_shared_constants,                ONLY: init_shared_constants
-    USE mo_shared_set_parameters,           ONLY: parameters_from_file    !< TYPE t_parameters_from_file
-    ! atmland
-    USE mo_atmland_constants,               ONLY: init_atmland_constants
-    ! radiation
-    USE mo_rad_constants,                   ONLY: init_rad_constants
-    USE mo_rad_init,                        ONLY: rad_init
-    ! assimilation (photosynthesis)
-    USE mo_assimi_constants,                ONLY: init_assimi_constants
-    USE mo_assimi_init,                     ONLY: assimi_init
-    ! phenology
-    USE mo_pheno_constants,                 ONLY: init_pheno_constants
-    USE mo_pheno_init,                      ONLY: pheno_init
-    ! vegetation
-    USE mo_veg_constants,                   ONLY: init_veg_constants
-    USE mo_veg_config_class,                ONLY: t_veg_config
-    USE mo_veg_init,                        ONLY: veg_init
-    ! soil
-    USE mo_soil_constants,                  ONLY: init_soil_constants
-    USE mo_soil_config_class,               ONLY: t_soil_config
-    USE mo_soil_init,                       ONLY: soil_init
-    ! soil_biogeochemistry
-    USE mo_sb_constants,                    ONLY: init_sb_constants
-    USE mo_sb_init,                         ONLY: sb_init
+  USE mo_kind
+  USE mo_exception,                       ONLY: finish, message, message_text
+  ! driver
+  USE mo_jsb4_forcing,                    ONLY: Init_forcing, forcing_options
+  ! base
+  USE mo_base_constants                     ! e.g. dtime, init_base_constants
+  USE mo_jsb_class,                       ONLY: Get_model, jsbach
+  USE mo_base_memory,                     ONLY: t_slm_tile, grid
+  USE mo_jsb_model_class,                 ONLY: t_jsb_model, new_model
+  USE mo_base_config_class,               ONLY: base_config
+  USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, Read_lctlib
+  USE mo_jsb_memory_class,                ONLY: t_jsb_memory
+  USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
+                                                PHENO_, SB_, Get_process_name
+  USE mo_jsb_process_factory,             ONLY: Create_process, Create_process_memory, max_no_of_processes
+  ! shared
+  USE mo_shared_constants,                ONLY: init_shared_constants
+  USE mo_shared_set_parameters,           ONLY: parameters_from_file    !< TYPE t_parameters_from_file
+  ! atmland
+  USE mo_atmland_constants,               ONLY: init_atmland_constants
+  ! radiation
+  USE mo_rad_constants,                   ONLY: init_rad_constants
+  USE mo_rad_init,                        ONLY: rad_init
+  ! assimilation (photosynthesis)
+  USE mo_assimi_constants,                ONLY: init_assimi_constants
+  USE mo_assimi_init,                     ONLY: assimi_init
+  ! phenology
+  USE mo_pheno_constants,                 ONLY: init_pheno_constants
+  USE mo_pheno_init,                      ONLY: pheno_init
+  ! vegetation
+  USE mo_veg_constants,                   ONLY: init_veg_constants
+  USE mo_veg_config_class,                ONLY: t_veg_config
+  USE mo_veg_init,                        ONLY: veg_init
+  ! soil
+  USE mo_soil_constants,                  ONLY: init_soil_constants
+  USE mo_soil_config_class,               ONLY: t_soil_config
+  USE mo_soil_init,                       ONLY: soil_init
+  ! soil_biogeochemistry
+  USE mo_sb_constants,                    ONLY: init_sb_constants
+  USE mo_sb_init,                         ONLY: sb_init
 
   IMPLICIT NONE
   PRIVATE
@@ -60,18 +60,17 @@ MODULE mo_jsb_model_init
   PUBLIC :: fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
 
 
-    ! variables for the driver
-    REAL(wp) :: time_day                     !< displays the 'real time' in days; time_day == 1.0 after one day has passed
-    INTEGER  :: time_year                    !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
-    INTEGER  :: ntimestep                    !< number of timesteps the model runs
-    INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
-    REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dtime/one_day)
-
-    ! special case: fluxnet output
-    INTEGER  :: fluxnet_output_length        !< number of timesteps data may be written out to file, only for fluxnet sites
-    INTEGER  :: fluxnet_output_start         !< write output at each time step starting with this timestep, only for fluxnet sites
-    INTEGER  :: fluxnet_output_stop          !< write output at each time step stopping with this timestep, only for fluxnet sites
-    INTEGER  :: fluxnet_output_status        !< a simple status var to inform other processes about it
+  ! variables used in the land model driver
+  REAL(wp) :: time_day                     !< displays the 'real time' in days; time_day == 1.0 after one day has passed
+  INTEGER  :: time_year                    !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
+  INTEGER  :: ntimestep                    !< number of timesteps the model runs
+  INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
+  REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dtime/one_day)
+  ! special case: fluxnet output
+  INTEGER  :: fluxnet_output_length        !< number of timesteps data may be written out to file, only for fluxnet sites
+  INTEGER  :: fluxnet_output_start         !< write output at each time step starting with this timestep, only for fluxnet sites
+  INTEGER  :: fluxnet_output_stop          !< write output at each time step stopping with this timestep, only for fluxnet sites
+  INTEGER  :: fluxnet_output_status        !< a simple status var to inform other processes about it
                                              !! 0: not activiated at all [default], 1: active, 2: currently writing, 3: finished
 
   INTERFACE init_model
@@ -270,9 +269,9 @@ CONTAINS
     !! 
     time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
     time_year         = 1                           ! the 1st year of a simulation == 1 (not zero)
-    dtime             = base_config%dtime              ! time step length in seconds, default: 1800.0 == 30 minutes, mo_base_constants
-    ntimestep         = base_config%Timesteps()     ! number of time steps
-    timestep_prop_day = dtime/one_day                  ! proportion of one day that is simulated with one timestep
+    dtime             = base_config%dtime           ! time step length in seconds, default: 1800.0 == 30 minutes, mo_base_constants
+    ntimestep         = forcing_options%Timesteps() ! number of time steps (considers the simulation_mode static & transient)
+    timestep_prop_day = dtime/one_day               ! proportion of one day that is simulated with one timestep
 
 
     !! 10 Initialise: Fluxnet specific simulation output

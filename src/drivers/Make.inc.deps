@@ -5,6 +5,7 @@ land_model_driver.o: \
   mo_base_memory.o \
   mo_base_config_class.o \
   mo_jsb_model_init.o \
+  mo_jsb4_forcing.o \
   mo_atmland_forcing.o \
   mo_shared_output.o
 
@@ -59,6 +60,8 @@ mo_atmland_forcing.o: \
 mo_jsb4_forcing.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_base_constants.o \
+  mo_base_config_class.o \
   mo_namelist.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o

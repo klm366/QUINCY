@@ -62,10 +62,6 @@
 &BASE_CTL
   ! basic model config
   dtime_step_length_sec=1800.0
-  ! units: y years, w weeks, d days
-  simulation_length_unit="y"
-  ! integer values
-  simulation_length_number=30
   ! SLM model: land plant soil canopy test_canopy
   slm_model_name="land"
   ! model output
@@ -85,9 +81,22 @@
   flag_climate_forcing_one_year=.FALSE.
 /
 &JSB_FORCING_CTL
-  ! flags for mo_jsb4_forcing
+  ! mo_jsb4_forcing
+  ! options
   n_deposition_scheme="none"
   p_deposition_scheme="none"
+  forcing_mode="static"
+  ! flags
   flag_read_dC13=.FALSE.
   flag_read_dC14=.FALSE.
+  ! simulation length 
+  ! units: y years, w weeks, d days
+  simulation_length_unit="y"
+  ! integer values
+  simulation_length_number=30
+  ! options for transient forcing mode (as compared to static)
+  transient_spinup_start_year=1901
+  transient_spinup_end_year=1930
+  transient_spinup_years=500
+  transient_simulation_start_year=1901
 /

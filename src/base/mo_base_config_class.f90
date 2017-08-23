@@ -28,8 +28,6 @@ MODULE mo_base_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_base_config
     ! BASE_CTL
     REAL(wp)          :: dtime                             !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
-    CHARACTER(1)      :: simulation_length_unit
-    INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
     CHARACTER(8)      :: output_interval_pool, &
                          output_interval_flux
@@ -45,7 +43,6 @@ MODULE mo_base_config_class
     REAL(wp)          :: lat, lon                           !< latitude longitude currently stored in mo_base_memory:t_slm_grid
   CONTAINS
     PROCEDURE :: Init => Init_base_config
-    PROCEDURE :: Timesteps => Get_timstep_number
   END Type t_base_config
 
   TYPE(t_base_config), SAVE :: base_config
@@ -69,8 +66,6 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     ! BASE_CTL
     REAL(wp)          :: dtime_step_length_sec   ! model-variable: dtime 
-    CHARACTER(1)      :: simulation_length_unit
-    INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
     CHARACTER(8)      :: output_interval_pool          , &
                          output_interval_flux
@@ -88,8 +83,6 @@ CONTAINS
 
     NAMELIST /base_ctl/                       &  
         dtime_step_length_sec                 , &
-        simulation_length_unit                , &
-        simulation_length_number              , &
         slm_model_name                        , &
         output_interval_pool                  , &
         output_interval_flux                  , &
@@ -115,11 +108,9 @@ CONTAINS
     ! 
     ! BASE_CTL
     dtime_step_length_sec                   = 1800.0_wp
-    simulation_length_unit                  = 'y'         ! y (years), w (weeks), d (days)
-    simulation_length_number                = 20 
     slm_model_name                          = 'land'
-    output_interval_pool                    = 'monthly' ! timestep daily weekly monthly yearly
-    output_interval_flux                    = 'monthly' ! timestep daily weekly monthly yearly
+    output_interval_pool                    = 'weekly' ! timestep daily weekly monthly yearly
+    output_interval_flux                    = 'weekly' ! timestep daily weekly monthly yearly
     output_start_first_day_year             = 1
     output_end_last_day_year                = 10
     fluxnet_output                          = .FALSE.     ! .TRUE. .FALSE.
@@ -149,8 +140,6 @@ CONTAINS
     ! 
     ! BASE_CTL
     config%dtime                                  = dtime_step_length_sec
-    config%simulation_length_unit                 = simulation_length_unit
-    config%simulation_length_number               = simulation_length_number
     config%slm_model_name                         = slm_model_name
     config%output_interval_pool                   = output_interval_pool
     config%output_interval_flux                   = output_interval_flux
@@ -165,35 +154,6 @@ CONTAINS
     config%lat                                    = latitude
     config%lon                                    = longitude
   END SUBROUTINE Init_base_config
-
-  !-----------------------------------------------------------------------------------------------------
-  !> calculates the number of timesteps the model may run based on config-options set in the namelist
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Get_timstep_number(this) RESULT(timesteps)
-
-    USE mo_base_constants, ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
-
-    IMPLICIT NONE 
-    ! 0.1 InOut
-    CLASS(t_base_config), INTENT(in) :: this        !< config type for base
-    ! 0.2 Local
-    INTEGER                          :: timesteps   
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_timstep_number' 
-
-
-    SELECT CASE(this%simulation_length_unit)
-      CASE('y') ! years
-        timesteps = NINT(this%simulation_length_number * one_year   * one_day / this%dtime)
-      CASE('w') ! weeks
-        timesteps = NINT(this%simulation_length_number * 7.0_wp     * one_day / this%dtime)
-      CASE('d') ! days
-        timesteps = NINT(this%simulation_length_number              * one_day / this%dtime)
-      CASE DEFAULT
-        timesteps = 1
-    END SELECT 
-  END FUNCTION Get_timstep_number
 
 
 !#endif

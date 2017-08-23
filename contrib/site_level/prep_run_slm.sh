@@ -32,7 +32,7 @@ forcingMode="static"
 #  fluxnet:  (currently no options)
 #  cruncep: all cue spp
 #  face:     (currently no options)
-siteSelection="all"
+siteSelection="cue"
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
 customSiteList="F"
@@ -111,11 +111,17 @@ flag_tile_veg_dynamics="T"      # does also set "start_bareground"
 soil_depth=5.7                  # meters
 
 # simulation length & output
-simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 116 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
 output_end_last_day_year=30     # equal with or larger than option: output_start_first_day_year
+
+# options for the forcingMode transient (only evaluated if forcingMode == transient)
+transient_spinup_start_year=1901      # default 1901; start year of spinup period
+transient_spinup_end_year=1930        # default 1930; last  year of spinup period
+transient_spinup_years=500            # default 500; overall years of spinup repeating "spinup period" multiple times
+transient_simulation_start_year=1901  # default 1901; simulation start with forcing at this year and ends after simulation_length_number
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -204,7 +210,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":e:f:c:m:y:o:b:h" opt; do
+while getopts ":e:f:c:m:r:y:o:b:h" opt; do
   case "$opt" in
   "e")
     echo "   experimentalID=""$OPTARG"
@@ -240,6 +246,18 @@ while getopts ":e:f:c:m:y:o:b:h" opt; do
     simulation_length_number="$OPTARG"
     output_start_first_day_year=1
     output_end_last_day_year="$OPTARG"
+    ;;
+  "r")
+    case "$OPTARG" in
+    "st")
+      echo "   forcingMode=static"
+      forcingMode="static"
+      ;;
+    "tr")
+      echo "   forcingMode=transient"
+      forcingMode="transient"
+      ;;
+    esac
     ;;
   "o")
     case "$OPTARG" in
@@ -321,6 +339,10 @@ while getopts ":e:f:c:m:y:o:b:h" opt; do
     echo "    Arguments to -y:"
     echo "       any integer value"
     echo "       note: this sets simulation output accordingly (1-x)"
+    echo " -r set forcingMode (namelist: forcing_mode)"
+    echo "    Arguments to -r:"
+    echo "       st: static"
+    echo "       tr: transient"
     echo " -o set the optimality scheme"
     echo "    Arguments to -o:"
     echo "       no: no optimality"
@@ -646,10 +668,6 @@ else # the default case: $customSiteList == "F"
         siteListFileName="spp_sites_1901-2015_list.dat"
       fi
       ;;
-    *)
-      echo "EXIT!  The >forcingMode< you selected is not available for the forcingDataSet: ""$forcingDataSet"
-      exit
-      ;;
     esac
     ;;
   "face")
@@ -662,6 +680,55 @@ else # the default case: $customSiteList == "F"
     ;;
   esac
   siteList="$siteDataFold""$siteListFileName"
+fi
+
+
+## evaluate options for the forcingMode == transient
+if [ $forcingMode == "transient" ]
+ then
+   echo " "
+   echo " You set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
+   echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
+
+   if [ $transient_spinup_start_year != "1901" ]
+    then
+     echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not possible. Sorry."
+     echo " Only the default value (1901) is working. Setting transient_spinup_start_year=1901."
+     transient_spinup_start_year=1901
+   fi
+   if [ $transient_simulation_start_year != "1901" ]
+    then
+     echo " You set the transient_simulation_start_year to ""$transient_simulation_start_year"", which is currently not possible. Sorry."
+     echo " Only the default value (1901) is working. Setting transient_simulation_start_year=1901."
+     transient_simulation_start_year=1901
+   fi
+   # test calc length of forcing period used for spinup
+   transient_test_spinup_forcing_period=$((transient_spinup_end_year - transient_spinup_start_year + 1))
+   if [ $transient_test_spinup_forcing_period -lt 6 ] || [ $transient_test_spinup_forcing_period -gt 49 ]
+    then
+     echo " You set the length of forcing period repeatedly used for spinup to ""$transient_test_spinup_forcing_period""."
+     echo " This is not recommended. Please use a period length (transient_spinup_end_year - transient_spinup_start_year) between 5 and 50 years."
+     transient_spinup_end_year=$((transient_spinup_start_year + 29))
+     echo " The new (automagically corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
+   fi
+   if [ $transient_spinup_years -lt 10 ]
+    then
+     echo " You set the spinup length to ""$transient_spinup_years"", which quite low and not very useful."
+     echo " Assuming a simple typo, the spinup length is set to 100 years (the default would be 500 years though)."
+     transient_spinup_years=100
+   fi
+   if [ $forcingDataSet == "fluxnet" ]
+    then
+     echo " Please note: the transient forcingMode works best with CRUNCEPv7 and FACE sites, but might produce questionable results with FLUXNET2 sites."
+     echo "  You selected FLUXNET2 sites. This is just a warning, none of your options will be changed."
+   fi
+ else  
+ # $forcingMode == "static"
+ # set transient* parameter to default values
+  transient_spinup_start_year=1901
+  transient_spinup_end_year=1930
+  transient_spinup_years=500
+  transient_simulation_start_year=1901
 fi
 
 
@@ -933,6 +1000,7 @@ return 0                                                         # get return va
 
 # change values in the namelist copied to the simulation folder at the scratch drive
 changeNamelistValue slm_model_name "$slmModel"
+changeNamelistValue forcing_mode "$forcingMode"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
 changeNamelistValue myc_scheme "$myc_scheme"
 changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
@@ -1041,7 +1109,11 @@ changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 changeNamelistValue soil_depth "$soil_depth"
-
+changeNamelistValue transient_spinup_start_year "$transient_spinup_start_year"
+changeNamelistValue transient_spinup_end_year "$transient_spinup_end_year"
+changeNamelistValue transient_spinup_years "$transient_spinup_years"
+changeNamelistValue transient_simulation_start_year "$transient_simulation_start_year"
+  
 
 ## start job with simulations by starting the job(array) -> run_slm.sh ##
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used

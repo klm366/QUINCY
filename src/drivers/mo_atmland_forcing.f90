@@ -46,6 +46,7 @@ CONTAINS
                                   nc                 , &  ! in
                                   nsoil_sb           , &  ! in
                                   time               , &  ! in
+                                  l_transient_spinup_rewind_forcing, & ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
                                   rain               , &  ! out
@@ -103,9 +104,10 @@ CONTAINS
 
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile)  , INTENT(inout) :: tile     !< one tile
-    INTEGER           , INTENT(in)    :: iblk, ics, ice, nc, nsoil_sb
-    REAL(wp)          , INTENT(in)    :: time     !< current time (not timestep !)
+    TYPE(t_slm_tile)  , INTENT(inout) :: tile                           !< one tile
+    INTEGER           , INTENT(in)    :: iblk, ics, ice, nc, nsoil_sb   !< info on block, chunk and soil layer number
+    REAL(wp)          , INTENT(in)    :: time                           !< current time (not timestep !)
+    LOGICAL           , INTENT(in)    :: l_transient_spinup_rewind_forcing
     REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
@@ -323,6 +325,12 @@ CONTAINS
       END IF
     END IF
 
+    ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
+    ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
+    IF(l_transient_spinup_rewind_forcing) THEN
+      stat = -1
+    END IF
+
     ! if end of file (IS_IOSTAT_END(stat) == Test for end-of-file value)
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
@@ -461,8 +469,12 @@ CONTAINS
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_dC13_r, seed_bed_DC14_r, seed_bed_dN15_r
 
+    ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
+    ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
+    IF(l_transient_spinup_rewind_forcing) THEN
+      stat = -1
+    END IF
 
-    ! if this flag is set TRUE, check whether the current time step is a new year, if so 
     ! set stat = -1 to indicate "end of file" which invokes the re-reading of the climate forcing input file at line 1
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
@@ -496,6 +508,12 @@ CONTAINS
                      veg_pool_fine_root_carbon_r, &
                      nhx_deposition_r, noy_deposition_r, &
                      nhx_dn15_deposition_r, noy_dn15_deposition_r
+
+    ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
+    ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
+    IF(l_transient_spinup_rewind_forcing) THEN
+      stat = -1
+    END IF
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy

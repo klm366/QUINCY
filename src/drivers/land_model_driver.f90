@@ -23,6 +23,8 @@ PROGRAM land_model_driver
   USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
                                         fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
+  ! forcing
+  USE mo_jsb4_forcing,            ONLY: forcing_options
   ! atmland
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
                                         
@@ -41,9 +43,13 @@ PROGRAM land_model_driver
   !! 
   !! Local variables
   !! 
-  LOGICAL                       :: l_forcing  ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
-  INTEGER                       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
-  INTEGER                       :: nsoil_sb             !< necessary for open_pool_output_files() & init_output_writing_pool()
+  LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
+  LOGICAL       :: l_transient_forcing_mode, &        ! set to TRUE if forcing_options%forcing_mode == transient
+                   l_transient_spinup, &              ! TRUE for forcing_mode=='transient' and model spinup, otherwise FALSE
+                   l_transient_spinup_rewind_forcing  ! TRUE at the timestep after one transient spinup period has finished (e.g. after 1930 for 1901-1930)
+  INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
+  INTEGER       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
+  INTEGER       :: nsoil_sb             !< necessary for open_pool_output_files() & init_output_writing_pool()
                                                         !!  number of soil layers used in SB_ - equal to nsoil_water
   REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
                                   t_air              , &
@@ -213,18 +219,41 @@ PROGRAM land_model_driver
       END IF
     CASE('test_canopy')
       ntimestep = 1
-   END SELECT
-
+  END SELECT
 
   !! 3.0 -----------------------------------------------------------------------------------------------
   !! 
+  !! settings for the transient forcing_mode
+  !! 
+  ! init with default values
+  l_transient_forcing_mode          = .FALSE.
+  l_transient_spinup                = .FALSE.
+  itimestep                         = 1         ! default start of time loop
+  transient_spinup_itimestep_period = 0  
+  ! set simulation values
+  IF ( TRIM(forcing_options%forcing_mode) == "transient" ) THEN
+    ! set logicals to TRUE
+    l_transient_forcing_mode  = .TRUE.
+    l_transient_spinup        = .TRUE.  ! transient forcing_mode always starts with a spinup
+    ! number of spinup timesteps
+    itimestep = itimestep - forcing_options%transient_spinup_timesteps_all
+    ! init spinup period counter
+    transient_spinup_itimestep_period = 0
+    
+  END IF
+
+
+
+  !! 4.0 -----------------------------------------------------------------------------------------------
+  !! 
   !! Time loop calling the land model interface
   !! 
-  DO itimestep = 1, ntimestep
-
-    !! 3.1 advance timer and check timer for new year (year counter)
+  DO
+    IF (itimestep .GT. ntimestep) EXIT
+    
+    !! 4.1 advance timer and check timer for new year (year counter)
     !! 
-    !! Note \n 
+    !! Note: \n 
     !!  for each timestep the model simulates what happens during the period:
     !!  time_day (end of prevous timestep)  -->  time_day  + timestep_prop_day
     !! 
@@ -235,7 +264,32 @@ PROGRAM land_model_driver
       time_year = time_year + 1
     END IF
 
-    !! 3.2 set orbital parameters and update time-variant forcing
+
+    !! 4.2 control variables for transient forcing_mode
+    !! 
+    !! 
+    IF (l_transient_forcing_mode) THEN
+      l_transient_spinup_rewind_forcing = .FALSE.
+      ! control spinup
+      IF (l_transient_spinup) THEN
+        transient_spinup_itimestep_period = transient_spinup_itimestep_period + 1
+        ! if one spinup period has finished
+        IF (transient_spinup_itimestep_period .GT. forcing_options%transient_spinup_timesteps_repeat) THEN
+          transient_spinup_itimestep_period = 1
+          l_transient_spinup_rewind_forcing = .TRUE.
+        END IF
+        ! if complete spinup has ended and the simulation should start
+        IF (itimestep .EQ. 1) THEN
+          l_transient_spinup_rewind_forcing = .TRUE.
+          l_transient_spinup                = .FALSE.   ! do not enter the "control spinup" IF statement anymore
+          time_day                          = 0.0_wp    ! equals 1.0 after one day has passed (i.e. start with zero)
+          time_year                         = 1         ! the 1st year of a simulation == 1 (not zero)
+        END IF
+      END IF
+    END IF
+    
+    
+    !! 4.3 set orbital parameters and update time-variant forcing
     !! 
     !! l_forcing is set in init_slm() depending on the specific SLM model
     !! 
@@ -247,6 +301,7 @@ PROGRAM land_model_driver
                             nc      , &
                             nsoil_sb, &
                             time_day, & 
+                            l_transient_spinup_rewind_forcing, &
                                   !! forcing (read from file and passed to a2l memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
                                   t_air                   = t_air(:)              , &
@@ -293,11 +348,12 @@ PROGRAM land_model_driver
     END IF
 
     
-    !! 3.3 land model interface
+    !! 4.4 land model interface
     !! 
     CALL land_model_interface(tile, &
                               l_forcing, &
                               time_day, time_year, timestep_prop_day, &
+                              l_transient_spinup, &
                                   !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
@@ -365,7 +421,7 @@ PROGRAM land_model_driver
                                   !! l2a memory - end
                                 &  ) ! land_model_interface()
 
-    !! 3.4 special case: fluxnet output
+    !! 4.5 special case: fluxnet output
     !! 
     IF(base_config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
@@ -383,10 +439,11 @@ PROGRAM land_model_driver
       END IF
     END IF
 
+    itimestep = itimestep + 1   ! increment DO loop counter
   END DO  ! end time loop 
 
 
-  !! 4.0 -----------------------------------------------------------------------------------------------
+  !! 5.0 -----------------------------------------------------------------------------------------------
   !! 
   !! Close output and forcing files
   !! 
