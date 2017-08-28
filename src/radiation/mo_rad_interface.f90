@@ -686,13 +686,13 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
-    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1() .AND. .NOT. jsbach_runs_standalone()) RETURN
-
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
     ! Set model
     model => Get_model(tile%owner_model_id)
+
+    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
+    IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1(model%id) .AND. .NOT. jsbach_runs_standalone()) RETURN
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(RAD_)
@@ -965,12 +965,12 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1() .AND. .NOT. jsbach_runs_standalone()) RETURN
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
+    IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1(model%id) .AND. .NOT. jsbach_runs_standalone()) RETURN
 
     dsl4jsb_Get_memory(RAD_)
 
