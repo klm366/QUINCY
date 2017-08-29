@@ -930,7 +930,11 @@ CONTAINS
                                       labile_nitrogen, 0.0_wp) / soil_depth_sl(:,1)
        plant_uptake_po4_sl(:,1) = MAX(labile_carbon / lctlib%cn_leaf / lctlib%np_leaf - &
                                       labile_phosphorus, 0.0_wp)  / soil_depth_sl(:,1)
-    ENDIF
+       plant_uptake_nh4_n15_sl(:,1) = plant_uptake_nh4_sl(:,1) / & 
+                                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+       plant_uptake_no3_n15_sl(:,1) = plant_uptake_no3_sl(:,1) / & 
+                                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+   ENDIF
 
     !> 1.2 integrate root uptake over soil layers
     !!

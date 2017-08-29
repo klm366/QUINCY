@@ -1605,7 +1605,7 @@ CONTAINS
                lun = 100 + 30
                SELECT CASE(TRIM(base_config%slm_model_name))
                  CASE('land','plant')
-                   write(lun,'(10F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                   write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                          n_transform_resp_acc,n_fixation_resp_acc         , & 
                                          npp_acc, res_use_c_acc, exudationC_acc
                    lun=lun+1
@@ -1617,16 +1617,16 @@ CONTAINS
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
-                   write(lun,'(10F12.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
+                   write(lun,'(10F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
                                           res_use_n_acc, n_fixation_acc, & 
                                           calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
                                           calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
                                           calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
 
                    lun=lun+1
-                   write(lun,'(4F12.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
+                   write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                    lun=lun+1
-                   write(lun,'(12F16.8)') time_d, precip_acc, evaporation_acc, interception_acc, & 
+                   write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, & 
                                           transpiration_acc, runoff_acc, drainage_acc, gc_acc, ga_acc
                    lun=lun+1
                    IF(ppfd_acc>eps8) THEN
@@ -1634,18 +1634,18 @@ CONTAINS
                    ELSE
                       hlp1=0.0_wp
                    ENDIF
-                   write(lun,'(12F16.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
+                   write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
                    lun=lun+1
                    dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
-                   write(lun,'(20F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
+                   write(lun,'(20F18.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
 
                    lun=lun+1
-                   write(lun,'(20F16.8)') time_d,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
+                   write(lun,'(20F18.8)') time_d,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
                                           leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
                    lun=lun+1
-                   write(lun,'(20F16.8)') time_d, & 
+                   write(lun,'(20F18.8)') time_d, & 
                          calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
                          calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
                          calc_delta_N15(emission_noy_acc,emission_noy_n15_acc), &
@@ -1663,7 +1663,7 @@ CONTAINS
 
                  CASE('canopy') ! subset of CASE('land','plant')
                    ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
-                   write(lun,'(8F12.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                   write(lun,'(8F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                          n_transform_resp_acc,n_fixation_resp_acc         , & 
                                          npp_acc, res_use_c_acc
                    lun=lun+1
@@ -1675,7 +1675,7 @@ CONTAINS
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
-                   write(lun,'(12F16.8)') time_d, precip_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
+                   write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
                                           drainage_acc, gc_acc, ga_acc
                    lun=lun+1
                    IF(ppfd_acc>eps8) THEN
@@ -1683,7 +1683,7 @@ CONTAINS
                    ELSE
                       hlp1=0.0_wp
                    ENDIF
-                   write(lun,'(12F16.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
+                   write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
                END SELECT
 
