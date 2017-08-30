@@ -2093,7 +2093,7 @@ CONTAINS
        time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 + 60
-      write(lun,'(70F12.6)') time_d         , &
+      write(lun,'(70F18.6)') time_d         , &
         ! per variable values per soil layer is written out
         ! number of soil layers == options%nsoil_sb  (default = 5)
         t_soil_sl(1,:)                      , &
@@ -2140,7 +2140,7 @@ CONTAINS
       dN15_seed_bed    = calc_delta_N15(veg%litterfall%seed_bed%nitrogen%ptr,veg%litterfall%seed_bed%nitrogen15%ptr)
 
       lun=lun+1
-      write(lun,'(55F12.6)') time_d, &
+      write(lun,'(55F18.6)') time_d, &
         ! leaf
         veg%litterfall%leaf%carbon%ptr*1000._wp, veg%litterfall%leaf%nitrogen%ptr*1000000._wp, veg%litterfall%leaf%phosphorus%ptr*1000000._wp    , &
         dC13_leaf, DC14_leaf, dN15_leaf, & 

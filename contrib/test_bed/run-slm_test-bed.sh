@@ -54,7 +54,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet"        # options: fluxnet cruncep face none  (in case of 'none' a test_bed/climate.dat is expected)
+forcingDataSet="fluxnet"        # options: fluxnet cruncep face none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 siteName="DE-Hai_2000-2006"     # provide filename (without the trailing '.dat') of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET2/ or CRUNCEPv7/ or FACE/ 
                                 # e.g. [FLUX] DE-Hai_2000-2006, AT-Neu_2002-2005 [CRUN] HOW_1984-2013, KAN_1984-2013 [FACE] DK-AMB_1996-2007, OR-AMB_1998-2008
 soil_awc_prescribe=300.0        # float !
@@ -263,6 +263,8 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
     then  # local forcing file
       if [ $slmModel == "soil" ]
         then
+          echo -e '\n' "  Info: you set forcingDataSet to 'none' using the test_bed/soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat files."
+          echo "   No site specific parameter values are available in this mode, and the option setPFTAutomatically is used with 'no'."
           if [ ! -e ./"$forceSoilLitterFile" ] # if file not exists
             then
               echo "EXIT!  the test_bed/""$forceSoilLitterFile"" does not exist, but the option forcingDataSet is set to none !"
@@ -274,6 +276,9 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
               exit
           fi
         else # land plant canopy
+          echo -e '\n' "  Info: you set forcingDataSet to 'none' using the test_bed/climate.dat."
+          echo "   No site specific parameter values are available in this mode, and the option setPFTAutomatically is used with 'no'."
+          echo "   PFT is set to: ""$plant_functional_type_id"
           if [ ! -e ./"$forceLandMetFile" ] # if file not exists
             then
               echo "EXIT!  the test_bed/""$forceLandMetFile"" does not exist, but the option forcingDataSet is set to none !"
@@ -281,8 +286,6 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
           fi
       fi 
       setPFTAutomatically="no"
-      echo -e '\n' "  Info: the option setPFTAutomatically is used with 'no', as you are using the test_bed/climate.dat, which does not provide PFT information. "
-      echo "   PFT is set to: ""$plant_functional_type_id"
     else  # fluxnet/cruncep forcing file
       case "$forcingDataSet" in
       "fluxnet")
