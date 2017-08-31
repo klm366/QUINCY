@@ -88,12 +88,9 @@ CONTAINS
     REAL(wp),DIMENSION(nc),INTENT(in),OPTIONAL   :: beta_sinklim_ps       !< beta sinklim ps (avg)
     REAL(wp),DIMENSION(nc),INTENT(in),OPTIONAL   :: beta_soil_gs          !< beta soil gs (avg)
     REAL(wp),DIMENSION(nc),INTENT(in),OPTIONAL   :: t_jmax_opt            !< Jmax optimum temperature (avg)
-    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout),OPTIONAL :: ppfd_sunlit_cl !< absorbed Photosynthetically Active Photon Flux Density
-                                                                                    !!  on sunlit leafes (average over time)
-    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout),OPTIONAL :: ppfd_shaded_cl !< absorbed Photosynthetically Active Photon Flux Density
-                                                                                    !!  on shaded leafes (average over time)
-    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout),OPTIONAL :: fleaf_sunlit_cl !< fraction of sunlit leaves
-                                                                                  !  (average over time)
+    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: ppfd_sunlit_cl        !< absorbed Photosynthetically Active Photon Flux Density on sunlit leafes (average over time)
+    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: ppfd_shaded_cl        !< absorbed Photosynthetically Active Photon Flux Density on shaded leafes (average over time)
+    REAL(wp),DIMENSION(nc,ncanopy),INTENT(inout) :: fleaf_sunlit_cl       !< fraction of sunlit leaves (average over time)
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(out)   :: lai_cl                !< LAI of canopy layer
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(out)   :: cumm_lai_cl           !< cummlative LAI above canopy layer
     REAL(wp),DIMENSION(nc,ncanopy),INTENT(out)   :: leaf_nitrogen_cl      !< total N in canopy layer (mmol N/m2)
@@ -137,13 +134,6 @@ CONTAINS
     optimise_n_fractions = flag_optimal_Nfraction
     IF (PRESENT(inquire_n_fractions)) optimise_n_fractions = .NOT.inquire_n_fractions
 
-    ! check if all input is available to run optimal fractions
-    IF(flag_optimal_Nfraction)THEN
-       IF(.NOT.PRESENT(ppfd_sunlit_cl).OR..NOT.PRESENT(ppfd_shaded_cl).OR..NOT.PRESENT(fleaf_sunlit_cl)) THEN
-          WRITE(message_text,'(a)') 'called with fractional optimisation flag, but without par[sunlit|shaded]_cl'
-          CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
-       ENDIF
-    ENDIF
     IF(optimise_n_fractions)THEN
        IF(.NOT.PRESENT(t_air).OR..NOT.PRESENT(t_acclim).OR..NOT.PRESENT(press_srf).OR.&
           .NOT.PRESENT(co2_mixing_ratio).OR..NOT.PRESENT(ga).OR.&

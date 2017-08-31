@@ -456,8 +456,8 @@ changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 changeNamelistValue soil_depth "$soil_depth"
 changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
 
-# forcingDataSet
-if [ "$forcingDataSet" != "none" ]
+# forcingDataSet (not for test_canopy)
+if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
   then
     case "$forcingDataSet" in
     "fluxnet")
@@ -546,7 +546,7 @@ echo "Simulation finished"
 sync
 
 ## run R script for postprocessing ##
-Rscript ./postprocessing_"$slmModel".R
+Rscript --vanilla ./postprocessing_"$slmModel".R
 
 sync
 echo " ... done !"

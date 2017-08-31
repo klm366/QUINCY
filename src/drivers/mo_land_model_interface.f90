@@ -493,6 +493,7 @@ CONTAINS
     
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -559,14 +560,21 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem
-    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem
-    dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory), POINTER      :: soil__mem
+    dsl4jsb_Def_memory(RAD_)                          !   TYPE(t_rad_memory),    POINTER      :: rad__mem
+    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory),    POINTER      :: veg__mem
+    dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory),   POINTER      :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: net_assimilation          ! ASSIMI_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: net_assimilation 
     dsl4jsb_Real2D_onChunk      :: canopy_cond
     dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta         ! SOIL_
-    dsl4jsb_Real2D_onChunk      :: lai                       ! VEG_
+    ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
+    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta 
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
@@ -576,7 +584,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
-
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -605,12 +613,16 @@ CONTAINS
     dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
     ! ---------------------------
@@ -624,6 +636,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
 
 
 
@@ -666,6 +679,7 @@ CONTAINS
     !latitude                  = 50.0_wp
     !longitude                 = 0.0_wp
 
+
     CALL update_a2l( &
            tile                                            , &
            options                                         , &
@@ -700,8 +714,11 @@ CONTAINS
                             dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                             dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                            leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
-                            lai                 = lai(:),&
+                            leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr      , &
+                            lai                 = lai(:)                          , &
+                            ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
+                            ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
+                            fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
                             lai_cl              = lai_cl(1,:), &
                             cumm_lai_cl         = cumm_lai_cl(1,:), &
                             leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
@@ -889,8 +906,11 @@ CONTAINS
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
-                              lai                 = lai(:),&
+                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr      , &
+                              lai                 = lai(:)                          , &
+                              ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
+                              ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
+                              fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
                               lai_cl              = lai_cl(1,:), &
                               cumm_lai_cl         = cumm_lai_cl(1,:), &
                               leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
@@ -927,8 +947,11 @@ CONTAINS
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
-                              lai                 = lai(:),&
+                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr      , &
+                              lai                 = lai(:)                          , &
+                              ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
+                              ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
+                              fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
                               lai_cl              = lai_cl(1,:), &
                               cumm_lai_cl         = cumm_lai_cl(1,:), &
                               leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
@@ -959,15 +982,21 @@ CONTAINS
   DO i = 1,npft
      veg%pool%leaf%nitrogen%ptr  =lai(1) /model%lctlib(i)%sla /model%lctlib(i)%cn_leaf
      veg%pool%leaf%phosphorus%ptr=veg%pool%leaf%nitrogen%ptr /model%lctlib(i)%np_leaf
+     ! change lctlib id
      tile%lcts%lib_id = i
+     ! set pointer to the new PFT
+     lctlib  => model%lctlib(tile%lcts%lib_id)
      CALL calc_canopy_layers(&
                               nc                                             , & ! in
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
-                              lai                 = lai(:),&
+                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr      , &
+                              lai                 = lai(:)                          , &
+                              ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
+                              ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
+                              fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
                               lai_cl              = lai_cl(1,:), &
                               cumm_lai_cl         = cumm_lai_cl(1,:), &
                               leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
