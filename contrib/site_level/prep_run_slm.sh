@@ -158,7 +158,7 @@ if [ $flag_generate_soil_forcing == "T" ]
     experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
   fi
   forcingMode="static"
-  slmModel="plant"
+  slmModel="land"
 
   customSiteList="F"
   specialFluxnetOutput="F"
