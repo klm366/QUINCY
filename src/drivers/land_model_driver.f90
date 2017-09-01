@@ -228,6 +228,7 @@ PROGRAM land_model_driver
   ! init with default values
   l_transient_forcing_mode          = .FALSE.
   l_transient_spinup                = .FALSE.
+  l_transient_spinup_rewind_forcing = .FALSE.
   itimestep                         = 1         ! default start of time loop
   transient_spinup_itimestep_period = 0  
   ! set simulation values
