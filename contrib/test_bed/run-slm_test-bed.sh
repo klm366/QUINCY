@@ -468,6 +468,11 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
       allSiteDatFile="$siteFolder"/all_gfdb_sites_1984-2013_list.dat
       siteNameShort=$(echo "$siteName" | cut -c1-3)             # shortens file name provided, e.g.: KAD_1901-2015 -> KAD
       siteNameShort="$siteNameShort""_01"                       # KAD -> KAD_01
+      # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
+      if [ "$siteNameShort" == "BBR_01" ] || [ "$siteNameShort" == "LUE_01" ]
+       then
+        allSiteDatFile="$siteFolder"/spp_sites_1984-2013_list.dat
+      fi
       ;;
     "face")
       allSiteDatFile="$siteFolder"/all_sites_1996-2008_list.dat
