@@ -17,7 +17,7 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
                                        t_jsb_var_logical2d                                       ! *slmjsb4
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
+  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
 
 
@@ -64,8 +64,10 @@ CONTAINS
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-!    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
-!    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_io,            ONLY: grib_bits
+!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
+    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,       ONLY: t_jsb_model
 
@@ -77,15 +79,17 @@ CONTAINS
     INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
-!    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-!    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
-!    INTEGER :: table
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+!    TYPE(t_jsb_vgrid), POINTER :: canopy_layer                 ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_memory'
 
     model => Get_model(model_id)
 
 !    table = tables(1)
+    table = 1
 
 !    hgrid   => Get_grid(mem%grid_id)
 !    surface => Get_vgrid('surface')
@@ -95,19 +99,31 @@ CONTAINS
 
       !> add variables to pheno memory pheno\%VAR
       !! 
-      !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
+      !! jsb_add_var -> jsb_add_var_list_element_r1d    *slmtemp 1D -> 2D
       !!  
-      CALL slm_add_var(mem, 'growing_season', mem%growing_season, &
+      CALL jsb_add_var(mem, 'growing_season', mem%growing_season, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=.TRUE.) ! initvalue
 
-      CALL slm_add_var(mem, 'gdd', mem%gdd, &
+      CALL jsb_add_var(mem, 'gdd', mem%gdd, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'nd_dormance', mem%nd_dormance, &
+      CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
-
-
-
 
     END IF
 

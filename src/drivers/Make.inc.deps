@@ -66,4 +66,3 @@ mo_jsb4_forcing.o: \
   mo_namelist.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o
-    

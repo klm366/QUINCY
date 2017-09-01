@@ -19,8 +19,9 @@ STRIP   = strip
 SIZE    = size
 #---------------------------------------------------------------------
 #-
-VPATH = ../atmland:../echam:../base:../drivers:../shared:../assimilation:../radiation:../soil:../soil_biogeochemistry:../phenology:../vegetation:$(OBJDIR)
-MODS = $(shell find ../atmland/ -name '*.f90' -print)
+VPATH = ../adapters:../atmland:../echam:../base:../drivers:../shared:../assimilation:../radiation:../soil:../soil_biogeochemistry:../phenology:../vegetation:$(OBJDIR)
+MODS = $(shell find ../adapters/ -name '*.f90' -print)
+MODS += $(shell find ../atmland/ -name '*.f90' -print)
 MODS += $(shell find ../echam/ -name '*.f90' -print)
 MODS += $(shell find ../base/ -name '*.f90' -print)
 MODS += $(shell find ../drivers/ -name 'mo*.f90' -print)
@@ -77,3 +78,4 @@ include ../soil_biogeochemistry/Make.inc.deps
 include ../phenology/Make.inc.deps
 include ../vegetation/Make.inc.deps
 include ../drivers/Make.inc.deps
+include ../adapters/Make.inc.deps

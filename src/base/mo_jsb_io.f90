@@ -11,6 +11,7 @@ MODULE mo_jsb_io
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp, dp
+  USE mo_jsb_io_iface, ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, Get_netcdf_precision
 !  USE mo_jsb_io_iface, ONLY:                                           &
 !    Get_netcdf_precision,                                              &
 !    DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
@@ -27,10 +28,10 @@ MODULE mo_jsb_io
 
   PUBLIC
 
-!  INTEGER, PARAMETER :: grib_bits     = DATATYPE_PACK16, &
-!                        grib_extbits  = DATATYPE_PACK24, &
-!                        nc_bits       = DATATYPE_FLT32,  &
-!                        nc_extbits    = DATATYPE_FLT64
+  INTEGER, PARAMETER :: grib_bits     = DATATYPE_PACK16, &
+                        grib_extbits  = DATATYPE_PACK24, &
+                        nc_bits       = DATATYPE_FLT32,  &
+                        nc_extbits    = DATATYPE_FLT64
 
   TYPE t_cf
     CHARACTER(len=128) :: standard_name = ''
@@ -52,10 +53,10 @@ MODULE mo_jsb_io
     INTEGER :: bits
   END TYPE t_grib2
 
-!!  ! Derived-type constructor for t_cf
-!!  INTERFACE t_cf
-!!    PROCEDURE Construct_cf
-!!  END INTERFACE t_cf
+  ! Derived-type constructor for t_cf
+  INTERFACE t_cf
+    PROCEDURE Construct_cf
+  END INTERFACE t_cf
 
   INTEGER, PARAMETER :: max_tables = 5
   INTEGER, PARAMETER :: max_cdi_zaxis_ids = 20
@@ -81,26 +82,26 @@ MODULE mo_jsb_io
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
 
-!CONTAINS
+CONTAINS
 
-!  FUNCTION Construct_cf(standard_name, units, long_name, datatype) RESULT(return_value)
+  FUNCTION Construct_cf(standard_name, units, long_name, datatype) RESULT(return_value)
 
-!    CHARACTER(len=*), INTENT(in) :: standard_name
-!    CHARACTER(len=*), INTENT(in) :: units
-!    CHARACTER(len=*), INTENT(in) :: long_name
-!    INTEGER, OPTIONAL,  INTENT(in) :: datatype
-!    TYPE(t_cf)         :: return_value
+    CHARACTER(len=*), INTENT(in) :: standard_name
+    CHARACTER(len=*), INTENT(in) :: units
+    CHARACTER(len=*), INTENT(in) :: long_name
+    INTEGER, OPTIONAL,  INTENT(in) :: datatype
+    TYPE(t_cf)         :: return_value
 
-!    return_value%standard_name = TRIM(standard_name)
-!    return_value%units         = TRIM(units)
-!    return_value%long_name     = TRIM(long_name)
-!    IF (PRESENT(datatype)) THEN
-!      return_value%datatype = datatype
-!    ELSE
-!      return_value%datatype = Get_netcdf_precision()
-!    END IF
+    return_value%standard_name = TRIM(standard_name)
+    return_value%units         = TRIM(units)
+    return_value%long_name     = TRIM(long_name)
+    IF (PRESENT(datatype)) THEN
+      return_value%datatype = datatype
+    ELSE
+      return_value%datatype = Get_netcdf_precision()
+    END IF
 
-!  END FUNCTION Construct_cf
+  END FUNCTION Construct_cf
 
 !  !>
 !  !! @brief Initialize io control for JSBACH

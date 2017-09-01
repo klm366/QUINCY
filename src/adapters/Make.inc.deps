@@ -1,0 +1,2 @@
+mo_jsb_domain_iface.o: \
+  mo_decomposition.o

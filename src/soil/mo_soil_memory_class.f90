@@ -16,7 +16,7 @@ MODULE mo_soil_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later    *slmtemp
+  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
 
 
 
@@ -112,8 +112,10 @@ CONTAINS
   SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-!    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
-!    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_io,            ONLY: grib_bits
+!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
+    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
 
@@ -125,15 +127,17 @@ CONTAINS
     INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
-!    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-!    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
-!    INTEGER :: table
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+!    TYPE(t_jsb_vgrid), POINTER :: canopy_layer                 ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_memory'
 
     model => Get_model(model_id)
 
 !    table = tables(1)
+    table = 1
 
 !    hgrid   => Get_grid(mem%grid_id)
 !    surface => Get_vgrid('surface')
@@ -146,79 +150,204 @@ CONTAINS
       !! 
       !! soil\%VAR
       !!  
-      CALL slm_add_var(mem, 'soil_depth', mem%soil_depth, &
+      CALL jsb_add_var(mem, 'soil_depth', mem%soil_depth, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'soil_depth_sl', mem%soil_depth_sl, &
+      CALL jsb_add_var(mem, 'soil_depth_sl', mem%soil_depth_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'root_depth', mem%root_depth, &
+      CALL jsb_add_var(mem, 'root_depth', mem%root_depth, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
+      CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'interception', mem%interception, &
+      CALL jsb_add_var(mem, 'interception', mem%interception, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'evaporation', mem%evaporation, &
+      CALL jsb_add_var(mem, 'evaporation', mem%evaporation, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'runoff', mem%runoff, &
+      CALL jsb_add_var(mem, 'runoff', mem%runoff, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'drainage', mem%drainage, &
+      CALL jsb_add_var(mem, 'drainage', mem%drainage, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'drainage_fraction', mem%drainage_fraction, &
+      CALL jsb_add_var(mem, 'drainage_fraction', mem%drainage_fraction, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'drainage_sl', mem%drainage_sl, &
+      CALL jsb_add_var(mem, 'drainage_sl', mem%drainage_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'percolation_sl', mem%percolation_sl, &
+      CALL jsb_add_var(mem, 'percolation_sl', mem%percolation_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_root', mem%w_soil_root, &
+      CALL jsb_add_var(mem, 'w_soil_root', mem%w_soil_root, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_skin', mem%w_skin, &
+      CALL jsb_add_var(mem, 'w_skin', mem%w_skin, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_root_fc', mem%w_soil_root_fc, &
+      CALL jsb_add_var(mem, 'w_soil_root_fc', mem%w_soil_root_fc, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_root_pwp', mem%w_soil_root_pwp, &
+      CALL jsb_add_var(mem, 'w_soil_root_pwp', mem%w_soil_root_pwp, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_root_pot', mem%w_soil_root_pot, &
+      CALL jsb_add_var(mem, 'w_soil_root_pot', mem%w_soil_root_pot, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_root_theta', mem%w_soil_root_theta, &
+      CALL jsb_add_var(mem, 'w_soil_root_theta', mem%w_soil_root_theta, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=1.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_sl', mem%w_soil_sl, &
+      CALL jsb_add_var(mem, 'w_soil_sl', mem%w_soil_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_fc_sl', mem%w_soil_fc_sl, &
+      CALL jsb_add_var(mem, 'w_soil_fc_sl', mem%w_soil_fc_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'w_soil_pwp_sl', mem%w_soil_pwp_sl, &
+      CALL jsb_add_var(mem, 'w_soil_pwp_sl', mem%w_soil_pwp_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'w_soil_pot_sl', mem%w_soil_pot_sl, &
+      CALL jsb_add_var(mem, 'w_soil_pot_sl', mem%w_soil_pot_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 't_soil_sl', mem%t_soil_sl, &
+      CALL jsb_add_var(mem, 't_soil_sl', mem%t_soil_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=273.15_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'heat_capa_sl', mem%heat_capa_sl, &
+      CALL jsb_add_var(mem, 'heat_capa_sl', mem%heat_capa_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'bulk_dens_sl', mem%bulk_dens_sl, &
+      CALL jsb_add_var(mem, 'bulk_dens_sl', mem%bulk_dens_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'therm_cond_sl', mem%therm_cond_sl, &
+      CALL jsb_add_var(mem, 'therm_cond_sl', mem%therm_cond_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
     END IF

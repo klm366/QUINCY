@@ -21,12 +21,14 @@ MODULE mo_slm_varlist
                                   t_jsb_struct, t_jsb_n_struct               , &                 ! *slmjsb4
                                   t_jsb_var_real1d                                               ! *slmtemp
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
+  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: slm_add_var
+  PUBLIC :: jsb_add_var
 
-  INTERFACE slm_add_var
+  INTERFACE jsb_add_var
   !! struct
     ! mem%struct 
     MODULE PROCEDURE slm_add_struct               ! *slmjsb4  a TYPE with only variables included
@@ -51,7 +53,7 @@ MODULE mo_slm_varlist
     MODULE PROCEDURE slm_add_var_list_element_r3d ! *slmtemp
     ! LOGICAL 2D
     MODULE PROCEDURE slm_add_var_list_element_l2d ! *slmjsb4 *slmtemp
-  END INTERFACE slm_add_var
+  END INTERFACE jsb_add_var
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_slm_varlist'
 
@@ -69,12 +71,23 @@ CONTAINS
   !!    
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct( &
-    mem, name, struct) 
+    mem, name, struct, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix)
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     CLASS(t_jsb_struct), TARGET, INTENT(inout)    :: struct              ! struct
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+
     ! 0.2 Local
     INTEGER           :: pos_of_struct
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct'
@@ -102,12 +115,23 @@ CONTAINS
   !!    
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_n_struct( &
-    mem, name, n_struct) 
+    mem, name, n_struct, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix)
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     CLASS(t_jsb_n_struct), TARGET, INTENT(inout)  :: n_struct            ! n_struct
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+
     ! 0.2 Local
     INTEGER           :: pos_of_n_struct
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_n_struct'
@@ -135,12 +159,23 @@ CONTAINS
   !!    
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_l2_struct( &
-    n_struct, name, l2_struct) 
+    n_struct, name, l2_struct, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix)
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_n_struct),  INTENT(inout)       :: n_struct            ! memory structure
     CHARACTER(len=*),     INTENT(in)            :: name                ! name of variable
     CLASS(t_jsb_struct), TARGET, INTENT(inout)  :: l2_struct           ! l2_struct
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+
     ! 0.2 Local
     INTEGER           :: pos_of_l2_struct
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_l2_struct'
@@ -175,13 +210,24 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r1d( &
     struct, name, var, &
-    initval_r) 
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    initval_r)
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
     TYPE(t_jsb_var_real1d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+    REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
+
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real1d'
@@ -218,14 +264,24 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r2d( &
     struct, name, var, &
-    initval_r) 
-
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    initval_r)
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
     TYPE(t_jsb_var_real2d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+    REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
+
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
@@ -263,17 +319,27 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r3d( &
     struct, name, var, &
-    initval_r) 
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    initval_r)
 
     USE mo_soil_config_class,               ONLY: soil_nsoil_water
     USE mo_assimi_config_class,             ONLY: assimi_ncanopy
-
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
     TYPE(t_jsb_var_real3d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+    REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
+
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
@@ -328,14 +394,24 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r2d( &
     mem, name, var, &
-    initval_r) 
-
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    initval_r)
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
     TYPE(t_jsb_var_real2d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+    REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
+
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
@@ -374,17 +450,27 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r3d( &
     mem, name, var, &
-    initval_r) 
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    initval_r)
 
     USE mo_soil_config_class,               ONLY: soil_nsoil_water
     USE mo_assimi_config_class,             ONLY: assimi_ncanopy
-
     IMPLICIT NONE
+
     ! 0.1 InOut
     CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
     TYPE(t_jsb_var_real3d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+    REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
+
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
@@ -434,13 +520,23 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_l2d( &
     mem, name, var, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
     initval_r) 
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_memory),                INTENT(inout)   :: mem              ! memory structure
     CHARACTER(len=*),                   INTENT(in)      :: name             ! name of variable
     TYPE(t_jsb_var_logical2d), TARGET,  INTENT(inout)   :: var              ! reference to jsbach var -> newly created plain scalar REAL
-    LOGICAL,                            INTENT(in)      :: initval_r        ! value for initialization of the variable (usually 0.0_wp)
+
+    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
+    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
+    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
+    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
+    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
+    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
+    LOGICAL,          OPTIONAL, INTENT(in) :: initval_r ! value if var not available
+
     ! 0.2 Local
     INTEGER                     :: pos_of_var
     TYPE(t_jsb_model), POINTER  :: model
@@ -468,7 +564,5 @@ CONTAINS
     var%ptr(ics:ice,iblk) = initval_r
 
   END SUBROUTINE slm_add_var_list_element_l2d
-
-
 
 END MODULE mo_slm_varlist

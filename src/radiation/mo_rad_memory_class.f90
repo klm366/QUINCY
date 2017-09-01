@@ -16,7 +16,7 @@ MODULE mo_rad_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later   *slmtemp
+  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later   *slmtemp
 
 
 
@@ -102,8 +102,10 @@ CONTAINS
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-!    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
-!    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_io,            ONLY: grib_bits
+!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
+    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,       ONLY: t_jsb_model
 
@@ -115,15 +117,17 @@ CONTAINS
     INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
-!    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-!    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
-!    INTEGER :: table
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+!    TYPE(t_jsb_vgrid), POINTER :: canopy_layer                 ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_memory'
 
     model => Get_model(model_id)
 
 !    table = tables(1)
+    table = 1
 
 !    hgrid   => Get_grid(mem%grid_id)
 !    surface => Get_vgrid('surface')
@@ -132,106 +136,276 @@ CONTAINS
 
     IF (.NOT. ALLOCATED(mem%sw_srf_net%ptr)) THEN
 
-      CALL slm_add_var(mem, 'sw_srf_net', mem%sw_srf_net, &
+      CALL jsb_add_var(mem, 'sw_srf_net', mem%sw_srf_net, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'swvis_srf_net', mem%swvis_srf_net, &
+      CALL jsb_add_var(mem, 'swvis_srf_net', mem%swvis_srf_net, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'swnir_srf_net', mem%swnir_srf_net, &
+      CALL jsb_add_var(mem, 'swnir_srf_net', mem%swnir_srf_net, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'lw_srf_net', mem%lw_srf_net, &
+      CALL jsb_add_var(mem, 'lw_srf_net', mem%lw_srf_net, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'rad_srf_net', mem%rad_srf_net, &
+      CALL jsb_add_var(mem, 'rad_srf_net', mem%rad_srf_net, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_vis', mem%alb_vis, &
+      CALL jsb_add_var(mem, 'alb_vis', mem%alb_vis, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_nir', mem%alb_nir, &
+      CALL jsb_add_var(mem, 'alb_nir', mem%alb_nir, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &
+      CALL jsb_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &
+      CALL jsb_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &
+      CALL jsb_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &
+      CALL jsb_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &
+      CALL jsb_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &
+      CALL jsb_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &
+      CALL jsb_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &
+      CALL jsb_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &
+      CALL jsb_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &
+      CALL jsb_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'appfd', mem%appfd, &
+      CALL jsb_add_var(mem, 'appfd', mem%appfd, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
+      CALL jsb_add_var(mem, 'ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_shaded_cl', mem%ppfd_shaded_cl, &
+      CALL jsb_add_var(mem, 'ppfd_shaded_cl', mem%ppfd_shaded_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
+      CALL jsb_add_var(mem, 'ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
+      CALL jsb_add_var(mem, 'ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
+      CALL jsb_add_var(mem, 'ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
+      CALL jsb_add_var(mem, 'ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
+      CALL jsb_add_var(mem, 'ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
+      CALL jsb_add_var(mem, 'ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
+      CALL jsb_add_var(mem, 'ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
+      CALL jsb_add_var(mem, 'ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'arad_sunlit_vis_cl', mem%arad_sunlit_vis_cl, &
+      CALL jsb_add_var(mem, 'arad_sunlit_vis_cl', mem%arad_sunlit_vis_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'arad_shaded_vis_cl', mem%arad_shaded_vis_cl, &
+      CALL jsb_add_var(mem, 'arad_shaded_vis_cl', mem%arad_shaded_vis_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'fleaf_sunlit_vis_cl', mem%fleaf_sunlit_vis_cl, &
+      CALL jsb_add_var(mem, 'fleaf_sunlit_vis_cl', mem%fleaf_sunlit_vis_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'arad_sunlit_nir_cl', mem%arad_sunlit_nir_cl, &
+      CALL jsb_add_var(mem, 'arad_sunlit_nir_cl', mem%arad_sunlit_nir_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'arad_shaded_nir_cl', mem%arad_shaded_nir_cl, &
+      CALL jsb_add_var(mem, 'arad_shaded_nir_cl', mem%arad_shaded_nir_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'fleaf_sunlit_nir_cl', mem%fleaf_sunlit_nir_cl, &
+      CALL jsb_add_var(mem, 'fleaf_sunlit_nir_cl', mem%fleaf_sunlit_nir_cl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
 
