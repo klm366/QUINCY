@@ -6,8 +6,6 @@
   ! options for the vegetation
   ! biological nitrogen fixation
   bnf_scheme="standard"
-  ! mycorrhiza
-  myc_scheme="standard"
   plant_functional_type_id=5
 /
 &ASSIMILATION_CTL
@@ -53,6 +51,11 @@
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.
   flag_sb_prescribe_po4=.FALSE.
+  ! mycorrhiza flags
+  flag_mycorrhiza=.FALSE.
+  flag_myco_inorganic=.FALSE.
+  flag_myco_organic=.FALSE.
+  flag_myco_priming=.FALSE.
   ! parameter values
   bulk_density=1500.0
   usda_taxonomy_class=1

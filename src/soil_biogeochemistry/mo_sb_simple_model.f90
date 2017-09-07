@@ -149,6 +149,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
@@ -263,6 +265,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
     dsl4jsb_Get_var3D_onChunk(SB_,       n2o) 
@@ -384,9 +388,11 @@ CONTAINS
     !> 2.2 Potential plant nutrient uptake rates
     !!
     CALL calc_potential_mycorrhiza_uptake_rate(lctlib, &
+                                               dsl4jsb_Config(SB_)%flag_myco_inorganic, &
                                                options, &
                                                soil_depth_sl(:,:), &
                                                sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
+                                               sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk), &
                                                rtm_decomposition_act(:,:), &
                                                km1_uptake_nh4_act(:,:), &
                                                km2_uptake_nh4_act(:,:), &
@@ -403,7 +409,8 @@ CONTAINS
 
     !> 2.4 Calculate the potential decomposition rate of soil organic matter and litter pools 
     !!
-    CALL calc_potential_decomposition_rate(options, &                       
+    CALL calc_potential_decomposition_rate(options, &  
+                                           dsl4jsb_Config(SB_)%flag_myco_priming, &                  
                                            rtm_decomposition_act(:,:), &
                                            rmm_decomposition_act(:,:), &
                                            sb%pool, &
@@ -590,9 +597,12 @@ CONTAINS
     !! 
     CALL calc_mycorrhiza_dynamics(lctlib, &
                                   options, &
+                                  dsl4jsb_Config(SB_)%flag_myco_organic, &
                                   soil_depth_sl(:,:), &
+                                  veg%pool%fine_root%carbon%ptr, &
                                   mycorrhiza_uptake_nh4_sl(:,:), &
                                   mycorrhiza_uptake_no3_sl(:,:), &
+                                  mycorrhiza_uptake_norg_sl(:,:), &
                                   mycorrhiza_uptake_po4_sl(:,:), &
                                   sb%pool, &
                                   sb%formation, &
@@ -600,7 +610,7 @@ CONTAINS
                                   het_respiration(:,:), &
                                   het_respiration_c13(:,:), &
                                   het_respiration_c14(:,:), &
-                                  veg%mycorrhiza_export)
+                                  sb%mycorrhiza_export)
 
 
     !> 5.0 Update soil litter pools with litter fall
@@ -653,6 +663,7 @@ CONTAINS
     plant_uptake_po4_sl(:,:) = plant_uptake_po4_sl(:,:) / dtime * 1000000._wp 
     mycorrhiza_uptake_nh4_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) / dtime * 1000000._wp 
     mycorrhiza_uptake_no3_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._wp
+    mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) / dtime * 1000000._wp
     mycorrhiza_uptake_po4_sl(:,:) = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._wp 
 
     volatilisation_nh4(:,:) = volatilisation_nh4(:,:) / dtime * 1000000._wp
@@ -978,9 +989,11 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_potential_mycorrhiza_uptake_rate(lctlib, &                     ! in
+                                                   flag_myco_inorganic, &
                                                    options, &
                                                    soil_depth_sl, &
                                                    sb_pool_mycorrhiza_carbon, &
+                                                   sb_pool_mycorrhiza_nitrogen, &
                                                    rtm_mycorrhiza_uptake_act, &
                                                    km1_uptake_nh4_act, &
                                                    km2_uptake_nh4_act, &
@@ -1001,9 +1014,11 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),                           INTENT(in)  :: lctlib                      !< land-cover-type library - parameter across pft's
+    LOGICAL,                                          INTENT(in)  :: flag_myco_inorganic           !< from sb config
     TYPE(t_jsb_task_options),                         INTENT(in)  :: options                     !< dimensions...
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: soil_depth_sl, &            !< soil depth per layer [m]
                                                                      sb_pool_mycorrhiza_carbon, &!< mycorrhizal biomass [mol C / m3]
+                                                                     sb_pool_mycorrhiza_nitrogen, &!< mycorrhizal biomass [mol C / m3]
                                                                      rtm_mycorrhiza_uptake_act, &!< temperature response of mycorrhiza uptake (taken identical to that of decomposition) 
                                                                      km1_uptake_nh4_act, &       !< actual km1 for NH4 uptake [m3 / mol]
                                                                      km2_uptake_nh4_act, &       !< actual km2 for NH4 uptake [mol / m3]
@@ -1017,52 +1032,55 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: mycorrhiza_uptake_nh4_sl, & !< potential mycorrhiza uptake of NH4 [mol / m3 / timestep]
                                                                      mycorrhiza_uptake_no3_sl, & !< potential mycorrhiza uptake of NO3 [mol / m3 / timestep]
                                                                      mycorrhiza_uptake_po4_sl    !< potential mycorrhiza uptake of PO4 [mol / m3 / timestep]
+
     ! 0.2 Local
     INTEGER                                          :: isoil        !< loop over options%nsoil_sb
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2   !< helpers
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_potential_mycorrhiza_uptake_rate'
 
     
-    DO isoil = 1,options%nsoil_sb
 
-      !> 1.0 pot. N uptake by mycorrhizal fungi (mol / m3 / timestep)
-      !!
-      mycorrhiza_uptake_nh4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
+    !> 1.0 pot. N uptake by mycorrhizal fungi (mol / m3 / timestep)
+    !!
+    IF(flag_myco_inorganic)THEN
+      DO isoil = 1,options%nsoil_sb
+        mycorrhiza_uptake_nh4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * f_surface_myc2fineroot * lctlib%vmax_uptake_n * & 
                                           nh4_solute(:,isoil) * ( km1_uptake_nh4_act(:,isoil) + & 
                                           1._wp / ( km2_uptake_nh4_act(:,isoil) + nh4_solute(:,isoil) )) * & 
                                           dtime/1.e6_wp
-      mycorrhiza_uptake_no3_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
+        mycorrhiza_uptake_no3_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * f_surface_myc2fineroot * lctlib%vmax_uptake_n * & 
                                           no3_solute(:,isoil) * ( km1_uptake_no3_act(:,isoil) + & 
                                           1._wp / ( km2_uptake_no3_act(:,isoil) + no3_solute(:,isoil) )) * & 
                                           dtime/1.e6_wp
 
-      !> 1.1 constrain potential N uptake by avaiable C for N transformation to organic
-      !!
-      hlp1(:,isoil) = mycorrhiza_uptake_nh4_sl(:,isoil) * transform_cost_nh4 + & 
+        !> 1.1 constrain potential N uptake by avaiable C for N transformation to organic
+        !!
+        hlp1(:,isoil) = mycorrhiza_uptake_nh4_sl(:,isoil) * transform_cost_nh4 + & 
                       mycorrhiza_uptake_no3_sl(:,isoil) * transform_cost_no3 
 
-      WHERE(hlp1(:,isoil)  > sb_pool_mycorrhiza_carbon(:,isoil) * f_maxresp_myc / one_day * dtime )
-         WHERE(hlp1(:,isoil) > eps8)
+        WHERE(hlp1(:,isoil)  > sb_pool_mycorrhiza_carbon(:,isoil) * f_maxresp_myc / one_day * dtime )
+          WHERE(hlp1(:,isoil) > eps8)
             hlp2(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * f_maxresp_myc / one_day * dtime / & 
                             (hlp1(:,isoil)) 
             mycorrhiza_uptake_nh4_sl(:,isoil) = hlp2(:,isoil) * mycorrhiza_uptake_nh4_sl(:,isoil)
             mycorrhiza_uptake_no3_sl(:,isoil) = hlp2(:,isoil) * mycorrhiza_uptake_no3_sl(:,isoil)
-         ELSEWHERE
+          ELSEWHERE
             mycorrhiza_uptake_nh4_sl(:,isoil) = 0.0_wp
             mycorrhiza_uptake_no3_sl(:,isoil) = 0.0_wp
-         ENDWHERE
-      ENDWHERE 
+          ENDWHERE
+        ENDWHERE 
 
-      !> 2.0 pot. P uptake by mycorrhizal fungi (mol / m3 / timestep)
-      !!
-      mycorrhiza_uptake_po4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
+        !> 2.0 pot. P uptake by mycorrhizal fungi (mol / m3 / timestep)
+        !!
+        mycorrhiza_uptake_po4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * f_surface_myc2fineroot * lctlib%vmax_uptake_p * & 
                                           po4_solute(:,isoil) * ( km1_uptake_po4_act(:,isoil) + & 
                                           1._wp / ( km2_uptake_po4_act(:,isoil) + po4_solute(:,isoil) )) * & 
                                           dtime/1.e6_wp
-    END DO    
+      END DO
+    ENDIF 
   
   END SUBROUTINE calc_potential_mycorrhiza_uptake_rate
   
@@ -1282,23 +1300,29 @@ CONTAINS
   !!  dX/dt = - f(T)*g(M)/tau_pool * X
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_potential_decomposition_rate( options, &                ! in
-                                                rtm_decomposition_act, &
-                                                rmm_decomposition_act, &
-                                                sb_pool, &
-                                                sb_loss )                ! out
+  SUBROUTINE calc_potential_decomposition_rate(options, &                ! in
+                                               flag_myco_priming, &
+                                               rtm_decomposition_act, &
+                                               rmm_decomposition_act, &
+                                               sb_pool, &
+                                               sb_loss )                ! out
 
     USE mo_sb_constants,            ONLY: tau_metabolic_litter, tau_structural_litter, tau_woody_litter, tau_fast, tau_slow
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                  !< dimensions
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_decomposition_act, & !< temperature response of decomposition
-                                                                       rmm_decomposition_act    !< moisture response of decomposition 
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_pool                  !< soil organic matter and litter pools [mol / m3]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_loss                  !< soil organic matter and litter loss [mol / m3]
+    TYPE(t_jsb_task_options),                    INTENT(in)       :: options                  !< dimensions
+    LOGICAL,                                     INTENT(in)       :: flag_myco_priming        !< from sb config
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: rtm_decomposition_act, & !< temperature response of decomposition
+                                                                     rmm_decomposition_act    !< moisture response of decomposition 
+    TYPE(t_slm_struct_sb_pool),                  INTENT(in)       :: sb_pool                  !< soil organic matter and litter pools [mol / m3]
+    TYPE(t_slm_struct_sb_pool),                  INTENT(inout)    :: sb_loss                  !< soil organic matter and litter loss [mol / m3]
     ! 0.2 Local
     ! 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: k_priming, &
+                                                        tau_slow_myc, &
+                                                        hlp1
+    REAL(wp)                                         :: vmax_priming
     INTEGER                     :: ics,ice,iblk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_decomposition_rate'
 
@@ -1393,24 +1417,25 @@ CONTAINS
     !> 5.0 slow SOM pool (=residue pool)
     !!
     sb_loss%residue%carbon%ptr(ics:ice,:,iblk) = sb_loss%residue%carbon%ptr(ics:ice,:,iblk) + & 
-                                                 rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_slow * dtime * &
-                                                 sb_pool%residue%carbon%ptr(ics:ice,:,iblk)
+                                                     rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
+                                                     tau_slow * dtime * sb_pool%residue%carbon%ptr(ics:ice,:,iblk)
     sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                   rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_slow * dtime * &
-                                                   sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
+                                                       rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
+                                                       tau_slow * dtime * sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
     sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                     rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_slow * dtime * &
-                                                     sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
+                                                         rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
+                                                         tau_slow * dtime * sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
     sb_loss%residue%carbon13%ptr(ics:ice,:,iblk) = sb_loss%residue%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                   rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_slow * dtime * &
-                                                   sb_pool%residue%carbon13%ptr(ics:ice,:,iblk)
+                                                       rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
+                                                       tau_slow * dtime * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk)
     sb_loss%residue%carbon14%ptr(ics:ice,:,iblk) = sb_loss%residue%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                   rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_slow * dtime * &
-                                                   sb_pool%residue%carbon14%ptr(ics:ice,:,iblk)
+                                                       rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
+                                                       tau_slow * dtime * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk)
     sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                     rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_slow * dtime * &
-                                                     sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk)  
-  
+                                                         rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
+                                                         tau_slow * dtime * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk) 
+
+
   END SUBROUTINE calc_potential_decomposition_rate
 
   !-----------------------------------------------------------------------------------------------------
@@ -2651,9 +2676,12 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_mycorrhiza_dynamics(lctlib, &
                                       options, &
+                                      flag_myco_organic  , &
                                       soil_depth_sl, &
+                                      veg_pool_fine_root_carbon , &
                                       mycorrhiza_uptake_nh4_sl, &
                                       mycorrhiza_uptake_no3_sl, &
+                                      mycorrhiza_uptake_norg_sl, &
                                       mycorrhiza_uptake_po4_sl, &
                                       sb_pool, &
                                       sb_formation, &
@@ -2661,32 +2689,42 @@ CONTAINS
                                       het_respiration, &
                                       het_respiration_c13, &
                                       het_respiration_c14, &
-                                      veg_mycorrhiza_export) 
+                                      sb_mycorrhiza_export) 
 
     USE mo_veg_memory_class
     USE mo_veg_constants,           ONLY: transform_cost_nh4, transform_cost_no3
-    USE mo_sb_constants,            ONLY: mycorrhiza_cn, mycorrhiza_np
+    USE mo_sb_constants,            ONLY: mycorrhiza_cn, mycorrhiza_np, tau_slow
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &             !< depth per soil layer
-                                                                       mycorrhiza_uptake_nh4_sl, &  !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
-                                                                       mycorrhiza_uptake_no3_sl, &  !< NO3 uptake by mycorrhiza [mol / m3 / timestep]
-                                                                       mycorrhiza_uptake_po4_sl     !< PO4 uptake by mycorrhiza [mol / m3 / timestep]
+    LOGICAL,                                          INTENT(in)    :: flag_myco_organic            !< from sb config
+    REAL(wp),                                         INTENT(in)    :: veg_pool_fine_root_carbon    !< fine root carbon [mol / m2]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl                !< depth per soil layer
     TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_pool                      !< soil biogeochemistry pools [mol / m3]
     TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation, &              !< pool formation rate  [mol / m3 / timestep]
                                                                        sb_loss                      !< pool loss rate  [mol / m3 / timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mycorrhiza_uptake_nh4_sl, &  !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
+                                                                       mycorrhiza_uptake_no3_sl, &  !< NO3 uptake by mycorrhiza [mol / m3 / timestep]
+                                                                       mycorrhiza_uptake_norg_sl, & !< N uptake by mycorrhiza from organic (residue) pool [mol / m3 / timestep]
+                                                                       mycorrhiza_uptake_po4_sl     !< PO4 uptake by mycorrhiza [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: het_respiration, &           !< heterotrophic respiration [mol / m3 / timestep]
                                                                        het_respiration_c13, &       !< heterotrophic respiration [mol / m3 / timestep]
                                                                        het_respiration_c14          !< heterotrophic respiration [mol / m3 / timestep]
-    TYPE(t_slm_struct_veg_element),                   INTENT(inout) :: veg_mycorrhiza_export        !< export from mycorrhiza to plants [mol / m2 / timestep]
+    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: sb_mycorrhiza_export         !< export from mycorrhiza to plants [mol / m2 / timestep]
     ! 0.2 Local
-    INTEGER                                          :: isoil                      !< loop over soil layers
-    INTEGER                                          :: iblk, ics, ice
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: transform_respiration,fresp,fturn_mycorrhiza
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: transform_respiration, &
+                                                        fresp, &
+                                                        fturn_mycorrhiza, &
+                                                        vmax_norg_up, &
+                                                        k_norg_up, &
+                                                        fnorg, &
+                                                        mycorrhiza_cue, &
+                                                        f_myc_opt
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3
+    INTEGER                     :: isoil, ichunk                      !< loop over soil layers, loop over chunks
+    INTEGER                     :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc__mycorrhiza_dynamics'
     ! ---------------------------
     ! Get local variables from options argument
@@ -2698,13 +2736,22 @@ CONTAINS
     !! 
     !> 8.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
+    WHERE(sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) > eps8 .AND. &
+          sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) / sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) < mycorrhiza_cn)
+        mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
+        mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
+        mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp
+    ENDWHERE
+
     ! calculate respiration costs associated with N transformation (mol C / m3 / timestep)
     transform_respiration(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * transform_cost_nh4 + & 
                                  mycorrhiza_uptake_no3_sl(:,:) * transform_cost_no3
+
     fresp(:,:) = 0.0_wp
     WHERE(sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) > eps8)
        fresp(:,:) = transform_respiration(:,:) / sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)
     ENDWHERE
+
     sb_loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk)   = sb_loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + &
                                                       fresp * sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)   !! respiration
     sb_loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + &
@@ -2716,7 +2763,29 @@ CONTAINS
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + fresp * sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + fresp * sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)
 
-    !> 8.2 nutrient flux to vegetation (surplus uptake goes to plants) (mol (N/P) / m2 / timestep)
+    !> 8.2 organic N uptake by mycorrhiza and associated respiration losses to heterotrophic respiration
+    !!
+    mycorrhiza_uptake_norg_sl(:,:) = 0.0_wp
+
+    fnorg(:,:) = 0.0_wp
+    WHERE(sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk) > eps8)
+        fnorg(:,:) = mycorrhiza_uptake_norg_sl(:,:) / sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
+    ENDWHERE
+
+    sb_loss%residue%carbon%ptr(ics:ice,:,iblk)     = sb_loss%residue%carbon%ptr(ics:ice,:,iblk) + &
+                                                     fnorg * sb_pool%residue%carbon%ptr(ics:ice,:,iblk)
+    sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk)   = sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) + &
+                                                     fnorg * sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
+    sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) + &
+                                                     fnorg * sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
+    sb_loss%residue%carbon13%ptr(ics:ice,:,iblk)   = sb_loss%residue%carbon13%ptr(ics:ice,:,iblk) + &
+                                                     fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk)
+    sb_loss%residue%carbon14%ptr(ics:ice,:,iblk)   = sb_loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
+                                                     fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk)
+    sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) + &
+                                                     fnorg * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk)
+
+    !> 8.3 nutrient flux to vegetation (surplus uptake goes to plants) (mol (N/P) / m3 / timestep)
     !!
 !@todo: N15 uptake
  
@@ -2726,28 +2795,17 @@ CONTAINS
 
     ! constrain flux to minimum of potential uptake and demand
     hlp2(:,:) = MIN(hlp1(:,:), &
-                mycorrhiza_uptake_nh4_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:))
+                mycorrhiza_uptake_nh4_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + mycorrhiza_uptake_norg_sl(:,:))
 
     ! maintain C:N of mycorrhizal fungi
     ! N supply for plants = N uptake by mycorrhiza - N demand by mycorrhiza
     ! N demand can be negative => N supply can be greater then current N uptake by plants!
-    WHERE(hlp1(:,:) > 0.0_wp)
-        ! incorporation of N into mycorrhiza (mol N / m3 / timestep)
-        sb_formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + &
-                                                               hlp2(:,:)
-    ELSEWHERE
-        !surplus N removal from myorrhiza (mol N / m3 / timestep, note the negative sign
-        sb_loss%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) - &
-                                                          hlp2(:,:)
-    ENDWHERE
 
-    ! remainder is exported to plants (mol N / m2 / timestep)
-    hlp3(:,:) = mycorrhiza_uptake_nh4_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) - hlp2(:,:)
+    ! remainder is exported to plants (mol N / m3 / timestep)
+    hlp3(:,:) = mycorrhiza_uptake_nh4_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + mycorrhiza_uptake_norg_sl(:,:) - hlp2(:,:)
 
-    veg_mycorrhiza_export%nitrogen%ptr = 0.0_wp
-    DO isoil = 1, options%nsoil_sb
-         veg_mycorrhiza_export%nitrogen%ptr = veg_mycorrhiza_export%nitrogen%ptr + hlp3(1,isoil) * soil_depth_sl(1,isoil)
-    ENDDO 
+    sb_mycorrhiza_export%nitrogen%ptr(ics:ice,:,iblk) = 0.0_wp
+    sb_mycorrhiza_export%nitrogen%ptr(ics:ice,:,iblk) = sb_mycorrhiza_export%nitrogen%ptr(ics:ice,:,iblk) + hlp3(:,:)
 
     ! P demand of mycorrhiza in mol P / m3 / timestep ! BLARPP SZ: constrained to positive solutions
     hlp1(:,:) = MAX(sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) / mycorrhiza_cn / mycorrhiza_np - &
@@ -2755,17 +2813,33 @@ CONTAINS
     ! incorporation of P into mycorrhiza (mol P / m3 / timestep)
     ! constrain flux to minimum of potential uptake and demand 
     hlp2(:,:) = MIN(hlp1(:,:), mycorrhiza_uptake_po4_sl(:,:))
-    sb_formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + &
-                                                             hlp2(:,:)
 
-    ! remainder is exported to plants (mol P / m2 / timestep)
+    ! remainder is exported to plants (mol P / m3 / timestep)
     hlp3(:,:) = mycorrhiza_uptake_po4_sl(:,:) - hlp2(:,:)
-    veg_mycorrhiza_export%phosphorus%ptr = 0.0_wp
-    DO isoil = 1, options%nsoil_sb
-         veg_mycorrhiza_export%phosphorus%ptr = veg_mycorrhiza_export%phosphorus%ptr + hlp3(1,isoil) * soil_depth_sl(1,isoil) 
-    ENDDO
+    sb_mycorrhiza_export%phosphorus%ptr(ics:ice,:,iblk) = 0.0_wp
+    sb_mycorrhiza_export%phosphorus%ptr(ics:ice,:,iblk) = sb_mycorrhiza_export%phosphorus%ptr(ics:ice,:,iblk) + hlp3(:,:) 
 
-    !> 8.3 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
+    !new mycorrhiza formation out of uptake from slow N pool 
+    mycorrhiza_cue = 0.5_wp
+
+    sb_formation%mycorrhiza%carbon%ptr(ics:ice,:,iblk)     = sb_formation%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + &
+                                                             fnorg * sb_pool%residue%carbon%ptr(ics:ice,:,iblk) * mycorrhiza_cue
+    sb_formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)   = sb_formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + &
+                                                             fnorg * sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
+    sb_formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + &
+                                                             fnorg * sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
+    sb_formation%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)   = sb_formation%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + &
+                                                             fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk) * mycorrhiza_cue
+    sb_formation%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)   = sb_formation%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + &
+                                                             fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk) * mycorrhiza_cue
+    sb_formation%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + &
+                                                             fnorg * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk)
+
+    het_respiration(:,:)     = het_respiration(:,:)     + fnorg * sb_pool%residue%carbon%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
+
+    !> 8.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
     !!
     fturn_mycorrhiza(:,:) = 1.0_wp/lctlib%tau_mycorrhiza/one_day/one_year * dtime
 

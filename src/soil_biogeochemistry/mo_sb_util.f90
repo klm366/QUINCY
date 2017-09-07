@@ -87,6 +87,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
@@ -172,6 +174,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl)! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
@@ -250,6 +254,9 @@ CONTAINS
     CALL sb%formation%init(zero)
     CALL sb%transport%init(zero)
 
+    ! t_slm_struct_sb_element
+    CALL sb%mycorrhiza_export%init(zero)
+
     ! 3D fields
     het_respiration(:,:)              = zero
     het_respiration_c13(:,:)          = zero
@@ -268,6 +275,8 @@ CONTAINS
     mycorrhiza_uptake_nh4_n15_sl(:,:) = zero
     mycorrhiza_uptake_no3_sl(:,:)     = zero
     mycorrhiza_uptake_no3_n15_sl(:,:) = zero
+    mycorrhiza_uptake_norg_sl(:,:)    = zero
+    mycorrhiza_uptake_norg_n15_sl(:,:)= zero
     mycorrhiza_uptake_po4_sl(:,:)     = zero
     transport_nh4_solute(:,:)         = zero 
     transport_nh4_assoc(:,:)          = zero 

@@ -17,8 +17,6 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-bnf_scheme="standard"           # none fixed standard optimal resistance
-myc_scheme="no"                 # mycchoriza scheme: no am ecm
 soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic 
@@ -27,6 +25,12 @@ flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
+# BNF & Mycorrhiza
+bnf_scheme="standard"           # none fixed standard optimal resistance
+flag_mycorrhiza="T"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
+flag_myco_inorganic="T"         # allows mycorrhiza to access the inorganic N pools
+flag_myco_organic="T"           # allows mycorrhiza to access the organic/residual N pool
+flag_myco_priming="T"           # present mycorrhiza enhance decomposition of residual pool (priming)
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -72,7 +76,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":p:m:y:o:b:h" opt; do
+while getopts ":p:m:y:o:b:z:h" opt; do
   case "$opt" in
   "p")
     echo "   plant_functional_type_id=""$OPTARG"
@@ -143,6 +147,20 @@ while getopts ":p:m:y:o:b:h" opt; do
       ;;
     esac
     ;;
+  "z")
+    case "$OPTARG" in
+    "T")
+      echo "   flag_mycorrhiza=""$OPTARG"
+      echo "     mycorrhiza are active!"
+      flag_mycorrhiza="$OPTARG"
+      ;;
+    "F")
+      echo "   flag_mycorrhiza=""$OPTARG"
+      echo "     mycorrhiza not active!"
+      flag_mycorrhiza="$OPTARG"
+      ;;
+    esac
+    ;;
   \?)
     echo "     Invalid option: -$OPTARG"
     echo "     Use -h for help."
@@ -178,6 +196,10 @@ while getopts ":p:m:y:o:b:h" opt; do
     echo "       std : standard (includes costs)"
     echo "       opt : optimal"
     echo "       res : resistance"
+    echo " -z set mycorrhiza on/off (flag_mycorrhiza)"
+    echo "    Arguments to -z:"
+    echo "       T: TRUE  - mycorrhiza are simulated"
+    echo "       F: FALSE - mycorrhiza are NOT simulated"
     exit 1
     ;;
   esac
@@ -225,7 +247,12 @@ validateForcingDataSet="fluxnet cruncep face none"
 ## validate user-defined model-options ##
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
-validateUserConfigValues "$myc_scheme" "$validateMycScheme" "myc_scheme"
+validateUserConfigValues "$flag_mycorrhiza" "$validateFlags" "flag_mycorrhiza"
+validateUserConfigValues "$flag_myco_inorganic" "$validateFlags" "flag_myco_inorganic"
+validateUserConfigValues "$flag_myco_organic" "$validateFlags" "flag_myco_organic"
+validateUserConfigValues "$flag_myco_priming" "$validateFlags" "flag_myco_priming"
+validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
+validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
 validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
@@ -353,6 +380,15 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
 fi
 
 
+## set mycorrhiza flag_myco_* flags to FALSE if mycorrhiza are disabled overall
+if [ $flag_mycorrhiza == "F" ]
+ then
+  flag_myco_inorganic="F"
+  flag_myco_organic="F"
+  flag_myco_priming="F"
+fi
+
+
 ## cd into the new folder ##
 cd ./"$slmModel"
 
@@ -378,7 +414,6 @@ return 0                                                                        
 
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
-changeNamelistValue myc_scheme "$myc_scheme" 
 changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
@@ -386,6 +421,30 @@ changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
+if [ $flag_mycorrhiza == T ]
+  then
+    changeNamelistValue flag_mycorrhiza ".TRUE."
+  else
+    changeNamelistValue flag_mycorrhiza ".FALSE."
+fi
+if [ $flag_myco_inorganic == T ]
+  then
+    changeNamelistValue flag_myco_inorganic ".TRUE."
+  else
+    changeNamelistValue flag_myco_inorganic ".FALSE."
+fi
+if [ $flag_myco_organic == T ]
+  then
+    changeNamelistValue flag_myco_organic ".TRUE."
+  else
+    changeNamelistValue flag_myco_organic ".FALSE."
+fi
+if [ $flag_myco_priming == T ]
+  then
+    changeNamelistValue flag_myco_priming ".TRUE."
+  else
+    changeNamelistValue flag_myco_priming ".FALSE."
+fi
 if [ $flag_sb_prescribe_nh4 == T ]
   then
     changeNamelistValue flag_sb_prescribe_nh4 ".TRUE."

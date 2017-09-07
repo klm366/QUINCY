@@ -418,8 +418,8 @@ CONTAINS
     CALL calc_actual_nutrient_uptake_rate(options, & 
                                           lctlib, &
                                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
-                                          TRIM(dsl4jsb_Config(VEG_)%myc_scheme), &
                                           TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
+                                          dsl4jsb_Config(SB_)%flag_mycorrhiza, &
                                           kstar_labile(:), &
                                           t_air(:), &
                                           veg%pool%fine_root%carbon%ptr, & 
@@ -444,7 +444,7 @@ CONTAINS
                                           plant_uptake_no3_sl(:,:), &
                                           plant_uptake_no3_n15_sl(:,:), &
                                           plant_uptake_po4_sl(:,:), &
-                                          veg%mycorrhiza_export, &
+                                          sb%mycorrhiza_export, &
                                           uptake_nh4(:), &
                                           uptake_nh4_n15(:), &
                                           uptake_no3(:), &
@@ -799,8 +799,8 @@ CONTAINS
   SUBROUTINE calc_actual_nutrient_uptake_rate(options, & 
                                               lctlib, &
                                               bnf_scheme, &
-                                              myc_scheme, &
                                               sb_model_scheme, &
+                                              flag_mycorrhiza  , &
                                               kstar_labile, &
                                               t_air, &                                              
                                               fine_root_carbon, & 
@@ -825,7 +825,7 @@ CONTAINS
                                               plant_uptake_no3_sl, &
                                               plant_uptake_no3_n15_sl, &
                                               plant_uptake_po4_sl, &
-                                              veg_mycorrhiza_export, &
+                                              sb_mycorrhiza_export, &
                                               uptake_nh4, &
                                               uptake_nh4_n15, &
                                               uptake_no3, &
@@ -850,6 +850,7 @@ CONTAINS
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf
     USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
+    USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element     ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(SB_)]
 
     IMPLICIT NONE
     
@@ -857,8 +858,8 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options                  !< model options
     TYPE(t_lctlib_element),                INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                      INTENT(in)    :: bnf_scheme               !< from veg config 
-    CHARACTER(len=*),                      INTENT(in)    :: myc_scheme               !< from veg config 
     CHARACTER(len=*),                      INTENT(in)    :: sb_model_scheme          !< from sb config
+    LOGICAL,                               INTENT(in)    :: flag_mycorrhiza          !< from sb config
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: kstar_labile             !< meristem turnover rate  
     REAL(wp), DIMENSION(options%nc),       INTENT(in)    :: t_air                    !< air temperature (K) !! should be soil temperature!
     REAL(wp),                              INTENT(in)    :: fine_root_carbon         !< fine root carbon (mol C / m2)
@@ -883,7 +884,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
-    TYPE(t_slm_struct_veg_element),        INTENT(in)    :: veg_mycorrhiza_export    !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
+    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: sb_mycorrhiza_export     !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4               !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4_n15           !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_no3               !< total plant NO3 uptake (mu mol N / m2 / s)
@@ -918,7 +919,11 @@ CONTAINS
                                        hlp1, &
                                        hlp2 
     INTEGER :: isoil
+    INTEGER :: iblk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_actual_nutrient_uptake_rate'
+
+
+    iblk = options%iblk
 
     !> 1.0 determine root nutrient uptake from soil  
     !!
@@ -1039,13 +1044,14 @@ CONTAINS
 
     !> 4.0 Determine C use for Root Exudates
     !! 
-    IF(myc_scheme == 'am' .OR. myc_scheme == 'ecm') THEN
+    IF(flag_mycorrhiza) THEN
 
        f_exudate(:) = 0.5_wp   
-       IF(veg_mycorrhiza_export%nitrogen%ptr > eps8)THEN 
+       hlp1(:) = SUM(sb_mycorrhiza_export%nitrogen%ptr(:,:,iblk) * soil_depth_sl(:,:),DIM=2) 
+       WHERE( hlp1(:) > eps8) 
           f_exudate(:) = MIN(f_exudate(:), &
-                             veg_mycorrhiza_export%nitrogen%ptr / (veg_mycorrhiza_export%nitrogen%ptr + dtime/1.e6_wp * (uptake_nh4(:)+uptake_no3(:)))) ! Mycofon
-       ENDIF 
+                             hlp1(:) / (hlp1(:) + (uptake_nh4(:)+uptake_no3(:)) * dtime/1.e6_wp )) ! Mycofon
+       ENDWHERE 
 !! Shorter for trunk!!!
        ! mol/m3 * m -> mol/m2
        ! mol/m2 * g/mol -> g/m2
@@ -1069,6 +1075,16 @@ CONTAINS
        exudation_carbon = MAX(0.0_wp, & 
                               MIN(f_exudate_max(1) * labile_carbon * kstar_labile(1) * dtime / one_day, &
                                   f_exudate(1) * (f_myc_opt(1) * fine_root_carbon - SUM(mycorrhiza_carbon(1,:) * soil_depth_sl(1,:))))) 
+
+       IF(exudation_carbon < eps8)THEN
+         sb_mycorrhiza_export%carbon%ptr(1,:,iblk)     = 0.0_wp
+         sb_mycorrhiza_export%nitrogen%ptr(1,:,iblk)   = 0.0_wp
+         sb_mycorrhiza_export%phosphorus%ptr(1,:,iblk) = 0.0_wp
+         sb_mycorrhiza_export%carbon13%ptr(1,:,iblk)   = 0.0_wp
+         sb_mycorrhiza_export%carbon14%ptr(1,:,iblk)   = 0.0_wp
+         sb_mycorrhiza_export%nitrogen15%ptr(1,:,iblk) = 0.0_wp
+       ENDIF
+
     ENDIF
 
     !> 4.0 Determine C use for N uptake, and constrain this to available carbon

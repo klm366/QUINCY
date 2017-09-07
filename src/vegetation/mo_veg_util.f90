@@ -57,7 +57,6 @@ CONTAINS
     CALL veg%reserve_use%init(flux_zero)
     CALL veg%establishment%init(flux_zero)
     CALL veg%exudation%init(flux_zero)
-    CALL veg%mycorrhiza_export%init(flux_zero)
     ! t_slm_struct_veg_pool
     CALL veg%growth%init(flux_zero)
     CALL veg%litterfall%init(flux_zero)

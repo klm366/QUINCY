@@ -28,10 +28,8 @@ MODULE mo_veg_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
-    CHARACTER(15)    :: bnf_scheme       , &       !< select scheme to simulate BNF (biological nitrogen fixation)
+    CHARACTER(15)    :: bnf_scheme                 !< select scheme to simulate BNF (biological nitrogen fixation)
                                                    ! "none|fixed|standard|resistance|optimal"   
-                        myc_scheme                 !< select scheme to simulate mycorrhiza
-                                                   !< "no|am|ecm"
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
     LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
@@ -59,8 +57,7 @@ CONTAINS
     LOGICAL       :: active
     ! variables for reading from namlist, identical to variable-name in namelist
     INTEGER       :: plant_functional_type_id
-    CHARACTER(15) :: bnf_scheme       , & 
-                     myc_scheme
+    CHARACTER(15) :: bnf_scheme       
     LOGICAL       :: flag_tile_veg_dynamics
     LOGICAL       :: flag_optimal_Nleaf
     LOGICAL       :: flag_optimal_allocation
@@ -68,7 +65,6 @@ CONTAINS
 
     NAMELIST /vegetation_ctl/       & 
       bnf_scheme,                   & 
-      myc_scheme,                   &
       plant_functional_type_id,     &
       flag_tile_veg_dynamics,       &
       flag_optimal_Nleaf,           &
@@ -81,7 +77,6 @@ CONTAINS
 
     ! Set defaults
     bnf_scheme                     = "standard"  ! standard std_plus_costs resistance optimal
-    myc_scheme                     = "no"        ! no am ecm
     plant_functional_type_id       = 1
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
@@ -103,17 +98,9 @@ CONTAINS
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
     ENDSELECT
 
-    ! check input for mycorrhiza scheme
-    SELECT CASE (TRIM(myc_scheme))
-     CASE ("no","am","ecm")
-     CASE DEFAULT
-       WRITE(message_text,'(2a)') 'invalid myc_scheme',myc_scheme
-       CALL finish("mo_veg_config_class:init_veg_config",message_text) 
-    ENDSELECT
 
     ! pass values as read from file
     config%bnf_scheme                    = TRIM(bnf_scheme)
-    config%myc_scheme                    = TRIM(myc_scheme)
     config%pft_id                        = plant_functional_type_id
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf

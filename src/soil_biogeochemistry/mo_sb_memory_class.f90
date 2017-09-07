@@ -212,7 +212,9 @@ MODULE mo_sb_memory_class
                                     mycorrhiza_uptake_nh4_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
                                     mycorrhiza_uptake_no3_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
                                     mycorrhiza_uptake_no3_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
-                                    mycorrhiza_uptake_po4_sl,     &  !< mycorrhiza uptake of P  [mol m-3 s-1] 
+                                    mycorrhiza_uptake_norg_sl,    &  !< mycorrhiza uptake of N    [mol m-3 s-1]
+                                    mycorrhiza_uptake_norg_n15_sl,&  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
+                                    mycorrhiza_uptake_po4_sl,   &  !< mycorrhiza uptake of P  [mol m-3 s-1] 
                                     volatilisation_nh4,       &  !< volatilisation of NH4  [µmol m-3 s-1]
                                     volatilisation_nh4_n15, &    !< volatilisation of 15NH4  [µmol m-3 s-1]
                                     nitrification_no3, &         !< nitrification NO3 [µmol m-3 s-1]
@@ -265,7 +267,8 @@ MODULE mo_sb_memory_class
                                     total_flux_nitrogen15         !< nitrogen15 mass balance checks in soil_biogeochemistry model
 
    TYPE(t_slm_struct_sb_element)    :: &   ! simple structure for elements: t_jsb_struct
-                                    delta_pools                 !< for mass balance checks in soil_biogeochemistry model
+                                    delta_pools, &              !< for mass balance checks in soil_biogeochemistry model
+                                    mycorrhiza_export           !< nutrient flux from mycorrhiza to host plant
 
 
     TYPE(t_slm_struct_sb_pool)      :: &   ! nested pool TYPE t_jsb_n_struct
@@ -1431,7 +1434,23 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
-  
+
+      CALL jsb_add_var(mem, 'mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -1774,6 +1793,13 @@ CONTAINS
       !! jsb_add_var -> slm_add_struct()
       !! 
       CALL jsb_add_var(mem, 'sb_delta_pools', mem%delta_pools, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix)
+
+      CALL jsb_add_var(mem, 'sb_mycorrhiza_export', mem%mycorrhiza_export, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
@@ -3823,6 +3849,49 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp)     ! initvalue
       CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_nitrogen15', mem%delta_pools%nitrogen15, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp)     ! initvalue
+
+      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_carbon', mem%mycorrhiza_export%carbon, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_nitrogen', mem%mycorrhiza_export%nitrogen, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_phosphorus', mem%mycorrhiza_export%phosphorus, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_carbon13', mem%mycorrhiza_export%carbon13, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_carbon14', mem%mycorrhiza_export%carbon14, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_nitrogen15', mem%mycorrhiza_export%nitrogen15, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

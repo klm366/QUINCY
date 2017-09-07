@@ -31,6 +31,10 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
+    LOGICAL               :: flag_mycorrhiza
+    LOGICAL               :: flag_myco_inorganic
+    LOGICAL               :: flag_myco_organic
+    LOGICAL               :: flag_myco_priming
     REAL(wp)              :: bulk_density
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
@@ -64,6 +68,10 @@ CONTAINS
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
+    LOGICAL               :: flag_mycorrhiza
+    LOGICAL               :: flag_myco_inorganic
+    LOGICAL               :: flag_myco_organic
+    LOGICAL               :: flag_myco_priming
     REAL(wp)              :: bulk_density
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
@@ -76,10 +84,15 @@ CONTAINS
                       flag_sb_prescribe_nh4,  &
                       flag_sb_prescribe_no3,  &
                       flag_sb_prescribe_po4,  &
+                      flag_mycorrhiza      ,  &
+                      flag_myco_inorganic  ,  &
+                      flag_myco_organic    ,  &
+                      flag_myco_priming    ,  &     
                       bulk_density         ,  &
                       usda_taxonomy_class  ,  &
                       nwrb_taxonomy_class  ,  &
                       glim_lithology_class
+     
      
 
     ! variables for reading model-options from namelist
@@ -93,6 +106,10 @@ CONTAINS
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
+    flag_mycorrhiza             = .FALSE.
+    flag_myco_inorganic         = .FALSE.
+    flag_myco_organic           = .FALSE.
+    flag_myco_priming           = .FALSE.
     bulk_density                = 1500.0_wp
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
@@ -125,6 +142,10 @@ CONTAINS
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
+    config%flag_mycorrhiza                 = flag_mycorrhiza
+    config%flag_myco_inorganic             = flag_myco_inorganic
+    config%flag_myco_organic               = flag_myco_organic
+    config%flag_myco_priming               = flag_myco_priming
     config%bulk_density                    = bulk_density
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class

@@ -91,6 +91,7 @@ CONTAINS
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -111,11 +112,13 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SB_)
 
 
     !> 1.0 init
@@ -133,6 +136,7 @@ CONTAINS
     IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+!    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza) opt = trim(opt) // "_myco"
      
 
     !> 2.2 define open() statements for file output
@@ -936,6 +940,7 @@ CONTAINS
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -955,11 +960,13 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SB_)
 
 
 
@@ -978,6 +985,7 @@ CONTAINS
     IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+!    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza) opt = trim(opt) // "_myco"
 
     !> 2.2 define open() statements for file output
     !! 
@@ -1892,6 +1900,7 @@ CONTAINS
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -1911,11 +1920,13 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SB_)
 
 
 
@@ -1931,6 +1942,7 @@ CONTAINS
     IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
     IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
     IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+!    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza) opt = trim(opt) // "_myco"
 
     !> 2.1 define open() statements for file output
     !! 

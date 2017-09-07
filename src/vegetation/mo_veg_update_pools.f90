@@ -51,6 +51,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -72,6 +73,7 @@ CONTAINS
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),      POINTER :: sb__mem
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
@@ -84,6 +86,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
     ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    ! SOIL_ 3D
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
@@ -141,6 +145,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
+    TYPE(t_sb_memory),       POINTER      :: sb       ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -159,6 +164,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
     ! Get process variables (Set pointers to variables in memory)
@@ -170,6 +176,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)               ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                 ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
@@ -230,6 +237,7 @@ CONTAINS
 
 !! *slmtemp
     veg       => veg__mem 
+    sb        => sb__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -253,31 +261,43 @@ CONTAINS
            growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
        npp_c14(:)  = gross_assimilation_C14(:) - & 
            growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
+
        veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr   + & 
-                                        veg%mycorrhiza_export%carbon%ptr      + &
                                         npp(1)     * dtime / 1000000.0_wp
        veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr + & 
-                                        veg%mycorrhiza_export%carbon%ptr      + &
                                         npp_c13(1) * dtime / 1000000.0_wp
        veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr + & 
-                                        veg%mycorrhiza_export%carbon%ptr      + &
                                         npp_c14(1) * dtime / 1000000.0_wp
   
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
        veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr + & 
-                                            veg%mycorrhiza_export%nitrogen%ptr + &
                                             ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * &
                                             dtime / 1000000.0_wp
        veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
-                                            veg%mycorrhiza_export%nitrogen15%ptr + &
                                             ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * &
                                             dtime / 1000000.0_wp
        veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
-                                            veg%mycorrhiza_export%phosphorus%ptr + &
                                             uptake_po4(1) * dtime / 1000000.0_wp
-   
+
+       !> 1.2a Add mycorrhiza export
+       !!
+       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr   + & 
+                                        SUM(sb%mycorrhiza_export%carbon%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr + & 
+                                        SUM(sb%mycorrhiza_export%carbon13%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr + & 
+                                        SUM(sb%mycorrhiza_export%carbon14%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg%growth%labile%nitrogen%ptr = veg%growth%labile%nitrogen%ptr + & 
+                                        SUM(sb%mycorrhiza_export%nitrogen%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
+                                          SUM(sb%mycorrhiza_export%nitrogen15%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
+                                          SUM(sb%mycorrhiza_export%phosphorus%ptr(1,:,iblk) * soil_depth_sl(1,:))
+
+
+
        !> 1.3 update labile pool and reserve 
        !! 
        veg%pool%labile  = veg%pool%labile  + veg%reserve_use

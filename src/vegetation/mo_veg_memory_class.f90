@@ -352,7 +352,6 @@ MODULE mo_veg_memory_class
     !!
     TYPE(t_slm_struct_veg_element)  :: &
                                     exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
-                                    mycorrhiza_export, &  !< flux between mycorrhiza and fine roots (mol m-2 timestep-1)
                                     establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
                                     reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
                                     init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_tile_veg_dynamics
@@ -2561,12 +2560,6 @@ CONTAINS
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'veg_mycorrhiza_export',      mem%mycorrhiza_export, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
       CALL jsb_add_var(mem, 'veg_establishment',          mem%establishment, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -2591,6 +2584,7 @@ CONTAINS
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
+
       !> nested TYPE (t_jsb_n_struct)
       !! 
       !! jsb_add_var -> slm_add_n_struct()
@@ -5331,48 +5325,6 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp)     ! initvalue
  
-      CALL jsb_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_carbon', mem%mycorrhiza_export%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_nitrogen', mem%mycorrhiza_export%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_phosphorus', mem%mycorrhiza_export%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_carbon13', mem%mycorrhiza_export%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_carbon14', mem%mycorrhiza_export%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'veg_mycorrhiza_export_nitrogen15', mem%mycorrhiza_export%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
  
       CALL jsb_add_var(mem%establishment, 'veg_establishment_carbon', mem%establishment%carbon, &
             hgrid, surface, &

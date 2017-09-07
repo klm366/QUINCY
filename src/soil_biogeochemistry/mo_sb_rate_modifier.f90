@@ -351,14 +351,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
 
     IF(param>eps8.AND.w_soil_fc_sl > eps8) THEN
-       hlp1 = (w_soil_sl / w_soil_fc_sl)**3
+       hlp1 = (w_soil_sl / w_soil_fc_sl)**3._wp
        IF(hlp1 > param) THEN
           rate_modifier = 1._wp / hlp1 
        ELSE 
           rate_modifier = 1._wp / param 
        ENDIF
     ELSE
-       rate_modifier = 1._wp
+      rate_modifier = 1._wp
     ENDIF
 
   END FUNCTION calc_substrate_rate_modifier

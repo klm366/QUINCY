@@ -141,6 +141,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
@@ -260,6 +262,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)   ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl) ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! in
@@ -380,21 +384,38 @@ CONTAINS
        sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    * lambda_C14 * dtime 
 
 
-    !> 2.0 update mycorrhiza with flux due to exudation from vegetation
+    !> 2.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
-!@todo: make sure this works for all soil layers
-    sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
-      veg%exudation%carbon%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
+    sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)     = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
+                                                             veg%exudation%carbon%ptr * mycorrhizal_cue / soil_depth_sl(:,1)
     sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
-      veg%exudation%nitrogen%ptr / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
-      veg%exudation%phosphorus%ptr / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
-      veg%exudation%carbon13%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
-      veg%exudation%carbon14%ptr * mycorrhizal_cue / soil_depth_sl(ics:ice,1)
-    sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
-      veg%exudation%nitrogen15%ptr / soil_depth_sl(ics:ice,1)
+                                                             veg%exudation%nitrogen%ptr / soil_depth_sl(:,1) + &
+                                                             (mycorrhiza_uptake_nh4_sl(:,1) + mycorrhiza_uptake_no3_sl(:,1)) * & !+ mycorrhiza_uptake_norg_sl(:,1)) * &
+                                                             dtime / 1000000._wp
+    sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
+                                                             veg%exudation%phosphorus%ptr / soil_depth_sl(:,1) + &
+                                                             mycorrhiza_uptake_po4_sl(:,1) * dtime / 1000000._wp
+    sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
+                                                             veg%exudation%carbon13%ptr * mycorrhizal_cue / soil_depth_sl(:,1)
+    sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
+                                                             veg%exudation%carbon14%ptr * mycorrhizal_cue / soil_depth_sl(:,1)
+    sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
+                                                             veg%exudation%nitrogen15%ptr / soil_depth_sl(:,1) + &
+                                                             (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
+                                                             dtime / 1000000._wp
+
+    sb%loss%mycorrhiza%carbon%ptr(ics:ice,1,iblk)     = sb%loss%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
+                                                        sb%mycorrhiza_export%carbon%ptr(ics:ice,1,iblk) 
+    sb%loss%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%loss%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
+                                                        sb%mycorrhiza_export%nitrogen%ptr(ics:ice,1,iblk)
+    sb%loss%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) = sb%loss%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
+                                                        sb%mycorrhiza_export%phosphorus%ptr(ics:ice,1,iblk)
+    sb%loss%mycorrhiza%carbon13%ptr(ics:ice,1,iblk)   = sb%loss%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
+                                                        sb%mycorrhiza_export%carbon13%ptr(ics:ice,1,iblk)
+    sb%loss%mycorrhiza%carbon14%ptr(ics:ice,1,iblk)   = sb%loss%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
+                                                        sb%mycorrhiza_export%carbon14%ptr(ics:ice,1,iblk)
+    sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
+                                                        sb%mycorrhiza_export%nitrogen15%ptr(ics:ice,1,iblk)
 
     het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg%exudation%carbon%ptr / dtime * 1000000._wp                          
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon13%ptr / dtime * 1000000._wp
@@ -520,20 +541,23 @@ CONTAINS
        sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk)
 
     !! fluxes
+
     total_flux_carbon(:) =                  veg%litterfall%leaf%carbon%ptr        + &
       veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
       veg%litterfall%sap_wood%carbon%ptr  + veg%litterfall%heart_wood%carbon%ptr  + &
       veg%litterfall%labile%carbon%ptr    + veg%litterfall%reserve%carbon%ptr     + &
-      veg%litterfall%fruit%carbon%ptr     + veg%litterfall%seed_bed%carbon%ptr    - &
-      veg%mycorrhiza_export%carbon%ptr                                            - &
+      veg%litterfall%fruit%carbon%ptr     + veg%litterfall%seed_bed%carbon%ptr    + &
+      veg%exudation%carbon%ptr                                                    - &
+      SUM(sb%mycorrhiza_export%carbon%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)  - &
       SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
     total_flux_nitrogen(:) =                  veg%litterfall%leaf%nitrogen%ptr        + &
       veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
       veg%litterfall%sap_wood%nitrogen%ptr  + veg%litterfall%heart_wood%nitrogen%ptr  + &
       veg%litterfall%labile%nitrogen%ptr    + veg%litterfall%reserve%nitrogen%ptr     + &
       veg%litterfall%fruit%nitrogen%ptr     + veg%litterfall%seed_bed%nitrogen%ptr    + &
-      SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp           - &
-      veg%mycorrhiza_export%nitrogen%ptr                                              - &
+      SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp           + &
+      veg%exudation%nitrogen%ptr                                                      - &
+      SUM(sb%mycorrhiza_export%nitrogen%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
       (leaching_nh4_solute(:) + leaching_no3_solute(:)                                + &
        emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)            + &
        SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
@@ -542,31 +566,35 @@ CONTAINS
       veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
       veg%litterfall%sap_wood%phosphorus%ptr  + veg%litterfall%heart_wood%phosphorus%ptr  + &
       veg%litterfall%labile%phosphorus%ptr    + veg%litterfall%reserve%phosphorus%ptr     + &
-      veg%litterfall%fruit%phosphorus%ptr     + veg%litterfall%seed_bed%phosphorus%ptr    - &
-      veg%mycorrhiza_export%phosphorus%ptr                                                - &
+      veg%litterfall%fruit%phosphorus%ptr     + veg%litterfall%seed_bed%phosphorus%ptr    + &
+      veg%exudation%phosphorus%ptr                                                        - &
+      SUM(sb%mycorrhiza_export%phosphorus%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)      - &
       (leaching_po4_solute(:)                                                             + &
        SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
     total_flux_carbon13(:) =                  veg%litterfall%leaf%carbon13%ptr        + &
       veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
       veg%litterfall%sap_wood%carbon13%ptr  + veg%litterfall%heart_wood%carbon13%ptr  + &
       veg%litterfall%labile%carbon13%ptr    + veg%litterfall%reserve%carbon13%ptr     + &
-      veg%litterfall%fruit%carbon13%ptr     + veg%litterfall%seed_bed%carbon13%ptr    - &
-      veg%mycorrhiza_export%carbon13%ptr                                              - &
+      veg%litterfall%fruit%carbon13%ptr     + veg%litterfall%seed_bed%carbon13%ptr    + &
+      veg%exudation%carbon13%ptr                                                      - &
+      SUM(sb%mycorrhiza_export%carbon13%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
     total_flux_carbon14(:) =                  veg%litterfall%leaf%carbon14%ptr        + &
       veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
       veg%litterfall%sap_wood%carbon14%ptr  + veg%litterfall%heart_wood%carbon14%ptr  + &
       veg%litterfall%labile%carbon14%ptr    + veg%litterfall%reserve%carbon14%ptr     + &
-      veg%litterfall%fruit%carbon14%ptr     + veg%litterfall%seed_bed%carbon14%ptr    - &
-      veg%mycorrhiza_export%carbon14%ptr                                              - &
+      veg%litterfall%fruit%carbon14%ptr     + veg%litterfall%seed_bed%carbon14%ptr    + &
+      veg%exudation%carbon14%ptr                                                      - &
+      SUM(sb%mycorrhiza_export%carbon14%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
     total_flux_nitrogen15(:) =                  veg%litterfall%leaf%nitrogen15%ptr          + &
       veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr   + &
       veg%litterfall%sap_wood%nitrogen15%ptr  + veg%litterfall%heart_wood%nitrogen15%ptr    + &
       veg%litterfall%labile%nitrogen15%ptr    + veg%litterfall%reserve%nitrogen15%ptr       + &
       veg%litterfall%fruit%nitrogen15%ptr     + veg%litterfall%seed_bed%nitrogen15%ptr      + &
-      SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp             - &
-      veg%mycorrhiza_export%nitrogen15%ptr                                                  - &
+      SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp             + &
+      veg%exudation%nitrogen15%ptr                                                          - &
+      SUM(sb%mycorrhiza_export%nitrogen15%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)        - &
       (leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                              - &
        emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:) + &
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                        + &

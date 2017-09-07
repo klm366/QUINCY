@@ -293,6 +293,7 @@ CONTAINS
     !> 2.3 update net radiation flux at the surface, and implied soil temperature
     !!
     net_radiation(:) = latent_heat_flx(:) + sensible_heat_flx(:) - ground_heat_flx(:) 
+
     t_soil_sl(:,1) = t_soil_sl(:,1) + ( sw_srf_net(:) - net_radiation(:) + & 
                               ! simple estimate of surface net longwave flux
                               lw_srf_down(:) - stbo * zemiss_def * t_soil_sl(:,1)**4 ) / & 
