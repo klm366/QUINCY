@@ -14,7 +14,7 @@
 
 ## folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
-experimentalID=""
+experimentalID="FR-Pue_layer_land3"
 ## specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 # land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant), canopy
 slmModel="land"
@@ -44,7 +44,7 @@ customSiteListFileName=""
 # Site-ID must be consistent with the forcingDataSet option above
 # get the Site-ID from the 1st column of the particular "site list .dat"
 # examples: [FLUX] "DE-Hai" "ZA-Kru" [CRUN] "BHS_01" "ILO_05" [FACE] "DK-AMB" "OR-ELE"
-singleSiteName=""
+singleSiteName="FR-Pue"
 
 
 ##>> special runs <<####################################################################################
@@ -52,7 +52,7 @@ singleSiteName=""
 # T (True) or F (False) [large caps]
 # when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
 # scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
-specialFluxnetOutput="F"
+specialFluxnetOutput="T"
 
 ##(2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
@@ -85,9 +85,9 @@ yearsSoilForcing=1
 # plant-soil model options
 soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
-sb_nloss_scheme="dynamic"       # none fixed dynamic
-flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
-flag_sb_prescribe_no3="F"       # set no3solute to a constant value
+sb_nloss_scheme="none"       # none fixed dynamic
+flag_sb_prescribe_nh4="T"       # set nh4solute to a constant value
+flag_sb_prescribe_no3="T"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
@@ -100,8 +100,8 @@ flag_myco_organic="F"           # allows mycorrhiza to access the organic/residu
 flag_myco_priming="F"           # present mycorrhiza enhance decomposition of residual pool (priming)
 
 # canopy model options
-flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
-flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
+flag_t_resp_acclimation="F"     # use the respiration temperature acclimation factor
+flag_t_jmax_acclimation="F"     # acclimation of optimum temperature for Jmax
 flag_optimal_Nfraction="F"      # optimal N fraction
 ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
@@ -118,9 +118,9 @@ soil_depth=5.7                  # meters
 
 # simulation length & output
 simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 116 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
-output_interval_pool="weekly"   # timestep daily weekly monthly yearly
-output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=1   # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
+output_interval_pool="timestep"   # timestep daily weekly monthly yearly
+output_interval_flux="timestep"   # timestep daily weekly monthly yearly
+output_start_first_day_year=20   # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
 output_end_last_day_year=30     # equal with or larger than option: output_start_first_day_year
 
 # options for the forcingMode transient (only evaluated if forcingMode == transient)
@@ -132,7 +132,7 @@ transient_simulation_start_year=1901  # default 1901; simulation start with forc
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
-useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
+useSiteSpecificAWC="T"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0        # float !
 flag_read_dC13="F"              # either use forcing dC13 or the prescribed default value
 flag_read_dC14="F"              # either use forcing dC14 or the prescribed default value
