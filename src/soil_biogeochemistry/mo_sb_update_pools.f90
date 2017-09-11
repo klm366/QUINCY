@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_constants
-    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_org
+    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_N15N14
 
     ! Use of process configurations (t_PROC_config)
@@ -84,6 +84,7 @@ CONTAINS
     ! A2L
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
+    dsl4jsb_Real2D_onChunk :: p_deposition
     ! SOIL
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
@@ -137,6 +138,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: weathering_po4
+    dsl4jsb_Real3D_onChunk :: occlusion_po4
+    dsl4jsb_Real3D_onChunk :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk :: fast_adsorption_po4
+    dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: gross_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
@@ -176,8 +183,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: n2o_n15
     dsl4jsb_Real3D_onChunk :: n2
     dsl4jsb_Real3D_onChunk :: n2_n15
-    dsl4jsb_Real3D_onChunk :: qmax_org 
-    dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
+    dsl4jsb_Real3D_onChunk :: qmax_org
+    dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
 
 ! 2 be removed?: pointers to sb *slmtemp
@@ -206,6 +214,7 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_deposition)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_deposition)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
@@ -297,7 +306,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       n2o_n15)                     ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       n2)                          ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       n2_n15)                      ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)           ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorption_po4)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
 
@@ -429,11 +445,12 @@ CONTAINS
     !!
     bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb%pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
-    qmax_org = calc_qmax_org(bulk_dens_corr_sl)
+    qmax_org = calc_qmax(bulk_dens_corr_sl,qmax_org_mineral_default)
+    qmax_po4 = calc_qmax(bulk_dens_corr_sl,qmax_po4_mineral)
 
     !> 4.0 update of inorganic pools
     !!
-    !> 4.1 ecosystem internal processes  
+    !> 4.1 update of N pools  
     !!
     nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) + asymb_n_fixation(:,:) + transport_nh4_solute(:,:) - & 
                                                  plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
@@ -449,8 +466,6 @@ CONTAINS
     no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) + nitrification_no3_n15(:,:) + transport_no3_n15_solute(:,:) - & 
                                                  plant_uptake_no3_n15_sl(:,:) - mycorrhiza_uptake_no3_n15_sl(:,:) + &
                                                  denitrification_noy_n15(:,:) - denitrification_n2o_n15(:,:) - denitrification_n2_n15(:,:)) * dtime/1.e6_wp
-    po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + &
-                                                 transport_po4_solute(:,:)) * dtime/1.e6_wp
 
     noy(:,:)            = noy(:,:)            + (nitrification_noy(:,:) + denitrification_noy(:,:) + & 
                                                  transport_noy(:,:)) * dtime/1.e6_wp
@@ -467,10 +482,20 @@ CONTAINS
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-    !> 4.2 atmospheric deposition
+    !> 4.2 update of mineral P pools
+    !!
+    po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + weathering_po4(:,:) &
+                          + biochem_mineralisation_po4(:,:) + transport_po4_solute(:,:) - fast_adsorption_po4(:,:)) * dtime/1.e6_wp
+    po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (fast_adsorption_po4 - slow_sorption_po4 + transport_po4_assoc_fast) * dtime/1.e6_wp
+    po4_assoc_slow(:,:) = po4_assoc_slow(:,:) + (slow_sorption_po4 - occlusion_po4 + transport_po4_assoc_slow) * dtime/1.e6_wp
+    po4_occluded(:,:)   = po4_occluded(:,:)   + (occlusion_po4 + transport_po4_occluded) * dtime/1.e6_wp
+
+
+    !> 4.3 atmospheric deposition
     !!
     nh4_solute(:,1)     = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
     no3_solute(:,1)     = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    po4_solute(:,1)     = po4_solute(:,1)     + p_deposition(:)   / 1.e6_wp / soil_depth_sl(:,1) * dtime
     nh4_n15_solute(:,1) = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
                                                 ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
     no3_n15_solute(:,1) = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
@@ -608,12 +633,12 @@ CONTAINS
   ! Sub Task called from update_sb_pools
   !
   !-----------------------------------------------------------------------------------------------------
-  !> updates all SB pools given the JSM equations for formation, loss and transport 
+  !> updates all SB pools given the JSM equations for formation, loss and transport
   !! should be a simple pool operator overload function, but that doesn't work yet
-  !! 
-  !! Input: formation, loss and transport rate, pool sizes 
   !!
-  !! Output: updated pool sizes 
+  !! Input: formation, loss and transport rate, pool sizes
+  !!
+  !! Output: updated pool sizes
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_organic_pool_change(options,pool,formation,loss,transport)
 

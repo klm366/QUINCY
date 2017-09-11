@@ -226,17 +226,24 @@ CONTAINS
          sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
          sb%no3_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
          sb%no3_n15_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-         sb%po4_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
+         sb%po4_solute%ptr(ics:ice,:,iblk) = 0.01_wp 
 
          ! inital Qmax based on current soil carbon content
          sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options, sb%pool)
          sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk) = calc_bulk_density_correction(sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk), & 
                                                                          soil%bulk_dens_sl%ptr(ics:ice,:,iblk))
-         sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax_org(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk))
+         sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk),qmax_org_mineral_default)
+         sb%qmax_po4%ptr(ics:ice,:,iblk) = calc_qmax(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk),qmax_po4_mineral)
  
          ! initialise diffusion by bioturbation
          sb%k_bioturb%ptr(ics:ice,:,iblk) = calc_bioturbation_rate(options,sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)) 
 
+		 ! initialise mineral soil P pools
+         sb%po4_assoc_fast%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) * sb%qmax_po4%ptr(ics:ice,:,iblk) &
+                                                 / (sb%po4_solute%ptr(ics:ice,:,iblk) + km_adsorpt_po4 * sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk))
+         sb%po4_assoc_slow%ptr(ics:ice,:,iblk) = 70.0_wp / molar_mass_P
+         sb%po4_occluded%ptr(ics:ice,:,iblk)   = 150.0_wp / molar_mass_P		 
+		 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
  

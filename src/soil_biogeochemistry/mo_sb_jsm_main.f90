@@ -43,12 +43,14 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_isotope,        ONLY: calc_fractionation
     USE mo_sb_constants
-    USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_litter_turnover, calc_depolymerisation, &
-                                        calc_transfer_litterfall_pools, calc_microbial_growth, &
-                                        calc_microbial_turnover, calc_depolymerisation, calc_om_sorption
+    USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_po4_uptake_ECA, calc_litter_turnover, calc_depolymerisation, &
+                                        calc_transfer_litterfall_pools, calc_microbial_growth, calc_flux_po4, &
+                                        calc_microbial_turnover, calc_depolymerisation, calc_om_sorption, calc_adsorption_po4
     USE mo_sb_jsm_transport,      ONLY: calc_liquid_phase_transport_wrapper, calc_bioturbation_transport_wrapper, &
                                         calc_bioturbation_rate, calc_particle_fluxrate, calc_particle_transport_wrapper
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SB_)
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -76,6 +78,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -108,6 +111,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: weathering_po4
+    dsl4jsb_Real3D_onChunk :: occlusion_po4
+    dsl4jsb_Real3D_onChunk :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk :: fast_adsorption_po4
+    dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: gross_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: nh4_solute 
     dsl4jsb_Real3D_onChunk :: nh4_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
@@ -130,6 +139,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
     dsl4jsb_Real3D_onChunk :: k_bioturb 
     dsl4jsb_Real3D_onChunk :: qmax_org 
+    dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
 ! 2 be removed?: pointers to veg assimi *slmtemp
@@ -149,7 +159,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! Get process config
-!    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
@@ -182,6 +192,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorption_po4)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
@@ -204,6 +220,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
 
@@ -225,7 +242,7 @@ rmm_hsc = 1.0_wp
 rmm_sorption = 1.0_wp
 rmm_desorption = 1.0_wp
 
-    fine_root_carbon = root_fraction_sl * 6._wp !veg%pool%fine_root%carbon%ptr
+    fine_root_carbon = root_fraction_sl * 600._wp !veg%pool%fine_root%carbon%ptr
     !fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr
 
     !> X.0 Inorganic N assimilation
@@ -247,10 +264,30 @@ rmm_desorption = 1.0_wp
     plant_uptake_no3_n15_sl(:,:) = plant_uptake_no3_sl(:,:) * calc_fractionation(no3_solute,no3_n15_solute,eta_plant_uptake_no3)
 
     !> X.3 PO4
-    CALL calc_inorganic_uptake(po4_solute(:,:), sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), fine_root_carbon(:,:), &
-                               rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
-                               vmax_mic_uptake_po4, km_mic_uptake_po4, vmax_plant_uptake_po4, km_plant_uptake_po4, & 
-                               mic_uptake_po4(:,:), plant_uptake_po4_sl(:,:))
+
+    !! Calculate the P flux rates
+    !!
+	CALL calc_flux_po4(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),&
+                            rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                            sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk), sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk), &
+                            sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk), sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk), &
+                            sb%loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk), sb%loss%dom_assoc%phosphorus%ptr(ics:ice,:,iblk), &
+                            sb%loss%residue%phosphorus%ptr(ics:ice,:,iblk), sb%loss%residue_assoc%phosphorus%ptr(ics:ice,:,iblk), po4_assoc_slow(:,:), &
+                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
+
+    !! Microbial and plant P uptake
+    !!
+    CALL calc_po4_uptake_ECA(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), fine_root_carbon(:,:), po4_solute(:,:), &
+                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                                qmax_po4(:,:), po4_assoc_fast(:,:), mic_uptake_po4(:,:), plant_uptake_po4_sl(:,:), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4)
+
+    !! P adsorption
+    !!
+    CALL calc_adsorption_po4(options, po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), qmax_po4(:,:), &
+                               weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), percolation_sl(:,:), bulk_dens_corr_sl(:,:), &
+                               gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), fine_root_carbon(:,:), &
+                               mic_uptake_po4(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
+                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_CLE_po4, dsl4jsb_Config(SB_)%flag_sb_LK_po4)
 
     !> 2.0 Litter-related fluxes  
     !!
@@ -260,7 +297,7 @@ rmm_desorption = 1.0_wp
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                               sb%pool%soluable_litter,sb%loss%soluable_litter,sb%formation%dom)
 
-    !> 2.1 decay of woody litter
+    !> 2.2 decay of woody litter
     !!
     CALL calc_litter_turnover(options,tau_woody_litter, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &

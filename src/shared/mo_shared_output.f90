@@ -481,6 +481,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk      :: po4_occluded
     dsl4jsb_Real3D_onChunk      :: qmax_org
+    dsl4jsb_Real3D_onChunk      :: qmax_po4
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
 !! *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
@@ -555,6 +556,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_slow)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_occluded)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_org)
+    dsl4jsb_Get_var3D_onChunk(SB_,  qmax_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
 
 
@@ -930,7 +932,7 @@ CONTAINS
   !! 
   !! lun: start at 100 + 30
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc)
+  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile
@@ -948,7 +950,8 @@ CONTAINS
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
                                                    ics, &
                                                    ice, &
-                                                   nc 
+                                                   nc, &
+                                                   nsoil_sb 
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
@@ -1051,13 +1054,16 @@ CONTAINS
         lun=lun+1
         fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'mineralPflux'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         
     END SELECT
 
     !> 3.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_writing_flux
+    CALL init_output_writing_flux(nsoil_sb)
 
   END SUBROUTINE open_flux_output_files
 
@@ -1067,13 +1073,16 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_writing_flux
+  SUBROUTINE init_output_writing_flux(nsoil_sb)
 
     IMPLICIT NONE
     ! 0.1 InOut
     ! 
+    INTEGER,INTENT(in) :: nsoil_sb
     ! 0.2 Local
-    INTEGER :: lun
+    INTEGER :: lun,isoil
+    CHARACTER(2) :: layerstr
+    CHARACTER(200) :: p1str,p2str,p3str,p4str,p5str,p6str
 
     !> 1.0 write headers
     !!
@@ -1127,7 +1136,30 @@ CONTAINS
         WRITE(lun,'(a)') 'Time Litterfall NetMinNH4 NetMinNO3 LeachingOrg' 
         lun=lun+1   
         WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
-        
+        lun=lun+1
+
+         p1str=''
+         p2str=''
+         p3str=''
+         p4str=''
+         p5str=''
+         p6str=''
+         DO isoil = 1, nsoil_sb
+            IF(isoil<10) THEN 
+              WRITE(layerstr,'(I1)') isoil
+            ELSE
+              WRITE(layerstr,'(I2)') isoil
+            ENDIF
+            WRITE(p1str,'(a)') TRIM(p1str)//' Adsorp_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' MicUpt_L'//TRIM(layerstr)
+            WRITE(p3str,'(a)') TRIM(p3str)//' Weath_L'//TRIM(layerstr)
+            WRITE(p4str,'(a)') TRIM(p4str)//' Ocl_L'//TRIM(layerstr)
+            WRITE(p5str,'(a)') TRIM(p5str)//' Desorp_L'//TRIM(layerstr)
+            WRITE(p6str,'(a)') TRIM(p6str)//' Biochem_min_L'//TRIM(layerstr)
+
+         ENDDO
+         WRITE(lun,'(31a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
+         
     END SELECT
   END SUBROUTINE init_output_writing_flux
 
@@ -1260,6 +1292,12 @@ CONTAINS
     REAL(wp), SAVE                        :: sb_total_flux_carbon13_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
+    REAL(wp), DIMENSION(5), SAVE          :: adsorpt = 0.0_wp, &
+                                             net_min = 0.0_wp, &
+                                             ocl = 0.0_wp, &
+                                             weath = 0.0_wp, &
+                                             biochem_min = 0.0_wp, &
+                                             desorp = 0.0_wp    
     REAL(wp), SAVE                        :: dtime_one = 1.0_wp ! just 1.0    
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
@@ -1360,6 +1398,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: denitrification_n2o
     dsl4jsb_Real3D_onChunk      :: asymb_n_fixation 
     dsl4jsb_Real3D_onChunk      :: asymb_n_fixation_n15 
+    dsl4jsb_Real3D_onChunk      :: fast_adsorption_po4
+    dsl4jsb_Real3D_onChunk      :: weathering_po4
+    dsl4jsb_Real3D_onChunk      :: occlusion_po4
+    dsl4jsb_Real3D_onChunk      :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk      :: biochem_mineralisation_po4
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1788,7 +1831,7 @@ CONTAINS
              IF(output_interval_flux < 1.0_wp) THEN
                  dtime_one = 1.0_wp                     ! interval = timestep
                ELSE
-                 dtime_one = 1.0_wp / 1000000.0_wp      ! interval > timestep
+                 dtime_one = dtime / 1000000.0_wp      ! interval > timestep
              END IF
 
              litterfallC_acc = litterfallC_acc + (veg%litterfall%leaf%carbon%ptr + & 
@@ -1830,6 +1873,14 @@ CONTAINS
              leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
              leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
 
+             adsorpt      = adsorpt + sb%fast_adsorption_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+             net_min      = net_min + sb%net_mineralisation_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+             weath        = weath + sb%weathering_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+             ocl          = ocl + sb%occlusion_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+             desorp       = desorp + sb%slow_sorption_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+             biochem_min  = biochem_min + sb%biochem_mineralisation_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+
+
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
 
@@ -1851,6 +1902,9 @@ CONTAINS
                lun = lun + 1
                write(lun,'(8F16.6)') time_d, litterfallP_acc, net_min_po4_acc, leachingPorg_acc
 
+               lun = lun + 1
+               write(lun,'(31F16.6)') time_d, adsorpt(:), net_min(:) , weath(:), ocl(:), desorp(:), biochem_min(:) 
+
                litterfallC_acc = 0.0_wp
                het_respC_acc = 0.0_wp
                leachingCorg_acc = 0.0_wp
@@ -1867,6 +1921,13 @@ CONTAINS
                litterfallP_acc = 0.0_wp
                net_min_po4_acc = 0.0_wp
                leachingPorg_acc = 0.0_wp
+               !fast_adsorp_po4_acc(:) = 0.0_wp
+               adsorpt(:) = 0.0_wp
+               net_min(:) = 0.0_wp
+               weath(:) = 0.0_wp
+               ocl(:) = 0.0_wp
+               desorp(:) = 0.0_wp
+               biochem_min(:) = 0.0_wp
 
              ENDIF
           ENDIF

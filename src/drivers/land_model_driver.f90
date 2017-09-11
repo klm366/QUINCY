@@ -213,7 +213,7 @@ PROGRAM land_model_driver
   SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','plant','soil','canopy')
       CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
-      CALL open_flux_output_files(tile, iblk, ics, ice, nc)
+      CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
       END IF
@@ -432,7 +432,7 @@ PROGRAM land_model_driver
           base_config%output_interval_pool   = 'timestep' 
           base_config%output_interval_flux   = 'timestep' 
           CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
-          CALL open_flux_output_files(tile, iblk, ics, ice, nc)
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
       ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
           fluxnet_output_status = 3                       ! status update: writing output data finished

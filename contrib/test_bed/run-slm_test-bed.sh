@@ -44,6 +44,11 @@ flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T"      # does also set "start_bareground"
 # soil model options
 soil_depth=5.7                  # meter
+# ECA and P cycle
+flag_sb_eca_upt_po4="T"         # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
+flag_sb_cle_po4="T"             # TRUE: Langmuir equilibrium is constantly maintained between solute P and labile P | FALSE: Langmuir equilibrium is not maintained
+flag_sb_lk_po4="T"              # TRUE: Langmuir kinetics is used for adsorption flux | FALSE: adsorption rate is determined by CLE
+sb_adsorp_scheme="eca_full"     # eca_full; eca_part (only uptake, not for adsorption); eca_none
 
 # simulation length & output
 simulation_length_number=20     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
@@ -243,6 +248,7 @@ validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
 validateForcingDataSet="fluxnet cruncep face none"
+validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
 ## validate user-defined model-options ##
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
@@ -274,6 +280,11 @@ validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "
 validateUserConfigValues "$plant_functional_type_id" "$validatePlantFunctionalTypeID" "plant_functional_type_id"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
+validateUserConfigValues "$flag_sb_eca_upt_po4" "$validateFlags" "flag_sb_eca_upt_po4"
+validateUserConfigValues "$flag_sb_cle_po4" "$validateFlags" "flag_sb_cle_po4"
+validateUserConfigValues "$flag_sb_lk_po4" "$validateFlags" "flag_sb_lk_po4"
+validateUserConfigValues "$sb_adsorp_scheme" "$validateSb_adsorp_scheme" "sb_adsorp_scheme"
+
 # not validated: simulation_length_number, output_start_first_day_year, output_end_last_day_year, soil_awc_prescribe, soil_theta_prescribe, latitude, longitude 
 
 
@@ -421,6 +432,25 @@ changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
+changeNamelistValue sb_adsorp_scheme "$sb_adsorp_scheme"
+if [ $flag_sb_eca_upt_po4 == T ]
+  then
+    changeNamelistValue flag_sb_ECA_upt_po4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_ECA_upt_po4 ".FALSE."
+fi
+if [ $flag_sb_cle_po4 == T ]
+  then
+    changeNamelistValue flag_sb_CLE_po4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_CLE_po4 ".FALSE."
+fi
+if [ $flag_sb_lk_po4 == T ]
+  then
+    changeNamelistValue flag_sb_LK_po4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_LK_po4 ".FALSE."
+fi
 if [ $flag_mycorrhiza == T ]
   then
     changeNamelistValue flag_mycorrhiza ".TRUE."

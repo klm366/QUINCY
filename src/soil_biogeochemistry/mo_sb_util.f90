@@ -91,6 +91,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: weathering_po4
+    dsl4jsb_Real3D_onChunk :: occlusion_po4
+    dsl4jsb_Real3D_onChunk :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk :: fast_adsorption_po4
+    dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: gross_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
@@ -172,6 +178,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorption_po4)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)   ! out
@@ -271,6 +283,12 @@ CONTAINS
     plant_uptake_no3_sl(:,:)          = zero
     plant_uptake_no3_n15_sl(:,:)      = zero
     plant_uptake_po4_sl(:,:)          = zero
+    weathering_po4(:,:)               = zero
+    occlusion_po4(:,:)                = zero
+    slow_sorption_po4(:,:)            = zero
+    fast_adsorption_po4(:,:)          = zero
+    biochem_mineralisation_po4(:,:)   = zero
+    gross_mineralisation_po4(:,:)     = zero
     mycorrhiza_uptake_nh4_sl(:,:)     = zero
     mycorrhiza_uptake_nh4_n15_sl(:,:) = zero
     mycorrhiza_uptake_no3_sl(:,:)     = zero

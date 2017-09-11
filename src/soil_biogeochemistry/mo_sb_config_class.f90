@@ -35,6 +35,10 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_myco_inorganic
     LOGICAL               :: flag_myco_organic
     LOGICAL               :: flag_myco_priming
+    LOGICAL               :: flag_sb_ECA_upt_po4
+    LOGICAL               :: flag_sb_CLE_po4
+    LOGICAL               :: flag_sb_LK_po4
+    CHARACTER(15)         :: sb_adsorp_scheme
     REAL(wp)              :: bulk_density
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
@@ -72,6 +76,10 @@ CONTAINS
     LOGICAL               :: flag_myco_inorganic
     LOGICAL               :: flag_myco_organic
     LOGICAL               :: flag_myco_priming
+    LOGICAL               :: flag_sb_ECA_upt_po4
+    LOGICAL               :: flag_sb_CLE_po4
+    LOGICAL               :: flag_sb_LK_po4
+    CHARACTER(15)         :: sb_adsorp_scheme
     REAL(wp)              :: bulk_density
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
@@ -87,7 +95,11 @@ CONTAINS
                       flag_mycorrhiza      ,  &
                       flag_myco_inorganic  ,  &
                       flag_myco_organic    ,  &
-                      flag_myco_priming    ,  &     
+                      flag_myco_priming    ,  & 
+                      flag_sb_ECA_upt_po4  ,  &
+                      flag_sb_CLE_po4      ,  &
+                      flag_sb_LK_po4       ,  &    
+                      sb_adsorp_scheme     ,  &
                       bulk_density         ,  &
                       usda_taxonomy_class  ,  &
                       nwrb_taxonomy_class  ,  &
@@ -110,6 +122,10 @@ CONTAINS
     flag_myco_inorganic         = .FALSE.
     flag_myco_organic           = .FALSE.
     flag_myco_priming           = .FALSE.
+    flag_sb_ECA_upt_po4         = .TRUE.
+    flag_sb_CLE_po4             = .TRUE.
+    flag_sb_LK_po4              = .TRUE.
+    sb_adsorp_scheme            = "eca_full"         ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     bulk_density                = 1500.0_wp
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
@@ -125,6 +141,10 @@ CONTAINS
 
     SELECT CASE (TRIM(sb_model_scheme))
       CASE ("simple_0d", "simple_1d")
+        flag_sb_ECA_upt_po4         = .TRUE.
+        flag_sb_CLE_po4             = .TRUE.
+        flag_sb_LK_po4              = .TRUE.
+        sb_adsorp_scheme            = "eca_full"        
       CASE ("jsm")
          IF(TRIM(base_config%slm_model_name) /= "soil") THEN
             WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 
@@ -146,6 +166,10 @@ CONTAINS
     config%flag_myco_inorganic             = flag_myco_inorganic
     config%flag_myco_organic               = flag_myco_organic
     config%flag_myco_priming               = flag_myco_priming
+    config%flag_sb_ECA_upt_po4             = flag_sb_ECA_upt_po4
+    config%flag_sb_CLE_po4                 = flag_sb_CLE_po4
+    config%flag_sb_LK_po4                  = flag_sb_LK_po4
+    config%sb_adsorp_scheme                = sb_adsorp_scheme
     config%bulk_density                    = bulk_density
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class

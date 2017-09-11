@@ -56,6 +56,11 @@
   flag_myco_inorganic=.FALSE.
   flag_myco_organic=.FALSE.
   flag_myco_priming=.FALSE.
+  ! ECA flags
+  flag_sb_ECA_upt_po4=.TRUE.
+  flag_sb_CLE_po4=.TRUE.
+  flag_sb_LK_po4=.TRUE.
+  sb_adsorp_scheme="eca_full"
   ! parameter values
   bulk_density=1500.0
   usda_taxonomy_class=1

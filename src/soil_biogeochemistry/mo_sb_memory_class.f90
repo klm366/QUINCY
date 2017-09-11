@@ -230,7 +230,13 @@ MODULE mo_sb_memory_class
                                     denitrification_n2, &        !< denitrification to N2  [µmol m-3 s1]
                                     denitrification_n2_n15, &    !< denitrification to 15N2  [µmol m-3 s1]
                                     asymb_n_fixation, &          !< asymboitic N fixation [µmol m-3 s-1]
-                                    asymb_n_fixation_n15         !< asymboitic 15N fixation [µmol m-3 s-1]
+                                    asymb_n_fixation_n15, &      !< asymboitic 15N fixation [µmol m-3 s-1]
+                                    weathering_po4, &            !< phosphorus weathering rate [µmol P/m3/s]
+                                    occlusion_po4, &             !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P/m3/s]
+                                    slow_sorption_po4, &         !< phosphorus desorption rate, assoc_fast <--> assoc_slow [µmol P/m3/s]
+                                    fast_adsorption_po4, &       !< phosphorus adsorption rate, solute <--> assoc_fast [µmol P/m3/s]
+                                    biochem_mineralisation_po4, & !< phosphorus biochemical mineralization rate, [µmol P/m3/s]
+                                    gross_mineralisation_po4     !< phosphorus gross (biological) mineralization rate, [µmol P/m3/s]
 
     ! 2D transport fluxes for communication with groundwater and atmosphere
     TYPE(t_jsb_var_real2d)          :: & 
@@ -250,8 +256,9 @@ MODULE mo_sb_memory_class
                        
     ! 3D 
     TYPE(t_jsb_var_real3d)          :: &
-                                    qmax_org, &                   !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
-                                    k_bioturb, &                  !< diffusion rate resulting from bioturbation 
+                                    qmax_org, &                   !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
+                                    qmax_po4, &                   !< sorption capacity of po4 of mineral soil [kg C kg-1 mineral soil]
+                                    k_bioturb, &                  !< diffusion rate resulting from bioturbation
                                     bulk_dens_corr_sl, &          !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &        !< bulk soil density of carbon [kg m-3] 
                                     particle_fluxrate, &          !< burial rate due to organic matter fall and decay [s-1?] 
@@ -273,8 +280,8 @@ MODULE mo_sb_memory_class
 
     TYPE(t_slm_struct_sb_pool)      :: &   ! nested pool TYPE t_jsb_n_struct
                                     pool, &                     !< pools of the sb
-                                    formation, & 
-                                    loss, & 
+                                    formation, &
+                                    loss, &
                                     transport
 
 
@@ -1580,6 +1587,62 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'weathering_po4', mem%weathering_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'occlusion_po4', mem%occlusion_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'slow_sorption_po4', mem%slow_sorption_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'fast_adsorption_po4', mem%fast_adsorption_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'biochem_mineralisation_po4', mem%biochem_mineralisation_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'gross_mineralisation_po4', mem%gross_mineralisation_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_po4', mem%qmax_po4, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
