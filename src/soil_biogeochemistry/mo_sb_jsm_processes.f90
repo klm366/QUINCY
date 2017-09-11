@@ -559,7 +559,7 @@ CONTAINS
   !!
   !! Output: adsorption rate
   !-----------------------------------------------------------------------------------------------------
-SUBROUTINE calc_adsorption_po4(options, solute, assoc_fast, assoc_slow, occluded, qmax_po4, &
+  SUBROUTINE calc_adsorption_po4(options, solute, assoc_fast, assoc_slow, occluded, qmax_po4, &
                                         weathering_po4, occlusion_po4, slow_sorption_po4, percolation_sl, bulk_dens_corr_sl, &
                                         gross_mineralisation_po4, biochem_min_po4, microbial_carbon, fine_root_carbon, &
                                         mic_uptake, plant_uptake, fast_adsorption_po4, &
@@ -682,8 +682,8 @@ SUBROUTINE calc_adsorption_po4(options, solute, assoc_fast, assoc_slow, occluded
 
 
       CASE("eca_part")
-    !> 3.0 option 2: partial-ECA, adsorption is not determined by ECA
-    !!
+      !> 3.0 option 2: partial-ECA, adsorption is not determined by ECA
+      !!
         IF (flag_sb_CLE_po4 .AND. flag_sb_LK_po4) THEN
         !> 3.1 option with Langmuir kinetics and constant equilibrium
         !! @to be finished...
@@ -726,8 +726,8 @@ SUBROUTINE calc_adsorption_po4(options, solute, assoc_fast, assoc_slow, occluded
         ENDIF
 
       CASE("eca_none")
-    !> 4.0 option 3: non-ECA, this only applies to upt_opt=2 in SUB calc_po4_uptake_ECA
-    !! 
+      !> 4.0 option 3: non-ECA, this only applies to upt_opt=2 in SUB calc_po4_uptake_ECA
+      !! 
         IF (flag_sb_CLE_po4 .AND. flag_sb_LK_po4) THEN
         !> 4.1 option with Langmuir kinetics and constant equilibrium
         !! @to be finished...
@@ -776,7 +776,7 @@ SUBROUTINE calc_adsorption_po4(options, solute, assoc_fast, assoc_slow, occluded
     !! convert the units
     fast_adsorption_po4   = fast_adsorption_po4 * 1.e6_wp
 
-END SUBROUTINE calc_adsorption_po4
+  END SUBROUTINE calc_adsorption_po4
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
   !

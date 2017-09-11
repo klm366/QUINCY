@@ -27,10 +27,10 @@ n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down &
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 # BNF & Mycorrhiza
 bnf_scheme="standard"           # none fixed standard optimal resistance
-flag_mycorrhiza="T"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
-flag_myco_inorganic="T"         # allows mycorrhiza to access the inorganic N pools
-flag_myco_organic="T"           # allows mycorrhiza to access the organic/residual N pool
-flag_myco_priming="T"           # present mycorrhiza enhance decomposition of residual pool (priming)
+flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
+flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
+flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
+flag_myco_priming="F"           # present mycorrhiza enhance decomposition of residual pool (priming)
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"

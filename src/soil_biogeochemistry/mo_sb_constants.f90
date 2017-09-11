@@ -174,8 +174,8 @@ MODULE mo_sb_constants
       eta_ammonification, &      !< fractionation of N15 due to microbial ammonification (per mill)
       eta_volatilisation_nh3     !< fractionation of N15 due to NH3 volatilisation (per mill)
 
-	! soil Pi fluxes
-	REAL(wp), SAVE :: &
+  ! soil Pi fluxes
+  REAL(wp), SAVE :: &
       k_weath_mineral, &         !< Weathering coefficient of mineral soil [mol P kg-1 mineral soil s-1]
       eq_sorp_mineral_po4, &     !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
       k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [mol P kg-1 mineral soil s-1]
@@ -309,19 +309,17 @@ CONTAINS
     vmax_plant_uptake_po4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s
     km_plant_uptake_po4   = 0.067_wp / molar_mass_P ! mol / m3
     vmax_denitirfication  = 0.01_wp
-	k_mic_uptake_po4      = 400._wp / 10000._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein
-	k_plant_uptake_po4    = 12._wp / 100._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein/ 100._wp
-	f_mic_carrier_po4     = 0.0015_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-	f_plant_carrier_po4   = 0.1_wp / 80._wp ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
-	qmax_po4_mineral      = 0.134_wp / molar_mass_P ! [mol P kg-1 soil], Olander and Vitousek 2005
-	km_adsorpt_po4        = 0.075_wp / molar_mass_P ! [mol P kg-1 soil], Wang et al. 2010
-
-
-	k_weath_mineral       = 0.025_wp / molar_mass_P / one_year / one_day ! [mol P m-3 s-1], Wang et al. 2010
-	eq_sorp_mineral_po4   = 80._wp / molar_mass_P ![mol P m-3] ! random guess based on init value of assoc_slow
-	k_occlude_po4         = 1E-6_wp / 30._wp / one_day ! s-1, Yang et al. 2014
-	vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day ![s-1], estimated from Bunemann et al. 2016, LUS site
-	km_mic_biochem_po4    = 0.1_wp / molar_mass_C ![mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
+    k_mic_uptake_po4      = 400._wp / 10000._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein
+    k_plant_uptake_po4    = 12._wp / 100._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein/ 100._wp
+    f_mic_carrier_po4     = 0.0015_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
+    f_plant_carrier_po4   = 0.1_wp / 80._wp ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
+    qmax_po4_mineral      = 0.134_wp / molar_mass_P ! [mol P kg-1 soil], Olander and Vitousek 2005
+    km_adsorpt_po4        = 0.075_wp / molar_mass_P ! [mol P kg-1 soil], Wang et al. 2010
+    k_weath_mineral       = 0.025_wp / molar_mass_P / one_year / one_day ! [mol P m-3 s-1], Wang et al. 2010
+    eq_sorp_mineral_po4   = 80._wp / molar_mass_P ![mol P m-3] ! random guess based on init value of assoc_slow
+    k_occlude_po4         = 1E-6_wp / 30._wp / one_day ! s-1, Yang et al. 2014
+    vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day ![s-1], estimated from Bunemann et al. 2016, LUS site
+    km_mic_biochem_po4    = 0.1_wp / molar_mass_C ![mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
 
     ! Nitrification, Denitrification parameters
     lambda_anvf            = 1.8_wp         ! fitted from Zaehle et al. 2011, NatGeo 
