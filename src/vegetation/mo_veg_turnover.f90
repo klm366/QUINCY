@@ -77,7 +77,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
-!! *slmtemp
+    ! Declare pointers to structures in memory
+
+#include "slm_pools_p_incl.f90"
+
     TYPE(t_veg_memory),       POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -116,6 +119,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    ! Get process structures
+
+#include "slm_pools_p_incl.f90"
 
 
 !! *slmtemp
@@ -126,7 +132,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
 
     !> 1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots

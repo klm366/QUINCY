@@ -27,10 +27,90 @@ MODULE mo_veg_memory_class
   PUBLIC :: t_veg_memory, max_no_of_vars
   PUBLIC :: t_slm_struct_veg_pool, t_slm_struct_veg_element   ! *slmjsb4 
   PUBLIC :: max_no_of_structs, max_no_of_n_structs            ! *slmjsb4
+  PUBLIC :: t_veg_element_p, t_veg_pool_p                     ! *slmtemp
 
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for pointer elements in veg pool
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_veg_element_p
+    REAL(wp), POINTER :: carbon
+    REAL(wp), POINTER :: nitrogen
+    REAL(wp), POINTER :: phosphorus
+    REAL(wp), POINTER :: carbon13
+    REAL(wp), POINTER :: carbon14
+    REAL(wp), POINTER :: nitrogen15
+    ! REAL(wp), POINTER, DIMENSION(:) :: carbon
+    ! REAL(wp), POINTER, DIMENSION(:) :: nitrogen
+    ! REAL(wp), POINTER, DIMENSION(:) :: phosphorus
+    ! REAL(wp), POINTER, DIMENSION(:) :: carbon13
+    ! REAL(wp), POINTER, DIMENSION(:) :: carbon14
+    ! REAL(wp), POINTER, DIMENSION(:) :: nitrogen15
+  CONTAINS
+    PRIVATE
+    !! operator overload
+    ! +
+    PROCEDURE               :: Add_element_p                   ! Add two elements
+    PROCEDURE               :: Add_element_p_and_scalar        ! Add scalar to element
+    !PROCEDURE               :: Add_element_p_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to element
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_p, Add_element_p_and_scalar!, Add_element_p_and_field2d
+    !! operator overload
+    ! -
+    PROCEDURE               :: Subtract_element_p                   ! Subtract one element from another element
+    PROCEDURE               :: Subtract_element_p_and_scalar        ! Subtract scalar from element
+    !PROCEDURE               :: Subtract_element_p_and_vector        ! Subtract vector ( var(ics:ice) ) from element
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_p, Subtract_element_p_and_scalar!, Subtract_element_p_and_field2d
+    !! operator overload
+    ! *
+    PROCEDURE               :: Multiply_element_p                   ! Multiply two elements
+    PROCEDURE               :: Multiply_element_p_and_scalar        ! Multiply element with scalar
+    !PROCEDURE               :: Multiply_element_p_and_vector        ! Multiply element with REAL 1D vector ( var(ics:ice) )
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_p, Multiply_element_p_and_scalar!, Multiply_element_p_and_field2d
+  END TYPE t_veg_element_p
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for pointer pools in veg memory
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_veg_pool_p
+    TYPE(t_veg_element_p), POINTER  :: leaf             !< elements of leaf
+    TYPE(t_veg_element_p), POINTER  :: fine_root        !< elements of fine_root
+    TYPE(t_veg_element_p), POINTER  :: coarse_root      !< elements of coarse_root
+    TYPE(t_veg_element_p), POINTER  :: sap_wood         !< elements of sap_wood
+    TYPE(t_veg_element_p), POINTER  :: heart_wood       !< elements of heart_wood
+    TYPE(t_veg_element_p), POINTER  :: labile           !< elements of labile
+    TYPE(t_veg_element_p), POINTER  :: reserve          !< elements of reserve
+    TYPE(t_veg_element_p), POINTER  :: fruit            !< elements of fruit
+    TYPE(t_veg_element_p), POINTER  :: seed_bed         !< elements of seed_bed
+  CONTAINS
+    PRIVATE
+    !! operator overload
+    ! +
+    PROCEDURE               :: Add_pool_p                   ! Add two pools
+    PROCEDURE               :: Add_pool_p_and_scalar        ! Add scalar to pool
+    !PROCEDURE               :: Add_pool_p_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to pool
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_p, Add_pool_p_and_scalar!, Add_pool_p_and_field2d
+    !! operator overload
+    ! -
+    PROCEDURE               :: Subtract_pool_p                   ! Subtract one pool from another pool
+    PROCEDURE               :: Subtract_pool_p_and_scalar        ! Subtract scalar from pool
+    !PROCEDURE               :: Subtract_pool_p_and_vector        ! Subtract vector ( var(ics:ice) ) from pool
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_p, Subtract_pool_p_and_scalar!, Subtract_pool_p_and_field2d
+    !! operator overload
+    ! *
+    PROCEDURE               :: Multiply_pool_p                   ! Multiply two pools
+    PROCEDURE               :: Multiply_pool_p_and_scalar        ! Multiply pool with scalar
+    !PROCEDURE               :: Multiply_pool_p_and_vector        ! Multiply pool with REAL 1D vector ( var(ics:ice) )
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_p, Multiply_pool_p_and_scalar!, Multiply_pool_p_and_field2d
+  END TYPE t_veg_pool_p
 
 
 
@@ -146,7 +226,6 @@ MODULE mo_veg_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
 
-! *slmtemp  --> 2D
     !> variables
     !! 
 
@@ -268,8 +347,8 @@ MODULE mo_veg_memory_class
                                     daytime_counter  !< number of timesteps of current day with light available & daytime_avrg variables were added up
 
     ! moving averages
-    TYPE(t_jsb_var_real2d)          :: &   
     ! 1.1 memory of conditions for the labile pool dynamics
+    TYPE(t_jsb_var_real2d)          :: &   
                                     gpp_tlabile_mavg               , &  !< gpp  (µmol m-2 s-1)
                                     maint_respiration_tlabile_mavg , &  !< maintenance respiration (µmol m-2 s-1)
                                     growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions
@@ -348,14 +427,11 @@ MODULE mo_veg_memory_class
 
     !> structures
     !! 
-    !! ! These remain Scalar (aka 1D) at the moment !
     !!
     TYPE(t_slm_struct_veg_element)  :: &
                                     exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
                                     establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
                                     reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
-                                    init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_tile_veg_dynamics
-                                                          !! used only in mo_jsb_model_init:init_slm_plant()
                                     total_biomass         !< per time step sum over veg\%pool\%..
 
     TYPE(t_slm_struct_veg_pool)     :: &   ! nested pool TYPE t_jsb_n_struct
@@ -363,7 +439,6 @@ MODULE mo_veg_memory_class
                                     growth          , &   !< fluxes: growth
                                     litterfall      , &   !< fluxes: litterfall
                                     falloc          , &   !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
-                                    change_pool     , &   !< for diagnoses of mass conservation: changes in pools per timestep
                                     total_flux            !< for diagnoses of mass conservation: sum of fluxes
 
 
@@ -376,6 +451,389 @@ MODULE mo_veg_memory_class
 
 
 CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! t_veg_element_p operator overload                                                                    !
+  !-----------------------------------------------------------------------------------------------------!
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_veg_element + t_slm_struct_veg_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_element_p(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_p), INTENT(in) :: this, element2
+    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    ! 1.0 go
+    ALLOCATE(element3, source=this)
+    element3%carbon       = this%carbon      + element2%carbon
+    element3%nitrogen     = this%nitrogen    + element2%nitrogen
+    element3%phosphorus   = this%phosphorus  + element2%phosphorus
+    element3%carbon13     = this%carbon13    + element2%carbon13
+    element3%carbon14     = this%carbon14    + element2%carbon14
+    element3%nitrogen15   = this%nitrogen15  + element2%nitrogen15
+  END FUNCTION Add_element_p
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_veg_element + scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_element_p_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_p), INTENT(in) :: this
+    REAL(wp),               INTENT(in) :: scalar
+    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    ! 1.0 go
+    ALLOCATE(element3, source=this)
+    element3%carbon       = this%carbon      + scalar
+    element3%nitrogen     = this%nitrogen    + scalar
+    element3%phosphorus   = this%phosphorus  + scalar
+    element3%carbon13     = this%carbon13    + scalar
+    element3%carbon14     = this%carbon14    + scalar
+    element3%nitrogen15   = this%nitrogen15  + scalar
+  END FUNCTION Add_element_p_and_scalar
+  ! !-----------------------------------------------------------------------------------------------------
+  ! !> + (t_slm_struct_veg_element + 1D vector)
+  ! !!
+  ! !-----------------------------------------------------------------------------------------------------
+  ! FUNCTION Add_element_p_and_vector(this,vector) RESULT(element3)
+  !   IMPLICIT NONE
+  !   ! 0.1 InOut
+  !   CLASS(t_veg_element_p), INTENT(in) :: this
+  !   REAL(wp),               INTENT(in) :: vector(:)
+  !   TYPE(t_veg_element_p), ALLOCATABLE :: element3
+  !   ! 1.0 go
+  !   ALLOCATE(element3, source=this)
+  !   element3%carbon       = this%carbon      + vector
+  !   element3%nitrogen     = this%nitrogen    + vector
+  !   element3%phosphorus   = this%phosphorus  + vector
+  !   element3%carbon13     = this%carbon13    + vector
+  !   element3%carbon14     = this%carbon14    + vector
+  !   element3%nitrogen15   = this%nitrogen15  + vector
+  ! END FUNCTION Add_element_p_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_veg_element - t_slm_struct_veg_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_element_p(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_p), INTENT(in) :: this, element2
+    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    ! 1.0 go
+    ALLOCATE(element3, source=this)
+    element3%carbon       = this%carbon      - element2%carbon
+    element3%nitrogen     = this%nitrogen    - element2%nitrogen
+    element3%phosphorus   = this%phosphorus  - element2%phosphorus
+    element3%carbon13     = this%carbon13    - element2%carbon13
+    element3%carbon14     = this%carbon14    - element2%carbon14
+    element3%nitrogen15   = this%nitrogen15  - element2%nitrogen15
+  END FUNCTION Subtract_element_p
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_veg_element - scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_element_p_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_p), INTENT(in) :: this
+    REAL(wp),               INTENT(in) :: scalar
+    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    ! 1.0 go
+    ALLOCATE(element3, source=this)
+    element3%carbon       = this%carbon      - scalar
+    element3%nitrogen     = this%nitrogen    - scalar
+    element3%phosphorus   = this%phosphorus  - scalar
+    element3%carbon13     = this%carbon13    - scalar
+    element3%carbon14     = this%carbon14    - scalar
+    element3%nitrogen15   = this%nitrogen15  - scalar
+  END FUNCTION Subtract_element_p_and_scalar
+  ! !-----------------------------------------------------------------------------------------------------
+  ! !> - (t_slm_struct_veg_element - 1D vector)
+  ! !!
+  ! !-----------------------------------------------------------------------------------------------------
+  ! FUNCTION Subtract_element_p_and_vector(this,vector) RESULT(element3)
+  !   IMPLICIT NONE
+  !   ! 0.1 InOut
+  !   CLASS(t_veg_element_p), INTENT(in) :: this
+  !   REAL(wp),               INTENT(in) :: vector(:)
+  !   TYPE(t_veg_element_p), ALLOCATABLE :: element3
+  !   ! 1.0 go
+  !   ALLOCATE(element3, source=this)
+  !   element3%carbon       = this%carbon      - vector
+  !   element3%nitrogen     = this%nitrogen    - vector
+  !   element3%phosphorus   = this%phosphorus  - vector
+  !   element3%carbon13     = this%carbon13    - vector
+  !   element3%carbon14     = this%carbon14    - vector
+  !   element3%nitrogen15   = this%nitrogen15  - vector
+  ! END FUNCTION Subtract_element_p_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_veg_element * t_slm_struct_veg_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_element_p(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_p), INTENT(in) :: this, element2
+    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    ! 1.0 go
+    ALLOCATE(element3, source=this)
+    element3%carbon       = this%carbon      * element2%carbon
+    element3%nitrogen     = this%nitrogen    * element2%nitrogen
+    element3%phosphorus   = this%phosphorus  * element2%phosphorus
+    element3%carbon13     = this%carbon13    * element2%carbon13
+    element3%carbon14     = this%carbon14    * element2%carbon14
+    element3%nitrogen15   = this%nitrogen15  * element2%nitrogen15
+  END FUNCTION Multiply_element_p
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_veg_element * scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_element_p_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_p), INTENT(in) :: this
+    REAL(wp),               INTENT(in) :: scalar
+    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    ! 1.0 go
+    ALLOCATE(element3, source=this)
+    element3%carbon       = this%carbon      * scalar
+    element3%nitrogen     = this%nitrogen    * scalar
+    element3%phosphorus   = this%phosphorus  * scalar
+    element3%carbon13     = this%carbon13    * scalar
+    element3%carbon14     = this%carbon14    * scalar
+    element3%nitrogen15   = this%nitrogen15  * scalar
+  END FUNCTION Multiply_element_p_and_scalar
+  ! !-----------------------------------------------------------------------------------------------------
+  ! !> * (t_slm_struct_veg_element * 1D vector)
+  ! !!
+  ! !-----------------------------------------------------------------------------------------------------
+  ! FUNCTION Multiply_element_p_and_vector(this,vector) RESULT(element3)
+  !   IMPLICIT NONE
+  !   ! 0.1 InOut
+  !   CLASS(t_veg_element_p), INTENT(in) :: this
+  !   REAL(wp),               INTENT(in) :: vector(:)
+  !   TYPE(t_veg_element_p), ALLOCATABLE :: element3
+  !   ! 1.0 go
+  !   ALLOCATE(element3, source=this)
+  !   element3%carbon       = this%carbon      * vector
+  !   element3%nitrogen     = this%nitrogen    * vector
+  !   element3%phosphorus   = this%phosphorus  * vector
+  !   element3%carbon13     = this%carbon13    * vector
+  !   element3%carbon14     = this%carbon14    * vector
+  !   element3%nitrogen15   = this%nitrogen15  * vector
+  ! END FUNCTION Multiply_element_p_and_vector
+
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! t_veg_pool_p operator overload                                                                    !
+  !-----------------------------------------------------------------------------------------------------!
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_veg_pool + t_slm_struct_veg_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_pool_p(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_p), INTENT(in) :: this, pool2
+    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    ! 1.0 go
+    ALLOCATE(pool3, source=this)
+    pool3%leaf          = this%leaf         + pool2%leaf
+    pool3%fine_root     = this%fine_root    + pool2%fine_root
+    pool3%coarse_root   = this%coarse_root  + pool2%coarse_root
+    pool3%sap_wood      = this%sap_wood     + pool2%sap_wood
+    pool3%heart_wood    = this%heart_wood   + pool2%heart_wood
+    pool3%labile        = this%labile       + pool2%labile
+    pool3%reserve       = this%reserve      + pool2%reserve
+    pool3%fruit         = this%fruit        + pool2%fruit
+    pool3%seed_bed      = this%seed_bed     + pool2%seed_bed
+  END FUNCTION Add_pool_p
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_veg_pool + scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_pool_p_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_p), INTENT(in) :: this
+    REAL(wp),            INTENT(in) :: scalar
+    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    ! 1.0 go
+    ALLOCATE(pool3, source=this)
+    pool3%leaf          = this%leaf         + scalar
+    pool3%fine_root     = this%fine_root    + scalar
+    pool3%coarse_root   = this%coarse_root  + scalar
+    pool3%sap_wood      = this%sap_wood     + scalar
+    pool3%heart_wood    = this%heart_wood   + scalar
+    pool3%labile        = this%labile       + scalar
+    pool3%reserve       = this%reserve      + scalar
+    pool3%fruit         = this%fruit        + scalar
+    pool3%seed_bed      = this%seed_bed     + scalar
+  END FUNCTION Add_pool_p_and_scalar
+  ! !-----------------------------------------------------------------------------------------------------
+  ! !> + (t_slm_struct_veg_pool + 1D vector)
+  ! !!
+  ! !-----------------------------------------------------------------------------------------------------
+  ! FUNCTION Add_pool_p_and_vector(this,vector) RESULT(pool3)
+  !   IMPLICIT NONE
+  !   ! 0.1 InOut
+  !   CLASS(t_veg_pool_p), INTENT(in) :: this
+  !   REAL(wp),            INTENT(in) :: vector(:)
+  !   TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+  !   ! 1.0 go
+  !   ALLOCATE(pool3, source=this)
+  !   pool3%leaf          = this%leaf         + vector
+  !   pool3%fine_root     = this%fine_root    + vector
+  !   pool3%coarse_root   = this%coarse_root  + vector
+  !   pool3%sap_wood      = this%sap_wood     + vector
+  !   pool3%heart_wood    = this%heart_wood   + vector
+  !   pool3%labile        = this%labile       + vector
+  !   pool3%reserve       = this%reserve      + vector
+  !   pool3%fruit         = this%fruit        + vector
+  !   pool3%seed_bed      = this%seed_bed     + vector
+  ! END FUNCTION Add_pool_p_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_veg_pool - t_slm_struct_veg_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_pool_p(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_p), INTENT(in) :: this, pool2
+    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    ! 1.0 go
+    ALLOCATE(pool3, source=this)
+    pool3%leaf          = this%leaf         - pool2%leaf
+    pool3%fine_root     = this%fine_root    - pool2%fine_root
+    pool3%coarse_root   = this%coarse_root  - pool2%coarse_root
+    pool3%sap_wood      = this%sap_wood     - pool2%sap_wood
+    pool3%heart_wood    = this%heart_wood   - pool2%heart_wood
+    pool3%labile        = this%labile       - pool2%labile
+    pool3%reserve       = this%reserve      - pool2%reserve
+    pool3%fruit         = this%fruit        - pool2%fruit
+    pool3%seed_bed      = this%seed_bed     - pool2%seed_bed
+  END FUNCTION Subtract_pool_p
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_veg_pool - scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_pool_p_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_p), INTENT(in) :: this
+    REAL(wp),            INTENT(in) :: scalar
+    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    ! 1.0 go
+    ALLOCATE(pool3, source=this)
+    pool3%leaf          = this%leaf         - scalar
+    pool3%fine_root     = this%fine_root    - scalar
+    pool3%coarse_root   = this%coarse_root  - scalar
+    pool3%sap_wood      = this%sap_wood     - scalar
+    pool3%heart_wood    = this%heart_wood   - scalar
+    pool3%labile        = this%labile       - scalar
+    pool3%reserve       = this%reserve      - scalar
+    pool3%fruit         = this%fruit        - scalar
+    pool3%seed_bed      = this%seed_bed     - scalar
+  END FUNCTION Subtract_pool_p_and_scalar
+  ! !-----------------------------------------------------------------------------------------------------
+  ! !> - (t_slm_struct_veg_pool - 1D vector)
+  ! !!
+  ! !-----------------------------------------------------------------------------------------------------
+  ! FUNCTION Subtract_pool_p_and_vector(this,vector) RESULT(pool3)
+  !   IMPLICIT NONE
+  !   ! 0.1 InOut
+  !   CLASS(t_veg_pool_p), INTENT(in) :: this
+  !   REAL(wp),            INTENT(in) :: vector(:)
+  !   TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+  !   ! 1.0 go
+  !   ALLOCATE(pool3, source=this)
+  !   pool3%leaf          = this%leaf         - vector
+  !   pool3%fine_root     = this%fine_root    - vector
+  !   pool3%coarse_root   = this%coarse_root  - vector
+  !   pool3%sap_wood      = this%sap_wood     - vector
+  !   pool3%heart_wood    = this%heart_wood   - vector
+  !   pool3%labile        = this%labile       - vector
+  !   pool3%reserve       = this%reserve      - vector
+  !   pool3%fruit         = this%fruit        - vector
+  !   pool3%seed_bed      = this%seed_bed     - vector
+  ! END FUNCTION Subtract_pool_p_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_veg_pool * t_slm_struct_veg_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_pool_p(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_p), INTENT(in) :: this, pool2
+    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    ! 1.0 go
+    ALLOCATE(pool3, source=this)
+    pool3%leaf          = this%leaf         * pool2%leaf
+    pool3%fine_root     = this%fine_root    * pool2%fine_root
+    pool3%coarse_root   = this%coarse_root  * pool2%coarse_root
+    pool3%sap_wood      = this%sap_wood     * pool2%sap_wood
+    pool3%heart_wood    = this%heart_wood   * pool2%heart_wood
+    pool3%labile        = this%labile       * pool2%labile
+    pool3%reserve       = this%reserve      * pool2%reserve
+    pool3%fruit         = this%fruit        * pool2%fruit
+    pool3%seed_bed      = this%seed_bed     * pool2%seed_bed
+  END FUNCTION Multiply_pool_p
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_veg_pool * scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_pool_p_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_p), INTENT(in) :: this
+    REAL(wp),            INTENT(in) :: scalar
+    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    ! 1.0 go
+    ALLOCATE(pool3, source=this)
+    pool3%leaf          = this%leaf         * scalar
+    pool3%fine_root     = this%fine_root    * scalar
+    pool3%coarse_root   = this%coarse_root  * scalar
+    pool3%sap_wood      = this%sap_wood     * scalar
+    pool3%heart_wood    = this%heart_wood   * scalar
+    pool3%labile        = this%labile       * scalar
+    pool3%reserve       = this%reserve      * scalar
+    pool3%fruit         = this%fruit        * scalar
+    pool3%seed_bed      = this%seed_bed     * scalar
+  END FUNCTION Multiply_pool_p_and_scalar
+  ! !-----------------------------------------------------------------------------------------------------
+  ! !> * (t_slm_struct_veg_pool * 1D vector)
+  ! !!
+  ! !-----------------------------------------------------------------------------------------------------
+  ! FUNCTION Multiply_pool_p_and_vector(this,vector) RESULT(pool3)
+  !   IMPLICIT NONE
+  !   ! 0.1 InOut
+  !   CLASS(t_veg_pool_p), INTENT(in) :: this
+  !   REAL(wp),            INTENT(in) :: vector(:)
+  !   TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+  !   ! 1.0 go
+  !   ALLOCATE(pool3, source=this)
+  !   pool3%leaf          = this%leaf         * vector
+  !   pool3%fine_root     = this%fine_root    * vector
+  !   pool3%coarse_root   = this%coarse_root  * vector
+  !   pool3%sap_wood      = this%sap_wood     * vector
+  !   pool3%heart_wood    = this%heart_wood   * vector
+  !   pool3%labile        = this%labile       * vector
+  !   pool3%reserve       = this%reserve      * vector
+  !   pool3%fruit         = this%fruit        * vector
+  !   pool3%seed_bed      = this%seed_bed     * vector
+  ! END FUNCTION Multiply_pool_p_and_vector
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!  outdated operator overload
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !-----------------------------------------------------------------------------------------------------!
   ! t_slm_struct_veg_element operator overload                                                          !
@@ -2572,12 +3030,6 @@ CONTAINS
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'veg_init_pool',              mem%init_pool, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
       CALL jsb_add_var(mem, 'veg_total_biomass',          mem%total_biomass, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -2613,12 +3065,6 @@ CONTAINS
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'veg_change_pool' , mem%change_pool, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)    ! mass conservation diagnosis
       CALL jsb_add_var(mem, 'veg_total_flux'  , mem%total_flux, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -2840,60 +3286,6 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem%falloc, 'veg_falloc_seed_bed',     mem%falloc%seed_bed, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_leaf',         mem%change_pool%leaf, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)       
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_fine_root',    mem%change_pool%fine_root, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_coarse_root',  mem%change_pool%coarse_root, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_sap_wood',     mem%change_pool%sap_wood, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_heart_wood',   mem%change_pool%heart_wood, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_labile',       mem%change_pool%labile, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_reserve',      mem%change_pool%reserve, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_fruit',        mem%change_pool%fruit, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%change_pool, 'veg_change_pool_seed_bed',     mem%change_pool%seed_bed, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
@@ -4507,394 +4899,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_carbon', mem%change_pool%leaf%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_nitrogen', mem%change_pool%leaf%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_phosphorus', mem%change_pool%leaf%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_carbon13', mem%change_pool%leaf%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_carbon14', mem%change_pool%leaf%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_nitrogen15', mem%change_pool%leaf%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_carbon', mem%change_pool%fine_root%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_nitrogen', mem%change_pool%fine_root%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_phosphorus', mem%change_pool%fine_root%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_carbon13', mem%change_pool%fine_root%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_carbon14', mem%change_pool%fine_root%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_nitrogen15', mem%change_pool%fine_root%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_carbon', mem%change_pool%coarse_root%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_nitrogen', mem%change_pool%coarse_root%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_phosphorus', mem%change_pool%coarse_root%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_carbon13', mem%change_pool%coarse_root%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_carbon14', mem%change_pool%coarse_root%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_nitrogen15', mem%change_pool%coarse_root%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_carbon', mem%change_pool%sap_wood%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_nitrogen', mem%change_pool%sap_wood%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_phosphorus', mem%change_pool%sap_wood%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_carbon13', mem%change_pool%sap_wood%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_carbon14', mem%change_pool%sap_wood%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_nitrogen15', mem%change_pool%sap_wood%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_carbon', mem%change_pool%heart_wood%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_nitrogen', mem%change_pool%heart_wood%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_phosphorus', mem%change_pool%heart_wood%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_carbon13', mem%change_pool%heart_wood%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_carbon14', mem%change_pool%heart_wood%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_nitrogen15', mem%change_pool%heart_wood%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%labile, 'veg_change_pool_labile_carbon', mem%change_pool%labile%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%labile, 'veg_change_pool_labile_nitrogen', mem%change_pool%labile%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%labile, 'veg_change_pool_labile_phosphorus', mem%change_pool%labile%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%labile, 'veg_change_pool_labile_carbon13', mem%change_pool%labile%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%labile, 'veg_change_pool_labile_carbon14', mem%change_pool%labile%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%labile, 'veg_change_pool_labile_nitrogen15', mem%change_pool%labile%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_carbon', mem%change_pool%reserve%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_nitrogen', mem%change_pool%reserve%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_phosphorus', mem%change_pool%reserve%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_carbon13', mem%change_pool%reserve%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_carbon14', mem%change_pool%reserve%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_nitrogen15', mem%change_pool%reserve%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_carbon', mem%change_pool%fruit%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_nitrogen', mem%change_pool%fruit%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_phosphorus', mem%change_pool%fruit%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_carbon13', mem%change_pool%fruit%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_carbon14', mem%change_pool%fruit%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_nitrogen15', mem%change_pool%fruit%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_carbon', mem%change_pool%seed_bed%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_nitrogen', mem%change_pool%seed_bed%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_phosphorus', mem%change_pool%seed_bed%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_carbon13', mem%change_pool%seed_bed%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_carbon14', mem%change_pool%seed_bed%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_nitrogen15', mem%change_pool%seed_bed%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
+
       CALL jsb_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_carbon', mem%total_flux%leaf%carbon, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -5411,50 +5416,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%init_pool, 'veg_init_pool_carbon', mem%init_pool%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%init_pool, 'veg_init_pool_nitrogen', mem%init_pool%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%init_pool, 'veg_init_pool_phosphorus', mem%init_pool%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%init_pool, 'veg_init_pool_carbon13', mem%init_pool%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%init_pool, 'veg_init_pool_carbon14', mem%init_pool%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%init_pool, 'veg_init_pool_nitrogen15', mem%init_pool%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
+
       CALL jsb_add_var(mem%total_biomass, 'veg_total_biomass_carbon', mem%total_biomass%carbon, &
             hgrid, surface, &
             t_cf('', '', ''), &
