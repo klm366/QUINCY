@@ -119,7 +119,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    ! Get process structures
+    ! Get process memory structures
 
 #include "slm_pools_p_incl.f90"
 

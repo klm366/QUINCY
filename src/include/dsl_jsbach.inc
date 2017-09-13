@@ -65,3 +65,5 @@
 #define dsl4jsb_var3d_ptr dsl4jsb_var3D_ptr
 
 #define dsl4jsb_Aggregate_onChunk(PROC,var,agg) CALL agg%Aggregate(tile, CONCATENATE2(PROC,_mem)%var,ics,ice,iblk,routine)
+
+#define dsl4slm_Use_memory_p_veg USE mo_veg_memory_class, ONLY: t_veg_element_p, t_veg_pool_p
