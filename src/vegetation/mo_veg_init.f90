@@ -264,11 +264,11 @@ CONTAINS
         !> start bareground with vegetation dynamics switched on
         !! 
         IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics)THEN
-          veg_pool_seed_bed%carbon      = lctlib%seed_size * 10.0_wp
+          veg_pool%seed_bed%carbon      = lctlib%seed_size * 10.0_wp
           dens_ind(:)                   = 0.0_wp
 
-          veg_pool_seed_bed%nitrogen    = veg_pool_seed_bed%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-          veg_pool_seed_bed%phosphorus  = veg_pool_seed_bed%nitrogen  / lctlib%np_leaf
+          veg_pool%seed_bed%nitrogen    = veg_pool%seed_bed%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
+          veg_pool%seed_bed%phosphorus  = veg_pool%seed_bed%nitrogen  / lctlib%np_leaf
 
           ! pool%seed_bed%carbon13
           IF(lctlib%ps_pathway == ic3phot)THEN
@@ -276,7 +276,7 @@ CONTAINS
           ELSE
              hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
           ENDIF
-          veg_pool_seed_bed%carbon13 = veg_pool_seed_bed%carbon * &
+          veg_pool%seed_bed%carbon13 = veg_pool%seed_bed%carbon * &
                                        calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
 
           ! pool%seed_bed%carbon14
@@ -285,19 +285,19 @@ CONTAINS
           ELSE
              hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
           ENDIF
-          veg_pool_seed_bed%carbon14    = veg_pool_seed_bed%carbon * &
+          veg_pool%seed_bed%carbon14    = veg_pool%seed_bed%carbon * &
                                           calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
 
-          veg_pool_seed_bed%nitrogen15  = veg_pool_seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          veg_pool%seed_bed%nitrogen15  = veg_pool%seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
         !> no vegetation dynamics and not starting with bare ground
         !! 
         ELSE  
-          veg_pool_reserve%carbon      = 50.0_wp
+          veg_pool%reserve%carbon      = 50.0_wp
           dens_ind(:)                  = 1.0_wp
 
-          veg_pool_reserve%nitrogen    = veg_pool_reserve%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-          veg_pool_reserve%phosphorus  = veg_pool_reserve%nitrogen  / lctlib%np_leaf
+          veg_pool%reserve%nitrogen    = veg_pool%reserve%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
+          veg_pool%reserve%phosphorus  = veg_pool%reserve%nitrogen  / lctlib%np_leaf
 
           ! pool%reserve%carbon13
           IF(lctlib%ps_pathway == ic3phot)THEN
@@ -305,7 +305,7 @@ CONTAINS
           ELSE
              hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
           ENDIF
-          veg_pool_reserve%carbon13 = veg_pool_reserve%carbon * &
+          veg_pool%reserve%carbon13 = veg_pool%reserve%carbon * &
                                       calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
 
           ! pool%reserve%carbon14
@@ -314,10 +314,10 @@ CONTAINS
           ELSE
              hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
           ENDIF
-          veg_pool_reserve%carbon14   = veg_pool_reserve%carbon * &
+          veg_pool%reserve%carbon14   = veg_pool%reserve%carbon * &
                                         calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
 
-          veg_pool_reserve%nitrogen15 = veg_pool_reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          veg_pool%reserve%nitrogen15 = veg_pool%reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
         END IF
 
       !> 1.2 Canopy & Test_Canopy
@@ -328,10 +328,10 @@ CONTAINS
         lai(:)    = ref_lai
         !leaf_nitrogen
         IF(dsl4jsb_Config(VEG_)%pft_id==0) THEN
-          veg_pool_leaf%nitrogen   = ref_nleaf / molar_mass_N * lai(1)
+          veg_pool%leaf%nitrogen   = ref_nleaf / molar_mass_N * lai(1)
         ELSE
-          veg_pool_leaf%nitrogen   = lai(1) / lctlib%sla / lctlib%cn_leaf
-          veg_pool_leaf%phosphorus = veg_pool_leaf%nitrogen / lctlib%np_leaf
+          veg_pool%leaf%nitrogen   = lai(1) / lctlib%sla / lctlib%cn_leaf
+          veg_pool%leaf%phosphorus = veg_pool%leaf%nitrogen / lctlib%np_leaf
         ENDIF
         leaf_nitrogen_cl(:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
         lai_cl(:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
