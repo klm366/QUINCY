@@ -80,13 +80,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     ! Declare pointers to structures in memory
 #define Def_veg_pool
-! #define Def_veg_litterfall
-! #define Def_veg_growth
-#include "slm_pools_p_incl.f90"
+#define Def_veg_litterfall
+#define Def_veg_growth
+#include "slm_pools_a_incl.f90"
 #undef Def_veg_pool
-! #undef Def_veg_litterfall
-! #undef Def_veg_growth
-    TYPE(t_veg_memory),       POINTER     :: veg      ! local pointer to veg__mem for SLM usability
+#undef Def_veg_litterfall
+#undef Def_veg_growth
+!    TYPE(t_veg_memory),       POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -126,15 +126,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     ! Get process memory structures
 #define Get_veg_pool
-! #define Get_veg_litterfall
-! #define Get_veg_growth
-#include "slm_pools_p_incl.f90"
+#define Get_veg_litterfall
+#define Get_veg_growth
+#include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
-! #undef Get_veg_litterfall
-! #undef Get_veg_growth
+#undef Get_veg_litterfall
+#undef Get_veg_growth
 
 !! *slmtemp
-    veg     => veg__mem 
+!    veg     => veg__mem 
 
 
 
@@ -159,16 +159,12 @@ CONTAINS
                                   recycling_leaf_n15(:)                 , &
                                   recycling_fine_root_n15(:)            )
 
-#define Dealloc_veg_pool
-#include "slm_pools_p_incl.f90"
-#undef Dealloc_veg_pool
-
     !> 2.0 Calculate recycling and retranslocation
     !!  
     CALL calc_turnover(lctlib                                       , & ! in 
-                              veg%pool                              , & ! inout
-                              veg%growth                            , & ! inout
-                              veg%litterfall                        , & ! inout
+                              veg_pool                              , & ! inout
+                              veg_growth                            , & ! inout
+                              veg_litterfall                        , & ! inout
                               growing_season(1)                     , & ! in
                               lai(1)                                , & ! in
                               target_lai(1)                         , & ! in
@@ -180,9 +176,13 @@ CONTAINS
                               recycling_heart_wood_p(1)             )
 
 
-! #define Dealloc_veg_pool
-! #include "slm_pools_p_incl.f90"
-! #undef Dealloc_veg_pool
+#define Dealloc_veg_pool
+#define Dealloc_veg_litterfall
+#define Dealloc_veg_growth
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
+#undef Dealloc_veg_litterfall
+#undef Dealloc_veg_growth
 
   END SUBROUTINE update_veg_turnover
 
@@ -314,8 +314,8 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_turnover(lctlib                     , &
-!  ELEMENTAL SUBROUTINE calc_turnover(lctlib                     , &
+!  SUBROUTINE calc_turnover(lctlib                     , &
+  ELEMENTAL SUBROUTINE calc_turnover(lctlib                     , &
                                       veg_pool                  , &
                                       veg_growth                , &
                                       veg_litterfall            , &
@@ -330,17 +330,17 @@ CONTAINS
                                       recycling_heart_wood_p      )
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_shared_constants
     USE mo_veg_constants
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
 
     ! 0.1 InOut
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_pool         , & !< current state of vegetation pools 
+    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_pool         , & !< current state of vegetation pools 
                                                    veg_growth       , & !< current growth rate of vegetation pools
                                                    veg_litterfall       !< current litter fall from vegetation pools
     LOGICAL,                      INTENT(in)    :: growing_season       !< whether the plant is in the growing season
@@ -396,17 +396,17 @@ CONTAINS
     nitrogen_recycling_fract    = calc_nitrogen_recycling_fract("leaf")
     phosphorus_recycling_fract  = calc_phosphorus_recycling_fract("leaf")
 
-    retranslocation = nitrogen_recycling_fract * veg_pool%leaf%nitrogen%ptr * fturn_leaf 
+    retranslocation = nitrogen_recycling_fract * veg_pool%leaf%nitrogen * fturn_leaf 
     recycling_leaf_n = recycling_leaf_n + retranslocation
-    veg_litterfall%leaf%nitrogen%ptr = veg_litterfall%leaf%nitrogen%ptr - retranslocation
+    veg_litterfall%leaf%nitrogen = veg_litterfall%leaf%nitrogen - retranslocation
 
-    retranslocation = nitrogen_recycling_fract * veg_pool%leaf%nitrogen15%ptr * fturn_leaf
+    retranslocation = nitrogen_recycling_fract * veg_pool%leaf%nitrogen15 * fturn_leaf
     recycling_leaf_n15 = recycling_leaf_n15 + retranslocation
-    veg_litterfall%leaf%nitrogen15%ptr = veg_litterfall%leaf%nitrogen15%ptr - retranslocation
+    veg_litterfall%leaf%nitrogen15 = veg_litterfall%leaf%nitrogen15 - retranslocation
 
-    retranslocation = phosphorus_recycling_fract * veg_pool%leaf%phosphorus%ptr * fturn_leaf 
+    retranslocation = phosphorus_recycling_fract * veg_pool%leaf%phosphorus * fturn_leaf 
     recycling_leaf_p = recycling_leaf_p + retranslocation
-    veg_litterfall%leaf%phosphorus%ptr = veg_litterfall%leaf%phosphorus%ptr - retranslocation
+    veg_litterfall%leaf%phosphorus = veg_litterfall%leaf%phosphorus - retranslocation
 
     !> 2.0 fine root turnover to litter
     !! 
@@ -442,11 +442,11 @@ CONTAINS
         nitrogen_recycling_fract            = calc_nitrogen_recycling_fract("wood")
         phosphorus_recycling_fract          = calc_phosphorus_recycling_fract("wood")
         recycling_heart_wood_n   = recycling_heart_wood_n   + & 
-                                   veg_pool%sap_wood%nitrogen%ptr   * fturn * nitrogen_recycling_fract
+                                   veg_pool%sap_wood%nitrogen   * fturn * nitrogen_recycling_fract
         recycling_heart_wood_n15 = recycling_heart_wood_n15 + &
-                                   veg_pool%sap_wood%nitrogen15%ptr * fturn * nitrogen_recycling_fract
+                                   veg_pool%sap_wood%nitrogen15 * fturn * nitrogen_recycling_fract
         recycling_heart_wood_p   = recycling_heart_wood_p   + & 
-                                   veg_pool%sap_wood%phosphorus%ptr * fturn * phosphorus_recycling_fract
+                                   veg_pool%sap_wood%phosphorus * fturn * phosphorus_recycling_fract
     ENDIF 
 
     !> 5.0 fruit turnover to seed_bed

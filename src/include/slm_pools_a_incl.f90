@@ -3,23 +3,23 @@
 ! you can define/use pools either individually or all
 ! -------------------------------------------------------
 
-#if defined(Def_veg_pool) || defined(Def_all_veg_pools)
+#if defined(Def_veg_pool)
   TYPE(t_veg_pool_a)              :: veg_pool
 #endif
 
-#if defined(Def_veg_growth) || defined(Def_all_veg_pools)
+#if defined(Def_veg_growth)
   TYPE(t_veg_pool_a)              :: veg_growth
 #endif
 
-#if defined(Def_veg_litterfall) || defined(Def_all_veg_pools)
+#if defined(Def_veg_litterfall)
   TYPE(t_veg_pool_a)              :: veg_litterfall
 #endif
 
-#if defined(Def_veg_falloc) || defined(Def_all_veg_pools)
+#if defined(Def_veg_falloc)
   TYPE(t_veg_pool_a)              :: veg_falloc
 #endif
 
-#if defined(Def_veg_total_flux) || defined(Def_all_veg_pools)
+#if defined(Def_veg_total_flux)
   TYPE(t_veg_pool_a)              :: veg_total_flux
 #endif
 
@@ -45,19 +45,19 @@
 ! you can define/use pools either individually or all
 ! -------------------------------------------------------
 
-#if defined(Def_sb_pool) || defined(Def_all_sb_pools)
+#if defined(Def_sb_pool)
   TYPE(t_sb_pool_a)              :: sb_pool
 #endif
 
-#if defined(Def_sb_formation) || defined(Def_all_sb_pools)
+#if defined(Def_sb_formation)
   TYPE(t_sb_pool_a)              :: sb_formation
 #endif
 
-#if defined(Def_sb_loss) || defined(Def_all_sb_pools)
+#if defined(Def_sb_loss)
   TYPE(t_sb_pool_a)              :: sb_loss
 #endif
 
-#if defined(Def_sb_transport) || defined(Def_all_sb_pools)
+#if defined(Def_sb_transport)
   TYPE(t_sb_pool_a)              :: sb_transport
 #endif
 
@@ -75,7 +75,7 @@
 ! allocate variables in pools of vegetation memory
 ! -------------------------------------------------------
 
-#if defined(Get_veg_pool) || defined(Get_all_veg_pools)
+#if defined(Get_veg_pool)
   allocate(veg_pool%leaf%carbon              , source=veg__mem%pool%leaf%carbon%ptr)
   allocate(veg_pool%leaf%nitrogen            , source=veg__mem%pool%leaf%nitrogen%ptr)
   allocate(veg_pool%leaf%phosphorus          , source=veg__mem%pool%leaf%phosphorus%ptr)
@@ -132,7 +132,7 @@
   allocate(veg_pool%seed_bed%nitrogen15      , source=veg__mem%pool%seed_bed%nitrogen15%ptr)
 #endif
 
-#if defined(Get_veg_growth) || defined(Get_all_veg_pools)
+#if defined(Get_veg_growth)
   allocate(veg_growth%leaf%carbon              , source=veg__mem%growth%leaf%carbon%ptr)
   allocate(veg_growth%leaf%nitrogen            , source=veg__mem%growth%leaf%nitrogen%ptr)
   allocate(veg_growth%leaf%phosphorus          , source=veg__mem%growth%leaf%phosphorus%ptr)
@@ -189,7 +189,7 @@
   allocate(veg_growth%seed_bed%nitrogen15      , source=veg__mem%growth%seed_bed%nitrogen15%ptr)
 #endif
 
-#if defined(Get_veg_litterfall) || defined(Get_all_veg_pools)
+#if defined(Get_veg_litterfall)
   allocate(veg_litterfall%leaf%carbon              , source=veg__mem%litterfall%leaf%carbon%ptr)
   allocate(veg_litterfall%leaf%nitrogen            , source=veg__mem%litterfall%leaf%nitrogen%ptr)
   allocate(veg_litterfall%leaf%phosphorus          , source=veg__mem%litterfall%leaf%phosphorus%ptr)
@@ -246,7 +246,7 @@
   allocate(veg_litterfall%seed_bed%nitrogen15      , source=veg__mem%litterfall%seed_bed%nitrogen15%ptr)
 #endif
 
-#if defined(Get_veg_falloc) || defined(Get_all_veg_pools)
+#if defined(Get_veg_falloc)
   allocate(veg_falloc%leaf%carbon              , source=veg__mem%falloc%leaf%carbon%ptr)
   allocate(veg_falloc%leaf%nitrogen            , source=veg__mem%falloc%leaf%nitrogen%ptr)
   allocate(veg_falloc%leaf%phosphorus          , source=veg__mem%falloc%leaf%phosphorus%ptr)
@@ -303,7 +303,7 @@
   allocate(veg_falloc%seed_bed%nitrogen15      , source=veg__mem%falloc%seed_bed%nitrogen15%ptr)
 #endif
 
-#if defined(Get_veg_total_flux) || defined(Get_all_veg_pools)
+#if defined(Get_veg_total_flux)
   allocate(veg_total_flux%leaf%carbon              , source=veg__mem%total_flux%leaf%carbon%ptr)
   allocate(veg_total_flux%leaf%nitrogen            , source=veg__mem%total_flux%leaf%nitrogen%ptr)
   allocate(veg_total_flux%leaf%phosphorus          , source=veg__mem%total_flux%leaf%phosphorus%ptr)
@@ -401,7 +401,7 @@
 ! and pass values to pools of vegetation memory
 ! -------------------------------------------------------
 
-#if defined(Dealloc_veg_pool) || defined(Dealloc_all_veg_pools)
+#if defined(Dealloc_veg_pool)
   ! pass the values (back) to process memory
   veg__mem%pool%leaf%carbon%ptr             = veg_pool%leaf%carbon
   veg__mem%pool%leaf%nitrogen%ptr           = veg_pool%leaf%nitrogen
@@ -514,7 +514,7 @@
   deallocate(veg_pool%seed_bed%nitrogen15)
 #endif
 
-#if defined(Dealloc_veg_growth) || defined(Dealloc_all_veg_pools)
+#if defined(Dealloc_veg_growth)
   ! pass the values (back) to process memory
   veg__mem%growth%leaf%carbon%ptr             = veg_growth%leaf%carbon
   veg__mem%growth%leaf%nitrogen%ptr           = veg_growth%leaf%nitrogen
@@ -627,7 +627,7 @@
   deallocate(veg_growth%seed_bed%nitrogen15)
 #endif
 
-#if defined(Dealloc_veg_litterfall) || defined(Dealloc_all_veg_pools)
+#if defined(Dealloc_veg_litterfall)
   ! pass the values (back) to process memory
   veg__mem%litterfall%leaf%carbon%ptr             = veg_litterfall%leaf%carbon
   veg__mem%litterfall%leaf%nitrogen%ptr           = veg_litterfall%leaf%nitrogen
@@ -740,7 +740,7 @@
   deallocate(veg_litterfall%seed_bed%nitrogen15)
 #endif
 
-#if defined(Dealloc_veg_falloc) || defined(Dealloc_all_veg_pools)
+#if defined(Dealloc_veg_falloc)
   ! pass the values (back) to process memory
   veg__mem%falloc%leaf%carbon%ptr             = veg_falloc%leaf%carbon
   veg__mem%falloc%leaf%nitrogen%ptr           = veg_falloc%leaf%nitrogen
@@ -853,7 +853,7 @@
   deallocate(veg_falloc%seed_bed%nitrogen15)
 #endif
 
-#if defined(Dealloc_veg_total_flux) || defined(Dealloc_all_veg_pools)
+#if defined(Dealloc_veg_total_flux)
   ! pass the values (back) to process memory
   veg__mem%total_flux%leaf%carbon%ptr             = veg_total_flux%leaf%carbon
   veg__mem%total_flux%leaf%nitrogen%ptr           = veg_total_flux%leaf%nitrogen

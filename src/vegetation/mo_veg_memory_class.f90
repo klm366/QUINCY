@@ -461,7 +461,7 @@ CONTAINS
   !> + (t_veg_element_a + t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_element_a(this,element2) RESULT(element3)
+  PURE FUNCTION Add_element_a(this,element2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_element_a), INTENT(in)  :: this, element2
@@ -484,7 +484,7 @@ CONTAINS
   !> + (t_veg_element_a + scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_element_a_and_scalar(this,scalar) RESULT(element3)
+  PURE FUNCTION Add_element_a_and_scalar(this,scalar) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_element_a), INTENT(in)  :: this
@@ -508,7 +508,7 @@ CONTAINS
   ! !> + (t_veg_element_a + 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Add_element_a_and_vector(this,vector) RESULT(element3)
+  ! PURE FUNCTION Add_element_a_and_vector(this,vector) RESULT(element3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
   !   CLASS(t_veg_element_a), INTENT(in)  :: this
@@ -532,7 +532,7 @@ CONTAINS
   !> - (t_veg_element_a - t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_element_a(this,element2) RESULT(element3)
+  PURE FUNCTION Subtract_element_a(this,element2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_element_a), INTENT(in)  :: this, element2
@@ -555,7 +555,7 @@ CONTAINS
   !> - (t_veg_element_a - scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_element_a_and_scalar(this,scalar) RESULT(element3)
+  PURE FUNCTION Subtract_element_a_and_scalar(this,scalar) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_element_a), INTENT(in)  :: this
@@ -579,7 +579,7 @@ CONTAINS
   ! !> - (t_veg_element_a - 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Subtract_element_a_and_vector(this,vector) RESULT(element3)
+  ! PURE FUNCTION Subtract_element_a_and_vector(this,vector) RESULT(element3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
   !   CLASS(t_veg_element_a), INTENT(in)  :: this
@@ -603,7 +603,7 @@ CONTAINS
   !> * (t_veg_element_a * t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_element_a(this,element2) RESULT(element3)
+  PURE FUNCTION Multiply_element_a(this,element2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_element_a), INTENT(in)  :: this, element2
@@ -626,7 +626,7 @@ CONTAINS
   !> * (t_veg_element_a * scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_element_a_and_scalar(this,scalar) RESULT(element3)
+  PURE FUNCTION Multiply_element_a_and_scalar(this,scalar) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_element_a), INTENT(in)  :: this
@@ -650,7 +650,7 @@ CONTAINS
   !> * (scalar * t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_scalar_and_element_a(scalar,this2) RESULT(element3)
+  PURE FUNCTION Multiply_scalar_and_element_a(scalar,this2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),               INTENT(in)  :: scalar
@@ -674,7 +674,7 @@ CONTAINS
   ! !> * (t_veg_element_a * 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Multiply_element_a_and_vector(this,vector) RESULT(element3)
+  ! PURE FUNCTION Multiply_element_a_and_vector(this,vector) RESULT(element3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
   !   CLASS(t_veg_element_a), INTENT(in)  :: this
@@ -703,7 +703,7 @@ CONTAINS
   !> + (t_veg_pool_a + t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_pool_a(this,pool2) RESULT(pool3)
+  PURE FUNCTION Add_pool_a(this,pool2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
@@ -723,7 +723,7 @@ CONTAINS
   !> + (t_veg_pool_a + scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_pool_a_and_scalar(this,scalar) RESULT(pool3)
+  PURE FUNCTION Add_pool_a_and_scalar(this,scalar) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_pool_a), INTENT(in) :: this
@@ -744,7 +744,7 @@ CONTAINS
   ! !> + (t_veg_pool_a + 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Add_pool_a_and_vector(this,vector) RESULT(pool3)
+  ! PURE FUNCTION Add_pool_a_and_vector(this,vector) RESULT(pool3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
   !   CLASS(t_veg_pool_a), INTENT(in) :: this
@@ -765,7 +765,7 @@ CONTAINS
   !> - (t_veg_pool_a - t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_pool_a(this,pool2) RESULT(pool3)
+  PURE FUNCTION Subtract_pool_a(this,pool2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
@@ -785,7 +785,7 @@ CONTAINS
   !> - (t_veg_pool_a - scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_pool_a_and_scalar(this,scalar) RESULT(pool3)
+  PURE FUNCTION Subtract_pool_a_and_scalar(this,scalar) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_pool_a), INTENT(in) :: this
@@ -806,7 +806,7 @@ CONTAINS
   ! !> - (t_veg_pool_a - 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Subtract_pool_a_and_vector(this,vector) RESULT(pool3)
+  ! PURE FUNCTION Subtract_pool_a_and_vector(this,vector) RESULT(pool3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
   !   CLASS(t_veg_pool_a), INTENT(in) :: this
@@ -827,7 +827,7 @@ CONTAINS
   !> * (t_veg_pool_a * t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_pool_a(this,pool2) RESULT(pool3)
+  PURE FUNCTION Multiply_pool_a(this,pool2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
@@ -847,7 +847,7 @@ CONTAINS
   !> * (t_veg_pool_a * scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_pool_a_and_scalar(this,scalar) RESULT(pool3)
+  PURE FUNCTION Multiply_pool_a_and_scalar(this,scalar) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_veg_pool_a), INTENT(in) :: this
@@ -868,7 +868,7 @@ CONTAINS
   !> * (scalar * t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_scalar_and_pool_a(scalar,this2) RESULT(pool3)
+  PURE FUNCTION Multiply_scalar_and_pool_a(scalar,this2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),            INTENT(in) :: scalar
@@ -889,7 +889,7 @@ CONTAINS
   ! !> * (t_veg_pool_a * 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Multiply_pool_a_and_vector(this,vector) RESULT(pool3)
+  ! PURE FUNCTION Multiply_pool_a_and_vector(this,vector) RESULT(pool3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
   !   CLASS(t_veg_pool_a), INTENT(in) :: this

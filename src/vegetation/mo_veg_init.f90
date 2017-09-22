@@ -147,7 +147,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     ! Declare pointers to structures in memory
 #define Def_veg_pool
-#include "slm_pools_p_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Def_veg_pool
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -241,7 +241,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
     ! Get process memory structures
 #define Get_veg_pool
-#include "slm_pools_p_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
 
 
@@ -424,7 +424,7 @@ CONTAINS
 
 
 #define Dealloc_veg_pool
-#include "slm_pools_p_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_pool
 
   END SUBROUTINE veg_init
