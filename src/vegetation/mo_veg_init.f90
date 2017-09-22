@@ -51,7 +51,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)                ! USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4slm_Use_memory_p_veg                ! USE mo_veg_memory_class,      ONLY: t_veg_element_p, t_veg_pool_p
+    dsl4slm_Use_memory_a_veg                ! USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
 
     IMPLICIT NONE
     ! ---------------------------
@@ -421,6 +421,11 @@ CONTAINS
     t_air_week_mavg(:)                = 283.15_wp
     t_air_month_mavg(:)               = 283.15_wp
     t_jmax_opt_mavg(:)                = 17.0_wp
+
+
+#define Dealloc_veg_pool
+#include "slm_pools_p_incl.f90"
+#undef Dealloc_veg_pool
 
   END SUBROUTINE veg_init
 

@@ -27,7 +27,7 @@ MODULE mo_veg_memory_class
   PUBLIC :: t_veg_memory, max_no_of_vars
   PUBLIC :: t_slm_struct_veg_pool, t_slm_struct_veg_element   ! *slmjsb4 
   PUBLIC :: max_no_of_structs, max_no_of_n_structs            ! *slmjsb4
-  PUBLIC :: t_veg_element_p, t_veg_pool_p                     ! *slmtemp
+  PUBLIC :: t_veg_element_a, t_veg_pool_a                     ! *slmtemp
 
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
@@ -35,85 +35,84 @@ MODULE mo_veg_memory_class
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Type definition for pointer elements in veg pool
+  !> Type definition for helper elements with ALLOCATABLE variables for elements in veg memory
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE t_veg_element_p
-    REAL(wp), POINTER :: carbon
-    REAL(wp), POINTER :: nitrogen
-    REAL(wp), POINTER :: phosphorus
-    REAL(wp), POINTER :: carbon13
-    REAL(wp), POINTER :: carbon14
-    REAL(wp), POINTER :: nitrogen15
-    ! REAL(wp), POINTER :: carbon(:)      ! dimension of variable in memory: ics:ice,iblk
-    ! REAL(wp), POINTER :: nitrogen(:)
-    ! REAL(wp), POINTER :: phosphorus(:)
-    ! REAL(wp), POINTER :: carbon13(:)
-    ! REAL(wp), POINTER :: carbon14(:)
-    ! REAL(wp), POINTER :: nitrogen15(:)
+  TYPE t_veg_element_a
+    REAL(wp), ALLOCATABLE :: carbon
+    REAL(wp), ALLOCATABLE :: nitrogen
+    REAL(wp), ALLOCATABLE :: phosphorus
+    REAL(wp), ALLOCATABLE :: carbon13
+    REAL(wp), ALLOCATABLE :: carbon14
+    REAL(wp), ALLOCATABLE :: nitrogen15
+    ! REAL(wp), ALLOCATABLE :: carbon(:)      ! dimension of variable in memory: ics:ice,iblk
+    ! REAL(wp), ALLOCATABLE :: nitrogen(:)
+    ! REAL(wp), ALLOCATABLE :: phosphorus(:)
+    ! REAL(wp), ALLOCATABLE :: carbon13(:)
+    ! REAL(wp), ALLOCATABLE :: carbon14(:)
+    ! REAL(wp), ALLOCATABLE :: nitrogen15(:)
   CONTAINS
     PRIVATE
     !! operator overload
     ! +
-    PROCEDURE               :: Add_element_p                   ! Add two elements
-    PROCEDURE               :: Add_element_p_and_scalar        ! Add scalar to element
-    !PROCEDURE               :: Add_element_p_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to element
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_p, Add_element_p_and_scalar!, Add_element_p_and_field2d
+    PROCEDURE               :: Add_element_a                   ! Add two elements
+    PROCEDURE               :: Add_element_a_and_scalar        ! Add scalar to element
+    !PROCEDURE               :: Add_element_a_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to element
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_a, Add_element_a_and_scalar!, Add_element_a_and_field2d
     !! operator overload
     ! -
-    PROCEDURE               :: Subtract_element_p                   ! Subtract one element from another element
-    PROCEDURE               :: Subtract_element_p_and_scalar        ! Subtract scalar from element
-    !PROCEDURE               :: Subtract_element_p_and_vector        ! Subtract vector ( var(ics:ice) ) from element
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_p, Subtract_element_p_and_scalar!, Subtract_element_p_and_field2d
+    PROCEDURE               :: Subtract_element_a                   ! Subtract one element from another element
+    PROCEDURE               :: Subtract_element_a_and_scalar        ! Subtract scalar from element
+    !PROCEDURE               :: Subtract_element_a_and_vector        ! Subtract vector ( var(ics:ice) ) from element
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_a, Subtract_element_a_and_scalar!, Subtract_element_a_and_field2d
     !! operator overload
     ! *
-    PROCEDURE               :: Multiply_element_p                   ! Multiply two elements
-    PROCEDURE               :: Multiply_element_p_and_scalar        ! Multiply element with 
-    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_element_p        ! Multiply scalar with element
-    !PROCEDURE               :: Multiply_element_p_and_vector        ! Multiply element with REAL 1D vector ( var(ics:ice) )
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_p, Multiply_element_p_and_scalar, Multiply_scalar_and_element_p!, Multiply_element_p_and_field2d
-    FINAL                   :: finalize_veg_element_p
-  END TYPE t_veg_element_p
+    PROCEDURE               :: Multiply_element_a                   ! Multiply two elements
+    PROCEDURE               :: Multiply_element_a_and_scalar        ! Multiply element with 
+    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_element_a        ! Multiply scalar with element
+    !PROCEDURE               :: Multiply_element_a_and_vector        ! Multiply element with REAL 1D vector ( var(ics:ice) )
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_a, Multiply_element_a_and_scalar, Multiply_scalar_and_element_a!, Multiply_element_a_and_field2d
+  END TYPE t_veg_element_a
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Type definition for pointer pools in veg memory
+  !> Type definition for helper pools with ALLOCATABLE variables for pools in veg memory
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE t_veg_pool_p
-    TYPE(t_veg_element_p)  :: leaf             !< elements of leaf
-    TYPE(t_veg_element_p)  :: fine_root        !< elements of fine_root
-    TYPE(t_veg_element_p)  :: coarse_root      !< elements of coarse_root
-    TYPE(t_veg_element_p)  :: sap_wood         !< elements of sap_wood
-    TYPE(t_veg_element_p)  :: heart_wood       !< elements of heart_wood
-    TYPE(t_veg_element_p)  :: labile           !< elements of labile
-    TYPE(t_veg_element_p)  :: reserve          !< elements of reserve
-    TYPE(t_veg_element_p)  :: fruit            !< elements of fruit
-    TYPE(t_veg_element_p)  :: seed_bed         !< elements of seed_bed
+  TYPE t_veg_pool_a
+    TYPE(t_veg_element_a)  :: leaf             !< elements of leaf
+    TYPE(t_veg_element_a)  :: fine_root        !< elements of fine_root
+    TYPE(t_veg_element_a)  :: coarse_root      !< elements of coarse_root
+    TYPE(t_veg_element_a)  :: sap_wood         !< elements of sap_wood
+    TYPE(t_veg_element_a)  :: heart_wood       !< elements of heart_wood
+    TYPE(t_veg_element_a)  :: labile           !< elements of labile
+    TYPE(t_veg_element_a)  :: reserve          !< elements of reserve
+    TYPE(t_veg_element_a)  :: fruit            !< elements of fruit
+    TYPE(t_veg_element_a)  :: seed_bed         !< elements of seed_bed
   CONTAINS
     PRIVATE
     !! operator overload
     ! +
-    PROCEDURE               :: Add_pool_p                   ! Add two pools
-    PROCEDURE               :: Add_pool_p_and_scalar        ! Add scalar to pool
-    !PROCEDURE               :: Add_pool_p_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to pool
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_p, Add_pool_p_and_scalar!, Add_pool_p_and_field2d
+    PROCEDURE               :: Add_pool_a                   ! Add two pools
+    PROCEDURE               :: Add_pool_a_and_scalar        ! Add scalar to pool
+    !PROCEDURE               :: Add_pool_a_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to pool
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_a, Add_pool_a_and_scalar!, Add_pool_a_and_field2d
     !! operator overload
     ! -
-    PROCEDURE               :: Subtract_pool_p                   ! Subtract one pool from another pool
-    PROCEDURE               :: Subtract_pool_p_and_scalar        ! Subtract scalar from pool
-    !PROCEDURE               :: Subtract_pool_p_and_vector        ! Subtract vector ( var(ics:ice) ) from pool
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_p, Subtract_pool_p_and_scalar!, Subtract_pool_p_and_field2d
+    PROCEDURE               :: Subtract_pool_a                   ! Subtract one pool from another pool
+    PROCEDURE               :: Subtract_pool_a_and_scalar        ! Subtract scalar from pool
+    !PROCEDURE               :: Subtract_pool_a_and_vector        ! Subtract vector ( var(ics:ice) ) from pool
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_a, Subtract_pool_a_and_scalar!, Subtract_pool_a_and_field2d
     !! operator overload
     ! *
-    PROCEDURE               :: Multiply_pool_p                   ! Multiply two pools
-    PROCEDURE               :: Multiply_pool_p_and_scalar        ! Multiply pool with scalar
-    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_pool_p        ! Multiply scalar with pool
-    !PROCEDURE               :: Multiply_pool_p_and_vector        ! Multiply pool with REAL 1D vector ( var(ics:ice) )
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_p, Multiply_pool_p_and_scalar, Multiply_scalar_and_pool_p!, Multiply_pool_p_and_field2d
-  END TYPE t_veg_pool_p
+    PROCEDURE               :: Multiply_pool_a                   ! Multiply two pools
+    PROCEDURE               :: Multiply_pool_a_and_scalar        ! Multiply pool with scalar
+    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_pool_a        ! Multiply scalar with pool
+    !PROCEDURE               :: Multiply_pool_a_and_vector        ! Multiply pool with REAL 1D vector ( var(ics:ice) )
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_a, Multiply_pool_a_and_scalar, Multiply_scalar_and_pool_a!, Multiply_pool_a_and_field2d
+  END TYPE t_veg_pool_a
 
 
 
@@ -456,283 +455,260 @@ MODULE mo_veg_memory_class
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------!
-  ! t_veg_element_p operator overload                                                                    !
+  ! t_veg_element_a operator overload                                                                   !
   !-----------------------------------------------------------------------------------------------------!
   !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_veg_element + t_slm_struct_veg_element)
+  !> + (t_veg_element_a + t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_element_p(this,element2) RESULT(element3)
+  FUNCTION Add_element_a(this,element2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_element_p), INTENT(in) :: this, element2
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    CLASS(t_veg_element_a), INTENT(in)  :: this, element2
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this%carbon)       ! note: Function results are automatically deallocated after the result is "used" in the outer scope.
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
     element3%carbon       = this%carbon      + element2%carbon
     element3%nitrogen     = this%nitrogen    + element2%nitrogen
     element3%phosphorus   = this%phosphorus  + element2%phosphorus
     element3%carbon13     = this%carbon13    + element2%carbon13
     element3%carbon14     = this%carbon14    + element2%carbon14
     element3%nitrogen15   = this%nitrogen15  + element2%nitrogen15
-  END FUNCTION Add_element_p
+  END FUNCTION Add_element_a
   !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_veg_element + scalar)
+  !> + (t_veg_element_a + scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_element_p_and_scalar(this,scalar) RESULT(element3)
+  FUNCTION Add_element_a_and_scalar(this,scalar) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_element_p), INTENT(in) :: this
-    REAL(wp),               INTENT(in) :: scalar
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    CLASS(t_veg_element_a), INTENT(in)  :: this
+    REAL(wp),               INTENT(in)  :: scalar
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
     element3%carbon       = this%carbon      + scalar
     element3%nitrogen     = this%nitrogen    + scalar
     element3%phosphorus   = this%phosphorus  + scalar
     element3%carbon13     = this%carbon13    + scalar
     element3%carbon14     = this%carbon14    + scalar
     element3%nitrogen15   = this%nitrogen15  + scalar
-  END FUNCTION Add_element_p_and_scalar
+  END FUNCTION Add_element_a_and_scalar
   ! !-----------------------------------------------------------------------------------------------------
-  ! !> + (t_slm_struct_veg_element + 1D vector)
+  ! !> + (t_veg_element_a + 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Add_element_p_and_vector(this,vector) RESULT(element3)
+  ! FUNCTION Add_element_a_and_vector(this,vector) RESULT(element3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
-  !   CLASS(t_veg_element_p), INTENT(in) :: this
-  !   REAL(wp),               INTENT(in) :: vector(:)
-  !   TYPE(t_veg_element_p), ALLOCATABLE :: element3
+  !   CLASS(t_veg_element_a), INTENT(in)  :: this
+  !   REAL(wp),               INTENT(in)  :: vector(:)
+  !   TYPE(t_veg_element_a)               :: element3
   !   ! 1.0 go
-  !   ALLOCATE(element3, source=this)
-  !   ALLOCATE(element3%carbon)
-  !   ALLOCATE(element3%nitrogen)
-  !   ALLOCATE(element3%phosphorus)
-  !   ALLOCATE(element3%carbon13)
-  !   ALLOCATE(element3%carbon14)
-  !   ALLOCATE(element3%nitrogen15)
+  !   ALLOCATE(element3%carbon,     source=this%carbon)
+  !   ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+  !   ALLOCATE(element3%phosphorus, source=this%phosphorus)
+  !   ALLOCATE(element3%carbon13,   source=this%carbon13)
+  !   ALLOCATE(element3%carbon14,   source=this%carbon14)
+  !   ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
   !   element3%carbon       = this%carbon      + vector
   !   element3%nitrogen     = this%nitrogen    + vector
   !   element3%phosphorus   = this%phosphorus  + vector
   !   element3%carbon13     = this%carbon13    + vector
   !   element3%carbon14     = this%carbon14    + vector
   !   element3%nitrogen15   = this%nitrogen15  + vector
-  ! END FUNCTION Add_element_p_and_vector
+  ! END FUNCTION Add_element_a_and_vector
   !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_veg_element - t_slm_struct_veg_element)
+  !> - (t_veg_element_a - t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_element_p(this,element2) RESULT(element3)
+  FUNCTION Subtract_element_a(this,element2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_element_p), INTENT(in) :: this, element2
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    CLASS(t_veg_element_a), INTENT(in)  :: this, element2
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
     element3%carbon       = this%carbon      - element2%carbon
     element3%nitrogen     = this%nitrogen    - element2%nitrogen
     element3%phosphorus   = this%phosphorus  - element2%phosphorus
     element3%carbon13     = this%carbon13    - element2%carbon13
     element3%carbon14     = this%carbon14    - element2%carbon14
     element3%nitrogen15   = this%nitrogen15  - element2%nitrogen15
-  END FUNCTION Subtract_element_p
+  END FUNCTION Subtract_element_a
   !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_veg_element - scalar)
+  !> - (t_veg_element_a - scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_element_p_and_scalar(this,scalar) RESULT(element3)
+  FUNCTION Subtract_element_a_and_scalar(this,scalar) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_element_p), INTENT(in) :: this
-    REAL(wp),               INTENT(in) :: scalar
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    CLASS(t_veg_element_a), INTENT(in)  :: this
+    REAL(wp),               INTENT(in)  :: scalar
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
     element3%carbon       = this%carbon      - scalar
     element3%nitrogen     = this%nitrogen    - scalar
     element3%phosphorus   = this%phosphorus  - scalar
     element3%carbon13     = this%carbon13    - scalar
     element3%carbon14     = this%carbon14    - scalar
     element3%nitrogen15   = this%nitrogen15  - scalar
-  END FUNCTION Subtract_element_p_and_scalar
+  END FUNCTION Subtract_element_a_and_scalar
   ! !-----------------------------------------------------------------------------------------------------
-  ! !> - (t_slm_struct_veg_element - 1D vector)
+  ! !> - (t_veg_element_a - 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Subtract_element_p_and_vector(this,vector) RESULT(element3)
+  ! FUNCTION Subtract_element_a_and_vector(this,vector) RESULT(element3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
-  !   CLASS(t_veg_element_p), INTENT(in) :: this
-  !   REAL(wp),               INTENT(in) :: vector(:)
-  !   TYPE(t_veg_element_p), ALLOCATABLE :: element3
+  !   CLASS(t_veg_element_a), INTENT(in)  :: this
+  !   REAL(wp),               INTENT(in)  :: vector(:)
+  !   TYPE(t_veg_element_a)               :: element3
   !   ! 1.0 go
-  !   ALLOCATE(element3, source=this)
-  !   ALLOCATE(element3%carbon)
-  !   ALLOCATE(element3%nitrogen)
-  !   ALLOCATE(element3%phosphorus)
-  !   ALLOCATE(element3%carbon13)
-  !   ALLOCATE(element3%carbon14)
-  !   ALLOCATE(element3%nitrogen15)
+  !   ALLOCATE(element3%carbon,     source=this%carbon)
+  !   ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+  !   ALLOCATE(element3%phosphorus, source=this%phosphorus)
+  !   ALLOCATE(element3%carbon13,   source=this%carbon13)
+  !   ALLOCATE(element3%carbon14,   source=this%carbon14)
+  !   ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
   !   element3%carbon       = this%carbon      - vector
   !   element3%nitrogen     = this%nitrogen    - vector
   !   element3%phosphorus   = this%phosphorus  - vector
   !   element3%carbon13     = this%carbon13    - vector
   !   element3%carbon14     = this%carbon14    - vector
   !   element3%nitrogen15   = this%nitrogen15  - vector
-  ! END FUNCTION Subtract_element_p_and_vector
+  ! END FUNCTION Subtract_element_a_and_vector
   !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_veg_element * t_slm_struct_veg_element)
+  !> * (t_veg_element_a * t_veg_element_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_element_p(this,element2) RESULT(element3)
+  FUNCTION Multiply_element_a(this,element2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_element_p), INTENT(in) :: this, element2
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    CLASS(t_veg_element_a), INTENT(in)  :: this, element2
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
     element3%carbon       = this%carbon      * element2%carbon
     element3%nitrogen     = this%nitrogen    * element2%nitrogen
     element3%phosphorus   = this%phosphorus  * element2%phosphorus
     element3%carbon13     = this%carbon13    * element2%carbon13
     element3%carbon14     = this%carbon14    * element2%carbon14
     element3%nitrogen15   = this%nitrogen15  * element2%nitrogen15
-  END FUNCTION Multiply_element_p
+  END FUNCTION Multiply_element_a
   !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_veg_element * scalar)
+  !> * (t_veg_element_a * scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_element_p_and_scalar(this,scalar) RESULT(element3)
+  FUNCTION Multiply_element_a_and_scalar(this,scalar) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_element_p), INTENT(in) :: this
-    REAL(wp),               INTENT(in) :: scalar
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    CLASS(t_veg_element_a), INTENT(in)  :: this
+    REAL(wp),               INTENT(in)  :: scalar
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
     element3%carbon       = this%carbon      * scalar
     element3%nitrogen     = this%nitrogen    * scalar
     element3%phosphorus   = this%phosphorus  * scalar
     element3%carbon13     = this%carbon13    * scalar
     element3%carbon14     = this%carbon14    * scalar
     element3%nitrogen15   = this%nitrogen15  * scalar
-  END FUNCTION Multiply_element_p_and_scalar
-  FUNCTION Multiply_scalar_and_element_p(scalar,this2) RESULT(element3)
+  END FUNCTION Multiply_element_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> * (scalar * t_veg_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_scalar_and_element_a(scalar,this2) RESULT(element3)
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp),               INTENT(in) :: scalar
-    CLASS(t_veg_element_p), INTENT(in) :: this2
-    TYPE(t_veg_element_p), ALLOCATABLE :: element3
+    REAL(wp),               INTENT(in)  :: scalar
+    CLASS(t_veg_element_a), INTENT(in)  :: this2
+    TYPE(t_veg_element_a)               :: element3
     ! 1.0 go
-    ALLOCATE(element3, source=this2)
-    ALLOCATE(element3%carbon)
-    ALLOCATE(element3%nitrogen)
-    ALLOCATE(element3%phosphorus)
-    ALLOCATE(element3%carbon13)
-    ALLOCATE(element3%carbon14)
-    ALLOCATE(element3%nitrogen15)
+    ALLOCATE(element3%carbon,     source=this2%carbon)
+    ALLOCATE(element3%nitrogen,   source=this2%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this2%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this2%carbon13)
+    ALLOCATE(element3%carbon14,   source=this2%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
     element3%carbon       = scalar * this2%carbon
     element3%nitrogen     = scalar * this2%nitrogen
     element3%phosphorus   = scalar * this2%phosphorus
     element3%carbon13     = scalar * this2%carbon13
     element3%carbon14     = scalar * this2%carbon14
     element3%nitrogen15   = scalar * this2%nitrogen15
-  END FUNCTION Multiply_scalar_and_element_p
+  END FUNCTION Multiply_scalar_and_element_a
   ! !-----------------------------------------------------------------------------------------------------
-  ! !> * (t_slm_struct_veg_element * 1D vector)
+  ! !> * (t_veg_element_a * 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Multiply_element_p_and_vector(this,vector) RESULT(element3)
+  ! FUNCTION Multiply_element_a_and_vector(this,vector) RESULT(element3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
-  !   CLASS(t_veg_element_p), INTENT(in) :: this
-  !   REAL(wp),               INTENT(in) :: vector(:)
-  !   TYPE(t_veg_element_p), ALLOCATABLE :: element3
+  !   CLASS(t_veg_element_a), INTENT(in)  :: this
+  !   REAL(wp),               INTENT(in)  :: vector(:)
+  !   TYPE(t_veg_element_a)               :: element3
   !   ! 1.0 go
-  !   ALLOCATE(element3, source=this)
-  !   ALLOCATE(element3%carbon)
-  !   ALLOCATE(element3%nitrogen)
-  !   ALLOCATE(element3%phosphorus)
-  !   ALLOCATE(element3%carbon13)
-  !   ALLOCATE(element3%carbon14)
-  !   ALLOCATE(element3%nitrogen15)
+  !   ALLOCATE(element3%carbon,     source=this%carbon)
+  !   ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+  !   ALLOCATE(element3%phosphorus, source=this%phosphorus)
+  !   ALLOCATE(element3%carbon13,   source=this%carbon13)
+  !   ALLOCATE(element3%carbon14,   source=this%carbon14)
+  !   ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
   !   element3%carbon       = this%carbon      * vector
   !   element3%nitrogen     = this%nitrogen    * vector
   !   element3%phosphorus   = this%phosphorus  * vector
   !   element3%carbon13     = this%carbon13    * vector
   !   element3%carbon14     = this%carbon14    * vector
   !   element3%nitrogen15   = this%nitrogen15  * vector
-  ! END FUNCTION Multiply_element_p_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> finalize an object of t_veg_element_p
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE finalize_veg_element_p(this)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    TYPE(t_veg_element_p) :: this
-    ! 1.0 go
-    IF (ASSOCIATED(this%carbon))      NULLIFY(this%carbon)
-    IF (ASSOCIATED(this%nitrogen))    NULLIFY(this%nitrogen)
-    IF (ASSOCIATED(this%phosphorus))  NULLIFY(this%phosphorus)
-    IF (ASSOCIATED(this%carbon13))    NULLIFY(this%carbon13)
-    IF (ASSOCIATED(this%carbon14))    NULLIFY(this%carbon14)
-    IF (ASSOCIATED(this%nitrogen15))  NULLIFY(this%nitrogen15)
-  END SUBROUTINE finalize_veg_element_p
+  ! END FUNCTION Multiply_element_a_and_vector
 
 
   !-----------------------------------------------------------------------------------------------------!
-  ! t_veg_pool_p operator overload                                                                    !
+  ! t_veg_pool_a operator overload                                                                      !
   !-----------------------------------------------------------------------------------------------------!
   !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_veg_pool + t_slm_struct_veg_pool)
+  !> + (t_veg_pool_a + t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_pool_p(this,pool2) RESULT(pool3)
+  FUNCTION Add_pool_a(this,pool2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_pool_p), INTENT(in) :: this, pool2
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this)
     pool3%leaf          = this%leaf         + pool2%leaf
     pool3%fine_root     = this%fine_root    + pool2%fine_root
     pool3%coarse_root   = this%coarse_root  + pool2%coarse_root
@@ -742,19 +718,18 @@ CONTAINS
     pool3%reserve       = this%reserve      + pool2%reserve
     pool3%fruit         = this%fruit        + pool2%fruit
     pool3%seed_bed      = this%seed_bed     + pool2%seed_bed
-  END FUNCTION Add_pool_p
+  END FUNCTION Add_pool_a
   !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_veg_pool + scalar)
+  !> + (t_veg_pool_a + scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_pool_p_and_scalar(this,scalar) RESULT(pool3)
+  FUNCTION Add_pool_a_and_scalar(this,scalar) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_pool_p), INTENT(in) :: this
+    CLASS(t_veg_pool_a), INTENT(in) :: this
     REAL(wp),            INTENT(in) :: scalar
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this)
     pool3%leaf          = this%leaf         + scalar
     pool3%fine_root     = this%fine_root    + scalar
     pool3%coarse_root   = this%coarse_root  + scalar
@@ -764,19 +739,18 @@ CONTAINS
     pool3%reserve       = this%reserve      + scalar
     pool3%fruit         = this%fruit        + scalar
     pool3%seed_bed      = this%seed_bed     + scalar
-  END FUNCTION Add_pool_p_and_scalar
+  END FUNCTION Add_pool_a_and_scalar
   ! !-----------------------------------------------------------------------------------------------------
-  ! !> + (t_slm_struct_veg_pool + 1D vector)
+  ! !> + (t_veg_pool_a + 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Add_pool_p_and_vector(this,vector) RESULT(pool3)
+  ! FUNCTION Add_pool_a_and_vector(this,vector) RESULT(pool3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
-  !   CLASS(t_veg_pool_p), INTENT(in) :: this
+  !   CLASS(t_veg_pool_a), INTENT(in) :: this
   !   REAL(wp),            INTENT(in) :: vector(:)
-  !   TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+  !   TYPE(t_veg_pool_a)              :: pool3
   !   ! 1.0 go
-  !   ALLOCATE(pool3, source=this)  
   !   pool3%leaf          = this%leaf         + vector
   !   pool3%fine_root     = this%fine_root    + vector
   !   pool3%coarse_root   = this%coarse_root  + vector
@@ -786,18 +760,17 @@ CONTAINS
   !   pool3%reserve       = this%reserve      + vector
   !   pool3%fruit         = this%fruit        + vector
   !   pool3%seed_bed      = this%seed_bed     + vector
-  ! END FUNCTION Add_pool_p_and_vector
+  ! END FUNCTION Add_pool_a_and_vector
   !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_veg_pool - t_slm_struct_veg_pool)
+  !> - (t_veg_pool_a - t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_pool_p(this,pool2) RESULT(pool3)
+  FUNCTION Subtract_pool_a(this,pool2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_pool_p), INTENT(in) :: this, pool2
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this)
     pool3%leaf          = this%leaf         - pool2%leaf
     pool3%fine_root     = this%fine_root    - pool2%fine_root
     pool3%coarse_root   = this%coarse_root  - pool2%coarse_root
@@ -807,19 +780,18 @@ CONTAINS
     pool3%reserve       = this%reserve      - pool2%reserve
     pool3%fruit         = this%fruit        - pool2%fruit
     pool3%seed_bed      = this%seed_bed     - pool2%seed_bed
-  END FUNCTION Subtract_pool_p
+  END FUNCTION Subtract_pool_a
   !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_veg_pool - scalar)
+  !> - (t_veg_pool_a - scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_pool_p_and_scalar(this,scalar) RESULT(pool3)
+  FUNCTION Subtract_pool_a_and_scalar(this,scalar) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_pool_p), INTENT(in) :: this
+    CLASS(t_veg_pool_a), INTENT(in) :: this
     REAL(wp),            INTENT(in) :: scalar
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this)
     pool3%leaf          = this%leaf         - scalar
     pool3%fine_root     = this%fine_root    - scalar
     pool3%coarse_root   = this%coarse_root  - scalar
@@ -829,19 +801,18 @@ CONTAINS
     pool3%reserve       = this%reserve      - scalar
     pool3%fruit         = this%fruit        - scalar
     pool3%seed_bed      = this%seed_bed     - scalar
-  END FUNCTION Subtract_pool_p_and_scalar
+  END FUNCTION Subtract_pool_a_and_scalar
   ! !-----------------------------------------------------------------------------------------------------
-  ! !> - (t_slm_struct_veg_pool - 1D vector)
+  ! !> - (t_veg_pool_a - 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Subtract_pool_p_and_vector(this,vector) RESULT(pool3)
+  ! FUNCTION Subtract_pool_a_and_vector(this,vector) RESULT(pool3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
-  !   CLASS(t_veg_pool_p), INTENT(in) :: this
+  !   CLASS(t_veg_pool_a), INTENT(in) :: this
   !   REAL(wp),            INTENT(in) :: vector(:)
-  !   TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+  !   TYPE(t_veg_pool_a)              :: pool3
   !   ! 1.0 go
-  !   ALLOCATE(pool3, source=this)
   !   pool3%leaf          = this%leaf         - vector
   !   pool3%fine_root     = this%fine_root    - vector
   !   pool3%coarse_root   = this%coarse_root  - vector
@@ -851,18 +822,17 @@ CONTAINS
   !   pool3%reserve       = this%reserve      - vector
   !   pool3%fruit         = this%fruit        - vector
   !   pool3%seed_bed      = this%seed_bed     - vector
-  ! END FUNCTION Subtract_pool_p_and_vector
+  ! END FUNCTION Subtract_pool_a_and_vector
   !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_veg_pool * t_slm_struct_veg_pool)
+  !> * (t_veg_pool_a * t_veg_pool_a)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_pool_p(this,pool2) RESULT(pool3)
+  FUNCTION Multiply_pool_a(this,pool2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_pool_p), INTENT(in) :: this, pool2
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this)
     pool3%leaf          = this%leaf         * pool2%leaf
     pool3%fine_root     = this%fine_root    * pool2%fine_root
     pool3%coarse_root   = this%coarse_root  * pool2%coarse_root
@@ -872,19 +842,18 @@ CONTAINS
     pool3%reserve       = this%reserve      * pool2%reserve
     pool3%fruit         = this%fruit        * pool2%fruit
     pool3%seed_bed      = this%seed_bed     * pool2%seed_bed
-  END FUNCTION Multiply_pool_p
+  END FUNCTION Multiply_pool_a
   !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_veg_pool * scalar)
+  !> * (t_veg_pool_a * scalar)
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_pool_p_and_scalar(this,scalar) RESULT(pool3)
+  FUNCTION Multiply_pool_a_and_scalar(this,scalar) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_veg_pool_p), INTENT(in) :: this
+    CLASS(t_veg_pool_a), INTENT(in) :: this
     REAL(wp),            INTENT(in) :: scalar
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this)
     pool3%leaf          = this%leaf         * scalar
     pool3%fine_root     = this%fine_root    * scalar
     pool3%coarse_root   = this%coarse_root  * scalar
@@ -894,15 +863,18 @@ CONTAINS
     pool3%reserve       = this%reserve      * scalar
     pool3%fruit         = this%fruit        * scalar
     pool3%seed_bed      = this%seed_bed     * scalar
-  END FUNCTION Multiply_pool_p_and_scalar
-  FUNCTION Multiply_scalar_and_pool_p(scalar,this2) RESULT(pool3)
+  END FUNCTION Multiply_pool_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> * (scalar * t_veg_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_scalar_and_pool_a(scalar,this2) RESULT(pool3)
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),            INTENT(in) :: scalar
-    CLASS(t_veg_pool_p), INTENT(in) :: this2
-    TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+    CLASS(t_veg_pool_a), INTENT(in) :: this2
+    TYPE(t_veg_pool_a)              :: pool3
     ! 1.0 go
-    ALLOCATE(pool3, source=this2)
     pool3%leaf          = scalar * this2%leaf
     pool3%fine_root     = scalar * this2%fine_root
     pool3%coarse_root   = scalar * this2%coarse_root
@@ -912,19 +884,18 @@ CONTAINS
     pool3%reserve       = scalar * this2%reserve
     pool3%fruit         = scalar * this2%fruit
     pool3%seed_bed      = scalar * this2%seed_bed
-  END FUNCTION Multiply_scalar_and_pool_p
+  END FUNCTION Multiply_scalar_and_pool_a
   ! !-----------------------------------------------------------------------------------------------------
-  ! !> * (t_slm_struct_veg_pool * 1D vector)
+  ! !> * (t_veg_pool_a * 1D vector)
   ! !!
   ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Multiply_pool_p_and_vector(this,vector) RESULT(pool3)
+  ! FUNCTION Multiply_pool_a_and_vector(this,vector) RESULT(pool3)
   !   IMPLICIT NONE
   !   ! 0.1 InOut
-  !   CLASS(t_veg_pool_p), INTENT(in) :: this
+  !   CLASS(t_veg_pool_a), INTENT(in) :: this
   !   REAL(wp),            INTENT(in) :: vector(:)
-  !   TYPE(t_veg_pool_p), ALLOCATABLE :: pool3
+  !   TYPE(t_veg_pool_a)              :: pool3
   !   ! 1.0 go
-  !   ALLOCATE(pool3, source=this)
   !   pool3%leaf          = this%leaf         * vector
   !   pool3%fine_root     = this%fine_root    * vector
   !   pool3%coarse_root   = this%coarse_root  * vector
@@ -934,7 +905,7 @@ CONTAINS
   !   pool3%reserve       = this%reserve      * vector
   !   pool3%fruit         = this%fruit        * vector
   !   pool3%seed_bed      = this%seed_bed     * vector
-  ! END FUNCTION Multiply_pool_p_and_vector
+  ! END FUNCTION Multiply_pool_a_and_vector
 
 
 
@@ -1038,47 +1009,6 @@ CONTAINS
     struct3%nitrogen15   = scalar + this2%nitrogen15
   END FUNCTION Add_scalar_and_struct
 
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> + (t_slm_struct_veg_element + field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Add_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%carbon       = this%carbon      + field2d
-!    struct3%nitrogen     = this%nitrogen    + field2d
-!    struct3%phosphorus   = this%phosphorus  + field2d
-!    struct3%carbon13     = this%carbon13    + field2d
-!    struct3%carbon14     = this%carbon14    + field2d
-!    struct3%nitrogen15   = this%nitrogen15  + field2d
-!  END FUNCTION Add_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> + (field2d + t_slm_struct_veg_element)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Add_field2d_and_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%carbon       = field2d + this2%carbon
-!    struct3%nitrogen     = field2d + this2%nitrogen
-!    struct3%phosphorus   = field2d + this2%phosphorus
-!    struct3%carbon13     = field2d + this2%carbon13
-!    struct3%carbon14     = field2d + this2%carbon14
-!    struct3%nitrogen15   = field2d + this2%nitrogen15
-!  END FUNCTION Add_field2d_and_struct
-
   !-----------------------------------------------------------------------------------------------------
   !> - (t_slm_struct_veg_element - t_slm_struct_veg_element)
   !!
@@ -1141,47 +1071,6 @@ CONTAINS
     struct3%nitrogen15   = scalar - this2%nitrogen15
   END FUNCTION Subtract_scalar_and_struct
 
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> - (t_slm_struct_veg_element - field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Subtract_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%carbon       = this%carbon      - field2d
-!    struct3%nitrogen     = this%nitrogen    - field2d
-!    struct3%phosphorus   = this%phosphorus  - field2d
-!    struct3%carbon13     = this%carbon13    - field2d
-!    struct3%carbon14     = this%carbon14    - field2d
-!    struct3%nitrogen15   = this%nitrogen15  - field2d
-!  END FUNCTION Subtract_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> - (field2d - t_slm_struct_veg_element)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Subtract_field2d_and_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%carbon       = field2d - this2%carbon
-!    struct3%nitrogen     = field2d - this2%nitrogen
-!    struct3%phosphorus   = field2d - this2%phosphorus
-!    struct3%carbon13     = field2d - this2%carbon13
-!    struct3%carbon14     = field2d - this2%carbon14
-!    struct3%nitrogen15   = field2d - this2%nitrogen15
-!  END FUNCTION Subtract_field2d_and_struct
-
   !-----------------------------------------------------------------------------------------------------
   !> * (t_slm_struct_veg_element * t_slm_struct_veg_element)
   !!
@@ -1241,47 +1130,6 @@ CONTAINS
     struct3%carbon14     = scalar * this2%carbon14
     struct3%nitrogen15   = scalar * this2%nitrogen15
   END FUNCTION Multiply_scalar_and_struct
-
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> * (t_slm_struct_veg_element * field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Multiply_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%carbon       = this%carbon      * field2d
-!    struct3%nitrogen     = this%nitrogen    * field2d
-!    struct3%phosphorus   = this%phosphorus  * field2d
-!    struct3%carbon13     = this%carbon13    * field2d
-!    struct3%carbon14     = this%carbon14    * field2d
-!    struct3%nitrogen15   = this%nitrogen15  * field2d
-!  END FUNCTION Multiply_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> * (field2d * t_slm_struct_veg_element)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Multiply_field2d_and_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%carbon       = field2d * this2%carbon
-!    struct3%nitrogen     = field2d * this2%nitrogen
-!    struct3%phosphorus   = field2d * this2%phosphorus
-!    struct3%carbon13     = field2d * this2%carbon13
-!    struct3%carbon14     = field2d * this2%carbon14
-!    struct3%nitrogen15   = field2d * this2%nitrogen15
-!  END FUNCTION Multiply_field2d_and_struct
 
   !-----------------------------------------------------------------------------------------------------
   !> / (t_slm_struct_veg_element / t_slm_struct_veg_element)
@@ -1344,64 +1192,6 @@ CONTAINS
     struct3%carbon14     = scalar / this2%carbon14
     struct3%nitrogen15   = scalar / this2%nitrogen15
   END FUNCTION Divide_scalar_and_struct
-
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> / (t_slm_struct_veg_element / field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Divide_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%carbon       = this%carbon      / field2d
-!    struct3%nitrogen     = this%nitrogen    / field2d
-!    struct3%phosphorus   = this%phosphorus  / field2d
-!    struct3%carbon13     = this%carbon13    / field2d
-!    struct3%carbon14     = this%carbon14    / field2d
-!    struct3%nitrogen15   = this%nitrogen15  / field2d
-!  END FUNCTION Divide_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> / (field2d / t_slm_struct_veg_element)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Divide_field2d_and_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_element), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_element), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%carbon       = field2d / this2%carbon
-!    struct3%nitrogen     = field2d / this2%nitrogen
-!    struct3%phosphorus   = field2d / this2%phosphorus
-!    struct3%carbon13     = field2d / this2%carbon13
-!    struct3%carbon14     = field2d / this2%carbon14
-!    struct3%nitrogen15   = field2d / this2%nitrogen15
-!  END FUNCTION Divide_field2d_and_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Initialisation t_slm_struct_veg_element with a scalar
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_t_slm_struct_veg_element(this,s)
-    IMPLICIT NONE
-    CLASS(t_slm_struct_veg_element),INTENT(inout) :: this 
-    REAL(wp),                       INTENT(in)    :: s
-
-    CALL this%carbon%init(s) 
-    CALL this%nitrogen%init(s) 
-    CALL this%phosphorus%init(s) 
-    CALL this%carbon13%init(s) 
-    CALL this%carbon14%init(s) 
-    CALL this%nitrogen15%init(s) 
-  END SUBROUTINE init_t_slm_struct_veg_element 
 
 
   !-----------------------------------------------------------------------------------------------------!
@@ -1477,53 +1267,6 @@ CONTAINS
     struct3%seed_bed      = scalar + this2%seed_bed
   END FUNCTION Add_scalar_and_n_struct
 
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> + (t_slm_struct_veg_pool + field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Add_n_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%leaf           = this%leaf         + field2d
-!    struct3%fine_root      = this%fine_root    + field2d
-!    struct3%coarse_root    = this%coarse_root  + field2d
-!    struct3%sap_wood       = this%sap_wood     + field2d
-!    struct3%heart_wood     = this%heart_wood   + field2d
-!    struct3%labile         = this%labile       + field2d
-!    struct3%reserve        = this%reserve      + field2d
-!    struct3%fruit          = this%fruit        + field2d
-!    struct3%seed_bed       = this%seed_bed     + field2d
-!  END FUNCTION Add_n_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> + (field2d + t_slm_struct_veg_pool)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Add_field2d_and_n_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%leaf           = field2d + this2%leaf
-!    struct3%fine_root      = field2d + this2%fine_root
-!    struct3%coarse_root    = field2d + this2%coarse_root
-!    struct3%sap_wood       = field2d + this2%sap_wood
-!    struct3%heart_wood     = field2d + this2%heart_wood
-!    struct3%labile         = field2d + this2%labile
-!    struct3%reserve        = field2d + this2%reserve
-!    struct3%fruit          = field2d + this2%fruit
-!    struct3%seed_bed       = field2d + this2%seed_bed
-!  END FUNCTION Add_field2d_and_n_struct
-
   !-----------------------------------------------------------------------------------------------------
   !> - (t_slm_struct_veg_pool - t_slm_struct_veg_pool)
   !!
@@ -1595,53 +1338,6 @@ CONTAINS
     struct3%seed_bed      = scalar - this2%seed_bed
   END FUNCTION Subtract_scalar_and_n_struct
 
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> - (t_slm_struct_veg_pool - field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Subtract_n_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%leaf           = this%leaf         - field2d
-!    struct3%fine_root      = this%fine_root    - field2d
-!    struct3%coarse_root    = this%coarse_root  - field2d
-!    struct3%sap_wood       = this%sap_wood     - field2d
-!    struct3%heart_wood     = this%heart_wood   - field2d
-!    struct3%labile         = this%labile       - field2d
-!    struct3%reserve        = this%reserve      - field2d
-!    struct3%fruit          = this%fruit        - field2d
-!    struct3%seed_bed       = this%seed_bed     - field2d
-!  END FUNCTION Subtract_n_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> - (field2d - t_slm_struct_veg_pool)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Subtract_field2d_and_n_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%leaf           = field2d - this2%leaf
-!    struct3%fine_root      = field2d - this2%fine_root
-!    struct3%coarse_root    = field2d - this2%coarse_root
-!    struct3%sap_wood       = field2d - this2%sap_wood
-!    struct3%heart_wood     = field2d - this2%heart_wood
-!    struct3%labile         = field2d - this2%labile
-!    struct3%reserve        = field2d - this2%reserve
-!    struct3%fruit          = field2d - this2%fruit
-!    struct3%seed_bed       = field2d - this2%seed_bed
-!  END FUNCTION Subtract_field2d_and_n_struct
-
   !-----------------------------------------------------------------------------------------------------
   !> * (t_slm_struct_veg_pool * t_slm_struct_veg_pool)
   !!
@@ -1710,53 +1406,6 @@ CONTAINS
     struct3%fruit         = scalar * this2%fruit
     struct3%seed_bed      = scalar * this2%seed_bed
   END FUNCTION Multiply_scalar_and_n_struct
-
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> * (t_slm_struct_veg_pool * field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Multiply_n_struct_and_field2d(this,field2d) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this)
-
-!    struct3%leaf           = this%leaf         * field2d
-!    struct3%fine_root      = this%fine_root    * field2d
-!    struct3%coarse_root    = this%coarse_root  * field2d
-!    struct3%sap_wood       = this%sap_wood     * field2d
-!    struct3%heart_wood     = this%heart_wood   * field2d
-!    struct3%labile         = this%labile       * field2d
-!    struct3%reserve        = this%reserve      * field2d
-!    struct3%fruit          = this%fruit        * field2d
-!    struct3%seed_bed       = this%seed_bed     * field2d
-!  END FUNCTION Multiply_n_struct_and_field2d
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> * (field2d * t_slm_struct_veg_pool)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Multiply_field2d_and_n_struct(field2d,this2) RESULT(struct3)
-
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
-
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%leaf           = field2d * this2%leaf
-!    struct3%fine_root      = field2d * this2%fine_root
-!    struct3%coarse_root    = field2d * this2%coarse_root
-!    struct3%sap_wood       = field2d * this2%sap_wood
-!    struct3%heart_wood     = field2d * this2%heart_wood
-!    struct3%labile         = field2d * this2%labile
-!    struct3%reserve        = field2d * this2%reserve
-!    struct3%fruit          = field2d * this2%fruit
-!    struct3%seed_bed       = field2d * this2%seed_bed
-!  END FUNCTION Multiply_field2d_and_n_struct
 
   !-----------------------------------------------------------------------------------------------------
   !> / (t_slm_struct_veg_pool / t_slm_struct_veg_pool)
@@ -1829,52 +1478,31 @@ CONTAINS
     struct3%seed_bed      = scalar / this2%seed_bed
   END FUNCTION Divide_scalar_and_n_struct
 
-! *slmdev -> works only with 2D variables (t_jsb_var_real2d)
-!  !-----------------------------------------------------------------------------------------------------
-!  !> / (t_slm_struct_veg_pool / field2d)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Divide_n_struct_and_field2d(this,field2d) RESULT(struct3)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!  end - outdated operator overload - end 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
 
-!    ALLOCATE(struct3, source=this)
 
-!    struct3%leaf           = this%leaf         / field2d
-!    struct3%fine_root      = this%fine_root    / field2d
-!    struct3%coarse_root    = this%coarse_root  / field2d
-!    struct3%sap_wood       = this%sap_wood     / field2d
-!    struct3%heart_wood     = this%heart_wood   / field2d
-!    struct3%labile         = this%labile       / field2d
-!    struct3%reserve        = this%reserve      / field2d
-!    struct3%fruit          = this%fruit        / field2d
-!    struct3%seed_bed       = this%seed_bed     / field2d
-!  END FUNCTION Divide_n_struct_and_field2d
 
-!  !-----------------------------------------------------------------------------------------------------
-!  !> / (field2d / t_slm_struct_veg_pool)
-!  !!
-!  !-----------------------------------------------------------------------------------------------------
-!  FUNCTION Divide_field2d_and_n_struct(field2d,this2) RESULT(struct3)
 
-!    CLASS(t_slm_struct_veg_pool), INTENT(in) :: this2
-!    REAL(wp),                        INTENT(in) :: field2d(:,:)
-!    TYPE(t_slm_struct_veg_pool), ALLOCATABLE :: struct3
+  !-----------------------------------------------------------------------------------------------------
+  !> Initialisation t_slm_struct_veg_element with a scalar
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_t_slm_struct_veg_element(this,s)
+    IMPLICIT NONE
+    CLASS(t_slm_struct_veg_element),INTENT(inout) :: this 
+    REAL(wp),                       INTENT(in)    :: s
 
-!    ALLOCATE(struct3, source=this2)
-
-!    struct3%leaf           = field2d / this2%leaf
-!    struct3%fine_root      = field2d / this2%fine_root
-!    struct3%coarse_root    = field2d / this2%coarse_root
-!    struct3%sap_wood       = field2d / this2%sap_wood
-!    struct3%heart_wood     = field2d / this2%heart_wood
-!    struct3%labile         = field2d / this2%labile
-!    struct3%reserve        = field2d / this2%reserve
-!    struct3%fruit          = field2d / this2%fruit
-!    struct3%seed_bed       = field2d / this2%seed_bed
-!  END FUNCTION Divide_field2d_and_n_struct
+    CALL this%carbon%init(s) 
+    CALL this%nitrogen%init(s) 
+    CALL this%phosphorus%init(s) 
+    CALL this%carbon13%init(s) 
+    CALL this%carbon14%init(s) 
+    CALL this%nitrogen15%init(s) 
+  END SUBROUTINE init_t_slm_struct_veg_element 
 
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_slm_struct_veg_pool with a scalar
@@ -1895,6 +1523,9 @@ CONTAINS
     CALL this%fruit%init(s)
     CALL this%seed_bed%init(s)
   END SUBROUTINE init_t_slm_struct_veg_pool 
+
+
+
 
 
   !-----------------------------------------------------------------------------------------------------

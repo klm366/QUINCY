@@ -40,7 +40,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4slm_Use_memory_p_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_p, t_veg_pool_p
+    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
@@ -159,6 +159,10 @@ CONTAINS
                                   recycling_leaf_n15(:)                 , &
                                   recycling_fine_root_n15(:)            )
 
+#define Dealloc_veg_pool
+#include "slm_pools_p_incl.f90"
+#undef Dealloc_veg_pool
+
     !> 2.0 Calculate recycling and retranslocation
     !!  
     CALL calc_turnover(lctlib                                       , & ! in 
@@ -174,6 +178,11 @@ CONTAINS
                               recycling_heart_wood_n(1)             , &
                               recycling_heart_wood_n15(1)           , &
                               recycling_heart_wood_p(1)             )
+
+
+! #define Dealloc_veg_pool
+! #include "slm_pools_p_incl.f90"
+! #undef Dealloc_veg_pool
 
   END SUBROUTINE update_veg_turnover
 
@@ -205,12 +214,12 @@ CONTAINS
 
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
-    dsl4slm_Use_memory_p_veg
+    dsl4slm_Use_memory_a_veg
 
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_veg_pool_p), INTENT(in)    :: veg_pool
+    TYPE(t_veg_pool_a), INTENT(in)    :: veg_pool
     REAL(wp),           INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
                                          target_np_fine_root               , &  !< target N:P of fine_roots 
                                          target_cn_leaf                    , &  !< ..

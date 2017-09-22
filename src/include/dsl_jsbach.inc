@@ -66,4 +66,5 @@
 
 #define dsl4jsb_Aggregate_onChunk(PROC,var,agg) CALL agg%Aggregate(tile, CONCATENATE2(PROC,_mem)%var,ics,ice,iblk,routine)
 
-#define dsl4slm_Use_memory_p_veg USE mo_veg_memory_class, ONLY: t_veg_element_p, t_veg_pool_p
+#define dsl4slm_Use_memory_a_veg USE mo_veg_memory_class, ONLY: t_veg_element_a, t_veg_pool_a
+#define dsl4slm_Use_memory_a_sb USE mo_sb_memory_class, ONLY: t_sb_element_a, t_sb_pool_a
