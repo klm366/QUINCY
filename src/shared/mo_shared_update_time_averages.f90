@@ -50,10 +50,10 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)  :: options            !< model options
-    REAL(wp), INTENT(in)                  :: time_day           !< time in days
-    REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
+    TYPE(t_slm_tile),         INTENT(inout) :: tile               !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options            !< model options
+    REAL(wp), INTENT(in)                    :: time_day           !< time in days
+    REAL(wp), INTENT(in)                    :: timestep_prop_day  !< length of one time step (proportion of one day)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_time_averages'
@@ -108,23 +108,23 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)  :: options            !< model options
-    REAL(wp), INTENT(in)                  :: time_day           !< time in days
-    REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
+    TYPE(t_slm_tile),         INTENT(inout) :: tile               !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options            !< model options
+    REAL(wp), INTENT(in)                    :: time_day           !< time in days
+    REAL(wp), INTENT(in)                    :: timestep_prop_day  !< length of one time step (proportion of one day)
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: icanopy    !< loop over ncanopy
-    INTEGER                               :: ichunk     !< loop over chunks ics-ice
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
+    TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
+    INTEGER                                 :: icanopy            !< loop over ncanopy
+    INTEGER                                 :: ichunk             !< loop over chunks ics-ice
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_daytime_averages'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
-    dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
@@ -170,8 +170,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
-!! *slmtemp
-    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -237,10 +235,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
-
-
-!! *slmtemp
-    veg       => veg__mem
 
 
 
@@ -372,13 +366,15 @@ CONTAINS
     USE mo_base_constants,      ONLY: dtime, one_day, one_year
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in)                      :: current_avg        !< current average value
     REAL(wp), INTENT(in)                      :: new_value          !< new value
     REAL(wp), INTENT(in)                      :: avg_period_length  !< length of the period over which the variable is averaged
-    LOGICAL, OPTIONAL, INTENT(in)             :: do_calc            !< optional, do calculate new_avg from the new_value T/F
+    LOGICAL,          OPTIONAL, INTENT(in)    :: do_calc            !< optional, do calculate new_avg from the new_value T/F
     CHARACTER(LEN=4), OPTIONAL, INTENT(in)    :: avg_period_unit    !< optional, for different units than 'day' for avg_period length
     REAL(wp)                                  :: new_avg            !< function output: the new average
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)                                  :: new_value_weight   ! weight of the new value
     REAL(wp)                                  :: avg_period2seconds ! for converting the period length (day, week, year) into seconds
@@ -441,8 +437,9 @@ CONTAINS
     
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
 
@@ -451,13 +448,13 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)  :: options            !< model options
+    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAl(wp),DIMENSION(options%nc)        :: hlp
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),      POINTER         :: model            !< instance of the model
+    TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
+    REAl(wp),DIMENSION(options%nc)          :: hlp
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -578,8 +575,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
-!! *slmtemp
-    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_pool
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -715,17 +714,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
-     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    ! Get process memory pool structures
+#define Get_veg_pool
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
-!! *slmtemp
-    veg       => veg__mem
-
-
 
     !> 1.0
     !! calc_mavg(current average, new value, length of avg_period, do_calc=.FALSE., avg_period_unit='day')
@@ -747,11 +746,11 @@ CONTAINS
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
     npp_tuptake_mavg(:)                 = calc_mavg(npp_tuptake_mavg(:), npp(:), mavg_period_tuptake, &
-                                                     do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
+                                                     do_calc=(veg_pool%fine_root%carbon > eps8))
     demand_uptake_n_tuptake_mavg(:)     = calc_mavg(demand_uptake_n_tuptake_mavg(:), f_n_demand(:), &
-                                                     mavg_period_tuptake, do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
+                                                     mavg_period_tuptake, do_calc=(veg_pool%fine_root%carbon > eps8))
     demand_uptake_p_tuptake_mavg(:)     = calc_mavg(demand_uptake_p_tuptake_mavg(:), f_p_demand(:), &
-                                                     mavg_period_tuptake, do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
+                                                     mavg_period_tuptake, do_calc=(veg_pool%fine_root%carbon > eps8))
     cost_n_fixation_tuptake_mavg(:)     = calc_mavg(cost_n_fixation_tuptake_mavg(:), cost_n_fixation(:), &
                                                      mavg_period_tuptake, do_calc=growing_season(:))
     growth_req_n_tuptake_mavg(:)        = calc_mavg(growth_req_n_tuptake_mavg(:), growth_req_n(:), &
@@ -831,7 +830,7 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
          WHERE (n_fixation(:)>0._wp)
-            hlp=n_fixation/ veg%pool%fine_root%carbon%ptr
+            hlp=n_fixation/ veg_pool%fine_root%carbon
          ELSE WHERE
             hlp = 0.0_wp
          ENDWHERE
@@ -853,17 +852,17 @@ CONTAINS
                                                       mavg_period_talloc, do_calc=growing_season(:))
     unit_uptake_p_talloc_mavg(:)    = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg%pool%labile%carbon%ptr, &
+    labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg_pool%labile%carbon, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg%pool%labile%nitrogen%ptr, &
+    labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg_pool%labile%nitrogen, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg%pool%labile%phosphorus%ptr, &
+    labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg_pool%labile%phosphorus, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg%pool%reserve%carbon%ptr, &
+    reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg_pool%reserve%carbon, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg%pool%reserve%nitrogen%ptr, &
+    reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg_pool%reserve%nitrogen, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg%pool%reserve%phosphorus%ptr, &
+    reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg_pool%reserve%phosphorus, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
     WHERE(growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
@@ -884,14 +883,14 @@ CONTAINS
 
     !> 1.7 averages at the time-scale of root life-time
     !!
-    IF (veg%pool%fine_root%carbon%ptr > eps8) THEN
-       hlp(:) = veg%pool%leaf%carbon%ptr / veg%pool%fine_root%carbon%ptr
+    IF (veg_pool%fine_root%carbon > eps8) THEN
+       hlp(:) = veg_pool%leaf%carbon / veg_pool%fine_root%carbon
     ELSE
        hlp(:) = 0._wp
     END IF
     leaf2root_troot_mavg(:)      = calc_mavg(leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &
-                                               do_calc=(veg%pool%leaf%carbon%ptr > eps8) .AND. &
-                                                       (veg%pool%fine_root%carbon%ptr > eps8), &
+                                               do_calc=(veg_pool%leaf%carbon > eps8) .AND. &
+                                                       (veg_pool%fine_root%carbon > eps8), &
                                                avg_period_unit='year')
     unit_npp_troot_mavg(:)       = calc_mavg(unit_npp_troot_mavg(:), unit_npp(:), lctlib%tau_fine_root, &
                                                do_calc=growing_season(:), avg_period_unit='year')
@@ -904,7 +903,7 @@ CONTAINS
 
     !> 1.8 averages at the vegetation dynamics time-scale
     an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
-                                          do_calc=(veg%pool%leaf%carbon%ptr > eps8))
+                                          do_calc=(veg_pool%leaf%carbon > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     !! t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !! this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration
@@ -916,6 +915,12 @@ CONTAINS
     t_air_week_mavg(:)       = calc_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)
     t_air_month_mavg(:)      = calc_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
     t_jmax_opt_mavg(:)       = calc_mavg(t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
+
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_pool
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
 
   END SUBROUTINE calc_moving_averages
 
