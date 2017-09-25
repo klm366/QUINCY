@@ -62,9 +62,9 @@ CONTAINS
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Logical2D_onChunk   :: growing_season
-    ! VEG_
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
-    dsl4jsb_Real2D_onChunk      :: target_lai                      ! VEG_ 
+    dsl4jsb_Real2D_onChunk      :: target_lai
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
@@ -86,7 +86,6 @@ CONTAINS
 #undef Def_veg_pool
 #undef Def_veg_litterfall
 #undef Def_veg_growth
-!    TYPE(t_veg_memory),       POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -101,8 +100,8 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
-    dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)                        ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(VEG_)                        ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(PHENO_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -132,9 +131,6 @@ CONTAINS
 #undef Get_veg_pool
 #undef Get_veg_litterfall
 #undef Get_veg_growth
-
-!! *slmtemp
-!    veg     => veg__mem 
 
 
 

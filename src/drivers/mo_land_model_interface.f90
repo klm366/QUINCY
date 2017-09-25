@@ -294,7 +294,7 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_veg_fluxes(tile)                 ! mo_veg_util
+      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
 
       !! run Tasks
@@ -343,7 +343,7 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_veg_fluxes(tile)                 ! mo_veg_util
+      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
 
       !! run Tasks
       !!
@@ -411,7 +411,7 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_veg_fluxes(tile)                 ! mo_veg_util
+      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
 
       !! run Tasks
       !!
@@ -753,7 +753,7 @@ CONTAINS
            swpar_srf_down = swpar_srf_down(:))
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -793,7 +793,7 @@ CONTAINS
            q_air = q_air)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -824,7 +824,7 @@ CONTAINS
            co2_mixing_ratio = co2_mixing_ratio)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -850,7 +850,7 @@ CONTAINS
                           q_air = q_air)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -878,7 +878,7 @@ CONTAINS
      w_soil_root_theta(:) = w_soil_root_theta(:) + 0.01_wp
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -922,7 +922,7 @@ CONTAINS
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -963,7 +963,7 @@ CONTAINS
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -1008,7 +1008,7 @@ CONTAINS
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile)    !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 

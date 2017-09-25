@@ -1493,15 +1493,16 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE init_t_slm_struct_veg_element(this,s)
     IMPLICIT NONE
+    ! 0.1 InOut
     CLASS(t_slm_struct_veg_element),INTENT(inout) :: this 
     REAL(wp),                       INTENT(in)    :: s
-
-    CALL this%carbon%init(s) 
-    CALL this%nitrogen%init(s) 
-    CALL this%phosphorus%init(s) 
-    CALL this%carbon13%init(s) 
-    CALL this%carbon14%init(s) 
-    CALL this%nitrogen15%init(s) 
+    ! 1.0 Go
+    this%carbon%ptr     = s
+    this%nitrogen%ptr   = s
+    this%phosphorus%ptr = s
+    this%carbon13%ptr   = s
+    this%carbon14%ptr   = s
+    this%nitrogen15%ptr = s
   END SUBROUTINE init_t_slm_struct_veg_element 
 
   !-----------------------------------------------------------------------------------------------------
@@ -1510,9 +1511,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE init_t_slm_struct_veg_pool(this,s)
     IMPLICIT NONE
+    ! 0.1 InOut
     CLASS(t_slm_struct_veg_pool), INTENT(inout) :: this 
     REAL(wp),                     INTENT(in)    :: s
-
+    ! 1.0 Go
     CALL this%leaf%init(s)
     CALL this%fine_root%init(s)
     CALL this%coarse_root%init(s)

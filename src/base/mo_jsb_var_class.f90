@@ -91,8 +91,6 @@ MODULE mo_jsb_var_class
     PROCEDURE               :: Divide_real1d_and_scalar         ! Divide variable of type t_jsb_var_real1d by REAL scalar
     PROCEDURE, PASS(this2)  :: Divide_scalar_and_real1d         ! Divide variable of type REAL scalar by t_jsb_var_real1d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real1d, Divide_real1d_and_scalar, Divide_scalar_and_real1d
-    PROCEDURE, PUBLIC       :: Init => init_t_jsb_var_real1d
-    !FINAL                   :: finish_jsb_var_real1d
   END TYPE t_jsb_var_real1d
 
   !-----------------------------------------------------------------------------------------------------!
@@ -273,13 +271,6 @@ CONTAINS
   ! 1D : operator overload Functions      *slmtemp                                                      !
   !-----------------------------------------------------------------------------------------------------!
 
-!!  SUBROUTINE finish_jsb_var_real1d(this)
-!!    TYPE(t_jsb_var_real1d) :: this      !< The TYPE object that will be finalized
-!!!    if (allocated(this.buff)) deallocate(this.buff)
-!!    IF (ALLOCATED(this%ptr)) DEALLOCATE(this%ptr)
-!!!    IF (ASSOCIATED(this%ptr)) nullify(this%ptr)
-!!  END SUBROUTINE finish_jsb_var_real1d
-
   !-----------------------------------------------------------------------------------------------------
   !> 1D + 1D operator overload
   !! 
@@ -455,18 +446,6 @@ CONTAINS
 
     var3%ptr = scalar / this2%ptr
   END FUNCTION Divide_scalar_and_real1d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Initialisation of var_real1d with a scalar 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_t_jsb_var_real1d(this,s)
-    IMPLICIT NONE
-    CLASS(t_jsb_var_real1d), INTENT(inout) :: this
-    REAL(wp),                INTENT(in)    :: s
-
-    this%ptr     = s 
-  END SUBROUTINE init_t_jsb_var_real1d 
 
 
   !-----------------------------------------------------------------------------------------------------!
@@ -829,7 +808,7 @@ CONTAINS
   END FUNCTION Divide_field_and_real2d
 
   !-----------------------------------------------------------------------------------------------------
-  !> Initialisation of var_real3d with a scalar 
+  !> Initialisation of var_real2d with a scalar 
   !! 
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE init_t_jsb_var_real2d(this,s)
