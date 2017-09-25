@@ -128,8 +128,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
-! 2 be removed: pointers to veg assimi *slmtemp
-    TYPE(t_veg_memory),       POINTER   :: veg        ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -198,14 +196,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! in
 
 
-! 2 be removed  *slmtemp
-    veg     => veg__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     ! set output to zero
     gross_assimilation(:)     = 0.0_wp

@@ -46,6 +46,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -82,8 +83,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: lai_cl
-!! *slmtemp
-    TYPE(t_veg_memory),     POINTER           :: veg      ! local pointer to veg__mem for SLM usability
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_litterfall
+#define Def_veg_establishment
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_pool
+#undef Def_veg_litterfall
+#undef Def_veg_establishment
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -117,16 +124,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)       ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)              ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                 ! in
+    ! Get process memory pool structures
+#define Get_veg_pool
+#define Get_veg_litterfall
+#define Get_veg_establishment
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+#undef Get_veg_litterfall
+#undef Get_veg_establishment
 
-
-!! *slmtemp
-    veg     => veg__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
 
     !> 1.0 Calculate mortality rate and veg\%litterfall
@@ -136,8 +147,8 @@ CONTAINS
     CALL calc_veg_mortality(lctlib                                      , & ! in
                             dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics , &
                             an_boc_tvegdyn_mavg(1)                      , &
-                            veg%pool                                    , &
-                            veg%litterfall                              , & ! inout
+                            veg_pool                                    , &
+                            veg_litterfall                              , & ! inout
                             mortality_rate(1)                           )   ! out
 
     !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
@@ -146,26 +157,35 @@ CONTAINS
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
-      CALL calc_veg_establishment(lctlib                        , & ! in
-                                 dsl4jsb_Config(ASSIMI_)%ncanopy, &
-                                 w_soil_root_theta(1)     , &
-                                 growing_season(1)        , &
-                                 t_air_week_mavg(1)       , &
-                                 leaf_nitrogen_cl(1,:)    , &
-                                 fn_chl_cl(1,:)           , &
-                                 lai_cl(1,:)              , &
-                                 veg%pool%seed_bed        , &
-                                 veg%establishment        )   ! out
+      CALL calc_veg_establishment(lctlib                          , & ! in
+                                  dsl4jsb_Config(ASSIMI_)%ncanopy , &
+                                  w_soil_root_theta(1)            , &
+                                  growing_season(1)               , &
+                                  t_air_week_mavg(1)              , &
+                                  leaf_nitrogen_cl(1,:)           , &
+                                  fn_chl_cl(1,:)                  , &
+                                  lai_cl(1,:)                     , &
+                                  veg_pool%seed_bed               , &
+                                  veg_establishment               )   ! out
 
       !> 2.2 Calculate change in individual density from mortality and establishment
       !! 
       CALL calc_delta_density_individuals(lctlib                        , & ! in
                                           dens_ind(:)                   , &
                                           mortality_rate(:)             , &
-                                          veg%establishment%carbon%ptr  , &
+                                          veg_establishment%carbon      , &
                                           delta_dens_ind(:)             )   ! out
 
     END IF  ! dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_pool
+#define Dealloc_veg_litterfall
+#define Dealloc_veg_establishment
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
+#undef Dealloc_veg_litterfall
+#undef Dealloc_veg_establishment
 
   END SUBROUTINE update_veg_dynamics
 
@@ -188,8 +208,7 @@ CONTAINS
     USE mo_base_constants
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    ! veg memory
-    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
 
@@ -197,8 +216,8 @@ CONTAINS
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
     LOGICAL,                      INTENT(in)    :: flag_tile_veg_dynamics
     REAL(wp),                     INTENT(in)    :: an_boc_tvegdyn_mavg      !< moving average ...
-    TYPE(t_slm_struct_veg_pool),  INTENT(in)    :: veg_pool                 !< vegetation pool
-    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_litterfall           !< vegetation litterfall
+    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_pool                 !< vegetation pool
+    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_litterfall           !< vegetation litterfall
     REAL(wp),                     INTENT(out)   :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
     ! 0.2 Local
     REAL(wp)                                    :: boc_cbalance
@@ -271,8 +290,7 @@ CONTAINS
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_constants,      ONLY: Tzero
-    ! veg memory
-    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_element
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
 
@@ -285,8 +303,8 @@ CONTAINS
     REAL(wp), DIMENSION(:),         INTENT(in)    :: leaf_nitrogen_cl,& !< leaf nitrogen per canopy layer
                                                      fn_chl_cl,       & !< fraction of leaf nitrogen that is chlorophyll
                                                      lai_cl             !< leaf area index of canopy layer 
-    TYPE(t_slm_struct_veg_element), INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
-    TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_establishment  !< vegetation establishment
+    TYPE(t_veg_element_a),          INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
+    TYPE(t_veg_element_a),          INTENT(inout) :: veg_establishment  !< vegetation establishment
     ! 0.2 Local
     REAL(wp)                                      :: establishment_rate
     REAL(wp)                                      :: tc

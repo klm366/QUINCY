@@ -78,7 +78,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
-    ! Declare pointers to structures in memory
+    ! Declare pool structures in memory
 #define Def_veg_pool
 #define Def_veg_litterfall
 #define Def_veg_growth
@@ -123,7 +123,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    ! Get process memory structures
+    ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall
 #define Get_veg_growth
@@ -171,7 +171,7 @@ CONTAINS
                               recycling_heart_wood_n15(1)           , &
                               recycling_heart_wood_p(1)             )
 
-
+! Pass back values to process memory & deallocate pool structures 
 #define Dealloc_veg_pool
 #define Dealloc_veg_litterfall
 #define Dealloc_veg_growth
