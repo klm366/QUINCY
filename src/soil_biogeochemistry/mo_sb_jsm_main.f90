@@ -56,6 +56,7 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
+    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
 
 
     IMPLICIT NONE
@@ -142,9 +143,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_pool
+#undef Def_veg_litterfall
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to soil__mem for SLM usability
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -223,12 +229,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
+    ! Get process memory pool structures
+#define Get_veg_pool
+#define Get_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+#undef Get_veg_litterfall
 
 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
-    veg  => veg__mem
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -242,8 +252,8 @@ rmm_hsc = 1.0_wp
 rmm_sorption = 1.0_wp
 rmm_desorption = 1.0_wp
 
-    fine_root_carbon = root_fraction_sl * 600._wp !veg%pool%fine_root%carbon%ptr
-    !fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr
+    fine_root_carbon = root_fraction_sl * 600._wp 
+    !fine_root_carbon = root_fraction_sl * veg_pool%fine_root%carbon
 
     !> X.0 Inorganic N assimilation
     !!
@@ -321,7 +331,7 @@ rmm_desorption = 1.0_wp
 
     !> 2.5 update litter pools with recent litter fall
     CALL calc_transfer_litterfall_pools(options,soil_depth_sl, & 
-                                        root_fraction_sl,veg%litterfall,sb%formation%soluable_litter, & 
+                                        root_fraction_sl,veg_litterfall,sb%formation%soluable_litter, & 
                                         sb%formation%polymeric_litter,sb%formation%woody_litter)
                                              
 
@@ -407,6 +417,12 @@ rmm_desorption = 1.0_wp
     transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:)  * 1.e6 / dtime
 
 
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_pool
+#define Dealloc_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
+#undef Dealloc_veg_litterfall
 
   END SUBROUTINE update_sb_jsm
 

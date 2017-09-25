@@ -42,12 +42,12 @@ CONTAINS
   !!
   !! Output: increase in soluable, polymeric, and woody litter
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_transfer_litterfall_pools(options,soil_depth_sl,root_fraction_sl,litterfall, &
+  SUBROUTINE calc_transfer_litterfall_pools(options,soil_depth_sl,root_fraction_sl,veg_litterfall, &
                                   formation_soluable_litter,formation_polymeric_litter,formation_woody_litter)
                                  
 
     USE mo_sb_constants
-    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
     ! ---------------------------
@@ -55,7 +55,7 @@ CONTAINS
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                    !< model options
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl              !< depth of soil layer [m]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: root_fraction_sl           !< fraction of roots per layer 
-    TYPE(t_slm_struct_veg_pool),                      INTENT(in)    :: litterfall                 !< litter input from vegetation [mol/m2/time step] 
+    TYPE(t_veg_pool_a),                               INTENT(in)    :: veg_litterfall             !< litter input from vegetation [mol/m2/time step] 
     TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_soluable_litter
     TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_polymeric_litter
     TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: formation_woody_litter
@@ -83,102 +83,102 @@ CONTAINS
     !> 1.0 pure soluable litter -> labile + reserve?
     !!
     formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) + &
-        (litterfall%labile%carbon%ptr + litterfall%reserve%carbon%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%carbon + veg_litterfall%reserve%carbon) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        (litterfall%labile%nitrogen%ptr + litterfall%reserve%nitrogen%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%nitrogen + veg_litterfall%reserve%nitrogen) / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        (litterfall%labile%phosphorus%ptr + litterfall%reserve%phosphorus%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%phosphorus + veg_litterfall%reserve%phosphorus) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        (litterfall%labile%carbon13%ptr + litterfall%reserve%carbon13%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%carbon13 + veg_litterfall%reserve%carbon13) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        (litterfall%labile%carbon14%ptr + litterfall%reserve%carbon14%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%carbon14 + veg_litterfall%reserve%carbon14) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        (litterfall%labile%nitrogen15%ptr + litterfall%reserve%nitrogen15%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%nitrogen15 + veg_litterfall%reserve%nitrogen15) / soil_depth_sl(:,1)
 
     !> 2.0 mixed soluable and polymeric stuff
     !! 
     !> 2.1 leaves, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
     hlp1 = f_soluable_leaf 
     formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%leaf%carbon%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%leaf%carbon / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%leaf%carbon%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%leaf%carbon / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%leaf%nitrogen%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%leaf%nitrogen / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%leaf%nitrogen%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%leaf%nitrogen / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%leaf%phosphorus%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%leaf%phosphorus / soil_depth_sl(:,1)
     formation_polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%leaf%phosphorus%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%leaf%phosphorus / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%leaf%carbon13%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%leaf%carbon13 / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%leaf%carbon13%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%leaf%carbon13 / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%leaf%carbon14%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%leaf%carbon14 / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%leaf%carbon14%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%leaf%carbon14 / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%leaf%nitrogen15%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%leaf%nitrogen15 / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%leaf%nitrogen15%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%leaf%nitrogen15 / soil_depth_sl(:,1)
 
     !> 2.2 fruit, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
     !!
     hlp1 = f_soluable_fruit 
     formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%fruit%carbon%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%fruit%carbon / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%fruit%carbon%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%fruit%carbon / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%fruit%nitrogen%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%fruit%nitrogen / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%fruit%nitrogen%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%fruit%nitrogen / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%fruit%phosphorus%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%fruit%phosphorus / soil_depth_sl(:,1)
     formation_polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%fruit%phosphorus%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%fruit%phosphorus / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%fruit%carbon13%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%fruit%carbon13 / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%fruit%carbon13%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%fruit%carbon13 / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%fruit%carbon14%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%fruit%carbon14 / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%fruit%carbon14%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%fruit%carbon14 / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%fruit%nitrogen15%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%fruit%nitrogen15 / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%fruit%nitrogen15%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%fruit%nitrogen15 / soil_depth_sl(:,1)
 
     !> 2.3 seed_bed, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
     !!
     hlp1 = f_soluable_seed_bed 
     formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%seed_bed%carbon%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%seed_bed%carbon / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%seed_bed%carbon%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%seed_bed%carbon / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%seed_bed%nitrogen%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%seed_bed%nitrogen / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%seed_bed%nitrogen%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%seed_bed%nitrogen / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%seed_bed%phosphorus%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%seed_bed%phosphorus / soil_depth_sl(:,1)
     formation_polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%seed_bed%phosphorus%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%seed_bed%phosphorus / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%seed_bed%carbon13%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%seed_bed%carbon13 / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%seed_bed%carbon13%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%seed_bed%carbon13 / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) = formation_soluable_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%seed_bed%carbon14%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%seed_bed%carbon14 / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = formation_polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%seed_bed%carbon14%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%seed_bed%carbon14 / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        hlp1 * litterfall%seed_bed%nitrogen15%ptr / soil_depth_sl(:,1)
+        hlp1 * veg_litterfall%seed_bed%nitrogen15 / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-        (1._wp - hlp1) * litterfall%seed_bed%nitrogen15%ptr / soil_depth_sl(:,1)
+        (1._wp - hlp1) * veg_litterfall%seed_bed%nitrogen15 / soil_depth_sl(:,1)
 
     !> 3.0 roots
     !!
@@ -188,61 +188,61 @@ CONTAINS
        hlp1 = f_soluable_fine_root 
        WHERE(soil_depth_sl(:,isoil) > eps8)
           formation_soluable_litter%carbon%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + &
-              hlp1 * root_fraction_sl(:,isoil) * litterfall%fine_root%carbon%ptr / soil_depth_sl(:,isoil)
+              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon / soil_depth_sl(:,isoil)
           formation_polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * litterfall%fine_root%carbon%ptr / soil_depth_sl(:,isoil)
+              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon / soil_depth_sl(:,isoil)
           formation_soluable_litter%nitrogen%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%nitrogen%ptr(ics:ice,isoil,iblk) + &
-              hlp1 * root_fraction_sl(:,isoil) * litterfall%fine_root%nitrogen%ptr / soil_depth_sl(:,isoil)
+              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen / soil_depth_sl(:,isoil)
           formation_polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * litterfall%fine_root%nitrogen%ptr / soil_depth_sl(:,isoil)
+              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen / soil_depth_sl(:,isoil)
           formation_soluable_litter%phosphorus%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%phosphorus%ptr(ics:ice,isoil,iblk) + &
-              hlp1 * root_fraction_sl(:,isoil) * litterfall%fine_root%phosphorus%ptr / soil_depth_sl(:,isoil)
+              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus / soil_depth_sl(:,isoil)
           formation_polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * litterfall%fine_root%phosphorus%ptr / soil_depth_sl(:,isoil)
+              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus / soil_depth_sl(:,isoil)
           formation_soluable_litter%carbon13%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%carbon13%ptr(ics:ice,isoil,iblk) + &
-              hlp1 * root_fraction_sl(:,isoil) * litterfall%fine_root%carbon13%ptr / soil_depth_sl(:,isoil)
+              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13 / soil_depth_sl(:,isoil)
           formation_polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * litterfall%fine_root%carbon13%ptr / soil_depth_sl(:,isoil)
+              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13 / soil_depth_sl(:,isoil)
           formation_soluable_litter%carbon14%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%carbon14%ptr(ics:ice,isoil,iblk) + &
-              hlp1 * root_fraction_sl(:,isoil) * litterfall%fine_root%carbon14%ptr / soil_depth_sl(:,isoil)
+              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14 / soil_depth_sl(:,isoil)
           formation_polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * litterfall%fine_root%carbon14%ptr / soil_depth_sl(:,isoil)
+              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14 / soil_depth_sl(:,isoil)
           formation_soluable_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + &
-              hlp1 * root_fraction_sl(:,isoil) * litterfall%fine_root%nitrogen15%ptr / soil_depth_sl(:,isoil)
+              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15 / soil_depth_sl(:,isoil)
           formation_polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * litterfall%fine_root%nitrogen15%ptr / soil_depth_sl(:,isoil)
+              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15 / soil_depth_sl(:,isoil)
 
           !> 3.2 woody litter below ground 
           !!
           formation_woody_litter%carbon%ptr(ics:ice,isoil,iblk) = formation_woody_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-             root_fraction_sl(:,isoil) * litterfall%coarse_root%carbon%ptr / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon / soil_depth_sl(:,isoil)
           formation_woody_litter%nitrogen%ptr(ics:ice,isoil,iblk) = formation_woody_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
-             root_fraction_sl(:,isoil) * litterfall%coarse_root%nitrogen%ptr / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen / soil_depth_sl(:,isoil)
           formation_woody_litter%phosphorus%ptr(ics:ice,isoil,iblk) = formation_woody_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
-             root_fraction_sl(:,isoil) * litterfall%coarse_root%phosphorus%ptr / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%phosphorus / soil_depth_sl(:,isoil)
           formation_woody_litter%carbon13%ptr(ics:ice,isoil,iblk) = formation_woody_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
-             root_fraction_sl(:,isoil) * litterfall%coarse_root%carbon13%ptr / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon13 / soil_depth_sl(:,isoil)
           formation_woody_litter%carbon14%ptr(ics:ice,isoil,iblk) = formation_woody_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
-             root_fraction_sl(:,isoil) * litterfall%coarse_root%carbon14%ptr / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon14 / soil_depth_sl(:,isoil)
           formation_woody_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = formation_woody_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
-             root_fraction_sl(:,isoil) * litterfall%coarse_root%nitrogen15%ptr / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen15 / soil_depth_sl(:,isoil)
        ENDWHERE
     ENDDO
 
     !> 4.0 woody litter above ground 
     !!
     formation_woody_litter%carbon%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%carbon%ptr + litterfall%heart_wood%carbon%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%carbon + veg_litterfall%heart_wood%carbon) / soil_depth_sl(:,1)
     formation_woody_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_woody_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%nitrogen%ptr + litterfall%heart_wood%nitrogen%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%nitrogen + veg_litterfall%heart_wood%nitrogen) / soil_depth_sl(:,1)
     formation_woody_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_woody_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%phosphorus%ptr + litterfall%heart_wood%phosphorus%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%phosphorus + veg_litterfall%heart_wood%phosphorus) / soil_depth_sl(:,1)
     formation_woody_litter%carbon13%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%carbon13%ptr + litterfall%heart_wood%carbon13%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%carbon13 + veg_litterfall%heart_wood%carbon13) / soil_depth_sl(:,1)
     formation_woody_litter%carbon14%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%carbon14%ptr + litterfall%heart_wood%carbon14%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%carbon14 + veg_litterfall%heart_wood%carbon14) / soil_depth_sl(:,1)
     formation_woody_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_woody_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%nitrogen15%ptr + litterfall%heart_wood%nitrogen15%ptr) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / soil_depth_sl(:,1)
 
   END SUBROUTINE calc_transfer_litterfall_pools 
 

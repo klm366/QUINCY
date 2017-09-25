@@ -54,6 +54,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
@@ -198,9 +199,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15 
     dsl4jsb_Real3D_onChunk :: denitrification_n2_n15 
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15 
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_pool
+#undef Def_veg_litterfall
 !! *slmtemp    
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -232,11 +238,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute) 
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute) 
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute) 
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute) 
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)          
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)         
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)         
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)          
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)         
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)         
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_nitrification)
@@ -283,12 +294,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
-
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute) 
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute) 
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)          
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)         
-    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)         
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15) 
@@ -313,10 +318,15 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15) 
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)            ! out
+    ! Get process memory pool structures
+#define Get_veg_pool
+#define Get_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+#undef Get_veg_litterfall
 
 
 !! *slmtemp
-    veg  => veg__mem
     sb   => sb__mem
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -367,7 +377,7 @@ CONTAINS
     CALL calc_potential_plant_uptake_rate(lctlib, &
                                           options, &
                                           soil_depth_sl(:,:), &
-                                          veg%pool%fine_root%carbon%ptr, &
+                                          veg_pool%fine_root%carbon, &
                                           root_fraction_act_sl(:,:), &
                                           rtm_decomposition_act(:,:), &
                                           km1_uptake_nh4_act(:,:), &
@@ -599,7 +609,6 @@ CONTAINS
                                   options, &
                                   dsl4jsb_Config(SB_)%flag_myco_organic, &
                                   soil_depth_sl(:,:), &
-                                  veg%pool%fine_root%carbon%ptr, &
                                   mycorrhiza_uptake_nh4_sl(:,:), &
                                   mycorrhiza_uptake_no3_sl(:,:), &
                                   mycorrhiza_uptake_norg_sl(:,:), &
@@ -619,7 +628,7 @@ CONTAINS
                                   options, &
                                   soil_depth_sl(:,:), &
                                   root_fraction_act_sl(:,:), &
-                                  veg%litterfall, &
+                                  veg_litterfall, &
                                   sb%formation )
 
     !> 6.0 Add asymbiontic N fixation to NH4 pool 
@@ -713,6 +722,13 @@ CONTAINS
     emission_noy_n15(:) = emission_noy_n15(:) / dtime * 1000000._wp
     emission_n2o_n15(:) = emission_n2o_n15(:) / dtime * 1000000._wp
     emission_n2_n15(:) = emission_n2_n15(:) / dtime * 1000000._wp
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_pool
+#define Dealloc_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
+#undef Dealloc_veg_litterfall
 
   END SUBROUTINE update_sb_simple_model 
 
@@ -2371,19 +2387,21 @@ CONTAINS
                                       veg_litterfall, &
                                       sb_formation )
 
-    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool
     USE mo_veg_constants,           ONLY: itree, igrass
     USE mo_sb_constants,            ONLY: fc_soluable_max,k_fc_soluable,k_fn_soluable,k_fp_soluable, &
                                           lc_leaf_max,lc_leaf2sla,lc_fine_root,lc_coarse_root,lc_fruit,lc_seed_bed 
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &           !< depth per soil layer
                                                                        root_fraction_act_sl       !< root fraction per soil layer
-    TYPE(t_slm_struct_veg_pool),                      INTENT(in)    :: veg_litterfall             !< vegetation litterfall pool
+    TYPE(t_veg_pool_a),                               INTENT(in)    :: veg_litterfall             !< vegetation litterfall pool
     TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation               !< soil biogeochemistry formation pool
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: fc_soluable_leaf, fc_soluable_fine_root, fc_soluable_coarse_root, fc_soluable_fruit, & 
                                        fc_soluable_seed_bed, fc_soluable_labile, fc_soluable_reserve 
@@ -2406,9 +2424,9 @@ CONTAINS
     fc_soluable_leaf(:) = 0.0_wp
     fn_soluable_leaf(:) = 0.0_wp
     fp_soluable_leaf(:) = 0.0_wp
-    IF(veg_litterfall%leaf%nitrogen%ptr > eps8) THEN
+    IF(veg_litterfall%leaf%nitrogen > eps8) THEN
        fc_soluable_leaf(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib%sla) * & 
-                                 veg_litterfall%leaf%carbon%ptr / veg_litterfall%leaf%nitrogen%ptr)
+                                 veg_litterfall%leaf%carbon / veg_litterfall%leaf%nitrogen)
        WHERE(fc_soluable_leaf(:)>eps8)
           fn_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fn_soluable*fc_soluable_leaf(:)))
           fp_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fp_soluable*fc_soluable_leaf(:)))
@@ -2418,9 +2436,9 @@ CONTAINS
     fc_soluable_fine_root(:) = 0.0_wp 
     fn_soluable_fine_root(:) = 0.0_wp 
     fp_soluable_fine_root(:) = 0.0_wp 
-    IF(veg_litterfall%fine_root%nitrogen%ptr > eps8) THEN
+    IF(veg_litterfall%fine_root%nitrogen > eps8) THEN
        fc_soluable_fine_root(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_fine_root * & 
-                                      veg_litterfall%fine_root%carbon%ptr / veg_litterfall%fine_root%nitrogen%ptr)
+                                      veg_litterfall%fine_root%carbon / veg_litterfall%fine_root%nitrogen)
        WHERE(fc_soluable_fine_root(:)>eps8)
           fn_soluable_fine_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fine_root(:))/(k_fn_soluable*fc_soluable_fine_root(:)))
           fp_soluable_fine_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fine_root(:))/(k_fp_soluable*fc_soluable_fine_root(:)))
@@ -2430,9 +2448,9 @@ CONTAINS
     fc_soluable_coarse_root(:) = 0.0_wp 
     fn_soluable_coarse_root(:) = 0.0_wp 
     fp_soluable_coarse_root(:) = 0.0_wp 
-    IF(veg_litterfall%coarse_root%nitrogen%ptr > eps8) THEN
+    IF(veg_litterfall%coarse_root%nitrogen > eps8) THEN
        fc_soluable_coarse_root(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_coarse_root * & 
-                                        veg_litterfall%coarse_root%carbon%ptr / veg_litterfall%coarse_root%nitrogen%ptr)
+                                        veg_litterfall%coarse_root%carbon / veg_litterfall%coarse_root%nitrogen)
        WHERE(fc_soluable_coarse_root(:)>eps8)
           fn_soluable_coarse_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(:))/(k_fn_soluable*fc_soluable_coarse_root(:)))
           fp_soluable_coarse_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(:))/(k_fp_soluable*fc_soluable_coarse_root(:)))
@@ -2442,9 +2460,9 @@ CONTAINS
     fc_soluable_fruit(:) = 0.0_wp
     fn_soluable_fruit(:) = 0.0_wp
     fp_soluable_fruit(:) = 0.0_wp
-    IF(veg_litterfall%fruit%nitrogen%ptr > eps8) THEN
+    IF(veg_litterfall%fruit%nitrogen > eps8) THEN
        fc_soluable_fruit(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_fruit * & 
-                                  veg_litterfall%fruit%carbon%ptr / veg_litterfall%fruit%nitrogen%ptr)
+                                  veg_litterfall%fruit%carbon / veg_litterfall%fruit%nitrogen)
        WHERE(fc_soluable_fruit(:)>eps8)
           fn_soluable_fruit(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(:))/(k_fn_soluable*fc_soluable_fruit(:)))
           fp_soluable_fruit(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(:))/(k_fp_soluable*fc_soluable_fruit(:)))
@@ -2454,9 +2472,9 @@ CONTAINS
     fc_soluable_seed_bed(:) = 0.0_wp
     fn_soluable_seed_bed(:) = 0.0_wp
     fp_soluable_seed_bed(:) = 0.0_wp
-    IF(veg_litterfall%seed_bed%nitrogen%ptr > eps8) THEN
+    IF(veg_litterfall%seed_bed%nitrogen > eps8) THEN
        fc_soluable_seed_bed(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_seed_bed * & 
-                                     veg_litterfall%seed_bed%carbon%ptr / veg_litterfall%seed_bed%nitrogen%ptr)
+                                     veg_litterfall%seed_bed%carbon / veg_litterfall%seed_bed%nitrogen)
        WHERE(fc_soluable_seed_bed(:)>eps8)
           fn_soluable_seed_bed(:) = 1._wp / (1._wp + (1._wp - fc_soluable_seed_bed(:))/(k_fn_soluable*fc_soluable_seed_bed(:)))
           fp_soluable_seed_bed(:) = 1._wp / (1._wp + (1._wp - fc_soluable_seed_bed(:))/(k_fp_soluable*fc_soluable_seed_bed(:)))
@@ -2473,78 +2491,78 @@ CONTAINS
     !> 2.0 Update surface metabolic and soluable litter pools with litter fall
     !!
     sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
-       (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon%ptr    + & 
-        fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon%ptr   + & 
-        fc_soluable_labile(:)   * veg_litterfall%labile%carbon%ptr  + & 
-        fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon%ptr + & 
-        fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon%ptr ) / soil_depth_sl(:,1)
+       (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon    + & 
+        fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon   + & 
+        fc_soluable_labile(:)   * veg_litterfall%labile%carbon  + & 
+        fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon + & 
+        fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon ) / soil_depth_sl(:,1)
     sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
-       (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen%ptr    + & 
-        fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen%ptr   + & 
-        fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen%ptr  + & 
-        fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen%ptr + & 
-        fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen%ptr ) / soil_depth_sl(:,1)
+       (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen    + & 
+        fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen   + & 
+        fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen  + & 
+        fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen + & 
+        fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen ) / soil_depth_sl(:,1)
     sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-       (fp_soluable_leaf(:)     * veg_litterfall%leaf%phosphorus%ptr    + & 
-        fp_soluable_fruit(:)    * veg_litterfall%fruit%phosphorus%ptr   + & 
-        fp_soluable_labile(:)   * veg_litterfall%labile%phosphorus%ptr  + & 
-        fp_soluable_reserve(:)  * veg_litterfall%reserve%phosphorus%ptr + & 
-        fp_soluable_seed_bed(:) * veg_litterfall%seed_bed%phosphorus%ptr ) / soil_depth_sl(:,1)
+       (fp_soluable_leaf(:)     * veg_litterfall%leaf%phosphorus    + & 
+        fp_soluable_fruit(:)    * veg_litterfall%fruit%phosphorus   + & 
+        fp_soluable_labile(:)   * veg_litterfall%labile%phosphorus  + & 
+        fp_soluable_reserve(:)  * veg_litterfall%reserve%phosphorus + & 
+        fp_soluable_seed_bed(:) * veg_litterfall%seed_bed%phosphorus ) / soil_depth_sl(:,1)
     sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-       (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon13%ptr    + & 
-        fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon13%ptr   + & 
-        fc_soluable_labile(:)   * veg_litterfall%labile%carbon13%ptr  + & 
-        fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon13%ptr + & 
-        fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon13%ptr ) / soil_depth_sl(:,1)
+       (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon13    + & 
+        fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon13   + & 
+        fc_soluable_labile(:)   * veg_litterfall%labile%carbon13  + & 
+        fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon13 + & 
+        fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon13 ) / soil_depth_sl(:,1)
     sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-       (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon14%ptr    + & 
-        fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon14%ptr   + & 
-        fc_soluable_labile(:)   * veg_litterfall%labile%carbon14%ptr  + & 
-        fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon14%ptr + & 
-        fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon14%ptr ) / soil_depth_sl(:,1)
+       (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon14    + & 
+        fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon14   + & 
+        fc_soluable_labile(:)   * veg_litterfall%labile%carbon14  + & 
+        fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon14 + & 
+        fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon14 ) / soil_depth_sl(:,1)
     sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
-       (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen15%ptr    + & 
-        fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen15%ptr   + & 
-        fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen15%ptr  + & 
-        fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen15%ptr + & 
-        fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen15%ptr ) / soil_depth_sl(:,1)
+       (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen15    + & 
+        fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen15   + & 
+        fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen15  + & 
+        fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen15 + & 
+        fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen15 ) / soil_depth_sl(:,1)
 
     sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
-       ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon%ptr    + & 
-        (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon%ptr   + & 
-        (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon%ptr  + & 
-        (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon%ptr + & 
-        (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon%ptr ) / soil_depth_sl(:,1)
+       ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon    + & 
+        (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon   + & 
+        (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon  + & 
+        (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon + & 
+        (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon ) / soil_depth_sl(:,1)
     sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
-       ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen%ptr    + & 
-        (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen%ptr   + & 
-        (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen%ptr  + & 
-        (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen%ptr + & 
-        (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen%ptr ) / soil_depth_sl(:,1)
+       ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen    + & 
+        (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen   + & 
+        (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen  + & 
+        (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen + & 
+        (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen ) / soil_depth_sl(:,1)
     sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-       ((1.0_wp - fp_soluable_leaf(:))     * veg_litterfall%leaf%phosphorus%ptr    + & 
-        (1.0_wp - fp_soluable_fruit(:))    * veg_litterfall%fruit%phosphorus%ptr   + & 
-        (1.0_wp - fp_soluable_labile(:))   * veg_litterfall%labile%phosphorus%ptr  + & 
-        (1.0_wp - fp_soluable_reserve(:))  * veg_litterfall%reserve%phosphorus%ptr + & 
-        (1.0_wp - fp_soluable_seed_bed(:)) * veg_litterfall%seed_bed%phosphorus%ptr ) / soil_depth_sl(:,1)
+       ((1.0_wp - fp_soluable_leaf(:))     * veg_litterfall%leaf%phosphorus    + & 
+        (1.0_wp - fp_soluable_fruit(:))    * veg_litterfall%fruit%phosphorus   + & 
+        (1.0_wp - fp_soluable_labile(:))   * veg_litterfall%labile%phosphorus  + & 
+        (1.0_wp - fp_soluable_reserve(:))  * veg_litterfall%reserve%phosphorus + & 
+        (1.0_wp - fp_soluable_seed_bed(:)) * veg_litterfall%seed_bed%phosphorus ) / soil_depth_sl(:,1)
     sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-       ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon13%ptr    + & 
-        (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon13%ptr   + & 
-        (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon13%ptr  + & 
-        (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon13%ptr + & 
-        (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon13%ptr ) / soil_depth_sl(:,1)
+       ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon13    + & 
+        (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon13   + & 
+        (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon13  + & 
+        (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon13 + & 
+        (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon13 ) / soil_depth_sl(:,1)
     sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-       ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon14%ptr    + & 
-        (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon14%ptr   + & 
-        (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon14%ptr  + & 
-        (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon14%ptr + & 
-        (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon14%ptr ) / soil_depth_sl(:,1)
+       ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon14    + & 
+        (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon14   + & 
+        (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon14  + & 
+        (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon14 + & 
+        (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon14 ) / soil_depth_sl(:,1)
     sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
-       ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen15%ptr    + & 
-        (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen15%ptr   + & 
-        (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen15%ptr  + & 
-        (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen15%ptr + & 
-        (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen15%ptr ) / soil_depth_sl(:,1)
+       ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen15    + & 
+        (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen15   + & 
+        (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen15  + & 
+        (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen15 + & 
+        (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen15 ) / soil_depth_sl(:,1)
 
     !> 3.0 Add surface litter fall from sapwood and heartwood pools to surface woody litter pool for trees
     !!     for grasses, stems and halms (=sapwood) are not actually wood, and therefore paritioned to 
@@ -2552,60 +2570,60 @@ CONTAINS
     SELECT CASE(lctlib%growthform)
        CASE (itree)
           sb_formation%woody_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%carbon%ptr(ics:ice,1,iblk) + & 
-             (veg_litterfall%sap_wood%carbon%ptr + veg_litterfall%heart_wood%carbon%ptr) / & 
+             (veg_litterfall%sap_wood%carbon + veg_litterfall%heart_wood%carbon) / & 
              soil_depth_sl(:,1)
           sb_formation%woody_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%nitrogen%ptr(ics:ice,1,iblk) +  & 
-             (veg_litterfall%sap_wood%nitrogen%ptr + veg_litterfall%heart_wood%nitrogen%ptr) / & 
+             (veg_litterfall%sap_wood%nitrogen + veg_litterfall%heart_wood%nitrogen) / & 
              soil_depth_sl(:,1)
           sb_formation%woody_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-             (veg_litterfall%sap_wood%phosphorus%ptr + veg_litterfall%heart_wood%phosphorus%ptr) / & 
+             (veg_litterfall%sap_wood%phosphorus + veg_litterfall%heart_wood%phosphorus) / & 
              soil_depth_sl(:,1)
           sb_formation%woody_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-             (veg_litterfall%sap_wood%carbon13%ptr + veg_litterfall%heart_wood%carbon13%ptr) / & 
+             (veg_litterfall%sap_wood%carbon13 + veg_litterfall%heart_wood%carbon13) / & 
              soil_depth_sl(:,1)
           sb_formation%woody_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-             (veg_litterfall%sap_wood%carbon14%ptr + veg_litterfall%heart_wood%carbon14%ptr) / & 
+             (veg_litterfall%sap_wood%carbon14 + veg_litterfall%heart_wood%carbon14) / & 
              soil_depth_sl(:,1)
           sb_formation%woody_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
-             (veg_litterfall%sap_wood%nitrogen15%ptr + veg_litterfall%heart_wood%nitrogen15%ptr) / &
+             (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / &
              soil_depth_sl(:,1)
        CASE (igrass)
           sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
-             fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon%ptr + veg_litterfall%heart_wood%carbon%ptr) / & 
+             fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon + veg_litterfall%heart_wood%carbon) / & 
              soil_depth_sl(:,1)
           sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
-             fn_soluable_fine_root(:) * (veg_litterfall%sap_wood%nitrogen%ptr + veg_litterfall%heart_wood%nitrogen%ptr) / & 
+             fn_soluable_fine_root(:) * (veg_litterfall%sap_wood%nitrogen + veg_litterfall%heart_wood%nitrogen) / & 
              soil_depth_sl(:,1)
           sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-             fp_soluable_fine_root(:) * (veg_litterfall%sap_wood%phosphorus%ptr + veg_litterfall%heart_wood%phosphorus%ptr) / & 
+             fp_soluable_fine_root(:) * (veg_litterfall%sap_wood%phosphorus + veg_litterfall%heart_wood%phosphorus) / & 
              soil_depth_sl(:,1)
           sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-             fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon13%ptr + veg_litterfall%heart_wood%carbon13%ptr) / & 
+             fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon13 + veg_litterfall%heart_wood%carbon13) / & 
              soil_depth_sl(:,1)
           sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-             fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon14%ptr + veg_litterfall%heart_wood%carbon14%ptr) / & 
+             fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon14 + veg_litterfall%heart_wood%carbon14) / & 
              soil_depth_sl(:,1)
           sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
-             fn_soluable_fine_root(:) * (veg_litterfall%sap_wood%nitrogen15%ptr + veg_litterfall%heart_wood%nitrogen15%ptr) / &
+             fn_soluable_fine_root(:) * (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / &
              soil_depth_sl(:,1)
       
           sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
-             (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon%ptr + veg_litterfall%heart_wood%carbon%ptr) / & 
+             (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon + veg_litterfall%heart_wood%carbon) / & 
              soil_depth_sl(:,1)
           sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
-             (1.0_wp - fn_soluable_fine_root(:)) * (veg_litterfall%sap_wood%nitrogen%ptr + veg_litterfall%heart_wood%nitrogen%ptr) / & 
+             (1.0_wp - fn_soluable_fine_root(:)) * (veg_litterfall%sap_wood%nitrogen + veg_litterfall%heart_wood%nitrogen) / & 
              soil_depth_sl(:,1)
           sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-             (1.0_wp - fp_soluable_fine_root(:)) * (veg_litterfall%sap_wood%phosphorus%ptr + veg_litterfall%heart_wood%phosphorus%ptr) / & 
+             (1.0_wp - fp_soluable_fine_root(:)) * (veg_litterfall%sap_wood%phosphorus + veg_litterfall%heart_wood%phosphorus) / & 
              soil_depth_sl(:,1)
           sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-             (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon13%ptr + veg_litterfall%heart_wood%carbon13%ptr) / & 
+             (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon13 + veg_litterfall%heart_wood%carbon13) / & 
              soil_depth_sl(:,1)
           sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-             (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon14%ptr + veg_litterfall%heart_wood%carbon14%ptr) / & 
+             (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon14 + veg_litterfall%heart_wood%carbon14) / & 
              soil_depth_sl(:,1)
           sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
-             (1.0_wp - fn_soluable_fine_root(:)) * (veg_litterfall%sap_wood%nitrogen15%ptr + veg_litterfall%heart_wood%nitrogen15%ptr) / &
+             (1.0_wp - fn_soluable_fine_root(:)) * (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / &
              soil_depth_sl(:,1)
 
     END SELECT
@@ -2614,53 +2632,53 @@ CONTAINS
     !!
     DO isoil = 1,options%nsoil_sb
        sb_formation%soluable_litter%carbon%ptr(ics:ice,isoil,iblk)     = sb_formation%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-          (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon%ptr     + &
-           fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon%ptr ) * & 
+          (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon     + &
+           fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%soluable_litter%nitrogen%ptr(ics:ice,isoil,iblk)   = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
-          (fn_soluable_fine_root(:)   * veg_litterfall%fine_root%nitrogen%ptr     + &
-           fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen%ptr ) * & 
+          (fn_soluable_fine_root(:)   * veg_litterfall%fine_root%nitrogen     + &
+           fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%soluable_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
-          (fp_soluable_fine_root(:)   * veg_litterfall%fine_root%phosphorus%ptr     + &
-           fp_soluable_coarse_root(:) * veg_litterfall%coarse_root%phosphorus%ptr ) * & 
+          (fp_soluable_fine_root(:)   * veg_litterfall%fine_root%phosphorus     + &
+           fp_soluable_coarse_root(:) * veg_litterfall%coarse_root%phosphorus ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%soluable_litter%carbon13%ptr(ics:ice,isoil,iblk)   = sb_formation%soluable_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
-          (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon13%ptr     + &
-           fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon13%ptr ) * & 
+          (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon13     + &
+           fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon13 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%soluable_litter%carbon14%ptr(ics:ice,isoil,iblk)   = sb_formation%soluable_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
-          (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon14%ptr     + &
-           fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon14%ptr ) * & 
+          (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon14     + &
+           fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon14 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
-          (fn_soluable_fine_root(:)   * veg_litterfall%fine_root%nitrogen15%ptr     + &
-           fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen15%ptr ) * & 
+          (fn_soluable_fine_root(:)   * veg_litterfall%fine_root%nitrogen15     + &
+           fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen15 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
 
        sb_formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon%ptr     + &
-           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon%ptr ) * & 
+          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon     + &
+           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
-          ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen%ptr     + &
-           (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen%ptr ) * & 
+          ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen     + &
+           (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
-          ((1.0_wp - fp_soluable_fine_root(:))  * veg_litterfall%fine_root%phosphorus%ptr     + &
-           (1.0_wp - fp_soluable_coarse_root(:)) * veg_litterfall%coarse_root%phosphorus%ptr ) * & 
+          ((1.0_wp - fp_soluable_fine_root(:))  * veg_litterfall%fine_root%phosphorus     + &
+           (1.0_wp - fp_soluable_coarse_root(:)) * veg_litterfall%coarse_root%phosphorus ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
-          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon13%ptr     + &
-           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon13%ptr ) * & 
+          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon13     + &
+           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon13 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
-          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon14%ptr     + &
-           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon14%ptr ) * & 
+          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon14     + &
+           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon14 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
        sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
-          ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen15%ptr     + &
-           (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen15%ptr ) * & 
+          ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen15     + &
+           (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen15 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
     END DO  
 
@@ -2678,7 +2696,6 @@ CONTAINS
                                       options, &
                                       flag_myco_organic  , &
                                       soil_depth_sl, &
-                                      veg_pool_fine_root_carbon , &
                                       mycorrhiza_uptake_nh4_sl, &
                                       mycorrhiza_uptake_no3_sl, &
                                       mycorrhiza_uptake_norg_sl, &
@@ -2700,7 +2717,6 @@ CONTAINS
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     LOGICAL,                                          INTENT(in)    :: flag_myco_organic            !< from sb config
-    REAL(wp),                                         INTENT(in)    :: veg_pool_fine_root_carbon    !< fine root carbon [mol / m2]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl                !< depth per soil layer
     TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_pool                      !< soil biogeochemistry pools [mol / m3]
     TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation, &              !< pool formation rate  [mol / m3 / timestep]
@@ -2725,16 +2741,16 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3
     INTEGER                     :: isoil, ichunk                      !< loop over soil layers, loop over chunks
     INTEGER                     :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc__mycorrhiza_dynamics'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mycorrhiza_dynamics'
     ! ---------------------------
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     
-    !> 8.0 Mycorrhiza dynamics 
+    !> 1.0 Mycorrhiza dynamics 
     !! 
-    !> 8.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
+    !> 1.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
     WHERE(sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) > eps8 .AND. &
           sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) / sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) < mycorrhiza_cn)
@@ -2763,7 +2779,7 @@ CONTAINS
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + fresp * sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + fresp * sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)
 
-    !> 8.2 organic N uptake by mycorrhiza and associated respiration losses to heterotrophic respiration
+    !> 1.2 organic N uptake by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
     mycorrhiza_uptake_norg_sl(:,:) = 0.0_wp
 
@@ -2785,7 +2801,7 @@ CONTAINS
     sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) + &
                                                      fnorg * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk)
 
-    !> 8.3 nutrient flux to vegetation (surplus uptake goes to plants) (mol (N/P) / m3 / timestep)
+    !> 1.3 nutrient flux to vegetation (surplus uptake goes to plants) (mol (N/P) / m3 / timestep)
     !!
 !@todo: N15 uptake
  
@@ -2839,7 +2855,7 @@ CONTAINS
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
 
-    !> 8.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
+    !> 1.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
     !!
     fturn_mycorrhiza(:,:) = 1.0_wp/lctlib%tau_mycorrhiza/one_day/one_year * dtime
 
