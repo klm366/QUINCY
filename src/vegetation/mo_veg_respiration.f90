@@ -60,7 +60,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_maintenance_respiration( t_stem                , &
                                                         t_root                , &
-                                                        temp_mavg              , &
+                                                        temp_mavg             , &
                                                         sap_wood_nitrogen     , & 
                                                         fine_root_nitrogen    , &
                                                         coarse_root_nitrogen)   & 
@@ -73,7 +73,7 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: t_stem                   !< temperature of the stem (K) 
     REAL(wp), INTENT(in) :: t_root                   !< temperature of the roots (K)
-    REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K) 
+    REAL(wp), INTENT(in) :: temp_mavg                !< average temperature for acclimation (K) 
     REAL(wp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)

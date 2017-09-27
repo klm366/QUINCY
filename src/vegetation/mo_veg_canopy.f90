@@ -690,8 +690,8 @@ CONTAINS
                                                   beta_air          , &
                                                   beta_soil_ps      , &
                                                   beta_soil_gs      , &
-                                                  veg_pool_leaf_carbon    , & ! veg%pool%leaf%carbon%ptr
-                                                  veg_pool_leaf_nitrogen  , & ! veg%pool%leaf%nitrogen%ptr
+                                                  veg_pool_leaf_carbon    , & 
+                                                  veg_pool_leaf_nitrogen  , & 
                                                   lai                     , &
                                                   beta_sinklim_ps         , &
                                                   t_air_tacclim_mavg      , &
@@ -716,6 +716,7 @@ CONTAINS
 
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     INTEGER,                        INTENT(in) :: nc                     !< number of chunks
     INTEGER,                        INTENT(in) :: ncanopy                !< number of canopy layers
@@ -746,13 +747,14 @@ CONTAINS
                                                   fn_pepc_cl         , & !< ..
                                                   fn_oth_cl          , &
                                                   fleaf_sunlit_cl        !< ..
-    REAL(wp),DIMENSION(nc,ncanopy), INTENT(in) :: ppfd_sunlit_cl , & !< ..
-                                                  ppfd_shaded_cl     !< ..
-    REAl(wp),DIMENSION(nc)        ,  INTENT(in)  :: swpar_srf_down, &
-                                                    swpar_fdiffuse
+    REAL(wp),DIMENSION(nc,ncanopy), INTENT(in) :: ppfd_sunlit_cl     , & !< ..
+                                                  ppfd_shaded_cl         !< ..
+    REAl(wp),DIMENSION(nc)        , INTENT(in) :: swpar_srf_down     , &
+                                                  swpar_fdiffuse
 
     REAL(wp),DIMENSION(nc),         INTENT(out):: unit_npp           , & !< unit change of NPP per ??
                                                   unit_transpiration     !< unit change of NPP per ??
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)                                   :: leaf_nitrogen_new
     REAL(wp),DIMENSION(nc)                     :: lai_new
@@ -785,6 +787,7 @@ CONTAINS
     fn_et_new_cl(:,:)         = fn_et_cl(:,:)
     fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
     fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
+
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -917,8 +920,8 @@ CONTAINS
                                         flag_optimal_Nfraction        , &
                                         canopy_layer_depth            , &
                                         growing_season                , &
-                                        veg_pool_leaf_carbon          , & ! veg%pool%leaf%carbon%ptr
-                                        veg_pool_leaf_nitrogen        , & ! veg%pool%leaf%nitrogen%ptr
+                                        veg_pool_leaf_carbon          , & 
+                                        veg_pool_leaf_nitrogen        , & 
                                         lai                           , &
                                         t_jmax_opt_mavg               , &
                                         target_cn_leaf                , &
@@ -949,6 +952,7 @@ CONTAINS
 
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc           !< number of chunks
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
@@ -982,6 +986,7 @@ CONTAINS
                                                        growth_cn,&
                                                        npp
     REAL(wp),DIMENSION(nc),           INTENT(inout) :: leaf_cn_direction
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)                                        :: leaf_nitrogen_new
                                                        !fine_root_nitrogen, &
@@ -995,9 +1000,9 @@ CONTAINS
                                                        fn_pepc_new_cl, &
                                                        lai_new_cl, &
                                                        cumm_lai_new_cl
-    REAL(wp),DIMENSION(nc,ncanopy)             :: loc_ppfd_sunlit_cl   , &
-                                                  loc_ppfd_shaded_cl   , &
-                                                  loc_fleaf_sunlit_cl
+    REAL(wp),DIMENSION(nc,ncanopy)                  :: loc_ppfd_sunlit_cl   , &
+                                                       loc_ppfd_shaded_cl   , &
+                                                       loc_fleaf_sunlit_cl
     REAL(wp),DIMENSION(3)                           :: npp_direction
                                                        !maint_respiration
     REAL(wp)                                        :: anl, agl, rl
@@ -1006,9 +1011,11 @@ CONTAINS
     INTEGER                                         :: icanopy, dd, ichunk    ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
+    ! 0.9
     loc_ppfd_sunlit_cl(:,:)   = ppfd_sunlit_tcnl_mavg_cl(:,:)
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_tcnl_mavg_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_tcnl_mavg_cl(:,:)
+
 
     !> 1.0 ...
     !!
@@ -1099,7 +1106,7 @@ CONTAINS
 
      ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
 !@todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functiong in 4D
-!@todo:leaf_cn_direction rename to veg%opt_leaf_cn_direction%ptr
+!@todo:leaf_cn_direction rename to veg%opt_leaf_cn_direction
 
       leaf_cn_direction(ichunk) = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
 

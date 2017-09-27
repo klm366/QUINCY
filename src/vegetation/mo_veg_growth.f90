@@ -54,6 +54,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4slm_Use_memory_a_veg
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
@@ -221,8 +222,19 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_falloc
+#define Def_veg_growth
+#define Def_veg_exudation
+#define Def_veg_reserve_use
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_pool
+#undef Def_veg_falloc
+#undef Def_veg_growth
+#undef Def_veg_exudation
+#undef Def_veg_reserve_use
 !! *slmtemp    
-    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -383,11 +395,21 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                          ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                    ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)          ! in
-
+    ! Get process memory pool structures
+#define Get_veg_pool
+#define Get_veg_falloc
+#define Get_veg_growth
+#define Get_veg_exudation
+#define Get_veg_reserve_use
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+#undef Get_veg_falloc
+#undef Get_veg_growth
+#undef Get_veg_exudation
+#undef Get_veg_reserve_use
 
 
 !! *slmtemp
-    veg     => veg__mem 
     sb      => sb__mem 
 
 
@@ -405,12 +427,12 @@ CONTAINS
     !!
     fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
 
-    CALL calc_nutrient_demand_scalar(veg%pool%labile%carbon%ptr, & 
-                                     veg%pool%labile%nitrogen%ptr, & 
-                                     veg%pool%labile%phosphorus%ptr, & 
-                                     veg%pool%reserve%carbon%ptr, & 
-                                     veg%pool%reserve%nitrogen%ptr, & 
-                                     veg%pool%reserve%phosphorus%ptr,&
+    CALL calc_nutrient_demand_scalar(veg_pool%labile%carbon, & 
+                                     veg_pool%labile%nitrogen, & 
+                                     veg_pool%labile%phosphorus, & 
+                                     veg_pool%reserve%carbon, & 
+                                     veg_pool%reserve%nitrogen, & 
+                                     veg_pool%reserve%phosphorus,&
                                      f_n_demand(:), &
                                      f_p_demand(:))
     !> 1.2 calculate actual nutrient uptake and N fixation, as well as associated respiration
@@ -422,11 +444,11 @@ CONTAINS
                                           dsl4jsb_Config(SB_)%flag_mycorrhiza, &
                                           kstar_labile(:), &
                                           t_air(:), &
-                                          veg%pool%fine_root%carbon%ptr, & 
-                                          veg%pool%fine_root%nitrogen%ptr, & 
-                                          veg%pool%labile%carbon%ptr, & 
-                                          veg%pool%labile%nitrogen%ptr, & 
-                                          veg%pool%labile%phosphorus%ptr, & 
+                                          veg_pool%fine_root%carbon, & 
+                                          veg_pool%fine_root%nitrogen, & 
+                                          veg_pool%labile%carbon, & 
+                                          veg_pool%labile%nitrogen, & 
+                                          veg_pool%labile%phosphorus, & 
                                           sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), & 
                                           nh4_solute(:,:), &
                                           no3_solute(:,:), &
@@ -459,7 +481,7 @@ CONTAINS
                                           n_transform_respiration(:), &
                                           n_fixation_respiration(:), &
                                           n_processing_respiration(:), &
-                                          veg%exudation%carbon%ptr)
+                                          veg_exudation%carbon)
 
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
@@ -474,10 +496,10 @@ CONTAINS
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                                         growing_season(:)                , &
-                                        veg%pool%leaf%carbon%ptr         , &  
-                                        veg%pool%leaf%nitrogen%ptr       , & 
-!                                        veg%pool%leaf%carbon(ics:ice)    , & 
-!                                        veg%pool%leaf%nitrogen(ics:ice)  , & 
+                                        veg_pool%leaf%carbon         , &  
+                                        veg_pool%leaf%nitrogen       , & 
+!                                        veg_pool%leaf%carbon(ics:ice)    , & 
+!                                        veg_pool%leaf%nitrogen(ics:ice)  , & 
                                         lai(:)                           , &
                                         t_jmax_opt_mavg(:)               , &
                                         target_cn_leaf(:)                , &
@@ -540,10 +562,10 @@ CONTAINS
                                               beta_air(:)                 , & 
                                               beta_soil_ps(:)             , & 
                                               beta_soil_gs(:)             , & 
-                                              veg%pool%leaf%carbon%ptr    , &  
-                                              veg%pool%leaf%nitrogen%ptr  , &
-!                                              veg%pool%leaf%carbon(:)     , &  
-!                                              veg%pool%leaf%nitrogen(:)   , &  
+                                              veg_pool%leaf%carbon    , &  
+                                              veg_pool%leaf%nitrogen  , &
+!                                              veg_pool%leaf%carbon(:)     , &  
+!                                              veg_pool%leaf%nitrogen(:)   , &  
                                               lai(:)                      , &
                                               beta_sinklim_ps(:)          , &
                                               t_air_tacclim_mavg(:)       , &
@@ -567,10 +589,10 @@ CONTAINS
                         dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                         TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)         , &
                         height(:)                        , &
-                        veg%pool%sap_wood%carbon%ptr     , &
-                        veg%pool%heart_wood%carbon%ptr   , &
-!                        veg%pool%sap_wood%carbon(:)     , &
-!                        veg%pool%heart_wood%carbon(:)   , &
+                        veg_pool%sap_wood%carbon         , &
+                        veg_pool%heart_wood%carbon       , &
+!                        veg_pool%sap_wood%carbon(:)     , &
+!                        veg_pool%heart_wood%carbon(:)   , &
                         dens_ind(:)                      , & 
                         labile_carbon_talloc_mavg(:)     , &
                         labile_nitrogen_talloc_mavg(:)   , & 
@@ -598,7 +620,7 @@ CONTAINS
     
     !> 4.0 calculate net flux between reserve and labile pool 
     !! 
-    !! Info: veg%reserve_use is of TYPE(t_slm_struct_veg_element)
+    !! Info: veg_reserve_use is of TYPE(t_slm_struct_veg_element/t_veg_element_a)
     CALL calc_reserve_useage(lctlib                               , &   ! in
                              growing_season(1)                    , &
                              kstar_labile(1)                      , &
@@ -613,9 +635,9 @@ CONTAINS
                              leaf2root_troot_mavg(1)              , &
                              lai(1)                               , &
                              target_lai(1)                        , &
-                             veg%pool%labile                      , &
-                             veg%pool%reserve                     , &
-                             veg%reserve_use                      , &   ! out
+                             veg_pool%labile                      , &
+                             veg_pool%reserve                     , &
+                             veg_reserve_use                      , &   ! out
                              beta_sinklim_ps(1)                   )
 
 
@@ -626,11 +648,11 @@ CONTAINS
                                   dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                                   dheight(1)                      , &
                                   kstar_labile(1)                 , &
-                                  veg%pool%leaf%carbon%ptr        , &
-                                  veg%pool%sap_wood%carbon%ptr    , &
-                                  veg%pool%coarse_root%carbon%ptr , &
-                                  veg%pool%fine_root%carbon%ptr   , &
-                                  veg%pool%labile%carbon%ptr      , &
+                                  veg_pool%leaf%carbon            , &
+                                  veg_pool%sap_wood%carbon        , &
+                                  veg_pool%coarse_root%carbon     , &
+                                  veg_pool%fine_root%carbon       , &
+                                  veg_pool%labile%carbon          , &
                                   height(1)                       , &
                                   leaf2sapwood_mass_ratio(1)      , &
                                   leaf2root_mass_ratio(1)         , & 
@@ -646,8 +668,8 @@ CONTAINS
                                   target_np_coarse_root(1)        , &
                                   target_np_sap_wood(1)           , &
                                   target_np_fruit(1)              , &
-                                  veg%reserve_use%carbon%ptr      , & 
-                                  veg%falloc                      , & ! inout  TYPE(t_slm_struct_veg_pool)
+                                  veg_reserve_use%carbon          , & 
+                                  veg_falloc                      , & ! inout
                                   growth_req_n(1)                 , & ! out
                                   growth_req_p(1)                 )
 
@@ -660,8 +682,8 @@ CONTAINS
                            maint_respiration_leaf(1)        , &
                            growth_req_p(1)                  , &
                            growth_req_n(1)                  , &
-                           veg%falloc                       , &
-                           veg%pool                         , &
+                           veg_falloc                       , &
+                           veg_pool                         , &
                            n_processing_respiration(1)      , &
                            maint_respiration_c13(1)         , &
                            maint_respiration_c14(1)         , &
@@ -669,12 +691,25 @@ CONTAINS
                            growth_respiration_c14(1)        , &
                            n_processing_respiration_c13(1)  , &
                            n_processing_respiration_c14(1)  , &
-                           veg%growth                       , &
-                           veg%exudation                    , &
+                           veg_growth                       , &
+                           veg_exudation                    , &
                            maint_respiration_pot(1)         , & ! out
                            maint_respiration(1)             , &
                            growth_respiration(1)  )  
-  
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_pool
+#define Dealloc_veg_falloc
+#define Dealloc_veg_growth
+#define Dealloc_veg_exudation
+#define Dealloc_veg_reserve_use
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
+#undef Dealloc_veg_falloc
+#undef Dealloc_veg_growth
+#undef Dealloc_veg_exudation
+#undef Dealloc_veg_reserve_use
+
   END SUBROUTINE update_veg_growth 
 
 
@@ -849,8 +884,7 @@ CONTAINS
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf
-    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
-    USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element     ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(SB_)]
+    USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element    
 
     IMPLICIT NONE
     
@@ -980,7 +1014,7 @@ CONTAINS
     ELSE
         fresp_maint(:) = 0.0_wp
     ENDIF
-    gain_n(:) = unit_uptake_n_troot_mavg(:) /(1._wp+fresp_growth+fresp_maint(:)) !+ uptake_norg / veg_exudation%carbon%ptr
+    gain_n(:) = unit_uptake_n_troot_mavg(:) /(1._wp+fresp_growth+fresp_maint(:)) !+ uptake_norg / veg_exudation%carbon
     !! ToDo!! Ide for coupling BNF and Mycos... Somewhere in the future
  
     ! transformation costs depend on NH4 and NO3 uptake rates   
@@ -1179,8 +1213,6 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants          ! e.g. delta_n_leaf
 
-    ! Use of process memories
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -1290,6 +1322,7 @@ CONTAINS
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib                   !< land-cover-type library - parameters for one pft
     LOGICAL,               INTENT(in) :: flag_optimal_allocation  !< from veg config
@@ -1321,6 +1354,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: target_lai                   !< lai implied by current available supporting structure 
     REAL(wp), INTENT(out) :: k1_opt                       !< coefficient in optimized leaf:root ratio
     REAL(wp), INTENT(out) :: k2_opt                       !< coefficient in optimized leaf:root ratio
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: diameter2                     ! diameter (m) resulting from a infitisemal small increase in woody biomas 
     REAL(wp)             :: k1_opt_w  , &
@@ -1341,7 +1375,10 @@ CONTAINS
         !   height = allom_k1 * diameter ^ allom_k2
         IF(dens_ind > eps8) THEN
            ! Calculate change of height given a small change in woody biomass
-           diameter2 = calc_diameter_from_woody_biomass(lctlib,veg_pool_sap_wood_carbon+eps4,veg_pool_heart_wood_carbon,dens_ind)
+           diameter2 = calc_diameter_from_woody_biomass(lctlib,                         & 
+                                                        veg_pool_sap_wood_carbon+eps4,  & 
+                                                        veg_pool_heart_wood_carbon,     &
+                                                        dens_ind)
            dheight   = calc_height_from_diameter(lctlib,diameter2) - height
         ELSE 
            dheight   = 0.0_wp
@@ -1536,10 +1573,11 @@ CONTAINS
                                                   veg_reserve_use       , & 
                                                   beta_sinklim_ps )              
 
-    USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
+    dsl4slm_Use_memory_a_veg
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_lctlib_element),        INTENT(in)     :: lctlib                    !< land-cover-type library - parameters for one pft
     LOGICAL,                       INTENT(in)     :: growing_season            !< does the plant intend to grow?
@@ -1555,11 +1593,12 @@ CONTAINS
     REAL(wp),                      INTENT(in)     :: leaf2root_mass_ratio      !< leaf to root mass ratio
     REAL(wp),                      INTENT(in)     :: lai                       !< current LAI 
     REAL(wp),                      INTENT(in)     :: target_lai                !< target LAI 
-    TYPE(t_slm_struct_veg_element),INTENT(in)     :: veg_pool_labile           !< the plant's labile pool size
-    TYPE(t_slm_struct_veg_element),INTENT(in)     :: veg_pool_reserve          !< the plant's reserve pool size
-    TYPE(t_slm_struct_veg_element),INTENT(out)    :: veg_reserve_use           !< current resource use rate (mol/time step)
+    TYPE(t_veg_element_a),         INTENT(in)     :: veg_pool_labile           !< the plant's labile pool size
+    TYPE(t_veg_element_a),         INTENT(in)     :: veg_pool_reserve          !< the plant's reserve pool size
+    TYPE(t_veg_element_a),         INTENT(out)    :: veg_reserve_use           !< current resource use rate (mol/time step)
                                                                                !!  (+ve: net flux to labile / -ve: net flux to reserve)
     REAL(wp),                      INTENT(out)    :: beta_sinklim_ps           !< sink limitation factor for photosynthesis 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: phi_phenology                    ! relative pull from reserve due to phenology
     REAL(wp)             :: phi_maintenance                  ! relative pull from reserve due to maintenance resp. 
@@ -1584,8 +1623,8 @@ CONTAINS
     !! 
     !! for N and P this corresponds to the current growth C:N:P  
     target_labile_pool_carbon     = MAX( gpp_mavg , rm_mavg ) * one_day / 1.e6_wp * tau_labile
-    target_labile_pool_nitrogen   = veg_pool_labile%carbon%ptr    * growth_req_n_mavg
-    target_labile_pool_phosphorus = veg_pool_labile%nitrogen%ptr  * growth_req_p_mavg
+    target_labile_pool_nitrogen   = veg_pool_labile%carbon    * growth_req_n_mavg
+    target_labile_pool_phosphorus = veg_pool_labile%nitrogen  * growth_req_p_mavg
 
     !> 1.2 reserve pool
     !!
@@ -1615,12 +1654,12 @@ CONTAINS
        phi_phenology = exp(-(lambda_phiphen * lai / hlp1 )**k_phiphen) & 
                        - exp(-(lambda_phiphen)**k_phiphen) 
 
-    hlp1 = MAX(0.0_wp,veg_pool_labile%carbon%ptr)
+    hlp1 = MAX(0.0_wp,veg_pool_labile%carbon)
     IF(target_labile_pool_carbon > eps8 .AND. hlp1 < target_labile_pool_carbon) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_carbon)**k_phimaint) & 
                        - exp(-(lambda_phimaint)**k_phimaint)
 
-    hlp1 = MAX(0.0_wp,veg_pool_reserve%carbon%ptr)
+    hlp1 = MAX(0.0_wp,veg_pool_reserve%carbon)
     IF(target_reserve_pool_carbon > eps8 .AND. hlp1 < target_reserve_pool_carbon) & 
        phi_storage = exp(-(lambda_phistore * hlp1 / target_reserve_pool_carbon)**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
@@ -1635,52 +1674,52 @@ CONTAINS
     phi_maintenance = phi_maintenance / tau_labile/one_day * dtime
     phi_storage = phi_storage / tau_labile/one_day * dtime
 
-    veg_reserve_use%carbon%ptr   = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon%ptr   - & 
-                                 phi_storage   * veg_pool_labile%carbon%ptr) 
-    veg_reserve_use%carbon13%ptr = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon13%ptr - & 
-                                 phi_storage   * veg_pool_labile%carbon13%ptr) 
-    veg_reserve_use%carbon14%ptr = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon14%ptr - & 
-                                 phi_storage   * veg_pool_labile%carbon14%ptr) 
+    veg_reserve_use%carbon   = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon   - & 
+                                 phi_storage   * veg_pool_labile%carbon) 
+    veg_reserve_use%carbon13 = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon13 - & 
+                                 phi_storage   * veg_pool_labile%carbon13) 
+    veg_reserve_use%carbon14 = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon14 - & 
+                                 phi_storage   * veg_pool_labile%carbon14) 
 
     !> 3.0 net transfer of N from labile to reserve
     !! 
     !! 
     phi_maintenance = 0._wp
     phi_storage = 0._wp
-    hlp1 = MAX(0.0_wp,veg_pool_labile%nitrogen%ptr)
+    hlp1 = MAX(0.0_wp,veg_pool_labile%nitrogen)
     IF(target_labile_pool_nitrogen > eps8 .AND. hlp1 < target_labile_pool_nitrogen) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_nitrogen)**k_phimaint) & 
-                       - exp(-(lambda_phimaint)**k_phimaint)
-    IF(target_reserve_pool_nitrogen > eps8 .AND. veg_pool_reserve%nitrogen%ptr < target_reserve_pool_nitrogen) & 
-       phi_storage = exp(-(lambda_phistore * veg_pool_reserve%nitrogen%ptr / target_reserve_pool_nitrogen)**k_phistore) & 
-                       - exp(-(lambda_phistore)**k_phistore)
+                          - exp(-(lambda_phimaint)**k_phimaint)
+    IF(target_reserve_pool_nitrogen > eps8 .AND. veg_pool_reserve%nitrogen < target_reserve_pool_nitrogen) & 
+       phi_storage     = exp(-(lambda_phistore * veg_pool_reserve%nitrogen / target_reserve_pool_nitrogen)**k_phistore) & 
+                          - exp(-(lambda_phistore)**k_phistore)
        
-    veg_reserve_use%nitrogen%ptr    = (phi_maintenance * veg_pool_reserve%nitrogen%ptr - & 
-                                    phi_storage * veg_pool_labile%nitrogen%ptr) / tau_labile/one_day * dtime
-    veg_reserve_use%nitrogen15%ptr  = (phi_maintenance * veg_pool_reserve%nitrogen15%ptr - & 
-                                    phi_storage * veg_pool_labile%nitrogen15%ptr) / tau_labile/one_day * dtime
+    veg_reserve_use%nitrogen    = (phi_maintenance * veg_pool_reserve%nitrogen - & 
+                                    phi_storage * veg_pool_labile%nitrogen) / tau_labile/one_day * dtime
+    veg_reserve_use%nitrogen15  = (phi_maintenance * veg_pool_reserve%nitrogen15 - & 
+                                    phi_storage * veg_pool_labile%nitrogen15) / tau_labile/one_day * dtime
 
     !> 4.0 net transfer of P from labile to reserve
     !! 
     !! 
     phi_maintenance = 0._wp
-    phi_storage = 0._wp
-    hlp1 = MAX(0.0_wp,veg_pool_labile%phosphorus%ptr)
+    phi_storage     = 0._wp
+    hlp1            = MAX(0.0_wp,veg_pool_labile%phosphorus)
     IF(target_labile_pool_phosphorus > eps8 .AND. hlp1 < target_labile_pool_phosphorus) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_phosphorus)**k_phimaint) & 
-                       - exp(-(lambda_phimaint)**k_phimaint)
-    IF(target_reserve_pool_phosphorus > eps8 .AND. veg_pool_reserve%phosphorus%ptr < target_reserve_pool_phosphorus) & 
-       phi_storage = exp(-(lambda_phistore * veg_pool_reserve%phosphorus%ptr / target_reserve_pool_phosphorus)**k_phistore) & 
-                       - exp(-(lambda_phistore)**k_phistore)
+                          - exp(-(lambda_phimaint)**k_phimaint)
+    IF(target_reserve_pool_phosphorus > eps8 .AND. veg_pool_reserve%phosphorus < target_reserve_pool_phosphorus) & 
+       phi_storage     = exp(-(lambda_phistore * veg_pool_reserve%phosphorus / target_reserve_pool_phosphorus)**k_phistore) & 
+                          - exp(-(lambda_phistore)**k_phistore)
 
-    veg_reserve_use%phosphorus%ptr = (phi_maintenance * veg_pool_reserve%phosphorus%ptr - & 
-                                  phi_storage * veg_pool_labile%phosphorus%ptr) / tau_labile/one_day * dtime
+    veg_reserve_use%phosphorus = (phi_maintenance * veg_pool_reserve%phosphorus - & 
+                                  phi_storage * veg_pool_labile%phosphorus) / tau_labile/one_day * dtime
 
     !> 5.0 signal of carbon saturation to photosynthesis
     !!
     !!
-    IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
-        hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
+    IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon>target_labile_pool_carbon)THEN
+        hlp1=(veg_pool_labile%carbon-target_labile_pool_carbon)/target_labile_pool_carbon
         beta_sinklim_ps=beta_sinklim_ps_min + (1._wp - beta_sinklim_ps_min) * exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
     ELSE 
         beta_sinklim_ps=1.0_wp
@@ -1736,10 +1775,12 @@ CONTAINS
                                       growth_req_p )       
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool     ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
     USE mo_veg_constants,           ONLY: itree, igrass, lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
+    dsl4slm_Use_memory_a_veg
+
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     LOGICAL,                      INTENT(in)    :: flag_optimal_allocation    !< from veg config
@@ -1766,9 +1807,10 @@ CONTAINS
     REAL(wp),                     INTENT(in)    :: target_np_sap_wood         !< target N:P ratio for tissue type 
     REAL(wp),                     INTENT(in)    :: target_np_fruit            !< target N:P ratio for tissue type 
     REAL(wp),                     INTENT(in)    :: veg_reserve_use_carbon     !< current reserve usage (mol C / m2 / timestep)
-    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_falloc                 !< allocation coefficients 
+    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_falloc                 !< allocation coefficients 
     REAL(wp),                     INTENT(out)   :: growth_req_n               !< N requirement for unit growth in C and N
     REAL(wp),                     INTENT(out)   :: growth_req_p               !< P requirement for unit growth in C and N
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: b_inc,                   &             ! total and compartment-wise carbon increment (mol/dtime)
                 all_inc,                 &
@@ -1779,6 +1821,8 @@ CONTAINS
     REAL(wp) :: leaf2wood_mass_ratio,    &
                 wood_carbon
     REAL(wp) :: hlp1
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allocation_fraction'
+
 
     !> 1.0 Allocation factors for C (this should be calculated based on various principles of plant growth and allometry)
     !! 
@@ -1800,7 +1844,7 @@ CONTAINS
     !!  Fruit allocation depends on whether or not the plant is able to build reserves
     !!  as soon as the carbon balance exceeds a PFT specific offset, the maximal fruit growth rate is achieved
     hlp1                    = MAX(0.0_wp, veg_reserve_use_carbon / dtime * 1000000.0_wp + k3_fruit_alloc)
-    veg_falloc%fruit%carbon%ptr = k1_fruit_alloc + ( lctlib%k2_fruit_alloc - k1_fruit_alloc ) * & 
+    veg_falloc%fruit%carbon = k1_fruit_alloc + ( lctlib%k2_fruit_alloc - k1_fruit_alloc ) * & 
                               exp(-(lambda_fruit_alloc * hlp1)**k4_fruit_alloc)
 
     !> 1.2 Calculate allocation fractions to functional organs
@@ -1901,10 +1945,10 @@ CONTAINS
     IF(b_inc > eps8) THEN
        all_inc = leaf_carbon_inc + sap_wood_carbon_inc + root_carbon_inc + coarse_root_carbon_inc
        IF(all_inc > eps8) THEN 
-          veg_falloc%leaf%carbon%ptr        = (1._wp - veg_falloc%fruit%carbon%ptr ) * leaf_carbon_inc / all_inc
-          veg_falloc%fine_root%carbon%ptr   = (1._wp - veg_falloc%fruit%carbon%ptr ) * root_carbon_inc / all_inc
-          veg_falloc%coarse_root%carbon%ptr = (1._wp - veg_falloc%fruit%carbon%ptr ) * coarse_root_carbon_inc / all_inc
-          veg_falloc%sap_wood%carbon%ptr    = (1._wp - veg_falloc%fruit%carbon%ptr ) * sap_wood_carbon_inc/ all_inc
+          veg_falloc%leaf%carbon        = (1._wp - veg_falloc%fruit%carbon ) * leaf_carbon_inc / all_inc
+          veg_falloc%fine_root%carbon   = (1._wp - veg_falloc%fruit%carbon ) * root_carbon_inc / all_inc
+          veg_falloc%coarse_root%carbon = (1._wp - veg_falloc%fruit%carbon ) * coarse_root_carbon_inc / all_inc
+          veg_falloc%sap_wood%carbon    = (1._wp - veg_falloc%fruit%carbon ) * sap_wood_carbon_inc/ all_inc
        ENDIF
     ENDIF
 
@@ -1915,61 +1959,61 @@ CONTAINS
  
        !> 2.1 N required to sustain a unit of C growth
        !!
-       growth_req_n = veg_falloc%leaf%carbon%ptr        / target_cn_leaf        + & 
-                      veg_falloc%fine_root%carbon%ptr   / target_cn_fine_root   + &
-                      veg_falloc%coarse_root%carbon%ptr / target_cn_coarse_root + &
-                      veg_falloc%sap_wood%carbon%ptr    / target_cn_sap_wood    + & 
-                      veg_falloc%fruit%carbon%ptr       / target_cn_fruit 
+       growth_req_n = veg_falloc%leaf%carbon        / target_cn_leaf        + & 
+                      veg_falloc%fine_root%carbon   / target_cn_fine_root   + &
+                      veg_falloc%coarse_root%carbon / target_cn_coarse_root + &
+                      veg_falloc%sap_wood%carbon    / target_cn_sap_wood    + & 
+                      veg_falloc%fruit%carbon       / target_cn_fruit 
    
        !> 2.2 Adjustment of N allocation factors
        !!
        IF(growth_req_n > eps8)THEN
-          veg_falloc%leaf%nitrogen%ptr        = veg_falloc%leaf%carbon%ptr        / target_cn_leaf        / growth_req_n
-          veg_falloc%fine_root%nitrogen%ptr   = veg_falloc%fine_root%carbon%ptr   / target_cn_fine_root   / growth_req_n 
-          veg_falloc%coarse_root%nitrogen%ptr = veg_falloc%coarse_root%carbon%ptr / target_cn_coarse_root / growth_req_n
-          veg_falloc%sap_wood%nitrogen%ptr    = veg_falloc%sap_wood%carbon%ptr    / target_cn_sap_wood    / growth_req_n
-          veg_falloc%fruit%nitrogen%ptr       = veg_falloc%fruit%carbon%ptr       / target_cn_fruit       / growth_req_n
+          veg_falloc%leaf%nitrogen        = veg_falloc%leaf%carbon        / target_cn_leaf        / growth_req_n
+          veg_falloc%fine_root%nitrogen   = veg_falloc%fine_root%carbon   / target_cn_fine_root   / growth_req_n 
+          veg_falloc%coarse_root%nitrogen = veg_falloc%coarse_root%carbon / target_cn_coarse_root / growth_req_n
+          veg_falloc%sap_wood%nitrogen    = veg_falloc%sap_wood%carbon    / target_cn_sap_wood    / growth_req_n
+          veg_falloc%fruit%nitrogen       = veg_falloc%fruit%carbon       / target_cn_fruit       / growth_req_n
        ENDIF
 
        !> 3.0 Allocation factors for P, derived from the target N:P ratios and the N partitioning coefficients
        !! 
        !! 
        ! P required to sustain a unit of N growth
-       growth_req_p = veg_falloc%leaf%nitrogen%ptr        / target_np_leaf        + & 
-                      veg_falloc%fine_root%nitrogen%ptr   / target_np_fine_root   + &
-                      veg_falloc%coarse_root%nitrogen%ptr / target_np_coarse_root + &
-                      veg_falloc%sap_wood%nitrogen%ptr    / target_np_sap_wood    + & 
-                      veg_falloc%fruit%nitrogen%ptr       / target_np_fruit 
+       growth_req_p = veg_falloc%leaf%nitrogen        / target_np_leaf        + & 
+                      veg_falloc%fine_root%nitrogen   / target_np_fine_root   + &
+                      veg_falloc%coarse_root%nitrogen / target_np_coarse_root + &
+                      veg_falloc%sap_wood%nitrogen    / target_np_sap_wood    + & 
+                      veg_falloc%fruit%nitrogen       / target_np_fruit 
    
        ! Adjustment of P allocation factors
        IF(growth_req_p > eps8)THEN
-          veg_falloc%leaf%phosphorus%ptr        = veg_falloc%leaf%nitrogen%ptr        / target_np_leaf        / growth_req_p
-          veg_falloc%fine_root%phosphorus%ptr   = veg_falloc%fine_root%nitrogen%ptr   / target_np_fine_root   / growth_req_p 
-          veg_falloc%coarse_root%phosphorus%ptr = veg_falloc%coarse_root%nitrogen%ptr / target_np_coarse_root / growth_req_p
-          veg_falloc%sap_wood%phosphorus%ptr    = veg_falloc%sap_wood%nitrogen%ptr    / target_np_sap_wood    / growth_req_p
-          veg_falloc%fruit%phosphorus%ptr       = veg_falloc%fruit%nitrogen%ptr       / target_np_fruit       / growth_req_p
+          veg_falloc%leaf%phosphorus        = veg_falloc%leaf%nitrogen        / target_np_leaf        / growth_req_p
+          veg_falloc%fine_root%phosphorus   = veg_falloc%fine_root%nitrogen   / target_np_fine_root   / growth_req_p 
+          veg_falloc%coarse_root%phosphorus = veg_falloc%coarse_root%nitrogen / target_np_coarse_root / growth_req_p
+          veg_falloc%sap_wood%phosphorus    = veg_falloc%sap_wood%nitrogen    / target_np_sap_wood    / growth_req_p
+          veg_falloc%fruit%phosphorus       = veg_falloc%fruit%nitrogen       / target_np_fruit       / growth_req_p
        ENDIF
    
        !> 4.0 Allocation factors for isotopes follow the main isotope 
        !! 
        !! 
-       veg_falloc%leaf%carbon13%ptr         = veg_falloc%leaf%carbon%ptr
-       veg_falloc%fine_root%carbon13%ptr    = veg_falloc%fine_root%carbon%ptr
-       veg_falloc%coarse_root%carbon13%ptr  = veg_falloc%coarse_root%carbon%ptr
-       veg_falloc%sap_wood%carbon13%ptr     = veg_falloc%sap_wood%carbon%ptr
-       veg_falloc%fruit%carbon13%ptr        = veg_falloc%fruit%carbon%ptr
+       veg_falloc%leaf%carbon13         = veg_falloc%leaf%carbon
+       veg_falloc%fine_root%carbon13    = veg_falloc%fine_root%carbon
+       veg_falloc%coarse_root%carbon13  = veg_falloc%coarse_root%carbon
+       veg_falloc%sap_wood%carbon13     = veg_falloc%sap_wood%carbon
+       veg_falloc%fruit%carbon13        = veg_falloc%fruit%carbon
    
-       veg_falloc%leaf%carbon14%ptr         = veg_falloc%leaf%carbon%ptr
-       veg_falloc%fine_root%carbon14%ptr    = veg_falloc%fine_root%carbon%ptr
-       veg_falloc%coarse_root%carbon14%ptr  = veg_falloc%coarse_root%carbon%ptr
-       veg_falloc%sap_wood%carbon14%ptr     = veg_falloc%sap_wood%carbon%ptr
-       veg_falloc%fruit%carbon14%ptr        = veg_falloc%fruit%carbon%ptr
+       veg_falloc%leaf%carbon14         = veg_falloc%leaf%carbon
+       veg_falloc%fine_root%carbon14    = veg_falloc%fine_root%carbon
+       veg_falloc%coarse_root%carbon14  = veg_falloc%coarse_root%carbon
+       veg_falloc%sap_wood%carbon14     = veg_falloc%sap_wood%carbon
+       veg_falloc%fruit%carbon14        = veg_falloc%fruit%carbon
    
-       veg_falloc%leaf%nitrogen15%ptr         = veg_falloc%leaf%nitrogen%ptr
-       veg_falloc%fine_root%nitrogen15%ptr    = veg_falloc%fine_root%nitrogen%ptr
-       veg_falloc%coarse_root%nitrogen15%ptr  = veg_falloc%coarse_root%nitrogen%ptr
-       veg_falloc%sap_wood%nitrogen15%ptr     = veg_falloc%sap_wood%nitrogen%ptr
-       veg_falloc%fruit%nitrogen15%ptr        = veg_falloc%fruit%nitrogen%ptr
+       veg_falloc%leaf%nitrogen15         = veg_falloc%leaf%nitrogen
+       veg_falloc%fine_root%nitrogen15    = veg_falloc%fine_root%nitrogen
+       veg_falloc%coarse_root%nitrogen15  = veg_falloc%coarse_root%nitrogen
+       veg_falloc%sap_wood%nitrogen15     = veg_falloc%sap_wood%nitrogen
+       veg_falloc%fruit%nitrogen15        = veg_falloc%fruit%nitrogen
     ENDIF
 
   END SUBROUTINE calc_allocation_fraction
@@ -2018,14 +2062,11 @@ CONTAINS
 
 
     USE mo_veg_respiration,         ONLY: calc_maintenance_respiration
-    USE mo_veg_memory_class,        ONLY: t_slm_struct_veg_pool, t_slm_struct_veg_element
-    USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element
+    dsl4slm_Use_memory_a_veg
 
-    ! Use of process memories
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp),                     INTENT(in)    :: t_air                        , & !< air temperature
                                                    t_air_tacclim_mavg           , & !< .. 
@@ -2033,7 +2074,7 @@ CONTAINS
                                                    maint_respiration_leaf       , & !< foliar maintenance respiration
                                                    growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                    growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
-    TYPE(t_slm_struct_veg_pool),  INTENT(in)    :: veg_falloc                   , & !< fractional allocation to pools
+    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_falloc                   , & !< fractional allocation to pools
                                                    veg_pool                         !< pools of the plant 
     REAL(wp),                     INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                    maint_respiration_c13        , & !< maintenance respiration
@@ -2042,14 +2083,16 @@ CONTAINS
                                                    growth_respiration_c14       , & !< growth respiration
                                                    n_processing_respiration_c13 , & !< respiration associated with N processing
                                                    n_processing_respiration_c14     !< respiration associated with N processing
-    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
-    TYPE(t_slm_struct_veg_element),INTENT(inout):: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
+    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
+    TYPE(t_veg_element_a),        INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
     REAL(wp),                     INTENT(out)   :: maint_respiration_pot        , & !< potential maintenance respiration
                                                    maint_respiration            , & !< maintenance respiration
                                                    growth_respiration               !< growth respiration
-
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
+
+
 
     !> 1.0 Determine C use for maintenance 
     !! 
@@ -2061,14 +2104,14 @@ CONTAINS
                                      &      t_air                             , &  ! t_stem
                                      &      t_air                             , &  ! t_root
                                      &      t_air_tacclim_mavg                , &  ! average temperature for acclimation (K) 
-                                     &      veg_pool%sap_wood%nitrogen%ptr    , & 
-                                     &      veg_pool%fine_root%nitrogen%ptr   , &
-                                     &      veg_pool%coarse_root%nitrogen%ptr)  & 
+                                     &      veg_pool%sap_wood%nitrogen        , & 
+                                     &      veg_pool%fine_root%nitrogen       , &
+                                     &      veg_pool%coarse_root%nitrogen)      & 
                                      & + maint_respiration_leaf
     ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 
     ! support leaf respiration, but not more than the current labile pool turnover
     maint_respiration = MAX(maint_respiration_leaf                                      , & 
-                                      &   MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, &
+                                      &   MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon * 1.e6_wp, &
                                       &       maint_respiration_pot)                              &
                                       &   )
 
@@ -2078,61 +2121,58 @@ CONTAINS
     !! is determined from the labile turnover minus the carbon used for maintenance, i
     !! accounting for the fraction of growth respiration required to achieve this growth, to ensure that
     !! growth does not empty the labile pool
-    veg_growth%labile%carbon%ptr = (veg_pool%labile%carbon%ptr * kstar_labile / one_day - &
+    veg_growth%labile%carbon = (veg_pool%labile%carbon * kstar_labile / one_day - &
                                     &  (maint_respiration + n_processing_respiration) / 1.e6_wp ) * & 
                                     &   dtime /  (1._wp + fresp_growth)
 
-    IF(veg_growth%labile%carbon%ptr < eps8) veg_growth%labile%carbon%ptr = 0.0_wp
+    IF(veg_growth%labile%carbon < eps8) veg_growth%labile%carbon = 0.0_wp
     !> 2.2 Elemental limitation of growth by N & P (mol [N|P] / m2 / timestep)
     !! is determined by the minimum turnover of the labile N and P pools and the stoichiometric growth requirement
     !! given the potential growth rate of C
-    veg_growth%labile%nitrogen%ptr   = MIN(growth_req_n * veg_growth%labile%carbon%ptr, & 
-                                            veg_pool%labile%nitrogen%ptr * kstar_labile * dtime/one_day) 
-    veg_growth%labile%phosphorus%ptr = MIN(growth_req_p * veg_growth%labile%nitrogen%ptr, & 
-                                            veg_pool%labile%phosphorus%ptr * kstar_labile * dtime/one_day) 
+    veg_growth%labile%nitrogen   = MIN(growth_req_n * veg_growth%labile%carbon, & 
+                                            veg_pool%labile%nitrogen * kstar_labile * dtime/one_day) 
+    veg_growth%labile%phosphorus = MIN(growth_req_p * veg_growth%labile%nitrogen, & 
+                                            veg_pool%labile%phosphorus * kstar_labile * dtime/one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
     IF(growth_req_p > eps8) THEN
-      IF(veg_growth%labile%nitrogen%ptr > veg_growth%labile%phosphorus%ptr / growth_req_p) & 
-        veg_growth%labile%nitrogen%ptr = veg_growth%labile%phosphorus%ptr / growth_req_p
+      IF(veg_growth%labile%nitrogen > veg_growth%labile%phosphorus / growth_req_p) & 
+        veg_growth%labile%nitrogen = veg_growth%labile%phosphorus / growth_req_p
     END IF
     ! adjust C growth rate to N growth rate if N is limiting 
     IF(growth_req_n > eps8) THEN
-      IF(veg_growth%labile%carbon%ptr > veg_growth%labile%nitrogen%ptr / growth_req_n) & 
-        veg_growth%labile%carbon%ptr = veg_growth%labile%nitrogen%ptr / growth_req_n
+      IF(veg_growth%labile%carbon > veg_growth%labile%nitrogen / growth_req_n) & 
+        veg_growth%labile%carbon = veg_growth%labile%nitrogen / growth_req_n
     END IF
  
     ! Diagnose growth respiration (µmol C / m2 / s)
-    growth_respiration = fresp_growth * veg_growth%labile%carbon%ptr * 1.e6_wp / dtime
+    growth_respiration = fresp_growth * veg_growth%labile%carbon * 1.e6_wp / dtime
 
     !> 3.0 Adjust exudation rate to available carbon (mol C / m2 / timestep)
-    veg_exudation%carbon%ptr = MIN(veg_exudation%carbon%ptr, MAX(0.0_wp, & 
-                                   0.2_wp * veg_pool%labile%carbon%ptr - veg_growth%labile%carbon%ptr - &
+    veg_exudation%carbon = MIN(veg_exudation%carbon, MAX(0.0_wp, & 
+                                   0.2_wp * veg_pool%labile%carbon - veg_growth%labile%carbon - &
                                    (growth_respiration + maint_respiration + n_processing_respiration) * dtime / 1.e6_wp )) 
 
     !> 4.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
-    IF(veg_pool%labile%carbon%ptr > eps8) THEN
+    IF(veg_pool%labile%carbon > eps8) THEN
        ! growth (in mol C / m2 / timestep)
-       veg_growth%labile%carbon13%ptr = veg_growth%labile%carbon%ptr * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
-       veg_growth%labile%carbon14%ptr = veg_growth%labile%carbon%ptr * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
+       veg_growth%labile%carbon13 = veg_growth%labile%carbon * veg_pool%labile%carbon13/veg_pool%labile%carbon
+       veg_growth%labile%carbon14 = veg_growth%labile%carbon * veg_pool%labile%carbon14/veg_pool%labile%carbon
        ! exudation (in mol C / m2 / timestep)
-       veg_exudation%carbon13%ptr = veg_exudation%carbon%ptr * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
-       veg_exudation%carbon14%ptr = veg_exudation%carbon%ptr * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
+       veg_exudation%carbon13 = veg_exudation%carbon * veg_pool%labile%carbon13/veg_pool%labile%carbon
+       veg_exudation%carbon14 = veg_exudation%carbon * veg_pool%labile%carbon14/veg_pool%labile%carbon
        ! respiration (in µmol C / m2 / s)
-       maint_respiration_c13  = maint_respiration    * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
-       maint_respiration_c14  = maint_respiration    * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
-       growth_respiration_c13 = growth_respiration   * veg_pool%labile%carbon13%ptr/veg_pool%labile%carbon%ptr
-       growth_respiration_c14 = growth_respiration   * veg_pool%labile%carbon14%ptr/veg_pool%labile%carbon%ptr
-       n_processing_respiration_c13 = n_processing_respiration * & 
-                                                  veg_pool%labile%carbon13%ptr / veg_pool%labile%carbon%ptr 
-       n_processing_respiration_c14 = n_processing_respiration * & 
-                                                  veg_pool%labile%carbon14%ptr / veg_pool%labile%carbon%ptr 
+       maint_respiration_c13  = maint_respiration    * veg_pool%labile%carbon13/veg_pool%labile%carbon
+       maint_respiration_c14  = maint_respiration    * veg_pool%labile%carbon14/veg_pool%labile%carbon
+       growth_respiration_c13 = growth_respiration   * veg_pool%labile%carbon13/veg_pool%labile%carbon
+       growth_respiration_c14 = growth_respiration   * veg_pool%labile%carbon14/veg_pool%labile%carbon
+       n_processing_respiration_c13 = n_processing_respiration * veg_pool%labile%carbon13 / veg_pool%labile%carbon 
+       n_processing_respiration_c14 = n_processing_respiration * veg_pool%labile%carbon14 / veg_pool%labile%carbon 
     ENDIF
 
-    IF(veg_pool%labile%nitrogen%ptr > eps8) THEN
+    IF(veg_pool%labile%nitrogen > eps8) THEN
        ! growth (in mol  / m2 / timestep)
-       veg_growth%labile%nitrogen15%ptr = veg_growth%labile%nitrogen%ptr * &
-                                              veg_pool%labile%nitrogen15%ptr/veg_pool%labile%nitrogen%ptr
+       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen * veg_pool%labile%nitrogen15/veg_pool%labile%nitrogen
     ENDIF
 
     !> 5.0 partition growth to tissue types
