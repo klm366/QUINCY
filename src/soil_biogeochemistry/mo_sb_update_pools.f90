@@ -55,6 +55,7 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
+    dsl4slm_Use_memory_a_veg
     dsl4jsb_Use_memory(A2L_)
 
     IMPLICIT NONE
@@ -187,10 +188,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
-
+    ! Declare pool structures in memory
+#define Def_veg_litterfall
+#define Def_veg_exudation
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_litterfall
+#undef Def_veg_exudation
 ! 2 be removed?: pointers to sb *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -316,12 +321,15 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
-
+#define Get_veg_litterfall
+#define Get_veg_exudation
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_litterfall
+#undef Get_veg_exudation
 
 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
-    veg  => veg__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -403,20 +411,20 @@ CONTAINS
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
     sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)     = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
-                                                             veg%exudation%carbon%ptr * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon * mycorrhizal_cue / soil_depth_sl(:,1)
     sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
-                                                             veg%exudation%nitrogen%ptr / soil_depth_sl(:,1) + &
+                                                             veg_exudation%nitrogen / soil_depth_sl(:,1) + &
                                                              (mycorrhiza_uptake_nh4_sl(:,1) + mycorrhiza_uptake_no3_sl(:,1)) * & !+ mycorrhiza_uptake_norg_sl(:,1)) * &
                                                              dtime / 1000000._wp
     sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
-                                                             veg%exudation%phosphorus%ptr / soil_depth_sl(:,1) + &
+                                                             veg_exudation%phosphorus / soil_depth_sl(:,1) + &
                                                              mycorrhiza_uptake_po4_sl(:,1) * dtime / 1000000._wp
     sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
-                                                             veg%exudation%carbon13%ptr * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon13 * mycorrhizal_cue / soil_depth_sl(:,1)
     sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
-                                                             veg%exudation%carbon14%ptr * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon14 * mycorrhizal_cue / soil_depth_sl(:,1)
     sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
-                                                             veg%exudation%nitrogen15%ptr / soil_depth_sl(:,1) + &
+                                                             veg_exudation%nitrogen15 / soil_depth_sl(:,1) + &
                                                              (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
                                                              dtime / 1000000._wp
 
@@ -433,9 +441,9 @@ CONTAINS
     sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
                                                         sb%mycorrhiza_export%nitrogen15%ptr(ics:ice,1,iblk)
 
-    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg%exudation%carbon%ptr / dtime * 1000000._wp                          
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon13%ptr / dtime * 1000000._wp
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg%exudation%carbon14%ptr / dtime * 1000000._wp
+    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon   / dtime * 1000000._wp                          
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon13 / dtime * 1000000._wp
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon14 / dtime * 1000000._wp
 
     !> 3.0 update of organic pools
     !!
@@ -567,64 +575,71 @@ CONTAINS
 
     !! fluxes
 
-    total_flux_carbon(:) =                  veg%litterfall%leaf%carbon%ptr        + &
-      veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
-      veg%litterfall%sap_wood%carbon%ptr  + veg%litterfall%heart_wood%carbon%ptr  + &
-      veg%litterfall%labile%carbon%ptr    + veg%litterfall%reserve%carbon%ptr     + &
-      veg%litterfall%fruit%carbon%ptr     + veg%litterfall%seed_bed%carbon%ptr    + &
-      veg%exudation%carbon%ptr                                                    - &
+    total_flux_carbon(:) =                  veg_litterfall%leaf%carbon        + &
+      veg_litterfall%fine_root%carbon + veg_litterfall%coarse_root%carbon + &
+      veg_litterfall%sap_wood%carbon  + veg_litterfall%heart_wood%carbon  + &
+      veg_litterfall%labile%carbon    + veg_litterfall%reserve%carbon     + &
+      veg_litterfall%fruit%carbon     + veg_litterfall%seed_bed%carbon    + &
+      veg_exudation%carbon                                                    - &
       SUM(sb%mycorrhiza_export%carbon%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)  - &
       SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
-    total_flux_nitrogen(:) =                  veg%litterfall%leaf%nitrogen%ptr        + &
-      veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
-      veg%litterfall%sap_wood%nitrogen%ptr  + veg%litterfall%heart_wood%nitrogen%ptr  + &
-      veg%litterfall%labile%nitrogen%ptr    + veg%litterfall%reserve%nitrogen%ptr     + &
-      veg%litterfall%fruit%nitrogen%ptr     + veg%litterfall%seed_bed%nitrogen%ptr    + &
+    total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen        + &
+      veg_litterfall%fine_root%nitrogen + veg_litterfall%coarse_root%nitrogen + &
+      veg_litterfall%sap_wood%nitrogen  + veg_litterfall%heart_wood%nitrogen  + &
+      veg_litterfall%labile%nitrogen    + veg_litterfall%reserve%nitrogen     + &
+      veg_litterfall%fruit%nitrogen     + veg_litterfall%seed_bed%nitrogen    + &
       SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp           + &
-      veg%exudation%nitrogen%ptr                                                      - &
+      veg_exudation%nitrogen                                                      - &
       SUM(sb%mycorrhiza_export%nitrogen%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
       (leaching_nh4_solute(:) + leaching_no3_solute(:)                                + &
        emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)            + &
        SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
        SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                       
-    total_flux_phosphorus(:) =                  veg%litterfall%leaf%phosphorus%ptr        + &
-      veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
-      veg%litterfall%sap_wood%phosphorus%ptr  + veg%litterfall%heart_wood%phosphorus%ptr  + &
-      veg%litterfall%labile%phosphorus%ptr    + veg%litterfall%reserve%phosphorus%ptr     + &
-      veg%litterfall%fruit%phosphorus%ptr     + veg%litterfall%seed_bed%phosphorus%ptr    + &
-      veg%exudation%phosphorus%ptr                                                        - &
+    total_flux_phosphorus(:) =                  veg_litterfall%leaf%phosphorus        + &
+      veg_litterfall%fine_root%phosphorus + veg_litterfall%coarse_root%phosphorus + &
+      veg_litterfall%sap_wood%phosphorus  + veg_litterfall%heart_wood%phosphorus  + &
+      veg_litterfall%labile%phosphorus    + veg_litterfall%reserve%phosphorus     + &
+      veg_litterfall%fruit%phosphorus     + veg_litterfall%seed_bed%phosphorus    + &
+      veg_exudation%phosphorus                                                        - &
       SUM(sb%mycorrhiza_export%phosphorus%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)      - &
       (leaching_po4_solute(:)                                                             + &
        SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
-    total_flux_carbon13(:) =                  veg%litterfall%leaf%carbon13%ptr        + &
-      veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
-      veg%litterfall%sap_wood%carbon13%ptr  + veg%litterfall%heart_wood%carbon13%ptr  + &
-      veg%litterfall%labile%carbon13%ptr    + veg%litterfall%reserve%carbon13%ptr     + &
-      veg%litterfall%fruit%carbon13%ptr     + veg%litterfall%seed_bed%carbon13%ptr    + &
-      veg%exudation%carbon13%ptr                                                      - &
+    total_flux_carbon13(:) =                  veg_litterfall%leaf%carbon13        + &
+      veg_litterfall%fine_root%carbon13 + veg_litterfall%coarse_root%carbon13 + &
+      veg_litterfall%sap_wood%carbon13  + veg_litterfall%heart_wood%carbon13  + &
+      veg_litterfall%labile%carbon13    + veg_litterfall%reserve%carbon13     + &
+      veg_litterfall%fruit%carbon13     + veg_litterfall%seed_bed%carbon13    + &
+      veg_exudation%carbon13                                                      - &
       SUM(sb%mycorrhiza_export%carbon13%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
-    total_flux_carbon14(:) =                  veg%litterfall%leaf%carbon14%ptr        + &
-      veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
-      veg%litterfall%sap_wood%carbon14%ptr  + veg%litterfall%heart_wood%carbon14%ptr  + &
-      veg%litterfall%labile%carbon14%ptr    + veg%litterfall%reserve%carbon14%ptr     + &
-      veg%litterfall%fruit%carbon14%ptr     + veg%litterfall%seed_bed%carbon14%ptr    + &
-      veg%exudation%carbon14%ptr                                                      - &
+    total_flux_carbon14(:) =                  veg_litterfall%leaf%carbon14        + &
+      veg_litterfall%fine_root%carbon14 + veg_litterfall%coarse_root%carbon14 + &
+      veg_litterfall%sap_wood%carbon14  + veg_litterfall%heart_wood%carbon14  + &
+      veg_litterfall%labile%carbon14    + veg_litterfall%reserve%carbon14     + &
+      veg_litterfall%fruit%carbon14     + veg_litterfall%seed_bed%carbon14    + &
+      veg_exudation%carbon14                                                      - &
       SUM(sb%mycorrhiza_export%carbon14%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
-    total_flux_nitrogen15(:) =                  veg%litterfall%leaf%nitrogen15%ptr          + &
-      veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr   + &
-      veg%litterfall%sap_wood%nitrogen15%ptr  + veg%litterfall%heart_wood%nitrogen15%ptr    + &
-      veg%litterfall%labile%nitrogen15%ptr    + veg%litterfall%reserve%nitrogen15%ptr       + &
-      veg%litterfall%fruit%nitrogen15%ptr     + veg%litterfall%seed_bed%nitrogen15%ptr      + &
+    total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15          + &
+      veg_litterfall%fine_root%nitrogen15 + veg_litterfall%coarse_root%nitrogen15   + &
+      veg_litterfall%sap_wood%nitrogen15  + veg_litterfall%heart_wood%nitrogen15    + &
+      veg_litterfall%labile%nitrogen15    + veg_litterfall%reserve%nitrogen15       + &
+      veg_litterfall%fruit%nitrogen15     + veg_litterfall%seed_bed%nitrogen15      + &
       SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp             + &
-      veg%exudation%nitrogen15%ptr                                                          - &
+      veg_exudation%nitrogen15                                                          - &
       SUM(sb%mycorrhiza_export%nitrogen15%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)        - &
       (leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                              - &
        emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:) + &
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                        + &
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_litterfall
+#define Dealloc_veg_exudation
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_litterfall
+#undef Dealloc_veg_exudation
 
   END SUBROUTINE update_sb_pools
 
@@ -642,7 +657,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_organic_pool_change(options,pool,formation,loss,transport)
 
-    USE mo_sb_memory_class,       ONLY: t_slm_struct_sb_pool, t_slm_struct_sb_element
+    USE mo_sb_memory_class,       ONLY: t_slm_struct_sb_pool
 
     IMPLICIT NONE
     ! ---------------------------

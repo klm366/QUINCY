@@ -934,6 +934,7 @@ CONTAINS
 #include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_pool
 #undef Dealloc_veg_total_biomass
+
   END SUBROUTINE write_output_pool
 
 
@@ -1977,6 +1978,7 @@ CONTAINS
 #undef Dealloc_veg_litterfall
 #undef Dealloc_veg_exudation
 #undef Dealloc_veg_reserve_use
+
   END SUBROUTINE write_output_flux
 
 
@@ -2299,6 +2301,7 @@ CONTAINS
 #include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_pool
 #undef Dealloc_veg_litterfall
+
   END SUBROUTINE write_soil_forcing 
 
 

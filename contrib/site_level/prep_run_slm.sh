@@ -26,7 +26,7 @@ slmModel="land"
 # options: fluxnet cruncep face
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
-# options: static tansient
+# options: static transient
 forcingMode="static"
 # set the specific set of sites of the forcingDataSet you want to use
 #  fluxnet:  (currently no options)
