@@ -51,6 +51,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4slm_Use_memory_a_veg
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
@@ -143,8 +144,23 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_litterfall
+#define Def_veg_growth
+#define Def_veg_establishment
+#define Def_veg_exudation
+#define Def_veg_total_biomass
+#define Def_veg_reserve_use
+#include "slm_pools_a_incl.f90"
+#undef Def_veg_pool
+#undef Def_veg_litterfall
+#undef Def_veg_growth
+#undef Def_veg_establishment
+#undef Def_veg_exudation
+#undef Def_veg_total_biomass
+#undef Def_veg_reserve_use
 !! *slmtemp    
-    TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),       POINTER      :: sb       ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -232,18 +248,31 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
-
+    ! Get process memory pool structures
+#define Get_veg_pool
+#define Get_veg_litterfall
+#define Get_veg_growth
+#define Get_veg_establishment
+#define Get_veg_exudation
+#define Get_veg_total_biomass
+#define Get_veg_reserve_use
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+#undef Get_veg_litterfall
+#undef Get_veg_growth
+#undef Get_veg_establishment
+#undef Get_veg_exudation
+#undef Get_veg_total_biomass
+#undef Get_veg_reserve_use
 
 
 !! *slmtemp
-    veg       => veg__mem 
     sb        => sb__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
 
     !> 1.0 for plant and land model, update vegetation pools with fluxes
@@ -262,111 +291,106 @@ CONTAINS
        npp_c14(:)  = gross_assimilation_C14(:) - & 
            growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
 
-       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr   + & 
-                                        npp(1)     * dtime / 1000000.0_wp
-       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr + & 
-                                        npp_c13(1) * dtime / 1000000.0_wp
-       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr + & 
-                                        npp_c14(1) * dtime / 1000000.0_wp
+       veg_growth%labile%carbon   = veg_growth%labile%carbon   + npp(1)     * dtime / 1000000.0_wp
+       veg_growth%labile%carbon13 = veg_growth%labile%carbon13 + npp_c13(1) * dtime / 1000000.0_wp
+       veg_growth%labile%carbon14 = veg_growth%labile%carbon14 + npp_c14(1) * dtime / 1000000.0_wp
   
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
-       veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr + & 
-                                            ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * &
-                                            dtime / 1000000.0_wp
-       veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
-                                            ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * &
-                                            dtime / 1000000.0_wp
-       veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
+       veg_growth%labile%nitrogen   = veg_growth%labile%nitrogen + & 
+                                          ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * dtime / 1000000.0_wp
+       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen15 + & 
+                                          ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * dtime / 1000000.0_wp
+       veg_growth%labile%phosphorus = veg_growth%labile%phosphorus + & 
                                             uptake_po4(1) * dtime / 1000000.0_wp
 
        !> 1.2a Add mycorrhiza export
        !!
-       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr   + & 
+       veg_growth%labile%carbon     = veg_growth%labile%carbon   + & 
                                         SUM(sb%mycorrhiza_export%carbon%ptr(1,:,iblk) * soil_depth_sl(1,:))
-       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr + & 
+       veg_growth%labile%carbon13   = veg_growth%labile%carbon13 + & 
                                         SUM(sb%mycorrhiza_export%carbon13%ptr(1,:,iblk) * soil_depth_sl(1,:))
-       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr + & 
+       veg_growth%labile%carbon14   = veg_growth%labile%carbon14 + & 
                                         SUM(sb%mycorrhiza_export%carbon14%ptr(1,:,iblk) * soil_depth_sl(1,:))
-       veg%growth%labile%nitrogen%ptr = veg%growth%labile%nitrogen%ptr + & 
+       veg_growth%labile%nitrogen   = veg_growth%labile%nitrogen + & 
                                         SUM(sb%mycorrhiza_export%nitrogen%ptr(1,:,iblk) * soil_depth_sl(1,:))
-       veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
-                                          SUM(sb%mycorrhiza_export%nitrogen15%ptr(1,:,iblk) * soil_depth_sl(1,:))
-       veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
-                                          SUM(sb%mycorrhiza_export%phosphorus%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen15 + & 
+                                        SUM(sb%mycorrhiza_export%nitrogen15%ptr(1,:,iblk) * soil_depth_sl(1,:))
+       veg_growth%labile%phosphorus = veg_growth%labile%phosphorus + & 
+                                        SUM(sb%mycorrhiza_export%phosphorus%ptr(1,:,iblk) * soil_depth_sl(1,:))
 
 
 
        !> 1.3 update labile pool and reserve 
        !! 
-       veg%pool%labile  = veg%pool%labile  + veg%reserve_use
-       veg%pool%reserve = veg%pool%reserve - veg%reserve_use
+       veg_pool%labile  = veg_pool%labile  + veg_reserve_use
+       veg_pool%reserve = veg_pool%reserve - veg_reserve_use
    
        !> 1.4 update fluxes from continuous nutrient turnover and resorption 
        !!
-       veg%pool%labile%nitrogen%ptr       = veg%pool%labile%nitrogen%ptr       + recycling_leaf_n(1) + & 
-                                                      recycling_fine_root_n(1) + recycling_heart_wood_n(1)
-       veg%pool%leaf%nitrogen%ptr         = veg%pool%leaf%nitrogen%ptr         - recycling_leaf_n(1)
-       veg%pool%fine_root%nitrogen%ptr    = veg%pool%fine_root%nitrogen%ptr    - recycling_fine_root_n(1)
-       veg%pool%heart_wood%nitrogen%ptr   = veg%pool%heart_wood%nitrogen%ptr   - recycling_heart_wood_n(1)
+       veg_pool%labile%nitrogen       = veg_pool%labile%nitrogen       + recycling_leaf_n(1) + & 
+                                         recycling_fine_root_n(1) + recycling_heart_wood_n(1)
+       veg_pool%leaf%nitrogen         = veg_pool%leaf%nitrogen         - recycling_leaf_n(1)
+       veg_pool%fine_root%nitrogen    = veg_pool%fine_root%nitrogen    - recycling_fine_root_n(1)
+       veg_pool%heart_wood%nitrogen   = veg_pool%heart_wood%nitrogen   - recycling_heart_wood_n(1)
    
-       veg%pool%labile%phosphorus%ptr     = veg%pool%labile%phosphorus%ptr     + recycling_leaf_p(1) + & 
-                                                      recycling_fine_root_p(1) + recycling_heart_wood_p(1)
-       veg%pool%leaf%phosphorus%ptr       = veg%pool%leaf%phosphorus%ptr       - recycling_leaf_p(1)
-       veg%pool%fine_root%phosphorus%ptr  = veg%pool%fine_root%phosphorus%ptr  - recycling_fine_root_p(1)
-       veg%pool%heart_wood%phosphorus%ptr = veg%pool%heart_wood%phosphorus%ptr - recycling_heart_wood_p(1)
+       veg_pool%labile%phosphorus     = veg_pool%labile%phosphorus     + recycling_leaf_p(1) + & 
+                                         recycling_fine_root_p(1) + recycling_heart_wood_p(1)
+       veg_pool%leaf%phosphorus       = veg_pool%leaf%phosphorus       - recycling_leaf_p(1)
+       veg_pool%fine_root%phosphorus  = veg_pool%fine_root%phosphorus  - recycling_fine_root_p(1)
+       veg_pool%heart_wood%phosphorus = veg_pool%heart_wood%phosphorus - recycling_heart_wood_p(1)
    
-       veg%pool%labile%nitrogen15%ptr     = veg%pool%labile%nitrogen15%ptr     + recycling_leaf_n15(1) + & 
-                                                    recycling_fine_root_n15(1) + recycling_heart_wood_n15(1)
-       veg%pool%leaf%nitrogen15%ptr       = veg%pool%leaf%nitrogen15%ptr       - recycling_leaf_n15(1)
-       veg%pool%fine_root%nitrogen15%ptr  = veg%pool%fine_root%nitrogen15%ptr  - recycling_fine_root_n15(1)
-       veg%pool%heart_wood%nitrogen15%ptr = veg%pool%heart_wood%nitrogen15%ptr - recycling_heart_wood_n15(1)
+       veg_pool%labile%nitrogen15     = veg_pool%labile%nitrogen15     + recycling_leaf_n15(1) + & 
+                                         recycling_fine_root_n15(1) + recycling_heart_wood_n15(1)
+       veg_pool%leaf%nitrogen15       = veg_pool%leaf%nitrogen15       - recycling_leaf_n15(1)
+       veg_pool%fine_root%nitrogen15  = veg_pool%fine_root%nitrogen15  - recycling_fine_root_n15(1)
+       veg_pool%heart_wood%nitrogen15 = veg_pool%heart_wood%nitrogen15 - recycling_heart_wood_n15(1)
 
        !> 1.5 update labile pool with fluxes to mycorrhiza
-       veg%pool%labile%carbon%ptr     = veg%pool%labile%carbon%ptr       - veg%exudation%carbon%ptr 
-       veg%pool%labile%nitrogen%ptr   = veg%pool%labile%nitrogen%ptr     - veg%exudation%nitrogen%ptr 
-       veg%pool%labile%phosphorus%ptr = veg%pool%labile%phosphorus%ptr   - veg%exudation%phosphorus%ptr 
-       veg%pool%labile%carbon13%ptr   = veg%pool%labile%carbon13%ptr     - veg%exudation%carbon13%ptr 
-       veg%pool%labile%carbon14%ptr   = veg%pool%labile%carbon14%ptr     - veg%exudation%carbon14%ptr 
-       veg%pool%labile%nitrogen15%ptr = veg%pool%labile%nitrogen15%ptr   - veg%exudation%nitrogen15%ptr 
+       veg_pool%labile%carbon     = veg_pool%labile%carbon       - veg_exudation%carbon 
+       veg_pool%labile%nitrogen   = veg_pool%labile%nitrogen     - veg_exudation%nitrogen 
+       veg_pool%labile%phosphorus = veg_pool%labile%phosphorus   - veg_exudation%phosphorus 
+       veg_pool%labile%carbon13   = veg_pool%labile%carbon13     - veg_exudation%carbon13 
+       veg_pool%labile%carbon14   = veg_pool%labile%carbon14     - veg_exudation%carbon14 
+       veg_pool%labile%nitrogen15 = veg_pool%labile%nitrogen15   - veg_exudation%nitrogen15 
 
    
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
        !! 
-       veg%pool           = veg%pool - veg%litterfall
-       veg%pool           = veg%pool + veg%growth
-       veg%pool%labile    = veg%pool%labile   + veg%establishment
-       veg%pool%seed_bed  = veg%pool%seed_bed - veg%establishment
+       veg_pool           = veg_pool - veg_litterfall
+       veg_pool           = veg_pool + veg_growth
+       veg_pool%labile    = veg_pool%labile   + veg_establishment
+       veg_pool%seed_bed  = veg_pool%seed_bed - veg_establishment
    
        !> 1.6 Radioactive decay of C14 in living plant tissue
        !!
-       veg%pool%leaf%carbon14%ptr         = veg%pool%leaf%carbon14%ptr        * (1._wp - lambda_C14 * dtime )
-       veg%pool%fine_root%carbon14%ptr    = veg%pool%fine_root%carbon14%ptr   * (1._wp - lambda_C14 * dtime )
-       veg%pool%sap_wood%carbon14%ptr     = veg%pool%sap_wood%carbon14%ptr    * (1._wp - lambda_C14 * dtime )
-       veg%pool%heart_wood%carbon14%ptr   = veg%pool%heart_wood%carbon14%ptr  * (1._wp - lambda_C14 * dtime )
-       veg%pool%coarse_root%carbon14%ptr  = veg%pool%coarse_root%carbon14%ptr * (1._wp - lambda_C14 * dtime )
-       veg%pool%fruit%carbon14%ptr        = veg%pool%fruit%carbon14%ptr       * (1._wp - lambda_C14 * dtime )
-       veg%pool%labile%carbon14%ptr       = veg%pool%labile%carbon14%ptr      * (1._wp - lambda_C14 * dtime )
-       veg%pool%reserve%carbon14%ptr      = veg%pool%reserve%carbon14%ptr     * (1._wp - lambda_C14 * dtime )
-       veg%pool%seed_bed%carbon14%ptr     = veg%pool%seed_bed%carbon14%ptr    * (1._wp - lambda_C14 * dtime )
+       veg_pool%leaf%carbon14         = veg_pool%leaf%carbon14        * (1._wp - lambda_C14 * dtime )
+       veg_pool%fine_root%carbon14    = veg_pool%fine_root%carbon14   * (1._wp - lambda_C14 * dtime )
+       veg_pool%sap_wood%carbon14     = veg_pool%sap_wood%carbon14    * (1._wp - lambda_C14 * dtime )
+       veg_pool%heart_wood%carbon14   = veg_pool%heart_wood%carbon14  * (1._wp - lambda_C14 * dtime )
+       veg_pool%coarse_root%carbon14  = veg_pool%coarse_root%carbon14 * (1._wp - lambda_C14 * dtime )
+       veg_pool%fruit%carbon14        = veg_pool%fruit%carbon14       * (1._wp - lambda_C14 * dtime )
+       veg_pool%labile%carbon14       = veg_pool%labile%carbon14      * (1._wp - lambda_C14 * dtime )
+       veg_pool%reserve%carbon14      = veg_pool%reserve%carbon14     * (1._wp - lambda_C14 * dtime )
+       veg_pool%seed_bed%carbon14     = veg_pool%seed_bed%carbon14    * (1._wp - lambda_C14 * dtime )
    
        !> 2.0 Update plant diagnostics given the above fluxes
        !!
        !! 
-       lai(:)      = veg%pool%leaf%carbon%ptr * lctlib%sla
+       lai(:)      = veg_pool%leaf%carbon * lctlib%sla
        dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
        WHERE(dens_ind(:)>0.0_wp .AND. lctlib%growthform == itree)
-          diameter(:)  = calc_diameter_from_woody_biomass(lctlib                         , &
-                                                          veg%pool%sap_wood%carbon%ptr   , &
-                                                          veg%pool%heart_wood%carbon%ptr , &
+          diameter(:)  = calc_diameter_from_woody_biomass(lctlib                     , &
+                                                          veg_pool%sap_wood%carbon   , &
+                                                          veg_pool%heart_wood%carbon , &
                                                           dens_ind(:))
           height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
        END WHERE
 
-       IF(veg%pool%leaf%carbon%ptr > eps8) THEN 
+       IF(veg_pool%leaf%carbon > eps8) THEN 
            mean_leaf_age(:) = & 
-             (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
+             (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon / veg_pool%leaf%carbon)
          ELSE 
            mean_leaf_age(:) = 0.0_wp
        END IF
@@ -384,7 +408,7 @@ CONTAINS
                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                             veg%pool%leaf%nitrogen%ptr         , &
+                             veg_pool%leaf%nitrogen             , &
                              lai(:)                             , &
                              ppfd_sunlit_tfrac_mavg_cl(:,:)     , &
                              ppfd_shaded_tfrac_mavg_cl(:,:)     , & 
@@ -411,15 +435,32 @@ CONTAINS
     !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!
     !!
-    veg%total_biomass =   veg%pool%leaf        + &     !< elements of leaf
-                          veg%pool%fine_root   + &     !< elements of fine_root
-                          veg%pool%coarse_root + &     !< elements of coarse_root
-                          veg%pool%sap_wood    + &     !< elements of sap_wood
-                          veg%pool%heart_wood  + &     !< elements of heart_wood
-                          veg%pool%labile      + &     !< elements of labile
-                          veg%pool%reserve     + &     !< elements of reserve
-                          veg%pool%fruit       + &     !< elements of fruit
-                          veg%pool%seed_bed            !< elements of seed_bed
+    veg_total_biomass =   veg_pool%leaf        + &     !< elements of leaf
+                          veg_pool%fine_root   + &     !< elements of fine_root
+                          veg_pool%coarse_root + &     !< elements of coarse_root
+                          veg_pool%sap_wood    + &     !< elements of sap_wood
+                          veg_pool%heart_wood  + &     !< elements of heart_wood
+                          veg_pool%labile      + &     !< elements of labile
+                          veg_pool%reserve     + &     !< elements of reserve
+                          veg_pool%fruit       + &     !< elements of fruit
+                          veg_pool%seed_bed            !< elements of seed_bed
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_veg_pool
+#define Dealloc_veg_litterfall
+#define Dealloc_veg_growth
+#define Dealloc_veg_establishment
+#define Dealloc_veg_exudation
+#define Dealloc_veg_total_biomass
+#define Dealloc_veg_reserve_use
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_veg_pool
+#undef Dealloc_veg_litterfall
+#undef Dealloc_veg_growth
+#undef Dealloc_veg_establishment
+#undef Dealloc_veg_exudation
+#undef Dealloc_veg_total_biomass
+#undef Dealloc_veg_reserve_use
 
   END SUBROUTINE update_veg_pools
 
