@@ -19,9 +19,6 @@ MODULE mo_jsb_model_init
   USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
 
-  dsl4jsb_Use_processes PHENO_
-  dsl4jsb_Use_config(PHENO_)
-
   IMPLICIT NONE
   PRIVATE
 
@@ -165,7 +162,6 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_class,   ONLY: SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
@@ -188,7 +184,16 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
+    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_
+    dsl4jsb_Use_config(PHENO_)
+    dsl4jsb_Use_config(SSE_)
+    dsl4jsb_Use_config(HYDRO_)
+    dsl4jsb_Use_config(RAD_)
+
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(RAD_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -217,6 +222,30 @@ CONTAINS
 
     CALL model%Configure_processes()
 
+    ! Crosscheck process configs
+    IF (model%config%l_compat401) THEN
+      CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
+      CALL message('    ', '... using soil heat capacity from mineral soil map')
+      CALL message('    ', '... using soil heat conductivity from mineral soil map')
+      CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
+      CALL message('    ', '... not using multi-layer snow model')
+      CALL message('    ', '... not using dynamical snow density and thickness')
+      CALL message('    ', '... not using frozen ground')
+      CALL message('    ', '... not using organic soil fractions')
+      dsl4jsb_Get_config(PHENO_)
+      dsl4jsb_Get_config(SSE_)
+      dsl4jsb_Get_config(HYDRO_)
+      dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
+      dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
+      dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
+      dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
+      dsl4jsb_Config(SSE_)%l_snow = .FALSE.
+      dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
+      dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
+      dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
+    END IF
+
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
 
@@ -242,6 +271,7 @@ CONTAINS
       CALL model%Queue_task(RAD_,    "radiation_par")
     END IF
     CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(SSE_,    "soil_properties")
     CALL model%Queue_task(SSE_,    "soil_temperature")
     CALL model%Queue_task(HYDRO_,  "soil_hydrology")
@@ -259,7 +289,7 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
     END IF
     CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
-    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI_, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
                                                      ! should be called after the soil hydrology is calculated

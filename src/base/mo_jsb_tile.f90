@@ -425,7 +425,7 @@ CONTAINS
 
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
-    IF (this%fract_filename == '') THEN
+    IF (this%fract_varname == 'equal') THEN
       IF (ASSOCIATED(this%parent)) THEN
         tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
       ELSE
@@ -586,7 +586,11 @@ CONTAINS
 
     IF (l_timer .AND. debug_on()) CALL timer_start(timer_process_task(this%owner_model_id))
 
-    ALLOCATE(msg, source=msg_in)
+    ! Gfortran crashes on the next line
+    ! ALLOCATE(msg, source=msg_in)
+    ALLOCATE(msg)
+    msg%name = msg_in%name
+    msg%action = msg_in%action
 
     model => this%model
 
@@ -685,6 +689,7 @@ CONTAINS
     !return_ptr => msg
     IF (ASSOCIATED(msg)) THEN
       ALLOCATE(return_ptr, source=msg)
+!      return_ptr%action = msg%action
     ELSE
       return_ptr => NULL()
     END IF

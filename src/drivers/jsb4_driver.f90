@@ -122,6 +122,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: fact_q_air_proc(:,:)
   REAL(wp), ALLOCATABLE :: fact_qsat_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: rough_h_srf_proc(:,:)
+  REAL(wp), ALLOCATABLE :: rough_m_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: evap_act2pot_proc(:,:)
 !  REAL(wp), ALLOCATABLE :: evap_act_sum_proc(:,:)
 !  REAL(wp), ALLOCATABLE :: evap_pot_sum_proc(:,:)
@@ -137,7 +138,6 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hcap(:)
-  REAL(wp), ALLOCATABLE :: rough_m_srf(:)
   REAL(wp), ALLOCATABLE :: q_snocpymlt(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dir(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dir(:)
@@ -236,6 +236,7 @@ PROGRAM jsb4_driver
   ALLOCATE(fact_q_air_proc(nproma, nblks))
   ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
   ALLOCATE(rough_h_srf_proc(nproma, nblks))
+  ALLOCATE(rough_m_srf_proc(nproma, nblks))
   ALLOCATE(evap_act2pot_proc(nproma, nblks))
 !  ALLOCATE(evap_act_sum_proc(nproma, nblks))
 !  ALLOCATE(evap_pot_sum_proc(nproma, nblks))
@@ -250,7 +251,6 @@ PROGRAM jsb4_driver
   ALLOCATE(sensible_hflx(nproma))
   ALLOCATE(grnd_hflx(nproma))
   ALLOCATE(grnd_hcap(nproma))
-  ALLOCATE(rough_m_srf(nproma))
   ALLOCATE(q_snocpymlt(nproma))
   ALLOCATE(alb_vis_dir(nproma))
   ALLOCATE(alb_nir_dir(nproma))
@@ -279,6 +279,7 @@ PROGRAM jsb4_driver
     fact_q_air_proc = 0.5_wp
     fact_qsat_srf_proc = 0.5_wp
     rough_h_srf_proc = 1._wp
+    rough_m_srf_proc = 1._wp
     evap_act2pot_proc = 1._wp
 
 !    evap_act_sum_proc = 0._wp
@@ -302,7 +303,7 @@ PROGRAM jsb4_driver
       fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
       fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
       rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-
+      rough_m_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_m)
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
       evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotranspiration),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
@@ -343,7 +344,7 @@ PROGRAM jsb4_driver
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
       CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
-        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
+        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
         & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
         & frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
@@ -372,7 +373,7 @@ PROGRAM jsb4_driver
         & CO2_concentration(:,iblk), &
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-        & rough_h_srf_proc(:,iblk), rough_m_srf(:), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
+        & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:), evapopot(:))
 
       IF (.NOT. read_interface_vars) THEN
@@ -437,11 +438,11 @@ PROGRAM jsb4_driver
 
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
   DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
-  DEALLOCATE(rough_m_srf, q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+  DEALLOCATE(q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
-    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, evap_act2pot_proc)
+    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evap_act2pot_proc)
     !DEALLOCATE(evap_act_sum_proc, evap_pot_sum_proc)
   ENDIF
 

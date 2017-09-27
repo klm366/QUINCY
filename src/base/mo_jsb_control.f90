@@ -25,6 +25,7 @@ MODULE mo_jsb_control
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
   PUBLIC :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, l_timer
+  PUBLIC :: max_no_of_models
 
   LOGICAL :: is_standalone
   LOGICAL :: restart_jsbach
@@ -40,7 +41,7 @@ MODULE mo_jsb_control
     CHARACTER(len=filename_max) :: model_namelist_filename
   END TYPE t_jsb_model_nml
 
-  INTEGER, PARAMETER    :: max_no_of_models = 2
+  INTEGER, PARAMETER    :: max_no_of_models = 10
   INTEGER :: no_of_models = 0
   TYPE(t_jsb_model_nml) :: jsb_models_nml(max_no_of_models)
 
@@ -151,8 +152,8 @@ CONTAINS
       READ(nml_unit, jsb_model_nml)
     END DO
 
-    IF (no_of_models >= max_no_of_models) THEN
-      CALL finish(routine, 'no_of_models >= max_no_of_models')
+    IF (no_of_models > max_no_of_models) THEN
+      CALL finish(routine, 'no_of_models > max_no_of_models')
     ENDIF
 
     ! Now read namelists again and set parameters
@@ -174,7 +175,7 @@ CONTAINS
       READ(nml_unit, jsb_model_nml)
 
       IF (jsb_models_nml(model_id)%model_id > 0) THEN
-        CALL finish(TRIM(routine), 'Model id alread taken.')
+        CALL finish(TRIM(routine), 'Model id already taken.')
       END IF
 
       IF (model_id > no_of_models) THEN

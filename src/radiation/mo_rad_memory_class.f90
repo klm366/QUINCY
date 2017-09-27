@@ -206,7 +206,7 @@ CONTAINS
         & t_cf('gridcell_surface_albedo_visible', '', ''),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & lrestart=.FALSE.,                                                       &
+        & lrestart=.TRUE.,                                                          &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir', mem%alb_nir,                                &
@@ -214,7 +214,7 @@ CONTAINS
         & t_cf('gridcell_surface_albedo_nir', '', ''),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & lrestart=.FALSE.,                                                       &
+        & lrestart=.TRUE.,                                                          &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_snow', mem%alb_vis_snow,      &

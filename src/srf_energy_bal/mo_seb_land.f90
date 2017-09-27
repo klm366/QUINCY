@@ -309,7 +309,11 @@ CONTAINS
     ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
     t_star(:) = s_star(:) / t2s_conv(:)
 
-    has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
+    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+      has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
+    ELSE
+      has_snow_layer(:) = w_snow(:) > dsl4jsb_Config(SSE_)%w_soil_critical
+    END IF
 
     ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
     WHERE (has_snow_layer(:) .OR. is_glacier(:))
@@ -325,7 +329,7 @@ CONTAINS
         & matrix_pot_sl  (:,1)                        , &
         & bclapp_sl      (:,1)                          &
         & )
-      WHERE (has_snow_layer(:) .AND. .NOT. is_glacier(:))
+      WHERE (.NOT. has_snow_layer(:) .AND. .NOT. is_glacier(:))
         WHERE (w_soil_sl(:,1) > MAX(liquid_max(:), dsl4jsb_Config(SSE_)%w_soil_critical))
           ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
           t_star(:) = MAX(t_star(:), tmelt)

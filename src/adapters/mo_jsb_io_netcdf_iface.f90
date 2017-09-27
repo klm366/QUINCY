@@ -198,10 +198,9 @@ CONTAINS
 
 #ifndef __ICON__
     REAL(wp), POINTER :: tmp_array(:)
-    INTEGER :: file_id, var_id
-    INTEGER :: varid, var_type, var_dims
+    INTEGER :: file_id, var_id, dim_id(MAX_VAR_DIMS), ndims
+    INTEGER :: varid, var_type
     INTEGER :: var_size(MAX_VAR_DIMS)
-    CHARACTER(LEN=filename_max) :: var_dim_name(MAX_VAR_DIMS)
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_1d'
@@ -221,27 +220,31 @@ CONTAINS
       file_id = input_file%file_id
 
       IF (my_process_is_stdio()) THEN
-        CALL netcdf_inq_var(file_id, variable_name, varid, var_type, var_dims, &
-          &                 var_size, var_dim_name)
+        CALL nf(nf_inq_varid(file_id, TRIM(variable_name), varid), TRIM(routine))
+        CALL nf(nf_inq_varndims(file_id, varid, ndims), TRIM(routine))
+        IF (ndims /= 1) CALL finish(TRIM(routine), 'only one variable dimension expected')
+        CALL nf(nf_inq_vardimid(file_id, varid, dim_id(1:ndims)), TRIM(routine))
+        CALL nf(nf_inq_dimlen(file_id, dim_id(1), var_size(1)), TRIM(routine))
       END IF
+      
       CALL p_bcast(var_size(1), p_io)
 
-      ALLOCATE(tmp_array(var_size(1))
+      ALLOCATE(tmp_array(var_size(1)))
 
       IF (my_process_is_stdio()) THEN
         CALL nf(nf_inq_varid(file_id, TRIM(variable_name), var_id), TRIM(routine))
 
         CALL nf(nf_get_var_double(file_id, var_id, tmp_array), TRIM(routine))
       END IF
+      CALL p_bcast(tmp_array, p_io)
 
       IF (PRESENT(fill_array)) THEN
+        fill_array(:) = tmp_array(:)
         netcdf_read_real_1d => fill_array
       ELSE
-        ALLOCATE(netcdf_read_real_1d(var_size(1))
-        netcdf_read_real_1d(:) = 0._wp
+        ALLOCATE(netcdf_read_real_1d(var_size(1)))
+        netcdf_read_real_1d(:) = tmp_array(:)
       END IF
-
-      CALL scatter_field(tmp_array, netcdf_read_real_1d)
 
       DEALLOCATE(tmp_array)
 #endif

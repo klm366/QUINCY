@@ -350,7 +350,9 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
-      dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
+      IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+        dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
+      END IF
       dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_freeze_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
@@ -360,13 +362,22 @@ CONTAINS
         ! Correction for snowmelt
         t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:) 
 
-        heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
-        WHERE (snow_depth_sl(:,nsnow) < EPSILON(1._wp) .AND. heat_cap(:) > 0._wp)  ! No snow layers present
-          ! Correction for melting of ice in soil layers
-          t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
-          t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
-        END WHERE
-
+        IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+          heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
+          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+            WHERE (snow_depth_sl(:,nsnow) < EPSILON(1._wp) .AND. heat_cap(:) > 0._wp)  ! No snow layers present
+              ! Correction for melting of ice in soil layers
+              t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
+              t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
+            END WHERE
+          ELSE   ! No snow layers present
+            WHERE (heat_cap(:) > 0._wp)
+              ! Correction for melting of ice in soil layers
+              t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
+              t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
+            END WHERE
+          END IF
+        END IF
       END IF
 
     ELSE

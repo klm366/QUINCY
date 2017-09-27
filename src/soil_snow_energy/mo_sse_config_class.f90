@@ -25,7 +25,13 @@ MODULE mo_sse_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_sse_config
     INTEGER  :: nsnow           !< Maximum number of snow layers
     LOGICAL  :: l_snow          !< T: Consider snow layers in soil thermal calculations
-    LOGICAL  :: l_dynsnow       !< T: Calculate snow parameters dynamically
+    ! l_dynsnow, l_heat_cap_dyn and l_heat_cond_dyn are only effective for l_snow=.true.
+    LOGICAL  :: l_dynsnow       !< T: Calculate snow parameters heat cond. and heat cap. dynamically (depending on snow density)
+    LOGICAL  :: l_heat_cap_dyn  !< T: Use dynamic calculation of soil heat capacity, F: use mineral soil map
+    LOGICAL  :: l_heat_cond_dyn !< T: Use dynamic calculation of soil heat conductivity, F: use mineral soil map
+    !
+    LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
+    LOGICAL  :: l_heat_cond_map !< T: USe soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing in thermal soil calculations
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface 
@@ -52,7 +58,7 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_freeze, l_supercool
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
@@ -61,6 +67,8 @@ CONTAINS
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
+      & l_heat_cap_dyn, l_heat_cond_dyn,        &
+      & l_heat_cap_map, l_heat_cond_map,        &
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename, bc_filename
 
@@ -82,8 +90,12 @@ CONTAINS
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp
     l_snow           = .TRUE.
-    l_dynsnow        = .FALSE.
-    l_freeze         = .TRUE.
+    l_dynsnow        = .TRUE.
+    l_heat_cap_dyn   = .TRUE.
+    l_heat_cond_dyn  = .TRUE.
+    l_heat_cap_map   = .FALSE.
+    l_heat_cond_map  = .FALSE.
+    l_freeze         = .FALSE.
     l_supercool      = .FALSE.
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
@@ -100,9 +112,6 @@ CONTAINS
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 
-    IF (.NOT. l_snow) &
-      & CALL finish(TRIM(routine), 'Only the new snow model is possible. Set l_snow=.TRUE. in namelist.')
-
     config%nsnow         = nsnow
     IF (l_snow .AND. nsnow > max_snow_layers) THEN
       CALL finish(TRIM(routine), 'Too many snow layers, maximum is '//TRIM(int2string(max_snow_layers)))
@@ -114,12 +123,31 @@ CONTAINS
     IF (l_snow) THEN
       CALL message(TRIM(routine), 'Using '//TRIM(int2string(nsnow))//' snow layers.')
     ELSE
-      CALL message(TRIM(routine), 'Not using snow layers.')
+      CALL message(TRIM(routine), 'Not using multi-layer snow model')
     END IF
 
-    config%l_dynsnow     = l_dynsnow
-    config%l_freeze      = l_freeze
-    config%l_supercool   = l_supercool
+    IF (.NOT. l_snow .AND. l_dynsnow) THEN
+      config%l_dynsnow = .FALSE.
+      CALL message(TRIM(routine), 'l_dynsnow not in effect for l_snow=.false.')
+    ELSE
+      config%l_dynsnow       = l_dynsnow
+    END IF
+    IF (.NOT. l_snow .AND. l_heat_cap_dyn) THEN
+      config%l_heat_cap_dyn = .FALSE.
+      CALL message(TRIM(routine), 'l_heat_cap_dyn not in effect for l_snow=.false.')
+    ELSE
+      config%l_heat_cap_dyn  = l_heat_cap_dyn
+    END IF
+    IF (.NOT. l_snow .AND. l_heat_cond_dyn) THEN
+      config%l_heat_cond_dyn = .FALSE.
+      CALL message(TRIM(routine), 'l_heat_cond_dyn not in effect for l_snow=.false.')
+    ELSE
+      config%l_heat_cond_dyn = l_heat_cond_dyn
+    END IF
+    config%l_heat_cap_map  = l_heat_cap_map
+    config%l_heat_cond_map = l_heat_cond_map
+    config%l_freeze        = l_freeze
+    config%l_supercool     = l_supercool
 
     config%w_soil_critical     = w_soil_critical
     CALL message(TRIM(routine), 'Critical water/ice content in upper soil layer for correction of '// &

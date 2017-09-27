@@ -63,8 +63,7 @@ CONTAINS
         &                  jsb_models_nml(model_idx)%model_shortname,         &
         &                  jsb_models_nml(model_idx)%model_description,       &
         &                  jsb_models_nml(model_idx)%model_namelist_filename)
-      current%id = model_idx
-      jsbach%models(model_idx)%m => current
+      jsbach%models(jsb_models_nml(model_idx)%model_id)%m => current
     END DO
 
     ! Configure models according to model namelist(s)
@@ -76,6 +75,7 @@ CONTAINS
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(current%shortname))
        CALL message('     ', '... ID: '//TRIM(int2string(current%id)))
        CALL message('     ', '... Usecase: '//TRIM(current%config%usecase))
+       CALL message('     ', '... Reading configuration from namelist: '//TRIM(current%namelist_filename))
        CALL message('     ', '... Reading tile fractions from: '//TRIM(current%config%fract_filename))
 
        IF (jsbach_runs_standalone()) THEN

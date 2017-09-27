@@ -241,8 +241,7 @@ CONTAINS
 
     ! Compute snow density
     IF (l_dynsnow) THEN
-      ! If there was no considerable amount of snow before use the density of fresh snow
-      IF (snow_soil_old > snow_depth_min) THEN
+      IF (snow_soil_old * rhoh2o / snow_soil_dens > snow_depth_min) THEN
         ! Update density of old snow following eq. 31 of Verseghy, 1991
         snow_soil_dens = dens_snow_max - (dens_snow_max - snow_soil_dens) * EXP(-0.01_wp * delta_time/3600._wp)
         ! Calculate weighted mean density from old and fresh snow

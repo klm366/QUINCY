@@ -50,6 +50,9 @@ CONTAINS
     CASE ('jsbach_lite_with_hd')
       CALL init_usecase_lite_with_hd(model)
 
+    CASE ('jsbach_lite_nolake_with_hd')
+      CALL init_usecase_lite_nolake_with_hd(model)
+
     CASE ('jsbach_lite_tpe_open')
       CALL init_usecase_lite_tpe_open(model)
 
@@ -131,15 +134,15 @@ CONTAINS
         & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile, &
-        & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
+        & fract_varname='equal')   ! Fraction = 1.
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
+          & fract_varname='fract_glac')
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_veg')
+          & fract_varname='fract_veg')
 
     NULLIFY(box_tile)
 
@@ -158,8 +161,8 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_     , HYDRO_   , TURB_    , SEB_    , HD_     /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_, ON_TILE_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_     , HYDRO_   , TURB_    , HD_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
       & lct=t_jsb_lct(LAND_TYPE), &
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
@@ -173,19 +176,56 @@ CONTAINS
         & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile, &
-        & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
+        & fract_varname='fract_land')
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
+          & fract_varname='fract_glac')
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_veg')
+          & fract_varname='fract_veg')
 
     NULLIFY(box_tile)
 
   END SUBROUTINE init_usecase_lite_with_hd
+
+  SUBROUTINE init_usecase_lite_nolake_with_hd(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, land_tile, glacier_tile, veg_tile
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_nolake_with_hd'
+
+    grid => Get_grid(model%grid_id)
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_,      HYDRO_,    TURB_    , HD_     /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
+      & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
+    model%top => box_tile
+
+      ! Create sub-tiles
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), &
+        & parent=box_tile, &
+        & fract_varname='equal')   ! Fraction = 1.
+
+        glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
+          & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+          & fract_varname='fract_glac')
+
+        veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='fract_veg')
+
+    NULLIFY(box_tile)
+
+  END SUBROUTINE init_usecase_lite_nolake_with_hd
 
   SUBROUTINE init_usecase_lite_tpe_open(model)
 
