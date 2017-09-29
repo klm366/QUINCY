@@ -72,8 +72,6 @@ MODULE mo_jsb_var_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
     REAL(wp), ALLOCATABLE :: ptr(:,:)
-  CONTAINS
-    PROCEDURE :: Init => init_t_jsb_var_real2d
   END TYPE t_jsb_var_real2d
 
   !-----------------------------------------------------------------------------------------------------!
@@ -87,8 +85,6 @@ MODULE mo_jsb_var_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
     REAL(wp), ALLOCATABLE :: ptr(:,:,:)
-  CONTAINS
-    PROCEDURE :: Init => init_t_jsb_var_real3d
   END TYPE t_jsb_var_real3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -162,33 +158,7 @@ MODULE mo_jsb_var_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
 
-CONTAINS
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Initialisation of var_real2d with a scalar 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_t_jsb_var_real2d(this,s)
-    IMPLICIT NONE
-    CLASS(t_jsb_var_real2d), INTENT(inout) :: this
-    REAL(wp),                INTENT(in)    :: s
-
-    this%ptr(:,:)     = s 
-  END SUBROUTINE init_t_jsb_var_real2d 
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Initialisation of var_real3d with a scalar 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_t_jsb_var_real3d(this,s)
-    IMPLICIT NONE
-    CLASS(t_jsb_var_real3d), INTENT(inout) :: this
-    REAL(wp),                INTENT(in)    :: s
-
-    this%ptr(:,:,:)     = s 
-  END SUBROUTINE init_t_jsb_var_real3d 
-
+!CONTAINS
 
 
 !!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)

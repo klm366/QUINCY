@@ -25,12 +25,104 @@ MODULE mo_sb_memory_class
   PRIVATE
   PUBLIC :: t_sb_memory, max_no_of_vars
   PUBLIC :: t_slm_struct_sb_element, t_slm_struct_sb_pool   ! *slmjsb4
-  PUBLIC :: max_no_of_structs, max_no_of_n_structs                      ! *slmjsb4
+  PUBLIC :: max_no_of_structs, max_no_of_n_structs          ! *slmjsb4
+  PUBLIC :: t_sb_element_a, t_sb_pool_a                     ! *slmtemp
 
   INTEGER, PARAMETER :: max_no_of_vars      = 120   !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for helper elements with ALLOCATABLE variables for elements in sb memory
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_sb_element_a
+    REAL(wp), ALLOCATABLE :: carbon(:,:)      ! dimension of variable in memory is var(ics:ice,soil_layers,iblk)
+    REAL(wp), ALLOCATABLE :: nitrogen(:,:)
+    REAL(wp), ALLOCATABLE :: phosphorus(:,:)
+    REAL(wp), ALLOCATABLE :: carbon13(:,:)
+    REAL(wp), ALLOCATABLE :: carbon14(:,:)
+    REAL(wp), ALLOCATABLE :: nitrogen15(:,:)
+  CONTAINS
+    PRIVATE
+    !! operator overload
+    ! +
+    PROCEDURE               :: Add_element_a                   ! Add two elements
+    PROCEDURE               :: Add_element_a_and_scalar        ! Add scalar to element
+    PROCEDURE               :: Add_element_a_and_field2d       ! Add REAL field2d ( var(ics:ice,soil_layers) ) to element
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_a, Add_element_a_and_scalar, Add_element_a_and_field2d
+    !! operator overload
+    ! -
+    PROCEDURE               :: Subtract_element_a                   ! Subtract one element from another element
+    PROCEDURE               :: Subtract_element_a_and_scalar        ! Subtract scalar from element
+    PROCEDURE               :: Subtract_element_a_and_field2d       ! Subtract field2d ( var(ics:ice,soil_layers) ) from element
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_a, Subtract_element_a_and_scalar, Subtract_element_a_and_field2d
+    !! operator overload
+    ! /
+    PROCEDURE               :: Divide_element_a                   ! Divide two elements
+    PROCEDURE               :: Divide_element_a_and_scalar        ! Divide scalar to element
+    PROCEDURE               :: Divide_element_a_and_field2d       ! Divide REAL field2d ( var(ics:ice,soil_layers) ) to element
+    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_element_a, Divide_element_a_and_scalar, Divide_element_a_and_field2d
+    !! operator overload
+    ! *
+    PROCEDURE               :: Multiply_element_a                   ! Multiply two elements
+    PROCEDURE               :: Multiply_element_a_and_scalar        ! Multiply element with 
+    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_element_a        ! Multiply scalar with element
+    PROCEDURE               :: Multiply_element_a_and_field2d       ! Multiply element with REAL field2d ( var(ics:ice,soil_layers) )
+    PROCEDURE, PASS(this2)  :: Multiply_field2d_and_element_a       ! Multiply REAL field2d ( var(ics:ice,soil_layers) ) with element
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_a, Multiply_element_a_and_scalar, Multiply_scalar_and_element_a, &
+                                              Multiply_element_a_and_field2d, Multiply_field2d_and_element_a
+  END TYPE t_sb_element_a
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for helper pools with ALLOCATABLE variables for pools in sb memory
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_sb_pool_a
+    TYPE(t_sb_element_a)  :: dom                 !< dissolved organic matter
+    TYPE(t_sb_element_a)  :: dom_assoc           !< minerally associated disolved organic matter
+    TYPE(t_sb_element_a)  :: soluable_litter     !< metabolic litter (sugars, cellulose etc.)
+    TYPE(t_sb_element_a)  :: polymeric_litter    !< structural litter (lignified litter)
+    TYPE(t_sb_element_a)  :: woody_litter        !< physically protected wood litter
+    TYPE(t_sb_element_a)  :: fungi               !< saprophytic fungal biomass
+    TYPE(t_sb_element_a)  :: mycorrhiza          !< mycorrhizal fungal biomass 
+    TYPE(t_sb_element_a)  :: microbial           !< microbial biomass (bacteria!)
+    TYPE(t_sb_element_a)  :: residue             !< necromass of fungi, microbial and mycorrhiza
+    TYPE(t_sb_element_a)  :: residue_assoc       !< minerally associated microbial necromass 
+  CONTAINS
+    PRIVATE
+    !! operator overload
+    ! +
+    PROCEDURE               :: Add_pool_a                   ! Add two pools
+    PROCEDURE               :: Add_pool_a_and_scalar        ! Add scalar to pool
+    PROCEDURE               :: Add_pool_a_and_field2d       ! Add REAL field2d ( var(ics:ice,soil_layers) ) to pool
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_a, Add_pool_a_and_scalar, Add_pool_a_and_field2d
+    !! operator overload
+    ! -
+    PROCEDURE               :: Subtract_pool_a                   ! Subtract one pool from another pool
+    PROCEDURE               :: Subtract_pool_a_and_scalar        ! Subtract scalar from pool
+    PROCEDURE               :: Subtract_pool_a_and_field2d       ! Subtract field2d ( var(ics:ice,soil_layers) ) from pool
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_a, Subtract_pool_a_and_scalar, Subtract_pool_a_and_field2d
+    !! operator overload
+    ! /
+    PROCEDURE               :: Divide_pool_a                   ! Divide two pools
+    PROCEDURE               :: Divide_pool_a_and_scalar        ! Divide scalar to pool
+    PROCEDURE               :: Divide_pool_a_and_field2d       ! Divide REAL field2d ( var(ics:ice,soil_layers) ) to pool
+    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_pool_a, Divide_pool_a_and_scalar, Divide_pool_a_and_field2d
+    !! operator overload
+    ! *
+    PROCEDURE               :: Multiply_pool_a                   ! Multiply two pools
+    PROCEDURE               :: Multiply_pool_a_and_scalar        ! Multiply pool with scalar
+    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_pool_a        ! Multiply scalar with pool
+    PROCEDURE               :: Multiply_pool_a_and_field2d       ! Multiply pool with REAL 1D field2d ( var(ics:ice) )
+    PROCEDURE, PASS(this2)  :: Multiply_field2d_and_pool_a       ! Multiply REAL 1D field2d ( var(ics:ice,soil_layers) ) with pool
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_a, Multiply_pool_a_and_scalar, Multiply_scalar_and_pool_a, &
+                                              Multiply_pool_a_and_field2d, Multiply_field2d_and_pool_a
+  END TYPE t_sb_pool_a
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -47,30 +139,7 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real3d)    :: carbon14     !< 14carbon concentration of pool [pmol m-3]
     TYPE(t_jsb_var_real3d)    :: nitrogen15   !< 15nitrogen concentration of pool [mol m-3]
   CONTAINS
-    PRIVATE
-!!$    !! operator overload
-!!$    ! +
-!!$    PROCEDURE               :: Add_struct                   ! Add two variables of type t_slm_struct_sb_element
-!!$    PROCEDURE               :: Add_struct_and_scalar        ! Add variable of type t_slm_struct_sb_element with REAL scalar
-!!$    PROCEDURE               :: Add_struct_and_field3d       ! Add variable of type t_slm_struct_sb_element with REAL 2-d field2d
-!!$    GENERIC, PUBLIC         :: OPERATOR(+) => Add_struct, Add_struct_and_scalar, Add_struct_and_field3d
-!!$    ! -
-!!$    PROCEDURE               :: Subtract_struct              ! Subtract two variables of type t_slm_struct_sb_element
-!!$    PROCEDURE               :: Subtract_struct_and_scalar   ! Subtract variable of type t_slm_struct_sb_element with REAL scalar
-!!$    PROCEDURE               :: Subtract_struct_and_field3d  ! Subtract variable of type t_slm_struct_sb_element with REAL 2-d field2d
-!!$    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_struct, Subtract_struct_and_scalar, Subtract_struct_and_field3d
-!!$    ! *
-!!$    PROCEDURE               :: Multiply_struct              ! Multiply two variables of type t_slm_struct_sb_element
-!!$    PROCEDURE               :: Multiply_struct_and_scalar   ! Multiply variable of type t_slm_struct_sb_element with REAL scalar
-!!$    PROCEDURE               :: Multiply_struct_and_field3d  ! Multiply variable of type t_slm_struct_sb_element with REAL 2-d field2d
-!!$    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_struct, Multiply_struct_and_scalar, Multiply_struct_and_field3d
-!!$    ! /
-!!$    PROCEDURE               :: Divide_struct                ! Divide two variables of type t_slm_struct_sb_element
-!!$    PROCEDURE               :: Divide_struct_and_scalar     ! Divide variable of type t_slm_struct_sb_element by REAL scalar
-!!$    PROCEDURE               :: Divide_struct_and_field3d    ! Divide variable of type t_slm_struct_sb_element by REAL 2-d field2d
-!!$    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_struct, Divide_struct_and_scalar, Divide_struct_and_field3d
-    !! initialize with/ set to a certain REAL
-    PROCEDURE, PUBLIC       :: init => init_t_slm_struct_sb_element
+    PROCEDURE  :: init => init_t_slm_struct_sb_element
   END TYPE t_slm_struct_sb_element
 
 
@@ -92,30 +161,7 @@ MODULE mo_sb_memory_class
     TYPE(t_slm_struct_sb_element)  :: residue             !< necromass of fungi, microbial and mycorrhiza
     TYPE(t_slm_struct_sb_element)  :: residue_assoc       !< minerally associated microbial necromass 
   CONTAINS
-    PRIVATE
-!!$    !! operator overload
-!!$    ! +
-!!$    PROCEDURE               :: Add_n_struct                   
-!!$    PROCEDURE               :: Add_n_struct_and_scalar        
-!!$    PROCEDURE               :: Add_n_struct_and_field3d       
-!!$    GENERIC, PUBLIC         :: OPERATOR(+) => Add_n_struct, Add_n_struct_and_scalar, Add_n_struct_and_field3d
-!!$    ! -
-!!$    PROCEDURE               :: Subtract_n_struct              
-!!$    PROCEDURE               :: Subtract_n_struct_and_scalar   
-!!$    PROCEDURE               :: Subtract_n_struct_and_field3d  
-!!$    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_n_struct, Subtract_n_struct_and_scalar, Subtract_n_struct_and_field3d
-!!$    ! *
-!!$    PROCEDURE               :: Multiply_n_struct              
-!!$    PROCEDURE               :: Multiply_n_struct_and_scalar   
-!!$    PROCEDURE               :: Multiply_n_struct_and_field3d  
-!!$    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_n_struct, Multiply_n_struct_and_scalar, Multiply_n_struct_and_field3d
-!!$    ! /
-!!$    PROCEDURE               :: Divide_n_struct                
-!!$    PROCEDURE               :: Divide_n_struct_and_scalar     
-!!$    PROCEDURE               :: Divide_n_struct_and_field3d    
-!!$    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_n_struct, Divide_n_struct_and_scalar, Divide_n_struct_and_field3d
-    !! initialize with/ set to a certain REAL
-    PROCEDURE, PUBLIC       :: init => init_t_slm_struct_sb_pool
+    PROCEDURE  :: init => init_t_slm_struct_sb_pool
   END TYPE t_slm_struct_sb_pool
 
 
@@ -296,258 +342,654 @@ MODULE mo_sb_memory_class
 
 CONTAINS
 
-!!$  !-----------------------------------------------------------------------------------------------------!
-!!$  ! t_slm_struct_sb_element operator overload                                                           !
-!!$  !-----------------------------------------------------------------------------------------------------!
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> + (t_slm_struct_sb_element + t_slm_struct_sb_element)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Add_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      + struct2%carbon
-!!$    struct3%nitrogen     = this%nitrogen    + struct2%nitrogen
-!!$    struct3%phosphorus   = this%phosphorus  + struct2%phosphorus
-!!$    struct3%carbon13     = this%carbon13    + struct2%carbon13
-!!$    struct3%carbon14     = this%carbon14    + struct2%carbon14
-!!$    struct3%nitrogen15   = this%nitrogen15  + struct2%nitrogen15
-!!$  END FUNCTION Add_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> + (t_slm_struct_sb_element + scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Add_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      + scalar
-!!$    struct3%nitrogen     = this%nitrogen    + scalar
-!!$    struct3%phosphorus   = this%phosphorus  + scalar
-!!$    struct3%carbon13     = this%carbon13    + scalar
-!!$    struct3%carbon14     = this%carbon14    + scalar
-!!$    struct3%nitrogen15   = this%nitrogen15  + scalar
-!!$  END FUNCTION Add_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> + (t_slm_struct_sb_element + field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Add_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      + field3d
-!!$    struct3%nitrogen     = this%nitrogen    + field3d
-!!$    struct3%phosphorus   = this%phosphorus  + field3d
-!!$    struct3%carbon13     = this%carbon13    + field3d
-!!$    struct3%carbon14     = this%carbon14    + field3d
-!!$    struct3%nitrogen15   = this%nitrogen15  + field3d
-!!$  END FUNCTION Add_struct_and_field3d
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> - (t_slm_struct_sb_element - t_slm_struct_sb_element)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Subtract_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      - struct2%carbon
-!!$    struct3%nitrogen     = this%nitrogen    - struct2%nitrogen
-!!$    struct3%phosphorus   = this%phosphorus  - struct2%phosphorus
-!!$    struct3%carbon13     = this%carbon13    - struct2%carbon13
-!!$    struct3%carbon14     = this%carbon14    - struct2%carbon14
-!!$    struct3%nitrogen15   = this%nitrogen15  - struct2%nitrogen15
-!!$  END FUNCTION Subtract_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> - (t_slm_struct_sb_element - scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Subtract_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      - scalar
-!!$    struct3%nitrogen     = this%nitrogen    - scalar
-!!$    struct3%phosphorus   = this%phosphorus  - scalar
-!!$    struct3%carbon13     = this%carbon13    - scalar
-!!$    struct3%carbon14     = this%carbon14    - scalar
-!!$    struct3%nitrogen15   = this%nitrogen15  - scalar
-!!$  END FUNCTION Subtract_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> - (t_slm_struct_sb_element - field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Subtract_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      - field3d
-!!$    struct3%nitrogen     = this%nitrogen    - field3d
-!!$    struct3%phosphorus   = this%phosphorus  - field3d
-!!$    struct3%carbon13     = this%carbon13    - field3d
-!!$    struct3%carbon14     = this%carbon14    - field3d
-!!$    struct3%nitrogen15   = this%nitrogen15  - field3d
-!!$  END FUNCTION Subtract_struct_and_field3d
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> * (t_slm_struct_sb_element * t_slm_struct_sb_element)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Multiply_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      * struct2%carbon
-!!$    struct3%nitrogen     = this%nitrogen    * struct2%nitrogen
-!!$    struct3%phosphorus   = this%phosphorus  * struct2%phosphorus
-!!$    struct3%carbon13     = this%carbon13    * struct2%carbon13
-!!$    struct3%carbon14     = this%carbon14    * struct2%carbon14
-!!$    struct3%nitrogen15   = this%nitrogen15  * struct2%nitrogen15
-!!$  END FUNCTION Multiply_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> * (t_slm_struct_sb_element * scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Multiply_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      * scalar
-!!$    struct3%nitrogen     = this%nitrogen    * scalar
-!!$    struct3%phosphorus   = this%phosphorus  * scalar
-!!$    struct3%carbon13     = this%carbon13    * scalar
-!!$    struct3%carbon14     = this%carbon14    * scalar
-!!$    struct3%nitrogen15   = this%nitrogen15  * scalar
-!!$  END FUNCTION Multiply_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> * (t_slm_struct_sb_element * field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Multiply_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      * field3d
-!!$    struct3%nitrogen     = this%nitrogen    * field3d
-!!$    struct3%phosphorus   = this%phosphorus  * field3d
-!!$    struct3%carbon13     = this%carbon13    * field3d
-!!$    struct3%carbon14     = this%carbon14    * field3d
-!!$    struct3%nitrogen15   = this%nitrogen15  * field3d
-!!$  END FUNCTION Multiply_struct_and_field3d
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> / (t_slm_struct_sb_element / t_slm_struct_sb_element)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Divide_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2 
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3       
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      / struct2%carbon
-!!$    struct3%nitrogen     = this%nitrogen    / struct2%nitrogen
-!!$    struct3%phosphorus   = this%phosphorus  / struct2%phosphorus
-!!$    struct3%carbon13     = this%carbon13    / struct2%carbon13
-!!$    struct3%carbon14     = this%carbon14    / struct2%carbon14
-!!$    struct3%nitrogen15   = this%nitrogen15  / struct2%nitrogen15
-!!$  END FUNCTION Divide_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> / (t_slm_struct_sb_element / scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Divide_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      / scalar
-!!$    struct3%nitrogen     = this%nitrogen    / scalar
-!!$    struct3%phosphorus   = this%phosphorus  / scalar
-!!$    struct3%carbon13     = this%carbon13    / scalar
-!!$    struct3%carbon14     = this%carbon14    / scalar
-!!$    struct3%nitrogen15   = this%nitrogen15  / scalar
-!!$  END FUNCTION Divide_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> / (t_slm_struct_sb_element / field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Divide_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%carbon       = this%carbon      / field3d
-!!$    struct3%nitrogen     = this%nitrogen    / field3d
-!!$    struct3%phosphorus   = this%phosphorus  / field3d
-!!$    struct3%carbon13     = this%carbon13    / field3d
-!!$    struct3%carbon14     = this%carbon14    / field3d
-!!$    struct3%nitrogen15   = this%nitrogen15  / field3d
-!!$  END FUNCTION Divide_struct_and_field3d
-!!$
+  !-----------------------------------------------------------------------------------------------------!
+  ! t_sb_element_a operator overload                                                                   !
+  !-----------------------------------------------------------------------------------------------------!
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_sb_element_a + t_sb_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_element_a(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this, element2
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)       ! note: Function results are automatically deallocated after the result is "used" in the outer scope.
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      + element2%carbon(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    + element2%nitrogen(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  + element2%phosphorus(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    + element2%carbon13(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    + element2%carbon14(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  + element2%nitrogen15(:,:)
+  END FUNCTION Add_element_a
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_sb_element_a + scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_element_a_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: scalar
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      + scalar
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    + scalar
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  + scalar
+    element3%carbon13(:,:)     = this%carbon13(:,:)    + scalar
+    element3%carbon14(:,:)     = this%carbon14(:,:)    + scalar
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  + scalar
+  END FUNCTION Add_element_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_sb_element_a + field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_element_a_and_field2d(this,field2d) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      + field2d(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    + field2d(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  + field2d(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    + field2d(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    + field2d(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  + field2d(:,:)
+  END FUNCTION Add_element_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_sb_element_a - t_sb_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_element_a(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this, element2
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      - element2%carbon(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    - element2%nitrogen(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  - element2%phosphorus(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    - element2%carbon13(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    - element2%carbon14(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  - element2%nitrogen15(:,:)
+  END FUNCTION Subtract_element_a
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_sb_element_a - scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_element_a_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: scalar
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      - scalar
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    - scalar
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  - scalar
+    element3%carbon13(:,:)     = this%carbon13(:,:)    - scalar
+    element3%carbon14(:,:)     = this%carbon14(:,:)    - scalar
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  - scalar
+  END FUNCTION Subtract_element_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_sb_element_a - field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_element_a_and_field2d(this,field2d) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      - field2d(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    - field2d(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  - field2d(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    - field2d(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    - field2d(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  - field2d(:,:)
+  END FUNCTION Subtract_element_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_sb_element_a / t_sb_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Divide_element_a(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this, element2
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)       ! note: Function results are automatically deallocated after the result is "used" in the outer scope.
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      / element2%carbon(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    / element2%nitrogen(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  / element2%phosphorus(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    / element2%carbon13(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    / element2%carbon14(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  / element2%nitrogen15(:,:)
+  END FUNCTION Divide_element_a
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_sb_element_a / scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Divide_element_a_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: scalar
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      / scalar
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    / scalar
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  / scalar
+    element3%carbon13(:,:)     = this%carbon13(:,:)    / scalar
+    element3%carbon14(:,:)     = this%carbon14(:,:)    / scalar
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  / scalar
+  END FUNCTION Divide_element_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_sb_element_a / field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Divide_element_a_and_field2d(this,field2d) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      / field2d(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    / field2d(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  / field2d(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    / field2d(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    / field2d(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  / field2d(:,:)
+  END FUNCTION Divide_element_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_sb_element_a * t_sb_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_element_a(this,element2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this, element2
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      * element2%carbon(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    * element2%nitrogen(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  * element2%phosphorus(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    * element2%carbon13(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    * element2%carbon14(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  * element2%nitrogen15(:,:)
+  END FUNCTION Multiply_element_a
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_sb_element_a * scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_element_a_and_scalar(this,scalar) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: scalar
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      * scalar
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    * scalar
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  * scalar
+    element3%carbon13(:,:)     = this%carbon13(:,:)    * scalar
+    element3%carbon14(:,:)     = this%carbon14(:,:)    * scalar
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  * scalar
+  END FUNCTION Multiply_element_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> * (scalar * t_sb_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_scalar_and_element_a(scalar,this2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),              INTENT(in)  :: scalar
+    CLASS(t_sb_element_a), INTENT(in)  :: this2
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this2%carbon)
+    ALLOCATE(element3%nitrogen,   source=this2%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this2%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this2%carbon13)
+    ALLOCATE(element3%carbon14,   source=this2%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
+    element3%carbon(:,:)       = scalar * this2%carbon(:,:)
+    element3%nitrogen(:,:)     = scalar * this2%nitrogen(:,:)
+    element3%phosphorus(:,:)   = scalar * this2%phosphorus(:,:)
+    element3%carbon13(:,:)     = scalar * this2%carbon13(:,:)
+    element3%carbon14(:,:)     = scalar * this2%carbon14(:,:)
+    element3%nitrogen15(:,:)   = scalar * this2%nitrogen15(:,:)
+  END FUNCTION Multiply_scalar_and_element_a
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_sb_element_a * field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_element_a_and_field2d(this,field2d) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_element_a), INTENT(in)  :: this
+    REAL(wp),              INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:,:)       = this%carbon(:,:)      * field2d(:,:)
+    element3%nitrogen(:,:)     = this%nitrogen(:,:)    * field2d(:,:)
+    element3%phosphorus(:,:)   = this%phosphorus(:,:)  * field2d(:,:)
+    element3%carbon13(:,:)     = this%carbon13(:,:)    * field2d(:,:)
+    element3%carbon14(:,:)     = this%carbon14(:,:)    * field2d(:,:)
+    element3%nitrogen15(:,:)   = this%nitrogen15(:,:)  * field2d(:,:)
+  END FUNCTION Multiply_element_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> * (field2d * t_sb_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_field2d_and_element_a(field2d,this2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),              INTENT(in)  :: field2d(:,:)
+    CLASS(t_sb_element_a), INTENT(in)  :: this2
+    TYPE(t_sb_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this2%carbon)
+    ALLOCATE(element3%nitrogen,   source=this2%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this2%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this2%carbon13)
+    ALLOCATE(element3%carbon14,   source=this2%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
+    element3%carbon(:,:)       = field2d(:,:) * this2%carbon(:,:)
+    element3%nitrogen(:,:)     = field2d(:,:) * this2%nitrogen(:,:)
+    element3%phosphorus(:,:)   = field2d(:,:) * this2%phosphorus(:,:)
+    element3%carbon13(:,:)     = field2d(:,:) * this2%carbon13(:,:)
+    element3%carbon14(:,:)     = field2d(:,:) * this2%carbon14(:,:)
+    element3%nitrogen15(:,:)   = field2d(:,:) * this2%nitrogen15(:,:)
+  END FUNCTION Multiply_field2d_and_element_a
+  
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! t_sb_pool_a operator overload                                                                       !
+  !-----------------------------------------------------------------------------------------------------!
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_sb_pool_a + t_sb_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_pool_a(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              + pool2%dom
+    pool3%dom_assoc         = this%dom_assoc        + pool2%dom_assoc
+    pool3%soluable_litter   = this%soluable_litter  + pool2%soluable_litter
+    pool3%polymeric_litter  = this%polymeric_litter + pool2%polymeric_litter
+    pool3%woody_litter      = this%woody_litter     + pool2%woody_litter
+    pool3%fungi             = this%fungi            + pool2%fungi
+    pool3%mycorrhiza        = this%mycorrhiza       + pool2%mycorrhiza
+    pool3%microbial         = this%microbial        + pool2%microbial
+    pool3%residue           = this%residue          + pool2%residue
+    pool3%residue_assoc     = this%residue_assoc    + pool2%residue_assoc
+  END FUNCTION Add_pool_a
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_sb_pool_a + scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_pool_a_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: scalar
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              + scalar
+    pool3%dom_assoc         = this%dom_assoc        + scalar
+    pool3%soluable_litter   = this%soluable_litter  + scalar
+    pool3%polymeric_litter  = this%polymeric_litter + scalar
+    pool3%woody_litter      = this%woody_litter     + scalar
+    pool3%fungi             = this%fungi            + scalar
+    pool3%mycorrhiza        = this%mycorrhiza       + scalar
+    pool3%microbial         = this%microbial        + scalar
+    pool3%residue           = this%residue          + scalar
+    pool3%residue_assoc     = this%residue_assoc    + scalar
+  END FUNCTION Add_pool_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_sb_pool_a + field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_pool_a_and_field2d(this,field2d) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: field2d(:,:)
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              + field2d(:,:)
+    pool3%dom_assoc         = this%dom_assoc        + field2d(:,:)
+    pool3%soluable_litter   = this%soluable_litter  + field2d(:,:)
+    pool3%polymeric_litter  = this%polymeric_litter + field2d(:,:)
+    pool3%woody_litter      = this%woody_litter     + field2d(:,:)
+    pool3%fungi             = this%fungi            + field2d(:,:)
+    pool3%mycorrhiza        = this%mycorrhiza       + field2d(:,:)
+    pool3%microbial         = this%microbial        + field2d(:,:)
+    pool3%residue           = this%residue          + field2d(:,:)
+    pool3%residue_assoc     = this%residue_assoc    + field2d(:,:)
+  END FUNCTION Add_pool_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_sb_pool_a - t_sb_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_pool_a(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              - pool2%dom
+    pool3%dom_assoc         = this%dom_assoc        - pool2%dom_assoc
+    pool3%soluable_litter   = this%soluable_litter  - pool2%soluable_litter
+    pool3%polymeric_litter  = this%polymeric_litter - pool2%polymeric_litter
+    pool3%woody_litter      = this%woody_litter     - pool2%woody_litter
+    pool3%fungi             = this%fungi            - pool2%fungi
+    pool3%mycorrhiza        = this%mycorrhiza       - pool2%mycorrhiza
+    pool3%microbial         = this%microbial        - pool2%microbial
+    pool3%residue           = this%residue          - pool2%residue
+    pool3%residue_assoc     = this%residue_assoc    - pool2%residue_assoc
+  END FUNCTION Subtract_pool_a
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_sb_pool_a - scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_pool_a_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: scalar
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              - scalar
+    pool3%dom_assoc         = this%dom_assoc        - scalar
+    pool3%soluable_litter   = this%soluable_litter  - scalar
+    pool3%polymeric_litter  = this%polymeric_litter - scalar
+    pool3%woody_litter      = this%woody_litter     - scalar
+    pool3%fungi             = this%fungi            - scalar
+    pool3%mycorrhiza        = this%mycorrhiza       - scalar
+    pool3%microbial         = this%microbial        - scalar
+    pool3%residue           = this%residue          - scalar
+    pool3%residue_assoc     = this%residue_assoc    - scalar
+  END FUNCTION Subtract_pool_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_sb_pool_a - field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_pool_a_and_field2d(this,field2d) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: field2d(:,:)
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              - field2d(:,:)
+    pool3%dom_assoc         = this%dom_assoc        - field2d(:,:)
+    pool3%soluable_litter   = this%soluable_litter  - field2d(:,:)
+    pool3%polymeric_litter  = this%polymeric_litter - field2d(:,:)
+    pool3%woody_litter      = this%woody_litter     - field2d(:,:)
+    pool3%fungi             = this%fungi            - field2d(:,:)
+    pool3%mycorrhiza        = this%mycorrhiza       - field2d(:,:)
+    pool3%microbial         = this%microbial        - field2d(:,:)
+    pool3%residue           = this%residue          - field2d(:,:)
+    pool3%residue_assoc     = this%residue_assoc    - field2d(:,:)
+  END FUNCTION Subtract_pool_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_sb_pool_a / t_sb_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Divide_pool_a(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              / pool2%dom
+    pool3%dom_assoc         = this%dom_assoc        / pool2%dom_assoc
+    pool3%soluable_litter   = this%soluable_litter  / pool2%soluable_litter
+    pool3%polymeric_litter  = this%polymeric_litter / pool2%polymeric_litter
+    pool3%woody_litter      = this%woody_litter     / pool2%woody_litter
+    pool3%fungi             = this%fungi            / pool2%fungi
+    pool3%mycorrhiza        = this%mycorrhiza       / pool2%mycorrhiza
+    pool3%microbial         = this%microbial        / pool2%microbial
+    pool3%residue           = this%residue          / pool2%residue
+    pool3%residue_assoc     = this%residue_assoc    / pool2%residue_assoc
+  END FUNCTION Divide_pool_a
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_sb_pool_a / scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Divide_pool_a_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: scalar
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              / scalar
+    pool3%dom_assoc         = this%dom_assoc        / scalar
+    pool3%soluable_litter   = this%soluable_litter  / scalar
+    pool3%polymeric_litter  = this%polymeric_litter / scalar
+    pool3%woody_litter      = this%woody_litter     / scalar
+    pool3%fungi             = this%fungi            / scalar
+    pool3%mycorrhiza        = this%mycorrhiza       / scalar
+    pool3%microbial         = this%microbial        / scalar
+    pool3%residue           = this%residue          / scalar
+    pool3%residue_assoc     = this%residue_assoc    / scalar
+  END FUNCTION Divide_pool_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_sb_pool_a / field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Divide_pool_a_and_field2d(this,field2d) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: field2d(:,:)
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              / field2d(:,:)
+    pool3%dom_assoc         = this%dom_assoc        / field2d(:,:)
+    pool3%soluable_litter   = this%soluable_litter  / field2d(:,:)
+    pool3%polymeric_litter  = this%polymeric_litter / field2d(:,:)
+    pool3%woody_litter      = this%woody_litter     / field2d(:,:)
+    pool3%fungi             = this%fungi            / field2d(:,:)
+    pool3%mycorrhiza        = this%mycorrhiza       / field2d(:,:)
+    pool3%microbial         = this%microbial        / field2d(:,:)
+    pool3%residue           = this%residue          / field2d(:,:)
+    pool3%residue_assoc     = this%residue_assoc    / field2d(:,:)
+  END FUNCTION Divide_pool_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_sb_pool_a * t_sb_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_pool_a(this,pool2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this, pool2
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              * pool2%dom
+    pool3%dom_assoc         = this%dom_assoc        * pool2%dom_assoc
+    pool3%soluable_litter   = this%soluable_litter  * pool2%soluable_litter
+    pool3%polymeric_litter  = this%polymeric_litter * pool2%polymeric_litter
+    pool3%woody_litter      = this%woody_litter     * pool2%woody_litter
+    pool3%fungi             = this%fungi            * pool2%fungi
+    pool3%mycorrhiza        = this%mycorrhiza       * pool2%mycorrhiza
+    pool3%microbial         = this%microbial        * pool2%microbial
+    pool3%residue           = this%residue          * pool2%residue
+    pool3%residue_assoc     = this%residue_assoc    * pool2%residue_assoc
+  END FUNCTION Multiply_pool_a
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_sb_pool_a * scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_pool_a_and_scalar(this,scalar) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: scalar
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              * scalar
+    pool3%dom_assoc         = this%dom_assoc        * scalar
+    pool3%soluable_litter   = this%soluable_litter  * scalar
+    pool3%polymeric_litter  = this%polymeric_litter * scalar
+    pool3%woody_litter      = this%woody_litter     * scalar
+    pool3%fungi             = this%fungi            * scalar
+    pool3%mycorrhiza        = this%mycorrhiza       * scalar
+    pool3%microbial         = this%microbial        * scalar
+    pool3%residue           = this%residue          * scalar
+    pool3%residue_assoc     = this%residue_assoc    * scalar
+  END FUNCTION Multiply_pool_a_and_scalar
+  !-----------------------------------------------------------------------------------------------------
+  !> * (scalar * t_sb_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_scalar_and_pool_a(scalar,this2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),           INTENT(in) :: scalar
+    CLASS(t_sb_pool_a), INTENT(in) :: this2
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = scalar * this2%dom
+    pool3%dom_assoc         = scalar * this2%dom_assoc
+    pool3%soluable_litter   = scalar * this2%soluable_litter
+    pool3%polymeric_litter  = scalar * this2%polymeric_litter
+    pool3%woody_litter      = scalar * this2%woody_litter
+    pool3%fungi             = scalar * this2%fungi
+    pool3%mycorrhiza        = scalar * this2%mycorrhiza
+    pool3%microbial         = scalar * this2%microbial
+    pool3%residue           = scalar * this2%residue
+    pool3%residue_assoc     = scalar * this2%residue_assoc
+  END FUNCTION Multiply_scalar_and_pool_a
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_sb_pool_a * field2d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_pool_a_and_field2d(this,field2d) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_sb_pool_a), INTENT(in) :: this
+    REAL(wp),           INTENT(in) :: field2d(:,:)
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = this%dom              * field2d(:,:)
+    pool3%dom_assoc         = this%dom_assoc        * field2d(:,:)
+    pool3%soluable_litter   = this%soluable_litter  * field2d(:,:)
+    pool3%polymeric_litter  = this%polymeric_litter * field2d(:,:)
+    pool3%woody_litter      = this%woody_litter     * field2d(:,:)
+    pool3%fungi             = this%fungi            * field2d(:,:)
+    pool3%mycorrhiza        = this%mycorrhiza       * field2d(:,:)
+    pool3%microbial         = this%microbial        * field2d(:,:)
+    pool3%residue           = this%residue          * field2d(:,:)
+    pool3%residue_assoc     = this%residue_assoc    * field2d(:,:)
+  END FUNCTION Multiply_pool_a_and_field2d
+  !-----------------------------------------------------------------------------------------------------
+  !> * (field2d * t_sb_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_field2d_and_pool_a(field2d,this2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),           INTENT(in) :: field2d(:,:)
+    CLASS(t_sb_pool_a), INTENT(in) :: this2
+    TYPE(t_sb_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%dom               = field2d(:,:) * this2%dom
+    pool3%dom_assoc         = field2d(:,:) * this2%dom_assoc
+    pool3%soluable_litter   = field2d(:,:) * this2%soluable_litter
+    pool3%polymeric_litter  = field2d(:,:) * this2%polymeric_litter
+    pool3%woody_litter      = field2d(:,:) * this2%woody_litter
+    pool3%fungi             = field2d(:,:) * this2%fungi
+    pool3%mycorrhiza        = field2d(:,:) * this2%mycorrhiza
+    pool3%microbial         = field2d(:,:) * this2%microbial
+    pool3%residue           = field2d(:,:) * this2%residue
+    pool3%residue_assoc     = field2d(:,:) * this2%residue_assoc
+  END FUNCTION Multiply_field2d_and_pool_a
+
+
+
+
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_slm_struct_sb_element with a scalar
   !!
@@ -556,294 +998,16 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_slm_struct_sb_element),INTENT(inout) :: this 
-    REAL(wp),                       INTENT(in)    :: s
-
-    CALL this%carbon%init(s) 
-    CALL this%nitrogen%init(s) 
-    CALL this%phosphorus%init(s) 
-    CALL this%carbon13%init(s) 
-    CALL this%carbon14%init(s) 
-    CALL this%nitrogen15%init(s) 
+    REAL(wp),                      INTENT(in)    :: s
+    ! 1.0 Go
+    this%carbon%ptr(:,:,:)     = s
+    this%nitrogen%ptr(:,:,:)   = s
+    this%phosphorus%ptr(:,:,:) = s
+    this%carbon13%ptr(:,:,:)   = s
+    this%carbon14%ptr(:,:,:)   = s
+    this%nitrogen15%ptr(:,:,:) = s
   END SUBROUTINE init_t_slm_struct_sb_element 
 
-
-
-!!$  !-----------------------------------------------------------------------------------------------------!
-!!$  ! t_slm_struct_sb_pool operator overload                                                              !
-!!$  !-----------------------------------------------------------------------------------------------------!
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> + (t_slm_struct_sb_pool + t_slm_struct_sb_pool)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Add_n_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                + struct2%dom
-!!$    struct3%dom_assoc         = this%dom_assoc          + struct2%dom_assoc
-!!$    struct3%soluable_litter  = this%soluable_litter   + struct2%soluable_litter
-!!$    struct3%polymeric_litter = this%polymeric_litter  + struct2%polymeric_litter
-!!$    struct3%woody_litter      = this%woody_litter       + struct2%woody_litter
-!!$    struct3%microbial         = this%microbial          + struct2%microbial
-!!$    struct3%residue           = this%residue            + struct2%residue
-!!$    struct3%residue_assoc     = this%residue_assoc      + struct2%residue_assoc
-!!$  END FUNCTION Add_n_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> + (t_slm_struct_sb_pool + scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Add_n_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                + scalar
-!!$    struct3%dom_assoc         = this%dom_assoc          + scalar
-!!$    struct3%soluable_litter  = this%soluable_litter   + scalar
-!!$    struct3%polymeric_litter = this%polymeric_litter  + scalar
-!!$    struct3%woody_litter      = this%woody_litter       + scalar
-!!$    struct3%microbial         = this%microbial          + scalar
-!!$    struct3%residue           = this%residue            + scalar
-!!$    struct3%residue_assoc     = this%residue_assoc      + scalar
-!!$  END FUNCTION Add_n_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> + (t_slm_struct_sb_pool + field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Add_n_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                + field3d
-!!$    struct3%dom_assoc         = this%dom_assoc          + field3d
-!!$    struct3%soluable_litter  = this%soluable_litter   + field3d
-!!$    struct3%polymeric_litter = this%polymeric_litter  + field3d
-!!$    struct3%woody_litter      = this%woody_litter       + field3d
-!!$    struct3%microbial         = this%microbial          + field3d
-!!$    struct3%residue           = this%residue            + field3d
-!!$    struct3%residue_assoc     = this%residue_assoc      + field3d
-!!$  END FUNCTION Add_n_struct_and_field3d
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> - (t_slm_struct_sb_pool - t_slm_struct_sb_pool)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Subtract_n_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                - struct2%dom
-!!$    struct3%dom_assoc         = this%dom_assoc          - struct2%dom_assoc
-!!$    struct3%soluable_litter  = this%soluable_litter   - struct2%soluable_litter
-!!$    struct3%polymeric_litter = this%polymeric_litter  - struct2%polymeric_litter
-!!$    struct3%woody_litter      = this%woody_litter       - struct2%woody_litter
-!!$    struct3%microbial         = this%microbial          - struct2%microbial
-!!$    struct3%residue           = this%residue            - struct2%residue
-!!$    struct3%residue_assoc     = this%residue_assoc      - struct2%residue_assoc
-!!$  END FUNCTION Subtract_n_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> - (t_slm_struct_sb_pool - scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Subtract_n_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                - scalar
-!!$    struct3%dom_assoc         = this%dom_assoc          - scalar
-!!$    struct3%soluable_litter  = this%soluable_litter   - scalar
-!!$    struct3%polymeric_litter = this%polymeric_litter  - scalar
-!!$    struct3%woody_litter      = this%woody_litter       - scalar
-!!$    struct3%microbial         = this%microbial          - scalar
-!!$    struct3%residue           = this%residue            - scalar
-!!$    struct3%residue_assoc     = this%residue_assoc      - scalar
-!!$  END FUNCTION Subtract_n_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> - (t_slm_struct_sb_pool - field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Subtract_n_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                - field3d
-!!$    struct3%dom_assoc         = this%dom_assoc          - field3d
-!!$    struct3%soluable_litter  = this%soluable_litter   - field3d
-!!$    struct3%polymeric_litter = this%polymeric_litter  - field3d
-!!$    struct3%woody_litter      = this%woody_litter       - field3d
-!!$    struct3%microbial         = this%microbial          - field3d
-!!$    struct3%residue           = this%residue            - field3d
-!!$    struct3%residue_assoc     = this%residue_assoc      - field3d
-!!$  END FUNCTION Subtract_n_struct_and_field3d
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> * (t_slm_struct_sb_pool * t_slm_struct_sb_pool)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Multiply_n_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                * struct2%dom
-!!$    struct3%dom_assoc         = this%dom_assoc          * struct2%dom_assoc
-!!$    struct3%soluable_litter  = this%soluable_litter   * struct2%soluable_litter
-!!$    struct3%polymeric_litter = this%polymeric_litter  * struct2%polymeric_litter
-!!$    struct3%woody_litter      = this%woody_litter       * struct2%woody_litter
-!!$    struct3%microbial         = this%microbial          * struct2%microbial
-!!$    struct3%residue           = this%residue            * struct2%residue
-!!$    struct3%residue_assoc     = this%residue_assoc      * struct2%residue_assoc
-!!$  END FUNCTION Multiply_n_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> * (t_slm_struct_sb_pool * scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Multiply_n_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                * scalar
-!!$    struct3%dom_assoc         = this%dom_assoc          * scalar
-!!$    struct3%soluable_litter  = this%soluable_litter   * scalar
-!!$    struct3%polymeric_litter = this%polymeric_litter  * scalar
-!!$    struct3%woody_litter      = this%woody_litter       * scalar
-!!$    struct3%microbial         = this%microbial          * scalar
-!!$    struct3%residue           = this%residue            * scalar
-!!$    struct3%residue_assoc     = this%residue_assoc      * scalar
-!!$  END FUNCTION Multiply_n_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> * (t_slm_struct_sb_pool * field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Multiply_n_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                * field3d
-!!$    struct3%dom_assoc         = this%dom_assoc          * field3d
-!!$    struct3%soluable_litter  = this%soluable_litter   * field3d
-!!$    struct3%polymeric_litter = this%polymeric_litter  * field3d
-!!$    struct3%woody_litter      = this%woody_litter       * field3d
-!!$    struct3%microbial         = this%microbial          * field3d
-!!$    struct3%residue           = this%residue            * field3d
-!!$    struct3%residue_assoc     = this%residue_assoc      * field3d
-!!$  END FUNCTION Multiply_n_struct_and_field3d
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> / (t_slm_struct_sb_pool / t_slm_struct_sb_pool)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Divide_n_struct(this,struct2) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2 
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3       
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                / struct2%dom
-!!$    struct3%dom_assoc         = this%dom_assoc          / struct2%dom_assoc
-!!$    struct3%soluable_litter  = this%soluable_litter   / struct2%soluable_litter
-!!$    struct3%polymeric_litter = this%polymeric_litter  / struct2%polymeric_litter
-!!$    struct3%woody_litter      = this%woody_litter       / struct2%woody_litter
-!!$    struct3%microbial         = this%microbial          / struct2%microbial
-!!$    struct3%residue           = this%residue            / struct2%residue
-!!$    struct3%residue_assoc     = this%residue_assoc      / struct2%residue_assoc
-!!$  END FUNCTION Divide_n_struct
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> / (t_slm_struct_sb_pool / scalar)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Divide_n_struct_and_scalar(this,scalar) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: scalar
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                / scalar
-!!$    struct3%dom_assoc         = this%dom_assoc          / scalar
-!!$    struct3%soluable_litter  = this%soluable_litter   / scalar
-!!$    struct3%polymeric_litter = this%polymeric_litter  / scalar
-!!$    struct3%woody_litter      = this%woody_litter       / scalar
-!!$    struct3%microbial         = this%microbial          / scalar
-!!$    struct3%residue           = this%residue            / scalar
-!!$    struct3%residue_assoc     = this%residue_assoc      / scalar
-!!$  END FUNCTION Divide_n_struct_and_scalar
-!!$
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  !> / (t_slm_struct_sb_pool / field3d)
-!!$  !!
-!!$  !-----------------------------------------------------------------------------------------------------
-!!$  FUNCTION Divide_n_struct_and_field3d(this,field3d) RESULT(struct3)
-!!$    IMPLICIT NONE
-!!$    ! 0.1 InOut
-!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-!!$
-!!$    ALLOCATE(struct3, source=this)
-!!$
-!!$    struct3%dom               = this%dom                / field3d
-!!$    struct3%dom_assoc         = this%dom_assoc          / field3d
-!!$    struct3%soluable_litter  = this%soluable_litter   / field3d
-!!$    struct3%polymeric_litter = this%polymeric_litter  / field3d
-!!$    struct3%woody_litter      = this%woody_litter       / field3d
-!!$    struct3%microbial         = this%microbial          / field3d
-!!$    struct3%residue           = this%residue            / field3d
-!!$    struct3%residue_assoc     = this%residue_assoc      / field3d
-!!$  END FUNCTION Divide_n_struct_and_field3d
-!!$
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_slm_struct_sb_pool with a scalar
   !!
@@ -852,20 +1016,19 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_slm_struct_sb_pool),INTENT(inout) :: this 
-    REAL(wp),                       INTENT(in)    :: s
-
+    REAL(wp),                   INTENT(in)    :: s
+    ! 1.0 Go
     CALL this%dom%init(s)
     CALL this%dom_assoc%init(s)
     CALL this%soluable_litter%init(s)
     CALL this%polymeric_litter%init(s)
     CALL this%woody_litter%init(s)
-	CALL this%fungi%init(s)
-	CALL this%mycorrhiza%init(s)
+    CALL this%fungi%init(s)
+    CALL this%mycorrhiza%init(s)
     CALL this%microbial%init(s)
     CALL this%residue%init(s)
     CALL this%residue_assoc%init(s)
   END SUBROUTINE init_t_slm_struct_sb_pool 
-
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -881,7 +1044,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
 
     ! 0.1.InOut
     CLASS(t_sb_memory), INTENT(inout), TARGET :: mem             !> soil memory

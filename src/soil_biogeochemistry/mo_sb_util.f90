@@ -135,8 +135,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15
     dsl4jsb_Real3D_onChunk :: denitrification_n2_n15
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15
-! 2 be removed later: pointer to sb   *slmtemp
-    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -235,9 +233,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)        ! out
 
 
-! 2 be removed  *slmtemp
-    sb   => sb__mem
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -262,12 +257,12 @@ CONTAINS
     emission_n2(:)               = zero
 
     ! pools
-    CALL sb%loss%init(zero)
-    CALL sb%formation%init(zero)
-    CALL sb%transport%init(zero)
+    CALL sb__mem%loss%init(zero)
+    CALL sb__mem%formation%init(zero)
+    CALL sb__mem%transport%init(zero)
 
     ! t_slm_struct_sb_element
-    CALL sb%mycorrhiza_export%init(zero)
+    CALL sb__mem%mycorrhiza_export%init(zero)
 
     ! 3D fields
     het_respiration(:,:)              = zero
@@ -336,8 +331,6 @@ CONTAINS
     asymb_n_fixation_n15(:,:)         = zero
   
   END SUBROUTINE reset_sb_fluxes
-
-
 
 
 #endif
