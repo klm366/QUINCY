@@ -66,6 +66,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER  :: tchu
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
@@ -268,7 +269,7 @@ CONTAINS
 
 !! *slmtemp
     sb        => sb__mem 
-
+    tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -388,7 +389,7 @@ CONTAINS
           height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
        END WHERE
 
-       IF(veg_pool%leaf%carbon > eps8) THEN 
+       IF(veg_pool%leaf%carbon(tchu) > eps8) THEN 
            mean_leaf_age(:) = & 
              (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon / veg_pool%leaf%carbon)
          ELSE 
@@ -408,7 +409,7 @@ CONTAINS
                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                             veg_pool%leaf%nitrogen             , &
+                             veg_pool%leaf%nitrogen(tchu)       , &
                              lai(:)                             , &
                              ppfd_sunlit_tfrac_mavg_cl(:,:)     , &
                              ppfd_shaded_tfrac_mavg_cl(:,:)     , & 

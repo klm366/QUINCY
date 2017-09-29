@@ -22,7 +22,6 @@ MODULE mo_jsb_var_class
   PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
   PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! *slmjsb4
   PUBLIC :: t_jsb_var_logical2d                                               ! *slmjsb4
-  PUBLIC :: t_jsb_var_real1d, t_jsb_var_logical1d                             !! for SLM compatbility -> used in veg_mem_class  *slmtemp
   PUBLIC :: REAL2D, REAL3D
 
 !> @todo in JSBACH4 this parameter is defined in mo_jsb_varlist_iface (USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN), 
@@ -51,29 +50,6 @@ MODULE mo_jsb_var_class
                                                   ! of those where variable doesn't exist
   END TYPE t_jsb_var
 
-  !-----------------------------------------------------------------------------------------------------!
-  ! 1D/Scalar  *slmtemp                                                                                        !
-  !-----------------------------------------------------------------------------------------------------!
-
-! *slmtemp
-  !-----------------------------------------------------------------------------------------------------
-  !> 1D LOGICAL Variable TYPE - t_jsb_var_logical1d
-  !! 
-  !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_logical1d
-    LOGICAL, ALLOCATABLE :: ptr
-  END TYPE t_jsb_var_logical1d
-
-! *slmtemp
-  !-----------------------------------------------------------------------------------------------------
-  !> 1D REAL Variable TYPE - t_jsb_var_real1d
-  !! 
-  !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real1d
-    REAL(wp), ALLOCATABLE :: ptr
-  END TYPE t_jsb_var_real1d
 
   !-----------------------------------------------------------------------------------------------------!
   ! 2D                                                                                                  !

@@ -69,6 +69,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
+    INTEGER   :: tchu
 !!
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon,hlp1
 !!
@@ -330,7 +331,7 @@ CONTAINS
 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
-
+    tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -441,9 +442,12 @@ CONTAINS
     sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
                                                         sb%mycorrhiza_export%nitrogen15%ptr(ics:ice,1,iblk)
 
-    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon   / dtime * 1000000._wp                          
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon13 / dtime * 1000000._wp
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon14 / dtime * 1000000._wp
+    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon(tchu)   / &
+                                dtime * 1000000._wp                          
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon13(tchu) / &
+                                dtime * 1000000._wp
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon14(tchu) / &
+                                dtime * 1000000._wp
 
     !> 3.0 update of organic pools
     !!

@@ -30,7 +30,7 @@ MODULE mo_shared_output
   !-----------------------------------------------------------------------------------------------------
   REAL(wp), SAVE :: output_interval_pool   ! equals 'dtime/one_day' or is a mulitple of it
   REAL(wp), SAVE :: output_interval_flux   ! equals 'dtime/one_day' or is a mulitple of it
-
+  INTEGER, PRIVATE :: ipoi = 1             ! the chunk in ics:ice of which data will be written to file; per default = 1
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
@@ -599,60 +599,60 @@ CONTAINS
               time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
              IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
                 & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
-              write(lun,'(13F12.6)') time_d,veg_pool%leaf%carbon,&
-                veg_pool%fine_root%carbon,veg_pool%sap_wood%carbon,&
-                veg_pool%heart_wood%carbon,veg_pool%coarse_root%carbon,&
-                veg_pool%fruit%carbon,veg_pool%labile%carbon,&
-                veg_pool%reserve%carbon,veg_pool%seed_bed%carbon,&
-                veg_total_biomass%carbon,veg_total_biomass%carbon13,veg_total_biomass%carbon14
+              write(lun,'(13F12.6)') time_d,veg_pool%leaf%carbon(ipoi),&
+                veg_pool%fine_root%carbon(ipoi),veg_pool%sap_wood%carbon(ipoi),&
+                veg_pool%heart_wood%carbon(ipoi),veg_pool%coarse_root%carbon(ipoi),&
+                veg_pool%fruit%carbon(ipoi),veg_pool%labile%carbon(ipoi),&
+                veg_pool%reserve%carbon(ipoi),veg_pool%seed_bed%carbon(ipoi),&
+                veg_total_biomass%carbon(ipoi),veg_total_biomass%carbon13(ipoi),veg_total_biomass%carbon14(ipoi)
        
-              dC13leaf        = calc_delta_C13(veg_pool%leaf%carbon,veg_pool%leaf%carbon13)
-              dC13fine_root   = calc_delta_C13(veg_pool%fine_root%carbon,veg_pool%fine_root%carbon13)
-              dC13sap_wood    = calc_delta_C13(veg_pool%sap_wood%carbon,veg_pool%sap_wood%carbon13)
-              dC13heart_wood  = calc_delta_C13(veg_pool%heart_wood%carbon,veg_pool%heart_wood%carbon13)
-              dC13coarse_root = calc_delta_C13(veg_pool%coarse_root%carbon,veg_pool%coarse_root%carbon13)
-              dC13fruit       = calc_delta_C13(veg_pool%fruit%carbon,veg_pool%fruit%carbon13)
-              dC13labile      = calc_delta_C13(veg_pool%labile%carbon,veg_pool%labile%carbon13)
-              dC13reserve     = calc_delta_C13(veg_pool%reserve%carbon,veg_pool%reserve%carbon13)
-              dC13seed_bed    = calc_delta_C13(veg_pool%seed_bed%carbon,veg_pool%seed_bed%carbon13)
+              dC13leaf        = calc_delta_C13(veg_pool%leaf%carbon(ipoi),veg_pool%leaf%carbon13(ipoi))
+              dC13fine_root   = calc_delta_C13(veg_pool%fine_root%carbon(ipoi),veg_pool%fine_root%carbon13(ipoi))
+              dC13sap_wood    = calc_delta_C13(veg_pool%sap_wood%carbon(ipoi),veg_pool%sap_wood%carbon13(ipoi))
+              dC13heart_wood  = calc_delta_C13(veg_pool%heart_wood%carbon(ipoi),veg_pool%heart_wood%carbon13(ipoi))
+              dC13coarse_root = calc_delta_C13(veg_pool%coarse_root%carbon(ipoi),veg_pool%coarse_root%carbon13(ipoi))
+              dC13fruit       = calc_delta_C13(veg_pool%fruit%carbon(ipoi),veg_pool%fruit%carbon13(ipoi))
+              dC13labile      = calc_delta_C13(veg_pool%labile%carbon(ipoi),veg_pool%labile%carbon13(ipoi))
+              dC13reserve     = calc_delta_C13(veg_pool%reserve%carbon(ipoi),veg_pool%reserve%carbon13(ipoi))
+              dC13seed_bed    = calc_delta_C13(veg_pool%seed_bed%carbon(ipoi),veg_pool%seed_bed%carbon13(ipoi))
               lun=lun+1
               write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
                 dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
-                calc_delta_C14(veg_pool%leaf%carbon,veg_pool%leaf%carbon14,dC13leaf),&
-                calc_delta_C14(veg_pool%fine_root%carbon,veg_pool%fine_root%carbon14,dC13fine_root),&
-                calc_delta_C14(veg_pool%sap_wood%carbon,veg_pool%sap_wood%carbon14,dC13sap_wood),&
-                calc_delta_C14(veg_pool%heart_wood%carbon,veg_pool%heart_wood%carbon14,dC13heart_wood),&
-                calc_delta_C14(veg_pool%coarse_root%carbon,veg_pool%coarse_root%carbon14,dC13coarse_root),&
-                calc_delta_C14(veg_pool%fruit%carbon,veg_pool%fruit%carbon14,dC13fruit),&
-                calc_delta_C14(veg_pool%labile%carbon,veg_pool%labile%carbon14,dC13labile),&
-                calc_delta_C14(veg_pool%reserve%carbon,veg_pool%reserve%carbon14,dC13reserve),&
-                calc_delta_C14(veg_pool%seed_bed%carbon,veg_pool%seed_bed%carbon14,dC13seed_bed)
+                calc_delta_C14(veg_pool%leaf%carbon(ipoi),veg_pool%leaf%carbon14(ipoi),dC13leaf),&
+                calc_delta_C14(veg_pool%fine_root%carbon(ipoi),veg_pool%fine_root%carbon14(ipoi),dC13fine_root),&
+                calc_delta_C14(veg_pool%sap_wood%carbon(ipoi),veg_pool%sap_wood%carbon14(ipoi),dC13sap_wood),&
+                calc_delta_C14(veg_pool%heart_wood%carbon(ipoi),veg_pool%heart_wood%carbon14(ipoi),dC13heart_wood),&
+                calc_delta_C14(veg_pool%coarse_root%carbon(ipoi),veg_pool%coarse_root%carbon14(ipoi),dC13coarse_root),&
+                calc_delta_C14(veg_pool%fruit%carbon(ipoi),veg_pool%fruit%carbon14(ipoi),dC13fruit),&
+                calc_delta_C14(veg_pool%labile%carbon(ipoi),veg_pool%labile%carbon14(ipoi),dC13labile),&
+                calc_delta_C14(veg_pool%reserve%carbon(ipoi),veg_pool%reserve%carbon14(ipoi),dC13reserve),&
+                calc_delta_C14(veg_pool%seed_bed%carbon(ipoi),veg_pool%seed_bed%carbon14(ipoi),dC13seed_bed)
               lun=lun+1
-              write(lun,'(12F12.6)') time_d,veg_pool%leaf%nitrogen,&
-                veg_pool%fine_root%nitrogen,veg_pool%sap_wood%nitrogen,&
-                veg_pool%heart_wood%nitrogen,veg_pool%coarse_root%nitrogen,&
-                veg_pool%fruit%nitrogen,veg_pool%labile%nitrogen,&
-                veg_pool%reserve%nitrogen,veg_pool%seed_bed%nitrogen,&
-                veg_total_biomass%nitrogen
+              write(lun,'(12F12.6)') time_d,veg_pool%leaf%nitrogen(ipoi),&
+                veg_pool%fine_root%nitrogen(ipoi),veg_pool%sap_wood%nitrogen(ipoi),&
+                veg_pool%heart_wood%nitrogen(ipoi),veg_pool%coarse_root%nitrogen(ipoi),&
+                veg_pool%fruit%nitrogen(ipoi),veg_pool%labile%nitrogen(ipoi),&
+                veg_pool%reserve%nitrogen(ipoi),veg_pool%seed_bed%nitrogen(ipoi),&
+                veg_total_biomass%nitrogen(ipoi)
               lun=lun+1
-              write(lun,'(11F12.6)') time_d,veg_pool%leaf%phosphorus,&
-                veg_pool%fine_root%phosphorus,veg_pool%sap_wood%phosphorus,&
-                veg_pool%heart_wood%phosphorus,veg_pool%coarse_root%phosphorus,&
-                veg_pool%fruit%phosphorus,veg_pool%labile%phosphorus,&
-                veg_pool%reserve%phosphorus,veg_pool%seed_bed%phosphorus,& 
-                veg_total_biomass%phosphorus
+              write(lun,'(11F12.6)') time_d,veg_pool%leaf%phosphorus(ipoi),&
+                veg_pool%fine_root%phosphorus(ipoi),veg_pool%sap_wood%phosphorus(ipoi),&
+                veg_pool%heart_wood%phosphorus(ipoi),veg_pool%coarse_root%phosphorus(ipoi),&
+                veg_pool%fruit%phosphorus(ipoi),veg_pool%labile%phosphorus(ipoi),&
+                veg_pool%reserve%phosphorus(ipoi),veg_pool%seed_bed%phosphorus(ipoi),& 
+                veg_total_biomass%phosphorus(ipoi)
               lun=lun+1
                 write(lun,'(12F12.6)') time_d, &
-                calc_delta_N15(veg_pool%leaf%nitrogen,veg_pool%leaf%nitrogen15), &
-                calc_delta_N15(veg_pool%fine_root%nitrogen,veg_pool%fine_root%nitrogen15), &
-                calc_delta_N15(veg_pool%sap_wood%nitrogen,veg_pool%sap_wood%nitrogen15), &
-                calc_delta_N15(veg_pool%heart_wood%nitrogen,veg_pool%heart_wood%nitrogen15), &
-                calc_delta_N15(veg_pool%coarse_root%nitrogen,veg_pool%coarse_root%nitrogen15), &
-                calc_delta_N15(veg_pool%fruit%nitrogen,veg_pool%fruit%nitrogen15), &
-                calc_delta_N15(veg_pool%labile%nitrogen,veg_pool%labile%nitrogen15), &
-                calc_delta_N15(veg_pool%reserve%nitrogen,veg_pool%reserve%nitrogen15), &
-                calc_delta_N15(veg_pool%seed_bed%nitrogen,veg_pool%seed_bed%nitrogen15), &
-                calc_delta_N15(veg_total_biomass%nitrogen,veg_total_biomass%nitrogen15)
+                calc_delta_N15(veg_pool%leaf%nitrogen(ipoi),veg_pool%leaf%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%fine_root%nitrogen(ipoi),veg_pool%fine_root%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%sap_wood%nitrogen(ipoi),veg_pool%sap_wood%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%heart_wood%nitrogen(ipoi),veg_pool%heart_wood%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%coarse_root%nitrogen(ipoi),veg_pool%coarse_root%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%fruit%nitrogen(ipoi),veg_pool%fruit%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%labile%nitrogen(ipoi),veg_pool%labile%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%reserve%nitrogen(ipoi),veg_pool%reserve%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_pool%seed_bed%nitrogen(ipoi),veg_pool%seed_bed%nitrogen15(ipoi)), &
+                calc_delta_N15(veg_total_biomass%nitrogen(ipoi),veg_total_biomass%nitrogen15(ipoi))
               lun=lun+1
               write(lun,'(9F16.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
@@ -708,7 +708,7 @@ CONTAINS
                                       SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:))            + &
                                       SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:))              + & 
                                       SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:))           + &
-                                      veg_total_biomass%carbon                                               , &
+                                      veg_total_biomass%carbon(ipoi)                                         , &
                                      SUM(sb%pool%soluable_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
                                       SUM(sb%pool%polymeric_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
                                       SUM(sb%pool%woody_litter%nitrogen%ptr(1,:,1)*soil_depth_sl(1,:))       + &
@@ -720,7 +720,7 @@ CONTAINS
                                       SUM(noy(1,:)*soil_depth_sl(1,:))                                       + &
                                       SUM(n2o(1,:)*soil_depth_sl(1,:))                                       + &
                                       SUM(n2(1,:)*soil_depth_sl(1,:))                                        + &     
-                                      veg_total_biomass%nitrogen                                             , &
+                                      veg_total_biomass%nitrogen(ipoi)                                       , &
                                      SUM(sb%pool%soluable_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
                                       SUM(sb%pool%polymeric_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
                                       SUM(sb%pool%woody_litter%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))       + &
@@ -728,7 +728,7 @@ CONTAINS
                                       SUM(sb%pool%residue%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))            + & 
                                       SUM(sb%pool%mycorrhiza%phosphorus%ptr(1,:,1)*soil_depth_sl(1,:))         + &
                                       SUM(po4_solute(1,:)*soil_depth_sl(1,:))                                + & 
-                                      veg_total_biomass%phosphorus                                           , &
+                                      veg_total_biomass%phosphorus(ipoi)                                     , &
                                      SUM(sb%pool%soluable_litter%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
                                       SUM(sb%pool%polymeric_litter%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))   + & 
                                       SUM(sb%pool%woody_litter%nitrogen15%ptr(1,:,1)*soil_depth_sl(1,:))       + &
@@ -740,7 +740,7 @@ CONTAINS
                                       SUM(noy_n15(1,:)*soil_depth_sl(1,:))                                       + &
                                       SUM(n2o_n15(1,:)*soil_depth_sl(1,:))                                       + &
                                       SUM(n2_n15(1,:)*soil_depth_sl(1,:))                                        + &     
-                                      veg_total_biomass%nitrogen15
+                                      veg_total_biomass%nitrogen15(ipoi)
  
 
               dC13soluable_litter(1,1)  = calc_delta_C13(SUM(sb%pool%soluable_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
@@ -767,13 +767,13 @@ CONTAINS
                 calc_delta_C14(SUM(sb%pool%soluable_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                SUM(sb%pool%soluable_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13soluable_litter(1,1)) , &
                 calc_delta_C14(SUM(sb%pool%polymeric_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%polymeric_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13polymeric_litter(1,1)) , &
+                               SUM(sb%pool%polymeric_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13polymeric_litter(1,1)), &
                 calc_delta_C14(SUM(sb%pool%woody_litter%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%woody_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13woody_litter(1,1))         , &
+                               SUM(sb%pool%woody_litter%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13woody_litter(1,1))        , &
                 calc_delta_C14(SUM(sb%pool%microbial%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%microbial%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13microbial(1,1))               , &
+                               SUM(sb%pool%microbial%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13microbial(1,1))              , &
                 calc_delta_C14(SUM(sb%pool%residue%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
-                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                   , &
+                               SUM(sb%pool%residue%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)), dC13residue(1,1))                  , &
                 calc_delta_C14(SUM(sb%pool%mycorrhiza%carbon%ptr(1,:,1)*soil_depth_sl(1,:)), &
                                SUM(sb%pool%mycorrhiza%carbon14%ptr(1,:,1)*soil_depth_sl(1,:)),dC13mycorrhiza(1,1)), &
                 calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(1,1,1),sb%pool%soluable_litter%nitrogen15%ptr(1,1,1)), &
@@ -793,33 +793,33 @@ CONTAINS
               END DO
        
               IF(lctlib%growthform == itree) THEN 
-                 IF (veg_pool%sap_wood%carbon > eps8) THEN
-                    hlp1 = lai(1)/(veg_pool%sap_wood%carbon / height(1) / lctlib%wood_density)
+                 IF (veg_pool%sap_wood%carbon(ipoi) > eps8) THEN
+                    hlp1 = lai(1)/(veg_pool%sap_wood%carbon(ipoi) / height(1) / lctlib%wood_density)
                  ELSE
                     hlp1 = 0._wp
                  ENDIF
               ELSE
-                 IF (veg_pool%leaf%carbon>eps8) THEN
-                    hlp1 = veg_pool%sap_wood%carbon/veg_pool%leaf%carbon
+                 IF (veg_pool%leaf%carbon(ipoi)>eps8) THEN
+                    hlp1 = veg_pool%sap_wood%carbon(ipoi)/veg_pool%leaf%carbon(ipoi)
                  ELSE
                     hlp1 = 0._wp
                  ENDIF
               ENDIF
-              IF (veg_pool%fine_root%carbon > eps8) THEN
-                 l2r = veg_pool%leaf%carbon/veg_pool%fine_root%carbon
+              IF (veg_pool%fine_root%carbon(ipoi) > eps8) THEN
+                 l2r = veg_pool%leaf%carbon(ipoi)/veg_pool%fine_root%carbon(ipoi)
               ELSE
                  l2r = 0._wp
               ENDIF
-              IF (veg_pool%sap_wood%carbon>eps8) THEN
-                 s2c =  veg_pool%coarse_root%carbon/veg_pool%sap_wood%carbon
+              IF (veg_pool%sap_wood%carbon(ipoi)>eps8) THEN
+                 s2c =  veg_pool%coarse_root%carbon(ipoi)/veg_pool%sap_wood%carbon(ipoi)
               ELSE
                  s2c = 0._wp
               ENDIF
-              IF ((veg_pool%leaf%carbon+veg_pool%sap_wood%carbon+veg_pool%heart_wood%carbon+&
-                   veg_pool%fine_root%carbon+veg_pool%coarse_root%carbon)>eps8) THEN
-                 bcf =  (veg_pool%fine_root%carbon+veg_pool%coarse_root%carbon)/ & 
-                (veg_pool%leaf%carbon+veg_pool%sap_wood%carbon+veg_pool%heart_wood%carbon+&
-                   veg_pool%fine_root%carbon+veg_pool%coarse_root%carbon)
+              IF ((veg_pool%leaf%carbon(ipoi)+veg_pool%sap_wood%carbon(ipoi)+veg_pool%heart_wood%carbon(ipoi)+&
+                   veg_pool%fine_root%carbon(ipoi)+veg_pool%coarse_root%carbon(ipoi))>eps8) THEN
+                 bcf =  (veg_pool%fine_root%carbon(ipoi)+veg_pool%coarse_root%carbon(ipoi))/ & 
+                (veg_pool%leaf%carbon(ipoi)+veg_pool%sap_wood%carbon(ipoi)+veg_pool%heart_wood%carbon(ipoi)+&
+                   veg_pool%fine_root%carbon(ipoi)+veg_pool%coarse_root%carbon(ipoi))
               ELSE
                  bcf = 0._wp
               ENDIF
@@ -847,69 +847,100 @@ CONTAINS
              & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
 
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),&
-                                  sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),&
-                                  sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),&
-                                  sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),&
-                                  sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon%ptr(ics:ice,:,iblk),&
-                                  sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
+                            sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),&
+                            sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),&
+                            sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),&
+                            sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon%ptr(ics:ice,:,iblk),&
+                            sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
              lun=lun+1
 
-             dC13soluable_litter(:,:) = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk))
-             dC13polymeric_litter(:,:) = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
-             dC13woody_litter(:,:) = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk))
-             dC13dom(:,:) = calc_delta_C13(sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%carbon13%ptr(ics:ice,:,iblk))
-             dC13dom_assoc(:,:) = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk))
-             dC13fungi(:,:) = calc_delta_C13(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk))
-             dC13mycorrhiza(:,:) = calc_delta_C13(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk))
-             dC13microbial(:,:) = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk))
-             dC13residue(:,:) = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon13%ptr(ics:ice,:,iblk))
-             dC13residue_assoc(:,:) = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
+             dC13soluable_litter(:,:)   = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk))
+             dC13polymeric_litter(:,:)  = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
+             dC13woody_litter(:,:)      = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk))
+             dC13dom(:,:)               = calc_delta_C13(sb%pool%dom%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%dom%carbon13%ptr(ics:ice,:,iblk))
+             dC13dom_assoc(:,:)         = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk))
+             dC13fungi(:,:)             = calc_delta_C13(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk))
+             dC13mycorrhiza(:,:)        = calc_delta_C13(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk))
+             dC13microbial(:,:)         = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk))
+             dC13residue(:,:)           = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%residue%carbon13%ptr(ics:ice,:,iblk))
+             dC13residue_assoc(:,:)     = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk), &
+                                                          sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
              write(lun,'(100F12.6)') time_d,dC13soluable_litter(:,:),&
                                      dC13polymeric_litter(:,:),dC13woody_litter(:,:),dC13dom(:,:),dC13dom_assoc(:,:),& 
                                      dC13fungi(:,:),dC13mycorrhiza(:,:),dC13microbial(:,:),dC13residue(:,:),dC13residue_assoc(:,:)
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,&
-                calc_delta_C14(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk),dC13soluable_litter),&
-                calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk),dC13polymeric_litter),&
-                calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk),dC13woody_litter),&
-                calc_delta_C14(sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%carbon14%ptr(ics:ice,:,iblk),dC13dom),&
-                calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk),dC13dom_assoc),&
-                calc_delta_C14(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk),dC13fungi),&
-                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
-                calc_delta_C14(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk),dC13mycorrhiza),&
-                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
-                calc_delta_C14(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon14%ptr(ics:ice,:,iblk),dC13residue),&
-                calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk),dC13residue_assoc)
+                calc_delta_C14(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk),dC13soluable_litter),&
+                calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk),dC13polymeric_litter),&
+                calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk),dC13woody_litter),&
+                calc_delta_C14(sb%pool%dom%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%dom%carbon14%ptr(ics:ice,:,iblk),dC13dom),&
+                calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk),dC13dom_assoc),&
+                calc_delta_C14(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk),dC13fungi),&
+                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
+                calc_delta_C14(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk),dC13mycorrhiza),&
+                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
+                calc_delta_C14(sb%pool%residue%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%residue%carbon14%ptr(ics:ice,:,iblk),dC13residue),&
+                calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk), &
+                                sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk),dC13residue_assoc)
              lun=lun+1
  
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),&
-                                  sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
-                                  sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),&
-                                  sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk),&
-                                  sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),&
-                                  sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)
+                    sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
+                    sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),&
+                    sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk),&
+                    sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),&
+                    sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d, &
-                calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk),sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
+                calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk), &
+                                sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk),&
-                                  sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk),&
-                                  sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
-                                  sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk),&
-                                  sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
-                                  sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
+                  sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk),&
+                  sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
+                  sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk),&
+                  sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
+                  sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
              lun=lun+1
 
              write(lun,'(100F12.6)') time_d,nh4_solute(:,:),no3_solute(:,:), &
@@ -1584,14 +1615,14 @@ CONTAINS
                ELSE
                  dtime_one = dtime / 1000000.0_wp      ! interval > timestep
              END IF
-             gpp_acc          = gpp_acc           + gross_assimilation(1)               * dtime_one
-             growth_resp_acc  = growth_resp_acc   + growth_respiration(1)               * dtime_one
-             maint_resp_acc   = maint_resp_acc    + maint_respiration(1)                * dtime_one
-             n_transform_resp_acc = n_transform_resp_acc  + n_transform_respiration(1)  * dtime_one
-             n_fixation_resp_acc  = n_fixation_resp_acc   + n_fixation_respiration(1)   * dtime_one
-             exudationC_acc       = exudationC_acc        + veg_exudation%carbon        * dtime_one *1000000._wp/dtime      
-             npp_acc              = npp_acc               + npp(1)                      * dtime_one
-             res_use_c_acc        = res_use_c_acc         + veg_reserve_use%carbon      * dtime_one *1000000._wp/dtime
+             gpp_acc          = gpp_acc           + gross_assimilation(1)                 * dtime_one
+             growth_resp_acc  = growth_resp_acc   + growth_respiration(1)                 * dtime_one
+             maint_resp_acc   = maint_resp_acc    + maint_respiration(1)                  * dtime_one
+             n_transform_resp_acc = n_transform_resp_acc  + n_transform_respiration(1)    * dtime_one
+             n_fixation_resp_acc  = n_fixation_resp_acc   + n_fixation_respiration(1)     * dtime_one
+             exudationC_acc       = exudationC_acc        + veg_exudation%carbon(ipoi)    * dtime_one *1000000._wp/dtime      
+             npp_acc              = npp_acc               + npp(1)                        * dtime_one
+             res_use_c_acc        = res_use_c_acc         + veg_reserve_use%carbon(ipoi)  * dtime_one *1000000._wp/dtime
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(1) * dtime_one
              growth_resp_C13_acc  = growth_resp_C13_acc   + growth_respiration_c13(1) * dtime_one
              maint_resp_C13_acc   = maint_resp_C13_acc    + maint_respiration_c13(1)  * dtime_one
@@ -1603,14 +1634,14 @@ CONTAINS
              uptake_no3_acc       = uptake_no3_acc        + uptake_no3(1)             * dtime_one
              uptake_no3_n15_acc   = uptake_no3_n15_acc    + uptake_no3_n15(1)         * dtime_one
              recycling_n_acc  = recycling_n_acc   + ( recycling_leaf_n(1) + recycling_fine_root_n(1) + recycling_heart_wood_n(1)) &
-                                                                                    * dtime_one *1000000._wp/dtime
-             res_use_n_acc    = res_use_n_acc     + veg_reserve_use%nitrogen        * dtime_one *1000000._wp/dtime
-             n_fixation_acc   = n_fixation_acc    + n_fixation(1)                   * dtime_one 
-             n_fixation_n15_acc = n_fixation_n15_acc + n_fixation_n15(1)            * dtime_one 
-             uptake_po4_acc   = uptake_po4_acc    + uptake_po4(1)                   * dtime_one
+                                                                                      * dtime_one *1000000._wp/dtime
+             res_use_n_acc    = res_use_n_acc     + veg_reserve_use%nitrogen(ipoi)    * dtime_one *1000000._wp/dtime
+             n_fixation_acc   = n_fixation_acc    + n_fixation(1)                     * dtime_one 
+             n_fixation_n15_acc = n_fixation_n15_acc + n_fixation_n15(1)              * dtime_one 
+             uptake_po4_acc   = uptake_po4_acc    + uptake_po4(1)                     * dtime_one
              recycling_p_acc  = recycling_p_acc   + ( recycling_leaf_p(1) + recycling_fine_root_p(1) + recycling_heart_wood_p(1)) &
-                                                                                    * dtime_one *1000000._wp/dtime
-             res_use_p_acc    = res_use_p_acc     + veg_reserve_use%phosphorus      * dtime_one *1000000._wp/dtime
+                                                                                      * dtime_one *1000000._wp/dtime
+             res_use_p_acc    = res_use_p_acc     + veg_reserve_use%phosphorus(ipoi)  * dtime_one *1000000._wp/dtime
              IF(output_interval_flux < 1.0_wp) THEN
                 precip_acc       = precip_acc        + (rain(1) + snow(1))  
                 interception_acc = interception_acc  + interception(1)       
@@ -1663,12 +1694,18 @@ CONTAINS
              asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(1,:)*soil_depth_sl(1,:)) * dtime_one
              asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(1,:)*soil_depth_sl(1,:)) * dtime_one
              ! for mass balance checks in SB_
-              sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + SUM(sb%delta_pools%carbon%ptr(1,:,iblk)*soil_depth_sl(1,:))
-              sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + SUM(sb%delta_pools%nitrogen%ptr(1,:,iblk)*soil_depth_sl(1,:))
-              sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + SUM(sb%delta_pools%phosphorus%ptr(1,:,iblk)*soil_depth_sl(1,:))
-              sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + SUM(sb%delta_pools%carbon13%ptr(1,:,iblk)*soil_depth_sl(1,:))
-              sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + SUM(sb%delta_pools%carbon14%ptr(1,:,iblk)*soil_depth_sl(1,:))
-              sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + SUM(sb%delta_pools%nitrogen15%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
+                                                SUM(sb%delta_pools%carbon%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + &
+                                                SUM(sb%delta_pools%nitrogen%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + &
+                                                SUM(sb%delta_pools%phosphorus%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + &
+                                                SUM(sb%delta_pools%carbon13%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + &
+                                                SUM(sb%delta_pools%carbon14%ptr(1,:,iblk)*soil_depth_sl(1,:))
+              sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + &
+                                                SUM(sb%delta_pools%nitrogen15%ptr(1,:,iblk)*soil_depth_sl(1,:))
               sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(1)
               sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(1)
               sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(1)
@@ -1725,10 +1762,12 @@ CONTAINS
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
                    lun=lun+1
                    dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
-                   write(lun,'(20F18.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
+                   write(lun,'(20F18.8)') time_d, het_respC_acc, dC13het_resp, &
+                                          calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
 
                    lun=lun+1
-                   write(lun,'(20F18.8)') time_d,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc,nitrification_acc,denitrification_acc, & 
+                   write(lun,'(20F18.8)') time_d,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, &
+                                          nitrification_acc, denitrification_acc, & 
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
                                           leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
                    lun=lun+1
@@ -1870,31 +1909,36 @@ CONTAINS
                  dtime_one = dtime / 1000000.0_wp      ! interval > timestep
              END IF
 
-             litterfallC_acc = litterfallC_acc + (veg_litterfall%leaf%carbon + & 
-                                      veg_litterfall%fine_root%carbon + veg_litterfall%coarse_root%carbon + &
-                                      veg_litterfall%sap_wood%carbon + veg_litterfall%heart_wood%carbon + &
-                                      veg_litterfall%labile%carbon + veg_litterfall%reserve%carbon + &
-                                      veg_litterfall%fruit%carbon + veg_litterfall%seed_bed%carbon) * 1000000.0_wp * dtime_one/dtime
-             litterfallC13_acc = litterfallC13_acc + (veg_litterfall%leaf%carbon13 + & 
-                                      veg_litterfall%fine_root%carbon13 + veg_litterfall%coarse_root%carbon13 + &
-                                      veg_litterfall%sap_wood%carbon13 + veg_litterfall%heart_wood%carbon13 + &
-                                      veg_litterfall%labile%carbon13 + veg_litterfall%reserve%carbon13 + &
-                                      veg_litterfall%fruit%carbon13 + veg_litterfall%seed_bed%carbon13) * 1000000.0_wp * dtime_one/dtime
-             litterfallC14_acc = litterfallC14_acc + (veg_litterfall%leaf%carbon14 + & 
-                                      veg_litterfall%fine_root%carbon14 + veg_litterfall%coarse_root%carbon14 + &
-                                      veg_litterfall%sap_wood%carbon14 + veg_litterfall%heart_wood%carbon14 + &
-                                      veg_litterfall%labile%carbon14 + veg_litterfall%reserve%carbon14 + &
-                                      veg_litterfall%fruit%carbon14 + veg_litterfall%seed_bed%carbon14) * 1000000.0_wp * dtime_one/dtime
-             litterfallN_acc = litterfallN_acc + (veg_litterfall%leaf%nitrogen + & 
-                                      veg_litterfall%fine_root%nitrogen + veg_litterfall%coarse_root%nitrogen + &
-                                      veg_litterfall%sap_wood%nitrogen + veg_litterfall%heart_wood%nitrogen + &
-                                      veg_litterfall%labile%nitrogen + veg_litterfall%reserve%nitrogen + &
-                                      veg_litterfall%fruit%nitrogen + veg_litterfall%seed_bed%nitrogen) * 1000000.0_wp * dtime_one/dtime
-             litterfallP_acc = litterfallP_acc + (veg_litterfall%leaf%phosphorus + & 
-                                      veg_litterfall%fine_root%phosphorus + veg_litterfall%coarse_root%phosphorus + &
-                                      veg_litterfall%sap_wood%phosphorus + veg_litterfall%heart_wood%phosphorus + &
-                                      veg_litterfall%labile%phosphorus + veg_litterfall%reserve%phosphorus + &
-                                      veg_litterfall%fruit%phosphorus + veg_litterfall%seed_bed%phosphorus) * 1000000.0_wp * dtime_one/dtime
+             litterfallC_acc = litterfallC_acc + (veg_litterfall%leaf%carbon(ipoi) + & 
+                                      veg_litterfall%fine_root%carbon(ipoi) + veg_litterfall%coarse_root%carbon(ipoi) + &
+                                      veg_litterfall%sap_wood%carbon(ipoi) + veg_litterfall%heart_wood%carbon(ipoi) + &
+                                      veg_litterfall%labile%carbon(ipoi) + veg_litterfall%reserve%carbon(ipoi) + &
+                                      veg_litterfall%fruit%carbon(ipoi) + veg_litterfall%seed_bed%carbon(ipoi)) * &
+                                      1000000.0_wp * dtime_one/dtime
+             litterfallC13_acc = litterfallC13_acc + (veg_litterfall%leaf%carbon13(ipoi) + & 
+                                      veg_litterfall%fine_root%carbon13(ipoi) + veg_litterfall%coarse_root%carbon13(ipoi) + &
+                                      veg_litterfall%sap_wood%carbon13(ipoi) + veg_litterfall%heart_wood%carbon13(ipoi) + &
+                                      veg_litterfall%labile%carbon13(ipoi) + veg_litterfall%reserve%carbon13(ipoi) + &
+                                      veg_litterfall%fruit%carbon13(ipoi) + veg_litterfall%seed_bed%carbon13(ipoi)) * &
+                                      1000000.0_wp * dtime_one/dtime
+             litterfallC14_acc = litterfallC14_acc + (veg_litterfall%leaf%carbon14(ipoi) + & 
+                                      veg_litterfall%fine_root%carbon14(ipoi) + veg_litterfall%coarse_root%carbon14(ipoi) + &
+                                      veg_litterfall%sap_wood%carbon14(ipoi) + veg_litterfall%heart_wood%carbon14(ipoi) + &
+                                      veg_litterfall%labile%carbon14(ipoi) + veg_litterfall%reserve%carbon14(ipoi) + &
+                                      veg_litterfall%fruit%carbon14(ipoi) + veg_litterfall%seed_bed%carbon14(ipoi)) * &
+                                      1000000.0_wp * dtime_one/dtime
+             litterfallN_acc = litterfallN_acc + (veg_litterfall%leaf%nitrogen(ipoi) + & 
+                                      veg_litterfall%fine_root%nitrogen(ipoi) + veg_litterfall%coarse_root%nitrogen(ipoi) + &
+                                      veg_litterfall%sap_wood%nitrogen(ipoi) + veg_litterfall%heart_wood%nitrogen(ipoi) + &
+                                      veg_litterfall%labile%nitrogen(ipoi) + veg_litterfall%reserve%nitrogen(ipoi) + &
+                                      veg_litterfall%fruit%nitrogen(ipoi) + veg_litterfall%seed_bed%nitrogen(ipoi)) * &
+                                      1000000.0_wp * dtime_one/dtime
+             litterfallP_acc = litterfallP_acc + (veg_litterfall%leaf%phosphorus(ipoi) + & 
+                                      veg_litterfall%fine_root%phosphorus(ipoi) + veg_litterfall%coarse_root%phosphorus(ipoi) + &
+                                      veg_litterfall%sap_wood%phosphorus(ipoi) + veg_litterfall%heart_wood%phosphorus(ipoi) + &
+                                      veg_litterfall%labile%phosphorus(ipoi) + veg_litterfall%reserve%phosphorus(ipoi) + &
+                                      veg_litterfall%fruit%phosphorus(ipoi) + veg_litterfall%seed_bed%phosphorus(ipoi)) * &
+                                      1000000.0_wp * dtime_one/dtime
              
              het_respC_acc   = het_respC_acc   + SUM(het_respiration(:,:) * soil_depth_sl(:,:)) * dtime_one
              het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:)) * dtime_one
@@ -1903,18 +1947,29 @@ CONTAINS
              net_min_no3_acc = net_min_no3_acc + SUM(net_mineralisation_no3(:,:) * soil_depth_sl(:,:)) * dtime_one
              net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(:,:) * soil_depth_sl(:,:)) * dtime_one
 
-             leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
-             leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(1,options%nsoil_sb,iblk) * 1000000.0_wp * dtime_one/dtime
+             leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(1,options%nsoil_sb,iblk) * &
+                                    1000000.0_wp * dtime_one/dtime
+             leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(1,options%nsoil_sb,iblk) * &
+                                    1000000.0_wp * dtime_one/dtime
+             leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(1,options%nsoil_sb,iblk) * &
+                                    1000000.0_wp * dtime_one/dtime
+             leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(1,options%nsoil_sb,iblk) * &
+                                    1000000.0_wp * dtime_one/dtime
+             leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(1,options%nsoil_sb,iblk) * &
+                                    1000000.0_wp * dtime_one/dtime
 
-             adsorpt      = adsorpt + sb%fast_adsorption_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
-             net_min      = net_min + sb%net_mineralisation_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
-             weath        = weath + sb%weathering_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
-             ocl          = ocl + sb%occlusion_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
-             desorp       = desorp + sb%slow_sorption_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
-             biochem_min  = biochem_min + sb%biochem_mineralisation_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * dtime_one * 1000000.0_wp
+             adsorpt      = adsorpt + sb%fast_adsorption_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * &
+                              dtime_one * 1000000.0_wp
+             net_min      = net_min + sb%net_mineralisation_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * &
+                              dtime_one * 1000000.0_wp
+             weath        = weath + sb%weathering_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * &
+                              dtime_one * 1000000.0_wp
+             ocl          = ocl + sb%occlusion_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * &
+                              dtime_one * 1000000.0_wp
+             desorp       = desorp + sb%slow_sorption_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * &
+                              dtime_one * 1000000.0_wp
+             biochem_min  = biochem_min + sb%biochem_mineralisation_po4%ptr(1,:,iblk) * soil_depth_sl(1,:) * &
+                              dtime_one * 1000000.0_wp
 
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
@@ -2225,7 +2280,7 @@ CONTAINS
         w_soil_sl(1,:)                      , &
         percolation_sl(1,:)                 , &
         root_fraction_sl(1,:)               , &
-        veg_pool%fine_root%carbon           , &
+        veg_pool%fine_root%carbon(ipoi)     , &
         nhx_deposition(1)                   , &
         noy_deposition(1)                   , &
         calc_delta_N15(nhx_deposition(1),nhx_n15_deposition(1)), &
@@ -2234,64 +2289,82 @@ CONTAINS
 
       !> convert 13C and 14C in delta notation
       !! 
-      dC13_leaf        = calc_delta_C13(veg_litterfall%leaf%carbon,veg_litterfall%leaf%carbon13)
-      dC13_fine_root   = calc_delta_C13(veg_litterfall%fine_root%carbon,veg_litterfall%fine_root%carbon13)
-      dC13_coarse_root = calc_delta_C13(veg_litterfall%coarse_root%carbon,veg_litterfall%coarse_root%carbon13)
-      dC13_sap_wood    = calc_delta_C13(veg_litterfall%sap_wood%carbon,veg_litterfall%sap_wood%carbon13)
-      dC13_heart_wood  = calc_delta_C13(veg_litterfall%heart_wood%carbon,veg_litterfall%heart_wood%carbon13)
-      dC13_labile      = calc_delta_C13(veg_litterfall%labile%carbon,veg_litterfall%labile%carbon13)
-      dC13_reserve     = calc_delta_C13(veg_litterfall%reserve%carbon,veg_litterfall%reserve%carbon13)
-      dC13_fruit       = calc_delta_C13(veg_litterfall%fruit%carbon,veg_litterfall%fruit%carbon13)
-      dC13_seed_bed    = calc_delta_C13(veg_litterfall%seed_bed%carbon,veg_litterfall%seed_bed%carbon13)
+      dC13_leaf        = calc_delta_C13(veg_litterfall%leaf%carbon(ipoi),veg_litterfall%leaf%carbon13(ipoi))
+      dC13_fine_root   = calc_delta_C13(veg_litterfall%fine_root%carbon(ipoi),veg_litterfall%fine_root%carbon13(ipoi))
+      dC13_coarse_root = calc_delta_C13(veg_litterfall%coarse_root%carbon(ipoi),veg_litterfall%coarse_root%carbon13(ipoi))
+      dC13_sap_wood    = calc_delta_C13(veg_litterfall%sap_wood%carbon(ipoi),veg_litterfall%sap_wood%carbon13(ipoi))
+      dC13_heart_wood  = calc_delta_C13(veg_litterfall%heart_wood%carbon(ipoi),veg_litterfall%heart_wood%carbon13(ipoi))
+      dC13_labile      = calc_delta_C13(veg_litterfall%labile%carbon(ipoi),veg_litterfall%labile%carbon13(ipoi))
+      dC13_reserve     = calc_delta_C13(veg_litterfall%reserve%carbon(ipoi),veg_litterfall%reserve%carbon13(ipoi))
+      dC13_fruit       = calc_delta_C13(veg_litterfall%fruit%carbon(ipoi),veg_litterfall%fruit%carbon13(ipoi))
+      dC13_seed_bed    = calc_delta_C13(veg_litterfall%seed_bed%carbon(ipoi),veg_litterfall%seed_bed%carbon13(ipoi))
 
-      DC14_leaf        = calc_delta_C14(veg_litterfall%leaf%carbon,veg_litterfall%leaf%carbon14,dC13_leaf)
-      DC14_fine_root   = calc_delta_C14(veg_litterfall%fine_root%carbon,veg_litterfall%fine_root%carbon14,dC13_fine_root)
-      DC14_coarse_root = calc_delta_C14(veg_litterfall%coarse_root%carbon,veg_litterfall%coarse_root%carbon14,dC13_coarse_root)
-      DC14_sap_wood    = calc_delta_C14(veg_litterfall%sap_wood%carbon,veg_litterfall%sap_wood%carbon14,dC13_sap_wood)
-      DC14_heart_wood  = calc_delta_C14(veg_litterfall%heart_wood%carbon,veg_litterfall%heart_wood%carbon14,dC13_heart_wood)
-      DC14_labile      = calc_delta_C14(veg_litterfall%labile%carbon,veg_litterfall%labile%carbon14,dC13_labile)
-      DC14_reserve     = calc_delta_C14(veg_litterfall%reserve%carbon,veg_litterfall%reserve%carbon14,dC13_reserve)
-      DC14_fruit       = calc_delta_C14(veg_litterfall%fruit%carbon,veg_litterfall%fruit%carbon14,dC13_fruit)
-      DC14_seed_bed    = calc_delta_C14(veg_litterfall%seed_bed%carbon,veg_litterfall%seed_bed%carbon14,dC13_seed_bed)
+      DC14_leaf        = calc_delta_C14(veg_litterfall%leaf%carbon(ipoi), &
+                                        veg_litterfall%leaf%carbon14(ipoi),dC13_leaf)
+      DC14_fine_root   = calc_delta_C14(veg_litterfall%fine_root%carbon(ipoi), &
+                                        veg_litterfall%fine_root%carbon14(ipoi),dC13_fine_root)
+      DC14_coarse_root = calc_delta_C14(veg_litterfall%coarse_root%carbon(ipoi), &
+                                        veg_litterfall%coarse_root%carbon14(ipoi),dC13_coarse_root)
+      DC14_sap_wood    = calc_delta_C14(veg_litterfall%sap_wood%carbon(ipoi), &
+                                        veg_litterfall%sap_wood%carbon14(ipoi),dC13_sap_wood)
+      DC14_heart_wood  = calc_delta_C14(veg_litterfall%heart_wood%carbon(ipoi), &
+                                        veg_litterfall%heart_wood%carbon14(ipoi),dC13_heart_wood)
+      DC14_labile      = calc_delta_C14(veg_litterfall%labile%carbon(ipoi), &
+                                        veg_litterfall%labile%carbon14(ipoi),dC13_labile)
+      DC14_reserve     = calc_delta_C14(veg_litterfall%reserve%carbon(ipoi), &
+                                        veg_litterfall%reserve%carbon14(ipoi),dC13_reserve)
+      DC14_fruit       = calc_delta_C14(veg_litterfall%fruit%carbon(ipoi), &
+                                        veg_litterfall%fruit%carbon14(ipoi),dC13_fruit)
+      DC14_seed_bed    = calc_delta_C14(veg_litterfall%seed_bed%carbon(ipoi), &
+                                        veg_litterfall%seed_bed%carbon14(ipoi),dC13_seed_bed)
 
-      dN15_leaf        = calc_delta_N15(veg_litterfall%leaf%nitrogen,veg_litterfall%leaf%nitrogen15)
-      dN15_fine_root   = calc_delta_N15(veg_litterfall%fine_root%nitrogen,veg_litterfall%fine_root%nitrogen15)
-      dN15_coarse_root = calc_delta_N15(veg_litterfall%coarse_root%nitrogen,veg_litterfall%coarse_root%nitrogen15)
-      dN15_sap_wood    = calc_delta_N15(veg_litterfall%sap_wood%nitrogen,veg_litterfall%sap_wood%nitrogen15)
-      dN15_heart_wood  = calc_delta_N15(veg_litterfall%heart_wood%nitrogen,veg_litterfall%heart_wood%nitrogen15)
-      dN15_labile      = calc_delta_N15(veg_litterfall%labile%nitrogen,veg_litterfall%labile%nitrogen15)
-      dN15_reserve     = calc_delta_N15(veg_litterfall%reserve%nitrogen,veg_litterfall%reserve%nitrogen15)
-      dN15_fruit       = calc_delta_N15(veg_litterfall%fruit%nitrogen,veg_litterfall%fruit%nitrogen15)
-      dN15_seed_bed    = calc_delta_N15(veg_litterfall%seed_bed%nitrogen,veg_litterfall%seed_bed%nitrogen15)
+      dN15_leaf        = calc_delta_N15(veg_litterfall%leaf%nitrogen(ipoi),veg_litterfall%leaf%nitrogen15(ipoi))
+      dN15_fine_root   = calc_delta_N15(veg_litterfall%fine_root%nitrogen(ipoi),veg_litterfall%fine_root%nitrogen15(ipoi))
+      dN15_coarse_root = calc_delta_N15(veg_litterfall%coarse_root%nitrogen(ipoi),veg_litterfall%coarse_root%nitrogen15(ipoi))
+      dN15_sap_wood    = calc_delta_N15(veg_litterfall%sap_wood%nitrogen(ipoi),veg_litterfall%sap_wood%nitrogen15(ipoi))
+      dN15_heart_wood  = calc_delta_N15(veg_litterfall%heart_wood%nitrogen(ipoi),veg_litterfall%heart_wood%nitrogen15(ipoi))
+      dN15_labile      = calc_delta_N15(veg_litterfall%labile%nitrogen(ipoi),veg_litterfall%labile%nitrogen15(ipoi))
+      dN15_reserve     = calc_delta_N15(veg_litterfall%reserve%nitrogen(ipoi),veg_litterfall%reserve%nitrogen15(ipoi))
+      dN15_fruit       = calc_delta_N15(veg_litterfall%fruit%nitrogen(ipoi),veg_litterfall%fruit%nitrogen15(ipoi))
+      dN15_seed_bed    = calc_delta_N15(veg_litterfall%seed_bed%nitrogen(ipoi),veg_litterfall%seed_bed%nitrogen15(ipoi))
 
       lun=lun+1
       write(lun,'(55F18.6)') time_d, &
         ! leaf
-        veg_litterfall%leaf%carbon*1000._wp, veg_litterfall%leaf%nitrogen*1000000._wp, veg_litterfall%leaf%phosphorus*1000000._wp    , &
+        veg_litterfall%leaf%carbon(ipoi)*1000._wp, veg_litterfall%leaf%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%leaf%phosphorus(ipoi)*1000000._wp    , &
         dC13_leaf, DC14_leaf, dN15_leaf, & 
         ! fine_root
-        veg_litterfall%fine_root%carbon*1000._wp, veg_litterfall%fine_root%nitrogen*1000000._wp, veg_litterfall%fine_root%phosphorus*1000000._wp   , &
+        veg_litterfall%fine_root%carbon(ipoi)*1000._wp, veg_litterfall%fine_root%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%fine_root%phosphorus(ipoi)*1000000._wp   , &
         dC13_fine_root, DC14_fine_root, dN15_fine_root, & 
         ! coarse_root
-        veg_litterfall%coarse_root%carbon*1000._wp, veg_litterfall%coarse_root%nitrogen*1000000._wp, veg_litterfall%coarse_root%phosphorus*1000000._wp   , &
+        veg_litterfall%coarse_root%carbon(ipoi)*1000._wp, veg_litterfall%coarse_root%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%coarse_root%phosphorus(ipoi)*1000000._wp   , &
         dC13_coarse_root, DC14_coarse_root, dN15_coarse_root, & 
         ! sap_wood
-        veg_litterfall%sap_wood%carbon*1000._wp, veg_litterfall%sap_wood%nitrogen*1000000._wp, veg_litterfall%sap_wood%phosphorus*1000000._wp    , &
+        veg_litterfall%sap_wood%carbon(ipoi)*1000._wp, veg_litterfall%sap_wood%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%sap_wood%phosphorus(ipoi)*1000000._wp    , &
         dC13_sap_wood, DC14_sap_wood, dN15_sap_wood, & 
         ! heart_wood
-        veg_litterfall%heart_wood%carbon*1000._wp, veg_litterfall%heart_wood%nitrogen*1000000._wp, veg_litterfall%heart_wood%phosphorus*1000000._wp    , &
+        veg_litterfall%heart_wood%carbon(ipoi)*1000._wp, veg_litterfall%heart_wood%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%heart_wood%phosphorus(ipoi)*1000000._wp    , &
         dC13_heart_wood, DC14_heart_wood, dN15_heart_wood, & 
         ! labile
-        veg_litterfall%labile%carbon*1000._wp, veg_litterfall%labile%nitrogen*1000000._wp, veg_litterfall%labile%phosphorus*1000000._wp    , &
+        veg_litterfall%labile%carbon(ipoi)*1000._wp, veg_litterfall%labile%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%labile%phosphorus(ipoi)*1000000._wp    , &
         dC13_labile, DC14_labile, dN15_labile, & 
         ! reserve
-        veg_litterfall%reserve%carbon*1000._wp, veg_litterfall%reserve%nitrogen*1000000._wp, veg_litterfall%reserve%phosphorus*1000000._wp   , &
+        veg_litterfall%reserve%carbon(ipoi)*1000._wp, veg_litterfall%reserve%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%reserve%phosphorus(ipoi)*1000000._wp   , &
         dC13_reserve, DC14_reserve, dN15_reserve, & 
         ! fruit
-        veg_litterfall%fruit%carbon*1000._wp, veg_litterfall%fruit%nitrogen*1000000._wp, veg_litterfall%fruit%phosphorus*1000000._wp   , &
+        veg_litterfall%fruit%carbon(ipoi)*1000._wp, veg_litterfall%fruit%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%fruit%phosphorus(ipoi)*1000000._wp   , &
         dC13_fruit, DC14_fruit, dN15_fruit, & 
         ! seed_bed
-        veg_litterfall%seed_bed%carbon*1000._wp, veg_litterfall%seed_bed%nitrogen*1000000._wp, veg_litterfall%seed_bed%phosphorus*1000000._wp  , &
+        veg_litterfall%seed_bed%carbon(ipoi)*1000._wp, veg_litterfall%seed_bed%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%seed_bed%phosphorus(ipoi)*1000000._wp  , &
         dC13_seed_bed, DC14_seed_bed, dN15_seed_bed 
     END IF 
 

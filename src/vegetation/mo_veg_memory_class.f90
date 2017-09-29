@@ -15,8 +15,7 @@ MODULE mo_veg_memory_class
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
-                                       t_jsb_struct, t_jsb_n_struct               , &                 ! *slmjsb4
-                                       t_jsb_var_real1d                                               ! *slmtemp
+                                       t_jsb_struct, t_jsb_n_struct                                   ! *slmjsb4
 
   USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
 
@@ -40,39 +39,35 @@ MODULE mo_veg_memory_class
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_veg_element_a
-    REAL(wp), ALLOCATABLE :: carbon
-    REAL(wp), ALLOCATABLE :: nitrogen
-    REAL(wp), ALLOCATABLE :: phosphorus
-    REAL(wp), ALLOCATABLE :: carbon13
-    REAL(wp), ALLOCATABLE :: carbon14
-    REAL(wp), ALLOCATABLE :: nitrogen15
-    ! REAL(wp), ALLOCATABLE :: carbon(:)      ! dimension of variable in memory: ics:ice,iblk
-    ! REAL(wp), ALLOCATABLE :: nitrogen(:)
-    ! REAL(wp), ALLOCATABLE :: phosphorus(:)
-    ! REAL(wp), ALLOCATABLE :: carbon13(:)
-    ! REAL(wp), ALLOCATABLE :: carbon14(:)
-    ! REAL(wp), ALLOCATABLE :: nitrogen15(:)
+    REAL(wp), ALLOCATABLE :: carbon(:)      ! dimension of variable in memory is var(ics:ice,iblk)
+    REAL(wp), ALLOCATABLE :: nitrogen(:)
+    REAL(wp), ALLOCATABLE :: phosphorus(:)
+    REAL(wp), ALLOCATABLE :: carbon13(:)
+    REAL(wp), ALLOCATABLE :: carbon14(:)
+    REAL(wp), ALLOCATABLE :: nitrogen15(:)
   CONTAINS
     PRIVATE
     !! operator overload
     ! +
     PROCEDURE               :: Add_element_a                   ! Add two elements
     PROCEDURE               :: Add_element_a_and_scalar        ! Add scalar to element
-    !PROCEDURE               :: Add_element_a_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to element
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_a, Add_element_a_and_scalar!, Add_element_a_and_field2d
+    PROCEDURE               :: Add_element_a_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to element
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_a, Add_element_a_and_scalar, Add_element_a_and_vector
     !! operator overload
     ! -
     PROCEDURE               :: Subtract_element_a                   ! Subtract one element from another element
     PROCEDURE               :: Subtract_element_a_and_scalar        ! Subtract scalar from element
-    !PROCEDURE               :: Subtract_element_a_and_vector        ! Subtract vector ( var(ics:ice) ) from element
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_a, Subtract_element_a_and_scalar!, Subtract_element_a_and_field2d
+    PROCEDURE               :: Subtract_element_a_and_vector        ! Subtract vector ( var(ics:ice) ) from element
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_a, Subtract_element_a_and_scalar, Subtract_element_a_and_vector
     !! operator overload
     ! *
     PROCEDURE               :: Multiply_element_a                   ! Multiply two elements
     PROCEDURE               :: Multiply_element_a_and_scalar        ! Multiply element with 
     PROCEDURE, PASS(this2)  :: Multiply_scalar_and_element_a        ! Multiply scalar with element
-    !PROCEDURE               :: Multiply_element_a_and_vector        ! Multiply element with REAL 1D vector ( var(ics:ice) )
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_a, Multiply_element_a_and_scalar, Multiply_scalar_and_element_a!, Multiply_element_a_and_field2d
+    PROCEDURE               :: Multiply_element_a_and_vector        ! Multiply element with REAL 1D vector ( var(ics:ice) )
+    PROCEDURE, PASS(this2)  :: Multiply_vector_and_element_a        ! Multiply REAL 1D vector ( var(ics:ice) ) with element
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_a, Multiply_element_a_and_scalar, Multiply_scalar_and_element_a, &
+                                              Multiply_element_a_and_vector, Multiply_vector_and_element_a
   END TYPE t_veg_element_a
 
 
@@ -97,21 +92,23 @@ MODULE mo_veg_memory_class
     ! +
     PROCEDURE               :: Add_pool_a                   ! Add two pools
     PROCEDURE               :: Add_pool_a_and_scalar        ! Add scalar to pool
-    !PROCEDURE               :: Add_pool_a_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to pool
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_a, Add_pool_a_and_scalar!, Add_pool_a_and_field2d
+    PROCEDURE               :: Add_pool_a_and_vector        ! Add REAL 1D vector ( var(ics:ice) ) to pool
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_a, Add_pool_a_and_scalar, Add_pool_a_and_vector
     !! operator overload
     ! -
     PROCEDURE               :: Subtract_pool_a                   ! Subtract one pool from another pool
     PROCEDURE               :: Subtract_pool_a_and_scalar        ! Subtract scalar from pool
-    !PROCEDURE               :: Subtract_pool_a_and_vector        ! Subtract vector ( var(ics:ice) ) from pool
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_a, Subtract_pool_a_and_scalar!, Subtract_pool_a_and_field2d
+    PROCEDURE               :: Subtract_pool_a_and_vector        ! Subtract vector ( var(ics:ice) ) from pool
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_a, Subtract_pool_a_and_scalar, Subtract_pool_a_and_vector
     !! operator overload
     ! *
     PROCEDURE               :: Multiply_pool_a                   ! Multiply two pools
     PROCEDURE               :: Multiply_pool_a_and_scalar        ! Multiply pool with scalar
     PROCEDURE, PASS(this2)  :: Multiply_scalar_and_pool_a        ! Multiply scalar with pool
-    !PROCEDURE               :: Multiply_pool_a_and_vector        ! Multiply pool with REAL 1D vector ( var(ics:ice) )
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_a, Multiply_pool_a_and_scalar, Multiply_scalar_and_pool_a!, Multiply_pool_a_and_field2d
+    PROCEDURE               :: Multiply_pool_a_and_vector        ! Multiply pool with REAL 1D vector ( var(ics:ice) )
+    PROCEDURE, PASS(this2)  :: Multiply_vector_and_pool_a        ! Multiply REAL 1D vector ( var(ics:ice) ) with pool
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_a, Multiply_pool_a_and_scalar, Multiply_scalar_and_pool_a, &
+                                              Multiply_pool_a_and_vector, Multiply_vector_and_pool_a
   END TYPE t_veg_pool_a
 
 
@@ -124,12 +121,12 @@ MODULE mo_veg_memory_class
   !! *slmtemp 1D -> 2D
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_struct) :: t_slm_struct_veg_element
-    TYPE(t_jsb_var_real1d)    :: carbon       !< total carbon concentration of pool in mol / m2
-    TYPE(t_jsb_var_real1d)    :: nitrogen     !< totol nitrogen concentration of pool in mol / m2
-    TYPE(t_jsb_var_real1d)    :: phosphorus   !< phosphorus concentration of pool in mol / m2
-    TYPE(t_jsb_var_real1d)    :: carbon13     !< 13carbon concentration of pool in mol / m2
-    TYPE(t_jsb_var_real1d)    :: carbon14     !< 14carbon concentration of pool in pmol / m2
-    TYPE(t_jsb_var_real1d)    :: nitrogen15   !< 15nitrogen concentration of pool in mol / m2
+    TYPE(t_jsb_var_real2d)    :: carbon       !< total carbon concentration of pool in mol / m2
+    TYPE(t_jsb_var_real2d)    :: nitrogen     !< totol nitrogen concentration of pool in mol / m2
+    TYPE(t_jsb_var_real2d)    :: phosphorus   !< phosphorus concentration of pool in mol / m2
+    TYPE(t_jsb_var_real2d)    :: carbon13     !< 13carbon concentration of pool in mol / m2
+    TYPE(t_jsb_var_real2d)    :: carbon14     !< 14carbon concentration of pool in pmol / m2
+    TYPE(t_jsb_var_real2d)    :: nitrogen15   !< 15nitrogen concentration of pool in mol / m2
   CONTAINS
     PROCEDURE :: init => init_t_slm_struct_veg_element
   END TYPE t_slm_struct_veg_element
@@ -415,12 +412,12 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this%carbon13)
     ALLOCATE(element3%carbon14,   source=this%carbon14)
     ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon       = this%carbon      + element2%carbon
-    element3%nitrogen     = this%nitrogen    + element2%nitrogen
-    element3%phosphorus   = this%phosphorus  + element2%phosphorus
-    element3%carbon13     = this%carbon13    + element2%carbon13
-    element3%carbon14     = this%carbon14    + element2%carbon14
-    element3%nitrogen15   = this%nitrogen15  + element2%nitrogen15
+    element3%carbon(:)       = this%carbon(:)      + element2%carbon(:)
+    element3%nitrogen(:)     = this%nitrogen(:)    + element2%nitrogen(:)
+    element3%phosphorus(:)   = this%phosphorus(:)  + element2%phosphorus(:)
+    element3%carbon13(:)     = this%carbon13(:)    + element2%carbon13(:)
+    element3%carbon14(:)     = this%carbon14(:)    + element2%carbon14(:)
+    element3%nitrogen15(:)   = this%nitrogen15(:)  + element2%nitrogen15(:)
   END FUNCTION Add_element_a
   !-----------------------------------------------------------------------------------------------------
   !> + (t_veg_element_a + scalar)
@@ -439,37 +436,37 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this%carbon13)
     ALLOCATE(element3%carbon14,   source=this%carbon14)
     ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon       = this%carbon      + scalar
-    element3%nitrogen     = this%nitrogen    + scalar
-    element3%phosphorus   = this%phosphorus  + scalar
-    element3%carbon13     = this%carbon13    + scalar
-    element3%carbon14     = this%carbon14    + scalar
-    element3%nitrogen15   = this%nitrogen15  + scalar
+    element3%carbon(:)       = this%carbon(:)      + scalar
+    element3%nitrogen(:)     = this%nitrogen(:)    + scalar
+    element3%phosphorus(:)   = this%phosphorus(:)  + scalar
+    element3%carbon13(:)     = this%carbon13(:)    + scalar
+    element3%carbon14(:)     = this%carbon14(:)    + scalar
+    element3%nitrogen15(:)   = this%nitrogen15(:)  + scalar
   END FUNCTION Add_element_a_and_scalar
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> + (t_veg_element_a + 1D vector)
-  ! !!
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE FUNCTION Add_element_a_and_vector(this,vector) RESULT(element3)
-  !   IMPLICIT NONE
-  !   ! 0.1 InOut
-  !   CLASS(t_veg_element_a), INTENT(in)  :: this
-  !   REAL(wp),               INTENT(in)  :: vector(:)
-  !   TYPE(t_veg_element_a)               :: element3
-  !   ! 1.0 go
-  !   ALLOCATE(element3%carbon,     source=this%carbon)
-  !   ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-  !   ALLOCATE(element3%phosphorus, source=this%phosphorus)
-  !   ALLOCATE(element3%carbon13,   source=this%carbon13)
-  !   ALLOCATE(element3%carbon14,   source=this%carbon14)
-  !   ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-  !   element3%carbon       = this%carbon      + vector
-  !   element3%nitrogen     = this%nitrogen    + vector
-  !   element3%phosphorus   = this%phosphorus  + vector
-  !   element3%carbon13     = this%carbon13    + vector
-  !   element3%carbon14     = this%carbon14    + vector
-  !   element3%nitrogen15   = this%nitrogen15  + vector
-  ! END FUNCTION Add_element_a_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_veg_element_a + 1D vector)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_element_a_and_vector(this,vector) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_a), INTENT(in)  :: this
+    REAL(wp),               INTENT(in)  :: vector(:)
+    TYPE(t_veg_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:)       = this%carbon(:)      + vector(:)
+    element3%nitrogen(:)     = this%nitrogen(:)    + vector(:)
+    element3%phosphorus(:)   = this%phosphorus(:)  + vector(:)
+    element3%carbon13(:)     = this%carbon13(:)    + vector(:)
+    element3%carbon14(:)     = this%carbon14(:)    + vector(:)
+    element3%nitrogen15(:)   = this%nitrogen15(:)  + vector(:)
+  END FUNCTION Add_element_a_and_vector
   !-----------------------------------------------------------------------------------------------------
   !> - (t_veg_element_a - t_veg_element_a)
   !!
@@ -486,12 +483,12 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this%carbon13)
     ALLOCATE(element3%carbon14,   source=this%carbon14)
     ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon       = this%carbon      - element2%carbon
-    element3%nitrogen     = this%nitrogen    - element2%nitrogen
-    element3%phosphorus   = this%phosphorus  - element2%phosphorus
-    element3%carbon13     = this%carbon13    - element2%carbon13
-    element3%carbon14     = this%carbon14    - element2%carbon14
-    element3%nitrogen15   = this%nitrogen15  - element2%nitrogen15
+    element3%carbon(:)       = this%carbon(:)      - element2%carbon(:)
+    element3%nitrogen(:)     = this%nitrogen(:)    - element2%nitrogen(:)
+    element3%phosphorus(:)   = this%phosphorus(:)  - element2%phosphorus(:)
+    element3%carbon13(:)     = this%carbon13(:)    - element2%carbon13(:)
+    element3%carbon14(:)     = this%carbon14(:)    - element2%carbon14(:)
+    element3%nitrogen15(:)   = this%nitrogen15(:)  - element2%nitrogen15(:)
   END FUNCTION Subtract_element_a
   !-----------------------------------------------------------------------------------------------------
   !> - (t_veg_element_a - scalar)
@@ -510,37 +507,37 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this%carbon13)
     ALLOCATE(element3%carbon14,   source=this%carbon14)
     ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon       = this%carbon      - scalar
-    element3%nitrogen     = this%nitrogen    - scalar
-    element3%phosphorus   = this%phosphorus  - scalar
-    element3%carbon13     = this%carbon13    - scalar
-    element3%carbon14     = this%carbon14    - scalar
-    element3%nitrogen15   = this%nitrogen15  - scalar
+    element3%carbon(:)       = this%carbon(:)      - scalar
+    element3%nitrogen(:)     = this%nitrogen(:)    - scalar
+    element3%phosphorus(:)   = this%phosphorus(:)  - scalar
+    element3%carbon13(:)     = this%carbon13(:)    - scalar
+    element3%carbon14(:)     = this%carbon14(:)    - scalar
+    element3%nitrogen15(:)   = this%nitrogen15(:)  - scalar
   END FUNCTION Subtract_element_a_and_scalar
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> - (t_veg_element_a - 1D vector)
-  ! !!
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE FUNCTION Subtract_element_a_and_vector(this,vector) RESULT(element3)
-  !   IMPLICIT NONE
-  !   ! 0.1 InOut
-  !   CLASS(t_veg_element_a), INTENT(in)  :: this
-  !   REAL(wp),               INTENT(in)  :: vector(:)
-  !   TYPE(t_veg_element_a)               :: element3
-  !   ! 1.0 go
-  !   ALLOCATE(element3%carbon,     source=this%carbon)
-  !   ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-  !   ALLOCATE(element3%phosphorus, source=this%phosphorus)
-  !   ALLOCATE(element3%carbon13,   source=this%carbon13)
-  !   ALLOCATE(element3%carbon14,   source=this%carbon14)
-  !   ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-  !   element3%carbon       = this%carbon      - vector
-  !   element3%nitrogen     = this%nitrogen    - vector
-  !   element3%phosphorus   = this%phosphorus  - vector
-  !   element3%carbon13     = this%carbon13    - vector
-  !   element3%carbon14     = this%carbon14    - vector
-  !   element3%nitrogen15   = this%nitrogen15  - vector
-  ! END FUNCTION Subtract_element_a_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_veg_element_a - 1D vector)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_element_a_and_vector(this,vector) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_a), INTENT(in)  :: this
+    REAL(wp),               INTENT(in)  :: vector(:)
+    TYPE(t_veg_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:)       = this%carbon(:)      - vector(:)
+    element3%nitrogen(:)     = this%nitrogen(:)    - vector(:)
+    element3%phosphorus(:)   = this%phosphorus(:)  - vector(:)
+    element3%carbon13(:)     = this%carbon13(:)    - vector(:)
+    element3%carbon14(:)     = this%carbon14(:)    - vector(:)
+    element3%nitrogen15(:)   = this%nitrogen15(:)  - vector(:)
+  END FUNCTION Subtract_element_a_and_vector
   !-----------------------------------------------------------------------------------------------------
   !> * (t_veg_element_a * t_veg_element_a)
   !!
@@ -557,12 +554,12 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this%carbon13)
     ALLOCATE(element3%carbon14,   source=this%carbon14)
     ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon       = this%carbon      * element2%carbon
-    element3%nitrogen     = this%nitrogen    * element2%nitrogen
-    element3%phosphorus   = this%phosphorus  * element2%phosphorus
-    element3%carbon13     = this%carbon13    * element2%carbon13
-    element3%carbon14     = this%carbon14    * element2%carbon14
-    element3%nitrogen15   = this%nitrogen15  * element2%nitrogen15
+    element3%carbon(:)       = this%carbon(:)      * element2%carbon(:)
+    element3%nitrogen(:)     = this%nitrogen(:)    * element2%nitrogen(:)
+    element3%phosphorus(:)   = this%phosphorus(:)  * element2%phosphorus(:)
+    element3%carbon13(:)     = this%carbon13(:)    * element2%carbon13(:)
+    element3%carbon14(:)     = this%carbon14(:)    * element2%carbon14(:)
+    element3%nitrogen15(:)   = this%nitrogen15(:)  * element2%nitrogen15(:)
   END FUNCTION Multiply_element_a
   !-----------------------------------------------------------------------------------------------------
   !> * (t_veg_element_a * scalar)
@@ -581,12 +578,12 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this%carbon13)
     ALLOCATE(element3%carbon14,   source=this%carbon14)
     ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon       = this%carbon      * scalar
-    element3%nitrogen     = this%nitrogen    * scalar
-    element3%phosphorus   = this%phosphorus  * scalar
-    element3%carbon13     = this%carbon13    * scalar
-    element3%carbon14     = this%carbon14    * scalar
-    element3%nitrogen15   = this%nitrogen15  * scalar
+    element3%carbon(:)       = this%carbon(:)      * scalar
+    element3%nitrogen(:)     = this%nitrogen(:)    * scalar
+    element3%phosphorus(:)   = this%phosphorus(:)  * scalar
+    element3%carbon13(:)     = this%carbon13(:)    * scalar
+    element3%carbon14(:)     = this%carbon14(:)    * scalar
+    element3%nitrogen15(:)   = this%nitrogen15(:)  * scalar
   END FUNCTION Multiply_element_a_and_scalar
   !-----------------------------------------------------------------------------------------------------
   !> * (scalar * t_veg_element_a)
@@ -605,38 +602,63 @@ CONTAINS
     ALLOCATE(element3%carbon13,   source=this2%carbon13)
     ALLOCATE(element3%carbon14,   source=this2%carbon14)
     ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
-    element3%carbon       = scalar * this2%carbon
-    element3%nitrogen     = scalar * this2%nitrogen
-    element3%phosphorus   = scalar * this2%phosphorus
-    element3%carbon13     = scalar * this2%carbon13
-    element3%carbon14     = scalar * this2%carbon14
-    element3%nitrogen15   = scalar * this2%nitrogen15
+    element3%carbon(:)       = scalar * this2%carbon(:)
+    element3%nitrogen(:)     = scalar * this2%nitrogen(:)
+    element3%phosphorus(:)   = scalar * this2%phosphorus(:)
+    element3%carbon13(:)     = scalar * this2%carbon13(:)
+    element3%carbon14(:)     = scalar * this2%carbon14(:)
+    element3%nitrogen15(:)   = scalar * this2%nitrogen15(:)
   END FUNCTION Multiply_scalar_and_element_a
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> * (t_veg_element_a * 1D vector)
-  ! !!
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE FUNCTION Multiply_element_a_and_vector(this,vector) RESULT(element3)
-  !   IMPLICIT NONE
-  !   ! 0.1 InOut
-  !   CLASS(t_veg_element_a), INTENT(in)  :: this
-  !   REAL(wp),               INTENT(in)  :: vector(:)
-  !   TYPE(t_veg_element_a)               :: element3
-  !   ! 1.0 go
-  !   ALLOCATE(element3%carbon,     source=this%carbon)
-  !   ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-  !   ALLOCATE(element3%phosphorus, source=this%phosphorus)
-  !   ALLOCATE(element3%carbon13,   source=this%carbon13)
-  !   ALLOCATE(element3%carbon14,   source=this%carbon14)
-  !   ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-  !   element3%carbon       = this%carbon      * vector
-  !   element3%nitrogen     = this%nitrogen    * vector
-  !   element3%phosphorus   = this%phosphorus  * vector
-  !   element3%carbon13     = this%carbon13    * vector
-  !   element3%carbon14     = this%carbon14    * vector
-  !   element3%nitrogen15   = this%nitrogen15  * vector
-  ! END FUNCTION Multiply_element_a_and_vector
-
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_veg_element_a * 1D vector)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_element_a_and_vector(this,vector) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_element_a), INTENT(in)  :: this
+    REAL(wp),               INTENT(in)  :: vector(:)
+    TYPE(t_veg_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this%carbon)
+    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this%carbon13)
+    ALLOCATE(element3%carbon14,   source=this%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
+    element3%carbon(:)       = this%carbon(:)      * vector(:)
+    element3%nitrogen(:)     = this%nitrogen(:)    * vector(:)
+    element3%phosphorus(:)   = this%phosphorus(:)  * vector(:)
+    element3%carbon13(:)     = this%carbon13(:)    * vector(:)
+    element3%carbon14(:)     = this%carbon14(:)    * vector(:)
+    element3%nitrogen15(:)   = this%nitrogen15(:)  * vector(:)
+  END FUNCTION Multiply_element_a_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> * (vector * t_veg_element_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_vector_and_element_a(vector,this2) RESULT(element3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),               INTENT(in)  :: vector(:)
+    CLASS(t_veg_element_a), INTENT(in)  :: this2
+    TYPE(t_veg_element_a)               :: element3
+    ! 1.0 go
+    ALLOCATE(element3%carbon,     source=this2%carbon)
+    ALLOCATE(element3%nitrogen,   source=this2%nitrogen)
+    ALLOCATE(element3%phosphorus, source=this2%phosphorus)
+    ALLOCATE(element3%carbon13,   source=this2%carbon13)
+    ALLOCATE(element3%carbon14,   source=this2%carbon14)
+    ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
+    element3%carbon(:)       = vector(:) * this2%carbon(:)
+    element3%nitrogen(:)     = vector(:) * this2%nitrogen(:)
+    element3%phosphorus(:)   = vector(:) * this2%phosphorus(:)
+    element3%carbon13(:)     = vector(:) * this2%carbon13(:)
+    element3%carbon14(:)     = vector(:) * this2%carbon14(:)
+    element3%nitrogen15(:)   = vector(:) * this2%nitrogen15(:)
+  END FUNCTION Multiply_vector_and_element_a
+  
+  
 
   !-----------------------------------------------------------------------------------------------------!
   ! t_veg_pool_a operator overload                                                                      !
@@ -682,27 +704,27 @@ CONTAINS
     pool3%fruit         = this%fruit        + scalar
     pool3%seed_bed      = this%seed_bed     + scalar
   END FUNCTION Add_pool_a_and_scalar
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> + (t_veg_pool_a + 1D vector)
-  ! !!
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE FUNCTION Add_pool_a_and_vector(this,vector) RESULT(pool3)
-  !   IMPLICIT NONE
-  !   ! 0.1 InOut
-  !   CLASS(t_veg_pool_a), INTENT(in) :: this
-  !   REAL(wp),            INTENT(in) :: vector(:)
-  !   TYPE(t_veg_pool_a)              :: pool3
-  !   ! 1.0 go
-  !   pool3%leaf          = this%leaf         + vector
-  !   pool3%fine_root     = this%fine_root    + vector
-  !   pool3%coarse_root   = this%coarse_root  + vector
-  !   pool3%sap_wood      = this%sap_wood     + vector
-  !   pool3%heart_wood    = this%heart_wood   + vector
-  !   pool3%labile        = this%labile       + vector
-  !   pool3%reserve       = this%reserve      + vector
-  !   pool3%fruit         = this%fruit        + vector
-  !   pool3%seed_bed      = this%seed_bed     + vector
-  ! END FUNCTION Add_pool_a_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_veg_pool_a + 1D vector)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Add_pool_a_and_vector(this,vector) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_a), INTENT(in) :: this
+    REAL(wp),            INTENT(in) :: vector(:)
+    TYPE(t_veg_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%leaf          = this%leaf         + vector(:)
+    pool3%fine_root     = this%fine_root    + vector(:)
+    pool3%coarse_root   = this%coarse_root  + vector(:)
+    pool3%sap_wood      = this%sap_wood     + vector(:)
+    pool3%heart_wood    = this%heart_wood   + vector(:)
+    pool3%labile        = this%labile       + vector(:)
+    pool3%reserve       = this%reserve      + vector(:)
+    pool3%fruit         = this%fruit        + vector(:)
+    pool3%seed_bed      = this%seed_bed     + vector(:)
+  END FUNCTION Add_pool_a_and_vector
   !-----------------------------------------------------------------------------------------------------
   !> - (t_veg_pool_a - t_veg_pool_a)
   !!
@@ -744,27 +766,27 @@ CONTAINS
     pool3%fruit         = this%fruit        - scalar
     pool3%seed_bed      = this%seed_bed     - scalar
   END FUNCTION Subtract_pool_a_and_scalar
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> - (t_veg_pool_a - 1D vector)
-  ! !!
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE FUNCTION Subtract_pool_a_and_vector(this,vector) RESULT(pool3)
-  !   IMPLICIT NONE
-  !   ! 0.1 InOut
-  !   CLASS(t_veg_pool_a), INTENT(in) :: this
-  !   REAL(wp),            INTENT(in) :: vector(:)
-  !   TYPE(t_veg_pool_a)              :: pool3
-  !   ! 1.0 go
-  !   pool3%leaf          = this%leaf         - vector
-  !   pool3%fine_root     = this%fine_root    - vector
-  !   pool3%coarse_root   = this%coarse_root  - vector
-  !   pool3%sap_wood      = this%sap_wood     - vector
-  !   pool3%heart_wood    = this%heart_wood   - vector
-  !   pool3%labile        = this%labile       - vector
-  !   pool3%reserve       = this%reserve      - vector
-  !   pool3%fruit         = this%fruit        - vector
-  !   pool3%seed_bed      = this%seed_bed     - vector
-  ! END FUNCTION Subtract_pool_a_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_veg_pool_a - 1D vector)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Subtract_pool_a_and_vector(this,vector) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_a), INTENT(in) :: this
+    REAL(wp),            INTENT(in) :: vector(:)
+    TYPE(t_veg_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%leaf          = this%leaf         - vector(:)
+    pool3%fine_root     = this%fine_root    - vector(:)
+    pool3%coarse_root   = this%coarse_root  - vector(:)
+    pool3%sap_wood      = this%sap_wood     - vector(:)
+    pool3%heart_wood    = this%heart_wood   - vector(:)
+    pool3%labile        = this%labile       - vector(:)
+    pool3%reserve       = this%reserve      - vector(:)
+    pool3%fruit         = this%fruit        - vector(:)
+    pool3%seed_bed      = this%seed_bed     - vector(:)
+  END FUNCTION Subtract_pool_a_and_vector
   !-----------------------------------------------------------------------------------------------------
   !> * (t_veg_pool_a * t_veg_pool_a)
   !!
@@ -827,28 +849,48 @@ CONTAINS
     pool3%fruit         = scalar * this2%fruit
     pool3%seed_bed      = scalar * this2%seed_bed
   END FUNCTION Multiply_scalar_and_pool_a
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> * (t_veg_pool_a * 1D vector)
-  ! !!
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE FUNCTION Multiply_pool_a_and_vector(this,vector) RESULT(pool3)
-  !   IMPLICIT NONE
-  !   ! 0.1 InOut
-  !   CLASS(t_veg_pool_a), INTENT(in) :: this
-  !   REAL(wp),            INTENT(in) :: vector(:)
-  !   TYPE(t_veg_pool_a)              :: pool3
-  !   ! 1.0 go
-  !   pool3%leaf          = this%leaf         * vector
-  !   pool3%fine_root     = this%fine_root    * vector
-  !   pool3%coarse_root   = this%coarse_root  * vector
-  !   pool3%sap_wood      = this%sap_wood     * vector
-  !   pool3%heart_wood    = this%heart_wood   * vector
-  !   pool3%labile        = this%labile       * vector
-  !   pool3%reserve       = this%reserve      * vector
-  !   pool3%fruit         = this%fruit        * vector
-  !   pool3%seed_bed      = this%seed_bed     * vector
-  ! END FUNCTION Multiply_pool_a_and_vector
-
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_veg_pool_a * 1D vector)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_pool_a_and_vector(this,vector) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_veg_pool_a), INTENT(in) :: this
+    REAL(wp),            INTENT(in) :: vector(:)
+    TYPE(t_veg_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%leaf          = this%leaf         * vector(:)
+    pool3%fine_root     = this%fine_root    * vector(:)
+    pool3%coarse_root   = this%coarse_root  * vector(:)
+    pool3%sap_wood      = this%sap_wood     * vector(:)
+    pool3%heart_wood    = this%heart_wood   * vector(:)
+    pool3%labile        = this%labile       * vector(:)
+    pool3%reserve       = this%reserve      * vector(:)
+    pool3%fruit         = this%fruit        * vector(:)
+    pool3%seed_bed      = this%seed_bed     * vector(:)
+  END FUNCTION Multiply_pool_a_and_vector
+  !-----------------------------------------------------------------------------------------------------
+  !> * (1D vector * t_veg_pool_a)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE FUNCTION Multiply_vector_and_pool_a(vector,this2) RESULT(pool3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),            INTENT(in) :: vector(:)
+    CLASS(t_veg_pool_a), INTENT(in) :: this2
+    TYPE(t_veg_pool_a)              :: pool3
+    ! 1.0 go
+    pool3%leaf          = vector(:) * this2%leaf
+    pool3%fine_root     = vector(:) * this2%fine_root
+    pool3%coarse_root   = vector(:) * this2%coarse_root
+    pool3%sap_wood      = vector(:) * this2%sap_wood
+    pool3%heart_wood    = vector(:) * this2%heart_wood
+    pool3%labile        = vector(:) * this2%labile
+    pool3%reserve       = vector(:) * this2%reserve
+    pool3%fruit         = vector(:) * this2%fruit
+    pool3%seed_bed      = vector(:) * this2%seed_bed
+  END FUNCTION Multiply_vector_and_pool_a
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -861,12 +903,12 @@ CONTAINS
     CLASS(t_slm_struct_veg_element),INTENT(inout) :: this 
     REAL(wp),                       INTENT(in)    :: s
     ! 1.0 Go
-    this%carbon%ptr     = s
-    this%nitrogen%ptr   = s
-    this%phosphorus%ptr = s
-    this%carbon13%ptr   = s
-    this%carbon14%ptr   = s
-    this%nitrogen15%ptr = s
+    this%carbon%ptr(:,:)     = s
+    this%nitrogen%ptr(:,:)   = s
+    this%phosphorus%ptr(:,:) = s
+    this%carbon13%ptr(:,:)   = s
+    this%carbon14%ptr(:,:)   = s
+    this%nitrogen15%ptr(:,:) = s
   END SUBROUTINE init_t_slm_struct_veg_element 
 
   !-----------------------------------------------------------------------------------------------------

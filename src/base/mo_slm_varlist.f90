@@ -18,8 +18,7 @@ MODULE mo_slm_varlist
 
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
                                   t_jsb_var_logical2d                        , &                 ! *slmjsb4
-                                  t_jsb_struct, t_jsb_n_struct               , &                 ! *slmjsb4
-                                  t_jsb_var_real1d                                               ! *slmtemp
+                                  t_jsb_struct, t_jsb_n_struct                                   ! *slmjsb4
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
@@ -38,9 +37,6 @@ MODULE mo_slm_varlist
     MODULE PROCEDURE slm_add_l2_struct            ! *slmjsb4  a TYPE with only variables included within a TYPE
 
   !! variable -> struct (mem%struct or mem%nested-struct%level2-struct | works NOT for mem%nested-struct%VAR !)
-    ! REAL 1D = scalar!
-    ! temporary conserved for the pools only !!
-    MODULE PROCEDURE slm_add_struct_element_r1d   ! *slmjsb4 *slmtemp
     ! REAL 2D
     MODULE PROCEDURE slm_add_struct_element_r2d   ! *slmjsb4 *slmtemp
     ! REAL 3D
@@ -200,60 +196,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------!
   ! add variable to struct                                                                              !
   !-----------------------------------------------------------------------------------------------------!
-
-  !-----------------------------------------------------------------------------------------------------
-  !> add SCALAR variable to VEG_ l2_struct (ONLY for VEG_ !)
-  !!
-  !!  t_jsb_struct:struct <- t_jsb_var_real1d:var
-  !! 
-  !!  e.g.: veg\%pool\%leaf\%nitrogen\%ptr
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE slm_add_struct_element_r1d( &
-    struct, name, var, &
-    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
-    initval_r)
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
-    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
-    TYPE(t_jsb_var_real1d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-
-    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
-    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
-    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
-    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
-    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
-    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
-    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
-    REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
-
-    ! 0.2 Local
-    INTEGER                       :: pos_of_var
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real1d'
-
-    var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id  ! VEG_=7
-
-    ! only for VEG_
-    IF (var%owner_proc_id /= 7) THEN
-      CALL finish(TRIM(routine), 'No scalar variables for processes other than VEG_ are allowed. Info: var name and process ID: '//TRIM(var%name))
-    END IF
-
-    pos_of_var = struct%no_of_vars + 1
-    IF (pos_of_var > struct%max_no_of_vars) THEN
-      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
-    ELSE
-      struct%vars(pos_of_var)%p => var
-      struct%no_of_vars = pos_of_var
-    END IF
-
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr)
-    var%ptr = initval_r
-
-  END SUBROUTINE slm_add_struct_element_r1d
-
 
   !-----------------------------------------------------------------------------------------------------
   !> add 2D variable to struct or l2_struct

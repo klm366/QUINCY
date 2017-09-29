@@ -883,11 +883,11 @@ CONTAINS
 
     !> 1.7 averages at the time-scale of root life-time
     !!
-    IF (veg_pool%fine_root%carbon > eps8) THEN
-       hlp(:) = veg_pool%leaf%carbon / veg_pool%fine_root%carbon
-    ELSE
+    WHERE (veg_pool%fine_root%carbon(:) > eps8)
+       hlp(:) = veg_pool%leaf%carbon(:) / veg_pool%fine_root%carbon(:)
+    ELSE WHERE
        hlp(:) = 0._wp
-    END IF
+    END WHERE
     leaf2root_troot_mavg(:)      = calc_mavg(leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &
                                                do_calc=(veg_pool%leaf%carbon > eps8) .AND. &
                                                        (veg_pool%fine_root%carbon > eps8), &

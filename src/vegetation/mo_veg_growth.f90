@@ -71,6 +71,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: dheight    !< delta height
     INTEGER                               :: ichunk     !< loop over chunks ics:ice / 1:nc
+    INTEGER :: tchu
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ---------------------------
@@ -411,7 +412,7 @@ CONTAINS
 
 !! *slmtemp
     sb      => sb__mem 
-
+    tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -444,11 +445,11 @@ CONTAINS
                                           dsl4jsb_Config(SB_)%flag_mycorrhiza, &
                                           kstar_labile(:), &
                                           t_air(:), &
-                                          veg_pool%fine_root%carbon, & 
-                                          veg_pool%fine_root%nitrogen, & 
-                                          veg_pool%labile%carbon, & 
-                                          veg_pool%labile%nitrogen, & 
-                                          veg_pool%labile%phosphorus, & 
+                                          veg_pool%fine_root%carbon(tchu), & 
+                                          veg_pool%fine_root%nitrogen(tchu), & 
+                                          veg_pool%labile%carbon(tchu), & 
+                                          veg_pool%labile%nitrogen(tchu), & 
+                                          veg_pool%labile%phosphorus(tchu), & 
                                           sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), & 
                                           nh4_solute(:,:), &
                                           no3_solute(:,:), &
@@ -481,7 +482,7 @@ CONTAINS
                                           n_transform_respiration(:), &
                                           n_fixation_respiration(:), &
                                           n_processing_respiration(:), &
-                                          veg_exudation%carbon)
+                                          veg_exudation%carbon(tchu))
 
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
@@ -496,10 +497,8 @@ CONTAINS
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                                         growing_season(:)                , &
-                                        veg_pool%leaf%carbon         , &  
-                                        veg_pool%leaf%nitrogen       , & 
-!                                        veg_pool%leaf%carbon(ics:ice)    , & 
-!                                        veg_pool%leaf%nitrogen(ics:ice)  , & 
+                                        veg_pool%leaf%carbon(tchu)       , &  
+                                        veg_pool%leaf%nitrogen(tchu)     , & 
                                         lai(:)                           , &
                                         t_jmax_opt_mavg(:)               , &
                                         target_cn_leaf(:)                , &
@@ -562,10 +561,8 @@ CONTAINS
                                               beta_air(:)                 , & 
                                               beta_soil_ps(:)             , & 
                                               beta_soil_gs(:)             , & 
-                                              veg_pool%leaf%carbon    , &  
-                                              veg_pool%leaf%nitrogen  , &
-!                                              veg_pool%leaf%carbon(:)     , &  
-!                                              veg_pool%leaf%nitrogen(:)   , &  
+                                              veg_pool%leaf%carbon(tchu)  , &  
+                                              veg_pool%leaf%nitrogen(tchu), &
                                               lai(:)                      , &
                                               beta_sinklim_ps(:)          , &
                                               t_air_tacclim_mavg(:)       , &
@@ -589,10 +586,8 @@ CONTAINS
                         dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                         TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)         , &
                         height(:)                        , &
-                        veg_pool%sap_wood%carbon         , &
-                        veg_pool%heart_wood%carbon       , &
-!                        veg_pool%sap_wood%carbon(:)     , &
-!                        veg_pool%heart_wood%carbon(:)   , &
+                        veg_pool%sap_wood%carbon(tchu)   , &
+                        veg_pool%heart_wood%carbon(tchu) , &
                         dens_ind(:)                      , & 
                         labile_carbon_talloc_mavg(:)     , &
                         labile_nitrogen_talloc_mavg(:)   , & 
@@ -648,11 +643,11 @@ CONTAINS
                                   dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                                   dheight(1)                      , &
                                   kstar_labile(1)                 , &
-                                  veg_pool%leaf%carbon            , &
-                                  veg_pool%sap_wood%carbon        , &
-                                  veg_pool%coarse_root%carbon     , &
-                                  veg_pool%fine_root%carbon       , &
-                                  veg_pool%labile%carbon          , &
+                                  veg_pool%leaf%carbon(tchu)      , &
+                                  veg_pool%sap_wood%carbon(tchu)  , &
+                                  veg_pool%coarse_root%carbon(tchu), &
+                                  veg_pool%fine_root%carbon(tchu) , &
+                                  veg_pool%labile%carbon(tchu)    , &
                                   height(1)                       , &
                                   leaf2sapwood_mass_ratio(1)      , &
                                   leaf2root_mass_ratio(1)         , & 
@@ -668,7 +663,7 @@ CONTAINS
                                   target_np_coarse_root(1)        , &
                                   target_np_sap_wood(1)           , &
                                   target_np_fruit(1)              , &
-                                  veg_reserve_use%carbon          , & 
+                                  veg_reserve_use%carbon(tchu)    , & 
                                   veg_falloc                      , & ! inout
                                   growth_req_n(1)                 , & ! out
                                   growth_req_p(1)                 )
@@ -1610,9 +1605,10 @@ CONTAINS
     REAL(wp)             :: target_reserve_pool_nitrogen     ! desirable size (mol N/m2) of the reserve pool
     REAL(wp)             :: target_reserve_pool_phosphorus   ! desirable size (mol P/m2) of the reserve pool
     REAL(wp)             :: hlp1                             ! helper variable
+    INTEGER   :: tchu
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_reserve_useage'
 
-
+    tchu = 1
     !> 1.0 target size of the labile and reserve pools
     !!
 
@@ -1623,8 +1619,8 @@ CONTAINS
     !! 
     !! for N and P this corresponds to the current growth C:N:P  
     target_labile_pool_carbon     = MAX( gpp_mavg , rm_mavg ) * one_day / 1.e6_wp * tau_labile
-    target_labile_pool_nitrogen   = veg_pool_labile%carbon    * growth_req_n_mavg
-    target_labile_pool_phosphorus = veg_pool_labile%nitrogen  * growth_req_p_mavg
+    target_labile_pool_nitrogen   = veg_pool_labile%carbon(tchu)    * growth_req_n_mavg
+    target_labile_pool_phosphorus = veg_pool_labile%nitrogen(tchu)  * growth_req_p_mavg
 
     !> 1.2 reserve pool
     !!
@@ -1654,12 +1650,12 @@ CONTAINS
        phi_phenology = exp(-(lambda_phiphen * lai / hlp1 )**k_phiphen) & 
                        - exp(-(lambda_phiphen)**k_phiphen) 
 
-    hlp1 = MAX(0.0_wp,veg_pool_labile%carbon)
+    hlp1 = MAX(0.0_wp,veg_pool_labile%carbon(tchu))
     IF(target_labile_pool_carbon > eps8 .AND. hlp1 < target_labile_pool_carbon) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_carbon)**k_phimaint) & 
                        - exp(-(lambda_phimaint)**k_phimaint)
 
-    hlp1 = MAX(0.0_wp,veg_pool_reserve%carbon)
+    hlp1 = MAX(0.0_wp,veg_pool_reserve%carbon(tchu))
     IF(target_reserve_pool_carbon > eps8 .AND. hlp1 < target_reserve_pool_carbon) & 
        phi_storage = exp(-(lambda_phistore * hlp1 / target_reserve_pool_carbon)**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
@@ -1686,12 +1682,12 @@ CONTAINS
     !! 
     phi_maintenance = 0._wp
     phi_storage = 0._wp
-    hlp1 = MAX(0.0_wp,veg_pool_labile%nitrogen)
+    hlp1 = MAX(0.0_wp,veg_pool_labile%nitrogen(tchu))
     IF(target_labile_pool_nitrogen > eps8 .AND. hlp1 < target_labile_pool_nitrogen) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_nitrogen)**k_phimaint) & 
                           - exp(-(lambda_phimaint)**k_phimaint)
-    IF(target_reserve_pool_nitrogen > eps8 .AND. veg_pool_reserve%nitrogen < target_reserve_pool_nitrogen) & 
-       phi_storage     = exp(-(lambda_phistore * veg_pool_reserve%nitrogen / target_reserve_pool_nitrogen)**k_phistore) & 
+    IF(target_reserve_pool_nitrogen > eps8 .AND. veg_pool_reserve%nitrogen(tchu) < target_reserve_pool_nitrogen) & 
+       phi_storage     = exp(-(lambda_phistore * veg_pool_reserve%nitrogen(tchu) / target_reserve_pool_nitrogen)**k_phistore) & 
                           - exp(-(lambda_phistore)**k_phistore)
        
     veg_reserve_use%nitrogen    = (phi_maintenance * veg_pool_reserve%nitrogen - & 
@@ -1704,12 +1700,12 @@ CONTAINS
     !! 
     phi_maintenance = 0._wp
     phi_storage     = 0._wp
-    hlp1            = MAX(0.0_wp,veg_pool_labile%phosphorus)
+    hlp1            = MAX(0.0_wp,veg_pool_labile%phosphorus(tchu))
     IF(target_labile_pool_phosphorus > eps8 .AND. hlp1 < target_labile_pool_phosphorus) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_phosphorus)**k_phimaint) & 
                           - exp(-(lambda_phimaint)**k_phimaint)
-    IF(target_reserve_pool_phosphorus > eps8 .AND. veg_pool_reserve%phosphorus < target_reserve_pool_phosphorus) & 
-       phi_storage     = exp(-(lambda_phistore * veg_pool_reserve%phosphorus / target_reserve_pool_phosphorus)**k_phistore) & 
+    IF(target_reserve_pool_phosphorus > eps8 .AND. veg_pool_reserve%phosphorus(tchu) < target_reserve_pool_phosphorus) & 
+       phi_storage     = exp(-(lambda_phistore * veg_pool_reserve%phosphorus(tchu) / target_reserve_pool_phosphorus)**k_phistore) & 
                           - exp(-(lambda_phistore)**k_phistore)
 
     veg_reserve_use%phosphorus = (phi_maintenance * veg_pool_reserve%phosphorus - & 
@@ -1718,8 +1714,8 @@ CONTAINS
     !> 5.0 signal of carbon saturation to photosynthesis
     !!
     !!
-    IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon>target_labile_pool_carbon)THEN
-        hlp1=(veg_pool_labile%carbon-target_labile_pool_carbon)/target_labile_pool_carbon
+    IF(target_labile_pool_carbon > eps8 .AND. veg_pool_labile%carbon(tchu) > target_labile_pool_carbon)THEN
+        hlp1=(veg_pool_labile%carbon(tchu) - target_labile_pool_carbon) / target_labile_pool_carbon
         beta_sinklim_ps=beta_sinklim_ps_min + (1._wp - beta_sinklim_ps_min) * exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
     ELSE 
         beta_sinklim_ps=1.0_wp
@@ -1821,9 +1817,10 @@ CONTAINS
     REAL(wp) :: leaf2wood_mass_ratio,    &
                 wood_carbon
     REAL(wp) :: hlp1
+    INTEGER  :: tchu
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allocation_fraction'
 
-
+    tchu = 1
     !> 1.0 Allocation factors for C (this should be calculated based on various principles of plant growth and allometry)
     !! 
     !! 
@@ -1945,10 +1942,10 @@ CONTAINS
     IF(b_inc > eps8) THEN
        all_inc = leaf_carbon_inc + sap_wood_carbon_inc + root_carbon_inc + coarse_root_carbon_inc
        IF(all_inc > eps8) THEN 
-          veg_falloc%leaf%carbon        = (1._wp - veg_falloc%fruit%carbon ) * leaf_carbon_inc / all_inc
-          veg_falloc%fine_root%carbon   = (1._wp - veg_falloc%fruit%carbon ) * root_carbon_inc / all_inc
-          veg_falloc%coarse_root%carbon = (1._wp - veg_falloc%fruit%carbon ) * coarse_root_carbon_inc / all_inc
-          veg_falloc%sap_wood%carbon    = (1._wp - veg_falloc%fruit%carbon ) * sap_wood_carbon_inc/ all_inc
+          veg_falloc%leaf%carbon        = (1._wp - veg_falloc%fruit%carbon(tchu) ) * leaf_carbon_inc / all_inc
+          veg_falloc%fine_root%carbon   = (1._wp - veg_falloc%fruit%carbon(tchu) ) * root_carbon_inc / all_inc
+          veg_falloc%coarse_root%carbon = (1._wp - veg_falloc%fruit%carbon(tchu) ) * coarse_root_carbon_inc / all_inc
+          veg_falloc%sap_wood%carbon    = (1._wp - veg_falloc%fruit%carbon(tchu) ) * sap_wood_carbon_inc/ all_inc
        ENDIF
     ENDIF
 
@@ -1959,11 +1956,11 @@ CONTAINS
  
        !> 2.1 N required to sustain a unit of C growth
        !!
-       growth_req_n = veg_falloc%leaf%carbon        / target_cn_leaf        + & 
-                      veg_falloc%fine_root%carbon   / target_cn_fine_root   + &
-                      veg_falloc%coarse_root%carbon / target_cn_coarse_root + &
-                      veg_falloc%sap_wood%carbon    / target_cn_sap_wood    + & 
-                      veg_falloc%fruit%carbon       / target_cn_fruit 
+       growth_req_n = veg_falloc%leaf%carbon(tchu)        / target_cn_leaf        + & 
+                      veg_falloc%fine_root%carbon(tchu)   / target_cn_fine_root   + &
+                      veg_falloc%coarse_root%carbon(tchu) / target_cn_coarse_root + &
+                      veg_falloc%sap_wood%carbon(tchu)    / target_cn_sap_wood    + & 
+                      veg_falloc%fruit%carbon(tchu)       / target_cn_fruit 
    
        !> 2.2 Adjustment of N allocation factors
        !!
@@ -1979,11 +1976,11 @@ CONTAINS
        !! 
        !! 
        ! P required to sustain a unit of N growth
-       growth_req_p = veg_falloc%leaf%nitrogen        / target_np_leaf        + & 
-                      veg_falloc%fine_root%nitrogen   / target_np_fine_root   + &
-                      veg_falloc%coarse_root%nitrogen / target_np_coarse_root + &
-                      veg_falloc%sap_wood%nitrogen    / target_np_sap_wood    + & 
-                      veg_falloc%fruit%nitrogen       / target_np_fruit 
+       growth_req_p = veg_falloc%leaf%nitrogen(tchu)        / target_np_leaf        + & 
+                      veg_falloc%fine_root%nitrogen(tchu)   / target_np_fine_root   + &
+                      veg_falloc%coarse_root%nitrogen(tchu) / target_np_coarse_root + &
+                      veg_falloc%sap_wood%nitrogen(tchu)    / target_np_sap_wood    + & 
+                      veg_falloc%fruit%nitrogen(tchu)       / target_np_fruit 
    
        ! Adjustment of P allocation factors
        IF(growth_req_p > eps8)THEN
@@ -2090,9 +2087,10 @@ CONTAINS
                                                    growth_respiration               !< growth respiration
     ! ---------------------------
     ! 0.2 Local
+    INTEGER  :: tchu
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
 
-
+    tchu = 1
 
     !> 1.0 Determine C use for maintenance 
     !! 
@@ -2104,14 +2102,14 @@ CONTAINS
                                      &      t_air                             , &  ! t_stem
                                      &      t_air                             , &  ! t_root
                                      &      t_air_tacclim_mavg                , &  ! average temperature for acclimation (K) 
-                                     &      veg_pool%sap_wood%nitrogen        , & 
-                                     &      veg_pool%fine_root%nitrogen       , &
-                                     &      veg_pool%coarse_root%nitrogen)      & 
+                                     &      veg_pool%sap_wood%nitrogen(tchu)        , & 
+                                     &      veg_pool%fine_root%nitrogen(tchu)       , &
+                                     &      veg_pool%coarse_root%nitrogen(tchu))      & 
                                      & + maint_respiration_leaf
     ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 
     ! support leaf respiration, but not more than the current labile pool turnover
     maint_respiration = MAX(maint_respiration_leaf                                      , & 
-                                      &   MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon * 1.e6_wp, &
+                                      &   MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon(tchu) * 1.e6_wp, &
                                       &       maint_respiration_pot)                              &
                                       &   )
 
@@ -2125,7 +2123,7 @@ CONTAINS
                                     &  (maint_respiration + n_processing_respiration) / 1.e6_wp ) * & 
                                     &   dtime /  (1._wp + fresp_growth)
 
-    IF(veg_growth%labile%carbon < eps8) veg_growth%labile%carbon = 0.0_wp
+    IF(veg_growth%labile%carbon(tchu) < eps8) veg_growth%labile%carbon(tchu) = 0.0_wp
     !> 2.2 Elemental limitation of growth by N & P (mol [N|P] / m2 / timestep)
     !! is determined by the minimum turnover of the labile N and P pools and the stoichiometric growth requirement
     !! given the potential growth rate of C
@@ -2135,17 +2133,17 @@ CONTAINS
                                             veg_pool%labile%phosphorus * kstar_labile * dtime/one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
     IF(growth_req_p > eps8) THEN
-      IF(veg_growth%labile%nitrogen > veg_growth%labile%phosphorus / growth_req_p) & 
+      IF(veg_growth%labile%nitrogen(tchu) > veg_growth%labile%phosphorus(tchu) / growth_req_p) & 
         veg_growth%labile%nitrogen = veg_growth%labile%phosphorus / growth_req_p
     END IF
     ! adjust C growth rate to N growth rate if N is limiting 
     IF(growth_req_n > eps8) THEN
-      IF(veg_growth%labile%carbon > veg_growth%labile%nitrogen / growth_req_n) & 
+      IF(veg_growth%labile%carbon(tchu) > veg_growth%labile%nitrogen(tchu) / growth_req_n) & 
         veg_growth%labile%carbon = veg_growth%labile%nitrogen / growth_req_n
     END IF
  
     ! Diagnose growth respiration (µmol C / m2 / s)
-    growth_respiration = fresp_growth * veg_growth%labile%carbon * 1.e6_wp / dtime
+    growth_respiration = fresp_growth * veg_growth%labile%carbon(tchu) * 1.e6_wp / dtime
 
     !> 3.0 Adjust exudation rate to available carbon (mol C / m2 / timestep)
     veg_exudation%carbon = MIN(veg_exudation%carbon, MAX(0.0_wp, & 
@@ -2154,25 +2152,25 @@ CONTAINS
 
     !> 4.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
-    IF(veg_pool%labile%carbon > eps8) THEN
+    IF(veg_pool%labile%carbon(tchu) > eps8) THEN
        ! growth (in mol C / m2 / timestep)
-       veg_growth%labile%carbon13 = veg_growth%labile%carbon * veg_pool%labile%carbon13/veg_pool%labile%carbon
-       veg_growth%labile%carbon14 = veg_growth%labile%carbon * veg_pool%labile%carbon14/veg_pool%labile%carbon
+       veg_growth%labile%carbon13 = veg_growth%labile%carbon * veg_pool%labile%carbon13 / veg_pool%labile%carbon
+       veg_growth%labile%carbon14 = veg_growth%labile%carbon * veg_pool%labile%carbon14 / veg_pool%labile%carbon
        ! exudation (in mol C / m2 / timestep)
-       veg_exudation%carbon13 = veg_exudation%carbon * veg_pool%labile%carbon13/veg_pool%labile%carbon
-       veg_exudation%carbon14 = veg_exudation%carbon * veg_pool%labile%carbon14/veg_pool%labile%carbon
+       veg_exudation%carbon13 = veg_exudation%carbon * veg_pool%labile%carbon13 / veg_pool%labile%carbon
+       veg_exudation%carbon14 = veg_exudation%carbon * veg_pool%labile%carbon14 / veg_pool%labile%carbon
        ! respiration (in µmol C / m2 / s)
-       maint_respiration_c13  = maint_respiration    * veg_pool%labile%carbon13/veg_pool%labile%carbon
-       maint_respiration_c14  = maint_respiration    * veg_pool%labile%carbon14/veg_pool%labile%carbon
-       growth_respiration_c13 = growth_respiration   * veg_pool%labile%carbon13/veg_pool%labile%carbon
-       growth_respiration_c14 = growth_respiration   * veg_pool%labile%carbon14/veg_pool%labile%carbon
-       n_processing_respiration_c13 = n_processing_respiration * veg_pool%labile%carbon13 / veg_pool%labile%carbon 
-       n_processing_respiration_c14 = n_processing_respiration * veg_pool%labile%carbon14 / veg_pool%labile%carbon 
+       maint_respiration_c13  = maint_respiration    * veg_pool%labile%carbon13(tchu) / veg_pool%labile%carbon(tchu)
+       maint_respiration_c14  = maint_respiration    * veg_pool%labile%carbon14(tchu) / veg_pool%labile%carbon(tchu)
+       growth_respiration_c13 = growth_respiration   * veg_pool%labile%carbon13(tchu) / veg_pool%labile%carbon(tchu)
+       growth_respiration_c14 = growth_respiration   * veg_pool%labile%carbon14(tchu) / veg_pool%labile%carbon(tchu)
+       n_processing_respiration_c13 = n_processing_respiration * veg_pool%labile%carbon13(tchu) / veg_pool%labile%carbon(tchu) 
+       n_processing_respiration_c14 = n_processing_respiration * veg_pool%labile%carbon14(tchu) / veg_pool%labile%carbon(tchu) 
     ENDIF
 
-    IF(veg_pool%labile%nitrogen > eps8) THEN
+    IF(veg_pool%labile%nitrogen(tchu) > eps8) THEN
        ! growth (in mol  / m2 / timestep)
-       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen * veg_pool%labile%nitrogen15/veg_pool%labile%nitrogen
+       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen * veg_pool%labile%nitrogen15 / veg_pool%labile%nitrogen
     ENDIF
 
     !> 5.0 partition growth to tissue types
