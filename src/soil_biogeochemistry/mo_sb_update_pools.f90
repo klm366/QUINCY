@@ -68,6 +68,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: nsoil_sb
     INTEGER                               :: isoil
     INTEGER   :: tchu
 !!
@@ -198,10 +199,11 @@ CONTAINS
 ! 2 be removed?: pointers to sb *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -322,6 +324,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
+    ! Get process memory pool structures
 #define Get_veg_litterfall
 #define Get_veg_exudation
 #include "slm_pools_a_incl.f90"

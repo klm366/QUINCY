@@ -130,6 +130,7 @@ allocate(veg_pool%seed_bed%phosphorus    ,source=reshape(veg__mem%pool%seed_bed%
 allocate(veg_pool%seed_bed%carbon13      ,source=reshape(veg__mem%pool%seed_bed%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_pool%seed_bed%carbon14      ,source=reshape(veg__mem%pool%seed_bed%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_pool%seed_bed%nitrogen15    ,source=reshape(veg__mem%pool%seed_bed%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #if defined(Get_veg_growth)
@@ -187,6 +188,7 @@ allocate(veg_growth%seed_bed%phosphorus    ,source=reshape(veg__mem%growth%seed_
 allocate(veg_growth%seed_bed%carbon13      ,source=reshape(veg__mem%growth%seed_bed%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_growth%seed_bed%carbon14      ,source=reshape(veg__mem%growth%seed_bed%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_growth%seed_bed%nitrogen15    ,source=reshape(veg__mem%growth%seed_bed%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #if defined(Get_veg_litterfall)
@@ -244,6 +246,7 @@ allocate(veg_litterfall%seed_bed%phosphorus    ,source=reshape(veg__mem%litterfa
 allocate(veg_litterfall%seed_bed%carbon13      ,source=reshape(veg__mem%litterfall%seed_bed%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_litterfall%seed_bed%carbon14      ,source=reshape(veg__mem%litterfall%seed_bed%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_litterfall%seed_bed%nitrogen15    ,source=reshape(veg__mem%litterfall%seed_bed%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #if defined(Get_veg_falloc)
@@ -301,6 +304,7 @@ allocate(veg_falloc%seed_bed%phosphorus    ,source=reshape(veg__mem%falloc%seed_
 allocate(veg_falloc%seed_bed%carbon13      ,source=reshape(veg__mem%falloc%seed_bed%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_falloc%seed_bed%carbon14      ,source=reshape(veg__mem%falloc%seed_bed%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_falloc%seed_bed%nitrogen15    ,source=reshape(veg__mem%falloc%seed_bed%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #if defined(Get_veg_total_flux)
@@ -358,6 +362,7 @@ allocate(veg_total_flux%seed_bed%phosphorus    ,source=reshape(veg__mem%total_fl
 allocate(veg_total_flux%seed_bed%carbon13      ,source=reshape(veg__mem%total_flux%seed_bed%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_total_flux%seed_bed%carbon14      ,source=reshape(veg__mem%total_flux%seed_bed%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_total_flux%seed_bed%nitrogen15    ,source=reshape(veg__mem%total_flux%seed_bed%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #ifdef Get_veg_exudation
@@ -367,6 +372,7 @@ allocate(veg_exudation%phosphorus ,source=reshape(veg__mem%exudation%phosphorus%
 allocate(veg_exudation%carbon13   ,source=reshape(veg__mem%exudation%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_exudation%carbon14   ,source=reshape(veg__mem%exudation%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_exudation%nitrogen15 ,source=reshape(veg__mem%exudation%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #ifdef Get_veg_establishment
@@ -376,6 +382,7 @@ allocate(veg_establishment%phosphorus ,source=reshape(veg__mem%establishment%pho
 allocate(veg_establishment%carbon13   ,source=reshape(veg__mem%establishment%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_establishment%carbon14   ,source=reshape(veg__mem%establishment%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_establishment%nitrogen15 ,source=reshape(veg__mem%establishment%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #ifdef Get_veg_reserve_use
@@ -385,6 +392,7 @@ allocate(veg_reserve_use%phosphorus ,source=reshape(veg__mem%reserve_use%phospho
 allocate(veg_reserve_use%carbon13   ,source=reshape(veg__mem%reserve_use%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_reserve_use%carbon14   ,source=reshape(veg__mem%reserve_use%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_reserve_use%nitrogen15 ,source=reshape(veg__mem%reserve_use%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
 
 #ifdef Get_veg_total_biomass
@@ -394,7 +402,542 @@ allocate(veg_total_biomass%phosphorus ,source=reshape(veg__mem%total_biomass%pho
 allocate(veg_total_biomass%carbon13   ,source=reshape(veg__mem%total_biomass%carbon13%ptr(ics:ice,iblk),[nc]))
 allocate(veg_total_biomass%carbon14   ,source=reshape(veg__mem%total_biomass%carbon14%ptr(ics:ice,iblk),[nc]))
 allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nitrogen15%ptr(ics:ice,iblk),[nc]))
+
 #endif
+
+
+! -------------------------------------------------------
+! allocate variables in pools of sb memory
+! -------------------------------------------------------
+
+#if defined(Get_sb_pool)
+allocate(sb_pool%dom%carbon                   ,& 
+                    source=reshape(sb__mem%pool%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom%nitrogen                 ,& 
+                    source=reshape(sb__mem%pool%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom%phosphorus               ,& 
+                    source=reshape(sb__mem%pool%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom%carbon13                 ,& 
+                    source=reshape(sb__mem%pool%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom%carbon14                 ,& 
+                    source=reshape(sb__mem%pool%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom%nitrogen15               ,& 
+                    source=reshape(sb__mem%pool%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom_assoc%carbon             ,& 
+                    source=reshape(sb__mem%pool%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom_assoc%nitrogen           ,& 
+                    source=reshape(sb__mem%pool%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom_assoc%phosphorus         ,& 
+                    source=reshape(sb__mem%pool%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom_assoc%carbon13           ,& 
+                    source=reshape(sb__mem%pool%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom_assoc%carbon14           ,& 
+                    source=reshape(sb__mem%pool%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%dom_assoc%nitrogen15         ,& 
+                    source=reshape(sb__mem%pool%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%soluable_litter%carbon       ,& 
+                    source=reshape(sb__mem%pool%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%soluable_litter%nitrogen     ,& 
+                    source=reshape(sb__mem%pool%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%soluable_litter%phosphorus   ,& 
+                    source=reshape(sb__mem%pool%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%soluable_litter%carbon13     ,& 
+                    source=reshape(sb__mem%pool%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%soluable_litter%carbon14     ,& 
+                    source=reshape(sb__mem%pool%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%soluable_litter%nitrogen15   ,& 
+                    source=reshape(sb__mem%pool%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%polymeric_litter%carbon      ,& 
+                    source=reshape(sb__mem%pool%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%polymeric_litter%nitrogen    ,& 
+                    source=reshape(sb__mem%pool%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%polymeric_litter%phosphorus  ,& 
+                    source=reshape(sb__mem%pool%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%polymeric_litter%carbon13    ,& 
+                    source=reshape(sb__mem%pool%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%polymeric_litter%carbon14    ,& 
+                    source=reshape(sb__mem%pool%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%polymeric_litter%nitrogen15  ,& 
+                    source=reshape(sb__mem%pool%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%woody_litter%carbon          ,& 
+                    source=reshape(sb__mem%pool%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%woody_litter%nitrogen        ,& 
+                    source=reshape(sb__mem%pool%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%woody_litter%phosphorus      ,& 
+                    source=reshape(sb__mem%pool%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%woody_litter%carbon13        ,& 
+                    source=reshape(sb__mem%pool%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%woody_litter%carbon14        ,& 
+                    source=reshape(sb__mem%pool%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%woody_litter%nitrogen15      ,& 
+                    source=reshape(sb__mem%pool%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%fungi%carbon                 ,& 
+                    source=reshape(sb__mem%pool%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%fungi%nitrogen               ,& 
+                    source=reshape(sb__mem%pool%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%fungi%phosphorus             ,& 
+                    source=reshape(sb__mem%pool%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%fungi%carbon13               ,& 
+                    source=reshape(sb__mem%pool%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%fungi%carbon14               ,& 
+                    source=reshape(sb__mem%pool%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%fungi%nitrogen15             ,& 
+                    source=reshape(sb__mem%pool%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%mycorrhiza%carbon            ,& 
+                    source=reshape(sb__mem%pool%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%mycorrhiza%nitrogen          ,& 
+                    source=reshape(sb__mem%pool%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%mycorrhiza%phosphorus        ,& 
+                    source=reshape(sb__mem%pool%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%mycorrhiza%carbon13          ,& 
+                    source=reshape(sb__mem%pool%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%mycorrhiza%carbon14          ,& 
+                    source=reshape(sb__mem%pool%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%mycorrhiza%nitrogen15        ,& 
+                    source=reshape(sb__mem%pool%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%microbial%carbon             ,& 
+                    source=reshape(sb__mem%pool%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%microbial%nitrogen           ,& 
+                    source=reshape(sb__mem%pool%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%microbial%phosphorus         ,& 
+                    source=reshape(sb__mem%pool%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%microbial%carbon13           ,& 
+                    source=reshape(sb__mem%pool%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%microbial%carbon14           ,& 
+                    source=reshape(sb__mem%pool%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%microbial%nitrogen15         ,& 
+                    source=reshape(sb__mem%pool%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue%carbon               ,& 
+                    source=reshape(sb__mem%pool%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue%nitrogen             ,& 
+                    source=reshape(sb__mem%pool%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue%phosphorus           ,& 
+                    source=reshape(sb__mem%pool%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue%carbon13             ,& 
+                    source=reshape(sb__mem%pool%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue%carbon14             ,& 
+                    source=reshape(sb__mem%pool%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue%nitrogen15           ,& 
+                    source=reshape(sb__mem%pool%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue_assoc%carbon         ,& 
+                    source=reshape(sb__mem%pool%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue_assoc%nitrogen       ,& 
+                    source=reshape(sb__mem%pool%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue_assoc%phosphorus     ,& 
+                    source=reshape(sb__mem%pool%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue_assoc%carbon13       ,& 
+                    source=reshape(sb__mem%pool%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue_assoc%carbon14       ,& 
+                    source=reshape(sb__mem%pool%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_pool%residue_assoc%nitrogen15     ,& 
+                    source=reshape(sb__mem%pool%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+
+#endif
+
+#if defined(Get_sb_formation)
+allocate(sb_formation%dom%carbon                   ,& 
+                    source=reshape(sb__mem%formation%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom%nitrogen                 ,& 
+                    source=reshape(sb__mem%formation%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom%phosphorus               ,& 
+                    source=reshape(sb__mem%formation%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom%carbon13                 ,& 
+                    source=reshape(sb__mem%formation%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom%carbon14                 ,& 
+                    source=reshape(sb__mem%formation%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom%nitrogen15               ,& 
+                    source=reshape(sb__mem%formation%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom_assoc%carbon             ,& 
+                    source=reshape(sb__mem%formation%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom_assoc%nitrogen           ,& 
+                    source=reshape(sb__mem%formation%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom_assoc%phosphorus         ,& 
+                    source=reshape(sb__mem%formation%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom_assoc%carbon13           ,& 
+                    source=reshape(sb__mem%formation%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom_assoc%carbon14           ,& 
+                    source=reshape(sb__mem%formation%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%dom_assoc%nitrogen15         ,& 
+                    source=reshape(sb__mem%formation%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%soluable_litter%carbon       ,& 
+                    source=reshape(sb__mem%formation%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%soluable_litter%nitrogen     ,& 
+                    source=reshape(sb__mem%formation%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%soluable_litter%phosphorus   ,& 
+                    source=reshape(sb__mem%formation%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%soluable_litter%carbon13     ,& 
+                    source=reshape(sb__mem%formation%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%soluable_litter%carbon14     ,& 
+                    source=reshape(sb__mem%formation%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%soluable_litter%nitrogen15   ,& 
+                    source=reshape(sb__mem%formation%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%polymeric_litter%carbon      ,& 
+                    source=reshape(sb__mem%formation%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%polymeric_litter%nitrogen    ,& 
+                    source=reshape(sb__mem%formation%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%polymeric_litter%phosphorus  ,& 
+                    source=reshape(sb__mem%formation%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%polymeric_litter%carbon13    ,& 
+                    source=reshape(sb__mem%formation%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%polymeric_litter%carbon14    ,& 
+                    source=reshape(sb__mem%formation%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%polymeric_litter%nitrogen15  ,& 
+                    source=reshape(sb__mem%formation%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%woody_litter%carbon          ,& 
+                    source=reshape(sb__mem%formation%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%woody_litter%nitrogen        ,& 
+                    source=reshape(sb__mem%formation%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%woody_litter%phosphorus      ,& 
+                    source=reshape(sb__mem%formation%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%woody_litter%carbon13        ,& 
+                    source=reshape(sb__mem%formation%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%woody_litter%carbon14        ,& 
+                    source=reshape(sb__mem%formation%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%woody_litter%nitrogen15      ,& 
+                    source=reshape(sb__mem%formation%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%fungi%carbon                 ,& 
+                    source=reshape(sb__mem%formation%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%fungi%nitrogen               ,& 
+                    source=reshape(sb__mem%formation%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%fungi%phosphorus             ,& 
+                    source=reshape(sb__mem%formation%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%fungi%carbon13               ,& 
+                    source=reshape(sb__mem%formation%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%fungi%carbon14               ,& 
+                    source=reshape(sb__mem%formation%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%fungi%nitrogen15             ,& 
+                    source=reshape(sb__mem%formation%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%mycorrhiza%carbon            ,& 
+                    source=reshape(sb__mem%formation%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%mycorrhiza%nitrogen          ,& 
+                    source=reshape(sb__mem%formation%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%mycorrhiza%phosphorus        ,& 
+                    source=reshape(sb__mem%formation%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%mycorrhiza%carbon13          ,& 
+                    source=reshape(sb__mem%formation%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%mycorrhiza%carbon14          ,& 
+                    source=reshape(sb__mem%formation%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%mycorrhiza%nitrogen15        ,& 
+                    source=reshape(sb__mem%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%microbial%carbon             ,& 
+                    source=reshape(sb__mem%formation%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%microbial%nitrogen           ,& 
+                    source=reshape(sb__mem%formation%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%microbial%phosphorus         ,& 
+                    source=reshape(sb__mem%formation%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%microbial%carbon13           ,& 
+                    source=reshape(sb__mem%formation%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%microbial%carbon14           ,& 
+                    source=reshape(sb__mem%formation%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%microbial%nitrogen15         ,& 
+                    source=reshape(sb__mem%formation%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue%carbon               ,& 
+                    source=reshape(sb__mem%formation%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue%nitrogen             ,& 
+                    source=reshape(sb__mem%formation%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue%phosphorus           ,& 
+                    source=reshape(sb__mem%formation%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue%carbon13             ,& 
+                    source=reshape(sb__mem%formation%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue%carbon14             ,& 
+                    source=reshape(sb__mem%formation%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue%nitrogen15           ,& 
+                    source=reshape(sb__mem%formation%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue_assoc%carbon         ,& 
+                    source=reshape(sb__mem%formation%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue_assoc%nitrogen       ,& 
+                    source=reshape(sb__mem%formation%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue_assoc%phosphorus     ,& 
+                    source=reshape(sb__mem%formation%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue_assoc%carbon13       ,& 
+                    source=reshape(sb__mem%formation%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue_assoc%carbon14       ,& 
+                    source=reshape(sb__mem%formation%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_formation%residue_assoc%nitrogen15     ,& 
+                    source=reshape(sb__mem%formation%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+
+#endif
+
+#if defined(Get_sb_loss)
+allocate(sb_loss%dom%carbon                   ,& 
+                    source=reshape(sb__mem%loss%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom%nitrogen                 ,& 
+                    source=reshape(sb__mem%loss%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom%phosphorus               ,& 
+                    source=reshape(sb__mem%loss%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom%carbon13                 ,& 
+                    source=reshape(sb__mem%loss%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom%carbon14                 ,& 
+                    source=reshape(sb__mem%loss%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom%nitrogen15               ,& 
+                    source=reshape(sb__mem%loss%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom_assoc%carbon             ,& 
+                    source=reshape(sb__mem%loss%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom_assoc%nitrogen           ,& 
+                    source=reshape(sb__mem%loss%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom_assoc%phosphorus         ,& 
+                    source=reshape(sb__mem%loss%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom_assoc%carbon13           ,& 
+                    source=reshape(sb__mem%loss%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom_assoc%carbon14           ,& 
+                    source=reshape(sb__mem%loss%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%dom_assoc%nitrogen15         ,& 
+                    source=reshape(sb__mem%loss%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%soluable_litter%carbon       ,& 
+                    source=reshape(sb__mem%loss%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%soluable_litter%nitrogen     ,& 
+                    source=reshape(sb__mem%loss%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%soluable_litter%phosphorus   ,& 
+                    source=reshape(sb__mem%loss%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%soluable_litter%carbon13     ,& 
+                    source=reshape(sb__mem%loss%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%soluable_litter%carbon14     ,& 
+                    source=reshape(sb__mem%loss%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%soluable_litter%nitrogen15   ,& 
+                    source=reshape(sb__mem%loss%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%polymeric_litter%carbon      ,& 
+                    source=reshape(sb__mem%loss%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%polymeric_litter%nitrogen    ,& 
+                    source=reshape(sb__mem%loss%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%polymeric_litter%phosphorus  ,& 
+                    source=reshape(sb__mem%loss%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%polymeric_litter%carbon13    ,& 
+                    source=reshape(sb__mem%loss%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%polymeric_litter%carbon14    ,& 
+                    source=reshape(sb__mem%loss%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%polymeric_litter%nitrogen15  ,& 
+                    source=reshape(sb__mem%loss%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%woody_litter%carbon          ,& 
+                    source=reshape(sb__mem%loss%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%woody_litter%nitrogen        ,& 
+                    source=reshape(sb__mem%loss%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%woody_litter%phosphorus      ,& 
+                    source=reshape(sb__mem%loss%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%woody_litter%carbon13        ,& 
+                    source=reshape(sb__mem%loss%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%woody_litter%carbon14        ,& 
+                    source=reshape(sb__mem%loss%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%woody_litter%nitrogen15      ,& 
+                    source=reshape(sb__mem%loss%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%fungi%carbon                 ,& 
+                    source=reshape(sb__mem%loss%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%fungi%nitrogen               ,& 
+                    source=reshape(sb__mem%loss%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%fungi%phosphorus             ,& 
+                    source=reshape(sb__mem%loss%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%fungi%carbon13               ,& 
+                    source=reshape(sb__mem%loss%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%fungi%carbon14               ,& 
+                    source=reshape(sb__mem%loss%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%fungi%nitrogen15             ,& 
+                    source=reshape(sb__mem%loss%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%mycorrhiza%carbon            ,& 
+                    source=reshape(sb__mem%loss%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%mycorrhiza%nitrogen          ,& 
+                    source=reshape(sb__mem%loss%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%mycorrhiza%phosphorus        ,& 
+                    source=reshape(sb__mem%loss%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%mycorrhiza%carbon13          ,& 
+                    source=reshape(sb__mem%loss%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%mycorrhiza%carbon14          ,& 
+                    source=reshape(sb__mem%loss%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%mycorrhiza%nitrogen15        ,& 
+                    source=reshape(sb__mem%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%microbial%carbon             ,& 
+                    source=reshape(sb__mem%loss%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%microbial%nitrogen           ,& 
+                    source=reshape(sb__mem%loss%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%microbial%phosphorus         ,& 
+                    source=reshape(sb__mem%loss%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%microbial%carbon13           ,& 
+                    source=reshape(sb__mem%loss%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%microbial%carbon14           ,& 
+                    source=reshape(sb__mem%loss%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%microbial%nitrogen15         ,& 
+                    source=reshape(sb__mem%loss%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue%carbon               ,& 
+                    source=reshape(sb__mem%loss%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue%nitrogen             ,& 
+                    source=reshape(sb__mem%loss%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue%phosphorus           ,& 
+                    source=reshape(sb__mem%loss%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue%carbon13             ,& 
+                    source=reshape(sb__mem%loss%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue%carbon14             ,& 
+                    source=reshape(sb__mem%loss%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue%nitrogen15           ,& 
+                    source=reshape(sb__mem%loss%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue_assoc%carbon         ,& 
+                    source=reshape(sb__mem%loss%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue_assoc%nitrogen       ,& 
+                    source=reshape(sb__mem%loss%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue_assoc%phosphorus     ,& 
+                    source=reshape(sb__mem%loss%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue_assoc%carbon13       ,& 
+                    source=reshape(sb__mem%loss%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue_assoc%carbon14       ,& 
+                    source=reshape(sb__mem%loss%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_loss%residue_assoc%nitrogen15     ,& 
+                    source=reshape(sb__mem%loss%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+
+#endif
+
+#if defined(Get_sb_transport)
+allocate(sb_transport%dom%carbon                   ,& 
+                    source=reshape(sb__mem%transport%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom%nitrogen                 ,& 
+                    source=reshape(sb__mem%transport%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom%phosphorus               ,& 
+                    source=reshape(sb__mem%transport%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom%carbon13                 ,& 
+                    source=reshape(sb__mem%transport%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom%carbon14                 ,& 
+                    source=reshape(sb__mem%transport%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom%nitrogen15               ,& 
+                    source=reshape(sb__mem%transport%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom_assoc%carbon             ,& 
+                    source=reshape(sb__mem%transport%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom_assoc%nitrogen           ,& 
+                    source=reshape(sb__mem%transport%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom_assoc%phosphorus         ,& 
+                    source=reshape(sb__mem%transport%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom_assoc%carbon13           ,& 
+                    source=reshape(sb__mem%transport%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom_assoc%carbon14           ,& 
+                    source=reshape(sb__mem%transport%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%dom_assoc%nitrogen15         ,& 
+                    source=reshape(sb__mem%transport%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%soluable_litter%carbon       ,& 
+                    source=reshape(sb__mem%transport%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%soluable_litter%nitrogen     ,& 
+                    source=reshape(sb__mem%transport%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%soluable_litter%phosphorus   ,& 
+                    source=reshape(sb__mem%transport%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%soluable_litter%carbon13     ,& 
+                    source=reshape(sb__mem%transport%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%soluable_litter%carbon14     ,& 
+                    source=reshape(sb__mem%transport%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%soluable_litter%nitrogen15   ,& 
+                    source=reshape(sb__mem%transport%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%polymeric_litter%carbon      ,& 
+                    source=reshape(sb__mem%transport%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%polymeric_litter%nitrogen    ,& 
+                    source=reshape(sb__mem%transport%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%polymeric_litter%phosphorus  ,& 
+                    source=reshape(sb__mem%transport%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%polymeric_litter%carbon13    ,& 
+                    source=reshape(sb__mem%transport%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%polymeric_litter%carbon14    ,& 
+                    source=reshape(sb__mem%transport%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%polymeric_litter%nitrogen15  ,& 
+                    source=reshape(sb__mem%transport%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%woody_litter%carbon          ,& 
+                    source=reshape(sb__mem%transport%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%woody_litter%nitrogen        ,& 
+                    source=reshape(sb__mem%transport%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%woody_litter%phosphorus      ,& 
+                    source=reshape(sb__mem%transport%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%woody_litter%carbon13        ,& 
+                    source=reshape(sb__mem%transport%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%woody_litter%carbon14        ,& 
+                    source=reshape(sb__mem%transport%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%woody_litter%nitrogen15      ,& 
+                    source=reshape(sb__mem%transport%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%fungi%carbon                 ,& 
+                    source=reshape(sb__mem%transport%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%fungi%nitrogen               ,& 
+                    source=reshape(sb__mem%transport%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%fungi%phosphorus             ,& 
+                    source=reshape(sb__mem%transport%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%fungi%carbon13               ,& 
+                    source=reshape(sb__mem%transport%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%fungi%carbon14               ,& 
+                    source=reshape(sb__mem%transport%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%fungi%nitrogen15             ,& 
+                    source=reshape(sb__mem%transport%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%mycorrhiza%carbon            ,& 
+                    source=reshape(sb__mem%transport%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%mycorrhiza%nitrogen          ,& 
+                    source=reshape(sb__mem%transport%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%mycorrhiza%phosphorus        ,& 
+                    source=reshape(sb__mem%transport%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%mycorrhiza%carbon13          ,& 
+                    source=reshape(sb__mem%transport%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%mycorrhiza%carbon14          ,& 
+                    source=reshape(sb__mem%transport%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%mycorrhiza%nitrogen15        ,& 
+                    source=reshape(sb__mem%transport%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%microbial%carbon             ,& 
+                    source=reshape(sb__mem%transport%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%microbial%nitrogen           ,& 
+                    source=reshape(sb__mem%transport%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%microbial%phosphorus         ,& 
+                    source=reshape(sb__mem%transport%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%microbial%carbon13           ,& 
+                    source=reshape(sb__mem%transport%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%microbial%carbon14           ,& 
+                    source=reshape(sb__mem%transport%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%microbial%nitrogen15         ,& 
+                    source=reshape(sb__mem%transport%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue%carbon               ,& 
+                    source=reshape(sb__mem%transport%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue%nitrogen             ,& 
+                    source=reshape(sb__mem%transport%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue%phosphorus           ,& 
+                    source=reshape(sb__mem%transport%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue%carbon13             ,& 
+                    source=reshape(sb__mem%transport%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue%carbon14             ,& 
+                    source=reshape(sb__mem%transport%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue%nitrogen15           ,& 
+                    source=reshape(sb__mem%transport%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue_assoc%carbon         ,& 
+                    source=reshape(sb__mem%transport%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue_assoc%nitrogen       ,& 
+                    source=reshape(sb__mem%transport%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue_assoc%phosphorus     ,& 
+                    source=reshape(sb__mem%transport%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue_assoc%carbon13       ,& 
+                    source=reshape(sb__mem%transport%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue_assoc%carbon14       ,& 
+                    source=reshape(sb__mem%transport%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_transport%residue_assoc%nitrogen15     ,& 
+                    source=reshape(sb__mem%transport%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+
+#endif
+
+#if defined(Get_sb_delta_pools)
+allocate(sb_delta_pools%carbon      ,& 
+                    source=reshape(sb__mem%delta_pools%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_delta_pools%nitrogen    ,& 
+                    source=reshape(sb__mem%delta_pools%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_delta_pools%phosphorus  ,& 
+                    source=reshape(sb__mem%delta_pools%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_delta_pools%carbon13    ,& 
+                    source=reshape(sb__mem%delta_pools%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_delta_pools%carbon14    ,& 
+                    source=reshape(sb__mem%delta_pools%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_delta_pools%nitrogen15  ,& 
+                    source=reshape(sb__mem%delta_pools%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+
+#endif
+
+#if defined(Get_sb_mycorrhiza_export)
+allocate(sb_mycorrhiza_export%carbon      ,& 
+                    source=reshape(sb__mem%mycorrhiza_export%carbon%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_mycorrhiza_export%nitrogen    ,& 
+                    source=reshape(sb__mem%mycorrhiza_export%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_mycorrhiza_export%phosphorus  ,& 
+                    source=reshape(sb__mem%mycorrhiza_export%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_mycorrhiza_export%carbon13    ,& 
+                    source=reshape(sb__mem%mycorrhiza_export%carbon13%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_mycorrhiza_export%carbon14    ,& 
+                    source=reshape(sb__mem%mycorrhiza_export%carbon14%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+allocate(sb_mycorrhiza_export%nitrogen15  ,& 
+                    source=reshape(sb__mem%mycorrhiza_export%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk),[nc,nsoil_sb]))
+
+#endif
+
 
 ! -------------------------------------------------------
 ! deallocate helper variables for vegetation pools
@@ -512,6 +1055,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_pool%seed_bed%carbon13)
   deallocate(veg_pool%seed_bed%carbon14)
   deallocate(veg_pool%seed_bed%nitrogen15)
+
 #endif
 
 #if defined(Dealloc_veg_growth)
@@ -625,6 +1169,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_growth%seed_bed%carbon13)
   deallocate(veg_growth%seed_bed%carbon14)
   deallocate(veg_growth%seed_bed%nitrogen15)
+
 #endif
 
 #if defined(Dealloc_veg_litterfall)
@@ -738,6 +1283,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_litterfall%seed_bed%carbon13)
   deallocate(veg_litterfall%seed_bed%carbon14)
   deallocate(veg_litterfall%seed_bed%nitrogen15)
+
 #endif
 
 #if defined(Dealloc_veg_falloc)
@@ -851,6 +1397,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_falloc%seed_bed%carbon13)
   deallocate(veg_falloc%seed_bed%carbon14)
   deallocate(veg_falloc%seed_bed%nitrogen15)
+
 #endif
 
 #if defined(Dealloc_veg_total_flux)
@@ -964,6 +1511,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_total_flux%seed_bed%carbon13)
   deallocate(veg_total_flux%seed_bed%carbon14)
   deallocate(veg_total_flux%seed_bed%nitrogen15)
+
 #endif
 
 #ifdef Dealloc_veg_exudation
@@ -981,6 +1529,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_exudation%carbon13)
   deallocate(veg_exudation%carbon14)
   deallocate(veg_exudation%nitrogen15)
+
 #endif
 
 #ifdef Dealloc_veg_establishment
@@ -998,6 +1547,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_establishment%carbon13)
   deallocate(veg_establishment%carbon14)
   deallocate(veg_establishment%nitrogen15)
+
 #endif
 
 #ifdef Dealloc_veg_reserve_use
@@ -1015,6 +1565,7 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_reserve_use%carbon13)
   deallocate(veg_reserve_use%carbon14)
   deallocate(veg_reserve_use%nitrogen15)
+
 #endif
 
 #ifdef Dealloc_veg_total_biomass
@@ -1032,4 +1583,551 @@ allocate(veg_total_biomass%nitrogen15 ,source=reshape(veg__mem%total_biomass%nit
   deallocate(veg_total_biomass%carbon13)
   deallocate(veg_total_biomass%carbon14)
   deallocate(veg_total_biomass%nitrogen15)
+
+#endif
+
+
+! -------------------------------------------------------
+! deallocate helper variables for sb pools
+! and pass values to pools of sb memory
+! -------------------------------------------------------
+
+#if defined(Dealloc_sb_pool)
+  ! pass the values (back) to process memory
+  sb__mem%pool%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                  = sb_pool%dom%carbon(:,:)
+  sb__mem%pool%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_pool%dom%nitrogen(:,:)
+  sb__mem%pool%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_pool%dom%phosphorus(:,:)
+  sb__mem%pool%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_pool%dom%carbon13(:,:)
+  sb__mem%pool%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_pool%dom%carbon14(:,:)
+  sb__mem%pool%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_pool%dom%nitrogen15(:,:)
+  sb__mem%pool%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%dom_assoc%carbon(:,:)
+  sb__mem%pool%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%dom_assoc%nitrogen(:,:)
+  sb__mem%pool%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_pool%dom_assoc%phosphorus(:,:)
+  sb__mem%pool%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%dom_assoc%carbon13(:,:)
+  sb__mem%pool%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%dom_assoc%carbon14(:,:)
+  sb__mem%pool%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_pool%dom_assoc%nitrogen15(:,:)
+  sb__mem%pool%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_pool%soluable_litter%carbon(:,:)
+  sb__mem%pool%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_pool%soluable_litter%nitrogen(:,:)
+  sb__mem%pool%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_pool%soluable_litter%phosphorus(:,:)
+  sb__mem%pool%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_pool%soluable_litter%carbon13(:,:)
+  sb__mem%pool%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_pool%soluable_litter%carbon14(:,:)
+  sb__mem%pool%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_pool%soluable_litter%nitrogen15(:,:)
+  sb__mem%pool%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_pool%polymeric_litter%carbon(:,:)
+  sb__mem%pool%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_pool%polymeric_litter%nitrogen(:,:)
+  sb__mem%pool%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk) = sb_pool%polymeric_litter%phosphorus(:,:)
+  sb__mem%pool%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_pool%polymeric_litter%carbon13(:,:)
+  sb__mem%pool%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_pool%polymeric_litter%carbon14(:,:)
+  sb__mem%pool%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk) = sb_pool%polymeric_litter%nitrogen15(:,:)
+  sb__mem%pool%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_pool%woody_litter%carbon(:,:)
+  sb__mem%pool%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_pool%woody_litter%nitrogen(:,:)
+  sb__mem%pool%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_pool%woody_litter%phosphorus(:,:)
+  sb__mem%pool%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_pool%woody_litter%carbon13(:,:)
+  sb__mem%pool%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_pool%woody_litter%carbon14(:,:)
+  sb__mem%pool%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_pool%woody_litter%nitrogen15(:,:)
+  sb__mem%pool%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_pool%fungi%carbon(:,:)
+  sb__mem%pool%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_pool%fungi%nitrogen(:,:)
+  sb__mem%pool%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%fungi%phosphorus(:,:)
+  sb__mem%pool%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_pool%fungi%carbon13(:,:)
+  sb__mem%pool%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_pool%fungi%carbon14(:,:)
+  sb__mem%pool%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%fungi%nitrogen15(:,:)
+  sb__mem%pool%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk)           = sb_pool%mycorrhiza%carbon(:,:)
+  sb__mem%pool%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_pool%mycorrhiza%nitrogen(:,:)
+  sb__mem%pool%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_pool%mycorrhiza%phosphorus(:,:)
+  sb__mem%pool%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_pool%mycorrhiza%carbon13(:,:)
+  sb__mem%pool%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_pool%mycorrhiza%carbon14(:,:)
+  sb__mem%pool%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_pool%mycorrhiza%nitrogen15(:,:)
+  sb__mem%pool%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%microbial%carbon(:,:)
+  sb__mem%pool%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%microbial%nitrogen(:,:)
+  sb__mem%pool%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_pool%microbial%phosphorus(:,:)
+  sb__mem%pool%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%microbial%carbon13(:,:)
+  sb__mem%pool%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%microbial%carbon14(:,:)
+  sb__mem%pool%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_pool%microbial%nitrogen15(:,:)
+  sb__mem%pool%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_pool%residue%carbon(:,:)
+  sb__mem%pool%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%residue%nitrogen(:,:)
+  sb__mem%pool%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%residue%phosphorus(:,:)
+  sb__mem%pool%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%residue%carbon13(:,:)
+  sb__mem%pool%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_pool%residue%carbon14(:,:)
+  sb__mem%pool%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_pool%residue%nitrogen15(:,:)
+  sb__mem%pool%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_pool%residue_assoc%carbon(:,:)
+  sb__mem%pool%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_pool%residue_assoc%nitrogen(:,:)
+  sb__mem%pool%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_pool%residue_assoc%phosphorus(:,:)
+  sb__mem%pool%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_pool%residue_assoc%carbon13(:,:)
+  sb__mem%pool%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_pool%residue_assoc%carbon14(:,:)
+  sb__mem%pool%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_pool%residue_assoc%nitrogen15(:,:)
+  ! deallocate variables in helper pool structures
+  deallocate(sb_pool%dom%carbon)
+  deallocate(sb_pool%dom%nitrogen)
+  deallocate(sb_pool%dom%phosphorus)
+  deallocate(sb_pool%dom%carbon13)
+  deallocate(sb_pool%dom%carbon14)
+  deallocate(sb_pool%dom%nitrogen15)
+  deallocate(sb_pool%dom_assoc%carbon)
+  deallocate(sb_pool%dom_assoc%nitrogen)
+  deallocate(sb_pool%dom_assoc%phosphorus)
+  deallocate(sb_pool%dom_assoc%carbon13)
+  deallocate(sb_pool%dom_assoc%carbon14)
+  deallocate(sb_pool%dom_assoc%nitrogen15)
+  deallocate(sb_pool%soluable_litter%carbon)
+  deallocate(sb_pool%soluable_litter%nitrogen)
+  deallocate(sb_pool%soluable_litter%phosphorus)
+  deallocate(sb_pool%soluable_litter%carbon13)
+  deallocate(sb_pool%soluable_litter%carbon14)
+  deallocate(sb_pool%soluable_litter%nitrogen15)
+  deallocate(sb_pool%polymeric_litter%carbon)
+  deallocate(sb_pool%polymeric_litter%nitrogen)
+  deallocate(sb_pool%polymeric_litter%phosphorus)
+  deallocate(sb_pool%polymeric_litter%carbon13)
+  deallocate(sb_pool%polymeric_litter%carbon14)
+  deallocate(sb_pool%polymeric_litter%nitrogen15)
+  deallocate(sb_pool%woody_litter%carbon)
+  deallocate(sb_pool%woody_litter%nitrogen)
+  deallocate(sb_pool%woody_litter%phosphorus)
+  deallocate(sb_pool%woody_litter%carbon13)
+  deallocate(sb_pool%woody_litter%carbon14)
+  deallocate(sb_pool%woody_litter%nitrogen15)
+  deallocate(sb_pool%fungi%carbon)
+  deallocate(sb_pool%fungi%nitrogen)
+  deallocate(sb_pool%fungi%phosphorus)
+  deallocate(sb_pool%fungi%carbon13)
+  deallocate(sb_pool%fungi%carbon14)
+  deallocate(sb_pool%fungi%nitrogen15)
+  deallocate(sb_pool%mycorrhiza%carbon)
+  deallocate(sb_pool%mycorrhiza%nitrogen)
+  deallocate(sb_pool%mycorrhiza%phosphorus)
+  deallocate(sb_pool%mycorrhiza%carbon13)
+  deallocate(sb_pool%mycorrhiza%carbon14)
+  deallocate(sb_pool%mycorrhiza%nitrogen15)
+  deallocate(sb_pool%microbial%carbon)
+  deallocate(sb_pool%microbial%nitrogen)
+  deallocate(sb_pool%microbial%phosphorus)
+  deallocate(sb_pool%microbial%carbon13)
+  deallocate(sb_pool%microbial%carbon14)
+  deallocate(sb_pool%microbial%nitrogen15)
+  deallocate(sb_pool%residue%carbon)
+  deallocate(sb_pool%residue%nitrogen)
+  deallocate(sb_pool%residue%phosphorus)
+  deallocate(sb_pool%residue%carbon13)
+  deallocate(sb_pool%residue%carbon14)
+  deallocate(sb_pool%residue%nitrogen15)
+  deallocate(sb_pool%residue_assoc%carbon)
+  deallocate(sb_pool%residue_assoc%nitrogen)
+  deallocate(sb_pool%residue_assoc%phosphorus)
+  deallocate(sb_pool%residue_assoc%carbon13)
+  deallocate(sb_pool%residue_assoc%carbon14)
+  deallocate(sb_pool%residue_assoc%nitrogen15)
+
+#endif
+
+#if defined(Dealloc_sb_formation)
+  ! pass the values (back) to process memory
+  sb__mem%formation%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                  = sb_formation%dom%carbon(:,:)
+  sb__mem%formation%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_formation%dom%nitrogen(:,:)
+  sb__mem%formation%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_formation%dom%phosphorus(:,:)
+  sb__mem%formation%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_formation%dom%carbon13(:,:)
+  sb__mem%formation%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_formation%dom%carbon14(:,:)
+  sb__mem%formation%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_formation%dom%nitrogen15(:,:)
+  sb__mem%formation%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%dom_assoc%carbon(:,:)
+  sb__mem%formation%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%dom_assoc%nitrogen(:,:)
+  sb__mem%formation%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_formation%dom_assoc%phosphorus(:,:)
+  sb__mem%formation%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%dom_assoc%carbon13(:,:)
+  sb__mem%formation%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%dom_assoc%carbon14(:,:)
+  sb__mem%formation%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_formation%dom_assoc%nitrogen15(:,:)
+  sb__mem%formation%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_formation%soluable_litter%carbon(:,:)
+  sb__mem%formation%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_formation%soluable_litter%nitrogen(:,:)
+  sb__mem%formation%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_formation%soluable_litter%phosphorus(:,:)
+  sb__mem%formation%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_formation%soluable_litter%carbon13(:,:)
+  sb__mem%formation%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_formation%soluable_litter%carbon14(:,:)
+  sb__mem%formation%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_formation%soluable_litter%nitrogen15(:,:)
+  sb__mem%formation%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_formation%polymeric_litter%carbon(:,:)
+  sb__mem%formation%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_formation%polymeric_litter%nitrogen(:,:)
+  sb__mem%formation%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk) = sb_formation%polymeric_litter%phosphorus(:,:)
+  sb__mem%formation%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_formation%polymeric_litter%carbon13(:,:)
+  sb__mem%formation%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_formation%polymeric_litter%carbon14(:,:)
+  sb__mem%formation%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk) = sb_formation%polymeric_litter%nitrogen15(:,:)
+  sb__mem%formation%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_formation%woody_litter%carbon(:,:)
+  sb__mem%formation%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_formation%woody_litter%nitrogen(:,:)
+  sb__mem%formation%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_formation%woody_litter%phosphorus(:,:)
+  sb__mem%formation%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_formation%woody_litter%carbon13(:,:)
+  sb__mem%formation%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_formation%woody_litter%carbon14(:,:)
+  sb__mem%formation%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_formation%woody_litter%nitrogen15(:,:)
+  sb__mem%formation%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_formation%fungi%carbon(:,:)
+  sb__mem%formation%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_formation%fungi%nitrogen(:,:)
+  sb__mem%formation%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%fungi%phosphorus(:,:)
+  sb__mem%formation%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_formation%fungi%carbon13(:,:)
+  sb__mem%formation%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_formation%fungi%carbon14(:,:)
+  sb__mem%formation%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%fungi%nitrogen15(:,:)
+  sb__mem%formation%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk)           = sb_formation%mycorrhiza%carbon(:,:)
+  sb__mem%formation%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_formation%mycorrhiza%nitrogen(:,:)
+  sb__mem%formation%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_formation%mycorrhiza%phosphorus(:,:)
+  sb__mem%formation%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_formation%mycorrhiza%carbon13(:,:)
+  sb__mem%formation%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_formation%mycorrhiza%carbon14(:,:)
+  sb__mem%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_formation%mycorrhiza%nitrogen15(:,:)
+  sb__mem%formation%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%microbial%carbon(:,:)
+  sb__mem%formation%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%microbial%nitrogen(:,:)
+  sb__mem%formation%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_formation%microbial%phosphorus(:,:)
+  sb__mem%formation%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%microbial%carbon13(:,:)
+  sb__mem%formation%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%microbial%carbon14(:,:)
+  sb__mem%formation%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_formation%microbial%nitrogen15(:,:)
+  sb__mem%formation%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_formation%residue%carbon(:,:)
+  sb__mem%formation%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%residue%nitrogen(:,:)
+  sb__mem%formation%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%residue%phosphorus(:,:)
+  sb__mem%formation%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%residue%carbon13(:,:)
+  sb__mem%formation%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_formation%residue%carbon14(:,:)
+  sb__mem%formation%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_formation%residue%nitrogen15(:,:)
+  sb__mem%formation%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_formation%residue_assoc%carbon(:,:)
+  sb__mem%formation%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_formation%residue_assoc%nitrogen(:,:)
+  sb__mem%formation%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_formation%residue_assoc%phosphorus(:,:)
+  sb__mem%formation%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_formation%residue_assoc%carbon13(:,:)
+  sb__mem%formation%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_formation%residue_assoc%carbon14(:,:)
+  sb__mem%formation%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_formation%residue_assoc%nitrogen15(:,:)
+  ! deallocate variables in helper pool structures
+  deallocate(sb_formation%dom%carbon)
+  deallocate(sb_formation%dom%nitrogen)
+  deallocate(sb_formation%dom%phosphorus)
+  deallocate(sb_formation%dom%carbon13)
+  deallocate(sb_formation%dom%carbon14)
+  deallocate(sb_formation%dom%nitrogen15)
+  deallocate(sb_formation%dom_assoc%carbon)
+  deallocate(sb_formation%dom_assoc%nitrogen)
+  deallocate(sb_formation%dom_assoc%phosphorus)
+  deallocate(sb_formation%dom_assoc%carbon13)
+  deallocate(sb_formation%dom_assoc%carbon14)
+  deallocate(sb_formation%dom_assoc%nitrogen15)
+  deallocate(sb_formation%soluable_litter%carbon)
+  deallocate(sb_formation%soluable_litter%nitrogen)
+  deallocate(sb_formation%soluable_litter%phosphorus)
+  deallocate(sb_formation%soluable_litter%carbon13)
+  deallocate(sb_formation%soluable_litter%carbon14)
+  deallocate(sb_formation%soluable_litter%nitrogen15)
+  deallocate(sb_formation%polymeric_litter%carbon)
+  deallocate(sb_formation%polymeric_litter%nitrogen)
+  deallocate(sb_formation%polymeric_litter%phosphorus)
+  deallocate(sb_formation%polymeric_litter%carbon13)
+  deallocate(sb_formation%polymeric_litter%carbon14)
+  deallocate(sb_formation%polymeric_litter%nitrogen15)
+  deallocate(sb_formation%woody_litter%carbon)
+  deallocate(sb_formation%woody_litter%nitrogen)
+  deallocate(sb_formation%woody_litter%phosphorus)
+  deallocate(sb_formation%woody_litter%carbon13)
+  deallocate(sb_formation%woody_litter%carbon14)
+  deallocate(sb_formation%woody_litter%nitrogen15)
+  deallocate(sb_formation%fungi%carbon)
+  deallocate(sb_formation%fungi%nitrogen)
+  deallocate(sb_formation%fungi%phosphorus)
+  deallocate(sb_formation%fungi%carbon13)
+  deallocate(sb_formation%fungi%carbon14)
+  deallocate(sb_formation%fungi%nitrogen15)
+  deallocate(sb_formation%mycorrhiza%carbon)
+  deallocate(sb_formation%mycorrhiza%nitrogen)
+  deallocate(sb_formation%mycorrhiza%phosphorus)
+  deallocate(sb_formation%mycorrhiza%carbon13)
+  deallocate(sb_formation%mycorrhiza%carbon14)
+  deallocate(sb_formation%mycorrhiza%nitrogen15)
+  deallocate(sb_formation%microbial%carbon)
+  deallocate(sb_formation%microbial%nitrogen)
+  deallocate(sb_formation%microbial%phosphorus)
+  deallocate(sb_formation%microbial%carbon13)
+  deallocate(sb_formation%microbial%carbon14)
+  deallocate(sb_formation%microbial%nitrogen15)
+  deallocate(sb_formation%residue%carbon)
+  deallocate(sb_formation%residue%nitrogen)
+  deallocate(sb_formation%residue%phosphorus)
+  deallocate(sb_formation%residue%carbon13)
+  deallocate(sb_formation%residue%carbon14)
+  deallocate(sb_formation%residue%nitrogen15)
+  deallocate(sb_formation%residue_assoc%carbon)
+  deallocate(sb_formation%residue_assoc%nitrogen)
+  deallocate(sb_formation%residue_assoc%phosphorus)
+  deallocate(sb_formation%residue_assoc%carbon13)
+  deallocate(sb_formation%residue_assoc%carbon14)
+  deallocate(sb_formation%residue_assoc%nitrogen15)
+
+#endif
+
+#if defined(Dealloc_sb_loss)
+  ! pass the values (back) to process memory
+  sb__mem%loss%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                  = sb_loss%dom%carbon(:,:)
+  sb__mem%loss%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_loss%dom%nitrogen(:,:)
+  sb__mem%loss%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_loss%dom%phosphorus(:,:)
+  sb__mem%loss%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_loss%dom%carbon13(:,:)
+  sb__mem%loss%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_loss%dom%carbon14(:,:)
+  sb__mem%loss%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_loss%dom%nitrogen15(:,:)
+  sb__mem%loss%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%dom_assoc%carbon(:,:)
+  sb__mem%loss%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%dom_assoc%nitrogen(:,:)
+  sb__mem%loss%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_loss%dom_assoc%phosphorus(:,:)
+  sb__mem%loss%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%dom_assoc%carbon13(:,:)
+  sb__mem%loss%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%dom_assoc%carbon14(:,:)
+  sb__mem%loss%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_loss%dom_assoc%nitrogen15(:,:)
+  sb__mem%loss%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_loss%soluable_litter%carbon(:,:)
+  sb__mem%loss%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_loss%soluable_litter%nitrogen(:,:)
+  sb__mem%loss%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_loss%soluable_litter%phosphorus(:,:)
+  sb__mem%loss%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_loss%soluable_litter%carbon13(:,:)
+  sb__mem%loss%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_loss%soluable_litter%carbon14(:,:)
+  sb__mem%loss%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_loss%soluable_litter%nitrogen15(:,:)
+  sb__mem%loss%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_loss%polymeric_litter%carbon(:,:)
+  sb__mem%loss%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_loss%polymeric_litter%nitrogen(:,:)
+  sb__mem%loss%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk) = sb_loss%polymeric_litter%phosphorus(:,:)
+  sb__mem%loss%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_loss%polymeric_litter%carbon13(:,:)
+  sb__mem%loss%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_loss%polymeric_litter%carbon14(:,:)
+  sb__mem%loss%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk) = sb_loss%polymeric_litter%nitrogen15(:,:)
+  sb__mem%loss%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_loss%woody_litter%carbon(:,:)
+  sb__mem%loss%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_loss%woody_litter%nitrogen(:,:)
+  sb__mem%loss%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_loss%woody_litter%phosphorus(:,:)
+  sb__mem%loss%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_loss%woody_litter%carbon13(:,:)
+  sb__mem%loss%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_loss%woody_litter%carbon14(:,:)
+  sb__mem%loss%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_loss%woody_litter%nitrogen15(:,:)
+  sb__mem%loss%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_loss%fungi%carbon(:,:)
+  sb__mem%loss%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_loss%fungi%nitrogen(:,:)
+  sb__mem%loss%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%fungi%phosphorus(:,:)
+  sb__mem%loss%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_loss%fungi%carbon13(:,:)
+  sb__mem%loss%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_loss%fungi%carbon14(:,:)
+  sb__mem%loss%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%fungi%nitrogen15(:,:)
+  sb__mem%loss%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk)           = sb_loss%mycorrhiza%carbon(:,:)
+  sb__mem%loss%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_loss%mycorrhiza%nitrogen(:,:)
+  sb__mem%loss%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_loss%mycorrhiza%phosphorus(:,:)
+  sb__mem%loss%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_loss%mycorrhiza%carbon13(:,:)
+  sb__mem%loss%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_loss%mycorrhiza%carbon14(:,:)
+  sb__mem%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_loss%mycorrhiza%nitrogen15(:,:)
+  sb__mem%loss%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%microbial%carbon(:,:)
+  sb__mem%loss%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%microbial%nitrogen(:,:)
+  sb__mem%loss%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_loss%microbial%phosphorus(:,:)
+  sb__mem%loss%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%microbial%carbon13(:,:)
+  sb__mem%loss%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%microbial%carbon14(:,:)
+  sb__mem%loss%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_loss%microbial%nitrogen15(:,:)
+  sb__mem%loss%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_loss%residue%carbon(:,:)
+  sb__mem%loss%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%residue%nitrogen(:,:)
+  sb__mem%loss%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%residue%phosphorus(:,:)
+  sb__mem%loss%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%residue%carbon13(:,:)
+  sb__mem%loss%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_loss%residue%carbon14(:,:)
+  sb__mem%loss%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_loss%residue%nitrogen15(:,:)
+  sb__mem%loss%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_loss%residue_assoc%carbon(:,:)
+  sb__mem%loss%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_loss%residue_assoc%nitrogen(:,:)
+  sb__mem%loss%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_loss%residue_assoc%phosphorus(:,:)
+  sb__mem%loss%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_loss%residue_assoc%carbon13(:,:)
+  sb__mem%loss%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_loss%residue_assoc%carbon14(:,:)
+  sb__mem%loss%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_loss%residue_assoc%nitrogen15(:,:)
+  ! deallocate variables in helper pool structures
+  deallocate(sb_loss%dom%carbon)
+  deallocate(sb_loss%dom%nitrogen)
+  deallocate(sb_loss%dom%phosphorus)
+  deallocate(sb_loss%dom%carbon13)
+  deallocate(sb_loss%dom%carbon14)
+  deallocate(sb_loss%dom%nitrogen15)
+  deallocate(sb_loss%dom_assoc%carbon)
+  deallocate(sb_loss%dom_assoc%nitrogen)
+  deallocate(sb_loss%dom_assoc%phosphorus)
+  deallocate(sb_loss%dom_assoc%carbon13)
+  deallocate(sb_loss%dom_assoc%carbon14)
+  deallocate(sb_loss%dom_assoc%nitrogen15)
+  deallocate(sb_loss%soluable_litter%carbon)
+  deallocate(sb_loss%soluable_litter%nitrogen)
+  deallocate(sb_loss%soluable_litter%phosphorus)
+  deallocate(sb_loss%soluable_litter%carbon13)
+  deallocate(sb_loss%soluable_litter%carbon14)
+  deallocate(sb_loss%soluable_litter%nitrogen15)
+  deallocate(sb_loss%polymeric_litter%carbon)
+  deallocate(sb_loss%polymeric_litter%nitrogen)
+  deallocate(sb_loss%polymeric_litter%phosphorus)
+  deallocate(sb_loss%polymeric_litter%carbon13)
+  deallocate(sb_loss%polymeric_litter%carbon14)
+  deallocate(sb_loss%polymeric_litter%nitrogen15)
+  deallocate(sb_loss%woody_litter%carbon)
+  deallocate(sb_loss%woody_litter%nitrogen)
+  deallocate(sb_loss%woody_litter%phosphorus)
+  deallocate(sb_loss%woody_litter%carbon13)
+  deallocate(sb_loss%woody_litter%carbon14)
+  deallocate(sb_loss%woody_litter%nitrogen15)
+  deallocate(sb_loss%fungi%carbon)
+  deallocate(sb_loss%fungi%nitrogen)
+  deallocate(sb_loss%fungi%phosphorus)
+  deallocate(sb_loss%fungi%carbon13)
+  deallocate(sb_loss%fungi%carbon14)
+  deallocate(sb_loss%fungi%nitrogen15)
+  deallocate(sb_loss%mycorrhiza%carbon)
+  deallocate(sb_loss%mycorrhiza%nitrogen)
+  deallocate(sb_loss%mycorrhiza%phosphorus)
+  deallocate(sb_loss%mycorrhiza%carbon13)
+  deallocate(sb_loss%mycorrhiza%carbon14)
+  deallocate(sb_loss%mycorrhiza%nitrogen15)
+  deallocate(sb_loss%microbial%carbon)
+  deallocate(sb_loss%microbial%nitrogen)
+  deallocate(sb_loss%microbial%phosphorus)
+  deallocate(sb_loss%microbial%carbon13)
+  deallocate(sb_loss%microbial%carbon14)
+  deallocate(sb_loss%microbial%nitrogen15)
+  deallocate(sb_loss%residue%carbon)
+  deallocate(sb_loss%residue%nitrogen)
+  deallocate(sb_loss%residue%phosphorus)
+  deallocate(sb_loss%residue%carbon13)
+  deallocate(sb_loss%residue%carbon14)
+  deallocate(sb_loss%residue%nitrogen15)
+  deallocate(sb_loss%residue_assoc%carbon)
+  deallocate(sb_loss%residue_assoc%nitrogen)
+  deallocate(sb_loss%residue_assoc%phosphorus)
+  deallocate(sb_loss%residue_assoc%carbon13)
+  deallocate(sb_loss%residue_assoc%carbon14)
+  deallocate(sb_loss%residue_assoc%nitrogen15)
+
+#endif
+
+#if defined(Dealloc_sb_transport)
+  ! pass the values (back) to process memory
+  sb__mem%transport%dom%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                  = sb_transport%dom%carbon(:,:)
+  sb__mem%transport%dom%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_transport%dom%nitrogen(:,:)
+  sb__mem%transport%dom%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_transport%dom%phosphorus(:,:)
+  sb__mem%transport%dom%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_transport%dom%carbon13(:,:)
+  sb__mem%transport%dom%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_transport%dom%carbon14(:,:)
+  sb__mem%transport%dom%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_transport%dom%nitrogen15(:,:)
+  sb__mem%transport%dom_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%dom_assoc%carbon(:,:)
+  sb__mem%transport%dom_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%dom_assoc%nitrogen(:,:)
+  sb__mem%transport%dom_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_transport%dom_assoc%phosphorus(:,:)
+  sb__mem%transport%dom_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%dom_assoc%carbon13(:,:)
+  sb__mem%transport%dom_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%dom_assoc%carbon14(:,:)
+  sb__mem%transport%dom_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_transport%dom_assoc%nitrogen15(:,:)
+  sb__mem%transport%soluable_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_transport%soluable_litter%carbon(:,:)
+  sb__mem%transport%soluable_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_transport%soluable_litter%nitrogen(:,:)
+  sb__mem%transport%soluable_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_transport%soluable_litter%phosphorus(:,:)
+  sb__mem%transport%soluable_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_transport%soluable_litter%carbon13(:,:)
+  sb__mem%transport%soluable_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_transport%soluable_litter%carbon14(:,:)
+  sb__mem%transport%soluable_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)  = sb_transport%soluable_litter%nitrogen15(:,:)
+  sb__mem%transport%polymeric_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_transport%polymeric_litter%carbon(:,:)
+  sb__mem%transport%polymeric_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_transport%polymeric_litter%nitrogen(:,:)
+  sb__mem%transport%polymeric_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk) = sb_transport%polymeric_litter%phosphorus(:,:)
+  sb__mem%transport%polymeric_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_transport%polymeric_litter%carbon13(:,:)
+  sb__mem%transport%polymeric_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_transport%polymeric_litter%carbon14(:,:)
+  sb__mem%transport%polymeric_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk) = sb_transport%polymeric_litter%nitrogen15(:,:)
+  sb__mem%transport%woody_litter%carbon%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_transport%woody_litter%carbon(:,:)
+  sb__mem%transport%woody_litter%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_transport%woody_litter%nitrogen(:,:)
+  sb__mem%transport%woody_litter%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_transport%woody_litter%phosphorus(:,:)
+  sb__mem%transport%woody_litter%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_transport%woody_litter%carbon13(:,:)
+  sb__mem%transport%woody_litter%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_transport%woody_litter%carbon14(:,:)
+  sb__mem%transport%woody_litter%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_transport%woody_litter%nitrogen15(:,:)
+  sb__mem%transport%fungi%carbon%ptr(ics:ice,1:nsoil_sb,iblk)                = sb_transport%fungi%carbon(:,:)
+  sb__mem%transport%fungi%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_transport%fungi%nitrogen(:,:)
+  sb__mem%transport%fungi%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%fungi%phosphorus(:,:)
+  sb__mem%transport%fungi%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_transport%fungi%carbon13(:,:)
+  sb__mem%transport%fungi%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_transport%fungi%carbon14(:,:)
+  sb__mem%transport%fungi%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%fungi%nitrogen15(:,:)
+  sb__mem%transport%mycorrhiza%carbon%ptr(ics:ice,1:nsoil_sb,iblk)           = sb_transport%mycorrhiza%carbon(:,:)
+  sb__mem%transport%mycorrhiza%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_transport%mycorrhiza%nitrogen(:,:)
+  sb__mem%transport%mycorrhiza%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_transport%mycorrhiza%phosphorus(:,:)
+  sb__mem%transport%mycorrhiza%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_transport%mycorrhiza%carbon13(:,:)
+  sb__mem%transport%mycorrhiza%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)         = sb_transport%mycorrhiza%carbon14(:,:)
+  sb__mem%transport%mycorrhiza%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_transport%mycorrhiza%nitrogen15(:,:)
+  sb__mem%transport%microbial%carbon%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%microbial%carbon(:,:)
+  sb__mem%transport%microbial%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%microbial%nitrogen(:,:)
+  sb__mem%transport%microbial%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_transport%microbial%phosphorus(:,:)
+  sb__mem%transport%microbial%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%microbial%carbon13(:,:)
+  sb__mem%transport%microbial%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%microbial%carbon14(:,:)
+  sb__mem%transport%microbial%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_transport%microbial%nitrogen15(:,:)
+  sb__mem%transport%residue%carbon%ptr(ics:ice,1:nsoil_sb,iblk)              = sb_transport%residue%carbon(:,:)
+  sb__mem%transport%residue%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%residue%nitrogen(:,:)
+  sb__mem%transport%residue%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%residue%phosphorus(:,:)
+  sb__mem%transport%residue%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%residue%carbon13(:,:)
+  sb__mem%transport%residue%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)            = sb_transport%residue%carbon14(:,:)
+  sb__mem%transport%residue%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)          = sb_transport%residue%nitrogen15(:,:)
+  sb__mem%transport%residue_assoc%carbon%ptr(ics:ice,1:nsoil_sb,iblk)        = sb_transport%residue_assoc%carbon(:,:)
+  sb__mem%transport%residue_assoc%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_transport%residue_assoc%nitrogen(:,:)
+  sb__mem%transport%residue_assoc%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_transport%residue_assoc%phosphorus(:,:)
+  sb__mem%transport%residue_assoc%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_transport%residue_assoc%carbon13(:,:)
+  sb__mem%transport%residue_assoc%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)      = sb_transport%residue_assoc%carbon14(:,:)
+  sb__mem%transport%residue_assoc%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)    = sb_transport%residue_assoc%nitrogen15(:,:)
+  ! deallocate variables in helper pool structures
+  deallocate(sb_transport%dom%carbon)
+  deallocate(sb_transport%dom%nitrogen)
+  deallocate(sb_transport%dom%phosphorus)
+  deallocate(sb_transport%dom%carbon13)
+  deallocate(sb_transport%dom%carbon14)
+  deallocate(sb_transport%dom%nitrogen15)
+  deallocate(sb_transport%dom_assoc%carbon)
+  deallocate(sb_transport%dom_assoc%nitrogen)
+  deallocate(sb_transport%dom_assoc%phosphorus)
+  deallocate(sb_transport%dom_assoc%carbon13)
+  deallocate(sb_transport%dom_assoc%carbon14)
+  deallocate(sb_transport%dom_assoc%nitrogen15)
+  deallocate(sb_transport%soluable_litter%carbon)
+  deallocate(sb_transport%soluable_litter%nitrogen)
+  deallocate(sb_transport%soluable_litter%phosphorus)
+  deallocate(sb_transport%soluable_litter%carbon13)
+  deallocate(sb_transport%soluable_litter%carbon14)
+  deallocate(sb_transport%soluable_litter%nitrogen15)
+  deallocate(sb_transport%polymeric_litter%carbon)
+  deallocate(sb_transport%polymeric_litter%nitrogen)
+  deallocate(sb_transport%polymeric_litter%phosphorus)
+  deallocate(sb_transport%polymeric_litter%carbon13)
+  deallocate(sb_transport%polymeric_litter%carbon14)
+  deallocate(sb_transport%polymeric_litter%nitrogen15)
+  deallocate(sb_transport%woody_litter%carbon)
+  deallocate(sb_transport%woody_litter%nitrogen)
+  deallocate(sb_transport%woody_litter%phosphorus)
+  deallocate(sb_transport%woody_litter%carbon13)
+  deallocate(sb_transport%woody_litter%carbon14)
+  deallocate(sb_transport%woody_litter%nitrogen15)
+  deallocate(sb_transport%fungi%carbon)
+  deallocate(sb_transport%fungi%nitrogen)
+  deallocate(sb_transport%fungi%phosphorus)
+  deallocate(sb_transport%fungi%carbon13)
+  deallocate(sb_transport%fungi%carbon14)
+  deallocate(sb_transport%fungi%nitrogen15)
+  deallocate(sb_transport%mycorrhiza%carbon)
+  deallocate(sb_transport%mycorrhiza%nitrogen)
+  deallocate(sb_transport%mycorrhiza%phosphorus)
+  deallocate(sb_transport%mycorrhiza%carbon13)
+  deallocate(sb_transport%mycorrhiza%carbon14)
+  deallocate(sb_transport%mycorrhiza%nitrogen15)
+  deallocate(sb_transport%microbial%carbon)
+  deallocate(sb_transport%microbial%nitrogen)
+  deallocate(sb_transport%microbial%phosphorus)
+  deallocate(sb_transport%microbial%carbon13)
+  deallocate(sb_transport%microbial%carbon14)
+  deallocate(sb_transport%microbial%nitrogen15)
+  deallocate(sb_transport%residue%carbon)
+  deallocate(sb_transport%residue%nitrogen)
+  deallocate(sb_transport%residue%phosphorus)
+  deallocate(sb_transport%residue%carbon13)
+  deallocate(sb_transport%residue%carbon14)
+  deallocate(sb_transport%residue%nitrogen15)
+  deallocate(sb_transport%residue_assoc%carbon)
+  deallocate(sb_transport%residue_assoc%nitrogen)
+  deallocate(sb_transport%residue_assoc%phosphorus)
+  deallocate(sb_transport%residue_assoc%carbon13)
+  deallocate(sb_transport%residue_assoc%carbon14)
+  deallocate(sb_transport%residue_assoc%nitrogen15)
+
+#endif
+
+#if defined(Dealloc_sb_delta_pools)
+  ! pass the values (back) to process memory
+  sb__mem%delta_pools%carbon%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_delta_pools%carbon(:,:)
+  sb__mem%delta_pools%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_delta_pools%nitrogen(:,:)
+  sb__mem%delta_pools%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_delta_pools%phosphorus(:,:)
+  sb__mem%delta_pools%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_delta_pools%carbon13(:,:)
+  sb__mem%delta_pools%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_delta_pools%carbon14(:,:)
+  sb__mem%delta_pools%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_delta_pools%nitrogen15(:,:)
+  ! deallocate variables in helper pool structures
+  deallocate(sb_delta_pools%carbon)
+  deallocate(sb_delta_pools%nitrogen)
+  deallocate(sb_delta_pools%phosphorus)
+  deallocate(sb_delta_pools%carbon13)
+  deallocate(sb_delta_pools%carbon14)
+  deallocate(sb_delta_pools%nitrogen15)
+
+#endif
+
+#if defined(Dealloc_sb_mycorrhiza_export)
+  ! pass the values (back) to process memory
+  sb__mem%mycorrhiza_export%carbon%ptr(ics:ice,1:nsoil_sb,iblk)       = sb_mycorrhiza_export%carbon(:,:)
+  sb__mem%mycorrhiza_export%nitrogen%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_mycorrhiza_export%nitrogen(:,:)
+  sb__mem%mycorrhiza_export%phosphorus%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_mycorrhiza_export%phosphorus(:,:)
+  sb__mem%mycorrhiza_export%carbon13%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_mycorrhiza_export%carbon13(:,:)
+  sb__mem%mycorrhiza_export%carbon14%ptr(ics:ice,1:nsoil_sb,iblk)     = sb_mycorrhiza_export%carbon14(:,:)
+  sb__mem%mycorrhiza_export%nitrogen15%ptr(ics:ice,1:nsoil_sb,iblk)   = sb_mycorrhiza_export%nitrogen15(:,:)
+  ! deallocate variables in helper pool structures
+  deallocate(sb_mycorrhiza_export%carbon)
+  deallocate(sb_mycorrhiza_export%nitrogen)
+  deallocate(sb_mycorrhiza_export%phosphorus)
+  deallocate(sb_mycorrhiza_export%carbon13)
+  deallocate(sb_mycorrhiza_export%carbon14)
+  deallocate(sb_mycorrhiza_export%nitrogen15)
+
 #endif

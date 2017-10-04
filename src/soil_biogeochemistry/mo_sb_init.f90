@@ -48,6 +48,7 @@ CONTAINS
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SB_)
+    dsl4slm_Use_memory_a_sb
     dsl4jsb_Use_memory(SOIL_)
 
     IMPLICIT NONE
@@ -61,6 +62,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                                      :: isoil
     INTEGER                                      :: iblk, ics, ice, nc
+    INTEGER                                      :: nsoil_sb
     REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
     ! ---------------------------
@@ -70,14 +72,19 @@ CONTAINS
     dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SOIL_)
+    ! Declare pool structures in memory
+#define Def_sb_pool
+#include "slm_pools_a_incl.f90"
+#undef Def_sb_pool
 !! *slmtemp    
-    TYPE(t_sb_memory),    POINTER                :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_soil_memory),    POINTER              :: soil       ! local pointer to soil__mem for SLM usability
+    TYPE(t_sb_memory),    POINTER              :: sb 
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -94,11 +101,14 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     ! Get process variables (Set pointers to variables in memory)
     ! ...
-
+    ! Get process memory pool structures
+#define Get_sb_pool
+#include "slm_pools_a_incl.f90"
+#undef Get_sb_pool
 
 !! *slmtemp
-    sb      => sb__mem 
     soil    => soil__mem 
+    sb    => sb__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -118,35 +128,35 @@ CONTAINS
           hlp6 = 0.6_wp   ! fraction of production not roots 
 
           IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-             sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk) = hlp1 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%soluable_litter%carbon(:,1) = hlp1 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
              IF(lctlib%growthform==itree) &
-                sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+                sb_pool%woody_litter%carbon(:,1) = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%residue%carbon(:,1) = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
 
              sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
              sb%no3_solute%ptr(ics:ice,1,iblk) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
              sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
           ELSE 
-             sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+             sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
-             sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
              IF(lctlib%growthform==itree) &
-                sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb%pool%microbial%carbon%ptr(ics:ice,1,iblk)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+                sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%microbial%carbon(:,1)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
-             sb%pool%residue%carbon%ptr(ics:ice,1,iblk)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
+             sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
                                                                        ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
              DO isoil=2,options%nsoil_sb
-                sb%pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
-                sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
-                sb%pool%microbial%carbon%ptr(ics:ice,isoil,iblk)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                sb_pool%microbial%carbon(:,isoil)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
-                sb%pool%residue%carbon%ptr(ics:ice,isoil,iblk)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * & 
+                sb_pool%residue%carbon(:,isoil)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * & 
                                                                           (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk)
 
                 sb%nh4_solute%ptr(ics:ice,isoil,iblk) = 0.1_wp
@@ -156,56 +166,56 @@ CONTAINS
           ENDIF
  
           ! metabolic litter all other elements
-          sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%soluable_litter%nitrogen(:,:)   = sb_pool%soluable_litter%carbon(:,:) / & 
                                                                     (25._wp * molar_mass_N / molar_mass_C)
-          sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%soluable_litter%phosphorus(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / & 
                                                                     (14._wp * molar_mass_P / molar_mass_N) 
-          sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%soluable_litter%carbon13(:,:)   = sb_pool%soluable_litter%carbon(:,:) / & 
                                                                     (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) * & 
+          sb_pool%soluable_litter%carbon14(:,:)   = sb_pool%soluable_litter%carbon(:,:) * & 
                                                                     calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-          sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%soluable_litter%nitrogen15(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / & 
                                                                     (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           ! non-woody litter all other elements
-          sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%polymeric_litter%nitrogen(:,:)   = sb_pool%polymeric_litter%carbon(:,:) / & 
                                                                     (100._wp * molar_mass_N / molar_mass_C)
-          sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%polymeric_litter%phosphorus(:,:) = sb_pool%polymeric_litter%nitrogen(:,:) / & 
                                                                     (14._wp * molar_mass_P / molar_mass_N) 
-          sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%polymeric_litter%carbon13(:,:)   = sb_pool%polymeric_litter%carbon(:,:) / & 
                                                                     (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) * & 
+          sb_pool%polymeric_litter%carbon14(:,:)   = sb_pool%polymeric_litter%carbon(:,:) * & 
                                                                     calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-          sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%polymeric_litter%nitrogen15(:,:) = sb_pool%polymeric_litter%nitrogen(:,:) / & 
                                                                     (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           ! woody litter all other elements
-          sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%woody_litter%nitrogen(:,:)   = sb_pool%woody_litter%carbon(:,:) / & 
                                                                 (260._wp * molar_mass_N / molar_mass_C)
-          sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%woody_litter%phosphorus(:,:) = sb_pool%woody_litter%nitrogen(:,:) / & 
                                                                 (14._wp * molar_mass_P / molar_mass_N) 
-          sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%woody_litter%carbon13(:,:)   = sb_pool%woody_litter%carbon(:,:) / & 
                                                                 (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) * & 
+          sb_pool%woody_litter%carbon14(:,:)   = sb_pool%woody_litter%carbon(:,:) * & 
                                                                 calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-          sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%woody_litter%nitrogen15(:,:) = sb_pool%woody_litter%nitrogen(:,:) / & 
                                                                 (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
           ! fast pool (=microbial) all other elements
-          sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / microbial_cn
-          sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) / microbial_np 
-          sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%microbial%nitrogen(:,:)   = sb_pool%microbial%carbon(:,:) / microbial_cn
+          sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np 
+          sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) * & 
+          sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * & 
                                                              calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-          sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
-          sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%residue%carbon%ptr(ics:ice,:,iblk) / microbial_cn
-          sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) / microbial_np 
-          sb%pool%residue%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%residue%carbon%ptr(ics:ice,:,iblk) / & 
+          sb_pool%residue%nitrogen(:,:)   = sb_pool%residue%carbon(:,:) / microbial_cn
+          sb_pool%residue%phosphorus(:,:) = sb_pool%residue%nitrogen(:,:) / microbial_np 
+          sb_pool%residue%carbon13(:,:)   = sb_pool%residue%carbon(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%residue%carbon%ptr(ics:ice,:,iblk) * & 
+          sb_pool%residue%carbon14(:,:)   = sb_pool%residue%carbon(:,:) * & 
                                                              calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-          sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) / & 
+          sb_pool%residue%nitrogen15(:,:) = sb_pool%residue%nitrogen(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
           sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
@@ -214,12 +224,12 @@ CONTAINS
        CASE('jsm')
  
          ! set microbial biomass to minimum possible density
-         sb%pool%microbial%carbon%ptr(ics:ice,:,iblk)     = min_mic_biomass
-         sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / microbial_cn 
-         sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) / microbial_np
-         sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-         sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-         sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk)  / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+         sb_pool%microbial%carbon(:,:)     = min_mic_biomass
+         sb_pool%microbial%nitrogen(:,:)   = sb_pool%microbial%carbon(:,:) / microbial_cn 
+         sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np
+         sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+         sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+         sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:)  / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
      
          ! some initial values for testing
          sb%nh4_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
@@ -248,6 +258,11 @@ CONTAINS
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
  
     END SELECT
+
+! Pass back values to process memory & deallocate pool structures 
+#define Dealloc_sb_pool
+#include "slm_pools_a_incl.f90"
+#undef Dealloc_sb_pool
 
   END SUBROUTINE sb_init
 
