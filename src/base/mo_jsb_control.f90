@@ -12,6 +12,8 @@ MODULE mo_jsb_control
 
   USE mo_io_units,  ONLY: filename_max
   USE mo_exception, ONLY: finish
+  USE mo_util,      ONLY: int2string
+  USE mo_timer,     ONLY: new_timer
 
   IMPLICIT NONE
   PRIVATE
@@ -22,22 +24,28 @@ MODULE mo_jsb_control
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
+  PUBLIC :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, l_timer
+  PUBLIC :: max_no_of_models
 
   LOGICAL :: is_standalone
   LOGICAL :: restart_jsbach
   CHARACTER(len=99) :: model_base_dir
   INTEGER :: debug
+  LOGICAL :: l_timer
 
   TYPE t_jsb_model_nml
+    INTEGER            :: model_id = 0
     CHARACTER(len=30)  :: model_name
     CHARACTER(len=10)  :: model_shortname
     CHARACTER(len=132) :: model_description
     CHARACTER(len=filename_max) :: model_namelist_filename
   END TYPE t_jsb_model_nml
 
-  INTEGER, PARAMETER    :: max_no_of_models = 2
+  INTEGER, PARAMETER    :: max_no_of_models = 10
   INTEGER :: no_of_models = 0
   TYPE(t_jsb_model_nml) :: jsb_models_nml(max_no_of_models)
+
+  INTEGER, DIMENSION(max_no_of_models) :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
 
   CHARACTER(len=filename_max) :: master_namelist_filename = 'jsbach_master.namelist'
 
@@ -52,6 +60,8 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
+    INTEGER :: i
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_jsb_master_control'
 
     IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
@@ -61,6 +71,22 @@ CONTAINS
     CALL jsbach_init_version(jsbach_runs_standalone())
 
     CALL init_io(TRIM(master_namelist_filename))
+
+    IF (l_timer) THEN
+      IF (no_of_models > 1) THEN
+        DO i=1,no_of_models
+          timer_aggregate(i)    = new_timer('jsb:aggregate_'//int2string(i))
+          timer_integrate(i)    = new_timer('jsb:integrate_'//int2string(i))
+          timer_process_task(i) = new_timer('jsb:process_task_'//int2string(i))
+          timer_process_msg(i)  = new_timer('jsb:process_msg_'//int2string(i))
+        END DO
+      ELSE
+        timer_aggregate(1)    = new_timer('jsb:aggregate')
+        timer_integrate(1)    = new_timer('jsb:integrate')
+        timer_process_task(1) = new_timer('jsb:process_task')
+        timer_process_msg(1) = new_timer('jsb:process_msg')
+      END IF
+    END IF
 
   END SUBROUTINE init_jsb_master_control
 
@@ -78,12 +104,13 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
 
+    INTEGER            :: model_id
     CHARACTER(len=30)  :: model_name
     CHARACTER(len=10)  :: model_shortname
     CHARACTER(len=132) :: model_description
     CHARACTER(len=filename_max) :: model_namelist_filename
 
-    INTEGER :: nml_handler, nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat, i
     LOGICAL :: rwnd
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_jsb_control_namelist'
@@ -92,9 +119,11 @@ CONTAINS
       is_standalone,           &
       restart_jsbach,          &
       model_base_dir,          &
+      l_timer,                 &
       debug
 
     NAMELIST /jsb_model_nml/   &
+      model_id,                &
       model_name,              &
       model_shortname,         &
       model_description,       &
@@ -104,6 +133,7 @@ CONTAINS
     is_standalone  = .TRUE.
     restart_jsbach = .FALSE.
     model_base_dir = '.'
+    l_timer = .TRUE.
     debug          = 0
 
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -111,27 +141,52 @@ CONTAINS
     nml_unit = position_nml('jsb_control_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_control_nml)
 
+    ! Get number of models first
     rwnd = .TRUE.
     no_of_models = 0
     DO
       nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
       IF (istat /= POSITIONED) EXIT
-      IF (no_of_models >= max_no_of_models) THEN
-        CALL finish(routine, 'no_of_models >= max_no_of_models')
-      ENDIF
-      rwnd=.false.
+      rwnd=.FALSE.
+      no_of_models = no_of_models + 1
+      READ(nml_unit, jsb_model_nml)
+    END DO
 
+    IF (no_of_models > max_no_of_models) THEN
+      CALL finish(routine, 'no_of_models > max_no_of_models')
+    ENDIF
+
+    ! Now read namelists again and set parameters
+    ! Note: no_of_models needs to be known here (therfore extra loop above) in order to test for a valid model_id below
+    rwnd = .TRUE.
+    DO i=1,no_of_models
+      nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
+      IF (istat /= POSITIONED) THEN
+        CALL finish(TRIM(routine), 'jsb_model_nml not found in namelist')
+      END IF
+      rwnd=.FALSE.
+
+      model_id = i
       model_name = ''
       model_shortname = ''
       model_description = ''
       model_namelist_filename = ''
+
       READ(nml_unit, jsb_model_nml)
 
-      no_of_models = no_of_models + 1
-      jsb_models_nml(no_of_models)%model_name              = model_name
-      jsb_models_nml(no_of_models)%model_shortname         = model_shortname
-      jsb_models_nml(no_of_models)%model_description       = model_description
-      jsb_models_nml(no_of_models)%model_namelist_filename = model_namelist_filename
+      IF (jsb_models_nml(model_id)%model_id > 0) THEN
+        CALL finish(TRIM(routine), 'Model id already taken.')
+      END IF
+
+      IF (model_id > no_of_models) THEN
+        CALL finish(TRIM(routine), 'Model id larger than number of models.')
+      END IF
+
+      jsb_models_nml(i)%model_id                = model_id
+      jsb_models_nml(i)%model_name              = model_name
+      jsb_models_nml(i)%model_shortname         = model_shortname
+      jsb_models_nml(i)%model_description       = model_description
+      jsb_models_nml(i)%model_namelist_filename = model_namelist_filename
     END DO
 
     CALL close_nml(nml_handler)
@@ -157,9 +212,22 @@ CONTAINS
 
   END FUNCTION get_no_of_models
 
-  LOGICAL FUNCTION debug_on()
+  LOGICAL FUNCTION debug_on(level)
 
-    debug_on = debug > 0
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: level
+
+    IF (PRESENT(level)) THEN
+      SELECT CASE (TRIM(level))
+      CASE ('basic')
+        debug_on = debug >= 1
+      CASE ('detail')
+        debug_on = debug >= 2
+      CASE ('hsm')
+        debug_on = debug >= 3
+      END SELECT
+    ELSE
+      debug_on = debug > 0
+    END IF
 
   END FUNCTION debug_on
 

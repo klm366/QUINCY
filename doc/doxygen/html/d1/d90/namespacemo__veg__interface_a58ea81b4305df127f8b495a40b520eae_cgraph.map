@@ -1,5 +1,0 @@
-<map id="mo_veg_interface::update_vegetation_2" name="mo_veg_interface::update_vegetation_2">
-<area shape="rect" id="node2" href="$d9/da0/namespacemo__jsb__control.html#a5712e1cd2e5736d1d7e6a59707af0200" title="mo_jsb_control::debug_on" alt="" coords="225,5,400,32"/>
-<area shape="rect" id="node3" href="$d5/dad/namespacemo__veg__process.html#a274a1f4ec71f0e64f08d19c388367d89" title="mo_veg_process::foliage\l_projected_cover" alt="" coords="229,57,396,98"/>
-<area shape="rect" id="node4" href="$da/ded/namespacemo__jsb__parallel__iface.html#ac6bfd4dbf065e7de054fd412aae074ea" title="mo_jsb_parallel_iface\l::get_my_global_mpi_id" alt="" coords="233,122,392,163"/>
-</map>

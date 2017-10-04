@@ -1,6 +1,0 @@
-<map id="mo_phy_schemes::heat_transfer_coef" name="mo_phy_schemes::heat_transfer_coef">
-<area shape="rect" id="node2" href="$da/dcf/namespacemo__srf__interface.html#ac20b7f42f80cf50fcae6c709a2c70f8f" title="mo_srf_interface::update\l_snow_and_skin_fraction" alt="" coords="215,5,384,47"/>
-<area shape="rect" id="node4" href="$da/dcf/namespacemo__srf__interface.html#a35bdafa30fe0752a3903d61fc30173cf" title="mo_srf_interface::update\l_surface_energy" alt="" coords="216,71,383,112"/>
-<area shape="rect" id="node5" href="$da/dcf/namespacemo__srf__interface.html#acdac2acc6bb50d7ecc7dea28ea5b3e87" title="mo_srf_interface::update\l_surface_fluxes" alt="" coords="216,136,383,177"/>
-<area shape="rect" id="node3" href="$db/d22/namespacemo__jsb__interface.html#a669b978bf786a78426b4aa57d8c8f7b1" title="mo_jsb_interface::interface_full" alt="" coords="432,78,635,105"/>
-</map>

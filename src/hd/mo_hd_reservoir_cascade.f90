@@ -11,17 +11,18 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: finish, message, message_text
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: finish, message, message_text
 
-  USE mo_jsb_control,     ONLY: debug_on
-  USE mo_time_base,       ONLY: rdaylen
-  USE mo_srf_constants,   ONLY: rhoh2o
+  USE mo_jsb_control,            ONLY: debug_on
+  USE mo_time_base,              ONLY: rdaylen
+  USE mo_jsb_physical_constants, ONLY: rhoh2o
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: reservoir_cascade
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_reservoir_cascade'
 
 CONTAINS
@@ -45,18 +46,14 @@ CONTAINS
     ! local variables
     ! ---------------
 
-    REAL(wp), ALLOCATABLE    :: amod(:)
-    REAL(wp), ALLOCATABLE    :: akdiv(:)
-    REAL(wp), ALLOCATABLE    :: inflow_cascade(:) !< inflow into each level of the cascade
+    REAL(wp) :: &
+      & amod(nc),          &
+      & akdiv(nc),         &
+      & inflow_cascade(nc)   !< inflow into each level of the cascade
 
-    INTEGER ::  res, nres_max
-
+    INTEGER :: res, nres_max
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reservoir_cascade'
-
-    ALLOCATE(amod(nc))
-    ALLOCATE(akdiv(nc))
-    ALLOCATE(inflow_cascade(nc))
 
     WHERE (nres > 0)       !< land - without internal drainage cells
       ! unit conversions: [day] -> [seconds]
@@ -83,8 +80,6 @@ CONTAINS
 
     ! conversions: [m3] -> [m3/s]
     outflow(:) = outflow(:) / steplen
-
-    DEALLOCATE(amod, akdiv)
 
   END SUBROUTINE reservoir_cascade
 

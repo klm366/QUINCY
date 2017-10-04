@@ -1,5 +1,0 @@
-<map id="mo_soil_config_class::new_soil_config" name="mo_soil_config_class::new_soil_config">
-<area shape="rect" id="node2" href="$d2/dcf/namespacemo__jsb__grid__class.html#a9b97575796bec8269c7381e0ffedd2d8" title="mo_jsb_grid_class::\lnew_vgrid" alt="" coords="208,5,347,47"/>
-<area shape="rect" id="node3" href="$d4/d5f/namespacemo__jsb__namelist__iface.html#a4d29dc192b429a0c5f11ecd7d7f637e9" title="Wrapper function to make ICON subroutine position_nml a function, as in ECHAM. Should be replaced whe..." alt="" coords="200,71,355,112"/>
-<area shape="rect" id="node4" href="$d7/d72/namespacemo__jsb__grid.html#a043909fe2d80d058e59831341f25fdab" title="mo_jsb_grid::register\l_vgrid" alt="" coords="206,136,349,177"/>
-</map>

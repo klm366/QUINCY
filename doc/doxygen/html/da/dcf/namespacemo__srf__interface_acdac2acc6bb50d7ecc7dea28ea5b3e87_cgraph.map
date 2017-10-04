@@ -1,7 +1,0 @@
-<map id="mo_srf_interface::update_surface_fluxes" name="mo_srf_interface::update_surface_fluxes">
-<area shape="rect" id="node2" href="$d9/da0/namespacemo__jsb__control.html#a5712e1cd2e5736d1d7e6a59707af0200" title="mo_jsb_control::debug_on" alt="" coords="233,5,407,32"/>
-<area shape="rect" id="node3" href="$d7/d78/namespacemo__phy__schemes.html#a9d1fe0b8e7cc0e86d2cf43ea5ebaac58" title="mo_phy_schemes::heat\l_transfer_coef" alt="" coords="239,57,401,98"/>
-<area shape="rect" id="node4" href="$d7/d78/namespacemo__phy__schemes.html#a52234cb76d1efb2d2298d8fc66b61545" title="mo_phy_schemes::q_effective" alt="" coords="220,123,420,149"/>
-<area shape="rect" id="node6" href="$d7/d78/namespacemo__phy__schemes.html#afffc006f6b4ec423054e4e5f4943e19d" title="mo_phy_schemes::surface\l_dry_static_energy" alt="" coords="231,174,409,215"/>
-<area shape="rect" id="node5" href="$d7/d78/namespacemo__phy__schemes.html#aa793f9cf2db7aa0f821bde8fbf8f38a8" title="mo_phy_schemes::qsat" alt="" coords="468,123,629,149"/>
-</map>
