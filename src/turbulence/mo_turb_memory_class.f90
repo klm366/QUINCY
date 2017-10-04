@@ -1,0 +1,130 @@
+!>
+!! @brief Contains the memory class for the surface turbulence process.
+!!
+!! @author
+!!  Reiner Schnur, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Reiner Schnur (2013-04-04)
+!!
+MODULE mo_turb_memory_class
+#ifndef __NO_JSBACH__
+
+  USE mo_kind, ONLY: wp
+  USE mo_util, ONLY: One_of
+
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
+  USE mo_jsb_memory_class, ONLY: t_jsb_memory
+  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_turb_memory, max_no_of_vars
+
+  INTEGER, PARAMETER :: max_no_of_vars = 5
+
+  TYPE, EXTENDS(t_jsb_memory) :: t_turb_memory
+    !
+    ! Parameters
+    TYPE(t_jsb_var_real2d) :: &
+      & rough_m,              & !< Surface roughness length for momentum
+      & rough_h,              & !< Surface roughness length for heat
+      ! For everything but lakes
+      & fact_q_air,           & !< Factor for lowest atm. level in formulation of surface fluxes
+                                !! of specific humidity and dry static energy to account for
+                                !! evapotranspiration                                              []
+      & fact_qsat_srf,        & !< Similar factor for surface values of specific humidity
+                                !! and dry static energy
+      & fact_qsat_trans_srf     !< Similar factor for transpiration
+CONTAINS
+    PROCEDURE :: Init => Init_turb_memory
+  END TYPE t_turb_memory
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_memory_class'
+
+CONTAINS
+
+  SUBROUTINE Init_turb_memory(mem, prefix, suffix, lct_ids, model_id)
+
+    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
+                                    TSTEP_CONSTANT, tables
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+
+    CLASS(t_turb_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),     INTENT(in)    :: prefix
+    CHARACTER(len=*),     INTENT(in)    :: suffix
+    INTEGER,              INTENT(in)    :: lct_ids(:)
+    INTEGER,                   INTENT(in)    :: model_id
+
+    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER :: table
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_turb_memory'
+
+    model => Get_model(model_id)
+
+    table = tables(1)
+
+    hgrid   => Get_grid(mem%grid_id)
+    surface => Get_vgrid('surface')
+
+    IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
+
+    CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                       &
+      & hgrid, surface,                                                           &
+      & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=1.0_wp )
+
+    CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                       &
+      & hgrid, surface,                                                           &
+      & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=1.0_wp )
+
+    ! Additional variables for all lcts except lakes
+    IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
+      &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &  )                                       &
+      & .AND. .NOT. ASSOCIATED(mem%fact_q_air%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                                   &
+        & hgrid, surface,                                                                    &
+        & t_cf('fact_q_air', '', ''),                                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,                             &
+        & hgrid, surface,                                                                    &
+        & t_cf('fact_qsat_srf', '', ''),                                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,                 &
+        & hgrid, surface,                                                                    &
+        & t_cf('fact_qsat_trans_srf', '', ''),                                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & initval_r=0.5_wp )
+
+    END IF
+
+  END SUBROUTINE Init_turb_memory
+
+#endif
+END MODULE mo_turb_memory_class

@@ -16,13 +16,14 @@ MODULE mo_jsb_time_iface
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
 
 #ifdef __ICON__
-  USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime, &
-    &                                  OPERATOR(+), OPERATOR(*),                                &
-    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,      &   
-    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,   & 
-    &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,       &
-    &                                  getNoOfSecondsElapsedInDayDateTime,                      &
-    &                                  divideDatetimeDifferenceInSeconds
+  USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
+    &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                       &
+    &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                       &
+    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &   
+    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        & 
+    &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
+    &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
+    &                                  divideDatetimeDifferenceInSeconds, isCurrentEventActive
   USE mo_time_config,            ONLY: time_config !configure_time
   USE mo_time_nml,               ONLY: read_time_namelist
   USE mo_dynamics_config,        ONLY: iequations
@@ -31,12 +32,14 @@ MODULE mo_jsb_time_iface
   USE mo_ha_dyn_config,          ONLY: ha_dyn_config
   USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
     &                                  calculate_time_interpolation_weights
+  USE mo_mpi_phy_config,         ONLY: mpi_phy_config, mpi_phy_tc, dt_zero
+  USE mo_master_config,          ONLY: isRestart
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
   USE mo_time_control,    ONLY: get_year_length => get_year_len, get_month_length => get_month_len, get_year_day, &
                                 get_date_components
-  USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date
+  USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date, next_date, lstart, lresume, l_trigradm1
   USE mo_interpo,         ONLY: wgt1, wgt2, nmw1, nmw2
   USE mo_semi_impl,       ONLY: eps
 
@@ -57,7 +60,8 @@ MODULE mo_jsb_time_iface
   PUBLIC :: get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: get_time_dt, get_time_nsteps, &
             get_time_start, get_time_stop, &
-            get_time_current, get_time_previous
+            get_time_current, get_time_previous, is_time_experiment_start, is_time_restart, &
+            is_time_ltrig_rad_m1
   PUBLIC :: read_time_namelist !, configure_time
   PUBLIC :: start_timestep, finish_timestep
   PUBLIC :: configure_time_and_events
@@ -298,15 +302,79 @@ CONTAINS
   !! @brief Get time at previous time step
   !!
   FUNCTION get_time_previous() RESULT(previous)
-    TYPE(t_datetime), POINTER :: previous 
+    TYPE(t_datetime) :: previous 
 #ifdef __ICON__
-    IF (.NOT. ASSOCIATED(previous)) previous => newDatetime("1980-06-01T00:00:00.000") 
     previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model 
 #else
     previous = previous_date
 #endif
 
   END FUNCTION get_time_previous
+
+  !>
+  !! @brief Get time at next time step
+  !!
+  FUNCTION get_time_next() RESULT(next)
+    TYPE(t_datetime) :: next
+#ifdef __ICON__
+    next = time_config%tc_current_date + (1) * time_config%tc_dt_model 
+#else
+    next = next_date
+#endif
+
+  END FUNCTION get_time_next
+
+  !
+  ! Check whether we are one time step before radiation is calculated in atmosphere
+  !
+  FUNCTION is_time_ltrig_rad_m1(model_id) RESULT(ltrig_rad_m1)
+
+    INTEGER, INTENT(in) :: model_id
+    LOGICAL :: ltrig_rad_m1
+
+#ifdef __ICON__
+    !
+    ! In the ICON MPI atmosphere, radiation is triggered based on the radiation time delta and the old  time step.
+    ! We therefore use the current time step to check whether we're one time step before the radiation is triggered
+    ! in the atmosphere
+    TYPE(t_datetime) :: current
+    INTEGER          :: dt_rad
+
+    current = get_time_current()
+    IF (mpi_phy_tc(model_id)%dt_rad > dt_zero) THEN
+      dt_rad = getTotalSecondsTimeDelta(mpi_phy_tc(model_id)%dt_rad, current)
+      ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(current), dt_rad) == 0
+    ELSE
+      ltrig_rad_m1 = .FALSE.
+    END IF
+
+#else
+    ltrig_rad_m1 = l_trigradm1
+#endif
+
+  END FUNCTION is_time_ltrig_rad_m1
+
+  LOGICAL FUNCTION is_time_experiment_start()
+
+#ifdef __ICON__
+    ! In ICON, the first computed time step is one time step after the start date
+    is_time_experiment_start = get_time_previous() == time_config%tc_exp_startdate
+#else
+    ! In ECHAM, the first computed time step is the start date
+    is_time_experiment_start = lstart
+#endif
+
+  END FUNCTION is_time_experiment_start
+
+  LOGICAL FUNCTION is_time_restart()
+
+#ifdef __ICON__
+    is_time_restart = isRestart()
+#else
+    is_time_restart = lresume
+#endif
+
+  END FUNCTION is_time_restart
 
   SUBROUTINE start_timestep(istep)
 

@@ -1,6 +1,8 @@
-/*.mod
-/*~
-/.history
+.history
+*~
+*.mod
 /.projectile
+.env
+.idea/
 /doc/html
 /doc/latex

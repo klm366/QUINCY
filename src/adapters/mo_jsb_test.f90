@@ -14,6 +14,7 @@ MODULE mo_jsb_test
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
+  USE mo_jsb_time,           ONLY: is_time_experiment_start
 
 !#ifdef __ICON__
 !! TODO: fillvalue_double is private in icon
@@ -57,7 +58,7 @@ CONTAINS
     USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel
 
 #ifndef __ICON__
-    USE mo_time_control, ONLY: lstart, lresume, get_date_components, next_date
+    USE mo_time_control, ONLY: lresume, get_date_components, next_date
     USE mo_filename,     ONLY: compose_filenames, standard_output_file
     USE mo_netcdf,       ONLY: nf_check
 
@@ -138,7 +139,7 @@ CONTAINS
     END IF
 
     !-- Create netcdf file
-    IF ((lstart .OR. lresume) .AND. iblk == 1) THEN
+    IF ((is_time_experiment_start() .OR. lresume) .AND. iblk == 1) THEN
       CALL compose_filenames
       filename = TRIM(standard_output_file)//'_interface.nc'
 
@@ -273,7 +274,7 @@ CONTAINS
     USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel
 
 #ifndef __ICON__
-    USE mo_time_control, ONLY: lstart, lresume, get_date_components, next_date
+    USE mo_time_control, ONLY: lresume, get_date_components, next_date
     USE mo_netcdf,       ONLY: nf_check
 
     USE mo_decomposition, ONLY: local_decomposition
@@ -347,7 +348,7 @@ CONTAINS
       CALL finish (TRIM(routine), message_text)
     END IF
 
-    IF ((lstart .OR. lresume) .AND. iblk == 1) THEN
+    IF ((is_time_experiment_start() .OR. lresume) .AND. iblk == 1) THEN
       CALL nf_check(nf_open(TRIM(filename), NF_NOWRITE, ncid))
 
       CALL nf_check(nf_inq_dimid(ncid, 'lon', lon_id))
