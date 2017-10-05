@@ -53,6 +53,7 @@ CONTAINS
  
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4slm_Use_memory_a_sb
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
     dsl4slm_Use_memory_a_veg
@@ -193,11 +194,21 @@ CONTAINS
     ! Declare pool structures in memory
 #define Def_veg_litterfall
 #define Def_veg_exudation
+#define Def_sb_pool
+#define Def_sb_formation
+#define Def_sb_loss
+#define Def_sb_transport
+#define Def_sb_delta_pools
+#define Def_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Def_veg_litterfall
 #undef Def_veg_exudation
-! 2 be removed?: pointers to sb *slmtemp
-    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
+#undef Def_sb_pool
+#undef Def_sb_formation
+#undef Def_sb_loss
+#undef Def_sb_transport
+#undef Def_sb_delta_pools
+#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -327,13 +338,24 @@ CONTAINS
     ! Get process memory pool structures
 #define Get_veg_litterfall
 #define Get_veg_exudation
+#define Get_sb_pool
+#define Get_sb_formation
+#define Get_sb_loss
+#define Get_sb_transport
+#define Get_sb_delta_pools
+#define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_litterfall
 #undef Get_veg_exudation
+#undef Get_sb_pool
+#undef Get_sb_formation
+#undef Get_sb_loss
+#undef Get_sb_transport
+#undef Get_sb_delta_pools
+#undef Get_sb_mycorrhiza_export
 
 
-! 2 be removed  *slmtemp
-    sb   => sb__mem
+    ! temporary chunk selection
     tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -345,105 +367,105 @@ CONTAINS
     !! fluxes are calculated at the end of this routine (to include het_respiration)
     !!   
     !! changes in pools per time step are calculated here AND at the end of this routine
-    sb%delta_pools%carbon%ptr(ics:ice,:,iblk) = &
-       sb%pool%dom%carbon%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
-    sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) = &
-       sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
+    sb_delta_pools%carbon(:,:) = &
+       sb_pool%dom%carbon(:,:) + sb_pool%dom_assoc%carbon(:,:) + &
+       sb_pool%soluable_litter%carbon(:,:) + sb_pool%polymeric_litter%carbon(:,:) + &
+       sb_pool%woody_litter%carbon(:,:) + sb_pool%fungi%carbon(:,:) + &
+       sb_pool%mycorrhiza%carbon(:,:) + sb_pool%microbial%carbon(:,:) + &
+       sb_pool%residue%carbon(:,:) + sb_pool%residue_assoc%carbon(:,:)
+    sb_delta_pools%nitrogen(:,:) = &
+       sb_pool%dom%nitrogen(:,:) + sb_pool%dom_assoc%nitrogen(:,:) + &
+       sb_pool%soluable_litter%nitrogen(:,:) + sb_pool%polymeric_litter%nitrogen(:,:) + &
+       sb_pool%woody_litter%nitrogen(:,:) + sb_pool%fungi%nitrogen(:,:) + &
+       sb_pool%mycorrhiza%nitrogen(:,:) + sb_pool%microbial%nitrogen(:,:) + &
+       sb_pool%residue%nitrogen(:,:) + sb_pool%residue_assoc%nitrogen(:,:) + &
        nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:)
-    sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) = &
-       sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
+    sb_delta_pools%phosphorus(:,:) = &
+       sb_pool%dom%phosphorus(:,:) + sb_pool%dom_assoc%phosphorus(:,:) + &
+       sb_pool%soluable_litter%phosphorus(:,:) + sb_pool%polymeric_litter%phosphorus(:,:) + &
+       sb_pool%woody_litter%phosphorus(:,:) + sb_pool%fungi%phosphorus(:,:) + &
+       sb_pool%mycorrhiza%phosphorus(:,:) + sb_pool%microbial%phosphorus(:,:) + &
+       sb_pool%residue%phosphorus(:,:) + sb_pool%residue_assoc%phosphorus(:,:) + &
        po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:)
-    sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) = &
-       sb%pool%dom%carbon13%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk)
+    sb_delta_pools%carbon13(:,:) = &
+       sb_pool%dom%carbon13(:,:) + sb_pool%dom_assoc%carbon13(:,:) + &
+       sb_pool%soluable_litter%carbon13(:,:) + sb_pool%polymeric_litter%carbon13(:,:) + &
+       sb_pool%woody_litter%carbon13(:,:) + sb_pool%fungi%carbon13(:,:) + &
+       sb_pool%mycorrhiza%carbon13(:,:) + sb_pool%microbial%carbon13(:,:) + &
+       sb_pool%residue%carbon13(:,:) + sb_pool%residue_assoc%carbon13(:,:)
     ! for mass balance purposes, already reduce by radioactive decay, since this is not a reported flux
-    sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)) * &
+    sb_delta_pools%carbon14(:,:) = &
+       (sb_pool%dom%carbon14(:,:) + sb_pool%dom_assoc%carbon14(:,:) + &
+       sb_pool%soluable_litter%carbon14(:,:) + sb_pool%polymeric_litter%carbon14(:,:) + &
+       sb_pool%woody_litter%carbon14(:,:) + sb_pool%fungi%carbon14(:,:) + &
+       sb_pool%mycorrhiza%carbon14(:,:) + sb_pool%microbial%carbon14(:,:) + &
+       sb_pool%residue%carbon14(:,:) + sb_pool%residue_assoc%carbon14(:,:)) * &
        (1._wp - lambda_C14 * dtime)
-    sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = &
-       sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
+    sb_delta_pools%nitrogen15(:,:) = &
+       sb_pool%dom%nitrogen15(:,:) + sb_pool%dom_assoc%nitrogen15(:,:) + &
+       sb_pool%soluable_litter%nitrogen15(:,:) + sb_pool%polymeric_litter%nitrogen15(:,:) + &
+       sb_pool%woody_litter%nitrogen15(:,:) + sb_pool%fungi%nitrogen15(:,:) + &
+       sb_pool%mycorrhiza%nitrogen15(:,:) + sb_pool%microbial%nitrogen15(:,:) + &
+       sb_pool%residue%nitrogen15(:,:) + sb_pool%residue_assoc%nitrogen15(:,:) + &
        nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:)
 
 
     !> 1.0 loss of C14 due to radioactive decay
     !!
-    sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  = sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-       sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  * lambda_C14 * dtime
-    sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) * lambda_C14 * dtime
-    sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)     = sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)     * lambda_C14 * dtime
-    sb%loss%dom%carbon14%ptr(ics:ice,:,iblk)              = sb%loss%dom%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%dom%carbon14%ptr(ics:ice,:,iblk)              * lambda_C14 * dtime
-    sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
-    sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk)            = sb%loss%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
-       sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk)            * lambda_C14 * dtime
-    sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       = sb%loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
-       sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)       * lambda_C14 * dtime
-    sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-       sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
-    sb%loss%residue%carbon14%ptr(ics:ice,:,iblk)          = sb%loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
-    sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-       sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    * lambda_C14 * dtime 
+    sb_loss%soluable_litter%carbon14(:,:)  = sb_loss%soluable_litter%carbon14(:,:) + & 
+       sb_pool%soluable_litter%carbon14(:,:)  * lambda_C14 * dtime
+    sb_loss%polymeric_litter%carbon14(:,:) = sb_loss%polymeric_litter%carbon14(:,:) + &
+       sb_pool%polymeric_litter%carbon14(:,:) * lambda_C14 * dtime
+    sb_loss%woody_litter%carbon14(:,:)     = sb_loss%woody_litter%carbon14(:,:) + &
+       sb_pool%woody_litter%carbon14(:,:)     * lambda_C14 * dtime
+    sb_loss%dom%carbon14(:,:)              = sb_loss%dom%carbon14(:,:) + &
+       sb_pool%dom%carbon14(:,:)              * lambda_C14 * dtime
+    sb_loss%dom_assoc%carbon14(:,:)        = sb_loss%dom_assoc%carbon14(:,:) + &
+       sb_pool%dom_assoc%carbon14(:,:)        * lambda_C14 * dtime
+    sb_loss%fungi%carbon14(:,:)            = sb_loss%fungi%carbon14(:,:) + & 
+       sb_pool%fungi%carbon14(:,:)            * lambda_C14 * dtime
+    sb_loss%mycorrhiza%carbon14(:,:)       = sb_loss%mycorrhiza%carbon14(:,:) + & 
+       sb_pool%mycorrhiza%carbon14(:,:)       * lambda_C14 * dtime
+    sb_loss%microbial%carbon14(:,:)        = sb_loss%microbial%carbon14(:,:) + & 
+       sb_pool%microbial%carbon14(:,:)        * lambda_C14 * dtime
+    sb_loss%residue%carbon14(:,:)          = sb_loss%residue%carbon14(:,:) + &
+       sb_pool%residue%carbon14(:,:)          * lambda_C14 * dtime
+    sb_loss%residue_assoc%carbon14(:,:)    = sb_loss%residue_assoc%carbon14(:,:) + & 
+       sb_pool%residue_assoc%carbon14(:,:)    * lambda_C14 * dtime 
 
 
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
-    sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)     = sb%formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
+    sb_formation%mycorrhiza%carbon(:,1)     = sb_formation%mycorrhiza%carbon(:,1) + &
                                                              veg_exudation%carbon * mycorrhizal_cue / soil_depth_sl(:,1)
-    sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
+    sb_formation%mycorrhiza%nitrogen(:,1)   = sb_formation%mycorrhiza%nitrogen(:,1) + &
                                                              veg_exudation%nitrogen / soil_depth_sl(:,1) + &
                                                              (mycorrhiza_uptake_nh4_sl(:,1) + mycorrhiza_uptake_no3_sl(:,1)) * & !+ mycorrhiza_uptake_norg_sl(:,1)) * &
                                                              dtime / 1000000._wp
-    sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
+    sb_formation%mycorrhiza%phosphorus(:,1) = sb_formation%mycorrhiza%phosphorus(:,1) + &
                                                              veg_exudation%phosphorus / soil_depth_sl(:,1) + &
                                                              mycorrhiza_uptake_po4_sl(:,1) * dtime / 1000000._wp
-    sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
+    sb_formation%mycorrhiza%carbon13(:,1)   = sb_formation%mycorrhiza%carbon13(:,1) + &
                                                              veg_exudation%carbon13 * mycorrhizal_cue / soil_depth_sl(:,1)
-    sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk)   = sb%formation%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
+    sb_formation%mycorrhiza%carbon14(:,1)   = sb_formation%mycorrhiza%carbon14(:,1) + &
                                                              veg_exudation%carbon14 * mycorrhizal_cue / soil_depth_sl(:,1)
-    sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%formation%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
+    sb_formation%mycorrhiza%nitrogen15(:,1) = sb_formation%mycorrhiza%nitrogen15(:,1) + &
                                                              veg_exudation%nitrogen15 / soil_depth_sl(:,1) + &
                                                              (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
                                                              dtime / 1000000._wp
 
-    sb%loss%mycorrhiza%carbon%ptr(ics:ice,1,iblk)     = sb%loss%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + &
-                                                        sb%mycorrhiza_export%carbon%ptr(ics:ice,1,iblk) 
-    sb%loss%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk)   = sb%loss%mycorrhiza%nitrogen%ptr(ics:ice,1,iblk) + &
-                                                        sb%mycorrhiza_export%nitrogen%ptr(ics:ice,1,iblk)
-    sb%loss%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) = sb%loss%mycorrhiza%phosphorus%ptr(ics:ice,1,iblk) + &
-                                                        sb%mycorrhiza_export%phosphorus%ptr(ics:ice,1,iblk)
-    sb%loss%mycorrhiza%carbon13%ptr(ics:ice,1,iblk)   = sb%loss%mycorrhiza%carbon13%ptr(ics:ice,1,iblk) + &
-                                                        sb%mycorrhiza_export%carbon13%ptr(ics:ice,1,iblk)
-    sb%loss%mycorrhiza%carbon14%ptr(ics:ice,1,iblk)   = sb%loss%mycorrhiza%carbon14%ptr(ics:ice,1,iblk) + &
-                                                        sb%mycorrhiza_export%carbon14%ptr(ics:ice,1,iblk)
-    sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) = sb%loss%mycorrhiza%nitrogen15%ptr(ics:ice,1,iblk) + &
-                                                        sb%mycorrhiza_export%nitrogen15%ptr(ics:ice,1,iblk)
+    sb_loss%mycorrhiza%carbon(:,1)     = sb_loss%mycorrhiza%carbon(:,1) + &
+                                                        sb_mycorrhiza_export%carbon(:,1) 
+    sb_loss%mycorrhiza%nitrogen(:,1)   = sb_loss%mycorrhiza%nitrogen(:,1) + &
+                                                        sb_mycorrhiza_export%nitrogen(:,1)
+    sb_loss%mycorrhiza%phosphorus(:,1) = sb_loss%mycorrhiza%phosphorus(:,1) + &
+                                                        sb_mycorrhiza_export%phosphorus(:,1)
+    sb_loss%mycorrhiza%carbon13(:,1)   = sb_loss%mycorrhiza%carbon13(:,1) + &
+                                                        sb_mycorrhiza_export%carbon13(:,1)
+    sb_loss%mycorrhiza%carbon14(:,1)   = sb_loss%mycorrhiza%carbon14(:,1) + &
+                                                        sb_mycorrhiza_export%carbon14(:,1)
+    sb_loss%mycorrhiza%nitrogen15(:,1) = sb_loss%mycorrhiza%nitrogen15(:,1) + &
+                                                        sb_mycorrhiza_export%nitrogen15(:,1)
 
     het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon(tchu)   / &
                                 dtime * 1000000._wp                          
@@ -454,11 +476,13 @@ CONTAINS
 
     !> 3.0 update of organic pools
     !!
-    CALL calc_organic_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
+    !! updates all SB pools given the JSM equations for formation, loss and transport
+    !! Output: updated pool sizes
+    sb_pool = sb_pool + sb_formation - sb_loss + sb_transport 
 
     !> 3.1 update diagnostics and other state variables depending on organic matter content 
     !!
-    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb%pool)
+    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
     qmax_org = calc_qmax(bulk_dens_corr_sl,qmax_org_mineral_default)
     qmax_po4 = calc_qmax(bulk_dens_corr_sl,qmax_po4_mineral)
@@ -534,51 +558,51 @@ CONTAINS
     !!
     
     !! pools: calc the difference to what was calculated at the beginning of this routine
-    sb%delta_pools%carbon%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%carbon%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)) - & 
-       sb%delta_pools%carbon%ptr(ics:ice,:,iblk)
-    sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + &
+    sb_delta_pools%carbon(:,:) = &
+       (sb_pool%dom%carbon(:,:) + sb_pool%dom_assoc%carbon(:,:) + &
+       sb_pool%soluable_litter%carbon(:,:) + sb_pool%polymeric_litter%carbon(:,:) + &
+       sb_pool%woody_litter%carbon(:,:) + sb_pool%fungi%carbon(:,:) + &
+       sb_pool%mycorrhiza%carbon(:,:) + sb_pool%microbial%carbon(:,:) + &
+       sb_pool%residue%carbon(:,:) + sb_pool%residue_assoc%carbon(:,:)) - & 
+       sb_delta_pools%carbon(:,:)
+    sb_delta_pools%nitrogen(:,:) = &
+       (sb_pool%dom%nitrogen(:,:) + sb_pool%dom_assoc%nitrogen(:,:) + &
+       sb_pool%soluable_litter%nitrogen(:,:) + sb_pool%polymeric_litter%nitrogen(:,:) + &
+       sb_pool%woody_litter%nitrogen(:,:) + sb_pool%fungi%nitrogen(:,:) + &
+       sb_pool%mycorrhiza%nitrogen(:,:) + sb_pool%microbial%nitrogen(:,:) + &
+       sb_pool%residue%nitrogen(:,:) + sb_pool%residue_assoc%nitrogen(:,:) + &
        nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:) + noy(:,:) + n2o(:,:) + n2(:,:)) - &
-       sb%delta_pools%nitrogen%ptr(ics:ice,:,iblk)
-    sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + &
+       sb_delta_pools%nitrogen(:,:)
+    sb_delta_pools%phosphorus(:,:) = &
+       (sb_pool%dom%phosphorus(:,:) + sb_pool%dom_assoc%phosphorus(:,:) + &
+       sb_pool%soluable_litter%phosphorus(:,:) + sb_pool%polymeric_litter%phosphorus(:,:) + &
+       sb_pool%woody_litter%phosphorus(:,:) + sb_pool%fungi%phosphorus(:,:) + &
+       sb_pool%mycorrhiza%phosphorus(:,:) + sb_pool%microbial%phosphorus(:,:) + &
+       sb_pool%residue%phosphorus(:,:) + sb_pool%residue_assoc%phosphorus(:,:) + &
        po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:)) - &
-       sb%delta_pools%phosphorus%ptr(ics:ice,:,iblk)
-    sb%delta_pools%carbon13%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%carbon13%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon13%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk)) - &
-       sb%delta_pools%carbon13%ptr(ics:ice,:,iblk)
-    sb%delta_pools%carbon14%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%carbon14%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)) - &
-       sb%delta_pools%carbon14%ptr(ics:ice,:,iblk)
-    sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk) = &
-       (sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + &
-       sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + &
+       sb_delta_pools%phosphorus(:,:)
+    sb_delta_pools%carbon13(:,:) = &
+       (sb_pool%dom%carbon13(:,:) + sb_pool%dom_assoc%carbon13(:,:) + &
+       sb_pool%soluable_litter%carbon13(:,:) + sb_pool%polymeric_litter%carbon13(:,:) + &
+       sb_pool%woody_litter%carbon13(:,:) + sb_pool%fungi%carbon13(:,:) + &
+       sb_pool%mycorrhiza%carbon13(:,:) + sb_pool%microbial%carbon13(:,:) + &
+       sb_pool%residue%carbon13(:,:) + sb_pool%residue_assoc%carbon13(:,:)) - &
+       sb_delta_pools%carbon13(:,:)
+    sb_delta_pools%carbon14(:,:) = &
+       (sb_pool%dom%carbon14(:,:) + sb_pool%dom_assoc%carbon14(:,:) + &
+       sb_pool%soluable_litter%carbon14(:,:) + sb_pool%polymeric_litter%carbon14(:,:) + &
+       sb_pool%woody_litter%carbon14(:,:) + sb_pool%fungi%carbon14(:,:) + &
+       sb_pool%mycorrhiza%carbon14(:,:) + sb_pool%microbial%carbon14(:,:) + &
+       sb_pool%residue%carbon14(:,:) + sb_pool%residue_assoc%carbon14(:,:)) - &
+       sb_delta_pools%carbon14(:,:)
+    sb_delta_pools%nitrogen15(:,:) = &
+       (sb_pool%dom%nitrogen15(:,:) + sb_pool%dom_assoc%nitrogen15(:,:) + &
+       sb_pool%soluable_litter%nitrogen15(:,:) + sb_pool%polymeric_litter%nitrogen15(:,:) + &
+       sb_pool%woody_litter%nitrogen15(:,:) + sb_pool%fungi%nitrogen15(:,:) + &
+       sb_pool%mycorrhiza%nitrogen15(:,:) + sb_pool%microbial%nitrogen15(:,:) + &
+       sb_pool%residue%nitrogen15(:,:) + sb_pool%residue_assoc%nitrogen15(:,:) + &
        nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + no3_n15_solute(:,:) + noy_n15(:,:) + n2o_n15(:,:) + n2_n15(:,:)) - &
-       sb%delta_pools%nitrogen15%ptr(ics:ice,:,iblk)
+       sb_delta_pools%nitrogen15(:,:)
 
     !! fluxes
 
@@ -588,7 +612,7 @@ CONTAINS
       veg_litterfall%labile%carbon    + veg_litterfall%reserve%carbon     + &
       veg_litterfall%fruit%carbon     + veg_litterfall%seed_bed%carbon    + &
       veg_exudation%carbon                                                    - &
-      SUM(sb%mycorrhiza_export%carbon%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)  - &
+      SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:), DIM=2)  - &
       SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
     total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen        + &
       veg_litterfall%fine_root%nitrogen + veg_litterfall%coarse_root%nitrogen + &
@@ -597,7 +621,7 @@ CONTAINS
       veg_litterfall%fruit%nitrogen     + veg_litterfall%seed_bed%nitrogen    + &
       SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp           + &
       veg_exudation%nitrogen                                                      - &
-      SUM(sb%mycorrhiza_export%nitrogen%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
+      SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2)    - &
       (leaching_nh4_solute(:) + leaching_no3_solute(:)                                + &
        emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)            + &
        SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
@@ -608,7 +632,7 @@ CONTAINS
       veg_litterfall%labile%phosphorus    + veg_litterfall%reserve%phosphorus     + &
       veg_litterfall%fruit%phosphorus     + veg_litterfall%seed_bed%phosphorus    + &
       veg_exudation%phosphorus                                                        - &
-      SUM(sb%mycorrhiza_export%phosphorus%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)      - &
+      SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:), DIM=2)      - &
       (leaching_po4_solute(:)                                                             + &
        SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
     total_flux_carbon13(:) =                  veg_litterfall%leaf%carbon13        + &
@@ -617,7 +641,7 @@ CONTAINS
       veg_litterfall%labile%carbon13    + veg_litterfall%reserve%carbon13     + &
       veg_litterfall%fruit%carbon13     + veg_litterfall%seed_bed%carbon13    + &
       veg_exudation%carbon13                                                      - &
-      SUM(sb%mycorrhiza_export%carbon13%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
+      SUM(sb_mycorrhiza_export%carbon13(:,:) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
     total_flux_carbon14(:) =                  veg_litterfall%leaf%carbon14        + &
       veg_litterfall%fine_root%carbon14 + veg_litterfall%coarse_root%carbon14 + &
@@ -625,7 +649,7 @@ CONTAINS
       veg_litterfall%labile%carbon14    + veg_litterfall%reserve%carbon14     + &
       veg_litterfall%fruit%carbon14     + veg_litterfall%seed_bed%carbon14    + &
       veg_exudation%carbon14                                                      - &
-      SUM(sb%mycorrhiza_export%carbon14%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)    - &
+      SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
     total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15          + &
       veg_litterfall%fine_root%nitrogen15 + veg_litterfall%coarse_root%nitrogen15   + &
@@ -634,7 +658,7 @@ CONTAINS
       veg_litterfall%fruit%nitrogen15     + veg_litterfall%seed_bed%nitrogen15      + &
       SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp             + &
       veg_exudation%nitrogen15                                                          - &
-      SUM(sb%mycorrhiza_export%nitrogen15%ptr(:,:,iblk) * soil_depth_sl(:,:), DIM=2)        - &
+      SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:), DIM=2)        - &
       (leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                              - &
        emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:) + &
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                        + &
@@ -644,305 +668,22 @@ CONTAINS
 ! Pass back values to process memory & deallocate pool structures 
 #define Dealloc_veg_litterfall
 #define Dealloc_veg_exudation
+#define Dealloc_sb_pool
+#define Dealloc_sb_formation
+#define Dealloc_sb_loss
+#define Dealloc_sb_transport
+#define Dealloc_sb_delta_pools
+#define Dealloc_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_litterfall
 #undef Dealloc_veg_exudation
+#undef Dealloc_sb_pool
+#undef Dealloc_sb_formation
+#undef Dealloc_sb_loss
+#undef Dealloc_sb_transport
+#undef Dealloc_sb_delta_pools
+#undef Dealloc_sb_mycorrhiza_export
 
   END SUBROUTINE update_sb_pools
-
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> updates all SB pools given the JSM equations for formation, loss and transport
-  !! should be a simple pool operator overload function, but that doesn't work yet
-  !!
-  !! Input: formation, loss and transport rate, pool sizes
-  !!
-  !! Output: updated pool sizes
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_organic_pool_change(options,pool,formation,loss,transport)
-
-    USE mo_sb_memory_class,       ONLY: t_slm_struct_sb_pool
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    TYPE(t_jsb_task_options), INTENT(in)          :: options      !< model options
-    TYPE(t_slm_struct_sb_pool),  INTENT(in)       :: formation    !< rate of formation of a pool [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_pool),  INTENT(in)       :: loss         !< rate of loss of a pool [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_pool),  INTENT(in)       :: transport    !< rate of transport of a pool [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_pool),  INTENT(inout)    :: pool         !< the pool [mol/m3]
-    ! ---------------------------
-    ! 0.2 Local 
-    INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_organic_pool_change'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-    ! carbon
-    pool%dom%carbon%ptr(ics:ice,:,iblk) = pool%dom%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom%carbon%ptr(ics:ice,:,iblk)  
-    pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) = pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom_assoc%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom_assoc%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom_assoc%carbon%ptr(ics:ice,:,iblk)  
-    pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) = pool%soluable_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%soluable_litter%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%soluable_litter%carbon%ptr(ics:ice,:,iblk)  
-    pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%polymeric_litter%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%polymeric_litter%carbon%ptr(ics:ice,:,iblk)  
-    pool%woody_litter%carbon%ptr(ics:ice,:,iblk) = pool%woody_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%woody_litter%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%woody_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%woody_litter%carbon%ptr(ics:ice,:,iblk)  
-    pool%fungi%carbon%ptr(ics:ice,:,iblk) = pool%fungi%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%fungi%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%fungi%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%fungi%carbon%ptr(ics:ice,:,iblk)  
-    pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) = pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%mycorrhiza%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%mycorrhiza%carbon%ptr(ics:ice,:,iblk)  
-    pool%microbial%carbon%ptr(ics:ice,:,iblk) = pool%microbial%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%microbial%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%microbial%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%microbial%carbon%ptr(ics:ice,:,iblk)  
-    pool%residue%carbon%ptr(ics:ice,:,iblk) = pool%residue%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue%carbon%ptr(ics:ice,:,iblk)  
-    pool%residue_assoc%carbon%ptr(ics:ice,:,iblk) = pool%residue_assoc%carbon%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue_assoc%carbon%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue_assoc%carbon%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue_assoc%carbon%ptr(ics:ice,:,iblk)  
-
-    ! nitrogen
-    pool%dom%nitrogen%ptr(ics:ice,:,iblk) = pool%dom%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) = pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom_assoc%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom_assoc%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) = pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%soluable_litter%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) = pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%woody_litter%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%woody_litter%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%fungi%nitrogen%ptr(ics:ice,:,iblk) = pool%fungi%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%fungi%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%fungi%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%fungi%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) = pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%microbial%nitrogen%ptr(ics:ice,:,iblk) = pool%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%microbial%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%microbial%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%residue%nitrogen%ptr(ics:ice,:,iblk) = pool%residue%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue%nitrogen%ptr(ics:ice,:,iblk)  
-    pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) = pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue_assoc%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)  
-
-    ! phosphorus
-    pool%dom%phosphorus%ptr(ics:ice,:,iblk) = pool%dom%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) = pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom_assoc%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom_assoc%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) = pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%soluable_litter%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) = pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%woody_litter%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%woody_litter%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%fungi%phosphorus%ptr(ics:ice,:,iblk) = pool%fungi%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%fungi%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%fungi%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%fungi%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) = pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%microbial%phosphorus%ptr(ics:ice,:,iblk) = pool%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%microbial%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%microbial%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%residue%phosphorus%ptr(ics:ice,:,iblk) = pool%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue%phosphorus%ptr(ics:ice,:,iblk)  
-    pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) = pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue_assoc%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)  
-
-    ! C13
-    pool%dom%carbon13%ptr(ics:ice,:,iblk) = pool%dom%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom%carbon13%ptr(ics:ice,:,iblk)  
-    pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) = pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom_assoc%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom_assoc%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom_assoc%carbon13%ptr(ics:ice,:,iblk)  
-    pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) = pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%soluable_litter%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%soluable_litter%carbon13%ptr(ics:ice,:,iblk)  
-    pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)  
-    pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) = pool%woody_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%woody_litter%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%woody_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%woody_litter%carbon13%ptr(ics:ice,:,iblk)  
-    pool%fungi%carbon13%ptr(ics:ice,:,iblk) = pool%fungi%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%fungi%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%fungi%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%fungi%carbon13%ptr(ics:ice,:,iblk)  
-    pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) = pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)  
-    pool%microbial%carbon13%ptr(ics:ice,:,iblk) = pool%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%microbial%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%microbial%carbon13%ptr(ics:ice,:,iblk)  
-    pool%residue%carbon13%ptr(ics:ice,:,iblk) = pool%residue%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue%carbon13%ptr(ics:ice,:,iblk)  
-    pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk) = pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue_assoc%carbon13%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue_assoc%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue_assoc%carbon13%ptr(ics:ice,:,iblk)  
-    ! C14
-    pool%dom%carbon14%ptr(ics:ice,:,iblk) = pool%dom%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom%carbon14%ptr(ics:ice,:,iblk)  
-    pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) = pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom_assoc%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom_assoc%carbon14%ptr(ics:ice,:,iblk)  
-    pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) = pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%soluable_litter%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  
-    pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)  
-    pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) = pool%woody_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%woody_litter%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%woody_litter%carbon14%ptr(ics:ice,:,iblk)  
-    pool%fungi%carbon14%ptr(ics:ice,:,iblk) = pool%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%fungi%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%fungi%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%fungi%carbon14%ptr(ics:ice,:,iblk)  
-    pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) = pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)  
-    pool%microbial%carbon14%ptr(ics:ice,:,iblk) = pool%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%microbial%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%microbial%carbon14%ptr(ics:ice,:,iblk)  
-    pool%residue%carbon14%ptr(ics:ice,:,iblk) = pool%residue%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue%carbon14%ptr(ics:ice,:,iblk)  
-    pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk) = pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue_assoc%carbon14%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue_assoc%carbon14%ptr(ics:ice,:,iblk)  
-    ! N15
-    pool%dom%nitrogen15%ptr(ics:ice,:,iblk) = pool%dom%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) = pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) = pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) = pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) = pool%fungi%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%fungi%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%fungi%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%fungi%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) = pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) = pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%microbial%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%residue%nitrogen15%ptr(ics:ice,:,iblk) = pool%residue%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue%nitrogen15%ptr(ics:ice,:,iblk)  
-    pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) = pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                formation%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                loss%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                transport%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk)  
-
-  END SUBROUTINE calc_organic_pool_change
-
 
 END MODULE mo_sb_update_pools

@@ -1261,39 +1261,38 @@ CONTAINS
   !!
   !! Output: total_bulk_soil_carbon 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_bulk_soil_carbon(options,sb_pool) RESULT (bulk_soil_carbon_sl)
+  FUNCTION calc_bulk_soil_carbon(options, sb_pool) RESULT (bulk_soil_carbon_sl)
+
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    TYPE(t_slm_struct_sb_pool),            INTENT(in)    :: sb_pool                 !< pools [mol/m3]
+    TYPE(t_sb_pool_a),                     INTENT(in)    :: sb_pool                 !< pools [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb)     :: bulk_soil_carbon_sl
     ! ---------------------------
     ! 0.2 Local
-    INTEGER                     :: isoil
-    INTEGER                     :: iblk, ics, ice, nc
+    INTEGER                     :: nsoil_sb, isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_soil_carbon'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    nsoil_sb  = options%nsoil_sb
 
-    DO isoil = 1,options%nsoil_sb
+    DO isoil = 1,nsoil_sb
        bulk_soil_carbon_sl(:,isoil) = &
-            sb_pool%microbial%carbon%ptr(ics:ice,isoil,iblk) + &
-            sb_pool%residue%carbon%ptr(ics:ice,isoil,iblk) + &
-            sb_pool%residue_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
-            sb_pool%dom%carbon%ptr(ics:ice,isoil,iblk) + &
-            sb_pool%dom_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
-            sb_pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + &
-            sb_pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)
+            sb_pool%microbial%carbon(:,isoil) + &
+            sb_pool%residue%carbon(:,isoil) + &
+            sb_pool%residue_assoc%carbon(:,isoil) + &
+            sb_pool%dom%carbon(:,isoil) + &
+            sb_pool%dom_assoc%carbon(:,isoil) + &
+            sb_pool%soluable_litter%carbon(:,isoil) + &
+            sb_pool%polymeric_litter%carbon(:,isoil)
     !   IF(isoil > 1 ) THEN       
-          bulk_soil_carbon_sl(:,isoil) = bulk_soil_carbon_sl(:,isoil) + &
-               sb_pool%woody_litter%carbon%ptr(ics:ice,isoil,iblk) 
+         bulk_soil_carbon_sl(:,isoil) = &
+            bulk_soil_carbon_sl(:,isoil) + &
+            sb_pool%woody_litter%carbon(:,isoil) 
     !   ENDIF
     ENDDO
 

@@ -239,7 +239,7 @@ CONTAINS
          sb%po4_solute%ptr(ics:ice,:,iblk) = 0.01_wp 
 
          ! inital Qmax based on current soil carbon content
-         sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options, sb%pool)
+         sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options, sb_pool)
          sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk) = calc_bulk_density_correction(sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk), & 
                                                                          soil%bulk_dens_sl%ptr(ics:ice,:,iblk))
          sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk),qmax_org_mineral_default)
