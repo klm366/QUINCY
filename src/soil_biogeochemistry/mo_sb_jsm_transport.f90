@@ -15,7 +15,7 @@ MODULE mo_sb_jsm_transport
   USE mo_exception,       ONLY: message, finish
   USE mo_base_memory,     ONLY: t_jsb_task_options
   USE mo_base_constants,  ONLY: dtime
-  USE mo_sb_memory_class, ONLY: t_slm_struct_sb_pool,t_slm_struct_sb_element
+
 
   IMPLICIT NONE
 
@@ -43,19 +43,22 @@ CONTAINS
                                          pool_dom, nh4_solute, no3_solute, po4_solute, nh4_n15_solute, no3_n15_solute, & 
                                          transport_dom, transport_nh4_solute, transport_no3_solute, & 
                                          transport_po4_solute, transport_nh4_n15_solute, transport_no3_n15_solute)
+                                         
+    dsl4slm_Use_memory_a_sb
+                                         
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: percolation_sl         !< fraction of pool transported up or down per second
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl           !< depth of each soil layer [m] 
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_dom               !< DOM pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_dom               !< DOM pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute             !< NH4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: no3_solute             !< NO3 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_solute             !< PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_n15_solute         !< N15H4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: no3_n15_solute         !< N15O3 pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_dom          !< rate of DOM transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_dom          !< rate of DOM transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_solute   !< rate of NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_no3_solute   !< rate of NO3 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_solute   !< rate of PO4 transport [mol/m3/timestep]
@@ -63,16 +66,11 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
     ! ---------------------------
     ! 0.2 Local
-    INTEGER                               :: iblk, ics, ice, nc
     REAL(wp), DIMENSION(options%nc)       :: leaching
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    ! ...
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -83,22 +81,22 @@ CONTAINS
     !> 1.0 transport of DOM
     !!
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%carbon%ptr(ics:ice,:,iblk),transport_dom%carbon%ptr(ics:ice,:,iblk), &
+                                        pool_dom%carbon(:,:),transport_dom%carbon(:,:), &
                                         leaching(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%nitrogen%ptr(ics:ice,:,iblk),transport_dom%nitrogen%ptr(ics:ice,:,iblk), &
+                                        pool_dom%nitrogen(:,:),transport_dom%nitrogen(:,:), &
                                         leaching(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%phosphorus%ptr(ics:ice,:,iblk),transport_dom%phosphorus%ptr(ics:ice,:,iblk), & 
+                                        pool_dom%phosphorus(:,:),transport_dom%phosphorus(:,:), & 
                                         leaching(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%carbon13%ptr(ics:ice,:,iblk),transport_dom%carbon13%ptr(ics:ice,:,iblk), &
+                                        pool_dom%carbon13(:,:),transport_dom%carbon13(:,:), &
                                         leaching(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%carbon14%ptr(ics:ice,:,iblk),transport_dom%carbon14%ptr(ics:ice,:,iblk), &
+                                        pool_dom%carbon14(:,:),transport_dom%carbon14(:,:), &
                                         leaching(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        pool_dom%nitrogen15%ptr(ics:ice,:,iblk),transport_dom%nitrogen15%ptr(ics:ice,:,iblk), & 
+                                        pool_dom%nitrogen15(:,:),transport_dom%nitrogen15(:,:), & 
                                         leaching(:)) 
 
     !> 2.0 transport of other solutes (NH4, NO3, PO4, and their isotopes)
@@ -144,29 +142,31 @@ CONTAINS
                                           transport_po4_assoc_fast, transport_po4_assoc_slow, & 
                                           transport_po4_occluded, transport_nh4_n15_assoc)
 
+    dsl4slm_Use_memory_a_sb
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_polymeric_litter  !< polymeric litter pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_dom_assoc         !< minerally associated DOM pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_fungi             !< fungi pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_microbial         !< microbial pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_residue           !< microbial residue pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_residue_assoc     !< minerally associated microbial residue pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric_litter  !< polymeric litter pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_dom_assoc         !< minerally associated DOM pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_fungi             !< fungi pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial         !< microbial pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue           !< microbial residue pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue_assoc     !< minerally associated microbial residue pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_assoc              !< minerally associated NH4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_fast         !< fast minerally associated PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_slow         !< slow minerally associated PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_occluded           !< occluded PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_n15_assoc          !< N15H4 pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_polymeric_litter !< rate of polymeric litter transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_dom_assoc        !< rate of minerally associated DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_fungi            !< rate of fungi transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_microbial        !< rate of microbial transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_residue          !< rate of microbial residue transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_residue_assoc    !< rate of minerally associated microbial residue transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_polymeric_litter !< rate of polymeric litter transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_dom_assoc        !< rate of minerally associated DOM transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_fungi            !< rate of fungi transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_microbial        !< rate of microbial transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_residue          !< rate of microbial residue transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_residue_assoc    !< rate of minerally associated microbial residue transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_assoc        !< rate of NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_assoc_fast   !< rate of fast associated PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_assoc_slow   !< rate of slow associated PO4 transport [mol/m3/timestep]
@@ -174,15 +174,10 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_n15_assoc    !< rate of N15H4 transport [mol/m3/timestep]
     ! ---------------------------
     ! 0.2 Local
-    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    ! ...
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -194,136 +189,94 @@ CONTAINS
     !! 
     !> 1.1 polymeric litter
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%carbon%ptr(ics:ice,:,iblk))
+                                        pool_polymeric_litter%carbon(:,:), transport_polymeric_litter%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_polymeric_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_polymeric_litter%nitrogen(:,:), transport_polymeric_litter%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_polymeric_litter%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_polymeric_litter%phosphorus(:,:), transport_polymeric_litter%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_polymeric_litter%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_polymeric_litter%carbon13(:,:), transport_polymeric_litter%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_polymeric_litter%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_polymeric_litter%carbon14(:,:), transport_polymeric_litter%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_polymeric_litter%nitrogen15(:,:), transport_polymeric_litter%nitrogen15(:,:))
 
     !> 1.2 minerally associated DOM 
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_dom_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%carbon%ptr(ics:ice,:,iblk))
+                                        pool_dom_assoc%carbon(:,:), transport_dom_assoc%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_dom_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_dom_assoc%nitrogen(:,:), transport_dom_assoc%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_dom_assoc%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_dom_assoc%phosphorus(:,:), transport_dom_assoc%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_dom_assoc%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_dom_assoc%carbon13(:,:), transport_dom_assoc%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_dom_assoc%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_dom_assoc%carbon14(:,:), transport_dom_assoc%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_dom_assoc%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_dom_assoc%nitrogen15(:,:), transport_dom_assoc%nitrogen15(:,:))
 
     !> 1.3 fungi biomass 
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_fungi%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_fungi%carbon%ptr(ics:ice,:,iblk))
+                                        pool_fungi%carbon(:,:), transport_fungi%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_fungi%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_fungi%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_fungi%nitrogen(:,:), transport_fungi%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_fungi%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_fungi%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_fungi%phosphorus(:,:), transport_fungi%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_fungi%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_fungi%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_fungi%carbon13(:,:), transport_fungi%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_fungi%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_fungi%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_fungi%carbon14(:,:), transport_fungi%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_fungi%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_fungi%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_fungi%nitrogen15(:,:), transport_fungi%nitrogen15(:,:))
 
     !> 1.4 microbial biomass 
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon%ptr(ics:ice,:,iblk))
+                                        pool_microbial%carbon(:,:), transport_microbial%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_microbial%nitrogen(:,:), transport_microbial%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_microbial%phosphorus(:,:), transport_microbial%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_microbial%carbon13(:,:), transport_microbial%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_microbial%carbon14(:,:), transport_microbial%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_microbial%nitrogen15(:,:), transport_microbial%nitrogen15(:,:))
 
     !> 1.5 microbial residue 
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon%ptr(ics:ice,:,iblk))
+                                        pool_residue%carbon(:,:), transport_residue%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_residue%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_residue%nitrogen(:,:), transport_residue%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_residue%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_residue%phosphorus(:,:), transport_residue%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_residue%carbon13(:,:), transport_residue%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_residue%carbon14(:,:), transport_residue%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_residue%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_residue%nitrogen15(:,:), transport_residue%nitrogen15(:,:))
 
     !> 1.6 minerally associated microbial residue 
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%carbon%ptr(ics:ice,:,iblk))
+                                        pool_residue_assoc%carbon(:,:), transport_residue_assoc%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_residue_assoc%nitrogen(:,:), transport_residue_assoc%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue_assoc%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_residue_assoc%phosphorus(:,:), transport_residue_assoc%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue_assoc%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_residue_assoc%carbon13(:,:), transport_residue_assoc%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue_assoc%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_residue_assoc%carbon14(:,:), transport_residue_assoc%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue_assoc%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_residue_assoc%nitrogen15(:,:), transport_residue_assoc%nitrogen15(:,:))
 
     !> 2.0 inorganic pools 
-    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        nh4_assoc,transport_nh4_assoc) 
-    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        po4_assoc_fast,transport_po4_assoc_fast) 
-    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        po4_assoc_slow,transport_po4_assoc_slow) 
-    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        po4_occluded,transport_po4_occluded) 
-    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        nh4_n15_assoc,transport_nh4_n15_assoc) 
-
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl,nh4_assoc,transport_nh4_assoc) 
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl,po4_assoc_fast,transport_po4_assoc_fast) 
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl,po4_assoc_slow,transport_po4_assoc_slow) 
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl,po4_occluded,transport_po4_occluded) 
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl,nh4_n15_assoc,transport_nh4_n15_assoc) 
 
   END SUBROUTINE calc_bioturbation_transport_wrapper
 
@@ -340,33 +293,28 @@ CONTAINS
   !!
   !! Output: omega_transport_term 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_particle_fluxrate(options,soil_depth_sl,bulk_dens_corr_sl,sb_formation,sb_loss) & 
-     RESULT (particle_fluxrate)
+  FUNCTION calc_particle_fluxrate(options,soil_depth_sl,bulk_dens_corr_sl,sb_formation,sb_loss) RESULT (particle_fluxrate)
 
     USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM 
     USE mo_shared_constants,      ONLY: molar_mass_C
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in) :: options
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in) :: soil_depth_sl           !< depth of soil layer [m] 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in) :: soil_depth_sl          !< depth of soil layer [m] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in) :: bulk_dens_corr_sl      !< bulk density of mineral+organic soil [kg/m3]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in) :: sb_formation           !< formation of pools [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in) :: sb_loss                !< loss from pools [mol/m3/timestep]
+    TYPE(t_sb_pool_a),                                INTENT(in) :: sb_formation           !< formation of pools [mol/m3/timestep]
+    TYPE(t_sb_pool_a),                                INTENT(in) :: sb_loss                !< loss from pools [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb)             :: particle_fluxrate 
     ! ---------------------------
     ! 0.2 Local
     INTEGER                     :: isoil
-    INTEGER                     :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_fluxrate'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    ! ...
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -378,28 +326,28 @@ CONTAINS
     !! note the omission of woody litter in the first layer, which is assumed not to be part of the profile 
     !! 
     particle_fluxrate(:,1) = soil_depth_sl(:,1) * & 
-          (sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk)  - sb_loss%soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) - sb_loss%polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%dom%carbon%ptr(ics:ice,1,iblk)              - sb_loss%dom%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%dom_assoc%carbon%ptr(ics:ice,1,iblk)        - sb_loss%dom_assoc%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%fungi%carbon%ptr(ics:ice,1,iblk)            - sb_loss%fungi%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%mycorrhiza%carbon%ptr(ics:ice,1,iblk)       - sb_loss%mycorrhiza%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%microbial%carbon%ptr(ics:ice,1,iblk)        - sb_loss%microbial%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%residue%carbon%ptr(ics:ice,1,iblk)          - sb_loss%residue%carbon%ptr(ics:ice,1,iblk) + & 
-           sb_formation%residue_assoc%carbon%ptr(ics:ice,1,iblk)    - sb_loss%residue_assoc%carbon%ptr(ics:ice,1,iblk))
+          (sb_formation%soluable_litter%carbon(:,1)  - sb_loss%soluable_litter%carbon(:,1) + & 
+           sb_formation%polymeric_litter%carbon(:,1) - sb_loss%polymeric_litter%carbon(:,1) + & 
+           sb_formation%dom%carbon(:,1)              - sb_loss%dom%carbon(:,1) + & 
+           sb_formation%dom_assoc%carbon(:,1)        - sb_loss%dom_assoc%carbon(:,1) + & 
+           sb_formation%fungi%carbon(:,1)            - sb_loss%fungi%carbon(:,1) + & 
+           sb_formation%mycorrhiza%carbon(:,1)       - sb_loss%mycorrhiza%carbon(:,1) + & 
+           sb_formation%microbial%carbon(:,1)        - sb_loss%microbial%carbon(:,1) + & 
+           sb_formation%residue%carbon(:,1)          - sb_loss%residue%carbon(:,1) + & 
+           sb_formation%residue_assoc%carbon(:,1)    - sb_loss%residue_assoc%carbon(:,1))
           
     DO isoil = 2,options%nsoil_sb
        particle_fluxrate(:,isoil) = particle_fluxrate(:,isoil-1) + soil_depth_sl(:,isoil) * & 
-          (sb_formation%soluable_litter%carbon%ptr(ics:ice,isoil,iblk)  - sb_loss%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) - sb_loss%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%woody_litter%carbon%ptr(ics:ice,isoil,iblk)     - sb_loss%woody_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%dom%carbon%ptr(ics:ice,isoil,iblk)              - sb_loss%dom%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%dom_assoc%carbon%ptr(ics:ice,isoil,iblk)        - sb_loss%dom_assoc%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%fungi%carbon%ptr(ics:ice,isoil,iblk)            - sb_loss%fungi%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%mycorrhiza%carbon%ptr(ics:ice,isoil,iblk)       - sb_loss%mycorrhiza%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%microbial%carbon%ptr(ics:ice,isoil,iblk)        - sb_loss%microbial%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%residue%carbon%ptr(ics:ice,isoil,iblk)          - sb_loss%residue%carbon%ptr(ics:ice,isoil,iblk) + & 
-           sb_formation%residue_assoc%carbon%ptr(ics:ice,isoil,iblk)    - sb_loss%residue_assoc%carbon%ptr(ics:ice,isoil,iblk))
+          (sb_formation%soluable_litter%carbon(:,isoil)  - sb_loss%soluable_litter%carbon(:,isoil) + & 
+           sb_formation%polymeric_litter%carbon(:,isoil) - sb_loss%polymeric_litter%carbon(:,isoil) + & 
+           sb_formation%woody_litter%carbon(:,isoil)     - sb_loss%woody_litter%carbon(:,isoil) + & 
+           sb_formation%dom%carbon(:,isoil)              - sb_loss%dom%carbon(:,isoil) + & 
+           sb_formation%dom_assoc%carbon(:,isoil)        - sb_loss%dom_assoc%carbon(:,isoil) + & 
+           sb_formation%fungi%carbon(:,isoil)            - sb_loss%fungi%carbon(:,isoil) + & 
+           sb_formation%mycorrhiza%carbon(:,isoil)       - sb_loss%mycorrhiza%carbon(:,isoil) + & 
+           sb_formation%microbial%carbon(:,isoil)        - sb_loss%microbial%carbon(:,isoil) + & 
+           sb_formation%residue%carbon(:,isoil)          - sb_loss%residue%carbon(:,isoil) + & 
+           sb_formation%residue_assoc%carbon(:,isoil)    - sb_loss%residue_assoc%carbon(:,isoil))
    ENDDO  
   
    !> 2.0 convert change in pools in density change and thus transport term 
@@ -430,6 +378,8 @@ CONTAINS
                                           transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, & 
                                           transport_po4_occluded, transport_nh4_n15_solute, &
                                           transport_nh4_n15_assoc, transport_no3_n15_solute)
+                                          
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
@@ -437,7 +387,7 @@ CONTAINS
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: particle_fluxrate          !< particle fluxrate (1/timestep) 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl              !< depth of each soil layer [m] 
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_pool                    !< organic pools [mol/m3]
+    TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_pool                    !< organic pools [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute                 !< NH4 pool in soil solution [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_assoc                  !< minerally associated NH4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: no3_solute                 !< NO3 pool in soil solution [mol/m3]
@@ -448,7 +398,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_n15_solute             !< N15H4 pool in soil solution [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_n15_assoc              !< minerally associated N15H4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: no3_n15_solute             !< N15O3 pool in soil solution [mol/m3]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_transport               !< xminerally associated DOM pool [mol/m3]
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_transport               !< xminerally associated DOM pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_solute       !< rate of solute NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_assoc        !< rate of associated NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_no3_solute       !< rate of solute NO3 transport [mol/m3/timestep]
@@ -463,15 +413,10 @@ CONTAINS
     ! 0.2 Local
     INTEGER                                          :: isoil
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: particle_fluxrate_woody
-    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport_wrapper'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    ! ...
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -483,43 +428,31 @@ CONTAINS
     !! 
     !> 1.1 soluable litter
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%soluable_litter%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%soluable_litter%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%soluable_litter%carbon(:,:), sb_transport%soluable_litter%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%soluable_litter%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%soluable_litter%nitrogen(:,:), sb_transport%soluable_litter%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%soluable_litter%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%soluable_litter%phosphorus(:,:), sb_transport%soluable_litter%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%soluable_litter%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%soluable_litter%carbon13(:,:), sb_transport%soluable_litter%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%soluable_litter%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%soluable_litter%carbon14(:,:), sb_transport%soluable_litter%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%soluable_litter%nitrogen15(:,:), sb_transport%soluable_litter%nitrogen15(:,:))
 
     !> 1.2 polymeric litter
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%polymeric_litter%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%polymeric_litter%carbon(:,:), sb_transport%polymeric_litter%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%polymeric_litter%nitrogen(:,:), sb_transport%polymeric_litter%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%polymeric_litter%phosphorus(:,:), sb_transport%polymeric_litter%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%polymeric_litter%carbon13(:,:), sb_transport%polymeric_litter%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%polymeric_litter%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%polymeric_litter%carbon14(:,:), sb_transport%polymeric_litter%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%polymeric_litter%nitrogen15(:,:), sb_transport%polymeric_litter%nitrogen15(:,:))
 
     !> 1.3 woody litter
     !! first layer of woody litter does not belong to profile 
@@ -527,186 +460,127 @@ CONTAINS
       particle_fluxrate_woody(:,isoil) = particle_fluxrate(:,isoil) - particle_fluxrate(:,1)
     ENDDO
     CALL calc_particle_transport(options,particle_fluxrate_woody,soil_depth_sl, & 
-                                        sb_pool%woody_litter%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%woody_litter%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%woody_litter%carbon(:,:), sb_transport%woody_litter%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate_woody,soil_depth_sl, & 
-                                        sb_pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%woody_litter%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%woody_litter%nitrogen(:,:), sb_transport%woody_litter%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate_woody,soil_depth_sl, & 
-                                        sb_pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%woody_litter%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%woody_litter%phosphorus(:,:), sb_transport%woody_litter%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate_woody,soil_depth_sl, & 
-                                        sb_pool%woody_litter%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%woody_litter%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%woody_litter%carbon13(:,:), sb_transport%woody_litter%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate_woody,soil_depth_sl, & 
-                                        sb_pool%woody_litter%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%woody_litter%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%woody_litter%carbon14(:,:), sb_transport%woody_litter%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate_woody,soil_depth_sl, & 
-                                        sb_pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%woody_litter%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%woody_litter%nitrogen15(:,:), sb_transport%woody_litter%nitrogen15(:,:))
 
     !> 1.5 DOM 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom%carbon(:,:), sb_transport%dom%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom%nitrogen(:,:), sb_transport%dom%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom%phosphorus(:,:), sb_transport%dom%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom%carbon13(:,:), sb_transport%dom%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom%carbon14(:,:), sb_transport%dom%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom%nitrogen15(:,:), sb_transport%dom%nitrogen15(:,:))
 
     !> 1.6 minerally associated DOM 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom_assoc%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom_assoc%carbon(:,:), sb_transport%dom_assoc%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom_assoc%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom_assoc%nitrogen(:,:), sb_transport%dom_assoc%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom_assoc%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom_assoc%phosphorus(:,:), sb_transport%dom_assoc%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom_assoc%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom_assoc%carbon13(:,:), sb_transport%dom_assoc%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom_assoc%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom_assoc%carbon14(:,:), sb_transport%dom_assoc%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%dom_assoc%nitrogen15(:,:), sb_transport%dom_assoc%nitrogen15(:,:))
 
     !> 1.7 fungi biomass 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%fungi%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%fungi%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%fungi%carbon(:,:), sb_transport%fungi%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%fungi%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%fungi%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%fungi%nitrogen(:,:), sb_transport%fungi%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%fungi%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%fungi%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%fungi%phosphorus(:,:), sb_transport%fungi%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%fungi%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%fungi%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%fungi%carbon13(:,:), sb_transport%fungi%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%fungi%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%fungi%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%fungi%carbon14(:,:), sb_transport%fungi%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%fungi%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%fungi%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%fungi%nitrogen15(:,:), sb_transport%fungi%nitrogen15(:,:))
 
     !> 1.8 mycorrhiza biomass 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%mycorrhiza%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%mycorrhiza%carbon(:,:), sb_transport%mycorrhiza%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%mycorrhiza%nitrogen(:,:), sb_transport%mycorrhiza%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%mycorrhiza%phosphorus(:,:), sb_transport%mycorrhiza%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%mycorrhiza%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%mycorrhiza%carbon13(:,:), sb_transport%mycorrhiza%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%mycorrhiza%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%mycorrhiza%carbon14(:,:), sb_transport%mycorrhiza%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%mycorrhiza%nitrogen15(:,:), sb_transport%mycorrhiza%nitrogen15(:,:))
 
     !> 1.9 microbial biomass 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%microbial%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%microbial%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%microbial%carbon(:,:), sb_transport%microbial%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%microbial%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%microbial%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%microbial%nitrogen(:,:), sb_transport%microbial%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%microbial%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%microbial%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%microbial%phosphorus(:,:), sb_transport%microbial%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%microbial%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%microbial%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%microbial%carbon13(:,:), sb_transport%microbial%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%microbial%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%microbial%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%microbial%carbon14(:,:), sb_transport%microbial%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%microbial%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%microbial%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%microbial%nitrogen15(:,:), sb_transport%microbial%nitrogen15(:,:))
 
     !> 1.10 microbial residue 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue%carbon(:,:), sb_transport%residue%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue%nitrogen(:,:), sb_transport%residue%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue%phosphorus(:,:), sb_transport%residue%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue%carbon13(:,:), sb_transport%residue%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue%carbon14(:,:), sb_transport%residue%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue%nitrogen15(:,:), sb_transport%residue%nitrogen15(:,:))
 
     !> 1.11 minerally associated microbial residue 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue_assoc%carbon%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue_assoc%carbon(:,:), sb_transport%residue_assoc%carbon(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue_assoc%nitrogen%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue_assoc%nitrogen(:,:), sb_transport%residue_assoc%nitrogen(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue_assoc%phosphorus%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue_assoc%phosphorus(:,:), sb_transport%residue_assoc%phosphorus(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue_assoc%carbon13(:,:), sb_transport%residue_assoc%carbon13(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue_assoc%carbon14%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue_assoc%carbon14(:,:), sb_transport%residue_assoc%carbon14(:,:))
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        sb_pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        sb_transport%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
+                                        sb_pool%residue_assoc%nitrogen15(:,:), sb_transport%residue_assoc%nitrogen15(:,:))
 
     !> 2.0 inorganic pools 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        nh4_solute,transport_nh4_solute) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        nh4_assoc,transport_nh4_assoc) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        no3_solute,transport_no3_solute) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        po4_solute,transport_po4_solute) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        po4_assoc_fast,transport_po4_assoc_fast) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        po4_assoc_slow,transport_po4_assoc_slow) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        po4_occluded,transport_po4_occluded) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        nh4_n15_solute,transport_nh4_n15_solute) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        nh4_n15_assoc,transport_nh4_n15_assoc) 
-    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl, & 
-                                        no3_n15_solute,transport_no3_n15_solute) 
-
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,nh4_solute,transport_nh4_solute) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,nh4_assoc,transport_nh4_assoc) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,no3_solute,transport_no3_solute) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_solute,transport_po4_solute) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_assoc_fast,transport_po4_assoc_fast) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_assoc_slow,transport_po4_assoc_slow) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_occluded,transport_po4_occluded) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,nh4_n15_solute,transport_nh4_n15_solute) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,nh4_n15_assoc,transport_nh4_n15_assoc) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,no3_n15_solute,transport_no3_n15_solute) 
 
   END SUBROUTINE calc_particle_transport_wrapper
 
