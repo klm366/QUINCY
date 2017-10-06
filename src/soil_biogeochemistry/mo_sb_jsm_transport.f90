@@ -731,12 +731,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_rate'
 
 
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
     !> 1.0 
+    !! 
     WHERE(bulk_dens_corr_sl(:,:) > eps8) 
        k_bioturb(:,:) = k_diff_org / bulk_dens_corr_sl(:,:)
     ELSEWHERE

@@ -21,7 +21,6 @@ MODULE mo_sb_simple_model
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
   USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_base_constants,        ONLY: dtime, one_day, one_year
-  USE mo_sb_memory_class,       ONLY: t_slm_struct_sb_pool, t_slm_struct_sb_element
 
   IMPLICIT NONE
 
@@ -57,6 +56,7 @@ CONTAINS
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
@@ -93,6 +93,7 @@ CONTAINS
                                              rtm_gasdiffusion_act, &
                                              rmm_gasdiffusion_act, &
                                              anaerobic_volume_fraction_act
+    INTEGER                               :: nsoil_sb
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ---------------------------
@@ -202,16 +203,25 @@ CONTAINS
     ! Declare pool structures in memory
 #define Def_veg_pool
 #define Def_veg_litterfall
+#define Def_sb_pool
+#define Def_sb_formation
+#define Def_sb_loss
+#define Def_sb_transport
+#define Def_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Def_veg_pool
 #undef Def_veg_litterfall
-!! *slmtemp    
-    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
+#undef Def_sb_pool
+#undef Def_sb_formation
+#undef Def_sb_loss
+#undef Def_sb_transport
+#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -321,13 +331,20 @@ CONTAINS
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall
+#define Get_sb_pool
+#define Get_sb_formation
+#define Get_sb_loss
+#define Get_sb_transport
+#define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
 #undef Get_veg_litterfall
+#undef Get_sb_pool
+#undef Get_sb_formation
+#undef Get_sb_loss
+#undef Get_sb_transport
+#undef Get_sb_mycorrhiza_export
 
-
-!! *slmtemp
-    sb   => sb__mem
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -337,8 +354,8 @@ CONTAINS
     !> 1.0 Set values of soil profile variables to allow switching between simple_0d and simple1d in the 
     !!     following routines 
     !! 
-    CALL calc_vertical_profile(lctlib, &
-                               options, &
+    CALL calc_vertical_profile(options, &
+                               lctlib, &
                                TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                soil_depth_sl(:,:), &
                                root_fraction_sl(:,:), &
@@ -374,8 +391,8 @@ CONTAINS
     !!
     !> 2.1 Potential plant nutrient uptake rates
     !!
-    CALL calc_potential_plant_uptake_rate(lctlib, &
-                                          options, &
+    CALL calc_potential_plant_uptake_rate(options, &
+                                          lctlib, &
                                           soil_depth_sl(:,:), &
                                           veg_pool%fine_root%carbon(:), &
                                           root_fraction_act_sl(:,:), &
@@ -397,12 +414,12 @@ CONTAINS
 
     !> 2.2 Potential plant nutrient uptake rates
     !!
-    CALL calc_potential_mycorrhiza_uptake_rate(lctlib, &
+    CALL calc_potential_mycorrhiza_uptake_rate(options, &
+                                               lctlib, &
                                                dsl4jsb_Config(SB_)%flag_myco_inorganic, &
-                                               options, &
                                                soil_depth_sl(:,:), &
-                                               sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
-                                               sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk), &
+                                               sb_pool%mycorrhiza%carbon(:,:), &
+                                               sb_pool%mycorrhiza%nitrogen(:,:), &
                                                rtm_decomposition_act(:,:), &
                                                km1_uptake_nh4_act(:,:), &
                                                km2_uptake_nh4_act(:,:), &
@@ -423,32 +440,32 @@ CONTAINS
                                            dsl4jsb_Config(SB_)%flag_myco_priming, &                  
                                            rtm_decomposition_act(:,:), &
                                            rmm_decomposition_act(:,:), &
-                                           sb%pool, &
-                                           sb%loss )
+                                           sb_pool, &
+                                           sb_loss )
 
     !> 2.5 Calculate the potential PO4 biomineralisation rate 
     !!
     CALL calc_potential_biomineralisation_rate(options, &                  
                                                rtm_decomposition_act(:,:), &
                                                rmm_decomposition_act(:,:), &
-                                               sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk), & 
+                                               sb_pool%residue%phosphorus(:,:), & 
                                                biomineralisation_po4(:,:) )
 
     !> 2.6 Loss pathways for the dynamic loss calculation scheme 
     !!
     IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')THEN
        CALL calc_potential_nitrification_denitrification_rate(options, &
-                                   rtm_nitrification_act(:,:), &
-                                   rmm_nitrification_act(:,:), &
-                                   rtm_denitrification_act(:,:), &
-                                   km_denitrification_c_act(:,:), &
-                                   km_denitrification_no3_act(:,:), &
-                                   anaerobic_volume_fraction_act(:,:), &
-                                   nh4_solute(:,:), &
-                                   no3_solute(:,:), &
-                                   sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
-                                   nitrification_no3(:,:), &
-                                   denitrification_n2(:,:))
+                                                               rtm_nitrification_act(:,:), &
+                                                               rmm_nitrification_act(:,:), &
+                                                               rtm_denitrification_act(:,:), &
+                                                               km_denitrification_c_act(:,:), &
+                                                               km_denitrification_no3_act(:,:), &
+                                                               anaerobic_volume_fraction_act(:,:), &
+                                                               nh4_solute(:,:), &
+                                                               no3_solute(:,:), &
+                                                               sb_pool%microbial%carbon(:,:), &
+                                                               nitrification_no3(:,:), &
+                                                               denitrification_n2(:,:))
 
        CALL calc_inorganic_transport_rate(options, &
                                           TRIM(dsl4jsb_Config(SOIL_)%soil_moisture_scheme), &
@@ -492,7 +509,7 @@ CONTAINS
                                           emission_n2(:), &  
                                           emission_n2_n15(:))
 
-    ENDIF
+    ENDIF  ! IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')
 
     !> 3.0 Actual fluxes of in and out of SOM 
     !!
@@ -516,7 +533,7 @@ CONTAINS
                                 nitrification_no3(:,:), &
                                 denitrification_n2(:,:), &
                                 biomineralisation_po4(:,:), &
-                                sb%loss, &
+                                sb_loss, &
                                 mic_uptake_nh4_sl(:,:), &
                                 mic_uptake_po4_sl(:,:), &
                                 apparent_mic_cue(:,:) )
@@ -571,27 +588,27 @@ CONTAINS
                             mic_uptake_nh4_sl(:,:), &
                             mic_uptake_nh4_n15_sl, &        
                             mic_uptake_po4_sl(:,:), &
-                            sb%loss, &
+                            sb_loss, &
                             het_respiration(:,:), &
                             het_respiration_c13(:,:), &
                             het_respiration_c14(:,:), &
                             net_mineralisation_nh4(:,:), &
                             net_mineralisation_po4(:,:), &
                             net_mineralisation_nh4_n15(:,:), &
-                            sb%formation )
+                            sb_formation )
 
     !> 3.3 formation of metabolic and strucutral litter by woody liter decay and 
     !!     associated respiration, net mineralisation fluxes    
     IF(lctlib%growthform==itree)THEN 
        CALL calc_litter_formation_from_woody_decay(options, &
-                                                   sb%loss, &
+                                                   sb_loss, &
                                                    het_respiration(:,:), &
                                                    het_respiration_c13(:,:), &
                                                    het_respiration_c14(:,:), &
                                                    net_mineralisation_nh4(:,:), &
                                                    net_mineralisation_po4(:,:), &
                                                    net_mineralisation_nh4_n15(:,:), &
-                                                   sb%formation )
+                                                   sb_formation )
     ENDIF
 
     !> 3.4 transport due to bioturbation
@@ -599,47 +616,47 @@ CONTAINS
     IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=='simple_1d')THEN
        k_bioturb(:,:) = calc_bioturbation_rate(options, bulk_dens_corr_sl(:,:))
        CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
-                                                sb%pool%microbial, sb%pool%residue, & 
-                                                sb%transport%microbial, sb%transport%residue)
+                                                sb_pool%microbial, sb_pool%residue, & 
+                                                sb_transport%microbial, sb_transport%residue)
     ENDIF
 
     !> 4.0 Mycorrhiza dynamics 
     !! 
-    CALL calc_mycorrhiza_dynamics(lctlib, &
-                                  options, &
+    CALL calc_mycorrhiza_dynamics(options, &
+                                  lctlib, &
                                   dsl4jsb_Config(SB_)%flag_myco_organic, &
                                   soil_depth_sl(:,:), &
                                   mycorrhiza_uptake_nh4_sl(:,:), &
                                   mycorrhiza_uptake_no3_sl(:,:), &
                                   mycorrhiza_uptake_norg_sl(:,:), &
                                   mycorrhiza_uptake_po4_sl(:,:), &
-                                  sb%pool, &
-                                  sb%formation, &
-                                  sb%loss, &
+                                  sb_pool, &
+                                  sb_formation, &
+                                  sb_loss, &
                                   het_respiration(:,:), &
                                   het_respiration_c13(:,:), &
                                   het_respiration_c14(:,:), &
-                                  sb%mycorrhiza_export)
+                                  sb_mycorrhiza_export)
 
 
     !> 5.0 Update soil litter pools with litter fall
     !!
-    CALL calc_litter_partitioning(lctlib, &  
-                                  options, &
+    CALL calc_litter_partitioning(options, &
+                                  lctlib, &  
                                   soil_depth_sl(:,:), &
                                   root_fraction_act_sl(:,:), &
                                   veg_litterfall, &
-                                  sb%formation )
+                                  sb_formation )
 
     !> 6.0 Add asymbiontic N fixation to NH4 pool 
     !! 
-    CALL calc_asymbiontic_n_fixation(lctlib, &
-                                     options, &
+    CALL calc_asymbiontic_n_fixation(options, &
+                                     lctlib, &
                                      TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), & 
                                      soil_depth_sl(:,:), &
                                      nh4_solute(:,:), &
                                      no3_solute(:,:), &
-                                     sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
+                                     sb_pool%microbial%carbon(:,:), &
                                      root_fraction_act_sl(:,:), &
                                      asymb_n_fixation(:,:), &
                                      asymb_n_fixation_n15(:,:))
@@ -726,9 +743,19 @@ CONTAINS
 ! Pass back values to process memory & deallocate pool structures 
 #define Dealloc_veg_pool
 #define Dealloc_veg_litterfall
+#define Dealloc_sb_pool
+#define Dealloc_sb_formation
+#define Dealloc_sb_loss
+#define Dealloc_sb_transport
+#define Dealloc_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_pool
 #undef Dealloc_veg_litterfall
+#undef Dealloc_sb_pool
+#undef Dealloc_sb_formation
+#undef Dealloc_sb_loss
+#undef Dealloc_sb_transport
+#undef Dealloc_sb_mycorrhiza_export
 
   END SUBROUTINE update_sb_simple_model 
 
@@ -749,8 +776,8 @@ CONTAINS
   !! For the 1D model, values are simply copied.
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_vertical_profile(lctlib, &                             ! in 
-                                    options, &                         
+  SUBROUTINE calc_vertical_profile( options, & 
+                                    lctlib, &                             ! in 
                                     sb_model_scheme, &
                                     soil_depth_sl, &
                                     root_fraction_sl, &
@@ -787,8 +814,8 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                       !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                    INTENT(in)  :: options
+    TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                       !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                            INTENT(in)  :: sb_model_scheme              !< from sb config
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
@@ -910,8 +937,8 @@ CONTAINS
   !! and fine root mass per layer 
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_potential_plant_uptake_rate(lctlib, &                     ! in
-                                              options, &
+  SUBROUTINE calc_potential_plant_uptake_rate(options, &
+                                              lctlib, &                     ! in
                                               soil_depth_sl, &
                                               veg_pool_fine_root_carbon, &
                                               root_fraction_act_sl, &
@@ -933,8 +960,8 @@ CONTAINS
   
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                     !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                    INTENT(in)  :: options
+    TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc),             INTENT(in)  :: veg_pool_fine_root_carbon  !< fine root carbon [mol / m2]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: &
                                                                 soil_depth_sl, &           !< soil depth per layer [m]
@@ -1004,9 +1031,9 @@ CONTAINS
   !! and mycorrhiza mass per layer 
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_potential_mycorrhiza_uptake_rate(lctlib, &                     ! in
+  SUBROUTINE calc_potential_mycorrhiza_uptake_rate(options, &
+                                                   lctlib, &                     ! in
                                                    flag_myco_inorganic, &
-                                                   options, &
                                                    soil_depth_sl, &
                                                    sb_pool_mycorrhiza_carbon, &
                                                    sb_pool_mycorrhiza_nitrogen, &
@@ -1029,9 +1056,9 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
+    TYPE(t_jsb_task_options),                         INTENT(in)  :: options                     !< dimensions...
     TYPE(t_lctlib_element),                           INTENT(in)  :: lctlib                      !< land-cover-type library - parameter across pft's
     LOGICAL,                                          INTENT(in)  :: flag_myco_inorganic           !< from sb config
-    TYPE(t_jsb_task_options),                         INTENT(in)  :: options                     !< dimensions...
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: soil_depth_sl, &            !< soil depth per layer [m]
                                                                      sb_pool_mycorrhiza_carbon, &!< mycorrhizal biomass [mol C / m3]
                                                                      sb_pool_mycorrhiza_nitrogen, &!< mycorrhizal biomass [mol C / m3]
@@ -1324,132 +1351,131 @@ CONTAINS
                                                sb_loss )                ! out
 
     USE mo_sb_constants,            ONLY: tau_metabolic_litter, tau_structural_litter, tau_woody_litter, tau_fast, tau_slow
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),                    INTENT(in)       :: options                  !< dimensions
-    LOGICAL,                                     INTENT(in)       :: flag_myco_priming        !< from sb config
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: rtm_decomposition_act, & !< temperature response of decomposition
-                                                                     rmm_decomposition_act    !< moisture response of decomposition 
-    TYPE(t_slm_struct_sb_pool),                  INTENT(in)       :: sb_pool                  !< soil organic matter and litter pools [mol / m3]
-    TYPE(t_slm_struct_sb_pool),                  INTENT(inout)    :: sb_loss                  !< soil organic matter and litter loss [mol / m3]
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                  !< dimensions
+    LOGICAL,                                          INTENT(in)    :: flag_myco_priming        !< from sb config
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_decomposition_act, & !< temperature response of decomposition
+                                                                       rmm_decomposition_act    !< moisture response of decomposition 
+    TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_pool                  !< soil organic matter and litter pools [mol / m3]
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                  !< soil organic matter and litter loss [mol / m3]
+    ! ---------------------------
     ! 0.2 Local
-    ! 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: k_priming, &
                                                         tau_slow_myc, &
                                                         hlp1
     REAL(wp)                                         :: vmax_priming
-    INTEGER                     :: ics,ice,iblk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_decomposition_rate'
 
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
+
 
     !> 1.0 metabolic litter (= soluable pool)
     !! 
-    sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) = sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &
+    sb_loss%soluable_litter%carbon(:,:) = sb_loss%soluable_litter%carbon(:,:) + &
                                                           rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_metabolic_litter * dtime * &
-                                                          sb_pool%soluable_litter%carbon%ptr(ics:ice,:,iblk)
-    sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + &
+                                                          sb_pool%soluable_litter%carbon(:,:)
+    sb_loss%soluable_litter%nitrogen(:,:) = sb_loss%soluable_litter%nitrogen(:,:) + &
                                                             rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_metabolic_litter * dtime * &
-                                                            sb_pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk)
-    sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + &
+                                                            sb_pool%soluable_litter%nitrogen(:,:)
+    sb_loss%soluable_litter%phosphorus(:,:) = sb_loss%soluable_litter%phosphorus(:,:) + &
                                                               rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_metabolic_litter * dtime * &
-                                                              sb_pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk)
-    sb_loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk) = sb_loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + &
+                                                              sb_pool%soluable_litter%phosphorus(:,:)
+    sb_loss%soluable_litter%carbon13(:,:) = sb_loss%soluable_litter%carbon13(:,:) + &
                                                             rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_metabolic_litter * dtime * &
-                                                            sb_pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk)
-    sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) = sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + &
+                                                            sb_pool%soluable_litter%carbon13(:,:)
+    sb_loss%soluable_litter%carbon14(:,:) = sb_loss%soluable_litter%carbon14(:,:) + &
                                                             rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_metabolic_litter * dtime * &
-                                                            sb_pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)
-    sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
+                                                            sb_pool%soluable_litter%carbon14(:,:)
+    sb_loss%soluable_litter%nitrogen15(:,:) = sb_loss%soluable_litter%nitrogen15(:,:) + &
                                                               rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_metabolic_litter * dtime * &
-                                                              sb_pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)
+                                                              sb_pool%soluable_litter%nitrogen15(:,:)
 
     !> 2.0 structural litter (= polymeric pool)
     !! 
-    sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
+    sb_loss%polymeric_litter%carbon(:,:) = sb_loss%polymeric_litter%carbon(:,:) + &
                                                           rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_structural_litter * dtime * &
-                                                          sb_pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk)
-    sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
+                                                          sb_pool%polymeric_litter%carbon(:,:)
+    sb_loss%polymeric_litter%nitrogen(:,:) = sb_loss%polymeric_litter%nitrogen(:,:) + &
                                                             rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_structural_litter * dtime * &
-                                                            sb_pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)
-    sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
+                                                            sb_pool%polymeric_litter%nitrogen(:,:)
+    sb_loss%polymeric_litter%phosphorus(:,:) = sb_loss%polymeric_litter%phosphorus(:,:) + &
                                                               rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_structural_litter * dtime * &
-                                                              sb_pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk)
-    sb_loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = sb_loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
+                                                              sb_pool%polymeric_litter%phosphorus(:,:)
+    sb_loss%polymeric_litter%carbon13(:,:) = sb_loss%polymeric_litter%carbon13(:,:) + &
                                                             rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_structural_litter * dtime * &
-                                                            sb_pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)
-    sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
+                                                            sb_pool%polymeric_litter%carbon13(:,:)
+    sb_loss%polymeric_litter%carbon14(:,:) = sb_loss%polymeric_litter%carbon14(:,:) + &
                                                             rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_structural_litter * dtime * &
-                                                            sb_pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)
-    sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
+                                                            sb_pool%polymeric_litter%carbon14(:,:)
+    sb_loss%polymeric_litter%nitrogen15(:,:) = sb_loss%polymeric_litter%nitrogen15(:,:) + &
                                                               rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_structural_litter * dtime * &
-                                                              sb_pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)
+                                                              sb_pool%polymeric_litter%nitrogen15(:,:)
 
     !> 3.0 woody litter
     !! 
-    sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk) = sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk) + &
+    sb_loss%woody_litter%carbon(:,:) = sb_loss%woody_litter%carbon(:,:) + &
                                                       rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_woody_litter * dtime * &
-                                                      sb_pool%woody_litter%carbon%ptr(ics:ice,:,iblk)
-    sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) + &
+                                                      sb_pool%woody_litter%carbon(:,:)
+    sb_loss%woody_litter%nitrogen(:,:) = sb_loss%woody_litter%nitrogen(:,:) + &
                                                         rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_woody_litter * dtime * &
-                                                        sb_pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk)
-    sb_loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk) + &
+                                                        sb_pool%woody_litter%nitrogen(:,:)
+    sb_loss%woody_litter%phosphorus(:,:) = sb_loss%woody_litter%phosphorus(:,:) + &
                                                           rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_woody_litter * dtime * &
-                                                          sb_pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk)
-    sb_loss%woody_litter%carbon13%ptr(ics:ice,:,iblk) = sb_loss%woody_litter%carbon13%ptr(ics:ice,:,iblk) + &
+                                                          sb_pool%woody_litter%phosphorus(:,:)
+    sb_loss%woody_litter%carbon13(:,:) = sb_loss%woody_litter%carbon13(:,:) + &
                                                         rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_woody_litter * dtime * &
-                                                        sb_pool%woody_litter%carbon13%ptr(ics:ice,:,iblk)
-    sb_loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) = sb_loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + &
+                                                        sb_pool%woody_litter%carbon13(:,:)
+    sb_loss%woody_litter%carbon14(:,:) = sb_loss%woody_litter%carbon14(:,:) + &
                                                         rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_woody_litter * dtime * &
-                                                        sb_pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)
-    sb_loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
+                                                        sb_pool%woody_litter%carbon14(:,:)
+    sb_loss%woody_litter%nitrogen15(:,:) = sb_loss%woody_litter%nitrogen15(:,:) + &
                                                           rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_woody_litter * dtime * &
-                                                          sb_pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)
+                                                          sb_pool%woody_litter%nitrogen15(:,:)
 
     !> 4.0 fast SOM pool (=microbial pool)
     !!
-    sb_loss%microbial%carbon%ptr(ics:ice,:,iblk) = sb_loss%microbial%carbon%ptr(ics:ice,:,iblk) + & 
+    sb_loss%microbial%carbon(:,:) = sb_loss%microbial%carbon(:,:) + & 
                                                    rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_fast * dtime * &
-                                                   sb_pool%microbial%carbon%ptr(ics:ice,:,iblk)
-    sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                   sb_pool%microbial%carbon(:,:)
+    sb_loss%microbial%nitrogen(:,:) = sb_loss%microbial%nitrogen(:,:) + & 
                                                      rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_fast * dtime * &
-                                                     sb_pool%microbial%nitrogen%ptr(ics:ice,:,iblk)
-    sb_loss%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                     sb_pool%microbial%nitrogen(:,:)
+    sb_loss%microbial%phosphorus(:,:) = sb_loss%microbial%phosphorus(:,:) + & 
                                                        rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_fast * dtime * &
-                                                       sb_pool%microbial%phosphorus%ptr(ics:ice,:,iblk)
-    sb_loss%microbial%carbon13%ptr(ics:ice,:,iblk) = sb_loss%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
+                                                       sb_pool%microbial%phosphorus(:,:)
+    sb_loss%microbial%carbon13(:,:) = sb_loss%microbial%carbon13(:,:) + & 
                                                      rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_fast * dtime * &
-                                                     sb_pool%microbial%carbon13%ptr(ics:ice,:,iblk)
-    sb_loss%microbial%carbon14%ptr(ics:ice,:,iblk) = sb_loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                     sb_pool%microbial%carbon13(:,:)
+    sb_loss%microbial%carbon14(:,:) = sb_loss%microbial%carbon14(:,:) + & 
                                                      rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_fast * dtime * &
-                                                     sb_pool%microbial%carbon14%ptr(ics:ice,:,iblk)
-    sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                     sb_pool%microbial%carbon14(:,:)
+    sb_loss%microbial%nitrogen15(:,:) = sb_loss%microbial%nitrogen15(:,:) + & 
                                                        rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_fast * dtime * &
-                                                       sb_pool%microbial%nitrogen15%ptr(ics:ice,:,iblk)
+                                                       sb_pool%microbial%nitrogen15(:,:)
 
     !> 5.0 slow SOM pool (=residue pool)
     !!
-    sb_loss%residue%carbon%ptr(ics:ice,:,iblk) = sb_loss%residue%carbon%ptr(ics:ice,:,iblk) + & 
+    sb_loss%residue%carbon(:,:) = sb_loss%residue%carbon(:,:) + & 
                                                      rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
-                                                     tau_slow * dtime * sb_pool%residue%carbon%ptr(ics:ice,:,iblk)
-    sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                     tau_slow * dtime * sb_pool%residue%carbon(:,:)
+    sb_loss%residue%nitrogen(:,:) = sb_loss%residue%nitrogen(:,:) + & 
                                                        rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
-                                                       tau_slow * dtime * sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
-    sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
+                                                       tau_slow * dtime * sb_pool%residue%nitrogen(:,:)
+    sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
                                                          rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
-                                                         tau_slow * dtime * sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
-    sb_loss%residue%carbon13%ptr(ics:ice,:,iblk) = sb_loss%residue%carbon13%ptr(ics:ice,:,iblk) + & 
+                                                         tau_slow * dtime * sb_pool%residue%phosphorus(:,:)
+    sb_loss%residue%carbon13(:,:) = sb_loss%residue%carbon13(:,:) + & 
                                                        rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
-                                                       tau_slow * dtime * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk)
-    sb_loss%residue%carbon14%ptr(ics:ice,:,iblk) = sb_loss%residue%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                       tau_slow * dtime * sb_pool%residue%carbon13(:,:)
+    sb_loss%residue%carbon14(:,:) = sb_loss%residue%carbon14(:,:) + & 
                                                        rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
-                                                       tau_slow * dtime * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk)
-    sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                       tau_slow * dtime * sb_pool%residue%carbon14(:,:)
+    sb_loss%residue%nitrogen15(:,:) = sb_loss%residue%nitrogen15(:,:) + & 
                                                          rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/ &
-                                                         tau_slow * dtime * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk) 
+                                                         tau_slow * dtime * sb_pool%residue%nitrogen15(:,:) 
 
 
   END SUBROUTINE calc_potential_decomposition_rate
@@ -1471,17 +1497,20 @@ CONTAINS
     USE mo_sb_constants,            ONLY: tau_biomineralisation 
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)  :: options                    !< dimensions
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: rtm_decomposition_act, &   !< temperature response of decomposition
                                                                      rmm_decomposition_act, &   !< moisture response of decomposition
                                                                      sb_pool_residue_phosphorus !< slow SOM P pool [mol / m3] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: biomineralisation_po4      !< potential biomineralisation rate [mol / m3 / timestep] 
+    ! ---------------------------
     ! 0.2 Local
-    ! 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_biomineralisation_rate'
 
+
     !> 1.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
+    !! 
     biomineralisation_po4(:,:) = rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_biomineralisation * & 
                                  dtime * sb_pool_residue_phosphorus(:,:) 
 
@@ -1523,8 +1552,10 @@ CONTAINS
 
     USE mo_sb_constants,            ONLY: microbial_cue_max, microbial_cue_min, microbial_cn, microbial_np, &
                                           microbial_nue, microbial_pue
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute, &                 !< NH4 in solution [mol / m3] 
@@ -1542,18 +1573,16 @@ CONTAINS
                                                                        nitrification_no3, &          !< nitrification rate [mol / m3 / timestep]
                                                                        denitrification_n2, &         !< denitrification rate [mol / m3 / timestep]
                                                                        biomineralisation_po4         !< biomineralisation rate [mol / m3 / timestep]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_loss                       !< decomposition of SOM and litter pools [mol / m3 / timestep]
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                       !< decomposition of SOM and litter pools [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: mic_uptake_nh4_sl, &          !< microbial immobilisation of NH4 [mol / m3 / timestep]
                                                                        mic_uptake_po4_sl, &          !< microbial immobilisation of PO4 [mol / m3 / timestep]
                                                                        apparent_mic_cue              !< apparent microbial carbon-use-efficiency
+    ! ---------------------------
     ! 0.2 Local
-    INTEGER                                          :: ics, ice, iblk         !< chunks [ics:ice] and block numbers
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, growth_c, growth_n
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: hlp1, hlp2, &
+                                                                       growth_c, growth_n
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_actual_flux_rates'
 
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
 
     !> 1.0 formation of fast SOM from litter 
     !!
@@ -1561,12 +1590,12 @@ CONTAINS
     !> 1.1 calculate potential growth rate of fast SOM pool, and associated potential microbial 
     !!     immobilisation rate as difference between maximal growth rate and N in litter
     growth_c(:,:) = microbial_cue_max * & 
-                    (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                     sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk)) 
+                    (sb_loss%soluable_litter%carbon(:,:) + & 
+                     sb_loss%polymeric_litter%carbon(:,:)) 
     
     mic_uptake_nh4_sl(:,:) = growth_c(:,:) / microbial_cn - & 
-                             microbial_nue * (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                              sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk))
+                             microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
+                                              sb_loss%polymeric_litter%nitrogen(:,:))
 
     !> 1.2  Limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
     !!
@@ -1624,8 +1653,8 @@ CONTAINS
     !> 2.1 calculate C growth based on N availability
     !!
     growth_n(:,:) = microbial_cn * ( mic_uptake_nh4_sl(:,:) + & 
-                                     microbial_nue * (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                      sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk))) 
+                                     microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
+                                                      sb_loss%polymeric_litter%nitrogen(:,:))) 
 
     !> 2.2 Adjust carbon-use efficiency to match N availability by unchanged litter decomposition
     !!
@@ -1641,11 +1670,11 @@ CONTAINS
     !> 2.3 Calculate actual litter loss rate, calculated such that litter decomposition
     !! matches the actual immobilisation flux and CN uptake from litter given actual CUE
     hlp1(:,:) = apparent_mic_cue(:,:) / microbial_cn * &
-                      (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + & 
-                       sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk)) - & 
+                      (sb_loss%soluable_litter%carbon(:,:) + & 
+                       sb_loss%polymeric_litter%carbon(:,:)) - & 
                 microbial_nue * & 
-                       (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-                        sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)) 
+                       (sb_loss%soluable_litter%nitrogen(:,:) + & 
+                        sb_loss%polymeric_litter%nitrogen(:,:)) 
     hlp2(:,:) = 1.0_wp
     WHERE(mic_uptake_nh4_sl(:,:)<hlp1(:,:))
        WHERE(hlp1(:,:)>eps8)
@@ -1653,28 +1682,28 @@ CONTAINS
        ELSEWHERE
            hlp2(:,:) = 0.0_wp
        ENDWHERE
-       sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk)
-       sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk)
-       sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk)
-       sb_loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk)
-       sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)
-       sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)
+       sb_loss%soluable_litter%carbon(:,:) = hlp2(:,:) * sb_loss%soluable_litter%carbon(:,:)
+       sb_loss%soluable_litter%nitrogen(:,:) = hlp2(:,:) * sb_loss%soluable_litter%nitrogen(:,:)
+       sb_loss%soluable_litter%phosphorus(:,:) = hlp2(:,:) * sb_loss%soluable_litter%phosphorus(:,:)
+       sb_loss%soluable_litter%carbon13(:,:) = hlp2(:,:) * sb_loss%soluable_litter%carbon13(:,:)
+       sb_loss%soluable_litter%carbon14(:,:) = hlp2(:,:) * sb_loss%soluable_litter%carbon14(:,:)
+       sb_loss%soluable_litter%nitrogen15(:,:) = hlp2(:,:) * sb_loss%soluable_litter%nitrogen15(:,:)
 
-       sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk)
-       sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)
-       sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk)
-       sb_loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)
-       sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)
-       sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = hlp2(:,:) * sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)
+       sb_loss%polymeric_litter%carbon(:,:) = hlp2(:,:) * sb_loss%polymeric_litter%carbon(:,:)
+       sb_loss%polymeric_litter%nitrogen(:,:) = hlp2(:,:) * sb_loss%polymeric_litter%nitrogen(:,:)
+       sb_loss%polymeric_litter%phosphorus(:,:) = hlp2(:,:) * sb_loss%polymeric_litter%phosphorus(:,:)
+       sb_loss%polymeric_litter%carbon13(:,:) = hlp2(:,:) * sb_loss%polymeric_litter%carbon13(:,:)
+       sb_loss%polymeric_litter%carbon14(:,:) = hlp2(:,:) * sb_loss%polymeric_litter%carbon14(:,:)
+       sb_loss%polymeric_litter%nitrogen15(:,:) = hlp2(:,:) * sb_loss%polymeric_litter%nitrogen15(:,:)
     ENDWHERE 
 
     !> 3.0 calculate potential microbial P uptake from soluable pool (mol /m3 / timestep) 
     mic_uptake_po4_sl(:,:) =  apparent_mic_cue(:,:) / microbial_cn / microbial_np * & 
-                                (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &
-                                  sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk)) - &
+                                (sb_loss%soluable_litter%carbon(:,:) + &
+                                  sb_loss%polymeric_litter%carbon(:,:)) - &
                               microbial_pue * & 
-                                (sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                 sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk)) 
+                                (sb_loss%soluable_litter%phosphorus(:,:) + & 
+                                 sb_loss%polymeric_litter%phosphorus(:,:)) 
 
     !> 3.1 constrain P uptake by microbes and plants to the available sum of P from P_soluable, 
     !!     biomineralisation and transport (mol /m3 / timestep)   
@@ -1710,7 +1739,7 @@ CONTAINS
     !!      and substract from slow=residue pool 
     biomineralisation_po4(:,:) = MAX(mic_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) - & 
                                      (po4_solute(:,:) + transport_po4_solute(:,:)),0.0_wp)
-    sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
+    sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
                                                      biomineralisation_po4(:,:)
   
   END SUBROUTINE calc_actual_flux_rates
@@ -1987,139 +2016,136 @@ CONTAINS
     USE mo_shared_isotope,      ONLY: calc_fractionation
     USE mo_sb_constants,        ONLY: residue_cue, microbial_cue_min, microbial_np, microbial_cn, microbial_nue, microbial_pue, & 
                                       eta_ammonification
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: apparent_mic_cue, &           !< apparent carbon-use efficiency of microbial uptake
                                                                        mic_uptake_nh4_sl, &          !< microbial NH4 uptake [mol / m3 / timestep]
                                                                        mic_uptake_nh4_n15_sl, &      !< microbial 15NH4 uptake [mol / m3 / timestep]
                                                                        mic_uptake_po4_sl             !< microbial PO4 uptake [mol / m3 / timestep]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
+    TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
                                                                        het_respiration_c14, &        !< heterotrophic respiration [µmol 14C / m3 / timestep]
                                                                        net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                                        net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
                                                                        net_mineralisation_nh4_n15    !< net mineralisation of 15NH4 [mol / m3 / timestep]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation                  !< formation of SOM and litter pools  [mol / m3 / timestep]
-    
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation                  !< formation of SOM and litter pools  [mol / m3 / timestep]
+    ! ---------------------------
     ! 0.2 Local
-    ! 
-    INTEGER                                          :: ics, ice, iblk         !< chunks [ics:ice] and block numbers
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1
     CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_SOM_formation'
 
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
     
     !> 1.0 formation of fast SOM from litter 
     !! 
-    sb_formation%microbial%carbon%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon%ptr(ics:ice,:,iblk) + & 
+    sb_formation%microbial%carbon(:,:) = sb_formation%microbial%carbon(:,:) + & 
                                                         apparent_mic_cue(:,:) * & 
-                                                        (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &  
-                                                         sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk)) 
-    sb_formation%microbial%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
+                                                        (sb_loss%soluable_litter%carbon(:,:) + &  
+                                                         sb_loss%polymeric_litter%carbon(:,:)) 
+    sb_formation%microbial%nitrogen(:,:) = sb_formation%microbial%nitrogen(:,:) + & 
                                                           microbial_nue * &
-                                                          (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + &  
-                                                           sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)) + & 
+                                                          (sb_loss%soluable_litter%nitrogen(:,:) + &  
+                                                           sb_loss%polymeric_litter%nitrogen(:,:)) + & 
                                                           mic_uptake_nh4_sl(:,:) 
-    sb_formation%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
+    sb_formation%microbial%phosphorus(:,:) = sb_formation%microbial%phosphorus(:,:) + & 
                                                             microbial_pue * &
-                                                            (sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + &  
-                                                             sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk)) + & 
+                                                            (sb_loss%soluable_litter%phosphorus(:,:) + &  
+                                                             sb_loss%polymeric_litter%phosphorus(:,:)) + & 
                                                             mic_uptake_po4_sl(:,:) 
-    sb_formation%microbial%carbon13%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
+    sb_formation%microbial%carbon13(:,:) = sb_formation%microbial%carbon13(:,:) + & 
                                                         apparent_mic_cue(:,:) * & 
-                                                        (sb_loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + &  
-                                                         sb_loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)) 
-    sb_formation%microbial%carbon14%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
+                                                        (sb_loss%soluable_litter%carbon13(:,:) + &  
+                                                         sb_loss%polymeric_litter%carbon13(:,:)) 
+    sb_formation%microbial%carbon14(:,:) = sb_formation%microbial%carbon14(:,:) + & 
                                                         apparent_mic_cue(:,:) * & 
-                                                        (sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + &  
-                                                         sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk))
-    sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
+                                                        (sb_loss%soluable_litter%carbon14(:,:) + &  
+                                                         sb_loss%polymeric_litter%carbon14(:,:))
+    sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + & 
                                                           microbial_nue * &
-                                                          (sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + &  
-                                                           sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)) + &
+                                                          (sb_loss%soluable_litter%nitrogen15(:,:) + &  
+                                                           sb_loss%polymeric_litter%nitrogen15(:,:)) + &
                                                            mic_uptake_nh4_n15_sl(:,:) 
 
     het_respiration(:,:)     = het_respiration(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
-                                                      (sb_loss%soluable_litter%carbon%ptr(ics:ice,:,iblk) + &  
-                                                       sb_loss%polymeric_litter%carbon%ptr(ics:ice,:,iblk))
+                                                      (sb_loss%soluable_litter%carbon(:,:) + &  
+                                                       sb_loss%polymeric_litter%carbon(:,:))
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
-                                                          (sb_loss%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + &  
-                                                           sb_loss%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)) 
+                                                          (sb_loss%soluable_litter%carbon13(:,:) + &  
+                                                           sb_loss%polymeric_litter%carbon13(:,:)) 
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
-                                                          (sb_loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + &  
-                                                           sb_loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk))
+                                                          (sb_loss%soluable_litter%carbon14(:,:) + &  
+                                                           sb_loss%polymeric_litter%carbon14(:,:))
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) - mic_uptake_nh4_sl(:,:) + &  
                                                                 (1.0_wp - microbial_nue) * &
-                                                                (sb_loss%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + &  
-                                                                 sb_loss%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk))
+                                                                (sb_loss%soluable_litter%nitrogen(:,:) + &  
+                                                                 sb_loss%polymeric_litter%nitrogen(:,:))
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) - mic_uptake_po4_sl(:,:) + & 
                                                                 (1.0_wp - microbial_pue) * &
-                                                                (sb_loss%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + &  
-                                                                 sb_loss%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk))
+                                                                (sb_loss%soluable_litter%phosphorus(:,:) + &  
+                                                                 sb_loss%polymeric_litter%phosphorus(:,:))
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) - mic_uptake_nh4_n15_sl(:,:) + & 
                                                                 (1.0_wp - microbial_nue) * &
-                                                                (sb_loss%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + &  
-                                                                 sb_loss%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk))
+                                                                (sb_loss%soluable_litter%nitrogen15(:,:) + &  
+                                                                 sb_loss%polymeric_litter%nitrogen15(:,:))
 
 
     !> 2.0 formation of slow SOM (=residue pool) from fast SOM decay
     !! 
-    sb_formation%residue%carbon%ptr(ics:ice,:,iblk) = sb_formation%residue%carbon%ptr(ics:ice,:,iblk) + & 
-                                                      residue_cue * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%residue%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%residue%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                        residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%residue%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%residue%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                          residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%residue%carbon13%ptr(ics:ice,:,iblk) = sb_formation%residue%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                        residue_cue * sb_loss%microbial%carbon13%ptr(ics:ice,:,iblk)
-    sb_formation%residue%carbon14%ptr(ics:ice,:,iblk) = sb_formation%residue%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                        residue_cue * sb_loss%microbial%carbon14%ptr(ics:ice,:,iblk)
-    hlp1(:,:) = (sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) - residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)) * & 
-                calc_fractionation(sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk), &
-                                   sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk),eta_ammonification)
-    sb_formation%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%residue%nitrogen15%ptr(ics:ice,:,iblk) + &
-                                                             sb_loss%microbial%nitrogen15%ptr(ics:ice,:,iblk) - hlp1(:,:) 
+    sb_formation%residue%carbon(:,:) = sb_formation%residue%carbon(:,:) + & 
+                                                      residue_cue * sb_loss%microbial%carbon(:,:)
+    sb_formation%residue%nitrogen(:,:) = sb_formation%residue%nitrogen(:,:) + & 
+                                                        residue_cue / microbial_cn * sb_loss%microbial%carbon(:,:)
+    sb_formation%residue%phosphorus(:,:) = sb_formation%residue%phosphorus(:,:) + & 
+                                                          residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
+    sb_formation%residue%carbon13(:,:) = sb_formation%residue%carbon13(:,:) + & 
+                                                        residue_cue * sb_loss%microbial%carbon13(:,:)
+    sb_formation%residue%carbon14(:,:) = sb_formation%residue%carbon14(:,:) + & 
+                                                        residue_cue * sb_loss%microbial%carbon14(:,:)
+    hlp1(:,:) = (sb_loss%microbial%nitrogen(:,:) - residue_cue / microbial_cn * sb_loss%microbial%carbon(:,:)) * & 
+                calc_fractionation(sb_loss%microbial%nitrogen(:,:), &
+                                   sb_loss%microbial%nitrogen15(:,:),eta_ammonification)
+    sb_formation%residue%nitrogen15(:,:) = sb_formation%residue%nitrogen15(:,:) + &
+                                                             sb_loss%microbial%nitrogen15(:,:) - hlp1(:,:) 
 
-    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - residue_cue) * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon13%ptr(ics:ice,:,iblk)
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon14%ptr(ics:ice,:,iblk)
-    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%microbial%nitrogen%ptr(ics:ice,:,iblk) - &
-                                                                residue_cue / microbial_cn * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
-    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%microbial%phosphorus%ptr(ics:ice,:,iblk) - &
-                                                                residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon%ptr(ics:ice,:,iblk)
+    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - residue_cue) * sb_loss%microbial%carbon(:,:)
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon13(:,:)
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon14(:,:)
+    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%microbial%nitrogen(:,:) - &
+                                                                residue_cue / microbial_cn * sb_loss%microbial%carbon(:,:)
+    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%microbial%phosphorus(:,:) - &
+                                                                residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
 
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:) 
 
     !> 3.0 formation of fast SOM (=microbial pool) from slow SOM decay 
     !! 
-    sb_formation%microbial%carbon%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon%ptr(ics:ice,:,iblk) + & 
-                                                        microbial_cue_min * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%microbial%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                          microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                            microbial_cue_min / microbial_cn / microbial_np * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%microbial%carbon13%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                          microbial_cue_min * sb_loss%residue%carbon13%ptr(ics:ice,:,iblk)
-    sb_formation%microbial%carbon14%ptr(ics:ice,:,iblk) = sb_formation%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                          microbial_cue_min * sb_loss%residue%carbon14%ptr(ics:ice,:,iblk)
-    hlp1(:,:) = (sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) - microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)) * & 
-                calc_fractionation(sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk), &
-                                   sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk),eta_ammonification)
-    sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                            sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) - hlp1(:,:) 
+    sb_formation%microbial%carbon(:,:) = sb_formation%microbial%carbon(:,:) + & 
+                                                        microbial_cue_min * sb_loss%residue%carbon(:,:)
+    sb_formation%microbial%nitrogen(:,:) = sb_formation%microbial%nitrogen(:,:) + & 
+                                                          microbial_cue_min / microbial_cn * sb_loss%residue%carbon(:,:)
+    sb_formation%microbial%phosphorus(:,:) = sb_formation%microbial%phosphorus(:,:) + & 
+                                                            microbial_cue_min / microbial_cn / microbial_np * sb_loss%residue%carbon(:,:)
+    sb_formation%microbial%carbon13(:,:) = sb_formation%microbial%carbon13(:,:) + & 
+                                                          microbial_cue_min * sb_loss%residue%carbon13(:,:)
+    sb_formation%microbial%carbon14(:,:) = sb_formation%microbial%carbon14(:,:) + & 
+                                                          microbial_cue_min * sb_loss%residue%carbon14(:,:)
+    hlp1(:,:) = (sb_loss%residue%nitrogen(:,:) - microbial_cue_min / microbial_cn * sb_loss%residue%carbon(:,:)) * & 
+                calc_fractionation(sb_loss%residue%nitrogen(:,:), &
+                                   sb_loss%residue%nitrogen15(:,:),eta_ammonification)
+    sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + & 
+                                                            sb_loss%residue%nitrogen15(:,:) - hlp1(:,:) 
 
-    het_respiration(:,:)      = het_respiration(:,:)     + (1._wp - microbial_cue_min) * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    het_respiration_c13(:,:)  = het_respiration_c13(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon13%ptr(ics:ice,:,iblk)
-    het_respiration_c14(:,:)  = het_respiration_c14(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon14%ptr(ics:ice,:,iblk)
-    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) - &
-                                                                microbial_cue_min / microbial_cn * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
-    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) - &
-                                                                microbial_cue_min / microbial_cn / microbial_np * sb_loss%residue%carbon%ptr(ics:ice,:,iblk)
+    het_respiration(:,:)      = het_respiration(:,:)     + (1._wp - microbial_cue_min) * sb_loss%residue%carbon(:,:)
+    het_respiration_c13(:,:)  = het_respiration_c13(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon13(:,:)
+    het_respiration_c14(:,:)  = het_respiration_c14(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon14(:,:)
+    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%residue%nitrogen(:,:) - &
+                                                                microbial_cue_min / microbial_cn * sb_loss%residue%carbon(:,:)
+    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
+                                                                microbial_cue_min / microbial_cn / microbial_np * sb_loss%residue%carbon(:,:)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:)
 
   END SUBROUTINE calc_SOM_formation  
@@ -2146,88 +2172,87 @@ CONTAINS
   
     USE mo_sb_constants,        ONLY: microbial_cue_min, microbial_nue, microbial_pue, & 
                                       fc_soluable_max, k_fc_soluable, k_fn_soluable, k_fp_soluable, lc_woody_litter
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
+    TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
                                                                        het_respiration_c14, &        !< heterotrophic respiration [µmol 14C / m3 / timestep]
                                                                        net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                                        net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
                                                                        net_mineralisation_nh4_n15    !< net mineralisation of 15NH4 [mol / m3 / timestep]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation                  !< formation of SOM and litter pools  [mol / m3 / timestep]
-    
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation                  !< formation of SOM and litter pools  [mol / m3 / timestep]
+    ! ---------------------------
     ! 0.2 Local
-    ! 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fc_soluable_woody_litter, & !< fraction of non-respired woody litter becoming metabolic litter 
                                                         fn_soluable_woody_litter, & 
                                                         fp_soluable_woody_litter
-    INTEGER                                          :: ics, ice, iblk              !< chunks [ics:ice] and block numbers
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_litter_formation_from_woody_decay'
 
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
     
     !> 1.0 Calculate partitioning of decaying woody litter into metabolic and structural litter
     !!
     fc_soluable_woody_litter(:,:) = 0.0_wp
     fn_soluable_woody_litter(:,:) = 0.0_wp
     fp_soluable_woody_litter(:,:) = 0.0_wp
-    WHERE(sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) > eps8) 
+    WHERE(sb_loss%woody_litter%nitrogen(:,:) > eps8) 
        fc_soluable_woody_litter(:,:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_woody_litter * &
            microbial_cue_min / microbial_nue * & 
-           sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk) / sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk))
+           sb_loss%woody_litter%carbon(:,:) / sb_loss%woody_litter%nitrogen(:,:))
        WHERE(fc_soluable_woody_litter(:,:)>eps8)
-          fn_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:))/(k_fn_soluable*fc_soluable_woody_litter(:,:)))
-          fp_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:))/(k_fp_soluable*fc_soluable_woody_litter(:,:)))
+          fn_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) / &
+                                          (k_fn_soluable*fc_soluable_woody_litter(:,:)))
+          fp_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) / &
+                                          (k_fp_soluable*fc_soluable_woody_litter(:,:)))
        ENDWHERE
     ENDWHERE
 
     !> 2.0 formation of metabolic and structural litter 
     !!     taking account of the processing losses of C, N and P
-    sb_formation%soluable_litter%carbon%ptr(ics:ice,:,iblk) = sb_formation%soluable_litter%carbon%ptr(ics:ice,:,iblk) + & 
-       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk) 
-    sb_formation%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-       fn_soluable_woody_litter(:,:) * microbial_nue * sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) 
-    sb_formation%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-       fp_soluable_woody_litter(:,:) * microbial_pue * sb_loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk) 
-    sb_formation%soluable_litter%carbon13%ptr(ics:ice,:,iblk) = sb_formation%soluable_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon13%ptr(ics:ice,:,iblk) 
-    sb_formation%soluable_litter%carbon14%ptr(ics:ice,:,iblk) = sb_formation%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) 
-    sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-       fn_soluable_woody_litter(:,:) * microbial_nue * sb_loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) 
+    sb_formation%soluable_litter%carbon(:,:) = sb_formation%soluable_litter%carbon(:,:) + & 
+       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon(:,:) 
+    sb_formation%soluable_litter%nitrogen(:,:) = sb_formation%soluable_litter%nitrogen(:,:) + & 
+       fn_soluable_woody_litter(:,:) * microbial_nue * sb_loss%woody_litter%nitrogen(:,:) 
+    sb_formation%soluable_litter%phosphorus(:,:) = sb_formation%soluable_litter%phosphorus(:,:) + & 
+       fp_soluable_woody_litter(:,:) * microbial_pue * sb_loss%woody_litter%phosphorus(:,:) 
+    sb_formation%soluable_litter%carbon13(:,:) = sb_formation%soluable_litter%carbon13(:,:) + & 
+       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon13(:,:) 
+    sb_formation%soluable_litter%carbon14(:,:) = sb_formation%soluable_litter%carbon14(:,:) + & 
+       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon14(:,:) 
+    sb_formation%soluable_litter%nitrogen15(:,:) = sb_formation%soluable_litter%nitrogen15(:,:) + & 
+       fn_soluable_woody_litter(:,:) * microbial_nue * sb_loss%woody_litter%nitrogen15(:,:) 
 
-    sb_formation%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + & 
-       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk) 
-    sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + & 
-       (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue * sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk) 
-    sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + & 
-       (1.0_wp - fp_soluable_woody_litter(:,:)) * microbial_pue * sb_loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk) 
-    sb_formation%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + & 
-       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon13%ptr(ics:ice,:,iblk) 
-    sb_formation%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + & 
-       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) 
-    sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + & 
-       (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue * sb_loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) 
+    sb_formation%polymeric_litter%carbon(:,:) = sb_formation%polymeric_litter%carbon(:,:) + & 
+       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon(:,:) 
+    sb_formation%polymeric_litter%nitrogen(:,:) = sb_formation%polymeric_litter%nitrogen(:,:) + & 
+       (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue * sb_loss%woody_litter%nitrogen(:,:) 
+    sb_formation%polymeric_litter%phosphorus(:,:) = sb_formation%polymeric_litter%phosphorus(:,:) + & 
+       (1.0_wp - fp_soluable_woody_litter(:,:)) * microbial_pue * sb_loss%woody_litter%phosphorus(:,:) 
+    sb_formation%polymeric_litter%carbon13(:,:) = sb_formation%polymeric_litter%carbon13(:,:) + & 
+       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon13(:,:) 
+    sb_formation%polymeric_litter%carbon14(:,:) = sb_formation%polymeric_litter%carbon14(:,:) + & 
+       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon14(:,:) 
+    sb_formation%polymeric_litter%nitrogen15(:,:) = sb_formation%polymeric_litter%nitrogen15(:,:) + & 
+       (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue * sb_loss%woody_litter%nitrogen15(:,:) 
 
     !> 3.0 record losses to heterotrophic respiration and mineralisation
     !!
     het_respiration(:,:)            = het_respiration(:,:) + & 
-                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon%ptr(ics:ice,:,iblk)
+                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon(:,:)
     net_mineralisation_nh4(:,:)     = net_mineralisation_nh4(:,:) + &
-                                      (1.0_wp - microbial_nue) * sb_loss%woody_litter%nitrogen%ptr(ics:ice,:,iblk)
+                                      (1.0_wp - microbial_nue) * sb_loss%woody_litter%nitrogen(:,:)
     net_mineralisation_po4(:,:)     = net_mineralisation_po4(:,:) + &
-                                      (1.0_wp - microbial_pue) * sb_loss%woody_litter%phosphorus%ptr(ics:ice,:,iblk)
+                                      (1.0_wp - microbial_pue) * sb_loss%woody_litter%phosphorus(:,:)
     het_respiration_c13(:,:)        = het_respiration_c13(:,:) + & 
-                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon13%ptr(ics:ice,:,iblk)
+                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon13(:,:)
     het_respiration_c14(:,:)        = het_respiration_c14(:,:) + & 
-                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)
+                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon14(:,:)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + &
-                                      (1.0_wp - microbial_nue) * sb_loss%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)
+                                      (1.0_wp - microbial_nue) * sb_loss%woody_litter%nitrogen15(:,:)
  
   END SUBROUTINE calc_litter_formation_from_woody_decay
 
@@ -2248,6 +2273,7 @@ CONTAINS
                                                  transport_microbial, transport_residue)
 
     USE mo_sb_jsm_transport,        ONLY: calc_bioturbation_transport
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2255,63 +2281,45 @@ CONTAINS
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_microbial         !< microbial pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(in)    :: pool_residue           !< microbial residue pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_microbial    !< rate of microbial transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: transport_residue      !< rate of microbial residue transport [mol/m3/timestep]
-    ! 0.2 Local
-    ! 
-    INTEGER                               :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial         !< microbial pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue           !< microbial residue pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_microbial    !< rate of microbial transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_residue      !< rate of microbial residue transport [mol/m3/timestep]
     ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
+
 
 
     !> 1.0 fast SOM pool
     !!
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon%ptr(ics:ice,:,iblk))
+                                        pool_microbial%carbon(:,:),transport_microbial%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_microbial%nitrogen(:,:),transport_microbial%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_microbial%phosphorus(:,:),transport_microbial%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_microbial%carbon13(:,:),transport_microbial%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_microbial%carbon14(:,:),transport_microbial%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_microbial%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_microbial%nitrogen15(:,:),transport_microbial%nitrogen15(:,:))
 
     !> 1.1 slow SOM pool
     !!
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon%ptr(ics:ice,:,iblk))
+                                        pool_residue%carbon(:,:),transport_residue%carbon(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_residue%nitrogen%ptr(ics:ice,:,iblk))
+                                        pool_residue%nitrogen(:,:),transport_residue%nitrogen(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_residue%phosphorus%ptr(ics:ice,:,iblk))
+                                        pool_residue%phosphorus(:,:),transport_residue%phosphorus(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon13%ptr(ics:ice,:,iblk))
+                                        pool_residue%carbon13(:,:),transport_residue%carbon13(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon14%ptr(ics:ice,:,iblk))
+                                        pool_residue%carbon14(:,:),transport_residue%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
-                                        pool_residue%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_residue%nitrogen15%ptr(ics:ice,:,iblk))
+                                        pool_residue%nitrogen15(:,:),transport_residue%nitrogen15(:,:))
 
   END SUBROUTINE calc_bioturbation_transport_wrapper
 
@@ -2380,8 +2388,8 @@ CONTAINS
   !! according to their root profile 
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_litter_partitioning(lctlib, & 
-                                      options, &
+  SUBROUTINE calc_litter_partitioning(options, &
+                                      lctlib, & 
                                       soil_depth_sl, &
                                       root_fraction_act_sl, &
                                       veg_litterfall, &
@@ -2391,16 +2399,17 @@ CONTAINS
     USE mo_sb_constants,            ONLY: fc_soluable_max,k_fc_soluable,k_fn_soluable,k_fp_soluable, &
                                           lc_leaf_max,lc_leaf2sla,lc_fine_root,lc_coarse_root,lc_fruit,lc_seed_bed 
     dsl4slm_Use_memory_a_veg
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
+    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &           !< depth per soil layer
                                                                        root_fraction_act_sl       !< root fraction per soil layer
     TYPE(t_veg_pool_a),                               INTENT(in)    :: veg_litterfall             !< vegetation litterfall pool
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation               !< soil biogeochemistry formation pool
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation               !< soil biogeochemistry formation pool
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: fc_soluable_leaf, fc_soluable_fine_root, fc_soluable_coarse_root, fc_soluable_fruit, & 
@@ -2411,14 +2420,7 @@ CONTAINS
                                        fp_soluable_seed_bed, fp_soluable_labile, fp_soluable_reserve 
     INTEGER                     :: isoil                      !< loop over soil layers
     INTEGER  :: tchu
-    INTEGER                     :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_partitioning'
-    ! ---------------------------
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
 
     tchu = 1
 
@@ -2494,74 +2496,74 @@ CONTAINS
 
     !> 2.0 Update surface metabolic and soluable litter pools with litter fall
     !!
-    sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
+    sb_formation%soluable_litter%carbon(:,1) = sb_formation%soluable_litter%carbon(:,1) + & 
        (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon(:)    + & 
         fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon(:)   + & 
         fc_soluable_labile(:)   * veg_litterfall%labile%carbon(:)  + & 
         fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon(:) + & 
         fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon(:) ) / soil_depth_sl(:,1)
-    sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
+    sb_formation%soluable_litter%nitrogen(:,1) = sb_formation%soluable_litter%nitrogen(:,1) + & 
        (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen(:)    + & 
         fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen(:)   + & 
         fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen(:)  + & 
         fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen(:) + & 
         fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen(:) ) / soil_depth_sl(:,1)
-    sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
+    sb_formation%soluable_litter%phosphorus(:,1) = sb_formation%soluable_litter%phosphorus(:,1) + & 
        (fp_soluable_leaf(:)     * veg_litterfall%leaf%phosphorus(:)    + & 
         fp_soluable_fruit(:)    * veg_litterfall%fruit%phosphorus(:)   + & 
         fp_soluable_labile(:)   * veg_litterfall%labile%phosphorus(:)  + & 
         fp_soluable_reserve(:)  * veg_litterfall%reserve%phosphorus(:) + & 
         fp_soluable_seed_bed(:) * veg_litterfall%seed_bed%phosphorus(:) ) / soil_depth_sl(:,1)
-    sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) + & 
+    sb_formation%soluable_litter%carbon13(:,1) = sb_formation%soluable_litter%carbon13(:,1) + & 
        (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon13(:)    + & 
         fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon13(:)   + & 
         fc_soluable_labile(:)   * veg_litterfall%labile%carbon13(:)  + & 
         fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon13(:) + & 
         fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon13(:) ) / soil_depth_sl(:,1)
-    sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) + & 
+    sb_formation%soluable_litter%carbon14(:,1) = sb_formation%soluable_litter%carbon14(:,1) + & 
        (fc_soluable_leaf(:)     * veg_litterfall%leaf%carbon14(:)    + & 
         fc_soluable_fruit(:)    * veg_litterfall%fruit%carbon14(:)   + & 
         fc_soluable_labile(:)   * veg_litterfall%labile%carbon14(:)  + & 
         fc_soluable_reserve(:)  * veg_litterfall%reserve%carbon14(:) + & 
         fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon14(:) ) / soil_depth_sl(:,1)
-    sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
+    sb_formation%soluable_litter%nitrogen15(:,1) = sb_formation%soluable_litter%nitrogen15(:,1) + & 
        (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen15(:)    + & 
         fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen15   + & 
         fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen15  + & 
         fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen15 + & 
         fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen15 ) / soil_depth_sl(:,1)
 
-    sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
+    sb_formation%polymeric_litter%carbon(:,1) = sb_formation%polymeric_litter%carbon(:,1) + & 
        ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon(:)    + & 
         (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon(:)   + & 
         (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon(:)  + & 
         (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon(:) + & 
         (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon(:) ) / soil_depth_sl(:,1)
-    sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
+    sb_formation%polymeric_litter%nitrogen(:,1) = sb_formation%polymeric_litter%nitrogen(:,1) + & 
        ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen(:)    + & 
         (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen(:)   + & 
         (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen(:)  + & 
         (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen(:) + & 
         (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen(:) ) / soil_depth_sl(:,1)
-    sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
+    sb_formation%polymeric_litter%phosphorus(:,1) = sb_formation%polymeric_litter%phosphorus(:,1) + & 
        ((1.0_wp - fp_soluable_leaf(:))     * veg_litterfall%leaf%phosphorus(:)    + & 
         (1.0_wp - fp_soluable_fruit(:))    * veg_litterfall%fruit%phosphorus(:)   + & 
         (1.0_wp - fp_soluable_labile(:))   * veg_litterfall%labile%phosphorus(:)  + & 
         (1.0_wp - fp_soluable_reserve(:))  * veg_litterfall%reserve%phosphorus(:) + & 
         (1.0_wp - fp_soluable_seed_bed(:)) * veg_litterfall%seed_bed%phosphorus(:) ) / soil_depth_sl(:,1)
-    sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + & 
+    sb_formation%polymeric_litter%carbon13(:,1) = sb_formation%polymeric_litter%carbon13(:,1) + & 
        ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon13(:)    + & 
         (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon13(:)   + & 
         (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon13(:)  + & 
         (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon13(:) + & 
         (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon13(:) ) / soil_depth_sl(:,1)
-    sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + & 
+    sb_formation%polymeric_litter%carbon14(:,1) = sb_formation%polymeric_litter%carbon14(:,1) + & 
        ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon14(:)    + & 
         (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall%fruit%carbon14(:)   + & 
         (1.0_wp - fc_soluable_labile(:))   * veg_litterfall%labile%carbon14(:)  + & 
         (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon14(:) + & 
         (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon14(:) ) / soil_depth_sl(:,1)
-    sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
+    sb_formation%polymeric_litter%nitrogen15(:,1) = sb_formation%polymeric_litter%nitrogen15(:,1) + & 
        ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen15    + & 
         (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen15   + & 
         (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen15  + & 
@@ -2573,60 +2575,60 @@ CONTAINS
     !!     metabolic and structural litter as if their were fine roots
     SELECT CASE(lctlib%growthform)
        CASE (itree)
-          sb_formation%woody_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%carbon%ptr(ics:ice,1,iblk) + & 
+          sb_formation%woody_litter%carbon(:,1) = sb_formation%woody_litter%carbon(:,1) + & 
              (veg_litterfall%sap_wood%carbon(:) + veg_litterfall%heart_wood%carbon) / & 
              soil_depth_sl(:,1)
-          sb_formation%woody_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%nitrogen%ptr(ics:ice,1,iblk) +  & 
+          sb_formation%woody_litter%nitrogen(:,1) = sb_formation%woody_litter%nitrogen(:,1) +  & 
              (veg_litterfall%sap_wood%nitrogen(:) + veg_litterfall%heart_wood%nitrogen) / & 
              soil_depth_sl(:,1)
-          sb_formation%woody_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
+          sb_formation%woody_litter%phosphorus(:,1) = sb_formation%woody_litter%phosphorus(:,1) + & 
              (veg_litterfall%sap_wood%phosphorus(:) + veg_litterfall%heart_wood%phosphorus) / & 
              soil_depth_sl(:,1)
-          sb_formation%woody_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%carbon13%ptr(ics:ice,1,iblk) + & 
+          sb_formation%woody_litter%carbon13(:,1) = sb_formation%woody_litter%carbon13(:,1) + & 
              (veg_litterfall%sap_wood%carbon13(:) + veg_litterfall%heart_wood%carbon13) / & 
              soil_depth_sl(:,1)
-          sb_formation%woody_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%carbon14%ptr(ics:ice,1,iblk) + & 
+          sb_formation%woody_litter%carbon14(:,1) = sb_formation%woody_litter%carbon14(:,1) + & 
              (veg_litterfall%sap_wood%carbon14(:) + veg_litterfall%heart_wood%carbon14) / & 
              soil_depth_sl(:,1)
-          sb_formation%woody_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%woody_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
+          sb_formation%woody_litter%nitrogen15(:,1) = sb_formation%woody_litter%nitrogen15(:,1) + &
              (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / &
              soil_depth_sl(:,1)
        CASE (igrass)
-          sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
+          sb_formation%soluable_litter%carbon(:,1) = sb_formation%soluable_litter%carbon(:,1) + & 
              fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon(:) + veg_litterfall%heart_wood%carbon) / & 
              soil_depth_sl(:,1)
-          sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
+          sb_formation%soluable_litter%nitrogen(:,1) = sb_formation%soluable_litter%nitrogen(:,1) + & 
              fn_soluable_fine_root(:) * (veg_litterfall%sap_wood%nitrogen(:) + veg_litterfall%heart_wood%nitrogen) / & 
              soil_depth_sl(:,1)
-          sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
+          sb_formation%soluable_litter%phosphorus(:,1) = sb_formation%soluable_litter%phosphorus(:,1) + & 
              fp_soluable_fine_root(:) * (veg_litterfall%sap_wood%phosphorus(:) + veg_litterfall%heart_wood%phosphorus) / & 
              soil_depth_sl(:,1)
-          sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon13%ptr(ics:ice,1,iblk) + & 
+          sb_formation%soluable_litter%carbon13(:,1) = sb_formation%soluable_litter%carbon13(:,1) + & 
              fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon13(:) + veg_litterfall%heart_wood%carbon13) / & 
              soil_depth_sl(:,1)
-          sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%carbon14%ptr(ics:ice,1,iblk) + & 
+          sb_formation%soluable_litter%carbon14(:,1) = sb_formation%soluable_litter%carbon14(:,1) + & 
              fc_soluable_fine_root(:) * (veg_litterfall%sap_wood%carbon14(:) + veg_litterfall%heart_wood%carbon14) / & 
              soil_depth_sl(:,1)
-          sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
+          sb_formation%soluable_litter%nitrogen15(:,1) = sb_formation%soluable_litter%nitrogen15(:,1) + & 
              fn_soluable_fine_root(:) * (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / &
              soil_depth_sl(:,1)
       
-          sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
+          sb_formation%polymeric_litter%carbon(:,1) = sb_formation%polymeric_litter%carbon(:,1) + & 
              (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon(:) + veg_litterfall%heart_wood%carbon) / & 
              soil_depth_sl(:,1)
-          sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
+          sb_formation%polymeric_litter%nitrogen(:,1) = sb_formation%polymeric_litter%nitrogen(:,1) + & 
              (1.0_wp - fn_soluable_fine_root(:)) * (veg_litterfall%sap_wood%nitrogen(:) + veg_litterfall%heart_wood%nitrogen) / & 
              soil_depth_sl(:,1)
-          sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
+          sb_formation%polymeric_litter%phosphorus(:,1) = sb_formation%polymeric_litter%phosphorus(:,1) + & 
              (1.0_wp - fp_soluable_fine_root(:)) * (veg_litterfall%sap_wood%phosphorus(:) + veg_litterfall%heart_wood%phosphorus) / & 
              soil_depth_sl(:,1)
-          sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + & 
+          sb_formation%polymeric_litter%carbon13(:,1) = sb_formation%polymeric_litter%carbon13(:,1) + & 
              (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon13(:) + veg_litterfall%heart_wood%carbon13) / & 
              soil_depth_sl(:,1)
-          sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + & 
+          sb_formation%polymeric_litter%carbon14(:,1) = sb_formation%polymeric_litter%carbon14(:,1) + & 
              (1.0_wp - fc_soluable_fine_root(:)) * (veg_litterfall%sap_wood%carbon14(:) + veg_litterfall%heart_wood%carbon14) / & 
              soil_depth_sl(:,1)
-          sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
+          sb_formation%polymeric_litter%nitrogen15(:,1) = sb_formation%polymeric_litter%nitrogen15(:,1) + & 
              (1.0_wp - fn_soluable_fine_root(:)) * (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / &
              soil_depth_sl(:,1)
 
@@ -2635,52 +2637,52 @@ CONTAINS
     !> 4.0 Distribute fine and coarse root litter to soil depth according to the root profile 
     !!
     DO isoil = 1,options%nsoil_sb
-       sb_formation%soluable_litter%carbon%ptr(ics:ice,isoil,iblk)     = sb_formation%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%soluable_litter%carbon(:,isoil)     = sb_formation%soluable_litter%carbon(:,isoil) + & 
           (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon(:)     + &
            fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%soluable_litter%nitrogen%ptr(ics:ice,isoil,iblk)   = sb_formation%soluable_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%soluable_litter%nitrogen(:,isoil)   = sb_formation%soluable_litter%nitrogen(:,isoil) + & 
           (fn_soluable_fine_root(:)   * veg_litterfall%fine_root%nitrogen(:)     + &
            fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%soluable_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb_formation%soluable_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%soluable_litter%phosphorus(:,isoil) = sb_formation%soluable_litter%phosphorus(:,isoil) + & 
           (fp_soluable_fine_root(:)   * veg_litterfall%fine_root%phosphorus(:)     + &
            fp_soluable_coarse_root(:) * veg_litterfall%coarse_root%phosphorus(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%soluable_litter%carbon13%ptr(ics:ice,isoil,iblk)   = sb_formation%soluable_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%soluable_litter%carbon13(:,isoil)   = sb_formation%soluable_litter%carbon13(:,isoil) + & 
           (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon13(:)     + &
            fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon13(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%soluable_litter%carbon14%ptr(ics:ice,isoil,iblk)   = sb_formation%soluable_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%soluable_litter%carbon14(:,isoil)   = sb_formation%soluable_litter%carbon14(:,isoil) + & 
           (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon14(:)     + &
            fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon14(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb_formation%soluable_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%soluable_litter%nitrogen15(:,isoil) = sb_formation%soluable_litter%nitrogen15(:,isoil) + & 
           (fn_soluable_fine_root(:)   * veg_litterfall%fine_root%nitrogen15     + &
            fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen15 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
 
-       sb_formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%polymeric_litter%carbon(:,isoil)    = sb_formation%polymeric_litter%carbon(:,isoil) + & 
           ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon(:)     + &
            (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%polymeric_litter%nitrogen(:,isoil)    = sb_formation%polymeric_litter%nitrogen(:,isoil) + & 
           ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen(:)     + &
            (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%polymeric_litter%phosphorus(:,isoil)    = sb_formation%polymeric_litter%phosphorus(:,isoil) + & 
           ((1.0_wp - fp_soluable_fine_root(:))  * veg_litterfall%fine_root%phosphorus(:)     + &
            (1.0_wp - fp_soluable_coarse_root(:)) * veg_litterfall%coarse_root%phosphorus(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%polymeric_litter%carbon13(:,isoil)    = sb_formation%polymeric_litter%carbon13(:,isoil) + & 
           ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon13(:)     + &
            (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon13(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%polymeric_litter%carbon14(:,isoil)    = sb_formation%polymeric_litter%carbon14(:,isoil) + & 
           ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon14(:)     + &
            (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon14(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk)    = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
+       sb_formation%polymeric_litter%nitrogen15(:,isoil)    = sb_formation%polymeric_litter%nitrogen15(:,isoil) + & 
           ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen15     + &
            (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen15 ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
@@ -2696,8 +2698,8 @@ CONTAINS
   !> Subroutine to deal with mycorrhiza 
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_mycorrhiza_dynamics(lctlib, &
-                                      options, &
+  SUBROUTINE calc_mycorrhiza_dynamics(options, &
+                                      lctlib, &
                                       flag_myco_organic  , &
                                       soil_depth_sl, &
                                       mycorrhiza_uptake_nh4_sl, &
@@ -2712,18 +2714,19 @@ CONTAINS
                                       het_respiration_c14, &
                                       sb_mycorrhiza_export) 
 
-    USE mo_veg_memory_class
     USE mo_veg_constants,           ONLY: transform_cost_nh4, transform_cost_no3
     USE mo_sb_constants,            ONLY: mycorrhiza_cn, mycorrhiza_np, tau_slow
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
+    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     LOGICAL,                                          INTENT(in)    :: flag_myco_organic            !< from sb config
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl                !< depth per soil layer
-    TYPE(t_slm_struct_sb_pool),                       INTENT(in)    :: sb_pool                      !< soil biogeochemistry pools [mol / m3]
-    TYPE(t_slm_struct_sb_pool),                       INTENT(inout) :: sb_formation, &              !< pool formation rate  [mol / m3 / timestep]
+    TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_pool                      !< soil biogeochemistry pools [mol / m3]
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation, &              !< pool formation rate  [mol / m3 / timestep]
                                                                        sb_loss                      !< pool loss rate  [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: mycorrhiza_uptake_nh4_sl, &  !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                                        mycorrhiza_uptake_no3_sl, &  !< NO3 uptake by mycorrhiza [mol / m3 / timestep]
@@ -2732,7 +2735,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: het_respiration, &           !< heterotrophic respiration [mol / m3 / timestep]
                                                                        het_respiration_c13, &       !< heterotrophic respiration [mol / m3 / timestep]
                                                                        het_respiration_c14          !< heterotrophic respiration [mol / m3 / timestep]
-    TYPE(t_slm_struct_sb_element),                    INTENT(inout) :: sb_mycorrhiza_export         !< export from mycorrhiza to plants [mol / m2 / timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: sb_mycorrhiza_export         !< export from mycorrhiza to plants [mol / m2 / timestep]
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: transform_respiration, &
                                                         fresp, &
@@ -2743,21 +2747,18 @@ CONTAINS
                                                         mycorrhiza_cue, &
                                                         f_myc_opt
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3
-    INTEGER                     :: isoil, ichunk                      !< loop over soil layers, loop over chunks
-    INTEGER                     :: iblk, ics, ice
+    INTEGER                     :: isoil                                            !< loop over soil layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mycorrhiza_dynamics'
-    ! ---------------------------
-    ! Get local variables from options argument
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
+
+
     
     !> 1.0 Mycorrhiza dynamics 
     !! 
+
     !> 1.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
-    WHERE(sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) > eps8 .AND. &
-          sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) / sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) < mycorrhiza_cn)
+    WHERE(sb_pool%mycorrhiza%nitrogen(:,:) > eps8 .AND. &
+          sb_pool%mycorrhiza%carbon(:,:) / sb_pool%mycorrhiza%nitrogen(:,:) < mycorrhiza_cn)
         mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
         mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
         mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp
@@ -2768,50 +2769,40 @@ CONTAINS
                                  mycorrhiza_uptake_no3_sl(:,:) * transform_cost_no3
 
     fresp(:,:) = 0.0_wp
-    WHERE(sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) > eps8)
-       fresp(:,:) = transform_respiration(:,:) / sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)
+    WHERE(sb_pool%mycorrhiza%carbon(:,:) > eps8)
+       fresp(:,:) = transform_respiration(:,:) / sb_pool%mycorrhiza%carbon(:,:)
     ENDWHERE
 
-    sb_loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk)   = sb_loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + &
-                                                      fresp * sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)   !! respiration
-    sb_loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + &
-                                                      fresp * sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) !! respiration
-    sb_loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + &
-                                                      fresp * sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) !! respiration
+    sb_loss%mycorrhiza%carbon(:,:)   = sb_loss%mycorrhiza%carbon(:,:)   + fresp * sb_pool%mycorrhiza%carbon(:,:)   !! respiration
+    sb_loss%mycorrhiza%carbon13(:,:) = sb_loss%mycorrhiza%carbon13(:,:) + fresp * sb_pool%mycorrhiza%carbon13(:,:) !! respiration
+    sb_loss%mycorrhiza%carbon14(:,:) = sb_loss%mycorrhiza%carbon14(:,:) + fresp * sb_pool%mycorrhiza%carbon14(:,:) !! respiration
 
-    het_respiration(:,:)     = het_respiration(:,:)     + fresp * sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + fresp * sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + fresp * sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)
+    het_respiration(:,:)     = het_respiration(:,:)     + fresp * sb_pool%mycorrhiza%carbon(:,:)
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + fresp * sb_pool%mycorrhiza%carbon13(:,:)
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + fresp * sb_pool%mycorrhiza%carbon14(:,:)
 
     !> 1.2 organic N uptake by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
     mycorrhiza_uptake_norg_sl(:,:) = 0.0_wp
 
     fnorg(:,:) = 0.0_wp
-    WHERE(sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk) > eps8)
-        fnorg(:,:) = mycorrhiza_uptake_norg_sl(:,:) / sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
+    WHERE(sb_pool%residue%nitrogen(:,:) > eps8)
+        fnorg(:,:) = mycorrhiza_uptake_norg_sl(:,:) / sb_pool%residue%nitrogen(:,:)
     ENDWHERE
 
-    sb_loss%residue%carbon%ptr(ics:ice,:,iblk)     = sb_loss%residue%carbon%ptr(ics:ice,:,iblk) + &
-                                                     fnorg * sb_pool%residue%carbon%ptr(ics:ice,:,iblk)
-    sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk)   = sb_loss%residue%nitrogen%ptr(ics:ice,:,iblk) + &
-                                                     fnorg * sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
-    sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%residue%phosphorus%ptr(ics:ice,:,iblk) + &
-                                                     fnorg * sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
-    sb_loss%residue%carbon13%ptr(ics:ice,:,iblk)   = sb_loss%residue%carbon13%ptr(ics:ice,:,iblk) + &
-                                                     fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk)
-    sb_loss%residue%carbon14%ptr(ics:ice,:,iblk)   = sb_loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
-                                                     fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk)
-    sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%residue%nitrogen15%ptr(ics:ice,:,iblk) + &
-                                                     fnorg * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk)
+    sb_loss%residue%carbon(:,:)     = sb_loss%residue%carbon(:,:)     + fnorg * sb_pool%residue%carbon(:,:)
+    sb_loss%residue%nitrogen(:,:)   = sb_loss%residue%nitrogen(:,:)   + fnorg * sb_pool%residue%nitrogen(:,:)
+    sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + fnorg * sb_pool%residue%phosphorus(:,:)
+    sb_loss%residue%carbon13(:,:)   = sb_loss%residue%carbon13(:,:)   + fnorg * sb_pool%residue%carbon13(:,:)
+    sb_loss%residue%carbon14(:,:)   = sb_loss%residue%carbon14(:,:)   + fnorg * sb_pool%residue%carbon14(:,:)
+    sb_loss%residue%nitrogen15(:,:) = sb_loss%residue%nitrogen15(:,:) + fnorg * sb_pool%residue%nitrogen15(:,:)
 
     !> 1.3 nutrient flux to vegetation (surplus uptake goes to plants) (mol (N/P) / m3 / timestep)
     !!
 !@todo: N15 uptake
  
     ! N demand of mycorrhiza in mol N / m3 / timestep
-    hlp1(:,:) = sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) / mycorrhiza_cn - &
-                sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)
+    hlp1(:,:) = sb_pool%mycorrhiza%carbon(:,:) / mycorrhiza_cn - sb_pool%mycorrhiza%nitrogen(:,:)
 
     ! constrain flux to minimum of potential uptake and demand
     hlp2(:,:) = MIN(hlp1(:,:), &
@@ -2824,70 +2815,70 @@ CONTAINS
     ! remainder is exported to plants (mol N / m3 / timestep)
     hlp3(:,:) = mycorrhiza_uptake_nh4_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + mycorrhiza_uptake_norg_sl(:,:) - hlp2(:,:)
 
-    sb_mycorrhiza_export%nitrogen%ptr(ics:ice,:,iblk) = 0.0_wp
-    sb_mycorrhiza_export%nitrogen%ptr(ics:ice,:,iblk) = sb_mycorrhiza_export%nitrogen%ptr(ics:ice,:,iblk) + hlp3(:,:)
+    sb_mycorrhiza_export%nitrogen(:,:) = 0.0_wp
+    sb_mycorrhiza_export%nitrogen(:,:) = sb_mycorrhiza_export%nitrogen(:,:) + hlp3(:,:)
 
     ! P demand of mycorrhiza in mol P / m3 / timestep ! BLARPP SZ: constrained to positive solutions
-    hlp1(:,:) = MAX(sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk) / mycorrhiza_cn / mycorrhiza_np - &
-                    sb_pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk), 0.0_wp)
+    hlp1(:,:) = MAX(sb_pool%mycorrhiza%carbon(:,:) / mycorrhiza_cn / mycorrhiza_np - &
+                    sb_pool%mycorrhiza%phosphorus(:,:), 0.0_wp)
     ! incorporation of P into mycorrhiza (mol P / m3 / timestep)
     ! constrain flux to minimum of potential uptake and demand 
     hlp2(:,:) = MIN(hlp1(:,:), mycorrhiza_uptake_po4_sl(:,:))
 
     ! remainder is exported to plants (mol P / m3 / timestep)
     hlp3(:,:) = mycorrhiza_uptake_po4_sl(:,:) - hlp2(:,:)
-    sb_mycorrhiza_export%phosphorus%ptr(ics:ice,:,iblk) = 0.0_wp
-    sb_mycorrhiza_export%phosphorus%ptr(ics:ice,:,iblk) = sb_mycorrhiza_export%phosphorus%ptr(ics:ice,:,iblk) + hlp3(:,:) 
+    sb_mycorrhiza_export%phosphorus(:,:) = 0.0_wp
+    sb_mycorrhiza_export%phosphorus(:,:) = sb_mycorrhiza_export%phosphorus(:,:) + hlp3(:,:) 
 
     !new mycorrhiza formation out of uptake from slow N pool 
     mycorrhiza_cue = 0.5_wp
 
-    sb_formation%mycorrhiza%carbon%ptr(ics:ice,:,iblk)     = sb_formation%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + &
-                                                             fnorg * sb_pool%residue%carbon%ptr(ics:ice,:,iblk) * mycorrhiza_cue
-    sb_formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)   = sb_formation%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + &
-                                                             fnorg * sb_pool%residue%nitrogen%ptr(ics:ice,:,iblk)
-    sb_formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + &
-                                                             fnorg * sb_pool%residue%phosphorus%ptr(ics:ice,:,iblk)
-    sb_formation%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)   = sb_formation%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + &
-                                                             fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk) * mycorrhiza_cue
-    sb_formation%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)   = sb_formation%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + &
-                                                             fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk) * mycorrhiza_cue
-    sb_formation%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + &
-                                                             fnorg * sb_pool%residue%nitrogen15%ptr(ics:ice,:,iblk)
+    sb_formation%mycorrhiza%carbon(:,:)     = sb_formation%mycorrhiza%carbon(:,:) + &
+                                                             fnorg * sb_pool%residue%carbon(:,:) * mycorrhiza_cue
+    sb_formation%mycorrhiza%nitrogen(:,:)   = sb_formation%mycorrhiza%nitrogen(:,:) + &
+                                                             fnorg * sb_pool%residue%nitrogen(:,:)
+    sb_formation%mycorrhiza%phosphorus(:,:) = sb_formation%mycorrhiza%phosphorus(:,:) + &
+                                                             fnorg * sb_pool%residue%phosphorus(:,:)
+    sb_formation%mycorrhiza%carbon13(:,:)   = sb_formation%mycorrhiza%carbon13(:,:) + &
+                                                             fnorg * sb_pool%residue%carbon13(:,:) * mycorrhiza_cue
+    sb_formation%mycorrhiza%carbon14(:,:)   = sb_formation%mycorrhiza%carbon14(:,:) + &
+                                                             fnorg * sb_pool%residue%carbon14(:,:) * mycorrhiza_cue
+    sb_formation%mycorrhiza%nitrogen15(:,:) = sb_formation%mycorrhiza%nitrogen15(:,:) + &
+                                                             fnorg * sb_pool%residue%nitrogen15(:,:)
 
-    het_respiration(:,:)     = het_respiration(:,:)     + fnorg * sb_pool%residue%carbon%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + fnorg * sb_pool%residue%carbon13%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + fnorg * sb_pool%residue%carbon14%ptr(ics:ice,:,iblk) * (1.0_wp - mycorrhiza_cue)
+    het_respiration(:,:)     = het_respiration(:,:)     + fnorg * sb_pool%residue%carbon(:,:)   * (1.0_wp - mycorrhiza_cue)
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + fnorg * sb_pool%residue%carbon13(:,:) * (1.0_wp - mycorrhiza_cue)
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + fnorg * sb_pool%residue%carbon14(:,:) * (1.0_wp - mycorrhiza_cue)
 
     !> 1.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
     !!
     fturn_mycorrhiza(:,:) = 1.0_wp/lctlib%tau_mycorrhiza/one_day/one_year * dtime
 
-    sb_loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk)   = sb_loss%mycorrhiza%carbon%ptr(ics:ice,:,iblk) + &
-                                                      fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)     !! turnover
-    sb_loss%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk) + &
-                                                      fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)   !! turnover
-    sb_loss%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) + &
-                                                        fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk) !! turnover
-    sb_loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%carbon13%ptr(ics:ice,:,iblk) + &
-                                                      fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)   !! turnover
-    sb_loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%carbon14%ptr(ics:ice,:,iblk) + &
-                                                        fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)   !! turnover
-    sb_loss%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) = sb_loss%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) + &
-                                                        fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk) !! turnover
+    sb_loss%mycorrhiza%carbon(:,:)   = sb_loss%mycorrhiza%carbon(:,:) + &
+                                                      fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon(:,:)     !! turnover
+    sb_loss%mycorrhiza%nitrogen(:,:) = sb_loss%mycorrhiza%nitrogen(:,:) + &
+                                                      fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen(:,:)   !! turnover
+    sb_loss%mycorrhiza%phosphorus(:,:) = sb_loss%mycorrhiza%phosphorus(:,:) + &
+                                                        fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%phosphorus(:,:) !! turnover
+    sb_loss%mycorrhiza%carbon13(:,:) = sb_loss%mycorrhiza%carbon13(:,:) + &
+                                                      fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon13(:,:)   !! turnover
+    sb_loss%mycorrhiza%carbon14(:,:) = sb_loss%mycorrhiza%carbon14(:,:) + &
+                                                        fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon14(:,:)   !! turnover
+    sb_loss%mycorrhiza%nitrogen15(:,:) = sb_loss%mycorrhiza%nitrogen15(:,:) + &
+                                                        fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen15(:,:) !! turnover
 
-    sb_formation%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%carbon%ptr(ics:ice,:,iblk) + &
-                                                               fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk)
-    sb_formation%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) + &
-                                                                 fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk)
-    sb_formation%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
-                                                                 fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk)
-    sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) + &
-                                                                 fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk)
-    sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) + &
-                                                                   fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)
-    sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb_formation%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) + &
-                                                                   fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk)
+    sb_formation%polymeric_litter%carbon(:,:) = sb_formation%polymeric_litter%carbon(:,:) + &
+                                                               fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon(:,:)
+    sb_formation%polymeric_litter%carbon13(:,:) = sb_formation%polymeric_litter%carbon13(:,:) + &
+                                                                 fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon13(:,:)
+    sb_formation%polymeric_litter%carbon14(:,:) = sb_formation%polymeric_litter%carbon14(:,:) + &
+                                                                 fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon14(:,:)
+    sb_formation%polymeric_litter%nitrogen(:,:) = sb_formation%polymeric_litter%nitrogen(:,:) + &
+                                                                 fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen(:,:)
+    sb_formation%polymeric_litter%nitrogen15(:,:) = sb_formation%polymeric_litter%nitrogen15(:,:) + &
+                                                                   fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%nitrogen15(:,:)
+    sb_formation%polymeric_litter%phosphorus(:,:) = sb_formation%polymeric_litter%phosphorus(:,:) + &
+                                                                   fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%phosphorus(:,:)
 
   END SUBROUTINE calc_mycorrhiza_dynamics
 
@@ -2899,8 +2890,8 @@ CONTAINS
   !! declines within the soil profile according to the distribution of roots as a proxy for litter input
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_asymbiontic_n_fixation(lctlib, &                                      ! in
-                                         options, &
+  SUBROUTINE calc_asymbiontic_n_fixation(options, &
+                                         lctlib, &                                      ! in
                                          veg_bnf_scheme, &
                                          soil_depth_sl, &
                                          nh4_solute, &
@@ -2915,9 +2906,10 @@ CONTAINS
     USe mo_veg_constants,      ONLY: eta_nfixation
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                      !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
+    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                      !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                                 INTENT(in)    :: veg_bnf_scheme              !< veg n fixation scheme  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &            !< soil depth per layer [m] 
                                                                        nh4_solute, &               !< NH4 concentration [mol m-3]
@@ -2926,8 +2918,10 @@ CONTAINS
                                                                        root_fraction_act_sl        !< fraction of roots per root layer [m-3] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: asymb_n_fixation, &         !< asymbiontic rate of N fixation [umol m-3 s-1]
                                                                        asymb_n_fixation_n15        !< asymbiontic rate of 15N fixation [umol m-3 s-1]
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_asymbiontic_n_fixation'
+
  
     !> 1.0 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
     !!
