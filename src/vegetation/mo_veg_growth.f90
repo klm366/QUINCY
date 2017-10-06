@@ -59,6 +59,7 @@ CONTAINS
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
@@ -72,6 +73,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: dheight    !< delta height
     INTEGER                               :: ichunk     !< loop over chunks ics:ice / 1:nc
     INTEGER :: tchu
+    INTEGER                               :: nsoil_sb
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ---------------------------
@@ -229,19 +231,22 @@ CONTAINS
 #define Def_veg_growth
 #define Def_veg_exudation
 #define Def_veg_reserve_use
+#define Def_sb_pool
+#define Def_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Def_veg_pool
 #undef Def_veg_falloc
 #undef Def_veg_growth
 #undef Def_veg_exudation
 #undef Def_veg_reserve_use
-!! *slmtemp    
-    TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
+#undef Def_sb_pool
+#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
@@ -402,16 +407,18 @@ CONTAINS
 #define Get_veg_growth
 #define Get_veg_exudation
 #define Get_veg_reserve_use
+#define Get_sb_pool
+#define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
 #undef Get_veg_falloc
 #undef Get_veg_growth
 #undef Get_veg_exudation
 #undef Get_veg_reserve_use
+#undef Get_sb_pool
+#undef Get_sb_mycorrhiza_export
 
 
-!! *slmtemp
-    sb      => sb__mem 
     tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -450,7 +457,7 @@ CONTAINS
                                           veg_pool%labile%carbon(tchu), & 
                                           veg_pool%labile%nitrogen(tchu), & 
                                           veg_pool%labile%phosphorus(tchu), & 
-                                          sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), & 
+                                          sb_pool%mycorrhiza%carbon(:,:), & 
                                           nh4_solute(:,:), &
                                           no3_solute(:,:), &
                                           soil_depth_sl(:,:), &
@@ -467,7 +474,7 @@ CONTAINS
                                           plant_uptake_no3_sl(:,:), &
                                           plant_uptake_no3_n15_sl(:,:), &
                                           plant_uptake_po4_sl(:,:), &
-                                          sb%mycorrhiza_export, &
+                                          sb_mycorrhiza_export, &
                                           uptake_nh4(:), &
                                           uptake_nh4_n15(:), &
                                           uptake_no3(:), &
@@ -698,12 +705,16 @@ CONTAINS
 #define Dealloc_veg_growth
 #define Dealloc_veg_exudation
 #define Dealloc_veg_reserve_use
+#define Dealloc_sb_pool
+#define Dealloc_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_pool
 #undef Dealloc_veg_falloc
 #undef Dealloc_veg_growth
 #undef Dealloc_veg_exudation
 #undef Dealloc_veg_reserve_use
+#undef Dealloc_sb_pool
+#undef Dealloc_sb_mycorrhiza_export
 
   END SUBROUTINE update_veg_growth 
 
@@ -879,7 +890,7 @@ CONTAINS
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf
-    USE mo_sb_memory_class,         ONLY: t_slm_struct_sb_element    
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     
@@ -913,7 +924,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: sb_mycorrhiza_export     !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
+    TYPE(t_sb_element_a),                  INTENT(inout) :: sb_mycorrhiza_export     !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4               !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_nh4_n15           !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(options%nc),       INTENT(out)   :: uptake_no3               !< total plant NO3 uptake (mu mol N / m2 / s)
@@ -1076,7 +1087,7 @@ CONTAINS
     IF(flag_mycorrhiza) THEN
 
        f_exudate(:) = 0.5_wp   
-       hlp1(:) = SUM(sb_mycorrhiza_export%nitrogen%ptr(:,:,iblk) * soil_depth_sl(:,:),DIM=2) 
+       hlp1(:) = SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:),DIM=2) 
        WHERE( hlp1(:) > eps8) 
           f_exudate(:) = MIN(f_exudate(:), &
                              hlp1(:) / (hlp1(:) + (uptake_nh4(:)+uptake_no3(:)) * dtime/1.e6_wp )) ! Mycofon
@@ -1106,12 +1117,12 @@ CONTAINS
                                   f_exudate(1) * (f_myc_opt(1) * fine_root_carbon - SUM(mycorrhiza_carbon(1,:) * soil_depth_sl(1,:))))) 
 
        IF(exudation_carbon < eps8)THEN
-         sb_mycorrhiza_export%carbon%ptr(1,:,iblk)     = 0.0_wp
-         sb_mycorrhiza_export%nitrogen%ptr(1,:,iblk)   = 0.0_wp
-         sb_mycorrhiza_export%phosphorus%ptr(1,:,iblk) = 0.0_wp
-         sb_mycorrhiza_export%carbon13%ptr(1,:,iblk)   = 0.0_wp
-         sb_mycorrhiza_export%carbon14%ptr(1,:,iblk)   = 0.0_wp
-         sb_mycorrhiza_export%nitrogen15%ptr(1,:,iblk) = 0.0_wp
+         sb_mycorrhiza_export%carbon(:,:)     = 0.0_wp
+         sb_mycorrhiza_export%nitrogen(:,:)   = 0.0_wp
+         sb_mycorrhiza_export%phosphorus(:,:) = 0.0_wp
+         sb_mycorrhiza_export%carbon13(:,:)   = 0.0_wp
+         sb_mycorrhiza_export%carbon14(:,:)   = 0.0_wp
+         sb_mycorrhiza_export%nitrogen15(:,:) = 0.0_wp
        ENDIF
 
     ENDIF

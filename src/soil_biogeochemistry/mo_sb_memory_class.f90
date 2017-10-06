@@ -24,7 +24,6 @@ MODULE mo_sb_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_sb_memory, max_no_of_vars
-  PUBLIC :: t_slm_struct_sb_element, t_slm_struct_sb_pool   ! *slmjsb4
   PUBLIC :: max_no_of_structs, max_no_of_n_structs          ! *slmjsb4
   PUBLIC :: t_sb_element_a, t_sb_pool_a                     ! *slmtemp
 

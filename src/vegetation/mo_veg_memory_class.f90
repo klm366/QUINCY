@@ -24,7 +24,6 @@ MODULE mo_veg_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
-  PUBLIC :: t_slm_struct_veg_pool, t_slm_struct_veg_element   ! *slmjsb4 
   PUBLIC :: max_no_of_structs, max_no_of_n_structs            ! *slmjsb4
   PUBLIC :: t_veg_element_a, t_veg_pool_a                     ! *slmtemp
 

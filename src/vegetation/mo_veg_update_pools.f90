@@ -53,6 +53,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4slm_Use_memory_a_sb
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -67,6 +68,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER  :: tchu
+    INTEGER                               :: nsoil_sb
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
@@ -153,6 +155,7 @@ CONTAINS
 #define Def_veg_exudation
 #define Def_veg_total_biomass
 #define Def_veg_reserve_use
+#define Def_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Def_veg_pool
 #undef Def_veg_litterfall
@@ -161,13 +164,13 @@ CONTAINS
 #undef Def_veg_exudation
 #undef Def_veg_total_biomass
 #undef Def_veg_reserve_use
-!! *slmtemp    
-    TYPE(t_sb_memory),       POINTER      :: sb       ! local pointer to sb__mem for SLM usability
+#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
@@ -257,6 +260,7 @@ CONTAINS
 #define Get_veg_exudation
 #define Get_veg_total_biomass
 #define Get_veg_reserve_use
+#define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
 #undef Get_veg_litterfall
@@ -265,10 +269,9 @@ CONTAINS
 #undef Get_veg_exudation
 #undef Get_veg_total_biomass
 #undef Get_veg_reserve_use
+#undef Get_sb_mycorrhiza_export
 
 
-!! *slmtemp
-    sb        => sb__mem 
     tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -309,17 +312,17 @@ CONTAINS
        !> 1.2a Add mycorrhiza export
        !!
        veg_growth%labile%carbon     = veg_growth%labile%carbon   + & 
-                                        SUM(sb%mycorrhiza_export%carbon%ptr(1,:,iblk) * soil_depth_sl(1,:))
+                                        SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%carbon13   = veg_growth%labile%carbon13 + & 
-                                        SUM(sb%mycorrhiza_export%carbon13%ptr(1,:,iblk) * soil_depth_sl(1,:))
+                                        SUM(sb_mycorrhiza_export%carbon13(:,:) * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%carbon14   = veg_growth%labile%carbon14 + & 
-                                        SUM(sb%mycorrhiza_export%carbon14%ptr(1,:,iblk) * soil_depth_sl(1,:))
+                                        SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%nitrogen   = veg_growth%labile%nitrogen + & 
-                                        SUM(sb%mycorrhiza_export%nitrogen%ptr(1,:,iblk) * soil_depth_sl(1,:))
+                                        SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen15 + & 
-                                        SUM(sb%mycorrhiza_export%nitrogen15%ptr(1,:,iblk) * soil_depth_sl(1,:))
+                                        SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%phosphorus = veg_growth%labile%phosphorus + & 
-                                        SUM(sb%mycorrhiza_export%phosphorus%ptr(1,:,iblk) * soil_depth_sl(1,:))
+                                        SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:),DIM=2)
 
 
 
@@ -454,6 +457,7 @@ CONTAINS
 #define Dealloc_veg_exudation
 #define Dealloc_veg_total_biomass
 #define Dealloc_veg_reserve_use
+#define Dealloc_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Dealloc_veg_pool
 #undef Dealloc_veg_litterfall
@@ -462,6 +466,7 @@ CONTAINS
 #undef Dealloc_veg_exudation
 #undef Dealloc_veg_total_biomass
 #undef Dealloc_veg_reserve_use
+#undef Dealloc_sb_mycorrhiza_export
 
   END SUBROUTINE update_veg_pools
 
