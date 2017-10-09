@@ -72,13 +72,28 @@ CONTAINS
     dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SOIL_)
+    ! Declare pointers to variables in memory
+    ! SOIL_ 3D
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    dsl4jsb_Real3D_onChunk :: bulk_dens_sl
+    ! SB_ 3D
+    dsl4jsb_Real3D_onChunk :: nh4_solute
+    dsl4jsb_Real3D_onChunk :: no3_solute
+    dsl4jsb_Real3D_onChunk :: po4_solute
+    dsl4jsb_Real3D_onChunk :: nh4_n15_solute
+    dsl4jsb_Real3D_onChunk :: no3_n15_solute
+    dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
+    dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
+    dsl4jsb_Real3D_onChunk :: qmax_org
+    dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: k_bioturb
+    dsl4jsb_Real3D_onChunk :: po4_assoc_fast
+    dsl4jsb_Real3D_onChunk :: po4_assoc_slow
+    dsl4jsb_Real3D_onChunk :: po4_occluded
     ! Declare pool structures in memory
 #define Def_sb_pool
 #include "slm_pools_a_incl.f90"
 #undef Def_sb_pool
-!! *slmtemp    
-    TYPE(t_soil_memory),    POINTER              :: soil       ! local pointer to soil__mem for SLM usability
-    TYPE(t_sb_memory),    POINTER              :: sb 
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -100,15 +115,27 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     ! Get process variables (Set pointers to variables in memory)
-    ! ...
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded) 
     ! Get process memory pool structures
 #define Get_sb_pool
 #include "slm_pools_a_incl.f90"
 #undef Get_sb_pool
 
-!! *slmtemp
-    soil    => soil__mem 
-    sb    => sb__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -135,33 +162,33 @@ CONTAINS
              sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
              sb_pool%residue%carbon(:,1) = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
 
-             sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb%no3_solute%ptr(ics:ice,1,iblk) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
+             nh4_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
+             no3_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
+             po4_solute(:,1) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
           ELSE 
              sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
-                                                                       ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
+                                                                       ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
-                                                                       ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
+                                                                       ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              IF(lctlib%growthform==itree) &
                 sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
              sb_pool%microbial%carbon(:,1)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
-                                                                       ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
+                                                                       ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
-                                                                       ( hlp6 + (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,1,iblk)) 
+                                                                       ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              DO isoil=2,options%nsoil_sb
                 sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
-                                                                          (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
+                                                                          (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
                 sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
-                                                                          (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
+                                                                          (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
                 sb_pool%microbial%carbon(:,isoil)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
-                                                                          (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) 
+                                                                          (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
                 sb_pool%residue%carbon(:,isoil)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * & 
-                                                                          (1.0_wp - hlp6) * soil%root_fraction_sl%ptr(ics:ice,isoil,iblk)
+                                                                          (1.0_wp - hlp6) * root_fraction_sl(:,isoil)
 
-                sb%nh4_solute%ptr(ics:ice,isoil,iblk) = 0.1_wp
-                sb%no3_solute%ptr(ics:ice,isoil,iblk) = 0.1_wp 
-                sb%po4_solute%ptr(ics:ice,isoil,iblk) = 0.01_wp 
+                nh4_solute(:,isoil) = 0.1_wp
+                no3_solute(:,isoil) = 0.1_wp 
+                po4_solute(:,isoil) = 0.01_wp 
              ENDDO
           ENDIF
  
@@ -218,8 +245,8 @@ CONTAINS
           sb_pool%residue%nitrogen15(:,:) = sb_pool%residue%nitrogen(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
-          sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-          sb%no3_n15_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+          nh4_n15_solute(:,:) = nh4_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+          no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
 
        CASE('jsm')
  
@@ -229,30 +256,28 @@ CONTAINS
          sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np
          sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
          sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
-         sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:)  / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+         sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
      
          ! some initial values for testing
-         sb%nh4_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
-         sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-         sb%no3_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
-         sb%no3_n15_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-         sb%po4_solute%ptr(ics:ice,:,iblk) = 0.01_wp 
+         nh4_solute(:,:) = 1.0_wp 
+         nh4_n15_solute(:,:) = nh4_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+         no3_solute(:,:) = 1.0_wp 
+         no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+         po4_solute(:,:) = 0.01_wp 
 
          ! inital Qmax based on current soil carbon content
-         sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options, sb_pool)
-         sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk) = calc_bulk_density_correction(sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk), & 
-                                                                         soil%bulk_dens_sl%ptr(ics:ice,:,iblk))
-         sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk),qmax_org_mineral_default)
-         sb%qmax_po4%ptr(ics:ice,:,iblk) = calc_qmax(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk),qmax_po4_mineral)
+         bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+         bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
+         qmax_org(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_org_mineral_default)
+         qmax_po4(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_po4_mineral)
  
          ! initialise diffusion by bioturbation
-         sb%k_bioturb%ptr(ics:ice,:,iblk) = calc_bioturbation_rate(options,sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)) 
+         k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 
 
 		 ! initialise mineral soil P pools
-         sb%po4_assoc_fast%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) * sb%qmax_po4%ptr(ics:ice,:,iblk) &
-                                                 / (sb%po4_solute%ptr(ics:ice,:,iblk) + km_adsorpt_po4 * sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk))
-         sb%po4_assoc_slow%ptr(ics:ice,:,iblk) = 70.0_wp / molar_mass_P
-         sb%po4_occluded%ptr(ics:ice,:,iblk)   = 150.0_wp / molar_mass_P		 
+         po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
+         po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
+         po4_occluded(:,:)   = 150.0_wp / molar_mass_P		 
 		 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
