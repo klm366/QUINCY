@@ -77,20 +77,20 @@ CONTAINS
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_sw_fdiffuse(sw_srf_down,sw_toa_down,cos_zenith_angle) RESULT(sw_fdiffuse)
+  ELEMENTAL FUNCTION calc_sw_fdiffuse(sw_srf_down, sw_toa_down, cos_zenith_angle) RESULT(sw_fdiffuse)
 
     USE mo_atmland_constants, ONLY : k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
                                      min_sw_fdiffuse, min_cos_zenith_angle
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp) :: sw_srf_down           !< surface downward shortwave radiation flux
-    REAL(wp) :: sw_toa_down           !< top-of-atmoshere downward shortwave radiation flux
-    REAL(wp) :: cos_zenith_angle      !< cosine of solar zenith angle
-    REAL(wp) :: sw_fdiffuse           !< fraction of surface downward radiation flux that is diffuse
+    REAL(wp), INTENT(in) :: sw_srf_down           !< surface downward shortwave radiation flux
+    REAL(wp), INTENT(in) :: sw_toa_down           !< top-of-atmoshere downward shortwave radiation flux
+    REAL(wp), INTENT(in) :: cos_zenith_angle      !< cosine of solar zenith angle
+    REAL(wp)             :: sw_fdiffuse           !< fraction of surface downward radiation flux that is diffuse
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: transmission          ! fraction of radiation reaching surface
+    REAL(wp)             :: transmission          ! fraction of radiation reaching surface
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sw_fdiffuse'
 
 
@@ -174,9 +174,9 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp),INTENT(in) :: time              !< days since January 1st
+    REAL(wp),INTENT(in)  :: time             !< days since January 1st
     REAL(wp),INTENT(out) :: declination      !< solar declination 
-    REAL(wp),INTENT(out) :: sw_toa_down      !< shortwave downward flux at the top of the atmosphere (W m-2) 
+    REAL(wp),INTENT(out) :: sw_toa_down(:)   !< shortwave downward flux at the top of the atmosphere (W m-2) with DIMENSION(nc)
     ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: so                           ! sine of obliquity
@@ -236,7 +236,7 @@ CONTAINS
     dist = 1.0_wp / (( 1.0_wp - eccentricity * eccentricity ) / & 
            ( 1.0_wp + eccentricity * cos(ranv)))
     ! potential insolation normal to the atmosphere (W m-2)
-    sw_toa_down = dist * dist * solar_constant
+    sw_toa_down(:) = dist * dist * solar_constant
 
   END SUBROUTINE update_orbital_parameters
 

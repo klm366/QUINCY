@@ -129,8 +129,8 @@ PROGRAM land_model_driver
   iblk     = 1
   ics      = 1
   ice      = 1
-  nc       = ice - ics + 1                                       ! (end-number - start-number + 1)
-  nsoil_sb = -1
+  nc       = ice - ics + 1                 ! (end-number - start-number + 1)
+  nsoil_sb = -1                            ! namelist parameter
   CALL init_model(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)  !< model init : mo_jsb_model_init 
 
 
@@ -240,7 +240,6 @@ PROGRAM land_model_driver
     itimestep = itimestep - forcing_options%transient_spinup_timesteps_all
     ! init spinup period counter
     transient_spinup_itimestep_period = 0
-    
   END IF
 
 
@@ -297,15 +296,15 @@ PROGRAM land_model_driver
     !! 
     IF (l_forcing) THEN
       CALL update_forcing(  tile , & ! necessary for soil: veg%litterfall vegsoil%moisture
-                            iblk    , &
                             ics     , &
                             ice     , &
                             nc      , &
+                            iblk    , &
                             nsoil_sb, &
                             time_day, & 
                             l_transient_spinup_rewind_forcing, &
                                   !! forcing (read from file and passed to a2l memory via the land_model_interface)
-                                  !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
+                                  !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
                                   t_air                   = t_air(:)              , &
                                   q_air                   = q_air(:)              , &
                                   rain                    = rain(:)               , &
