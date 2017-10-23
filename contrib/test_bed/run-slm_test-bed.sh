@@ -3,10 +3,10 @@
 #########
 ## Where: you can start this script from anywhere (no need to cd into a specific directory), when logged into a cluster node such as pc028
 ## What:  this script starts the SLM binary land.x , the specific model may be specified via the "slmModel" option
-## HowTo: specify the below options as suitable for you
-## Tip:   you can pass the model name as argument to this script [i.e. run-slm_test-bed.sh modelName], which overwrites the below defined value of slmModel
+## HowTo: specify the below simulation options as suitable for you
+## Tip:   some of the below simulation options can be provided as argument to this script, for more information type: ./run-slm_test-bed.sh -h 
 ## 
-## Note:  the namelist option set_parameter_values_from_file is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
+## Note:  the namelist option 'set_parameter_values_from_file' is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
 
 ########################################################################################################
 ####### namelist options you might want to change ######################################################

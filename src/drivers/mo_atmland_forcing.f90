@@ -108,7 +108,7 @@ CONTAINS
     INTEGER           , INTENT(in)    :: ics, ice, nc, iblk, nsoil_sb   !< info on block, chunk and soil layer number
     REAL(wp)          , INTENT(in)    :: time                           !< current time (not timestep !)
     LOGICAL           , INTENT(in)    :: l_transient_spinup_rewind_forcing
-    REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory
+    REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
                                       rain(:)               , &    !< ..
@@ -179,11 +179,12 @@ CONTAINS
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_dC13_r, seed_bed_DC14_r, seed_bed_dN15_r
     REAL(wp), DIMENSION(nsoil_sb) :: & 
-                            t_soil_sl_r, w_soil_sl_r, &
-                            percolation_sl_r, root_fraction_sl_r
+                     t_soil_sl_r, &
+                     w_soil_sl_r, &
+                     percolation_sl_r, &
+                     root_fraction_sl_r
     REAL(wp) ::      veg_pool_fine_root_carbon_r
-
-
+    ! other local variables
     INTEGER                   :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
     INTEGER                   :: lun           ! logical unit number for file input stream, see '2.0 read data'
     REAL(wp), DIMENSION(nc)   :: sw_toa_down   ! potential radiation at the top of the atmosphere
@@ -194,9 +195,8 @@ CONTAINS
     REAL(wp), SAVE            :: day                    ! read input dummy variable - save value
     REAL(wp)                  :: doy_old, &             ! check for new year (column 2 in input file would change from 365 -> 1)
                                  doy_new
-    INTEGER                   :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
     INTEGER                   :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
-    INTEGER                   :: isoil
+    INTEGER                   :: isoil, ichunk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -252,7 +252,7 @@ CONTAINS
     swpar_srf_down(:)  = 0.0_wp
     swpar_fdiffuse(:)  = 0.0_wp
     press_srf(:)       = 0.0_wp
-    drag_srf(:)        = 1000.0_wp    ! 1.0_wp
+    drag_srf(:)        = 1000.0_wp
     t_acoef(:)         = 0.0_wp
     t_bcoef(:)         = 0.0_wp
     q_acoef(:)         = 0.0_wp
@@ -360,7 +360,9 @@ CONTAINS
     ELSE
       hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
     END IF
-    co2_mixing_ratio_C13(:) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1(:))
+    DO ichunk = 1,nc
+      co2_mixing_ratio_C13(ichunk) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1(ichunk))
+    END DO
     IF (forcing_options%flag_read_DC14) THEN
       hlp1(:)               = calc_mixing_ratio_C14C(co2_dc13_r, co2_dc14_r)
     ELSE
@@ -371,7 +373,7 @@ CONTAINS
     swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
     swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
     swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r
-    swpar_fdiffuse(:)       = calc_sw_fdiffuse(swvis_srf_down_r + swnir_srf_down(:), sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
+    swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down_r, sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
 
     !> 5.0 pass values read from file (i.e. scalar values) to ics-ice
     !! 
@@ -448,8 +450,6 @@ CONTAINS
     !!#######################
     CASE('soil')
 
-    nlevel_soil = nsoil_sb
-
     !> 1.0 read data
     !!
     !! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line
@@ -508,8 +508,8 @@ CONTAINS
 
     lun=10
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-                     t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil), &
-                     percolation_sl_r(1:nlevel_soil), root_fraction_sl_r(1:nlevel_soil), &
+                     t_soil_sl_r(1:nsoil_sb), w_soil_sl_r(1:nsoil_sb), &
+                     percolation_sl_r(1:nsoil_sb), root_fraction_sl_r(1:nsoil_sb), &
                      veg_pool_fine_root_carbon_r, &
                      nhx_deposition_r, noy_deposition_r, &
                      nhx_dn15_deposition_r, noy_dn15_deposition_r
@@ -525,8 +525,8 @@ CONTAINS
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-                     t_soil_sl_r(1:nlevel_soil), w_soil_sl_r(1:nlevel_soil), &
-                     percolation_sl_r(1:nlevel_soil), root_fraction_sl_r(1:nlevel_soil), &
+                     t_soil_sl_r(1:nsoil_sb), w_soil_sl_r(1:nsoil_sb), &
+                     percolation_sl_r(1:nsoil_sb), root_fraction_sl_r(1:nsoil_sb), &
                      veg_pool_fine_root_carbon_r, &
                      nhx_deposition_r, noy_deposition_r, &
                      nhx_dn15_deposition_r, noy_dn15_deposition_r
@@ -642,14 +642,14 @@ CONTAINS
                                                                       ( 1._wp + 1._wp / & 
                                                                       calc_mixing_ratio_N15N14(seed_bed_dN15_r))
 
-    DO isoil = 1,nlevel_soil
+    DO isoil = 1,nsoil_sb
 
        t_soil_sl(:,isoil)                              = t_soil_sl_r(isoil)
        w_soil_sl(:,isoil)                              = w_soil_sl_r(isoil)
        percolation_sl(:,isoil)                         = percolation_sl_r(isoil)
        root_fraction_sl(:,isoil)                       = root_fraction_sl_r(isoil)
     ENDDO
-    veg__mem%pool%fine_root%carbon%ptr(ics:ice,iblk)                 = veg_pool_fine_root_carbon_r
+    veg__mem%pool%fine_root%carbon%ptr(ics:ice,iblk)   = veg_pool_fine_root_carbon_r
 
     nhx_deposition(:)    = nhx_deposition_r
     noy_deposition(:)    = noy_deposition_r

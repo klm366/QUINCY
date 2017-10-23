@@ -144,12 +144,13 @@ CONTAINS
     !! 
     !! retruns constant mortality_rate if flag_tile_veg_dynamics == false \n
     !! but calcs mortality_rate dynamically if flag_tile_veg_dynamics == true
-    CALL calc_veg_mortality(lctlib                                      , & ! in
+    CALL calc_veg_mortality(options                                     , & ! in
+                            lctlib                                      , & 
                             dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics , &
-                            an_boc_tvegdyn_mavg(1)                      , &
+                            an_boc_tvegdyn_mavg(:)                      , &
                             veg_pool                                    , &
                             veg_litterfall                              , & ! inout
-                            mortality_rate(1)                           )   ! out
+                            mortality_rate(:)                           )   ! out
 
     !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
     !! 
@@ -157,14 +158,15 @@ CONTAINS
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
-      CALL calc_veg_establishment(lctlib                          , & ! in
+      CALL calc_veg_establishment(options                         , & ! in
+                                  lctlib                          , & 
                                   dsl4jsb_Config(ASSIMI_)%ncanopy , &
-                                  w_soil_root_theta(1)            , &
-                                  growing_season(1)               , &
-                                  t_air_week_mavg(1)              , &
-                                  leaf_nitrogen_cl(1,:)           , &
-                                  fn_chl_cl(1,:)                  , &
-                                  lai_cl(1,:)                     , &
+                                  w_soil_root_theta(:)            , &
+                                  growing_season(:)               , &
+                                  t_air_week_mavg(:)              , &
+                                  leaf_nitrogen_cl(:,:)           , &
+                                  fn_chl_cl(:,:)                  , &
+                                  lai_cl(:,:)                     , &
                                   veg_pool%seed_bed               , &
                                   veg_establishment               )   ! out
 
@@ -173,7 +175,7 @@ CONTAINS
       CALL calc_delta_density_individuals(lctlib                        , & ! in
                                           dens_ind(:)                   , &
                                           mortality_rate(:)             , &
-                                          veg_establishment%carbon      , &
+                                          veg_establishment%carbon(:)   , &
                                           delta_dens_ind(:)             )   ! out
 
     END IF  ! dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics
@@ -198,7 +200,8 @@ CONTAINS
   !!
   !! veg\%litterfall
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_mortality(lctlib                    , &
+  SUBROUTINE calc_veg_mortality(options                   , &
+                                lctlib                    , &
                                 flag_tile_veg_dynamics    , &
                                 an_boc_tvegdyn_mavg       , &
                                 veg_pool                  , &
@@ -206,22 +209,26 @@ CONTAINS
                                 mortality_rate )
 
     USE mo_base_constants
+    USE mo_base_memory,           ONLY: t_jsb_task_options
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
+    TYPE(t_jsb_task_options),     INTENT(in)    :: options                  !< model options
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
     LOGICAL,                      INTENT(in)    :: flag_tile_veg_dynamics
-    REAL(wp),                     INTENT(in)    :: an_boc_tvegdyn_mavg      !< moving average ...
+    REAL(wp), DIMENSION(:),       INTENT(in)    :: an_boc_tvegdyn_mavg      !< moving average ...
     TYPE(t_veg_pool_a),           INTENT(in)    :: veg_pool                 !< vegetation pool
     TYPE(t_veg_pool_a),           INTENT(inout) :: veg_litterfall           !< vegetation litterfall
-    REAL(wp),                     INTENT(out)   :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
+    REAL(wp), DIMENSION(:),       INTENT(out)   :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                                    :: boc_cbalance
+    REAL(wp), DIMENSION(options%nc)              :: boc_cbalance
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
+
 
 
     !> 1.0 background mortality 
@@ -229,39 +236,37 @@ CONTAINS
     !! select rate and convert from 1/year to 1/timestep
     SELECT CASE (lctlib%growthform)
       CASE (itree)
-         mortality_rate = ((background_mort_rate_tree /  one_year) / one_day) * dtime
+         mortality_rate(:) = ((background_mort_rate_tree /  one_year) / one_day) * dtime
       CASE (igrass)
-         mortality_rate = ((background_mort_rate_grass / one_year) / one_day) * dtime
+         mortality_rate(:) = ((background_mort_rate_grass / one_year) / one_day) * dtime
     ENDSELECT 
 
+    !> 2.0 self-thinning related mortality
+    !! 
+    !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost \n
+    !! in mol / m2 LAI / year \n
+    !! transformed to a mortality estimate using a Weibull function
     IF(flag_tile_veg_dynamics) THEN 
-
-       !> 2.0 self-thinning related mortality
-       !! 
-       !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost \n
-       !! in mol / m2 LAI / year \n
-       !! transformed to a mortality estimate using a Weibull function
-       boc_cbalance = an_boc_tvegdyn_mavg * one_day * one_year / 1.e6_wp &  
-                      - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib%tau_leaf/lctlib%sla
-       IF(boc_cbalance < -eps4 )THEN
-          mortality_rate = mortality_rate & 
-                           + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance ) ** k_mort_light)) & 
-                           / one_year / one_day * dtime
-       ENDIF
-
+       boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp &  
+                         - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib%tau_leaf/lctlib%sla
+       WHERE(boc_cbalance(:) < -eps4 )
+          mortality_rate(:) = mortality_rate(:) & 
+                              + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light)) & 
+                              / one_year / one_day * dtime
+       END WHERE
     ENDIF
 
     !> 3.0 calculate litter fall from mortality
     !!
     !! for all tissues but seed_bed
-    veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * mortality_rate
-    veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * mortality_rate
-    veg_litterfall%coarse_root  = veg_litterfall%coarse_root  + veg_pool%coarse_root  * mortality_rate
-    veg_litterfall%sap_wood     = veg_litterfall%sap_wood     + veg_pool%sap_wood     * mortality_rate
-    veg_litterfall%heart_wood   = veg_litterfall%heart_wood   + veg_pool%heart_wood   * mortality_rate
-    veg_litterfall%labile       = veg_litterfall%labile       + veg_pool%labile       * mortality_rate
-    veg_litterfall%reserve      = veg_litterfall%reserve      + veg_pool%reserve      * mortality_rate
-    veg_litterfall%fruit        = veg_litterfall%fruit        + veg_pool%fruit        * mortality_rate
+    veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * mortality_rate(:)
+    veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * mortality_rate(:)
+    veg_litterfall%coarse_root  = veg_litterfall%coarse_root  + veg_pool%coarse_root  * mortality_rate(:)
+    veg_litterfall%sap_wood     = veg_litterfall%sap_wood     + veg_pool%sap_wood     * mortality_rate(:)
+    veg_litterfall%heart_wood   = veg_litterfall%heart_wood   + veg_pool%heart_wood   * mortality_rate(:)
+    veg_litterfall%labile       = veg_litterfall%labile       + veg_pool%labile       * mortality_rate(:)
+    veg_litterfall%reserve      = veg_litterfall%reserve      + veg_pool%reserve      * mortality_rate(:)
+    veg_litterfall%fruit        = veg_litterfall%fruit        + veg_pool%fruit        * mortality_rate(:)
 
   END SUBROUTINE calc_veg_mortality
 
@@ -274,7 +279,8 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_establishment(lctlib              , &
+  SUBROUTINE calc_veg_establishment(options             , &
+                                    lctlib              , &
                                     ncanopy             , &
                                     w_soil_root_theta   , &
                                     growing_season      , &
@@ -287,30 +293,33 @@ CONTAINS
 
 
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
+    USE mo_base_memory,           ONLY: t_jsb_task_options
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_constants,      ONLY: Tzero
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
+    TYPE(t_jsb_task_options),       INTENT(in)    :: options            !< model options
     TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
     INTEGER,                        INTENT(in)    :: ncanopy            !< number of canopy layer
-    REAL(wp),                       INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
-    LOGICAL,                        INTENT(in)    :: growing_season     !< growing season 
-    REAL(wp),                       INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: leaf_nitrogen_cl,& !< leaf nitrogen per canopy layer
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
+    LOGICAL , DIMENSION(:),         INTENT(in)    :: growing_season     !< growing season 
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(:,:),       INTENT(in)    :: leaf_nitrogen_cl,& !< leaf nitrogen per canopy layer
                                                      fn_chl_cl,       & !< fraction of leaf nitrogen that is chlorophyll
                                                      lai_cl             !< leaf area index of canopy layer 
     TYPE(t_veg_element_a),          INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
     TYPE(t_veg_element_a),          INTENT(inout) :: veg_establishment  !< vegetation establishment
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                                      :: establishment_rate
-    REAL(wp)                                      :: tc
-    REAL(wp)                                      :: rfr_ratio
-    REAL(wp)                                      :: flim_light   , &
-                                                     flim_moist   , &
+    REAL(wp), DIMENSION(options%nc)               :: establishment_rate , &
+                                                     tc                 , &
+                                                     rfr_ratio          , &
+                                                     flim_light         , &
+                                                     flim_moist         , &
                                                      flim_temp
     INTEGER                                       :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
@@ -321,28 +330,28 @@ CONTAINS
 
     !> 1.1 light limitation
     !! depending on the red to far-red ratio of the light at the bottom of the canopy
-    tc = 0.0_wp
+    tc(:) = 0.0_wp
     DO icanopy=1,ncanopy
-       tc = tc + leaf_nitrogen_cl(icanopy) * fn_chl_cl(icanopy) * lai_cl(icanopy)
+       tc(:) = tc(:) + leaf_nitrogen_cl(:,icanopy) * fn_chl_cl(:,icanopy) * lai_cl(:,icanopy)
     ENDDO
-    rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
-    flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)
+    rfr_ratio(:)  = toc_rfr_ratio * exp( k_r2fr_chl * tc(:)) 
+    flim_light(:) = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio(:))**lctlib%k_est_light)
 
     !> 1.2 temperature and soil moisture limitation 
     !! 
     !! OBS: should be top soil moisture!
-    IF(t_air_week_mavg - Tzero < 0.0_wp .OR..NOT. growing_season) THEN 
-      flim_temp = 0.0_wp
-    ELSE
-      flim_temp = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg - Tzero))**k_est_temp)
-    ENDIF
-    flim_moist   = 1.0_wp - exp(-(lambda_est_moist * w_soil_root_theta)**k_est_moist) 
+    WHERE(t_air_week_mavg(:) - Tzero < 0.0_wp .OR..NOT. growing_season(:))
+      flim_temp(:) = 0.0_wp
+    ELSE WHERE
+      flim_temp(:) = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero))**k_est_temp)
+    END WHERE
+    flim_moist(:)  = 1.0_wp - exp(-(lambda_est_moist * w_soil_root_theta(:))**k_est_moist) 
    
     !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !!
-    establishment_rate = flim_light * flim_temp * flim_moist * & 
-                         1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
-    veg_establishment  = veg_pool_seed_bed * establishment_rate
+    establishment_rate(:) = flim_light(:) * flim_temp(:) * flim_moist(:) * & 
+                            1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
+    veg_establishment     = veg_pool_seed_bed * establishment_rate(:)
 
   END SUBROUTINE calc_veg_establishment
 
@@ -365,15 +374,17 @@ CONTAINS
     USE mo_veg_constants,           ONLY: itree
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_lctlib_element),         INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     REAL(wp),                       INTENT(in)    :: dens_ind                 , & !< soil moisture 
                                                      mortality_rate           , & !< mortality per timestep
                                                      veg_establishment_carbon     !< egetation establishment measured in C
     REAL(wp),                       INTENT(out)   :: delta_dens_ind               !< diff in individual density
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_density_individuals'
+
 
 
     !> 1.0 calc delta of individual density (#/m2)

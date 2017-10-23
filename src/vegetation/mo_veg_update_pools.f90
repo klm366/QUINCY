@@ -67,7 +67,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER  :: tchu
     INTEGER                               :: nsoil_sb
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
@@ -272,7 +271,6 @@ CONTAINS
 #undef Get_sb_mycorrhiza_export
 
 
-    tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -295,33 +293,33 @@ CONTAINS
        npp_c14(:)  = gross_assimilation_C14(:) - & 
            growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
 
-       veg_growth%labile%carbon   = veg_growth%labile%carbon   + npp(1)     * dtime / 1000000.0_wp
-       veg_growth%labile%carbon13 = veg_growth%labile%carbon13 + npp_c13(1) * dtime / 1000000.0_wp
-       veg_growth%labile%carbon14 = veg_growth%labile%carbon14 + npp_c14(1) * dtime / 1000000.0_wp
+       veg_growth%labile%carbon(:)   = veg_growth%labile%carbon(:)   + npp(:)     * dtime / 1000000.0_wp
+       veg_growth%labile%carbon13(:) = veg_growth%labile%carbon13(:) + npp_c13(:) * dtime / 1000000.0_wp
+       veg_growth%labile%carbon14(:) = veg_growth%labile%carbon14(:) + npp_c14(:) * dtime / 1000000.0_wp
   
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
-       veg_growth%labile%nitrogen   = veg_growth%labile%nitrogen + & 
-                                          ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * dtime / 1000000.0_wp
-       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen15 + & 
-                                          ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * dtime / 1000000.0_wp
-       veg_growth%labile%phosphorus = veg_growth%labile%phosphorus + & 
-                                            uptake_po4(1) * dtime / 1000000.0_wp
+       veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
+                                          ( uptake_nh4(:) + uptake_no3(:) + n_fixation(:)) * dtime / 1000000.0_wp
+       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
+                                          ( uptake_nh4_n15(:) + uptake_no3_n15(:) + n_fixation_n15(:)) * dtime / 1000000.0_wp
+       veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + & 
+                                            uptake_po4(:) * dtime / 1000000.0_wp
 
        !> 1.2a Add mycorrhiza export
        !!
-       veg_growth%labile%carbon     = veg_growth%labile%carbon   + & 
+       veg_growth%labile%carbon(:)     = veg_growth%labile%carbon(:)   + & 
                                         SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%carbon13   = veg_growth%labile%carbon13 + & 
+       veg_growth%labile%carbon13(:)   = veg_growth%labile%carbon13(:) + & 
                                         SUM(sb_mycorrhiza_export%carbon13(:,:) * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%carbon14   = veg_growth%labile%carbon14 + & 
+       veg_growth%labile%carbon14(:)   = veg_growth%labile%carbon14(:) + & 
                                         SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%nitrogen   = veg_growth%labile%nitrogen + & 
+       veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
                                         SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%nitrogen15 = veg_growth%labile%nitrogen15 + & 
+       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
                                         SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%phosphorus = veg_growth%labile%phosphorus + & 
+       veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + & 
                                         SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:),DIM=2)
 
 
@@ -333,23 +331,23 @@ CONTAINS
    
        !> 1.4 update fluxes from continuous nutrient turnover and resorption 
        !!
-       veg_pool%labile%nitrogen       = veg_pool%labile%nitrogen       + recycling_leaf_n(1) + & 
-                                         recycling_fine_root_n(1) + recycling_heart_wood_n(1)
-       veg_pool%leaf%nitrogen         = veg_pool%leaf%nitrogen         - recycling_leaf_n(1)
-       veg_pool%fine_root%nitrogen    = veg_pool%fine_root%nitrogen    - recycling_fine_root_n(1)
-       veg_pool%heart_wood%nitrogen   = veg_pool%heart_wood%nitrogen   - recycling_heart_wood_n(1)
+       veg_pool%labile%nitrogen(:)       = veg_pool%labile%nitrogen(:)       + recycling_leaf_n(:) + & 
+                                         recycling_fine_root_n(:) + recycling_heart_wood_n(:)
+       veg_pool%leaf%nitrogen(:)         = veg_pool%leaf%nitrogen(:)         - recycling_leaf_n(:)
+       veg_pool%fine_root%nitrogen(:)    = veg_pool%fine_root%nitrogen(:)    - recycling_fine_root_n(:)
+       veg_pool%heart_wood%nitrogen(:)   = veg_pool%heart_wood%nitrogen(:)   - recycling_heart_wood_n(:)
    
-       veg_pool%labile%phosphorus     = veg_pool%labile%phosphorus     + recycling_leaf_p(1) + & 
-                                         recycling_fine_root_p(1) + recycling_heart_wood_p(1)
-       veg_pool%leaf%phosphorus       = veg_pool%leaf%phosphorus       - recycling_leaf_p(1)
-       veg_pool%fine_root%phosphorus  = veg_pool%fine_root%phosphorus  - recycling_fine_root_p(1)
-       veg_pool%heart_wood%phosphorus = veg_pool%heart_wood%phosphorus - recycling_heart_wood_p(1)
+       veg_pool%labile%phosphorus(:)     = veg_pool%labile%phosphorus(:)     + recycling_leaf_p(:) + & 
+                                         recycling_fine_root_p(:) + recycling_heart_wood_p(:)
+       veg_pool%leaf%phosphorus(:)       = veg_pool%leaf%phosphorus(:)       - recycling_leaf_p(:)
+       veg_pool%fine_root%phosphorus(:)  = veg_pool%fine_root%phosphorus(:)  - recycling_fine_root_p(:)
+       veg_pool%heart_wood%phosphorus(:) = veg_pool%heart_wood%phosphorus(:) - recycling_heart_wood_p(:)
    
-       veg_pool%labile%nitrogen15     = veg_pool%labile%nitrogen15     + recycling_leaf_n15(1) + & 
-                                         recycling_fine_root_n15(1) + recycling_heart_wood_n15(1)
-       veg_pool%leaf%nitrogen15       = veg_pool%leaf%nitrogen15       - recycling_leaf_n15(1)
-       veg_pool%fine_root%nitrogen15  = veg_pool%fine_root%nitrogen15  - recycling_fine_root_n15(1)
-       veg_pool%heart_wood%nitrogen15 = veg_pool%heart_wood%nitrogen15 - recycling_heart_wood_n15(1)
+       veg_pool%labile%nitrogen15(:)     = veg_pool%labile%nitrogen15(:)     + recycling_leaf_n15(:) + & 
+                                         recycling_fine_root_n15(:) + recycling_heart_wood_n15(:)
+       veg_pool%leaf%nitrogen15(:)       = veg_pool%leaf%nitrogen15(:)       - recycling_leaf_n15(:)
+       veg_pool%fine_root%nitrogen15(:)  = veg_pool%fine_root%nitrogen15(:)  - recycling_fine_root_n15(:)
+       veg_pool%heart_wood%nitrogen15(:) = veg_pool%heart_wood%nitrogen15(:) - recycling_heart_wood_n15(:)
 
        !> 1.5 update labile pool with fluxes to mycorrhiza
        veg_pool%labile%carbon     = veg_pool%labile%carbon       - veg_exudation%carbon 
@@ -382,22 +380,21 @@ CONTAINS
        !> 2.0 Update plant diagnostics given the above fluxes
        !!
        !! 
-       lai(:)      = veg_pool%leaf%carbon * lctlib%sla
+       lai(:)      = veg_pool%leaf%carbon(:) * lctlib%sla
        dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
-       WHERE(dens_ind(:)>0.0_wp .AND. lctlib%growthform == itree)
-          diameter(:)  = calc_diameter_from_woody_biomass(lctlib                     , &
-                                                          veg_pool%sap_wood%carbon   , &
-                                                          veg_pool%heart_wood%carbon , &
+       WHERE(dens_ind(:) > 0.0_wp .AND. lctlib%growthform == itree)
+          diameter(:)  = calc_diameter_from_woody_biomass(lctlib                        , &
+                                                          veg_pool%sap_wood%carbon(:)   , &
+                                                          veg_pool%heart_wood%carbon(:) , &
                                                           dens_ind(:))
           height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
        END WHERE
 
-       IF(veg_pool%leaf%carbon(tchu) > eps8) THEN 
-           mean_leaf_age(:) = & 
-             (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon / veg_pool%leaf%carbon)
-         ELSE 
+       WHERE(veg_pool%leaf%carbon(:) > eps8)
+           mean_leaf_age(:) = (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
+         ELSE WHERE
            mean_leaf_age(:) = 0.0_wp
-       END IF
+       END WHERE
 
        dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
 
@@ -412,7 +409,7 @@ CONTAINS
                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                             veg_pool%leaf%nitrogen(tchu)       , &
+                             veg_pool%leaf%nitrogen(:)          , &
                              lai(:)                             , &
                              ppfd_sunlit_tfrac_mavg_cl(:,:)     , &
                              ppfd_shaded_tfrac_mavg_cl(:,:)     , & 

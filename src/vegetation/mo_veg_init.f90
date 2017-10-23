@@ -328,10 +328,10 @@ CONTAINS
         lai(:)    = ref_lai
         !leaf_nitrogen
         IF(dsl4jsb_Config(VEG_)%pft_id==0) THEN
-          veg_pool%leaf%nitrogen   = ref_nleaf / molar_mass_N * lai(1)
+          veg_pool%leaf%nitrogen(:)   = ref_nleaf / molar_mass_N * lai(:)
         ELSE
-          veg_pool%leaf%nitrogen   = lai(1) / lctlib%sla / lctlib%cn_leaf
-          veg_pool%leaf%phosphorus = veg_pool%leaf%nitrogen / lctlib%np_leaf
+          veg_pool%leaf%nitrogen(:)   = lai(:) / lctlib%sla / lctlib%cn_leaf
+          veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf
         ENDIF
         leaf_nitrogen_cl(:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
         lai_cl(:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)

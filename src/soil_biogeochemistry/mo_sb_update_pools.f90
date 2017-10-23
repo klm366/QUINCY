@@ -71,7 +71,6 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: nsoil_sb
     INTEGER                               :: isoil
-    INTEGER   :: tchu
 !!
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon,hlp1
 !!
@@ -355,8 +354,6 @@ CONTAINS
 #undef Get_sb_mycorrhiza_export
 
 
-    ! temporary chunk selection
-    tchu = 1
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -467,12 +464,14 @@ CONTAINS
     sb_loss%mycorrhiza%nitrogen15(:,1) = sb_loss%mycorrhiza%nitrogen15(:,1) + &
                                                         sb_mycorrhiza_export%nitrogen15(:,1)
 
-    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon(tchu)   / &
-                                dtime * 1000000._wp                          
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon13(tchu) / &
-                                dtime * 1000000._wp
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon14(tchu) / &
-                                dtime * 1000000._wp
+    DO isoil = 1,nsoil_sb
+      het_respiration(:,isoil)     = het_respiration(:,isoil)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon(:)   / &
+                                      dtime * 1000000._wp                          
+      het_respiration_c13(:,isoil) = het_respiration_c13(:,isoil) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon13(:) / &
+                                      dtime * 1000000._wp
+      het_respiration_c14(:,isoil) = het_respiration_c14(:,isoil) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon14(:) / &
+                                      dtime * 1000000._wp
+    END DO
 
     !> 3.0 update of organic pools
     !!

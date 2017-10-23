@@ -2419,10 +2419,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: fp_soluable_leaf, fp_soluable_fine_root, fp_soluable_coarse_root, fp_soluable_fruit, & 
                                        fp_soluable_seed_bed, fp_soluable_labile, fp_soluable_reserve 
     INTEGER                     :: isoil                      !< loop over soil layers
-    INTEGER  :: tchu
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_partitioning'
 
-    tchu = 1
 
 
     !> 1.0 determine allocation of fresh litter fall to litter pools
@@ -2430,62 +2428,62 @@ CONTAINS
     fc_soluable_leaf(:) = 0.0_wp
     fn_soluable_leaf(:) = 0.0_wp
     fp_soluable_leaf(:) = 0.0_wp
-    IF(veg_litterfall%leaf%nitrogen(tchu) > eps8) THEN
+    WHERE(veg_litterfall%leaf%nitrogen(:) > eps8)
        fc_soluable_leaf(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib%sla) * & 
                                  veg_litterfall%leaf%carbon(:) / veg_litterfall%leaf%nitrogen(:))
        WHERE(fc_soluable_leaf(:)>eps8)
           fn_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fn_soluable*fc_soluable_leaf(:)))
           fp_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fp_soluable*fc_soluable_leaf(:)))
-       ENDWHERE
-    ENDIF
+       END WHERE
+    END WHERE
 
     fc_soluable_fine_root(:) = 0.0_wp 
     fn_soluable_fine_root(:) = 0.0_wp 
     fp_soluable_fine_root(:) = 0.0_wp 
-    IF(veg_litterfall%fine_root%nitrogen(tchu) > eps8) THEN
+    WHERE(veg_litterfall%fine_root%nitrogen(:) > eps8)
        fc_soluable_fine_root(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_fine_root * & 
                                       veg_litterfall%fine_root%carbon(:) / veg_litterfall%fine_root%nitrogen(:))
        WHERE(fc_soluable_fine_root(:)>eps8)
           fn_soluable_fine_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fine_root(:))/(k_fn_soluable*fc_soluable_fine_root(:)))
           fp_soluable_fine_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fine_root(:))/(k_fp_soluable*fc_soluable_fine_root(:)))
-       ENDWHERE
-    ENDIF
+       END WHERE
+    END WHERE
 
     fc_soluable_coarse_root(:) = 0.0_wp 
     fn_soluable_coarse_root(:) = 0.0_wp 
     fp_soluable_coarse_root(:) = 0.0_wp 
-    IF(veg_litterfall%coarse_root%nitrogen(tchu) > eps8) THEN
+    WHERE(veg_litterfall%coarse_root%nitrogen(:) > eps8)
        fc_soluable_coarse_root(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_coarse_root * & 
                                         veg_litterfall%coarse_root%carbon(:) / veg_litterfall%coarse_root%nitrogen(:))
        WHERE(fc_soluable_coarse_root(:)>eps8)
           fn_soluable_coarse_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(:))/(k_fn_soluable*fc_soluable_coarse_root(:)))
           fp_soluable_coarse_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(:))/(k_fp_soluable*fc_soluable_coarse_root(:)))
-        ENDWHERE
-    ENDIF
+        END WHERE
+    END WHERE
 
     fc_soluable_fruit(:) = 0.0_wp
     fn_soluable_fruit(:) = 0.0_wp
     fp_soluable_fruit(:) = 0.0_wp
-    IF(veg_litterfall%fruit%nitrogen(tchu) > eps8) THEN
+    WHERE(veg_litterfall%fruit%nitrogen(:) > eps8)
        fc_soluable_fruit(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_fruit * & 
                                   veg_litterfall%fruit%carbon(:) / veg_litterfall%fruit%nitrogen(:))
        WHERE(fc_soluable_fruit(:)>eps8)
           fn_soluable_fruit(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(:))/(k_fn_soluable*fc_soluable_fruit(:)))
           fp_soluable_fruit(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(:))/(k_fp_soluable*fc_soluable_fruit(:)))
-       ENDWHERE
-    ENDIF
+       END WHERE
+    END WHERE
 
     fc_soluable_seed_bed(:) = 0.0_wp
     fn_soluable_seed_bed(:) = 0.0_wp
     fp_soluable_seed_bed(:) = 0.0_wp
-    IF(veg_litterfall%seed_bed%nitrogen(tchu) > eps8) THEN
+    WHERE(veg_litterfall%seed_bed%nitrogen(:) > eps8)
        fc_soluable_seed_bed(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_seed_bed * & 
                                      veg_litterfall%seed_bed%carbon(:) / veg_litterfall%seed_bed%nitrogen(:))
        WHERE(fc_soluable_seed_bed(:)>eps8)
           fn_soluable_seed_bed(:) = 1._wp / (1._wp + (1._wp - fc_soluable_seed_bed(:))/(k_fn_soluable*fc_soluable_seed_bed(:)))
           fp_soluable_seed_bed(:) = 1._wp / (1._wp + (1._wp - fc_soluable_seed_bed(:))/(k_fp_soluable*fc_soluable_seed_bed(:)))
-       ENDWHERE
-    ENDIF
+       END WHERE
+    END WHERE
 
     fc_soluable_labile(:)  = 1.0_wp 
     fn_soluable_labile(:)  = 1.0_wp 
@@ -2528,10 +2526,10 @@ CONTAINS
         fc_soluable_seed_bed(:) * veg_litterfall%seed_bed%carbon14(:) ) / soil_depth_sl(:,1)
     sb_formation%soluable_litter%nitrogen15(:,1) = sb_formation%soluable_litter%nitrogen15(:,1) + & 
        (fn_soluable_leaf(:)     * veg_litterfall%leaf%nitrogen15(:)    + & 
-        fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen15   + & 
-        fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen15  + & 
-        fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen15 + & 
-        fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen15 ) / soil_depth_sl(:,1)
+        fn_soluable_fruit(:)    * veg_litterfall%fruit%nitrogen15(:)   + & 
+        fn_soluable_labile(:)   * veg_litterfall%labile%nitrogen15(:)  + & 
+        fn_soluable_reserve(:)  * veg_litterfall%reserve%nitrogen15(:) + & 
+        fn_soluable_seed_bed(:) * veg_litterfall%seed_bed%nitrogen15(:) ) / soil_depth_sl(:,1)
 
     sb_formation%polymeric_litter%carbon(:,1) = sb_formation%polymeric_litter%carbon(:,1) + & 
        ((1.0_wp - fc_soluable_leaf(:))     * veg_litterfall%leaf%carbon(:)    + & 
@@ -2564,11 +2562,11 @@ CONTAINS
         (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall%reserve%carbon14(:) + & 
         (1.0_wp - fc_soluable_seed_bed(:)) * veg_litterfall%seed_bed%carbon14(:) ) / soil_depth_sl(:,1)
     sb_formation%polymeric_litter%nitrogen15(:,1) = sb_formation%polymeric_litter%nitrogen15(:,1) + & 
-       ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen15    + & 
-        (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen15   + & 
-        (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen15  + & 
-        (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen15 + & 
-        (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen15 ) / soil_depth_sl(:,1)
+       ((1.0_wp - fn_soluable_leaf(:))     * veg_litterfall%leaf%nitrogen15(:)    + & 
+        (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall%fruit%nitrogen15(:)   + & 
+        (1.0_wp - fn_soluable_labile(:))   * veg_litterfall%labile%nitrogen15(:)  + & 
+        (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall%reserve%nitrogen15(:) + & 
+        (1.0_wp - fn_soluable_seed_bed(:)) * veg_litterfall%seed_bed%nitrogen15(:) ) / soil_depth_sl(:,1)
 
     !> 3.0 Add surface litter fall from sapwood and heartwood pools to surface woody litter pool for trees
     !!     for grasses, stems and halms (=sapwood) are not actually wood, and therefore paritioned to 

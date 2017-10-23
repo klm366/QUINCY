@@ -816,17 +816,14 @@ CONTAINS
     ELSE WHERE
        hlp(:) = 0._wp
     ENDWHERE
-    growth_cn_tcnl_mavg  = calc_mavg(growth_cn_tcnl_mavg, hlp, &
-         mavg_period_tgrowth,  do_calc=growing_season(:))
-    npp_tcnl_mavg  = calc_mavg(npp_tcnl_mavg, npp(:), &
-                                            mavg_period_tgrowth,  do_calc=growing_season(:))
+    growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
+    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
 
 
 
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
-    npp_talloc_mavg(:)                  = calc_mavg(npp_talloc_mavg(:), npp(:), &
-         mavg_period_talloc, do_calc=growing_season(:))
+    npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), npp(:), mavg_period_talloc, do_calc=growing_season(:))
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
          WHERE (n_fixation(:)>0._wp)
@@ -848,9 +845,9 @@ CONTAINS
                                                       mavg_period_talloc, do_calc=growing_season(:))
     dphi_talloc_mavg(:)                 = calc_mavg(dphi_talloc_mavg(:), dphi(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    unit_uptake_n_talloc_mavg(:)    = calc_mavg(unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
+    unit_uptake_n_talloc_mavg(:)        = calc_mavg(unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    unit_uptake_p_talloc_mavg(:)    = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
+    unit_uptake_p_talloc_mavg(:)        = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
     labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg_pool%labile%carbon, &
                                                       mavg_period_talloc, do_calc=growing_season(:))
@@ -869,8 +866,7 @@ CONTAINS
     ELSE WHERE
        hlp(:) = 0._wp
     END WHERE
-    growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), &
-                                            mavg_period_tgrowth, do_calc=growing_season(:))
+    growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_season(:))
 
     WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
        hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
@@ -878,8 +874,7 @@ CONTAINS
        hlp(:) = 0._wp
     END WHERE
 
-    growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), &
-                                            mavg_period_tgrowth, do_calc=growing_season(:))
+    growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_season(:))
 
     !> 1.7 averages at the time-scale of root life-time
     !!
@@ -903,7 +898,7 @@ CONTAINS
 
     !> 1.8 averages at the vegetation dynamics time-scale
     an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
-                                          do_calc=(veg_pool%leaf%carbon > eps8))
+                                          do_calc=(veg_pool%leaf%carbon(:) > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     !! t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !! this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration

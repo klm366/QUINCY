@@ -553,7 +553,7 @@ CONTAINS
     REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
-    INTEGER       :: ipoi                             ! number of the chunk (ics:ice) used here, currently set to ipoi = ics
+    INTEGER       :: ipoi, ichunk                     ! number of the chunk: ipoi 1:nc / ichunk ics:ice
     INTEGER       :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':run_test_canopy_model'
     ! ---------------------------
@@ -586,8 +586,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
-! 2 be removed: pointers to veg assimi *slmtemp
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -639,11 +637,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
 
-
-
-! 2 be removed  *slmtemp
-    veg    => veg__mem
-    ipoi   = ics
+    ! define chunk for output: ipoi 1:nc / ichunk ics:ice
+    ipoi   = 1
+    ichunk = ics+ipoi-1
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -658,7 +654,7 @@ CONTAINS
     !!
     t_air(:)            = ref_t_air + TZero
     press_srf(:)        = standard_press_srf
-    q_air(:)            = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(ipoi) * eps_vpd
+    q_air(:)            = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(:) * eps_vpd
     co2_mixing_ratio(:) = def_co2_mixing_ratio   ! def_co2_mixing_ratio is used instead of ref_co2_mixing_ratio
     rain(:)             = 0.0_wp
     snow(:)             = 0.0_wp
@@ -676,7 +672,7 @@ CONTAINS
     q_bcoef(:)          = 0.0_wp
     pch(:)              = 0.0_wp
     cos_zenith_angle(:) = ref_cos_angle
-    ga(:)               = 0.4_wp / drag_srf(ipoi) * wind_10m(ipoi)
+    ga(:)               = 0.4_wp / drag_srf(:) * wind_10m(:)
     !latitude                  = 50.0_wp
     !longitude                 = 0.0_wp
 
@@ -704,10 +700,10 @@ CONTAINS
     w_soil_root_theta(:) = ref_theta
     lai(:)   = ref_lai
     IF(ref_pft==0) THEN
-      veg%pool%leaf%nitrogen%ptr(ipoi,iblk)     = ref_nleaf / molar_mass_N * lai(ipoi)
+      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)     = ref_nleaf / molar_mass_N * lai(:)
     ELSE
-      veg%pool%leaf%nitrogen%ptr(ipoi,iblk)     = lai(ipoi) / lctlib%sla / lctlib%cn_leaf
-      veg%pool%leaf%phosphorus%ptr(ipoi,iblk)   = veg%pool%leaf%nitrogen%ptr(ipoi,iblk) / lctlib%np_leaf
+      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)     = lai(:) / lctlib%sla / lctlib%cn_leaf
+      veg__mem%pool%leaf%phosphorus%ptr(:,iblk)   = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) / lctlib%np_leaf
     ENDIF
     CALL calc_canopy_layers(&
                             nc                                             , & ! in
@@ -715,21 +711,21 @@ CONTAINS
                             dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                             dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                            leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr(ipoi,iblk)      , &
+                            leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
                             lai                 = lai(:)                          , &
                             ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                             ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
                             fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
-                            lai_cl              = lai_cl(1,:), &
-                            cumm_lai_cl         = cumm_lai_cl(1,:), &
-                            leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
-                            fn_rub_cl           = fn_rub_cl(1,:), &
-                            fn_et_cl            = fn_et_cl(1,:), &
-                            fn_pepc_cl          = fn_pepc_cl(1,:), &
-                            fn_chl_cl           = fn_chl_cl(1,:), &
-                            fn_oth_cl           = fn_oth_cl(1,:), &
+                            lai_cl              = lai_cl(:,:), &
+                            cumm_lai_cl         = cumm_lai_cl(:,:), &
+                            leaf_nitrogen_cl    = leaf_nitrogen_cl(:,:), &
+                            fn_rub_cl           = fn_rub_cl(:,:), &
+                            fn_et_cl            = fn_et_cl(:,:), &
+                            fn_pepc_cl          = fn_pepc_cl(:,:), &
+                            fn_chl_cl           = fn_chl_cl(:,:), &
+                            fn_oth_cl           = fn_oth_cl(:,:), &
                             inquire_n_fractions = .TRUE.)
-  t_jmax_opt_mavg(ipoi) = 20._wp+0.35_wp*(t_air(ipoi) - Tzero)
+  t_jmax_opt_mavg(:) = 20._wp+0.35_wp*(t_air(:) - Tzero)
 
   !> 2.0 Sensitivity plots
   !!
@@ -762,8 +758,8 @@ CONTAINS
            net_assimilation(ipoi), canopy_cond(ipoi) *1000._wp, &
            co2_conc_leaf(ipoi)/co2_mixing_ratio(ipoi) !,&
 !           net_assimilation(ipoi),
-!           co2_conc_leaf(ipoi)/co2_mixing_ratio(ipoi),veg%pool%leaf%nitrogen%ptr(ipoi,iblk)*molar_mass_N,&
-!           net_assimilation(ipoi)/(veg%pool%leaf%nitrogen%ptr(ipoi,iblk)*molar_mass_N)
+!           co2_conc_leaf(ipoi)/co2_mixing_ratio(ipoi),veg__mem%pool%leaf%nitrogen%ptr(ipoi,iblk)*molar_mass_N,&
+!           net_assimilation(ipoi)/(veg__mem%pool%leaf%nitrogen%ptr(ipoi,iblk)*molar_mass_N)
 
   END DO
   swpar_srf_down(:) = ref_swdown
@@ -787,7 +783,7 @@ CONTAINS
 
      t_air(:) = t_air(:) + 1.0_wp
      q_air(:) = 0.8_wp * calc_spec_humidity_sat(t_air(:),press_srf(:))
-     t_jmax_opt_mavg(ipoi) = 20._wp+0.35_wp*(t_air(ipoi) - Tzero)
+     t_jmax_opt_mavg(:) = 20._wp+0.35_wp*(t_air(:) - Tzero)
      CALL update_a2l(tile, &
            options            , &
            t_air = t_air, &
@@ -804,7 +800,7 @@ CONTAINS
 
   END DO
   t_air(:)    = ref_t_air + Tzero
-  q_air(:)    = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(ipoi) * eps_vpd
+  q_air(:)    = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(:) * eps_vpd
   CALL update_a2l(tile, &
         options            , &
         t_air = t_air, &
@@ -845,7 +841,7 @@ CONTAINS
   lun = lun + 1
   WRITE(lun,*) 'VPD A GC CI'
   DO i = 1,30
-     q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - i * 100.0_wp / press_srf(ipoi) * eps_vpd
+     q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - i * 100.0_wp / press_srf(:) * eps_vpd
      CALL update_a2l(tile    , &
                           options , &
                           q_air = q_air)
@@ -855,15 +851,15 @@ CONTAINS
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(ipoi) / 1000.0_wp
+     vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(:) / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd(ipoi), &
            net_assimilation(ipoi), canopy_cond(ipoi) *1000._wp, &
            co2_conc_leaf(ipoi)/co2_mixing_ratio(ipoi)
 
   END DO
-  q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(ipoi) * eps_vpd
-  vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(ipoi) / 1000.0_wp
+  q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(:) * eps_vpd
+  vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(:) / 1000.0_wp
      CALL update_a2l(tile    , &
                           options , &
                           q_air = q_air)
@@ -900,26 +896,26 @@ CONTAINS
   DO i = 1,22
 
      lai(:) = lai(:) + 0.5_wp
-     veg%pool%leaf%nitrogen%ptr(ipoi,iblk)=ref_nleaf/molar_mass_N*lai(ipoi)
+     veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=ref_nleaf/molar_mass_N*lai(:)
      CALL calc_canopy_layers(&
                               nc                                             , & ! in
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr(ipoi,iblk)      , &
+                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
                               lai                 = lai(:)                          , &
                               ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                               ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
                               fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
-                              lai_cl              = lai_cl(1,:), &
-                              cumm_lai_cl         = cumm_lai_cl(1,:), &
-                              leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
-                              fn_rub_cl           = fn_rub_cl(1,:), &
-                              fn_et_cl            = fn_et_cl(1,:), &
-                              fn_pepc_cl          = fn_pepc_cl(1,:), &
-                              fn_chl_cl           = fn_chl_cl(1,:), &
-                              fn_oth_cl           = fn_oth_cl(1,:), &
+                              lai_cl              = lai_cl(:,:), &
+                              cumm_lai_cl         = cumm_lai_cl(:,:), &
+                              leaf_nitrogen_cl    = leaf_nitrogen_cl(:,:), &
+                              fn_rub_cl           = fn_rub_cl(:,:), &
+                              fn_et_cl            = fn_et_cl(:,:), &
+                              fn_pepc_cl          = fn_pepc_cl(:,:), &
+                              fn_chl_cl           = fn_chl_cl(:,:), &
+                              fn_oth_cl           = fn_oth_cl(:,:), &
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
@@ -941,26 +937,26 @@ CONTAINS
   WRITE(lun,*) 'Nleaf A GC CI'
   DO i = 1,24
 
-     veg%pool%leaf%nitrogen%ptr(ipoi,iblk)=0.125_wp*(i)/molar_mass_N*lai(ipoi)
+     veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=0.125_wp*(i)/molar_mass_N*lai(:)
      CALL calc_canopy_layers(&
                               nc                                             , & ! in
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr(ipoi,iblk)      , &
+                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
                               lai                 = lai(:)                          , &
                               ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                               ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
                               fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
-                              lai_cl              = lai_cl(1,:), &
-                              cumm_lai_cl         = cumm_lai_cl(1,:), &
-                              leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
-                              fn_rub_cl           = fn_rub_cl(1,:), &
-                              fn_et_cl            = fn_et_cl(1,:), &
-                              fn_pepc_cl          = fn_pepc_cl(1,:), &
-                              fn_chl_cl           = fn_chl_cl(1,:), &
-                              fn_oth_cl           = fn_oth_cl(1,:), &
+                              lai_cl              = lai_cl(:,:), &
+                              cumm_lai_cl         = cumm_lai_cl(:,:), &
+                              leaf_nitrogen_cl    = leaf_nitrogen_cl(:,:), &
+                              fn_rub_cl           = fn_rub_cl(:,:), &
+                              fn_et_cl            = fn_et_cl(:,:), &
+                              fn_pepc_cl          = fn_pepc_cl(:,:), &
+                              fn_chl_cl           = fn_chl_cl(:,:), &
+                              fn_oth_cl           = fn_oth_cl(:,:), &
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
@@ -968,12 +964,12 @@ CONTAINS
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') veg%pool%leaf%nitrogen%ptr(ipoi,iblk)/lai(ipoi)*molar_mass_N, &
+     WRITE(lun,'(4F16.7)') veg__mem%pool%leaf%nitrogen%ptr(ichunk,iblk)/lai(ipoi)*molar_mass_N, &
            net_assimilation(ipoi), canopy_cond(ipoi) *1000._wp, &
            co2_conc_leaf(ipoi)/co2_mixing_ratio(ipoi)
 
   END DO
-  veg%pool%leaf%nitrogen%ptr(ipoi,iblk)=ref_nleaf/molar_mass_N*lai(ipoi)
+  veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=ref_nleaf/molar_mass_N*lai(:)
 
   !> 2.8 PFT
   !!
@@ -981,8 +977,8 @@ CONTAINS
   lun = lun + 1
   WRITE(lun,*) 'PFT A GC CI'
   DO i = 1,npft
-     veg%pool%leaf%nitrogen%ptr(ipoi,iblk)  =lai(ipoi) /model%lctlib(i)%sla /model%lctlib(i)%cn_leaf
-     veg%pool%leaf%phosphorus%ptr(ipoi,iblk)=veg%pool%leaf%nitrogen%ptr(ipoi,iblk) /model%lctlib(i)%np_leaf
+     veg__mem%pool%leaf%nitrogen%ptr(:,iblk)  =lai(:) /model%lctlib(i)%sla /model%lctlib(i)%cn_leaf
+     veg__mem%pool%leaf%phosphorus%ptr(:,iblk)=veg__mem%pool%leaf%nitrogen%ptr(:,iblk) /model%lctlib(i)%np_leaf
      ! change lctlib id
      tile%lcts%lib_id = i
      ! set pointer to the new PFT
@@ -993,19 +989,19 @@ CONTAINS
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                              leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr(ipoi,iblk)      , &
+                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
                               lai                 = lai(:)                          , &
                               ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                               ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
                               fleaf_sunlit_cl     = fleaf_sunlit_tfrac_mavg_cl(:,:) , &
-                              lai_cl              = lai_cl(1,:), &
-                              cumm_lai_cl         = cumm_lai_cl(1,:), &
-                              leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
-                              fn_rub_cl           = fn_rub_cl(1,:), &
-                              fn_et_cl            = fn_et_cl(1,:), &
-                              fn_pepc_cl          = fn_pepc_cl(1,:), &
-                              fn_chl_cl           = fn_chl_cl(1,:), &
-                              fn_oth_cl           = fn_oth_cl(1,:), &
+                              lai_cl              = lai_cl(:,:), &
+                              cumm_lai_cl         = cumm_lai_cl(:,:), &
+                              leaf_nitrogen_cl    = leaf_nitrogen_cl(:,:), &
+                              fn_rub_cl           = fn_rub_cl(:,:), &
+                              fn_et_cl            = fn_et_cl(:,:), &
+                              fn_pepc_cl          = fn_pepc_cl(:,:), &
+                              fn_chl_cl           = fn_chl_cl(:,:), &
+                              fn_oth_cl           = fn_oth_cl(:,:), &
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
