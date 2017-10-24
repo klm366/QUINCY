@@ -7,7 +7,7 @@ MODULE mo_jsb_io
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
     ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
-    GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
+    GRID_CELL, GRID_UNSTRUCTURED_CELL, GRID_UNSTRUCTURED,              &
     TSTEP_CONSTANT, TSTEP_INSTANT,                                     &
     zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy,             &
     cdiDefMissval, read_io_namelist
@@ -49,11 +49,13 @@ MODULE mo_jsb_io
   END INTERFACE t_cf
 
   INTEGER, PARAMETER :: max_tables = 5
-  INTEGER, PARAMETER :: max_cdi_zaxis_ids = 20
 
   INTEGER :: tables(max_tables) = (/186, 187, 188, 189, 190/)
 
+#ifndef __ICON__
+  INTEGER, PARAMETER :: max_cdi_zaxis_ids = 20
   INTEGER, SAVE :: cdi_zaxis_ids(max_cdi_zaxis_ids) = 0  ! Collects CDI zaxis IDs of all JSBACH vgrids
+#endif
 
   ! Remark on usage of "cdiDefMissval" (taken from icon:mo_initicon.f90)
 

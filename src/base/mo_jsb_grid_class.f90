@@ -389,8 +389,13 @@ CONTAINS
 
   FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds, dz) RESULT(new)
 
+#ifndef __ICON__
     USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisInqName, zaxisInqSize
     USE mo_jsb_io_iface, ONLY: Create_zaxis
+#else
+    USE mo_jsb_varlist_iface, ONLY: additionalVerticalAxisList, t_verticalAxis
+    USE mo_jsb_io_iface,      ONLY: zaxisTypeList
+#endif
 
     CHARACTER(len=*),           INTENT(in) :: name
     INTEGER,                    INTENT(in) :: cdi_axis_type
@@ -404,6 +409,9 @@ CONTAINS
     INTEGER :: cdi_size
     CHARACTER(len=100) :: cdi_name
     INTEGER :: i, idx
+#ifdef __ICON__
+    INTEGER :: axis_type
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_vgrid'
 
@@ -444,6 +452,7 @@ CONTAINS
     IF (PRESENT(longname)) new%longname = TRIM(longname)
     IF (PRESENT(units)) new%units  = TRIM(units)
 
+#ifndef __ICON__
     ! Find free slot in cdi_zaxis_ids
     idx = 0
     DO i=1,SIZE(cdi_zaxis_ids)
@@ -483,12 +492,27 @@ CONTAINS
       new%cdiZaxisID = cdi_zaxis_ids(idx)
     END IF
     cdi_zaxis_ids(new%id) = new%cdiZaxisID
+#else
+    new%echamZaxisID = -1
+    axis_type = zaxisTypeList%register(cdi_zaxis_type=cdi_axis_type, is_2D=(length == 1))
+    CALL additionalVerticalAxisList%append(t_verticalAxis(                         &
+      &                                         zaxisTypeList%getEntry(axis_type), &
+      &                                         zaxisNlev=length,                  &
+      &                                         zaxisLevels=new%levels(1:length),  &
+      &                                         zaxisLbounds=new%lbounds(1:length),&
+      &                                         zaxisUbounds=new%ubounds(1:length),&
+      &                                         zaxisName=new%name,                &
+      &                                         zaxisLongname=new%longname,        &
+      &                                         zaxisUnits=new%units))
+#endif
 
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)
 
+#ifndef __ICON__
     USE mo_jsb_io, ONLY: cdi_zaxis_ids, zaxisDestroy
+#endif
 
 #ifdef HAVE_F2003
     TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: self
@@ -509,6 +533,9 @@ CONTAINS
     IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
     IF (ALLOCATED(self%dz))      DEALLOCATE(self%dz)
 
+#ifndef __ICON__
+    ! Destruction of CDI zaxis: ICON takes care of this itself
+
     cdi_zaxis_ids(self%id) = 0
     ! If this was the last instance of a JSBACH vgrid that uses a particular cdiZaxisID, also destroy CDI zaxis
     idx = 0
@@ -519,6 +546,7 @@ CONTAINS
       END IF
     END DO
     IF (idx == 0) CALL zaxisDestroy(self%cdiZaxisID)
+#endif
 
     DEALLOCATE(self)
 !!$    self%cdiZaxisID = 0

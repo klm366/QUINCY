@@ -20,6 +20,9 @@ MODULE mo_jsb_varlist_iface
                                    find_list_element
   USE mo_var_metadata_types, ONLY: t_var_metadata, VARNAME_LEN
   USE mo_linked_list,        ONLY: t_var_list, t_list_element
+  USE mo_name_list_output_zaxes, ONLY: t_verticalAxisList,           &
+    &                              t_verticalAxis,                   &
+    &                              additionalVerticalAxisList
 #else
   USE mo_memory_base,        ONLY: new_stream,                       &
                                    get_var_list => get_stream,       &
@@ -32,7 +35,7 @@ MODULE mo_jsb_varlist_iface
 #endif
 
   USE mo_jsb_io_iface, ONLY: t_cf_var, t_grib2_var
-  USE mo_jsb_io_iface, ONLY: GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
+  USE mo_jsb_io_iface, ONLY: GRID_UNSTRUCTURED_CELL, GRID_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 
   IMPLICIT NONE
   PRIVATE
@@ -47,6 +50,16 @@ MODULE mo_jsb_varlist_iface
 #endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_varlist_iface'
+
+#ifdef __ICON__
+  ! Vertical axis meta-data: JSBACH creates additional vertical
+  ! axes. These axes will be collected on compute PE#0 and finally
+  ! appended to ICON's output files.
+  !
+  PUBLIC :: t_verticalAxis
+  PUBLIC :: additionalVerticalAxisList
+#endif
+
 
 CONTAINS
 

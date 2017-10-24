@@ -21,12 +21,14 @@ MODULE mo_jsb_io_iface
   USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, &
                             & ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND, &
                             & FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
-                            & TSTEP_CONSTANT, TSTEP_INSTANT, &
+                            & TSTEP_CONSTANT, TSTEP_INSTANT, GRID_UNSTRUCTURED, &
                             & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
                             & zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
                             & zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
                             & cdiDefMissval
-  USE mo_cdi_constants, ONLY: GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
+  USE mo_zaxis_type, ONLY: zaxisTypeList
+  USE mo_impl_constants, ONLY: GRID_CELL, GRID_UNSTRUCTURED_CELL
+  USE mo_zaxis_type, ONLY: ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 #else
   USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
   USE mo_netcdf,        ONLY: add_dim
@@ -40,12 +42,16 @@ MODULE mo_jsb_io_iface
   PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
             ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND,               &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
-            GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, &
+            GRID_CELL, GRID_UNSTRUCTURED_CELL, GRID_UNSTRUCTURED, &
             ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, TSTEP_INSTANT, &
             zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
             zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
             zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
             Create_zaxis, cdiDefMissval, read_io_namelist
+
+#ifdef __ICON__
+  PUBLIC :: zaxisTypeList
+#endif
 
 #ifndef __ICON__
   TYPE t_cf_var
@@ -66,12 +72,12 @@ MODULE mo_jsb_io_iface
 
   INCLUDE 'cdi.inc'
 
-  ! From ICON mo_cdi_constants.f90
+  ! From ICON mo_zaxis_type.f90 and mo_impl_constants.f90
   INTEGER, PARAMETER :: ZA_SURFACE             =  1
   INTEGER, PARAMETER :: ZA_DEPTH_BELOW_LAND    = 11
   INTEGER, PARAMETER :: GRID_CELL              =  1
   INTEGER, PARAMETER :: GRID_UNSTRUCTURED_CELL =  1
-  INTEGER, PARAMETER :: GRID_REFERENCE         =  9
+
 #endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
