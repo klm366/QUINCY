@@ -9,14 +9,14 @@
 !!
 MODULE mo_sb_util
 #include "dsl_jsbach.inc"
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC reset_sb_fluxes
+  PUBLIC :: reset_sb_fluxes
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
@@ -329,9 +329,7 @@ CONTAINS
     emission_n2o_n15(:)               = zero
     emission_n2_n15(:)                = zero
     asymb_n_fixation_n15(:,:)         = zero
-  
   END SUBROUTINE reset_sb_fluxes
 
-
-#endif
+!#endif
 END MODULE mo_sb_util

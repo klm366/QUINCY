@@ -45,6 +45,7 @@ MODULE mo_jsb_model_init
   USE mo_veg_constants,                   ONLY: init_veg_constants
   USE mo_veg_config_class,                ONLY: t_veg_config
   USE mo_veg_init,                        ONLY: veg_init
+  USE mo_veg_memory_class,                ONLY: Init_veg_pools_elements_a
   ! soil
   USE mo_soil_constants,                  ONLY: init_soil_constants
   USE mo_soil_config_class,               ONLY: t_soil_config
@@ -52,6 +53,7 @@ MODULE mo_jsb_model_init
   ! soil_biogeochemistry
   USE mo_sb_constants,                    ONLY: init_sb_constants
   USE mo_sb_init,                         ONLY: sb_init
+  USE mo_sb_memory_class,                 ONLY: Init_sb_pools_elements_a
 
   IMPLICIT NONE
   PRIVATE
@@ -255,6 +257,12 @@ CONTAINS
         NULLIFY(tmp_ptr)    
       END SELECT    ! iproc
     END DO          ! iproc
+
+
+    !! 7.1 Memory init -> pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload
+    !! 
+    CALL Init_sb_pools_elements_a(ics, ice, nc, iblk, nsoil_sb)
+    CALL Init_veg_pools_elements_a(ics, ice, nc, iblk)
 
 
     !! 8 lctlib init and read

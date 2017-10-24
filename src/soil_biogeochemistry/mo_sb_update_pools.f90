@@ -54,9 +54,11 @@ CONTAINS
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
+    USE mo_sb_memory_class,       ONLY: sb_pool, sb_formation, sb_loss, sb_transport, sb_delta_pools, sb_mycorrhiza_export
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
     dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation
     dsl4jsb_Use_memory(A2L_)
 
     IMPLICIT NONE
@@ -190,24 +192,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
-    ! Declare pool structures in memory
-#define Def_veg_litterfall
-#define Def_veg_exudation
-#define Def_sb_pool
-#define Def_sb_formation
-#define Def_sb_loss
-#define Def_sb_transport
-#define Def_sb_delta_pools
-#define Def_sb_mycorrhiza_export
-#include "slm_pools_a_incl.f90"
-#undef Def_veg_litterfall
-#undef Def_veg_exudation
-#undef Def_sb_pool
-#undef Def_sb_formation
-#undef Def_sb_loss
-#undef Def_sb_transport
-#undef Def_sb_delta_pools
-#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -664,24 +648,24 @@ CONTAINS
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_veg_litterfall
-#define Dealloc_veg_exudation
-#define Dealloc_sb_pool
-#define Dealloc_sb_formation
-#define Dealloc_sb_loss
-#define Dealloc_sb_transport
-#define Dealloc_sb_delta_pools
-#define Dealloc_sb_mycorrhiza_export
+! Pass back values to process memory
+#define Passback_veg_litterfall
+#define Passback_veg_exudation
+#define Passback_sb_pool
+#define Passback_sb_formation
+#define Passback_sb_loss
+#define Passback_sb_transport
+#define Passback_sb_delta_pools
+#define Passback_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_veg_litterfall
-#undef Dealloc_veg_exudation
-#undef Dealloc_sb_pool
-#undef Dealloc_sb_formation
-#undef Dealloc_sb_loss
-#undef Dealloc_sb_transport
-#undef Dealloc_sb_delta_pools
-#undef Dealloc_sb_mycorrhiza_export
+#undef Passback_veg_litterfall
+#undef Passback_veg_exudation
+#undef Passback_sb_pool
+#undef Passback_sb_formation
+#undef Passback_sb_loss
+#undef Passback_sb_transport
+#undef Passback_sb_delta_pools
+#undef Passback_sb_mycorrhiza_export
 
   END SUBROUTINE update_sb_pools
 

@@ -92,12 +92,14 @@ mo_jsb_model_init.o: \
   mo_veg_constants.o \
   mo_veg_init.o \
   mo_veg_config_class.o \
+  mo_veg_memory_class.o \
   mo_pheno_constants.o \
   mo_pheno_init.o \
   mo_soil_constants.o \
   mo_soil_config_class.o \
   mo_soil_init.o \
   mo_sb_constants.o \
+  mo_sb_memory_class.o \
   mo_sb_init.o
 
 mo_jsb_io.o: \

@@ -27,14 +27,15 @@ PROGRAM land_model_driver
   USE mo_jsb4_forcing,            ONLY: forcing_options
   ! atmland
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
-                                        
   ! vegetation
   USE mo_shared_output,           ONLY: open_pool_output_files, &
                                         open_flux_output_files, &
                                         open_output_files_soil_forcing, &
                                         close_output_files, &
                                         close_output_files_soil_forcing
-
+  USE mo_veg_memory_class,        ONLY: Deallocate_var_veg_pools_elements_a
+  ! sb
+  USE mo_sb_memory_class,         ONLY: Deallocate_var_sb_pools_elements_a
 
 
   IMPLICIT NONE
@@ -454,5 +455,11 @@ PROGRAM land_model_driver
     CALL close_output_files_soil_forcing
   END IF
 
+
+  !! 6.0 -----------------------------------------------------------------------------------------------
+  !! 
+  !! DEALLOCATE variables
+  CALL Deallocate_var_sb_pools_elements_a     ! mo_sb_memory_class
+  CALL Deallocate_var_veg_pools_elements_a    ! mo_veg_memory_class
 
 END PROGRAM land_model_driver

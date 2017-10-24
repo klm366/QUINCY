@@ -54,9 +54,12 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
+    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
+    USE mo_sb_memory_class,       ONLY: sb_pool, sb_formation, sb_loss, sb_transport, sb_mycorrhiza_export
+
 
     IMPLICIT NONE
     ! ---------------------------
@@ -200,22 +203,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15 
     dsl4jsb_Real3D_onChunk :: denitrification_n2_n15 
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15 
-    ! Declare pool structures in memory
-#define Def_veg_pool
-#define Def_veg_litterfall
-#define Def_sb_pool
-#define Def_sb_formation
-#define Def_sb_loss
-#define Def_sb_transport
-#define Def_sb_mycorrhiza_export
-#include "slm_pools_a_incl.f90"
-#undef Def_veg_pool
-#undef Def_veg_litterfall
-#undef Def_sb_pool
-#undef Def_sb_formation
-#undef Def_sb_loss
-#undef Def_sb_transport
-#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -328,8 +315,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15) 
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)            ! out
-    ! Get process memory pool structures
-#define Get_veg_pool
+    ! Get process memory pool structures or individual variables from pools
+    dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
 #define Get_sb_pool
 #define Get_sb_formation
@@ -337,7 +324,6 @@ CONTAINS
 #define Get_sb_transport
 #define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
-#undef Get_veg_pool
 #undef Get_veg_litterfall
 #undef Get_sb_pool
 #undef Get_sb_formation
@@ -346,11 +332,13 @@ CONTAINS
 #undef Get_sb_mycorrhiza_export
 
 
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
     mic_uptake_no3_sl = 0.0_wp
+
     !> 1.0 Set values of soil profile variables to allow switching between simple_0d and simple1d in the 
     !!     following routines 
     !! 
@@ -740,22 +728,21 @@ CONTAINS
     emission_n2o_n15(:) = emission_n2o_n15(:) / dtime * 1000000._wp
     emission_n2_n15(:) = emission_n2_n15(:) / dtime * 1000000._wp
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_veg_pool
-#define Dealloc_veg_litterfall
-#define Dealloc_sb_pool
-#define Dealloc_sb_formation
-#define Dealloc_sb_loss
-#define Dealloc_sb_transport
-#define Dealloc_sb_mycorrhiza_export
+! Pass back values to process memory
+dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
+#define Passback_veg_litterfall
+#define Passback_sb_pool
+#define Passback_sb_formation
+#define Passback_sb_loss
+#define Passback_sb_transport
+#define Passback_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_veg_pool
-#undef Dealloc_veg_litterfall
-#undef Dealloc_sb_pool
-#undef Dealloc_sb_formation
-#undef Dealloc_sb_loss
-#undef Dealloc_sb_transport
-#undef Dealloc_sb_mycorrhiza_export
+#undef Passback_veg_litterfall
+#undef Passback_sb_pool
+#undef Passback_sb_formation
+#undef Passback_sb_loss
+#undef Passback_sb_transport
+#undef Passback_sb_mycorrhiza_export
 
   END SUBROUTINE update_sb_simple_model 
 

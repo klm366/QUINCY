@@ -47,6 +47,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
+    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall, veg_establishment
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -83,14 +84,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: lai_cl
-    ! Declare pool structures in memory
-#define Def_veg_pool
-#define Def_veg_litterfall
-#define Def_veg_establishment
-#include "slm_pools_a_incl.f90"
-#undef Def_veg_pool
-#undef Def_veg_litterfall
-#undef Def_veg_establishment
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -180,14 +173,14 @@ CONTAINS
 
     END IF  ! dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_veg_pool
-#define Dealloc_veg_litterfall
-#define Dealloc_veg_establishment
+! Pass back values to process memory
+#define Passback_veg_pool
+#define Passback_veg_litterfall
+#define Passback_veg_establishment
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_veg_pool
-#undef Dealloc_veg_litterfall
-#undef Dealloc_veg_establishment
+#undef Passback_veg_pool
+#undef Passback_veg_litterfall
+#undef Passback_veg_establishment
 
   END SUBROUTINE update_veg_dynamics
 

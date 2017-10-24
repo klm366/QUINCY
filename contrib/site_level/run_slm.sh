@@ -237,8 +237,14 @@ fi
 ## sync all data with the filesystem ##
 sync
 
+## get start-time of simulation
+startTime=$(date -u +%F_%X_%Z)
+
 ## run the simulation ##
 ./"$slmBinary"
+
+## get finish-time of simulation
+finishTime=$(date -u +%F_%X_%Z)
 sync
 
 ## run the postprocessing R Script ##
@@ -277,6 +283,14 @@ if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "
  then
   mv ./*.pdf                  ./postprocessing
 fi
+
+## write time to file
+echo "#####"                              >  ./postprocessing/start_finish_sim_time.txt
+echo "$jobIndex"                          >> ./postprocessing/start_finish_sim_time.txt
+echo $(awk '{print $1}' <<< "$siteData")  >> ./postprocessing/start_finish_sim_time.txt
+echo "start:  ""$startTime"               >> ./postprocessing/start_finish_sim_time.txt
+echo "finish: ""$finishTime"              >> ./postprocessing/start_finish_sim_time.txt
+echo "  "                                 >> ./postprocessing/start_finish_sim_time.txt
 
 ## sync all written data with file system ##
 sync

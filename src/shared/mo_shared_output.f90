@@ -402,6 +402,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,        ONLY: veg_pool, veg_total_biomass
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -494,12 +495,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: qmax_org
     dsl4jsb_Real3D_onChunk      :: qmax_po4
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
-    ! Declare pool structures in memory
-#define Def_veg_pool
-#define Def_veg_total_biomass
-#include "slm_pools_a_incl.f90"
-#undef Def_veg_pool
-#undef Def_veg_total_biomass
 !! *slmtemp
     TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -980,12 +975,12 @@ CONTAINS
        ENDIF 
     END SELECT
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_veg_pool
-#define Dealloc_veg_total_biomass
+! Pass back values to process memory
+#define Passback_veg_pool
+#define Passback_veg_total_biomass
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_veg_pool
-#undef Dealloc_veg_total_biomass
+#undef Passback_veg_pool
+#undef Passback_veg_total_biomass
 
   END SUBROUTINE write_output_pool
 
@@ -1257,6 +1252,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -1476,14 +1472,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: occlusion_po4
     dsl4jsb_Real3D_onChunk      :: slow_sorption_po4
     dsl4jsb_Real3D_onChunk      :: biochem_mineralisation_po4
-    ! Declare pool structures in memory
-#define Def_veg_litterfall
-#define Def_veg_exudation
-#define Def_veg_reserve_use
-#include "slm_pools_a_incl.f90"
-#undef Def_veg_litterfall
-#undef Def_veg_exudation
-#undef Def_veg_reserve_use
 !! *slmtemp
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
@@ -2051,14 +2039,14 @@ CONTAINS
 
     END SELECT
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_veg_litterfall
-#define Dealloc_veg_exudation
-#define Dealloc_veg_reserve_use
+! Pass back values to process memory
+#define Passback_veg_litterfall
+#define Passback_veg_exudation
+#define Passback_veg_reserve_use
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_veg_litterfall
-#undef Dealloc_veg_exudation
-#undef Dealloc_veg_reserve_use
+#undef Passback_veg_litterfall
+#undef Passback_veg_exudation
+#undef Passback_veg_reserve_use
 
   END SUBROUTINE write_output_flux
 
@@ -2203,6 +2191,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,        ONLY: veg_pool, veg_litterfall
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
@@ -2243,12 +2232,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
-    ! Declare pool structures in memory
-#define Def_veg_pool
-#define Def_veg_litterfall
-#include "slm_pools_a_incl.f90"
-#undef Def_veg_pool
-#undef Def_veg_litterfall
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -2394,12 +2377,12 @@ CONTAINS
         dC13_seed_bed, DC14_seed_bed, dN15_seed_bed 
     END IF 
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_veg_pool
-#define Dealloc_veg_litterfall
+! Pass back values to process memory
+#define Passback_veg_pool
+#define Passback_veg_litterfall
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_veg_pool
-#undef Dealloc_veg_litterfall
+#undef Passback_veg_pool
+#undef Passback_veg_litterfall
 
   END SUBROUTINE write_soil_forcing 
 

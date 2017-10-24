@@ -49,6 +49,7 @@ CONTAINS
     ! USE PROC_memory
     dsl4jsb_Use_memory(SB_)
     dsl4slm_Use_memory_a_sb
+    USE mo_sb_memory_class,       ONLY: sb_pool
     dsl4jsb_Use_memory(SOIL_)
 
     IMPLICIT NONE
@@ -90,10 +91,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_assoc_fast
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk :: po4_occluded
-    ! Declare pool structures in memory
-#define Def_sb_pool
-#include "slm_pools_a_incl.f90"
-#undef Def_sb_pool
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -284,10 +281,10 @@ CONTAINS
  
     END SELECT
 
-! Pass back values to process memory & deallocate pool structures 
-#define Dealloc_sb_pool
+! Pass back values to process memory
+#define Passback_sb_pool
 #include "slm_pools_a_incl.f90"
-#undef Dealloc_sb_pool
+#undef Passback_sb_pool
 
   END SUBROUTINE sb_init
 
