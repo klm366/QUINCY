@@ -61,6 +61,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: t_jmax_omega
     REAL(wp) :: g0
     REAL(wp) :: g1
+    REAL(wp) :: gmin
     REAL(wp) :: lambda_soil_ps
     REAL(wp) :: weibull_k_soil_ps
     REAL(wp) :: lambda_soil_gs
@@ -93,7 +94,8 @@ MODULE mo_jsb_lctlib_class
                 gdd_t_air_threshold   , &
                 gdd_req_max           , &
                 k_gdd_dormance        , &
-                t_air_senescence
+                t_air_senescence      , &
+                min_leaf_age
 
 ! Allocation paramters
     REAL(wp) :: frac_sapwood_branch   , &
@@ -300,6 +302,8 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%g0
           CASE ('g1')
             READ(line(pos:length),*) lctlib(1:nlct)%g1
+          CASE ('gmin')
+            READ(line(pos:length),*) lctlib(1:nlct)%gmin
           CASE ('lambda_soil_ps')
             READ(line(pos:length),*) lctlib(1:nlct)%lambda_soil_ps
           CASE ('weibull_k_soil_ps')
@@ -354,6 +358,8 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%k_gdd_dormance
           CASE ('t_air_senescence')
             READ(line(pos:length),*) lctlib(1:nlct)%t_air_senescence
+          CASE ('min_leaf_age')
+            READ(line(pos:length),*) lctlib(1:nlct)%min_leaf_age
 
           CASE ('frac_sapwood_branch')
             READ(line(pos:length),*) lctlib(1:nlct)%frac_sapwood_branch

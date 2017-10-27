@@ -438,6 +438,7 @@ CONTAINS
                                  lctlib%ps_pathway             , &
                                  t_jmax_opt                    , &
                                  lctlib%t_jmax_omega           , &
+                                 lctlib%gmin                   , &
                                  lctlib%g0                     , &
                                  lctlib%g1                     , &
                                  ag0_cl                        , &  ! out
@@ -470,7 +471,8 @@ CONTAINS
                  fn_pepc_cl*(1._wp-fn_oth_cl),&
                  lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                  leaf_nitrogen_cl,lctlib%ps_pathway, &
-                 t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+                 t_jmax_opt,lctlib%t_jmax_omega, &
+                 lctlib%gmin, lctlib%g0, lctlib%g1, &
                  ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp,hlp,hlp)
 
       !> 3.0 check if increased chlorophyll has increased photosynthesis. If not, try decreasing it
@@ -498,7 +500,8 @@ CONTAINS
                fn_pepc_cl*(1._wp-fn_oth_cl),&
                lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                leaf_nitrogen_cl, lctlib%ps_pathway, &
-               t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+               t_jmax_opt,lctlib%t_jmax_omega, &
+               lctlib%gmin, lctlib%g0, lctlib%g1, &
                ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp, hlp,hlp)
 
           ! if photosyntheis has still not increased, do not change fn_chl_cl
@@ -853,22 +856,23 @@ CONTAINS
                                     co2_mixing_ratio(:)             , &
                                     ga(:)                           , &
                                     t_air_tacclim_mavg(:)           , &
-                                    loc_ppfd_sunlit_cl(:,icanopy)       , &
-                                    loc_ppfd_shaded_cl(:,icanopy)       , &
-                                    loc_fleaf_sunlit_cl(:,icanopy)      , &
+                                    loc_ppfd_sunlit_cl(:,icanopy)   , &
+                                    loc_ppfd_shaded_cl(:,icanopy)   , &
+                                    loc_fleaf_sunlit_cl(:,icanopy)  , &
                                     beta_air(:)                     , &
                                     beta_soil_ps(:)                 , &
                                     beta_sinklim_ps(:)              , &
                                     beta_soil_gs(:)                 , &
-                                    fn_chl_new_cl(:,icanopy)            , &
-                                    fn_et_new_cl(:,icanopy)             , &
-                                    fn_rub_new_cl(:,icanopy)            , &
-                                    fn_pepc_new_cl(:,icanopy)           , &
+                                    fn_chl_new_cl(:,icanopy)        , &
+                                    fn_et_new_cl(:,icanopy)         , &
+                                    fn_rub_new_cl(:,icanopy)        , &
+                                    fn_pepc_new_cl(:,icanopy)       , &
                                     lai_new_cl(:,icanopy)           , &   ! used for: IF statement whether this routine may run or not
                                     leaf_nitrogen_new_cl(:,icanopy) , &
                                     lctlib%ps_pathway               , &
                                     t_jmax_opt_mavg(:)              , &
                                     lctlib%t_jmax_omega             , &
+                                    lctlib%gmin                     , &
                                     lctlib%g0                       , &
                                     lctlib%g1                       , &
                                     ag_cl(:)                        , & ! out (values per canopy layer)
@@ -1080,22 +1084,23 @@ CONTAINS
                        co2_mixing_ratio_tcnl_mavg(ichunk)            , &
                        ga_tcnl_mavg(ichunk)                          , &
                        t_air_tacclim_mavg(ichunk)                    , &
-                       ppfd_sunlit_tcnl_mavg_cl(ichunk,icanopy)  , &
-                       ppfd_shaded_tcnl_mavg_cl(ichunk,icanopy)  , &
+                       ppfd_sunlit_tcnl_mavg_cl(ichunk,icanopy)      , &
+                       ppfd_shaded_tcnl_mavg_cl(ichunk,icanopy)      , &
                        fleaf_sunlit_tcnl_mavg_cl(ichunk,icanopy)     , &
                        beta_air_tcnl_mavg(ichunk)                    , &
                        beta_soil_ps_tcnl_mavg(ichunk)                , &
                        beta_sinklim_ps_tcnl_mavg(ichunk)             , &
                        beta_soil_gs_tcnl_mavg(ichunk)                , &
-                       fn_chl_new_cl(ichunk,icanopy)                     , &
-                       fn_et_new_cl(ichunk,icanopy)                      , &
-                       fn_rub_new_cl(ichunk,icanopy)                     , &
-                       fn_pepc_new_cl(ichunk,icanopy)                    , &
+                       fn_chl_new_cl(ichunk,icanopy)                 , &
+                       fn_et_new_cl(ichunk,icanopy)                  , &
+                       fn_rub_new_cl(ichunk,icanopy)                 , &
+                       fn_pepc_new_cl(ichunk,icanopy)                , &
                        lai_new_cl(ichunk,icanopy)                    , &   ! used for: IF statement whether this routine may run or not
                        leaf_nitrogen_new_cl(ichunk,icanopy)          , &
                        lctlib%ps_pathway                             , &
                        t_jmax_opt_mavg(ichunk)                       , &
                        lctlib%t_jmax_omega                           , &
+                       lctlib%gmin                                   , &
                        lctlib%g0                                     , &
                        lctlib%g1                                     , &
                        agl                                           , &

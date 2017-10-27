@@ -248,6 +248,7 @@ CONTAINS
                                  lctlib%ps_pathway                     , &
                                  t_jmax_opt_mavg(:)                    , &
                                  lctlib%t_jmax_omega                   , &
+                                 lctlib%gmin                           , &
                                  lctlib%g0                             , &
                                  lctlib%g1                             , &
                                  gross_assimilation_cl(:,icanopy)      , & ! out
@@ -344,6 +345,7 @@ CONTAINS
                                             ps_pathway          , &
                                             t_jmax_opt          , &
                                             t_jmax_omega        , &
+                                            gmin                , &
                                             g0                  , &
                                             g1                  , &
                                             ag_cl               , &   ! out
@@ -383,6 +385,7 @@ CONTAINS
   INTEGER, INTENT(IN) :: ps_pathway              !< photosynthetic pathway
   REAL(wp),INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
   REAL(wp),INTENT(IN) :: t_jmax_omega            !< shape-parameter of temperature sensitivity of electron transport
+  REAL(wp),INTENT(IN) :: gmin                    !< minimum stomatal conductance (m/s)
   REAL(wp),INTENT(IN) :: g0                      !< offset of the stomatal conductance ~ An relationship
   REAL(wp),INTENT(IN) :: g1                      !< slope of the stomatal conductance ~ An relationship
   REAL(wp),INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (µmol CO2 / m2 /s)
@@ -429,7 +432,7 @@ CONTAINS
     IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
       ag_cl    = 0.0_wp
       an_cl    = ag_cl - maint_resp_cl
-      gs_cl    = MAX(g0,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
+      gs_cl    = MAX(gmin,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
       ci_cl    = co2_mixing_ratio * ppm2Pa
       m_et   = 0.0_wp
       m_rub  = 0.0_wp
@@ -575,7 +578,7 @@ CONTAINS
         an_cl = ag_cl - maint_resp_cl
 
         !> calculate canopy conductance (m/s) following Ball & Berry
-        gs_cl = MAX(g0, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * &
+        gs_cl = MAX(gmin, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * &
               rtck / press_srf
         !> calculate canopy conductance (m/s) following Medlyn et al. 2011
         !! gs_cl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf

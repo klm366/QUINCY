@@ -174,7 +174,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, min_leaf_age
+    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
 
@@ -219,20 +219,20 @@ CONTAINS
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
             IF(beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .AND. & 
-               mean_leaf_age > min_leaf_age ) & 
+               mean_leaf_age > lctlib%min_leaf_age ) & 
                   growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
             ! leaves have been out a given number of days
             IF(t_air_week_mavg < t_air_month_mavg .AND. &
                t_air_tphen_mavg < lctlib%t_air_senescence .AND. & 
-               mean_leaf_age > min_leaf_age) & 
+               mean_leaf_age > lctlib%min_leaf_age) & 
                   growing_season = .FALSE.
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
             IF((t_air_tphen_mavg < lctlib%t_air_senescence .OR. & 
                 beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .OR. &
                 gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. &
-               mean_leaf_age > min_leaf_age) &
+               mean_leaf_age > lctlib%min_leaf_age) &
                   growing_season = .FALSE.
        END SELECT
     ENDIF   

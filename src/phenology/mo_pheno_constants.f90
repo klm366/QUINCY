@@ -11,16 +11,8 @@ MODULE mo_pheno_constants
 
   USE mo_kind,                 ONLY: wp
 
-
   IMPLICIT NONE
   PUBLIC
-
-
-  !< Phenology constants (parameter)
-  !! 
-  REAL(wp), SAVE ::               &
-      min_leaf_age                    !< minimum leaf age before senescence is permitted (days) 
-      
 
   !< some useful numbers for easy identification of photosynthetic pathways and growth forms
   !! need to be parameters (i.e. constant across model runtime)
@@ -46,7 +38,11 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_pheno_constants'
 
-    min_leaf_age                = 10.0_wp 
+    
+    ! 
+    ! currently doing nothing, but called in model_init anyway
+    ! PFT specific parameters you may find in the lctlib file
+    ! 
 
 
   END SUBROUTINE init_pheno_constants

@@ -117,6 +117,9 @@ g0 0.01 0.01 0.01 0.01 0.01 0.01 0.03 0.03
 # g1 in Ball & Berry relationship, tuned to get similar Amax/N values as with Lin et al. g1         
 g1 9.3 8.3 7.0 10.9 5.5 7.0 9.3 2.0
         
+#gmin: minimum stomatal conductance (m/s)        
+gmin 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006
+        
 #lambda_soil_ps: Weibull parameter describing the response of leaf-level photosynthesis to fractional water availability        
 lambda_soil_ps 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
         
@@ -161,7 +164,7 @@ tau_seed_litter 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
 tau_seed_est 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0
         
 #tau_mycorrhiza: turnover time of mycorrhizal fungi (years)        
-tau_mycorrhiza 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7
+tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
         
 #         
 # N uptake parameters        
@@ -208,10 +211,13 @@ gdd_t_air_threshold 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
 gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 10.0 10.0
         
 #k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1)        
-k_gdd_dormance 0.0 0.0 0.0 0.0098 0.0 0.0098 0.1 0.1
+k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.1 0.1
         
 #t_air_senescence: weekly air temperature threshold inducing senescence of leaves         
-t_air_senescence 0.0 0.0 0.0 5.0 0.0 5.0 0.0 0.0
+t_air_senescence 0.0 0.0 0.0 8.5 0.0 5.0 0.0 0.0
+        
+#min_leaf_age: minimum leaf age before senescence is permitted (days)        
+min_leaf_age 10 10 10 50 10 10 10 10
         
 #        
 # Allocation paramters        
