@@ -211,20 +211,20 @@ CONTAINS
       & min_ice_depth)                                    !< in;    Minimum ice thickness
 
     ! Calculate new ice temperature and heat fluxes from melting of snow and ice
-    CALL calc_lake_ice_temp( &
-      & t_lice(:), &
-      & hcap_ice, &
-      & hflx_cond_ice, &
-      & hflx_melt_snow, &
-      & hflx_melt_lice, &
+    CALL calc_lake_ice_temp(                            &
+      & t_lice(:),                                      & ! inout
+      & hcap_ice,                                       & ! out
+      & hflx_cond_ice,                                  & ! out
+      & hflx_melt_snow,                                 & ! out
+      & hflx_melt_lice,                                 & ! inout
       & rad_net_lice(:) +                               &
       &   latent_hflx_ice(:)+sensible_hflx_ice(:),      & !< in;    Sum of all radiative and turbulent surface heat fluxes
       & latent_hflx_ice(:),                             & !< in;
       & snow(:),                                        & !< in; Snow fall
-      & depth_lice, &
-      & w_snow_lice, &
-      & fract_snow_lice, &
-      & min_ice_depth, &
+      & depth_lice,                                     &
+      & w_snow_lice,                                    &
+      & fract_snow_lice,                                &
+      & min_ice_depth,                                  &
       & dtime)
 
     qsat_lwtr(:)  = qsat(t_lwtr(:), press_srf(:))

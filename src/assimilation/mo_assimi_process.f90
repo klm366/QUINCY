@@ -19,7 +19,7 @@ MODULE mo_assimi_process
   PRIVATE
 
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
-    &       calc_assimilation_waterlimited, calc_NPP_rate
+    &       calc_assimilation_waterlimited, calc_NPP_pot_rate
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
 
@@ -429,8 +429,8 @@ CONTAINS
     REAL(wp),  INTENT(out)    ::                         &
       & CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers):
                                    ! Output only for the water limited case here
-      & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S]
-      & dark_respiration_cl,     & !
+      & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S] and canopy layer
+      & dark_respiration_cl,     & ! Dark respiration per canopy layer
       & carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
                                    ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
                                    ! and actual temperature.
@@ -728,25 +728,25 @@ CONTAINS
   END SUBROUTINE calc_assimilation_waterlimited
 
 
-  ELEMENTAL SUBROUTINE calc_NPP_rate( &
-    & gross_assimilation, &
-    & dark_respiration,   &
-    & NPP_rate )
+  ELEMENTAL SUBROUTINE calc_NPP_pot_rate( &
+    & gross_assimilation_ca, &
+    & dark_respiration_ca,   &
+    & NPP_pot_rate_ca )
 
     ! Use Declarations
     USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
     REAL(wp),  INTENT(in) :: &
-      & gross_assimilation, & ! Gross primary product (where photorespiration has already  ..
-                              ! .. been accounted for) [mol(CO2)/(m^2 s)]
-      & dark_respiration      ! Dark respiration of leaves [mol(CO2)/(m^2 s)]
+      & gross_assimilation_ca, & ! Gross primary product (where photorespiration has already  ..
+                              ! .. been accounted for) [mol(CO2)/(m^2 (canopy) s)]
+      & dark_respiration_ca      ! Dark respiration of leaves [mol(CO2)/(m^2 (canopy) s)]
 
     REAL(wp),  INTENT(out) :: &
-      & NPP_rate            ! Net primary production rate [mol(CO2)/(m^2 s)]
+      & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy) s)]
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_rate'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_pot_rate'
 
     REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m
@@ -759,11 +759,11 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    maintenanceRespiration = dark_respiration / f_aut_leaf
-    growthRespiration = max(0._wp,hlp * (gross_assimilation - maintenanceRespiration))
-    NPP_rate = gross_assimilation - maintenanceRespiration - growthRespiration
+    maintenanceRespiration = dark_respiration_ca / f_aut_leaf
+    growthRespiration = max(0._wp,hlp * (gross_assimilation_ca - maintenanceRespiration))
+    NPP_pot_rate_ca = gross_assimilation_ca - maintenanceRespiration - growthRespiration
 
-  END SUBROUTINE calc_NPP_rate
+  END SUBROUTINE calc_NPP_pot_rate
 
 #endif
 END MODULE mo_assimi_process

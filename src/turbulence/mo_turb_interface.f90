@@ -260,7 +260,7 @@ CONTAINS
   SUBROUTINE update_humidity_scaling(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_sse_process,            ONLY: relative_humidity
+    USE mo_sse_process,            ONLY: relative_humidity_soil
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -296,14 +296,14 @@ CONTAINS
       & w_soil_fc_sl,         &
       & w_soil_pwp_sl
 
-    ! Locally variables
+    ! Local variables
     REAL(wp) ::                    &
       fact_qsat_veg(options%nc),   &
       fact_qsat_trans(options%nc), &
       fact_qsat_soil(options%nc),  &
       fact_qair_veg(options%nc),   &
       fact_qair_soil(options%nc),  &
-      rel_hum(options%nc),         &
+      rel_hum(options%nc),         & ! relative humidity of uppermost soil layer as compared to its field capacity
       zfract_fpc(options%nc)
     LOGICAL :: &
       mask(options%nc)
@@ -313,7 +313,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
-    
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
@@ -344,25 +344,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   pch)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)               ! in
-
-    dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_star)           ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)          ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
-
     IF (tile%contains_soil) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  max_moist)           ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  max_moist)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_soil_column)       ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
     END IF
-  
+
     ! ---------------------------
     ! Go
-    
+
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           ! in
       IF (tile%Is_process_active(ASSIMI_)) THEN
@@ -399,7 +397,7 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
-      rel_hum(:) = relative_humidity(w_soil_sl(:,1), w_soil_fc_sl(:,1))
+      rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_soil_fc_sl(:,1))
 
       WHERE (qsat_star(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
         fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * &

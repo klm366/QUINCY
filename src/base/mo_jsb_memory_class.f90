@@ -12,8 +12,9 @@ MODULE mo_jsb_memory_class
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
-  USE mo_jsb_config_class, ONLY: t_jsb_config
-  USE mo_jsb_var_class, ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
+  USE mo_util,              ONLY: real2string, int2string
 
   IMPLICIT NONE
   PRIVATE
@@ -45,6 +46,12 @@ MODULE mo_jsb_memory_class
     PROCEDURE                                    :: Get_var_real2d
     PROCEDURE                                    :: Get_var_real3d
     PROCEDURE                                    :: Get_var_position
+    PROCEDURE                                    :: Collect_var_real2d  ! Collect var from its child tiles
+                                                                        ! R: Note, we do not want to keep a "var collection" in the memory
+                                                                        !    because we already have all child values in the memory.
+    PROCEDURE                                    :: Collect_var_real3d  ! Collect var from its child tiles                                                                        
+    PROCEDURE                                    :: HandDown_var_real3d ! Hand back var to child tiles
+    PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
   END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p
@@ -146,7 +153,7 @@ CONTAINS
         EXIT
       END IF
     END DO
-      
+
     ! Note: Not finding the variable in this memory, i.e. returning 0, should only happen because
     !       the variable belongs to an LCT that's not handled by this tile.
 
@@ -154,6 +161,94 @@ CONTAINS
     !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
 
   END FUNCTION Get_var_position
+ 
+
+  FUNCTION Collect_var_real2d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
+
+    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile:
+                                                          ! tile%mem(iproc)%p; iproc = DISTURB_
+    INTEGER,                INTENT(in)     :: ics, ice, iblk
+    INTEGER,                INTENT(in)     :: no_children ! of the parent tile
+    TYPE(t_jsb_var_real2d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
+    REAL(wp), allocatable                  :: var_collected(:,:)
+
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Collect_var_real2d'
+
+    DO i=1,no_children
+       var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk, 1, 1, 1)
+    END DO
+
+  END FUNCTION Collect_var_real2d
+
+
+  FUNCTION Collect_var_real3d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
+
+    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile:
+                                                          ! tile%mem(iproc)%p; iproc = DISTURB_
+    INTEGER,                INTENT(in)     :: ics, ice, iblk
+    INTEGER,                INTENT(in)     :: no_children ! of the parent tile
+    TYPE(t_jsb_var_real3d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
+    REAL(wp), allocatable                  :: var_collected(:,:,:)
+
+    INTEGER :: i !, iproc
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Collect_var_real3d'
+
+    DO i=1,no_children
+       ! R: Unterschied zu %ptr(ics:ice,iblk) ???
+       var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,:, iblk, 1, 1)
+    END DO
+
+  END FUNCTION Collect_var_real3d
+
+
+  REAL(wp) FUNCTION HandDown_var_real3d(this, ics, ice, iblk, no_children,  var, var_handdown)
+
+    CLASS(t_jsb_memory), INTENT(in)     :: this        ! mem_process of the parent tile: tile%mem(iproc)%p
+    INTEGER,             INTENT(in)     :: ics, ice, iblk
+    INTEGER,             INTENT(in)     :: no_children ! of the parent tile
+    CLASS(t_jsb_var),    INTENT(in)     :: var         ! of the parent tile only to find child memories
+    REAL(wp),            INTENT(in)     :: var_handdown(:,:) ! e.g. corresponds to (ics:ice,no_children)
+
+    INTEGER :: i !, iproc
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':HandDown_var_real3d'
+
+    DO i=1,no_children
+      this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice, iblk, 1, 1, 1) = var_handdown(:,i)
+    END DO
+
+  END FUNCTION HandDown_var_real3d
+
+
+  FUNCTION Average_over_children_real2d(this, ics, ice, iblk, no_children,  var, fract_st) RESULT(var_averaged)
+
+    CLASS(t_jsb_memory), INTENT(in)     :: this          ! mem_process of the parent tile: tile%mem(iproc)%p
+    INTEGER,             INTENT(in)     :: ics, ice, iblk
+    INTEGER,             INTENT(in)     :: no_children   ! of the parent tile
+    CLASS(t_jsb_var),    INTENT(in)     :: var           ! of the parent tile: tile%mem(iproc)%p%var
+                                                         ! R: kann man auf TYPE(t_jsb_var_real2d) setzen
+    REAL(wp),            INTENT(in)     :: fract_st(:,:) ! fract_st(:,:) =tile%aggregators(1)%p%fractions(ics:ice,iblk,:)
+    REAL(wp), allocatable               :: var_averaged(:)
+
+    ! local variables
+    INTEGER :: i 
+    REAL(wp), allocatable               :: var_collected(:,:)
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Average_over_children'
+
+    ! Collect corresponding vars of subtiles
+    DO i=1,no_children
+      IF ( .NOT. ASSOCIATED(this%children(i)%p%vars(var%child_idx(i))%p) ) THEN
+        CALL finish(TRIM(routine), 'This var does not exist on the child tile '//TRIM(int2string(i))//' .')
+      END IF
+      var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice, iblk, 1, 1, 1)
+    END DO
+    ! Note, this works because the fract_st sum over DIM=2 is always = 1 !
+    var_averaged(:) = SUM( var_collected(:,:) * fract_st(:,:) , DIM=2)
+
+  END FUNCTION Average_over_children_real2d
 
 #endif
 END MODULE mo_jsb_memory_class

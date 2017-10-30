@@ -314,7 +314,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
-        
+
       CALL jsb_add_var( mem,'N_pseudo_soil_temp', mem%N_pseudo_soil_temp,        &
         & hgrid, surface,                                                        &
         & t_cf('N_pseudo_soil_temp', '', ''),                                    &
@@ -334,14 +334,14 @@ CONTAINS
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_lwtr%ptr)) THEN
 
-      CALL jsb_add_var( mem, 't_lwtr', mem%t_lwtr,                                       &
+      CALL jsb_add_var( mem, 't_lwtr', mem%t_lwtr,                                     &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 't_lice', mem%t_lice,                                       &
+      CALL jsb_add_var( mem, 't_lice', mem%t_lice,                                     &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &

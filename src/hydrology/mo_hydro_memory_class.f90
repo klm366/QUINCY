@@ -380,7 +380,7 @@ CONTAINS
         & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
-        & lrestart=.FALSE., &
+        & lrestart=.FALSE.,                                                    &
         & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -390,6 +390,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL jsb_add_var( mem, 'fract_water', mem%fract_water,                     &
+        & hgrid, surface,                                                        &
+        & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
@@ -546,14 +554,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-      CALL jsb_add_var( mem, 'fract_water', mem%fract_water, &
-        & hgrid, surface,                                                            &
-        & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_skin', mem%w_skin,      &
         & hgrid, surface,                                                       &

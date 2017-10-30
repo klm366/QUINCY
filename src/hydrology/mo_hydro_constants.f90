@@ -37,7 +37,7 @@ MODULE mo_hydro_constants
 !    & minStomaConductance = 0.0_wp,        & ! Minimum stomatal conductance [mol H2O /(m^2 s) ??]
 
     ! Parameters describing orographic steepness in infiltration computation
-    & oro_var_min = 100._wp, &
+    & oro_var_min = 100._wp,  &
     & oro_var_max = 1000._wp, &
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual

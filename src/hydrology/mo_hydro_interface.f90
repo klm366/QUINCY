@@ -1390,7 +1390,7 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) ::                  &
-      & q_air        (options%nc), &  !< Humidity at lowest atmospheric level
+      & q_air        (options%nc), &  !< Humidity at lowest atmospheric level [kg kg-1]
       & q_air_eff    (options%nc), &  !< Effective humidity at lowest atmospheric level
       & qsat_srf_eff (options%nc), &  !< Effective surface saturation specific humidity
       & heat_tcoef   (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)

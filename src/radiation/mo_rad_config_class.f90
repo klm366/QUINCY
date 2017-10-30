@@ -119,6 +119,7 @@ CONTAINS
     use_alb_canopy            = .TRUE.
     albedo_age_weight         = 0.5_wp
 
+    ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
     nml_unit = position_nml('jsb_rad_nml', nml_handler, STATUS=istat)
@@ -126,6 +127,7 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
+    ! Write resulting values in config memory
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename

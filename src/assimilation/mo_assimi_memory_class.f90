@@ -30,11 +30,13 @@ MODULE mo_assimi_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
      ! t_canopy_sum variables
     TYPE(t_jsb_var_real2d) ::                             &
-      gross_assimilation,         & ! GROSS PHOTOSYNTHESIS at each time step
-                                    ! [MOL(CO2) / M^2(ground) S]  (mean value)
-      dark_respiration,           & ! DARK RESPIRATION OF LEAF at each time step
-                                    ! [MOL(CO2) / M^2(ground) S]  (mean value)
-      NPP_rate,                   & ! Net primary production rate [mol(CO2)/(m^2 s)]
+      gross_assimilation_ca,      & ! GROSS PHOTOSYNTHESIS at each time step
+                                    ! [MOL(CO2) / M^2(canopy) S]  (mean value)
+      gross_assimilation,         & ! ...on tile area
+      dark_respiration_ca,        & ! DARK RESPIRATION OF LEAF at each time step
+                                    ! [MOL(CO2) / M^2(canopy) S]  (mean value)
+      dark_respiration,           & ! ... on tile area
+      NPP_pot_rate_ca,            & ! Net primary production rate [mol(CO2)/(m^2 (canopy) s)]
       canopy_cond_over_time
 
 !                                         CO2_conc_leaf,                  & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
@@ -60,7 +62,8 @@ MODULE mo_assimi_memory_class
 !                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
 !                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes
 !                                         CO2_emission_harvest_acc,       & ! CO2 flux to the atmosphere from harvest
-!                                         CO2_flux_dynveg_acc               ! CO2 flux to the atmosphere from vegetation dynamics (disturbance?)
+!                                         CO2_flux_dynveg_acc               ! CO2 flux to the atmosphere from vegetation dynamics 
+!                                                                           ! (disturbance?)
 !
 
 
@@ -78,6 +81,11 @@ MODULE mo_assimi_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & canopy_cond                 ! Canopy conductance without water limit  [m/s] (mean value)
+
+    ! R: This variable is needed for process DISTURB and should be later in the process vegdyn 
+    !    However it has to exist on each pft, therefore I put it to this process for now!
+    TYPE(t_jsb_var_real2d) ::     &
+      cover_frac_pot ! Potential Natural Land Cover Fraction
 
   CONTAINS
     PROCEDURE :: Init => Init_assimi_memory
@@ -116,11 +124,25 @@ CONTAINS
     surface => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%gross_assimilation%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%gross_assimilation_ca%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca, &
+        & hgrid, surface,                                                                                             &
+        & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy)s (mean value)', 'Gross photosynthesis on canopy ground area'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'gross_assimilation', mem%gross_assimilation, &
+        & hgrid, surface,                                                                                             &
+        & t_cf('gross_assimilation', 'mol(CO2)/m^2 s (mean value)', 'Gross photosynthesis on tile area'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+
+      CALL jsb_add_var( mem, 'dark_respiration_ca', mem%dark_respiration_ca,     &
         & hgrid, surface,                                                                              &
-        & t_cf('gross_assimilation', 'mol(CO2)/m^2(ground)s (mean value)', 'Gross photosynthesis'),    &
+        & t_cf('dark_respiration_ca', 'mol(CO2)/m^2(canopy)s (mean value)', 'Dark_respiration on canopy ground area'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
         & output_level=BASIC, &
@@ -128,15 +150,15 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'dark_respiration', mem%dark_respiration,     &
         & hgrid, surface,                                                                              &
-        & t_cf('dark_respiration', 'mol(CO2)/m^2(ground)s (mean value)', 'dark_respiration'),        &
+        & t_cf('dark_respiration', 'mol(CO2)/m^2 s (mean value)', 'Dark_respiration on tile area'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
         & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'npp_rate', mem%NPP_rate,                     &
+      CALL jsb_add_var( mem, 'NPP_pot_rate_ca', mem%NPP_pot_rate_ca,                     &
         & hgrid, surface,                                                                              &
-        & t_cf('NPP_rate', 'mol(CO2)/(m^2 s)', 'NPP_rate'),                                         &
+        & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy) s)', 'NPP_pot_rate_ca'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=BASIC, &
@@ -169,14 +191,14 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'gross_assimilation_cl', mem%gross_assimilation_cl, &
         & hgrid, canopy_layer,                                                                           &
-        & t_cf('gross_assimilation_cl', 'mol(CO2)/m^2(leafarea)s', 'Gross photosynthesis per canopy layer'), &
+        & t_cf('gross_assimilation_cl', 'mol(CO2)/m^2(leafarea)s', 'Gross photosynthesis per canopy layer on leaf area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'dark_respiration_cl', mem%dark_respiration_cl, &
         & hgrid, canopy_layer,                                                                       &
-        & t_cf('dark_respiration_cl', 'mol(CO2)/m^2(leafarea)s', 'Dark respiration of leaf per canopy layer'), &
+        & t_cf('dark_respiration_cl', 'mol(CO2)/m^2(leafarea)s', 'Dark respiration of leaf per canopy layer on leaf area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
         & prefix, suffix,                                                                            &
         & lrestart=.FALSE., initval_r=0.0_wp )
@@ -223,6 +245,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'cover_frac_pot', mem%cover_frac_pot,             &
+        & hgrid, surface,                                                 &
+        & t_cf('cover_frac_pot', 'fract', ''),                                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                      &
+        & initval_r=0.1_wp ) ! initval choosen freely
+
 
     END IF
 

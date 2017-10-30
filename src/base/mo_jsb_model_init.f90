@@ -176,6 +176,8 @@ CONTAINS
     USE mo_rad_init,            ONLY: rad_init
     ! USE mo_assimi_init,         ONLY: assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
+    USE mo_carbon_init,         ONLY: carbon_init
+    !USE mo_disturb_init,       ONLY: disturb_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -184,16 +186,20 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
-    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_
+    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_
     dsl4jsb_Use_config(PHENO_)
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(CARBON_)
+    dsl4jsb_Use_config(DISTURB_)
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_config(DISTURB_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -236,6 +242,8 @@ CONTAINS
       dsl4jsb_Get_config(SSE_)
       dsl4jsb_Get_config(HYDRO_)
       dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Get_config(CARBON_)
+      dsl4jsb_Get_config(DISTURB_)
       dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
@@ -280,21 +288,30 @@ CONTAINS
 #endif
     CALL model%Queue_task(SEB_,    "snowmelt_correction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
-                                                                    ! and assimilation_waterunlimited
+      ! Normally called before
+      ! assimilation -> update_assimilation: -> calc_assimilation_waterlimited
+      ! and before
+      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed: 
+      !                                    -> calc_assimilation_waterunlimited
+      CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
     END IF
     IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
+      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed") ! -> calc_assimilation_waterunlimited
     ELSE
       CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
     END IF
-    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
+    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed") ! Should be called with and without ASSIMI,
+                                                           ! and before assimilation
     ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
+      CALL model%Queue_task(ASSIMI_, "assimilation") ! -> calc_assimilation_waterlimited
                                                      ! should be called after the soil hydrology is calculated
-                                                     ! (former update_soil_1) and after the vegetation conductance is calculated
-                                                     ! (former update_vegetation_conductanc)
+    END IF
+    IF (model%processes(CARBON_)%p%config%active) THEN
+       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+    END IF
+    IF (model%processes(DISTURB_)%p%config%active) THEN
+       CALL model%Queue_task(DISTURB_, "natural_disturbances")
     END IF
     CALL model%Queue_task(TURB_,   "humidity_scaling")
     CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
@@ -363,6 +380,15 @@ CONTAINS
       !   CALL assimi_init_bc(tile)
       !   CALL assimi_init_ic(tile)
       ! END IF
+
+      IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL carbon_init(tile)
+      END IF
+
+      ! R: in the moment we do not need any initialization for disturbance:
+      !IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      !  CALL disturb_init(tile)
+      !END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN

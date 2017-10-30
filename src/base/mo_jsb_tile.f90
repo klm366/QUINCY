@@ -22,8 +22,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
     &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
-  ! USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_msg
-  USE mo_jsb_task_class,      ONLY: t_jsb_process_task
+  USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
   USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
 
   IMPLICIT NONE
@@ -172,11 +171,11 @@ CONTAINS
       j = 0
       IF (PRESENT(processes)) THEN
         IF (SIZE(processes) > 0) THEN
-          j = one_of(i, processes) ! i counts through the number of all processes, j is the number of the i-process
-                                   ! within the processes vector (input)
+          j = one_of(i, processes) ! i counts through the number of all processes; j is the number of the i-process within
+                                   ! the explicitly defined input processes for this tile (e.g. defined in init_usecase)
         END IF
       END IF
-      IF (j > 0) THEN
+      IF (j > 0) THEN ! the i-process was explicitly defined for this tile
         iproc = processes(j)
 
         IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
@@ -187,7 +186,7 @@ CONTAINS
 
         IF (PRESENT(process_actions)) THEN
           return_ptr%process_action(iproc) = process_actions(j)
-        ELSE
+        ELSE          ! use defaults if process_actions are not given
           IF (iproc == A2L_) THEN
             return_ptr%process_action(iproc) = ON_TILE_
           ELSE IF (iproc == L2A_) THEN
@@ -205,7 +204,7 @@ CONTAINS
 !!$        CLASS IS (t_jsb_tile_abstract)
 !!$          return_ptr%process_action(iproc) = sibling%process_action(iproc)
 !!$        END SELECT
-      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN
+      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN  ! the i-process was NOT explicitly defined for this tile
         !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
@@ -248,6 +247,7 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
+    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -273,6 +273,7 @@ CONTAINS
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=VARNAME_LEN) :: name
     INTEGER                    :: ilct, i, no_of_children, child_no
+    LOGICAL                    :: l_disturb_active
 
     INTEGER :: isteptype
 
@@ -297,7 +298,20 @@ CONTAINS
 
       process_name = Get_process_name(iproc)
 
-      IF (this%process_action(iproc) == INHERIT_) THEN
+      ! R: TBD: workaround until we have something like process_actions=FOR_CHILDS: 
+      !    For disturbance we want to calculate on a parent tile, but the results
+      !    differ for each child tile. Therefore we have to create a own memory 
+      !    on the pfts tiles even when the process_action is now INHERIT on the pfts!
+      l_disturb_active = .FALSE.
+      IF (ASSOCIATED(this%parent_tile)) THEN
+        IF (this%parent_tile%Is_process_active(DISTURB_)) THEN
+          l_disturb_active = .TRUE.
+        END IF
+      END IF
+      IF ( (this%process_action(iproc) == INHERIT_ ) .AND.                          &
+        &  (.NOT. (l_disturb_active .AND. &
+        &          process_name == 'disturb' .AND. this%name(1:3) == 'pft') ) &
+        &  ) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
         IF (debug_on()) &
@@ -331,6 +345,7 @@ CONTAINS
         END IF
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
+
       END IF
 
       IF (this%must_create_memory_parents(iproc)) THEN
@@ -518,6 +533,7 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
@@ -533,16 +549,18 @@ CONTAINS
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
 
+      process_name = Get_process_name(iproc)
+      ! if the current process is not on leafs of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
-        CYCLE
+        ! R: TBD: workaround until we have something like FOR_CHILDS see comments above
+        IF (.NOT. (this%Is_process_active(DISTURB_) .AND. process_name == 'disturb'  .AND.  this%name(1:3) == 'veg') ) THEN
+            CYCLE
+        END IF
       END SELECT
-
-      process_name = Get_process_name(iproc)
 
       no_of_children = this%Get_no_of_children()
       mem => this%mem(iproc)%p
-
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
         IF (no_of_children > 0) THEN
@@ -656,7 +674,7 @@ CONTAINS
             msg => NULL()
           END IF
         END IF
-      ELSE
+      ELSE ! this%process_action(task%process_id) < AGGREGATE_ ; e.g. SKIP_ or INHERIT_
         IF (ASSOCIATED(this%next_sibling_tile)) THEN
           IF (this%next_sibling_tile%Has_children()) THEN
             CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)

@@ -948,13 +948,13 @@ CONTAINS
       IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
       DO WHILE (ASSOCIATED(state))
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
-        this%source(no_omp_thread)%p => state
+        this%source(no_omp_thread)%p => state  ! Set source always to the previous state. This is to find back again later.
         tmp_msg => state%Process_message(this, new_msg)
         IF (ASSOCIATED(new_msg)) THEN
         !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
           DEALLOCATE(new_msg)
         END IF
-        new_msg => tmp_msg
+        new_msg => tmp_msg ! Set new message to the "result" of last message
         CALL this%Process_exit_to_LCA()
         IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN      ! State transition taken (i.e. already exited to LCA)
           ! Execute entry and start messages to target

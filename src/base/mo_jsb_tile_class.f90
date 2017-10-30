@@ -172,7 +172,7 @@ MODULE mo_jsb_tile_class
   END INTERFACE
 
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:)
+    REAL(wp), ALLOCATABLE :: fractions(:,:,:) ! R: (grid%nproma, grid%nblks, no_children)), e.g. (ics:ice,iblk,child_no_i)
                                                     !  variable under consideration
   CONTAINS
     PROCEDURE :: Set_fractions => Set_fractions_aggregator

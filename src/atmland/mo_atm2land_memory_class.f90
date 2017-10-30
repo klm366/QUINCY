@@ -105,14 +105,14 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=283.15_wp )  ! R: I just invented a value to start with...
 
-    CALL jsb_add_var( mem, 'q_air', mem%q_air,                      &
-      & hgrid, surface,                                                      &
-      & t_cf('air_specific_humidity', '', ''),                               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
+    CALL jsb_add_var( mem, 'q_air', mem%q_air,                                            &
+      & hgrid, surface,                                                                   &
+      & t_cf('air_specific_humidity', 'kg kg-1', 'Specific humidity of air at surface.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & lrestart=.FALSE.,                                                                 &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
 
@@ -193,15 +193,16 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'press_srf', mem%press_srf,              &
+    CALL jsb_add_var( mem, 'press_srf', mem%press_srf,                       &
       & hgrid, surface,                                                      &
-      & t_cf('surface_pressure', '', ''),                                    &
+      & t_cf('surface_pressure', 'N/m2', ''),                                & ! N/m2 =Pa
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp )
+      & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure 
+                                 !    at sea level as value to start with...
 
-    CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf,                &
+    CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf,                         &
       & hgrid, surface,                                                      &
       & t_cf('surface_drag', '', ''),                                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -209,7 +210,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 't_acoef', mem%t_acoef,                  &
+    CALL jsb_add_var( mem, 't_acoef', mem%t_acoef,                           &
       & hgrid, surface,                                                      &
       & t_cf('temperature_acoef', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -217,7 +218,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef,                  &
+    CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef,                           &
       & hgrid, surface,                                                      &
       & t_cf('temperature_acoef', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -225,7 +226,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef,                  &
+    CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef,                           &
       & hgrid, surface,                                                      &
       & t_cf('specific_humidity_acoef', '', ''),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -233,7 +234,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef,                  &
+    CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef,                           &
       & hgrid, surface,                                                      &
       & t_cf('specific_humidity_bcoef', '', ''),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -241,7 +242,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'pch', mem%pch,                          &
+    CALL jsb_add_var( mem, 'pch', mem%pch,                                   &
       & hgrid, surface,                                                      &
       & t_cf('pch', '', ''),                                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -249,7 +250,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,&
+    CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,         &
       & hgrid, surface,                                                      &
       & t_cf('cosine_zenith_angle', '', ''),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -258,12 +259,14 @@ CONTAINS
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'CO2_air', mem%CO2_air, &
-      & hgrid, surface,                                                                                &
-      & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-      & prefix, suffix,                                                                                &
+      & hgrid, surface,                                                                            &
+      & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
+      & prefix, suffix,                                                                            &
       & output_level=BASIC, &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=6.077E-4_wp ) ! R: I just freely choosed this value. Corresponds to 400 ppm:
+                                                  !    CO2:44.011 g/mol; dry air: 28,97 g/mol
+                                                  !    400 ppm => 6.077*10^-4
 
     CALL jsb_add_var( mem, 'CO2_air_mol', mem%CO2_air_mol, &
       & hgrid, surface,                                                                                &
@@ -271,7 +274,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & output_level=BASIC, &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 

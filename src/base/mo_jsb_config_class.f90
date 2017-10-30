@@ -105,11 +105,13 @@ CONTAINS
     nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
 
+    ! Write resulting values in config memory
     model_config%grid_filename = grid_filename
     model_config%grid_name     = grid_name
 
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
+    CALL close_nml(nml_handler)
 
     model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
@@ -126,7 +128,6 @@ CONTAINS
     END IF
     ALLOCATE(model_config%output_tiles(i))
     model_config%output_tiles(1:i) = output_tiles(1:i)
-    print*,'BBB ', model_config%output_tiles(1:i)
 
     CALL close_nml(nml_handler)
 
