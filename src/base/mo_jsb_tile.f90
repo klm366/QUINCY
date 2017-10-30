@@ -34,6 +34,7 @@ MODULE mo_jsb_tile
   TYPE, EXTENDS(t_jsb_tile_abstract) :: t_jsb_tile
     LOGICAL :: must_create_memory_parents(max_no_of_processes)    !< helper variable
     TYPE(t_jsb_model),         POINTER :: model => NULL()
+    LOGICAL :: in_var_groups
   CONTAINS
     PROCEDURE :: Init      => Init_tile
     PROCEDURE :: Init_vars => Init_vars_on_tile
@@ -236,7 +237,7 @@ CONTAINS
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
-  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions)
+  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
@@ -253,6 +254,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)    :: prefix         ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
     LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
+    LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
@@ -297,6 +299,7 @@ CONTAINS
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
+        this%mem(iproc)%p%in_var_groups = in_var_groups
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
           &                             ' on tile '//TRIM(this%name)//' to parent')
@@ -320,6 +323,7 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%no_of_children = no_of_children
+        this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE

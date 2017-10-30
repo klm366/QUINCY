@@ -19,6 +19,7 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
@@ -140,6 +141,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
@@ -150,6 +152,7 @@ CONTAINS
         & t_cf('foliage_projected_cover', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,         &
@@ -157,6 +160,7 @@ CONTAINS
         & t_cf('maximum_fpc', '', ''),                                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_forest', mem%fract_forest,           &
@@ -164,6 +168,7 @@ CONTAINS
         & t_cf('forest_fraction', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN

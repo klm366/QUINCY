@@ -110,7 +110,7 @@ CONTAINS
 
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -142,6 +142,7 @@ CONTAINS
         & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=280.0_wp )
 
       CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &
@@ -164,6 +165,7 @@ CONTAINS
         & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'heat_cap_old', mem%heat_cap_old,                         &
@@ -172,6 +174,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                            &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'latent_hflx', mem%latent_hflx,                           &
@@ -180,6 +183,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                            &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'sensible_hflx', mem%sensible_hflx,                       &
@@ -188,6 +192,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                            &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'forc_hflx', mem%forc_hflx,                               &
@@ -196,6 +201,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                            &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
 
@@ -208,6 +214,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
+        & output_level=BASIC, &
         & initval_r=2.9E5_wp )
 
       CALL jsb_add_var( mem, 'qsat_star', mem%qsat_star,                                     &
@@ -216,6 +223,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
+        & output_level=BASIC, &
         & initval_r=0.0075_wp )
 
       CALL jsb_add_var( mem, 't_unfilt_old', mem%t_unfilt_old,                               &

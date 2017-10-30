@@ -39,6 +39,7 @@ MODULE mo_jsb_memory_class
     CHARACTER(LEN=50) :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
     CLASS(t_jsb_param), POINTER :: param => NULL()
+    LOGICAL :: in_var_groups = .FALSE.
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
     PROCEDURE                                    :: Get_var_real2d

@@ -329,7 +329,8 @@ CONTAINS
 
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
-      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE.)
+      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
+        & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN

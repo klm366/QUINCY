@@ -90,7 +90,7 @@ CONTAINS
 
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -123,6 +123,7 @@ CONTAINS
         & t_cf('gross_assimilation', 'mol(CO2)/m^2(ground)s (mean value)', 'Gross photosynthesis'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
+        & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'dark_respiration', mem%dark_respiration,     &
@@ -130,6 +131,7 @@ CONTAINS
         & t_cf('dark_respiration', 'mol(CO2)/m^2(ground)s (mean value)', 'dark_respiration'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
+        & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'npp_rate', mem%NPP_rate,                     &
@@ -137,6 +139,7 @@ CONTAINS
         & t_cf('NPP_rate', 'mol(CO2)/(m^2 s)', 'NPP_rate'),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
+        & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'canopy_cond_over_time', mem%canopy_cond_over_time,               &

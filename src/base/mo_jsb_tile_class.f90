@@ -110,13 +110,14 @@ MODULE mo_jsb_tile_class
   END type t_jsb_tile_abstract
 
   ABSTRACT INTERFACE
-    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, l_fixed_fractions)
+    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
       CHARACTER(len=*),           INTENT(in)    :: prefix
       CHARACTER(len=*),           INTENT(in)    :: suffix
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
+      LOGICAL,                    INTENT(in)    :: in_var_groups
     END SUBROUTINE Init_interface
   END INTERFACE
 

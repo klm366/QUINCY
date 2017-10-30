@@ -74,6 +74,7 @@ CONTAINS
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     CLASS(t_a2l_memory), INTENT(inout), TARGET :: mem
@@ -103,6 +104,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'q_air', mem%q_air,                      &
@@ -111,6 +113,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'rain', mem%rain,                        &
@@ -119,6 +122,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'snow', mem%snow,                        &
@@ -127,6 +131,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'wind_air', mem%wind_air,                &
@@ -151,6 +156,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,             &
@@ -159,6 +165,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,             &
@@ -167,6 +174,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down,    &
@@ -254,6 +262,7 @@ CONTAINS
       & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
+      & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'CO2_air_mol', mem%CO2_air_mol, &
@@ -261,6 +270,7 @@ CONTAINS
       & t_cf('CO2_air_mol', '[mol(CO2)/mol(air)]', 'CO2 mol mixing ratio of lowest atmosphere level'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
+      & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
