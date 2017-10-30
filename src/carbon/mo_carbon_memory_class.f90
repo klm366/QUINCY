@@ -706,7 +706,7 @@ CONTAINS
 !         & prefix, suffix,                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'carbon_2_GreenLitterPools', mem%carbon_2_GreenLitterPools,                           &
+      CALL jsb_add_var( mem, 'c2GreenLitterPools', mem%carbon_2_GreenLitterPools,                           &
         & hgrid, surface,                                                                                          &
         & t_cf('carbon_2_GreenLitterPools', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the &
         &  green litter pools.'), &
@@ -714,7 +714,7 @@ CONTAINS
         & prefix, suffix,                                                                                          &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'carbon_2_WoodLitterPools', mem%carbon_2_WoodLitterPools,                             &
+      CALL jsb_add_var( mem, 'c2WoodLitterPools', mem%carbon_2_WoodLitterPools,                             &
         & hgrid, surface,                                                                                          &
         & t_cf('carbon_2_WoodLitterPools', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the  &
         & woody litter pools..'), &
@@ -722,7 +722,7 @@ CONTAINS
         & prefix, suffix,                                                                                          &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'carbon_2_atmos', mem%carbon_2_atmos,                                                  &
+      CALL jsb_add_var( mem, 'c2atmos', mem%carbon_2_atmos,                                                  &
         & hgrid, surface,                                                                                           &
         & t_cf('carbon_2_atmos', 'mol(C) m-2(tile) s-1', 'Carbon flux into atmosphere.'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
@@ -773,7 +773,7 @@ CONTAINS
         & output_level=BASIC,                                                                            &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_litter_green_ag_ta', mem%Cpool_litter_green_ag_ta,                              &
+      CALL jsb_add_var( mem, 'c_litter_grn_ag_ta', mem%Cpool_litter_green_ag_ta,                              &
         & hgrid, surface,                                                                                       &
         & t_cf('Cpool_litter_green_ag_ta', 'mol(C) m-2', 'C-Pool for above ground non-woody litter (leaves).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
@@ -781,7 +781,7 @@ CONTAINS
         & output_level=BASIC,                                                                            &
         & lrestart=.TRUE., initval_r=60.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_litter_green_bg_ta', mem%Cpool_litter_green_bg_ta,                                  &
+      CALL jsb_add_var( mem, 'c_litter_grn_bg_ta', mem%Cpool_litter_green_bg_ta,                                  &
         & hgrid, surface,                                                                                           &
         & t_cf('Cpool_litter_green_bg_ta', 'mol(C) m-2', 'C-Pool for below ground non-woody litter (fine roots).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
@@ -991,7 +991,7 @@ CONTAINS
         & output_level=BASIC,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'npp_flux_correction_ta', mem%NPP_flux_correction_ta,                           &
+      CALL jsb_add_var( mem, 'npp_flux_corr_ta', mem%NPP_flux_correction_ta,                           &
         & hgrid, surface,                                                                                    &
         & t_cf('NPP_flux_correction_ta', 'mol(C) m-2 s-1', 'Amount by which the NPP rate has to be corrected &
         &                                                        to avoid a negative reserve pool.'),        &
@@ -1066,7 +1066,7 @@ CONTAINS
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'carbon_2_GreenLitterPools_ta', mem%carbon_2_GreenLitterPools_ta,    &
+      CALL jsb_add_var( mem, 'c2GreenLitterPools_ta', mem%carbon_2_GreenLitterPools_ta,    &
         & hgrid, surface,                                                                         &
         & t_cf('carbon_2_GreenLitterPools_ta', 'mol(C) m-2 s-1', 'Carbon flux to green litter.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
@@ -1074,7 +1074,7 @@ CONTAINS
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'carbon_2_WoodLitterPools_ta', mem%carbon_2_WoodLitterPools_ta,     &
+      CALL jsb_add_var( mem, 'c2WoodLitterPools_ta', mem%carbon_2_WoodLitterPools_ta,     &
         & hgrid, surface,                                                                        &
         & t_cf('carbon_2_WoodLitterPools_ta', 'mol(C) m-2 s-1', 'Carbon flux to woody litter.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
@@ -1082,7 +1082,7 @@ CONTAINS
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'carbon_2_atmos_ta', mem%carbon_2_atmos_ta,                                    &
+      CALL jsb_add_var( mem, 'c2atmos_ta', mem%carbon_2_atmos_ta,                                    &
         & hgrid, surface,                                                                                   &
         & t_cf('carbon_2_atmos_ta', 'mol(C) m-2 s-1', 'Total carbon flux from C pool green to herbivory.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
