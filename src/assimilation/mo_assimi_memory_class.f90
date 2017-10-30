@@ -156,7 +156,7 @@ CONTAINS
         & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'NPP_pot_rate_ca', mem%NPP_pot_rate_ca,                     &
+      CALL jsb_add_var( mem, 'npp_pot_rate_ca', mem%NPP_pot_rate_ca,                     &
         & hgrid, surface,                                                                              &
         & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy) s)', 'NPP_pot_rate_ca'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -232,7 +232,7 @@ CONTAINS
         & prefix, suffix,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'CO2_conc_leaf_cl', mem%CO2_conc_leaf_cl, &
+      CALL jsb_add_var( mem, 'co2_conc_leaf_cl', mem%CO2_conc_leaf_cl, &
         & hgrid, canopy_layer,                                                                 &
         & t_cf('CO2_conc_leaf_cl', 'dimensionen', 'CO2 concentration inside leaf per canopy layer'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &

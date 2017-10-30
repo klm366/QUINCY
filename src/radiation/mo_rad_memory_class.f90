@@ -366,7 +366,7 @@ CONTAINS
         & output_level=MEDIUM, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
-      CALL jsb_add_var( mem, 'faPAR', mem%faPAR,   &
+      CALL jsb_add_var( mem, 'fapar', mem%faPAR,   &
         & hgrid, surface,                                                    &
         & t_cf('Fraction of PAR absorbed by the canopy', '', ''),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &

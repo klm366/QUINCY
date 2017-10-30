@@ -258,7 +258,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'CO2_air', mem%CO2_air, &
+    CALL jsb_add_var( mem, 'co2_air', mem%CO2_air, &
       & hgrid, surface,                                                                            &
       & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
@@ -268,7 +268,7 @@ CONTAINS
                                                   !    CO2:44.011 g/mol; dry air: 28,97 g/mol
                                                   !    400 ppm => 6.077*10^-4
 
-    CALL jsb_add_var( mem, 'CO2_air_mol', mem%CO2_air_mol, &
+    CALL jsb_add_var( mem, 'co2_air_mol', mem%CO2_air_mol, &
       & hgrid, surface,                                                                                &
       & t_cf('CO2_air_mol', '[mol(CO2)/mol(air)]', 'CO2 mol mixing ratio of lowest atmosphere level'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
