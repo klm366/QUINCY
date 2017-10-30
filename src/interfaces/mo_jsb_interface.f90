@@ -82,6 +82,7 @@ CONTAINS
     & alb_nir_dir,      &
     & alb_vis_dif,      &
     & alb_nir_dif,      &
+    & CO2_flux,         &
     ! For lakes (optional):
     & drag_wtr, drag_ice,                                    & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,    & !< in
@@ -160,7 +161,8 @@ CONTAINS
       & alb_vis_dir       (:), &
       & alb_nir_dir       (:), &
       & alb_vis_dif       (:), &
-      & alb_nir_dif       (:)
+      & alb_nir_dif       (:), &
+      & CO2_flux          (:)
     ! For lakes:
     REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_lwtr            (:), &
@@ -280,6 +282,7 @@ CONTAINS
       & alb_nir_dir        = alb_nir_dir(:),     &
       & alb_vis_dif        = alb_vis_dif(:),     &
       & alb_nir_dif        = alb_nir_dif(:),     &
+      & CO2_flux           = CO2_flux(:),        &
       & t_lwtr             = t_lwtr,             &
       & evapo_wtr          = evapo_wtr,          &
       & latent_hflx_wtr    = latent_hflx_wtr,    &
