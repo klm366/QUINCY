@@ -23,7 +23,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max)    :: grid_filename
     CHARACTER(len=filename_max)    :: fract_filename
     CHARACTER(len=30)              :: grid_name
-    CHARACTER(len=30)              :: usecase
+    CHARACTER(len=40)              :: usecase
     CHARACTER(len=10)              :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
@@ -71,7 +71,7 @@ CONTAINS
 
     LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
-    CHARACTER(len=30)           :: usecase
+    CHARACTER(len=40)           :: usecase
     CHARACTER(len=10)           :: hsm_mode
     CHARACTER(len=10)           :: output_tiles(99)
 
