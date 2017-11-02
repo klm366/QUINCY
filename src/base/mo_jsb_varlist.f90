@@ -146,10 +146,11 @@ CONTAINS
         & ]
       IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
         output_level_name = Get_var_group_name(output_level)
-        groups = [ groups, [ CHARACTER(len=VARNAME_LEN) ::                      &
+        groups = [ CHARACTER(len=VARNAME_LEN) ::                                &
+          & groups,                                                             &
           & 'jsb_all_'//output_level_name,                                      & ! var group jsb_all_<level>
           & 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name & ! var group jsb_<process>_<level>
-          &      ] ]
+          &      ]
       END IF
     ELSE
       groups = [ CHARACTER(len=VARNAME_LEN) :: '']
@@ -281,10 +282,11 @@ CONTAINS
         & ]
       IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
         output_level_name = Get_var_group_name(output_level)
-        groups = [ groups, [ CHARACTER(len=VARNAME_LEN) ::                      &
+        groups = [ CHARACTER(len=VARNAME_LEN) ::                                &
+          & groups,                                                             &
           & 'jsb_all_'//output_level_name,                                      & ! var group jsb_all_<level>
           & 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name & ! var group jsb_<process>_<level>
-          &      ] ]
+          &      ]
       END IF
     ELSE
       groups = [ CHARACTER(len=VARNAME_LEN) :: '']
