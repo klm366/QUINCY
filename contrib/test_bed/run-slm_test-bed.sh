@@ -634,7 +634,7 @@ echo " Let's go with SLM ""$slmModel" #Starting SLM Simulation: ""$slmModel"
 echo -n "  ...  "
 
 ## run the SLM binary (always compiled as land.x) ##
-compiler=$(sed -n 2p ./../../../util/Make.inc.local | awk '{print $3}')
+compiler=$(sed -n 2p ./../../../build/Make.inc.local | awk '{print $3}')
 ./../../../"$compiler"/bin/land.x 
 echo "Simulation finished"
 sync
