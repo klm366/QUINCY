@@ -139,8 +139,6 @@ CONTAINS
     INTEGER, allocatable                      :: no_children, &            ! Number of existing sub tiles
                                                  i, j                      ! Index numbers over children of the current tile
 
-    REAL(wp), allocatable                     :: dummy
-
     ! R: The DISTURB_ process is calculated on the veg tile, because fire needs "fuel", which is a sum over the child tiles!
     !    Furthermore, the climate-buffers can be handled somewhat easier this way, as they have to be called only once...
     !    However, windbreak as a process could have been calculated also on the child tiles.
@@ -665,10 +663,10 @@ CONTAINS
       burned_frac = SUM( burned_frac_st(:,:) * fract_st(:,:) , DIM=2) ! Note, this works because the fract_st sum over DIM=2 
       SELECT TYPE (parentmem=>tile%mem(DISTURB_)%p)
         CLASS IS (t_disturb_memory)! is always = 1 !
-          dummy = parentmem%HandDown_var_real3d(ics, ice, iblk, no_children, parentmem%burned_frac,   &
+          CALL parentmem%HandDown_var_real3d(ics, ice, iblk, no_children, parentmem%burned_frac,   &
                                             burned_frac_st(:,:)   ) ! inout
           damaged_frac = SUM( damaged_frac_st(:,:) * fract_st(:,:) , DIM=2)
-          dummy = parentmem%HandDown_var_real3d(ics, ice, iblk, no_children, parentmem%damaged_frac,  &
+          CALL parentmem%HandDown_var_real3d(ics, ice, iblk, no_children, parentmem%damaged_frac,  &
                                             damaged_frac_st(:,:)  ) ! inout
       END SELECT
 
@@ -677,83 +675,83 @@ CONTAINS
           CLASS IS (t_carbon_memory)
             Cpool_green    = SUM( Cpool_green_st(:,:) * fract_st(:,:) , DIM=2)
             Cpool_green_ta = Cpool_green              * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%Cpool_green,   &
-                                            Cpool_green_st(:,:)       ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%Cpool_green,   &
+                                            Cpool_green_st(:,:)       )
 
             Cpool_woods    = SUM( Cpool_woods_st(:,:) * fract_st(:,:) , DIM=2)
             Cpool_woods_ta = Cpool_woods              * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%Cpool_woods,   &
-                                                Cpool_woods_st(:,:)      ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%Cpool_woods,   &
+                                                Cpool_woods_st(:,:)      )
 
             Cpool_reserve    = SUM( Cpool_reserve_st(:,:) * fract_st(:,:) , DIM=2)
             Cpool_reserve_ta = Cpool_reserve              * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%Cpool_reserve, &
-                                                Cpool_reserve_st(:,:)    ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%Cpool_reserve, &
+                                                Cpool_reserve_st(:,:)    )
 
             carbon_2_GreenLitterPools = SUM( carbon_2_GreenLitterPools_st(:,:) * fract_st(:,:) , DIM=2)
             carbon_2_GreenLitterPools_ta = carbon_2_GreenLitterPools           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%carbon_2_GreenLitterPools, &
-                                                carbon_2_GreenLitterPools_st(:,:)    ) ! out
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%carbon_2_GreenLitterPools, &
+                                                carbon_2_GreenLitterPools_st(:,:)    )
 
             carbon_2_WoodLitterPools = SUM( carbon_2_WoodLitterPools_st(:,:) * fract_st(:,:) , DIM=2)
             carbon_2_WoodLitterPools_ta = carbon_2_WoodLitterPools           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%carbon_2_WoodLitterPools, &
-                                                carbon_2_WoodLitterPools_st(:,:)    ) ! out
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%carbon_2_WoodLitterPools, &
+                                                carbon_2_WoodLitterPools_st(:,:)    )
 
             YCpool_acid_ag1 = SUM( YCpool_acid_ag1_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_acid_ag1_ta = YCpool_acid_ag1           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_acid_ag1,      &
-                                                YCpool_acid_ag1_st(:,:)       ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_acid_ag1,      &
+                                                YCpool_acid_ag1_st(:,:)       )
 
             YCpool_water_ag1 = SUM( YCpool_water_ag1_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_water_ag1_ta = YCpool_water_ag1           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_water_ag1,     &
-                                                YCpool_water_ag1_st(:,:)      ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_water_ag1,     &
+                                                YCpool_water_ag1_st(:,:)      )
 
             YCpool_ethanol_ag1 = SUM( YCpool_ethanol_ag1_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_ethanol_ag1_ta = YCpool_ethanol_ag1           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_ethanol_ag1,   &
-                                                YCpool_ethanol_ag1_st(:,:)    ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_ethanol_ag1,   &
+                                                YCpool_ethanol_ag1_st(:,:)    )
 
             YCpool_nonsoluble_ag1 = SUM( YCpool_nonsoluble_ag1_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_nonsoluble_ag1_ta = YCpool_nonsoluble_ag1           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_nonsoluble_ag1, &
-                                                YCpool_nonsoluble_ag1_st(:,:) ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_nonsoluble_ag1, &
+                                                YCpool_nonsoluble_ag1_st(:,:) )
 
             YCpool_acid_ag2 = SUM( YCpool_acid_ag2_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_acid_ag2_ta = YCpool_acid_ag2           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_acid_ag2,       &
-                                                YCpool_acid_ag2_st(:,:)       ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_acid_ag2,       &
+                                                YCpool_acid_ag2_st(:,:)       )
 
             YCpool_water_ag2 = SUM( YCpool_water_ag2_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_water_ag2_ta = YCpool_water_ag2           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_water_ag2,      &
-                                                YCpool_water_ag2_st(:,:)      ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_water_ag2,      &
+                                                YCpool_water_ag2_st(:,:)      )
 
             YCpool_ethanol_ag2 = SUM( YCpool_ethanol_ag2_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_ethanol_ag2_ta = YCpool_ethanol_ag2           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_ethanol_ag2,     &
-                                                YCpool_ethanol_ag2_st(:,:)    ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_ethanol_ag2,     &
+                                                YCpool_ethanol_ag2_st(:,:)    )
 
             YCpool_nonsoluble_ag2 = SUM( YCpool_nonsoluble_ag2_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_nonsoluble_ag2_ta = YCpool_nonsoluble_ag2           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_nonsoluble_ag2, &
-                                                YCpool_nonsoluble_ag2_st(:,:) ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_nonsoluble_ag2, &
+                                                YCpool_nonsoluble_ag2_st(:,:) )
 
             YCpool_humus_1 = SUM( YCpool_humus_1_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_humus_1_ta = YCpool_humus_1           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_humus_1,        &
-                                                YCpool_humus_1_st(:,:) )        ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_humus_1,        &
+                                                YCpool_humus_1_st(:,:) )
 
             YCpool_humus_2 = SUM( YCpool_humus_2_st(:,:) * fract_st(:,:) , DIM=2)
             YCpool_humus_2_ta = YCpool_humus_2           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_humus_2,        &
-                                                YCpool_humus_2_st(:,:) ) ! inout
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%YCpool_humus_2,        &
+                                                YCpool_humus_2_st(:,:) )
 
             carbon_2_atmos = SUM( carbon_2_atmos_st_ta(:,:) * fract_st(:,:) , DIM=2)
             carbon_2_atmos_ta = carbon_2_atmos           * veg_frac_correction
-            dummy = parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%carbon_2_atmos,        &
-                                                carbon_2_atmos_st_ta(:,:)    )     ! out
+            CALL parentmem%HandDown_var_real3d( ics, ice, iblk,  no_children,   parentmem%carbon_2_atmos,        &
+                                                carbon_2_atmos_st_ta(:,:)    )
         END SELECT
       ENDIF
     ENDIF ! is_newday

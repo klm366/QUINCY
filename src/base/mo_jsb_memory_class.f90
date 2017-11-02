@@ -204,9 +204,9 @@ CONTAINS
   END FUNCTION Collect_var_real3d
 
 
-  REAL(wp) FUNCTION HandDown_var_real3d(this, ics, ice, iblk, no_children,  var, var_handdown)
+  SUBROUTINE HandDown_var_real3d(this, ics, ice, iblk, no_children,  var, var_handdown)
 
-    CLASS(t_jsb_memory), INTENT(in)     :: this        ! mem_process of the parent tile: tile%mem(iproc)%p
+    CLASS(t_jsb_memory), INTENT(inout)  :: this        ! mem_process of the parent tile: tile%mem(iproc)%p
     INTEGER,             INTENT(in)     :: ics, ice, iblk
     INTEGER,             INTENT(in)     :: no_children ! of the parent tile
     CLASS(t_jsb_var),    INTENT(in)     :: var         ! of the parent tile only to find child memories
@@ -220,7 +220,7 @@ CONTAINS
       this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice, iblk, 1, 1, 1) = var_handdown(:,i)
     END DO
 
-  END FUNCTION HandDown_var_real3d
+  END SUBROUTINE HandDown_var_real3d
 
 
   FUNCTION Average_over_children_real2d(this, ics, ice, iblk, no_children,  var, fract_st) RESULT(var_averaged)
