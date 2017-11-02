@@ -104,6 +104,7 @@ mo_jsb_model_init.o: \
 
 mo_jsb_io.o: \
   mo_kind.o \
+  mo_jsb_io_iface.o \
   mo_exception.o
 
 mo_slm_varlist.o: \
@@ -134,3 +135,5 @@ mo_jsb_grid_class.o: \
   mo_io_units.o \
   mo_exception.o \
   mo_jsb_domain_iface.o
+
+

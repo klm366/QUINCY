@@ -13,10 +13,6 @@ MODULE mo_atmland_forcing
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps8
-  USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, calc_mixing_ratio_N15N14
-  USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
-  USE mo_atmland_constants
-
 
   IMPLICIT NONE
 
@@ -97,6 +93,10 @@ CONTAINS
     USE mo_shared_constants,      ONLY: molar_mass_N, molar_mass_P, grav
     USE mo_base_constants,        ONLY: one_day
     USE mo_jsb4_forcing,          ONLY: forcing_options
+    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
+                                        calc_mixing_ratio_N15N14
+    USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
+    USE mo_atmland_constants
 
     ! Use of process memories
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory

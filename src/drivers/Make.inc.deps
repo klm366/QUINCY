@@ -8,8 +8,8 @@ land_model_driver.o: \
   mo_jsb4_forcing.o \
   mo_atmland_forcing.o \
   mo_shared_output.o \
-  mo_veg_memory_class.o \
-  mo_sb_memory_class.o
+  mo_sb_memory_class.o \
+  mo_veg_memory_class.o
 
 mo_land_model_interface.o: \
   mo_kind.o \

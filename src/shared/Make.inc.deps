@@ -5,7 +5,8 @@ mo_util.o: \
   mo_kind.o
 
 mo_phy_schemes.o: \
-  mo_kind.o
+  mo_kind.o \
+  mo_shared_constants.o
 
 mo_shared_isotope.o: \
   mo_kind.o \

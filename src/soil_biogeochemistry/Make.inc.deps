@@ -7,11 +7,15 @@ mo_sb_interface.o: \
   mo_sb_jsm_main.o
 
 mo_sb_constants.o: \
-  mo_kind.o
+  mo_kind.o \
+  mo_base_constants.o \
+  mo_shared_constants.o
 
 mo_sb_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_jsb_io.o \
+  mo_jsb_grid_class.o \
   mo_jsb_model_class.o \
   mo_jsb_class.o \
   mo_jsb_memory_class.o \
@@ -88,6 +92,8 @@ mo_sb_rate_modifier.o: \
   mo_base_memory.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
+  mo_soil_memory_class.o \
+  mo_sb_memory_class.o \
   mo_sb_constants.o
 
 mo_sb_jsm_processes.o: \
