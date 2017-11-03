@@ -34,7 +34,8 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: dusk_time                   !< ?
   REAL(wp),SAVE :: tmp_peak_time               !< ?
   REAL(wp),SAVE :: min_cos_zenith_angle        !< minimum zenith angle for which PAR is calculated, see cos_zenith_angle
-
+  REAL(wp),SAVE :: min_wind                    !< minimum wind speed allowed to prevent total decoupling of the surface (m/s)
+  REAL(wp),SAVE :: max_wind                    !< maximum wind speed allowed to prevent excess cooling of the surface (m/s)
   ! conversion factors
   REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
@@ -110,6 +111,9 @@ CONTAINS
     tmp_peak_time = 14.0_wp / hourday
     dusk_time = 1.0_wp / hourday
     ! 
+    min_wind = 0.3_wp
+    max_wind = 5.0_wp
+
     ! conversion factors
     standard_press_srf  = 101300.0_wp  
     eps_vpd             = 0.622_wp  

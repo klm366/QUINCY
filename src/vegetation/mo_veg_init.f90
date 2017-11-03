@@ -44,7 +44,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: fresp_growth
     USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
-    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np
+    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, itree
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(VEG_)
@@ -81,6 +81,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
     dsl4jsb_Real2D_onChunk      :: dens_ind
+    dsl4jsb_Real2D_onChunk      :: height 
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
@@ -171,6 +172,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
@@ -326,9 +328,15 @@ CONTAINS
         !leaf_nitrogen
         IF(dsl4jsb_Config(VEG_)%pft_id==0) THEN
           veg_pool%leaf%nitrogen(:)   = ref_nleaf / molar_mass_N * lai(:)
+          height=10.0_wp
         ELSE
           veg_pool%leaf%nitrogen(:)   = lai(:) / lctlib%sla / lctlib%cn_leaf
           veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf
+          IF(lctlib%growthform==itree)THEN
+             height(:) = 10.0_wp
+          ELSE 
+             height(:) = 1.0_wp
+          ENDIF
         ENDIF
         leaf_nitrogen_cl(:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
         lai_cl(:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)

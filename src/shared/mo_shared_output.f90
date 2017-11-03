@@ -161,7 +161,7 @@ CONTAINS
          fname = 'vegpoold15N'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpoolH2O'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolPhysics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'soilpoolOrg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -259,7 +259,20 @@ CONTAINS
          WRITE(lun,'(2a)') 'Time Leaf_d15N FineRoot_d15N SapWood_d15N HeartWood_d15N CoarseRoot_d15N ', & 
                           'Fruit_d15N Labile_d15N Reserve_d15N SeedBank_d15N Total_d15N'
          lun=lun+1
-         WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
+
+         ! output per soil_layer for two SOIL_ variables
+         p1str=''
+         p2str=''
+         DO isoil = 1,nsoil_sb
+            IF(isoil<10) THEN 
+              WRITE(layerstr,'(I1)') isoil
+            ELSE
+              WRITE(layerstr,'(I2)') isoil
+            ENDIF
+            WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
+         ENDDO
+         WRITE(lun,'(3a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS ',TRIM(p1str), TRIM(p2str)
          lun=lun+1
          WRITE(lun,'(3a)') 'Time MetLitterC MetLitterN MetLitterP StrLitterC StrLitterN StrLitterP', &
                            ' WodLitterC WodLitterN WodLitterP',&
@@ -452,6 +465,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk      :: t_soil_sl
+    dsl4jsb_Real3D_onChunk      :: w_soil_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: height
@@ -529,6 +544,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, height)
@@ -658,7 +675,10 @@ CONTAINS
                 calc_delta_N15(veg_pool%seed_bed%nitrogen(ipoi),veg_pool%seed_bed%nitrogen15(ipoi)), &
                 calc_delta_N15(veg_total_biomass%nitrogen(ipoi),veg_total_biomass%nitrogen15(ipoi))
               lun=lun+1
-              write(lun,'(9F16.6)') time_d, w_soil_root(ipoi), w_soil_root_pot(ipoi),beta_soil_gs(ipoi),beta_soil_ps(ipoi)
+              write(lun,'(20F16.6)') time_d, &
+                                    w_soil_root(ipoi),  w_soil_root_pot(ipoi), &
+                                    beta_soil_gs(ipoi), beta_soil_ps(ipoi), &
+                                    w_soil_sl(ipoi,:),  t_soil_sl(ipoi,:)
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
                                      SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))      , & 
@@ -1663,7 +1683,7 @@ CONTAINS
                 runoff_acc       = runoff_acc        + runoff(ipoi)              
                 drainage_acc     = drainage_acc      + drainage(ipoi)             
              ELSE
-                precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))             * dtime
+                precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))          * dtime
                 interception_acc = interception_acc  + interception(ipoi)                 * dtime 
                 evaporation_acc  = evaporation_acc   + evaporation(ipoi)                  * dtime
                 transpiration_acc= transpiration_acc + transpiration(ipoi)                * dtime
@@ -1677,9 +1697,9 @@ CONTAINS
              albedo_acc       = albedo_acc        + albedo(ipoi)
              ppfd_acc         = ppfd_acc          + swpar_srf_down(ipoi) * rad2ppfd  * dtime_one               
              rnet_acc         = rnet_acc          + net_radiation(ipoi)              * dtime_one               
-             qh_acc           = qh_acc            + sensible_heat_flx(ipoi)          * dtime_one               
-             qle_acc          = qle_acc           + latent_heat_flx(ipoi)            * dtime_one               
-             qg_acc           = qg_acc            + ground_heat_flx(ipoi)            * dtime_one               
+             qh_acc           = qh_acc            - sensible_heat_flx(ipoi)          * dtime_one               
+             qle_acc          = qle_acc           - latent_heat_flx(ipoi)            * dtime_one               
+             qg_acc           = qg_acc            - ground_heat_flx(ipoi)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(ipoi)                      * dtime_one               
              ndat_acc         = ndat_acc          + 1 
              het_respC_acc   = het_respC_acc   + SUM(het_respiration(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one

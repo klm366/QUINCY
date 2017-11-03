@@ -1,6 +1,7 @@
 mo_soil_interface.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_soil_update_turbulence.o \
   mo_soil_update_physics.o
 
 mo_soil_constants.o: \
@@ -52,9 +53,30 @@ mo_soil_update_physics.o: \
   mo_jsb_process_class.o \
   mo_a2l_memory_class.o \
   mo_l2a_memory_class.o \
+  mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_shared_constants.o \
   mo_assimi_update_canopy_fluxes.o \
+  mo_phy_schemes.o \
+  mo_veg_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_soil_memory_class.o \
+  mo_soil_constants.o \
+  mo_assimi_memory_class.o
+
+mo_soil_update_turbulence.o: \
+  mo_kind.o \
+  mo_base_memory.o \
+  mo_jsb_model_class.o \
+  mo_base_constants.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_a2l_memory_class.o \
+  mo_l2a_memory_class.o \
+  mo_atmland_constants.o \
+  mo_atmland_util.o \
+  mo_shared_constants.o \
   mo_phy_schemes.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \

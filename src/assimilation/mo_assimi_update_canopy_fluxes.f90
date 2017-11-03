@@ -49,8 +49,10 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_atmland_constants,     ONLY: min_wind
     USE mo_shared_constants
     USE mo_shared_isotope,        ONLY: calc_fractionation
+    USE mo_phy_schemes
     USE mo_assimi_constants
 
     ! Use of process configurations (t_PROC_config)
@@ -70,7 +72,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: icanopy     ! for looping across ncanopy layers
-    REAL(wp),DIMENSION(options%nc)        :: hlp1       ! dummy variable
+    REAL(wp),DIMENSION(options%nc)        :: ga,hlp1       ! dummy variable
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
@@ -87,7 +89,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: q_air
     dsl4jsb_Real2D_onChunk      :: press_srf
-    dsl4jsb_Real2D_onChunk      :: ga
+    dsl4jsb_Real2D_onChunk      :: drag_srf
+    dsl4jsb_Real2D_onChunk      :: wind_10m
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
@@ -153,7 +156,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)                      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)               ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
@@ -223,6 +227,8 @@ CONTAINS
                                             lctlib%lambda_soil_gs   , &
                                             lctlib%weibull_k_soil_gs)
 
+   ga(:) = heat_transfer_coef(drag_srf(:),model%options%steplen) * & 
+           MAX(wind_10m, min_wind) 
 
   !> 2.0 calculate photosynthesis per layer
   !!

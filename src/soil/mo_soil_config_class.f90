@@ -121,8 +121,8 @@ CONTAINS
     soil_depth                    = 5.7_wp 
     soil_awc_prescribe            = 300.0_wp
     soil_theta_prescribe          = 1.0_wp 
-    soil_sand                     = 0.4_wp
-    soil_silt                     = 0.3_wp
+    soil_sand                     = 0.3_wp
+    soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
     soil_ph                       = 6.0_wp
     soil_moisture_scheme          = "bucket" ! prescribed bucket layer 

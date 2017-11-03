@@ -52,6 +52,7 @@ MODULE mo_l2a_memory_class
                               sensible_heat_flx , &   ! added from SLM, not existent in jsbach4 20160823
                               latent_heat_flx   , &   ! added from SLM, not existent in jsbach4 20160823
                               ground_heat_flx   , &   ! added from SLM, not existent in jsbach4 20160823
+                              ground_heat_flx_old, &  ! added from SLM, not existent in jsbach4 20160823
                               net_radiation     , &   ! added from SLM, not existent in jsbach4 20160823
                               vpd               , &   ! added from SLM, not existent in jsbach4 20160823
                               ! For lakes:
@@ -223,6 +224,14 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'ground_heat_flx', mem%ground_heat_flx, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

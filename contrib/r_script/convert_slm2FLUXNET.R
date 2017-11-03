@@ -109,15 +109,18 @@ for (v in 1:nvar) {
   if(variable_name[v]=='WUE') {
      outlongname[v]<-"Water-Use Efficiency"
      outunit[v]<-"gC / kg H20"
-     outvar[v,]<-fluxCfile$GPP/fluxH2Ofile$Transpiration*12/1000000
-     outvar[v,fluxH2Ofile$Transpiration<0.00000001]<-0
-     outvar[v,is.na(outvar[v,])]<-0
+     outvar[v,]<-fluxCfile$GPP/(fluxH2Ofile$Transpiration+fluxH2Ofile$Interception+fluxH2Ofile$Evaporation)*12/1000000
+     filt<-(fluxH2Ofile$Transpiration+fluxH2Ofile$Interception+fluxH2Ofile$Evaporation)
+     filt[filt<0.00001]<-0
+     filt[filt>=0.00001]<-fluxH2Ofile$Transpiration[filt>=0.00001]/filt[filt>=0.00001]
+     outvar[v,filt<0.7]<-NA
+     #outvar[v,is.na(outvar[v,])]<-0
   }
   if(variable_name[v]=='FAPAR') {
      outlongname[v]<-"Fraction of Absorbed Photosynthetically Active Radiation"
      outunit[v]<-"-"
      outvar[v,]<-fluxEfile$fAPPFD
-     outvar[v,is.na(outvar[v,])]<-0
+     #outvar[v,is.na(outvar[v,])]<-0
   }
 
 }

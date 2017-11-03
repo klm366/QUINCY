@@ -300,6 +300,7 @@ CONTAINS
       !! run Tasks
       !!
       CALL update_sb_rate_modifier(tile, model%options)
+      CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
@@ -347,6 +348,7 @@ CONTAINS
 
       !! run Tasks
       !!
+      CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
@@ -415,6 +417,7 @@ CONTAINS
 
       !! run Tasks
       !!
+      CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
@@ -486,7 +489,7 @@ CONTAINS
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_veg_util,              ONLY: reset_veg_fluxes
-    USE mo_shared_constants,      ONLY: molar_mass_N, Tzero
+    USE mo_shared_constants,      ONLY: molar_mass_N, Tzero, cvdifts, grav
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -550,6 +553,7 @@ CONTAINS
     REAL(wp),SAVE :: ref_cos_angle = 0.8_wp           ! cosine of zenith angle
     REAL(wp),SAVE :: ref_co2_mixing_ratio = 380.0_wp  ! co2 in ppm
     REAL(wp),SAVE :: ref_wind = 1.0_wp                ! wind in m/s
+    REAL(wp),SAVE :: ref_ga = 0.4_wp                  ! aerodynamic conductance in m/s
     REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
@@ -665,14 +669,14 @@ CONTAINS
     wind_air(:)         = ref_wind
     wind_10m(:)         = wind_air(:)
     lw_srf_down(:)      = 0.0_wp
-    drag_srf(:)         = 1.0_wp
+    ga(:)               = ref_ga 
+    drag_srf(:)         = ga(:) / wind_air(:) * cvdifts * grav * model%options%dtime 
     t_acoef(:)          = 0.0_wp
     t_bcoef(:)          = 0.0_wp
     q_acoef(:)          = 0.0_wp
     q_bcoef(:)          = 0.0_wp
     pch(:)              = 0.0_wp
     cos_zenith_angle(:) = ref_cos_angle
-    ga(:)               = 0.4_wp / drag_srf(:) * wind_10m(:)
     !latitude                  = 50.0_wp
     !longitude                 = 0.0_wp
 

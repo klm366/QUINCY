@@ -14,11 +14,12 @@ MODULE mo_soil_interface
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message, finish
 
+  USE mo_soil_update_turbulence,ONLY: update_soil_turbulence
   USE mo_soil_update_physics,   ONLY: update_soil_physics
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_soil_physics
+  PUBLIC :: update_soil_physics, update_soil_turbulence
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_interface'

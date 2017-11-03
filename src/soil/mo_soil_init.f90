@@ -11,7 +11,7 @@ MODULE mo_soil_init
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: wp,eps8
   USE mo_exception,             ONLY: message
 
   IMPLICIT NONE
@@ -34,7 +34,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_soil_constants,        ONLY: theta_sat, theta_wilt, rho_bulk_soil, soil_heat_cap, soil_therm_cond
+    USE mo_soil_constants        
     USE mo_soil_util,             ONLY: soil_depth_to_layers_2d
 
     ! Use of process configurations (t_PROC_config)
@@ -47,14 +47,15 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< data structure for dynamic phenoetation and soil variables
-    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    TYPE(t_slm_tile),           INTENT(inout)        :: tile         !< data structure for dynamic phenoetation and soil variables
+    TYPE(t_jsb_task_options),   INTENT(in)           :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER              :: model
-    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                                      :: isoil
-    INTEGER                                      :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),      POINTER                  :: model
+    TYPE(t_lctlib_element), POINTER                  :: lctlib     !< land-cover-type library - parameter across pft's
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, theta_pwp_sl, theta_fc_sl, theta_sat_sl
+    INTEGER                                          :: isoil
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -64,11 +65,13 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk    :: soil_depth
     dsl4jsb_Real2D_onChunk    :: root_depth
+    dsl4jsb_Real2D_onChunk    :: t_srf_old 
     dsl4jsb_Real2D_onChunk    :: w_skin
     dsl4jsb_Real2D_onChunk    :: w_soil_root
     dsl4jsb_Real2D_onChunk    :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk    :: w_soil_root_fc
     dsl4jsb_Real2D_onChunk    :: w_soil_root_theta
+    dsl4jsb_Real2D_onChunk    :: w_soil_root_pot
     dsl4jsb_Real3D_onChunk    :: soil_depth_sl
     dsl4jsb_Real3D_onChunk    :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk    :: heat_capa_sl
@@ -76,7 +79,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk    :: root_fraction_sl
     dsl4jsb_Real3D_onChunk    :: w_soil_pwp_sl
     dsl4jsb_Real3D_onChunk    :: w_soil_fc_sl 
+    dsl4jsb_Real3D_onChunk    :: w_soil_sat_sl 
     dsl4jsb_Real3D_onChunk    :: w_soil_sl
+    dsl4jsb_Real3D_onChunk    :: w_soil_pot_sl
+    dsl4jsb_Real3D_onChunk    :: saxtonA 
+    dsl4jsb_Real3D_onChunk    :: saxtonB 
+    dsl4jsb_Real3D_onChunk    :: saxtonC 
+    dsl4jsb_Real3D_onChunk    :: kdiff_sat_sl 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -97,11 +106,13 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(SOIL_, soil_depth)
     dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, t_srf_old)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_skin)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)
@@ -109,7 +120,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sat_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pot_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonA)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonB)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonC)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, kdiff_sat_sl)
 
 
 
@@ -135,21 +152,58 @@ CONTAINS
     bulk_dens_sl(:,:)  = rho_bulk_soil 
     heat_capa_sl(:,:)  = soil_heat_cap
     therm_cond_sl(:,:) = soil_therm_cond
+    t_srf_old(:) = 273.15_wp
+
+    ! soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
+    ! fractional water holding capacity at permanent wilting point
+    !
+    ! note that this assumes that the soil hydraulic properties are identical between the layers
+    !
+    hlp1(:,:) = k_pwp_s * dsl4jsb_Config(SOIL_)%soil_sand + & 
+                k_pwp_c * dsl4jsb_Config(SOIL_)%soil_clay + &
+                k_pwp_sc * dsl4jsb_Config(SOIL_)%soil_sand * dsl4jsb_Config(SOIL_)%soil_clay + &
+                k_pwp_a
+    theta_pwp_sl(:,:) = k_pwp_at + (1.0_wp + k_pwp_bt) * hlp1(:,:) 
+
+    ! fractional water holding capacity at field capacity 
+    hlp1(:,:) = k_fc_s * dsl4jsb_Config(SOIL_)%soil_sand + &
+                k_fc_c * dsl4jsb_Config(SOIL_)%soil_clay + &
+                k_fc_sc * dsl4jsb_Config(SOIL_)%soil_sand * dsl4jsb_Config(SOIL_)%soil_clay + &
+                k_fc_a
+    theta_fc_sl(:,:) = k_fc_at + (1.0_wp + k_fc_bt) * hlp1(:,:) + k_fc_ct * hlp1(:,:)**2
+
+    ! fractional water holding capacity at saturation 
+    hlp1(:,:) = k_sat_s * dsl4jsb_Config(SOIL_)%soil_sand + & 
+                k_sat_c * dsl4jsb_Config(SOIL_)%soil_clay + &
+                k_sat_sc * dsl4jsb_Config(SOIL_)%soil_sand * dsl4jsb_Config(SOIL_)%soil_clay + &
+                k_sat_a
+    theta_sat_sl(:,:) = theta_fc_sl(:,:) + k_sat_at + (1.0_wp + k_sat_bt) * hlp1(:,:) - & 
+                        k_sat_ct * dsl4jsb_Config(SOIL_)%soil_sand + k_sat_dt 
+    
+    ! parameters describing the moisture-tension curve                 
+    ! note that for convenience, B has a negative sign and A is in MPa 
+    saxtonB(:,:) = - (log(wpot_pwp) - log(wpot_fc))/(log(theta_fc_sl(:,:)) - log(theta_pwp_sl(:,:)))
+    saxtonA(:,:) = - (exp(log(wpot_fc) - saxtonB * log(theta_fc_sl(:,:))))/1000.0_wp
+
+    ! parameters describing the moisture-diffusivity curve
+    kdiff_sat_sl(:,:) = kdiff_sat_max * (theta_sat_sl(:,:) - theta_fc_sl(:,:)) ** (3.0_wp + 1._wp/saxtonB(:,:))
+    saxtonC(:,:) = 3.0_wp - 2._wp * saxtonB
 
     ! rooting depth given by prescribed AWC
     root_depth(:) = MAX(dsl4jsb_Config(SOIL_)%soil_depth_water(1), & 
-                          ( dsl4jsb_Config(SOIL_)%soil_awc_prescribe / 1000._wp )/ (theta_sat - theta_wilt)) 
+                        ( dsl4jsb_Config(SOIL_)%soil_awc_prescribe / 1000._wp )/ (theta_fc_sl(:,1) - theta_pwp_sl(:,1))) 
 
     ! water in the surface reservoir [m]
     w_skin(:) = 0.0_wp
 
     ! soil water in the rooting zone [m]
-    w_soil_root_pwp(:)    = theta_wilt * root_depth(:) 
-    w_soil_root_fc(:)     = dsl4jsb_Config(SOIL_)%soil_awc_prescribe / 1000._wp + w_soil_root_pwp(:)
+    w_soil_root_pwp(:)    = theta_pwp_sl(:,1) * root_depth(:) 
+    w_soil_root_fc(:)     = theta_fc_sl(:,1) * root_depth(:) 
     ! adjust initial water amount to prescribed theta 
     w_soil_root(:)        = w_soil_root_pwp(:) + & 
                             dsl4jsb_Config(SOIL_)%soil_theta_prescribe * (w_soil_root_fc(:) - w_soil_root_pwp(:)) 
     w_soil_root_theta(:)  = dsl4jsb_Config(SOIL_)%soil_theta_prescribe
+    w_soil_root_pot(:)    = saxtonA(:,1) * (MIN(w_soil_root_fc,w_soil_root(:)) / root_depth(:)) ** saxtonB(:,1) 
 
     ! root fractions assuming an exponential distribution of roots
     ! Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth)
@@ -178,17 +232,27 @@ CONTAINS
        ENDWHERE
     ENDDO
 
-
     ! soil water per layer depth
+    w_soil_pwp_sl(:,:) = 0.0_wp
+    w_soil_fc_sl(:,:) = 0.0_wp
+    w_soil_sat_sl(:,:) = 0.0_wp
     DO isoil=1,options%nsoil_sb
        WHERE(soil_depth_sl(:,isoil) > 0.0_wp) 
-          w_soil_pwp_sl(:,isoil) = theta_wilt * soil_depth_sl(:,isoil) 
-          w_soil_fc_sl(:,isoil)  = theta_sat * soil_depth_sl(:,isoil) 
+          w_soil_pwp_sl(:,isoil) = theta_pwp_sl(:,isoil) * soil_depth_sl(:,isoil) 
+          w_soil_fc_sl(:,isoil)  = theta_fc_sl(:,isoil) * soil_depth_sl(:,isoil) 
+          w_soil_sat_sl(:,isoil) = theta_sat_sl(:,isoil) * soil_depth_sl(:,isoil) 
        ENDWHERE
     ENDDO
     ! adjust initial water amount to prescribed theta
     w_soil_sl(:,:) = w_soil_pwp_sl(:,:) + & 
                      dsl4jsb_Config(SOIL_)%soil_theta_prescribe * (w_soil_fc_sl(:,:) - w_soil_pwp_sl(:,:))
+
+    WHERE(soil_depth_sl(:,:)>eps8)
+       hlp1(:,:) = MIN(w_soil_fc_sl(:,:),w_soil_sl(:,:))/soil_depth_sl(:,:)
+    ELSEWHERE
+       hlp1(:,:) = 0.0_wp 
+    ENDWHERE
+    w_soil_pot_sl(:,:) = saxtonA * hlp1(:,:) ** saxtonB
 
   END SUBROUTINE soil_init
 

@@ -1,4 +1,3 @@
-!>
 !! @brief Contains general parameters required for land calculations 
 !!
 !! @author
@@ -18,6 +17,7 @@ MODULE mo_shared_constants
   REAL(wp), SAVE :: &
     r_gas        ,  &           !< universal gas constant (J / mol / K) 
     r_gas_dryair ,  &           !< specific gas constant for dry air (J / kg / K) 
+    r_gas_vapour ,  &           !< specific gas constant for water vapour (J / kg / K) 
     Dwv          ,  &           !< diffusion coefficient for water vapour in air (m2 s-1) 
     Dco2         ,  &           !< diffusion coefficient for CO2 in air (m2 s-1) 
     Tzero        ,  &           !< melting point in K -> conversion factor for degreeC
@@ -30,7 +30,9 @@ MODULE mo_shared_constants
     cpv          ,  &           !< water vapour specific heat at constant pressure  [J/K/kg] 
     cpvd1        ,  &           !< auxiliary constants
     cvdifts      ,  &           !< ???
-    LatentHeatVaporization      !< Latent heat for vapourisation (J/kg) 
+    ckap         ,  &           !< von Karmann constant for evaporation
+    LatentHeatVaporization, &   !< Latent heat for vapourisation (J/kg) 
+    LatentHeatSublimation       !< Latent heat for sublimation (J/kg) 
   ! molar masses
   REAL(wp), SAVE :: &
     molar_mass_C    ,  &        !< g C / mol C
@@ -92,6 +94,7 @@ CONTAINS
     ! physical constants
     r_gas        = 8.3144_wp    
     r_gas_dryair = 287.058_wp   
+    r_gas_vapour = 461.51_wp   
     Dwv          = 0.0000242_wp 
     Dco2         = 0.0000151_wp 
     Tzero        = 273.15_wp
@@ -102,8 +105,10 @@ CONTAINS
     cpd          = 1004.64_wp       
     cpv          = 1869.46_wp   
     cpvd1        = cpv/cpd-1.0_wp   
-    cvdifts      = 1.0_wp !1.5_wp
+    cvdifts      = 1.0_wp
+    ckap         = 0.41_wp
     LatentHeatVaporization = 2.5008e6_wp
+    LatentHeatSublimation = 2.8345e6_wp
     ! molar masses
     molar_mass_C   = 12.0112_wp 
     molar_mass_C12 = 12.0_wp    

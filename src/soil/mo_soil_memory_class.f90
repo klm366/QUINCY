@@ -39,8 +39,9 @@ MODULE mo_soil_memory_class
 
     TYPE(t_jsb_var_real2d)          :: &
                                     soil_depth      , & !< Soil depth derived from textures (bedrock) (for hydrology) [m]
-                                    root_depth          !< actual rooting depth [m]
-
+                                    root_depth      , & !< actual rooting depth [m]
+                                    t_srf_old       , & !< previous surface temperature [K]
+                                    zril_old            !< previous timestep's Reynold's number
 
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
@@ -65,10 +66,16 @@ MODULE mo_soil_memory_class
                                     percolation_sl,   & !< fraction of mass transferred to below layer                              [fraction/s]
                                     drainage_sl,      & !< drainage of soil layers                                                  [kg / m2 / s]
                                     w_soil_sl,        & !< Water content in soil layers                                             [m]
+                                    w_soil_sat_sl,    & !< Water content of soil layers at saturation 
+                                                        !! (derived from volumetric capacity at saturation)                                 [m]
                                     w_soil_fc_sl,     & !< Water content of soil layers at field capacity
                                                         !! (derived from volumetric field capacity)                                 [m]
-                                    w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
+                                    w_soil_pwp_sl,    & !< Water content of soil layers at permanent wilting point
                                                         !! (derived from vol. perm wilt point)                                      [m]
+                                    saxtonA,          & !< coefficient in moisture-tension relationship
+                                    saxtonB,          & !< coefficient in moisture-tension relationship
+                                    saxtonC,          & !< exponent of moisture-conductivity relationship
+                                    kdiff_sat_sl        !< saturated hydraulic conductivity                                         [m / s]
 
     !Soil Water addons for SLM in HYDRO
     TYPE(t_jsb_var_real2d)          :: &
@@ -159,6 +166,22 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'soil_depth_sl', mem%soil_depth_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'zril_old', mem%zril_old, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 't_srf_old', mem%t_srf_old, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
@@ -294,6 +317,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL jsb_add_var(mem, 'w_soil_sat_sl', mem%w_soil_sat_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL jsb_add_var(mem, 'w_soil_fc_sl', mem%w_soil_fc_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -303,6 +334,38 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'w_soil_pwp_sl', mem%w_soil_pwp_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'saxtonA', mem%saxtonA, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'saxtonB', mem%saxtonB, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'saxtonC', mem%saxtonC, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'kdiff_sat_sl', mem%kdiff_sat_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
