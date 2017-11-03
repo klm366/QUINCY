@@ -39,12 +39,20 @@ CONTAINS
     REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K) 
     REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10°C)
     ! 0.2 Local
+    REAL(wp)             :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
 
 
-    ! IF flag_t_resp_acclimation is false: temp_mavg == t_acclim_zero
-    temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
-                     exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
+    hlp1 = t_maint_k3 + 1.0_wp / (1._wp/t_maint_k2 - log(eps8)/t_maint_k1)
+
+    IF(temp >= hlp1) THEN
+      ! IF flag_t_resp_acclimation is false: temp_mavg == t_acclim_zero
+      temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
+                       exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
+    ELSE
+      temp_response = 0.0_wp
+    ENDIF 
+
 
   END FUNCTION temperature_response_respiration
 
