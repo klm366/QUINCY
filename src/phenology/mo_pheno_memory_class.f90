@@ -42,7 +42,8 @@ MODULE mo_pheno_memory_class
 
     TYPE(t_jsb_var_real2d)          :: &
                                     gdd                 , & !< growing degree days above 5°C
-                                    nd_dormance             !< number of days since last growing season 
+                                    nd_dormance         , & !< number of days since last growing season 
+                                    lai_max                 !< maximum lai - from site specific lai data
 
 
   CONTAINS
@@ -118,6 +119,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'lai_max', mem%lai_max, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

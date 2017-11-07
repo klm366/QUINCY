@@ -20,7 +20,7 @@
   canopy_layer_scheme="standard"
 /
 &PHENOLOGY_CTL
-  ! tba
+  lai=6.0
 /
 &GRID_CTL
   latitude=50.0
@@ -40,7 +40,7 @@
   soil_sand=0.4
   soil_silt=0.3
   soil_clay=0.3
-  soil_ph=6.0
+  bulk_density=1500.0
 /
 &SOIL_BIOGEOCHEMISTRY_CTL
   ! the soil biogeochemistry process
@@ -62,10 +62,10 @@
   flag_sb_LK_po4=.TRUE.
   sb_adsorp_scheme="eca_full"
   ! parameter values
-  bulk_density=1500.0
   usda_taxonomy_class=1
   nwrb_taxonomy_class=1
-  glim_lithology_class=1
+  soil_ph=6.5
+  lithology_class=1
 /
 &BASE_CTL
   ! basic model config

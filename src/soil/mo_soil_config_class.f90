@@ -44,8 +44,8 @@ MODULE mo_soil_config_class
     REAL(wp)              :: soil_sand            !< soil sand proportion - site specific from forcing info file
     REAL(wp)              :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp)              :: soil_ph              !< soil pH - site specific from forcing info file
-    CHARACTER(15)         :: soil_moisture_scheme       !< soil moisture "prescribed|bucke|layer"
+    REAL(wp)              :: bulk_density    
+    CHARACTER(15)         :: soil_moisture_scheme !< soil moisture "prescribed|bucke|layer"
     CONTAINS
       PROCEDURE :: Init => Init_soil_config
   END Type t_soil_config
@@ -81,9 +81,9 @@ CONTAINS
                 soil_theta_prescribe
     REAL(wp) :: soil_sand       , &
                 soil_silt       , &
-                soil_clay       , &
-                soil_ph
-    CHARACTER(15)  :: soil_moisture_scheme
+                soil_clay
+    REAL(wp) :: bulk_density
+    CHARACTER(15) :: soil_moisture_scheme
     INTEGER  :: i   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
@@ -100,7 +100,7 @@ CONTAINS
                           soil_sand       , &
                           soil_silt       , &
                           soil_clay       , &
-                          soil_ph         , &
+                          bulk_density    , &
                           soil_moisture_scheme  
      
 
@@ -124,7 +124,7 @@ CONTAINS
     soil_sand                     = 0.3_wp
     soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
-    soil_ph                       = 6.0_wp
+    bulk_density                  = 1500.0_wp
     soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
 
     ! read the namelist
@@ -188,10 +188,10 @@ CONTAINS
     !config%soil_clay                 = soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
     config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
     IF(config%soil_clay < eps8) THEN
-       WRITE(message_text,'(2a)') 'invalid proportion of soil_claysoil_moisture_scheme (value < eps8)',routine
+       WRITE(message_text,'(2a)') 'invalid proportion of soil_clay (value < eps8)',routine
        CALL finish("mo_soil_config_class:init_soil_config",message_text)
     END IF
-    config%soil_ph                   = soil_ph
+    config%bulk_density              = bulk_density
 
   END SUBROUTINE Init_soil_config
 

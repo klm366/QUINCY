@@ -98,7 +98,11 @@ MODULE mo_soil_memory_class
                                     heat_capa_sl,         &  !< soil heat capacity (J / kg )
                                     bulk_dens_sl,         &  !< soil bulk density (kg / m3)
                                     therm_cond_sl            !< soil thermal conductivity (W / m2 / K)
-
+    TYPE(t_jsb_var_real3d)          :: & 
+                                    sand_sl             , &  !< soil sand proportion
+                                    silt_sl             , &  !< soil silt proportion
+                                    clay_sl                  !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+                                    
 
 
   CONTAINS
@@ -406,6 +410,30 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'therm_cond_sl', mem%therm_cond_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'sand_sl', mem%sand_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+            
+      CALL jsb_add_var(mem, 'silt_sl', mem%silt_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+            
+      CALL jsb_add_var(mem, 'clay_sl', mem%clay_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

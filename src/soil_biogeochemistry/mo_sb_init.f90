@@ -91,6 +91,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_assoc_fast
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk :: po4_occluded
+    dsl4jsb_Real3D_onChunk :: ph_sl
+    dsl4jsb_Real3D_onChunk :: lithology_class_sl
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -128,6 +130,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       ph_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       lithology_class_sl)
     ! Get process memory pool structures
 #define Get_sb_pool
 #include "slm_pools_a_incl.f90"
@@ -139,6 +143,15 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+
+    !> 1.0 all soil models
+    !! 
+    ph_sl(:,:)              = dsl4jsb_Config(SB_)%soil_ph
+    lithology_class_sl(:,:) = dsl4jsb_Config(SB_)%lithology_class
+
+
+    !> 2.0 differentiate soil model init
+    !! 
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
 
        ! Initial values for Soenke's four pool soil biogeochemical model

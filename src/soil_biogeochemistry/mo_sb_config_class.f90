@@ -39,10 +39,10 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_CLE_po4
     LOGICAL               :: flag_sb_LK_po4
     CHARACTER(15)         :: sb_adsorp_scheme
-    REAL(wp)              :: bulk_density
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
-    INTEGER               :: glim_lithology_class
+    REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
+    INTEGER               :: lithology_class
 
     CONTAINS
       PROCEDURE :: Init => Init_sb_config
@@ -80,10 +80,10 @@ CONTAINS
     LOGICAL               :: flag_sb_CLE_po4
     LOGICAL               :: flag_sb_LK_po4
     CHARACTER(15)         :: sb_adsorp_scheme
-    REAL(wp)              :: bulk_density
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
-    INTEGER               :: glim_lithology_class
+    REAL(wp)              :: soil_ph
+    INTEGER               :: lithology_class
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
@@ -100,10 +100,10 @@ CONTAINS
                       flag_sb_CLE_po4      ,  &
                       flag_sb_LK_po4       ,  &    
                       sb_adsorp_scheme     ,  &
-                      bulk_density         ,  &
                       usda_taxonomy_class  ,  &
                       nwrb_taxonomy_class  ,  &
-                      glim_lithology_class
+                      soil_ph              ,  &
+                      lithology_class
      
      
 
@@ -126,10 +126,10 @@ CONTAINS
     flag_sb_CLE_po4             = .TRUE.
     flag_sb_LK_po4              = .TRUE.
     sb_adsorp_scheme            = "eca_full"         ! eca_full; eca_part (only uptake, not for adsorption); eca_none
-    bulk_density                = 1500.0_wp
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
-    glim_lithology_class        = 1
+    soil_ph                     = 6.5_wp
+    lithology_class             = 1
 
     ! read the namelist
     ! 
@@ -170,10 +170,10 @@ CONTAINS
     config%flag_sb_CLE_po4                 = flag_sb_CLE_po4
     config%flag_sb_LK_po4                  = flag_sb_LK_po4
     config%sb_adsorp_scheme                = sb_adsorp_scheme
-    config%bulk_density                    = bulk_density
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
-    config%glim_lithology_class            = glim_lithology_class
+    config%soil_ph                         = soil_ph    
+    config%lithology_class                 = lithology_class
 
   END SUBROUTINE Init_sb_config
 

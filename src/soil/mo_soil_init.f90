@@ -86,6 +86,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk    :: saxtonB 
     dsl4jsb_Real3D_onChunk    :: saxtonC 
     dsl4jsb_Real3D_onChunk    :: kdiff_sat_sl 
+    dsl4jsb_Real3D_onChunk    :: sand_sl
+    dsl4jsb_Real3D_onChunk    :: silt_sl
+    dsl4jsb_Real3D_onChunk    :: clay_sl
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -127,7 +130,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonB)
     dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonC)
     dsl4jsb_Get_var3D_onChunk(SOIL_, kdiff_sat_sl)
-
+    dsl4jsb_Get_var3D_onChunk(SOIL_, sand_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, silt_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, clay_sl)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -149,10 +154,13 @@ CONTAINS
       & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
       & dsl4jsb_Config(SOIL_)%dz_water(1:options%nsoil_sb))    ! Soil layer thicknesses from namelist
 
-    bulk_dens_sl(:,:)  = rho_bulk_soil 
-    heat_capa_sl(:,:)  = soil_heat_cap
-    therm_cond_sl(:,:) = soil_therm_cond
-    t_srf_old(:) = 273.15_wp
+    bulk_dens_sl(:,:)   = dsl4jsb_Config(SOIL_)%bulk_density 
+    heat_capa_sl(:,:)   = soil_heat_cap
+    therm_cond_sl(:,:)  = soil_therm_cond
+    sand_sl(:,:)        = dsl4jsb_Config(SOIL_)%soil_sand
+    silt_sl(:,:)        = dsl4jsb_Config(SOIL_)%soil_silt
+    clay_sl(:,:)        = dsl4jsb_Config(SOIL_)%soil_clay
+    t_srf_old(:)        = 273.15_wp
 
     ! soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
     ! fractional water holding capacity at permanent wilting point

@@ -25,7 +25,7 @@ MODULE mo_pheno_config_class
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
-    REAL(wp)        :: test_pheno
+    REAL(wp)        :: lai        ! site specific lai, used to init lai_max in PHENO_
 
   CONTAINS
     PROCEDURE :: Init => Init_pheno_config
@@ -51,12 +51,12 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL         :: active
-    REAL(wp)        :: test_pheno
+    REAL(wp)        :: lai
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
 
 
     NAMELIST /phenology_ctl/       & 
-                test_pheno      !    , &
+                lai      !    , &
 
 
     ! variables for reading model-options from namelist
@@ -65,7 +65,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting pheno configuration')
 
     ! Set defaults
-    test_pheno                = 0.1_wp
+    lai                   = 6.0_wp
 
     ! read the namelist
     ! 
@@ -76,7 +76,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
-    config%test_pheno                   = test_pheno
+    config%lai                    = lai
 
 
   END SUBROUTINE Init_pheno_config

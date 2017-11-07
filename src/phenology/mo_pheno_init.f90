@@ -36,6 +36,9 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_pheno_constants
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(PHENO_)
+
     ! Use of process memories
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,      ONLY: t_pheno_memory
  
@@ -53,9 +56,11 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)                          !   TYPE(t_pheno_memory), POINTER      :: pheno__mem
     ! Declare pointers to variables in memory
     dsl4jsb_Logical2D_onChunk :: growing_season
+    dsl4jsb_Real2D_onChunk    :: lai_max
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -67,15 +72,15 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
     dsl4jsb_Get_memory(PHENO_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -88,6 +93,8 @@ CONTAINS
     ELSE
       growing_season=.FALSE.
     ENDIF
+
+    lai_max(:)      = dsl4jsb_Config(PHENO_)%lai
 
   END SUBROUTINE pheno_init
 

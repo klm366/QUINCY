@@ -16,7 +16,7 @@ MODULE mo_soil_constants
 
   REAL(wp), SAVE :: &
     soil_heat_cap,  &           !< soil heat capacity (temporarily for SLM offline) J/kg/K 
-    rho_bulk_soil,  &           !< soil bulk denisty (kg / m3) 
+    !rho_bulk_soil,  &           !< soil bulk denisty (kg / m3) 
     soil_therm_cond, &          !< soil thermal conductivity (W m-1 K-1)
 ! constants in simple multi-layer soil moisture scheme to describe the 
     InterceptionEfficiency, &   !< Efficiency of interception of precipitation as rain
@@ -69,7 +69,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_constants'
 
     soil_heat_cap   = 1480.0_wp    ! textbook for wet sandy soil
-    rho_bulk_soil   = 1695.86_wp   ! Bernhard Ahrens for Hainich
+    !rho_bulk_soil   = 1695.86_wp   ! Bernhard Ahrens for Hainich -> using site specific value now
     soil_therm_cond = 2.0_wp       ! Text book for wet sandy soil
 
     InterceptionEfficiency = 0.25_wp ! JSBACH4 

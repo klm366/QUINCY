@@ -51,4 +51,5 @@ mo_pheno_init.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_pheno_constants.o \
+  mo_pheno_config_class.o \
   mo_pheno_memory_class.o

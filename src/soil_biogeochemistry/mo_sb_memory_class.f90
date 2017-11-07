@@ -33,7 +33,7 @@ MODULE mo_sb_memory_class
 
 
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 120  !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 140  !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -314,6 +314,11 @@ MODULE mo_sb_memory_class
                                     bulk_soil_carbon_sl, &        !< bulk soil density of carbon [kg m-3] 
                                     particle_fluxrate, &          !< burial rate due to organic matter fall and decay [s-1?] 
                                     anaerobic_volume_fraction_sl  !< anaerobic volume fraction [--]
+
+    ! 3D soil properties
+    TYPE(t_jsb_var_real3d)          :: &
+                                    ph_sl               , &       !< ph per soil layer
+                                    lithology_class_sl            !< ..
 
     ! 2D total fluxes for mass balance checks in soil_biogeochemistry model
     TYPE(t_jsb_var_real2d)          :: & 
@@ -1869,6 +1874,22 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'ph_sl', mem%ph_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'lithology_class_sl', mem%lithology_class_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
