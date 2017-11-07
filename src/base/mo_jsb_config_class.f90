@@ -111,7 +111,7 @@ CONTAINS
 
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
-    CALL close_nml(nml_handler)
+!    CALL close_nml(nml_handler)
 
     model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
