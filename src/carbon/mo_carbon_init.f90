@@ -38,7 +38,11 @@ CONTAINS
   !
   SUBROUTINE carbon_init(tile)
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
-    USE mo_run_config,          ONLY: dtime   ! @todo replace by funktion in mo_jsb_time.f90 resp. mo_jsb_time_iface.f90
+#ifdef __ICON__
+  USE mo_run_config,          ONLY: dtime   ! @todo replace by funktion in mo_jsb_time.f90 resp. mo_jsb_time_iface.f90
+#else
+  USE mo_time_control,       ONLY: dtime => delta_time
+#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_model), POINTER                :: model

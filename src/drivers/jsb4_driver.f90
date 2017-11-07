@@ -134,6 +134,9 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: s_srf(:)
   REAL(wp), ALLOCATABLE :: evapotrans(:)
   REAL(wp), ALLOCATABLE :: evapopot(:)
+
+  REAL(wp), ALLOCATABLE :: CO2_flux(:) !!JN: hotfix to Reiners and Rainers checkin
+
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
@@ -247,6 +250,9 @@ PROGRAM jsb4_driver
   ALLOCATE(s_srf(nproma))
   ALLOCATE(evapotrans(nproma))
   ALLOCATE(evapopot(nproma))
+
+  ALLOCATE(CO2_flux(nproma)) !!JN: hotfix to Reiners and Rainers checkin
+  
   ALLOCATE(latent_hflx(nproma))
   ALLOCATE(sensible_hflx(nproma))
   ALLOCATE(grnd_hflx(nproma))
@@ -374,7 +380,7 @@ PROGRAM jsb4_driver
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:), evapopot(:))
+        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot(:))
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
