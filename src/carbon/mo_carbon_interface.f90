@@ -339,6 +339,7 @@ CONTAINS
     !
     dsl4jsb_Real2D_onChunk :: veg_frac_correction
     dsl4jsb_Real2D_onChunk :: LAI 
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
@@ -488,6 +489,7 @@ CONTAINS
     !
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
@@ -693,29 +695,29 @@ CONTAINS
        ! ------------------------------------------------------------------------------------------------------------------------
 
        ! C pools
-       Cpool_green_ta           = Cpool_green           * veg_frac_correction
-       Cpool_woods_ta           = Cpool_woods           * veg_frac_correction
-       Cpool_reserve_ta         = Cpool_reserve         * veg_frac_correction
-       Cpool_crop_harvest_ta    = Cpool_crop_harvest    * veg_frac_correction
+       Cpool_green_ta           = Cpool_green           * veg_frac_correction * fract_fpc_max
+       Cpool_woods_ta           = Cpool_woods           * veg_frac_correction * fract_fpc_max
+       Cpool_reserve_ta         = Cpool_reserve         * veg_frac_correction * fract_fpc_max
+       Cpool_crop_harvest_ta    = Cpool_crop_harvest    * veg_frac_correction * fract_fpc_max
 
-       YCpool_acid_ag1_ta       = YCpool_acid_ag1       * veg_frac_correction
-       YCpool_water_ag1_ta      = YCpool_water_ag1      * veg_frac_correction
-       YCpool_ethanol_ag1_ta    = YCpool_ethanol_ag1    * veg_frac_correction
-       YCpool_nonsoluble_ag1_ta = YCpool_nonsoluble_ag1 * veg_frac_correction
-       YCpool_acid_bg1_ta       = YCpool_acid_bg1       * veg_frac_correction
-       YCpool_water_bg1_ta      = YCpool_water_bg1      * veg_frac_correction
-       YCpool_ethanol_bg1_ta    = YCpool_ethanol_bg1    * veg_frac_correction
-       YCpool_nonsoluble_bg1_ta = YCpool_nonsoluble_bg1 * veg_frac_correction
-       YCpool_humus_1_ta        = YCpool_humus_1        * veg_frac_correction
-       YCpool_acid_ag2_ta       = YCpool_acid_ag2       * veg_frac_correction
-       YCpool_water_ag2_ta      = YCpool_water_ag2      * veg_frac_correction
-       YCpool_ethanol_ag2_ta    = YCpool_ethanol_ag2    * veg_frac_correction
-       YCpool_nonsoluble_ag2_ta = YCpool_nonsoluble_ag2 * veg_frac_correction
-       YCpool_acid_bg2_ta       = YCpool_acid_bg2       * veg_frac_correction
-       YCpool_water_bg2_ta      = YCpool_water_bg2      * veg_frac_correction
-       YCpool_ethanol_bg2_ta    = YCpool_ethanol_bg2    * veg_frac_correction
-       YCpool_nonsoluble_bg2_ta = YCpool_nonsoluble_bg2 * veg_frac_correction
-       YCpool_humus_2_ta        = YCpool_humus_2        * veg_frac_correction
+       YCpool_acid_ag1_ta       = YCpool_acid_ag1       * veg_frac_correction * fract_fpc_max
+       YCpool_water_ag1_ta      = YCpool_water_ag1      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_ag1_ta    = YCpool_ethanol_ag1    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_ag1_ta = YCpool_nonsoluble_ag1 * veg_frac_correction * fract_fpc_max
+       YCpool_acid_bg1_ta       = YCpool_acid_bg1       * veg_frac_correction * fract_fpc_max
+       YCpool_water_bg1_ta      = YCpool_water_bg1      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_bg1_ta    = YCpool_ethanol_bg1    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_bg1_ta = YCpool_nonsoluble_bg1 * veg_frac_correction * fract_fpc_max
+       YCpool_humus_1_ta        = YCpool_humus_1        * veg_frac_correction * fract_fpc_max
+       YCpool_acid_ag2_ta       = YCpool_acid_ag2       * veg_frac_correction * fract_fpc_max
+       YCpool_water_ag2_ta      = YCpool_water_ag2      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_ag2_ta    = YCpool_ethanol_ag2    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_ag2_ta = YCpool_nonsoluble_ag2 * veg_frac_correction * fract_fpc_max
+       YCpool_acid_bg2_ta       = YCpool_acid_bg2       * veg_frac_correction * fract_fpc_max
+       YCpool_water_bg2_ta      = YCpool_water_bg2      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_bg2_ta    = YCpool_ethanol_bg2    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_bg2_ta = YCpool_nonsoluble_bg2 * veg_frac_correction * fract_fpc_max
+       YCpool_humus_2_ta        = YCpool_humus_2        * veg_frac_correction * fract_fpc_max
 
 
        C_sum_natural_ta =   Cpool_green_ta           + Cpool_woods_ta            &
@@ -731,17 +733,17 @@ CONTAINS
                           + YCpool_humus_1_ta        + YCpool_humus_2_ta
 
        ! C fluxes
-       soil_respiration_ta         = soil_respiration      * veg_frac_correction
-       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_frac_correction
-       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction
-       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction
-       NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction
-       GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction
-       litter_flux_ta              = litter_flux           * veg_frac_correction
-       root_exudates_ta            = root_exudates         * veg_frac_correction
-       Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction
-       ! Cflux_herbivory_LG_ta      = Cflux_herbivory_LG    * veg_frac_correction
-       ! Cflux_herbivory_2_atm_ta   = Cflux_herbivory_2_atm * veg_frac_correction
+       soil_respiration_ta         = soil_respiration      * veg_frac_correction * fract_fpc_max
+       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_frac_correction * fract_fpc_max
+       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction * fract_fpc_max
+       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction * fract_fpc_max
+       NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction * fract_fpc_max
+       GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction * fract_fpc_max
+       litter_flux_ta              = litter_flux           * veg_frac_correction * fract_fpc_max
+       root_exudates_ta            = root_exudates         * veg_frac_correction * fract_fpc_max
+       Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction * fract_fpc_max
+       ! Cflux_herbivory_LG_ta      = Cflux_herbivory_LG    * veg_frac_correction * fract_fpc_max
+       ! Cflux_herbivory_2_atm_ta   = Cflux_herbivory_2_atm * veg_frac_correction * fract_fpc_max
 
    END IF
 
@@ -750,17 +752,17 @@ CONTAINS
    ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
    CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction                          & ! Minus: atmosphere gain is positive
+              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
                        - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
 
 
    CO2_flx2atm_soilresp_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction                          & ! Minus: atmosphere gain is positive
+              (- veg_frac_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
                    * soil_respiration      )                    ! .. soil respiration
 
    CO2_flx2atm_herbivory_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction                          & ! Minus: atmosphere gain is positive
+              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * Cflux_herbivory_2_atm )                    ! .. herbivory
 
 
