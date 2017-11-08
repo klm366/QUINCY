@@ -455,14 +455,6 @@ CONTAINS
           DO i=1,nlct
             lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
           END DO
-        !! k_rtos
-          DO i=1,nlct
-            IF(lctlib(i)%growthform /= igrass) THEN
-              lctlib(i)%k_rtos = 1.0_wp / (lctlib(i)%k_latosa / lctlib(i)%sla / lctlib(i)%wood_density)
-            ELSE
-              lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
-            END IF
-          END DO
         !! k2_fruit_alloc
           DO i=1,nlct
             IF(lctlib(i)%growthform /= igrass) THEN
@@ -478,7 +470,16 @@ CONTAINS
         !! k_sapwood
           DO i=1,nlct
             lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
-          END DO
+         END DO
+         !! k_rtos
+         DO i=1,nlct
+            IF(lctlib(i)%growthform /= igrass) THEN
+               lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+                    lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
+            ELSE
+               lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
+            END IF
+         END DO
         !! c0_allom
           DO i=1,nlct
             IF(lctlib(i)%growthform == itree) THEN

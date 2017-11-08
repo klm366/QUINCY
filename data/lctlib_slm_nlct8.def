@@ -253,7 +253,7 @@ allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5
 phi_leaf_min -1.0 -1.0 -1.0 -1.0 -1.0 -1.0 -0.75 -0.75
         
 #k_root: fine root hydraulic conductance (m3 mol-1 s-1 MPa-1)        
-k_root 2.3 2.3 2.3 2.3 2.3 2.3 2.3 2.3
+k_root 2.3 2.3 2.3 4.3 2.3 2.3 2.3 2.3
         
 #k_sapwood: apwood hydraulic conductance (m2 s-1 MPa-1)        
 # @todo: check tropics and grasses         
