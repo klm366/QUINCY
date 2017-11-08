@@ -71,6 +71,9 @@ CONTAINS
     CASE ('jsbach_pfts_with_carbon_with_hd')
       CALL init_usecase_pfts_with_carbon_with_hd(model)
 
+    CASE ('jsbach_cohorts_with_carbon')
+      CALL init_usecase_cohorts_with_carbon(model)
+
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
 
@@ -635,5 +638,108 @@ CONTAINS
 
   END SUBROUTINE init_usecase_pfts_with_carbon_with_hd
   
+
+
+  SUBROUTINE init_usecase_cohorts_with_carbon(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, cohort_tile
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    INTEGER :: i, j
+
+    INTEGER, PARAMETER :: npft = 11
+    INTEGER, PARAMETER :: ncohorts = 5 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
+
+    CHARACTER(len=5) :: pft_shortname
+    CHARACTER(len=10) :: cohort_name
+
+    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = (/ &
+      & 'Tropical broadleaf evergreen  ', &
+      & 'Tropical broadleaf deciduous  ', &
+      & 'Extra-tropical evergreen      ', &
+      & 'Extra-tropical deciduous      ', &
+      & 'Raingreen shrubs              ', &
+      & 'Deciduous shrubs              ', &
+      & 'C3 grass                      ', &
+      & 'C4 grass                      ', &
+      & 'C3 pasture                    ', &
+      & 'C4 pasture                    ', &
+      & 'C3 crops                      '    /)
+
+    ! Index of PFT into lctlib columns
+    ! id is one less than in lctlib file because the first column (glacier) has been thrown away
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_cohorts'
+
+    grid => Get_grid(model%grid_id)
+
+    !TODO-JN-COHORTS test ncohorts such that j>0 & j<=99 ! (cohort_name len=10 -- pft_shortname + '_fc' + j)
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
+    model%top => box_tile
+
+      lake_tile => t_jsb_tile('lake', 'Lake tile', &
+        & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+
+        glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+          & processes = (/HYDRO_, SSE_/), &
+          & process_actions = (/ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+          ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_,   DISTURB_/), &
+          & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='fract_veg')
+
+          DO i=1,npft
+            WRITE(pft_shortname, "(A3,I2.2)") "pft", i
+            pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
+              & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+
+            !TODO-JN-COHORTS should check which pft is a forest type?
+
+            IF (i .LE. 4) THEN
+              DO j=1,ncohorts
+                WRITE(cohort_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
+                cohort_tile => t_jsb_tile(cohort_name, TRIM(cohort_name // ' tile'), &
+!                 & processes       = (/FM_/), &
+!                 & process_actions = (/ON_TILE_/), &
+                 & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=pft_tile, &
+                 & fract_varname='allFirst')
+              ENDDO
+            ENDIF
+          END DO
+          ! DO i=1,npft
+          !   pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
+          !     & processes=(/ASSIMI_, PHENO_/), &
+          !     & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=land_tile)
+          ! END DO
+
+    NULLIFY(box_tile)
+    NULLIFY(lake_tile)
+    NULLIFY(land_tile)
+    NULLIFY(glacier_tile)
+    NULLIFY(veg_tile)
+    NULLIFY(pft_tile)
+
+  END SUBROUTINE init_usecase_cohorts_with_carbon
+
+
+
+
 #endif
 END MODULE mo_jsb_model_usecases

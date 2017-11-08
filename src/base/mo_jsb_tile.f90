@@ -453,6 +453,19 @@ CONTAINS
       CALL this%Set_fraction(fract=tmp_fract(:,:))
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
+    ELSEIF (this%fract_varname == 'allFirst') THEN !TODO-JN-COHORTS
+      IF(ASSOCIATED(this%parent)) THEN
+        IF (this%Is_first_child()) THEN
+          tmp_fract(:,:) = 1._wp !- 0.005_wp * (REAL(this%parent%Get_no_of_children(), wp) - 1._wp)
+        ELSE
+          tmp_fract(:,:) = 0._wp !0.005_wp
+        END IF
+      ELSE
+        tmp_fract(:,:) = 1._wp
+      END IF
+      CALL this%Set_fraction(fract=tmp_fract(:,:))
+      tmp_fract(:,:) = 1._wp
+      CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
