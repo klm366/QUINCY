@@ -25,7 +25,6 @@ MODULE mo_carbon_interface
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, DISTURB_
@@ -133,11 +132,12 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
     LOGICAL                      :: lstart
-    INTEGER                      :: no_omp_thread
     INTEGER                      :: ics, ice, iblk, nc
+    REAL(wp)                     :: dtime
     INTEGER                      :: i, itile
     REAL(wp), allocatable        :: precip_total(:)
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
+
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -348,16 +348,15 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
+
     ! Set model and process config and memory
     model => Get_model(tile%owner_model_id)
     !grid => Get_grid(model%grid_id)
-
-    ! Set local variables from options argument
-    no_omp_thread = Get_omp_thread()
-    iblk    = model%options(no_omp_thread)%iblk
-    ics     = model%options(no_omp_thread)%ics
-    ice     = model%options(no_omp_thread)%ice
-    nc      = model%options(no_omp_thread)%nc
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -609,6 +608,8 @@ CONTAINS
                                                                                   !    in the lct library.
                               dsl4jsb_Lctlib_param(PhenologyType),              & ! in  R: is it crop?
                                                                                   ! If yes then this is 5!
+                              time_steps_per_day(),                             & ! in
+                              dtime,                                            & ! in
                               !
                               Cpool_green,                                      & ! inout
                               Cpool_woods,                                      & ! inout
@@ -790,14 +791,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_C_NPP_pot_allocation'
 
     INTEGER  :: iblk, ics, ice, nc
-    INTEGER  :: no_omp_thread
 
-    ! Get local variables from options argument
-    !no_omp_thread = Get_omp_thread()
-    !iblk = options(no_omp_thread)%iblk
-    !ics  = options(no_omp_thread)%ics
-    !ice  = options(no_omp_thread)%ice
-    !nc   = options(no_omp_thread)%nc
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice

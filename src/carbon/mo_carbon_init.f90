@@ -74,13 +74,13 @@ CONTAINS
     !CALL carbon_init_bc(tile)
 
 
-    ! R: This should stand here because these variables are more technical constants (only depending only on dtime)
+    ! R: This should stand here because these variables are more technical constants (only depending on dtime)
     !    than a part of the carbon process parametrization. Furthermore they should be calculated only once when a simulation
     !    is started or restarted and not for each tile and for each time step again!
     !    It is not necessary to write and read them to/from the restart files.
     !    It is not necessary to write them to the output file.
     !    However, we could think about to kick them also out of the memory...
-    !    AND we should make the 1D, later, as soon as we do not want them in the output for debugging!
+    !    AND we should make them 1D, later, as soon as we do not want them in the output for debugging!
 
      !dsl4jsb_Get_var2D_onChunk(CARBON_,   F_pseudo_temp)    ! for this we would need iblk, but we want the whole field!
      F_pseudo_temp   => carbon__mem%F_pseudo_temp%ptr(:,:)   ! out
