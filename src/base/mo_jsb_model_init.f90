@@ -94,11 +94,11 @@ CONTAINS
   !! @todo mo_jsb_model_init: move to default JSBACH4 init style
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)  !(model_id, model_name)
+  SUBROUTINE init_slm(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)
 
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)              :: tile           !< data structure for dynamic vegetation and soil variables
     LOGICAL,INTENT(out)                         :: l_forcing      !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
@@ -108,6 +108,7 @@ CONTAINS
                                                    ics, &
                                                    ice, &
                                                    nc 
+    ! ---------------------------
     ! 0.2 Local
     CLASS(t_jsb_memory), POINTER                :: tmp_ptr        !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: process_name   !! for Memory init and alloc
@@ -146,6 +147,7 @@ CONTAINS
     DO iproc=1,max_no_of_processes      ! *slmtmp currently only creating: SOIL_ VEG_ ASSIMI_ PHENO_ SB_  (mo_jsb_process_factory:Create_process)
       model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
     END DO
+
 
     !! 2 Config init, run PROC_config%Init routines and Forcing init
     !!

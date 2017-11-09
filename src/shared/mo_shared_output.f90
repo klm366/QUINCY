@@ -14,9 +14,11 @@ MODULE mo_shared_output
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
+  USE mo_exception,             ONLY: message_text, message, finish
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
   USE mo_base_config_class,     ONLY: base_config
+  USE mo_sb_config_class,       ONLY: t_sb_config
   USE mo_jsb4_forcing,          ONLY: forcing_options
 
   IMPLICIT NONE
@@ -80,7 +82,7 @@ CONTAINS
   !! 
   !! open output files, define file names for pools, write column header names
   !! 
-  !! lun: start at 100
+  !! lun: start at 100 with a current max of 129 as flux outputs starts with lun 130
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
@@ -105,6 +107,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
+    INTEGER        :: max_lun_pool  ! currently 129
     CHARACTER(100) :: fname         ! filename
     CHARACTER(30)  :: opt           ! option according to namlist parameters
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_pool_output_files'
@@ -123,8 +126,9 @@ CONTAINS
 
 
     !> 1.0 init
-    opt = " "
-    output_interval_pool = 0.0_wp
+    max_lun_pool          = 129
+    opt                   = " "
+    output_interval_pool  = 0.0_wp
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
@@ -164,6 +168,9 @@ CONTAINS
          fname = 'soilpoolPhysics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         fname = 'soilpoolPhysics_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
          fname = 'soilpoolOrg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
@@ -181,41 +188,59 @@ CONTAINS
          lun=lun+1
          fname = 'veg_diagnostics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
 
-      CASE('soil')
-         fname = 'soilpoolCorg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpooldC13org'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpoolDC14org'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpoolNorg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpooldN15org'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpoolPorg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpoolNinorg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soilpoolPinorg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
-         fname = 'soil_diagnostics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
     END SELECT
+
+    !! land & soil
+    !! detailed data per layer only for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','soil')
+        SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
+          CASE('simple_1d','jsm')
+            fname = 'soilpoolCOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpoolNOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpoolPOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpoolInNOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpoolInPOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpooldC13org_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpooldC14org_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soilpooldN15org_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            fname = 'soil_diagnostics_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+        END SELECT
+    END SELECT
+
+
+    !> 2.3  test if lun for pools is too big
+    !! 
+    IF (lun > max_lun_pool) THEN
+       WRITE(message_text,'(a)') 'lun of pools is too big, reaching values that are reserved for lun of flux output'
+       CALL finish(TRIM(routine),message_text)
+    END IF
+
 
     !> 3.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_writing_pool(nsoil_sb)
+    CALL init_output_writing_pool(nsoil_sb, dsl4jsb_Config(SB_)%sb_model_scheme)
 
   END SUBROUTINE open_pool_output_files
 
@@ -225,11 +250,12 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_writing_pool(nsoil_sb)
+  SUBROUTINE init_output_writing_pool(nsoil_sb, sb_model_scheme)
 
     IMPLICIT NONE
     ! 0.1 InOut
     INTEGER, INTENT(in)       :: nsoil_sb
+    CHARACTER(15), INTENT(in) :: sb_model_scheme
     ! 0.2 Local
     INTEGER                   :: lun,isoil
     CHARACTER(2)              :: layerstr
@@ -237,7 +263,7 @@ CONTAINS
 
     !> 1.0 write headers
     !!
-    !! lun of pools starts at 100
+    !! lun of pools starts at 100 with a max of 30, as lun of flux output starts with 130 !
     lun = 100
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
@@ -259,8 +285,10 @@ CONTAINS
          WRITE(lun,'(2a)') 'Time Leaf_d15N FineRoot_d15N SapWood_d15N HeartWood_d15N CoarseRoot_d15N ', & 
                           'Fruit_d15N Labile_d15N Reserve_d15N SeedBank_d15N Total_d15N'
          lun=lun+1
-
-         ! output per soil_layer for two SOIL_ variables
+         ! soilpoolPhysics
+         WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS '
+         lun=lun+1
+         ! soilpoolPhysics_lay output per soil_layer for two SOIL_ variables
          p1str=''
          p2str=''
          DO isoil = 1,nsoil_sb
@@ -272,7 +300,7 @@ CONTAINS
             WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
             WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
          ENDDO
-         WRITE(lun,'(3a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS ',TRIM(p1str), TRIM(p2str)
+         WRITE(lun,'(3a)') 'Time ',TRIM(p1str), TRIM(p2str)
          lun=lun+1
          WRITE(lun,'(3a)') 'Time MetLitterC MetLitterN MetLitterP StrLitterC StrLitterN StrLitterP', &
                            ' WodLitterC WodLitterN WodLitterP',&
@@ -291,107 +319,160 @@ CONTAINS
          WRITE(lun,'(2a)') &
          & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
          & 'growing_season cost_nup cost_bnf unit_transp transp'
+         lun=lun+1
 
-      CASE('soil')
-         p1str=''
-         p2str=''
-         p3str=''
-         p4str=''
-         p5str=''
-         p6str=''
-         p7str=''
-         p8str=''
-         p9str=''
-         p10str=''
-         DO isoil = 1,nsoil_sb
-            IF(isoil<10) THEN 
-              WRITE(layerstr,'(I1)') isoil
-            ELSE
-              WRITE(layerstr,'(I2)') isoil
-            ENDIF
-            WRITE(p1str,'(a)') TRIM(p1str)//' SoluLit_L'//TRIM(layerstr)
-            WRITE(p2str,'(a)') TRIM(p2str)//' PolyLit_L'//TRIM(layerstr)
-            WRITE(p3str,'(a)') TRIM(p3str)//' WodLit_L'//TRIM(layerstr)
-            WRITE(p4str,'(a)') TRIM(p4str)//' DOM_L'//TRIM(layerstr)
-            WRITE(p5str,'(a)') TRIM(p5str)//' aDOM_L'//TRIM(layerstr)
-            WRITE(p6str,'(a)') TRIM(p6str)//' Fungi_L'//TRIM(layerstr)
-            WRITE(p7str,'(a)') TRIM(p7str)//' Myc_L'//TRIM(layerstr)
-            WRITE(p8str,'(a)') TRIM(p8str)//' Mic_L'//TRIM(layerstr)
-            WRITE(p9str,'(a)') TRIM(p9str)//' Res_L'//TRIM(layerstr)
-            WRITE(p10str,'(a)') TRIM(p10str)//' aRes_L'//TRIM(layerstr)
-         ENDDO
-         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-            TRIM(p8str),TRIM(p9str),TRIM(p10str)
-         lun=lun+1                 
-         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-            TRIM(p8str),TRIM(p9str),TRIM(p10str)
-         lun=lun+1                 
-         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-            TRIM(p8str),TRIM(p9str),TRIM(p10str)
-         lun=lun+1                 
-         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-            TRIM(p8str),TRIM(p9str),TRIM(p10str)
-         lun=lun+1                 
-         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-            TRIM(p8str),TRIM(p9str),TRIM(p10str)
-         lun=lun+1                 
-         WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-            TRIM(p8str),TRIM(p9str),TRIM(p10str)
-         lun=lun+1                 
-
-         p1str=''
-         p2str=''
-         p3str=''
-         p4str=''
-         p5str=''
-         p6str=''
-         DO isoil = 1,nsoil_sb
-            IF(isoil<10) THEN 
-              WRITE(layerstr,'(I1)') isoil
-            ELSE
-              WRITE(layerstr,'(I2)') isoil
-            ENDIF
-            WRITE(p1str,'(a)') TRIM(p1str)//' NH4solute_L'//TRIM(layerstr)
-            WRITE(p2str,'(a)') TRIM(p2str)//' NO3solute_L'//TRIM(layerstr)
-!            WRITE(p3str,'(a)') TRIM(p3str)//' d15N_NH4solute_L'//TRIM(layerstr)
-!            WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NO3solute_L'//TRIM(layerstr)
-            WRITE(p5str,'(a)') TRIM(p5str)//' NH4assoc_L'//TRIM(layerstr)
-!            WRITE(p6str,'(a)') TRIM(p6str)//' d15N_NH4assoc_L'//TRIM(layerstr)
-         ENDDO
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
-         lun=lun+1                 
-
-         p1str=''
-         p2str=''
-         DO isoil = 1,nsoil_sb
-            IF(isoil<10) THEN 
-              WRITE(layerstr,'(I1)') isoil
-            ELSE
-              WRITE(layerstr,'(I2)') isoil
-            ENDIF
-            WRITE(p1str,'(a)') TRIM(p1str)//' PO4solute_L'//TRIM(layerstr)
-            WRITE(p2str,'(a)') TRIM(p2str)//' PO4assoc_fast_L'//TRIM(layerstr)
-            WRITE(p3str,'(a)') TRIM(p3str)//' PO4assoc_slow_L'//TRIM(layerstr)
-            WRITE(p4str,'(a)') TRIM(p4str)//' PO4assoc_occl_L'//TRIM(layerstr)
-         ENDDO
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)
-         lun=lun+1                 
-
-         p1str=''
-         p2str=''
-         DO isoil = 1,nsoil_sb
-            IF(isoil<10) THEN 
-              WRITE(layerstr,'(I1)') isoil
-            ELSE
-              WRITE(layerstr,'(I2)') isoil
-            ENDIF
-            WRITE(p1str,'(a)') TRIM(p1str)//' Qmax_L'//TRIM(layerstr)
-            WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
-         ENDDO
-         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str)
-         lun=lun+1                 
     END SELECT
-     
+
+    !! land & soil
+    !! detailed data per layer only for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','soil')
+        SELECT CASE(TRIM(sb_model_scheme))
+          CASE('simple_1d','jsm')
+            ! soilpoolCOrg_lay
+            p1str=''
+            p2str=''
+            p3str=''
+            p4str=''
+            p5str=''
+            p6str=''
+            p7str=''
+            p8str=''
+            p9str=''
+            p10str=''
+            DO isoil = 1,nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              ENDIF
+              WRITE(p1str,'(a)') TRIM(p1str)//' SoluLit_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' PolyLit_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' WodLit_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' DOM_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' aDOM_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' Fungi_L'//TRIM(layerstr)
+              WRITE(p7str,'(a)') TRIM(p7str)//' Myc_L'//TRIM(layerstr)
+              WRITE(p8str,'(a)') TRIM(p8str)//' Mic_L'//TRIM(layerstr)
+              WRITE(p9str,'(a)') TRIM(p9str)//' Res_L'//TRIM(layerstr)
+              WRITE(p10str,'(a)') TRIM(p10str)//' aRes_L'//TRIM(layerstr)
+            ENDDO
+            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str)
+            lun=lun+1
+            
+            !soilpoolNOrg_lay
+            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str)
+            lun=lun+1
+            
+            !soilpoolPOrg_lay
+            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str)
+            lun=lun+1
+            
+            !soilpoolInNOrg_lay
+            p1str=''
+            p2str=''
+            p3str=''
+            p4str=''
+            p5str=''
+            p6str=''
+            DO isoil = 1,nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              END IF
+              WRITE(p1str,'(a)') TRIM(p1str)//' NH4assoc_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' NH4solute_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' NO3solute_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NH4assoc_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' d15N_NH4solute_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' d15N_NO3solute_L'//TRIM(layerstr)
+            END DO
+            WRITE(lun,'(7a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
+            lun=lun+1
+            
+            !soilpoolInPOrg_lay
+            p1str=''
+            p2str=''
+            p3str=''
+            p4str=''
+            p5str=''
+            DO isoil = 1,nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              ENDIF
+              WRITE(p1str,'(a)') TRIM(p1str)//' PO4assoc_fast_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' PO4assoc_slow_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' PO4assoc_occl_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' PO4solute_L'//TRIM(layerstr)
+              !WRITE(p5str,'(a)') TRIM(p5str)//' PO4primary_L'//TRIM(layerstr)
+            ENDDO
+            WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)!,TRIM(p5str)
+            lun=lun+1
+            
+            ! dC13 dC14 dN15
+            p1str=''
+            p2str=''
+            p3str=''
+            p4str=''
+            p5str=''
+            p6str=''
+            p7str=''
+            p8str=''
+            p9str=''
+            p10str=''
+            DO isoil = 1,nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              ENDIF
+              WRITE(p1str,'(a)') TRIM(p1str)//' SoluLit_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' PolyLit_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' WodLit_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' DOM_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' aDOM_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' Fungi_L'//TRIM(layerstr)
+              WRITE(p7str,'(a)') TRIM(p7str)//' Myc_L'//TRIM(layerstr)
+              WRITE(p8str,'(a)') TRIM(p8str)//' Mic_L'//TRIM(layerstr)
+              WRITE(p9str,'(a)') TRIM(p9str)//' Res_L'//TRIM(layerstr)
+              WRITE(p10str,'(a)') TRIM(p10str)//' aRes_L'//TRIM(layerstr)
+            ENDDO
+            ! soilpooldC13org_lay            
+            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str)
+            lun=lun+1          
+            ! soilpooldC14org_lay       
+            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str)
+            lun=lun+1      
+            ! soilpooldN15org_lay       
+            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str)
+            lun=lun+1 
+            
+            ! soil_diagnostics_lay
+            p1str=''
+            p2str=''
+            DO isoil = 1,nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              ENDIF
+              WRITE(p1str,'(a)') TRIM(p1str)//' Qmax_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
+            ENDDO
+            WRITE(lun,'(3a)') 'Time ',TRIM(p1str),TRIM(p2str)
+            lun=lun+1                 
+        END SELECT
+    END SELECT
+
   END SUBROUTINE init_output_writing_pool
 
 
@@ -411,6 +492,7 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(SB_)
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -431,13 +513,16 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
-    TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                              :: lun            ! locical unit number
-    INTEGER                              :: icanopy         ! loop over ncanopy
-    REAL(wp)                             :: hlp1           ! helper variable
-    REAL(wp)                             :: l2r, s2c, bcf  !helper ratio variables
-    REAl(wp)                             :: growing_season_float !output variable for growing season
-    REAL(wp)                             :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
+    TYPE(t_lctlib_element), POINTER      :: lctlib                    !< land-cover-type library - parameter across pft's
+    LOGICAL                              :: l_land_plant_output, &    !< write land/plant output T/F
+                                            l_soil_output             !< write soil       output T/F
+    INTEGER                              :: lun                       ! logical unit number
+    INTEGER                              :: icanopy                   ! loop over ncanopy
+    REAL(wp)                             :: hlp1                      ! helper variable
+    REAL(wp)                             :: l2r, s2c, bcf             ! helper ratio variables
+    REAl(wp)                             :: growing_season_float      ! output variable for growing season
+    REAL(wp)                             :: dC13leaf,dC13fine_root, & ! 
+                                            dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                             dC13fruit,dC13labile,dC13reserve,dC13seed_bed
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) & 
                                          :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
@@ -449,6 +534,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
@@ -507,6 +593,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: po4_assoc_fast
     dsl4jsb_Real3D_onChunk      :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk      :: po4_occluded
+!    dsl4jsb_Real3D_onChunk      :: po4_primary
     dsl4jsb_Real3D_onChunk      :: qmax_org
     dsl4jsb_Real3D_onChunk      :: qmax_po4
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
@@ -527,6 +614,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
@@ -583,6 +671,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_fast)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_slow)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_occluded)
+!    dsl4jsb_Get_var3D_onChunk(SB_,  po4_primary)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_org)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
@@ -603,23 +692,57 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
+    !< 0.9 init local variables
+    !! 
     ichu = ics    ! the chunk number for output using variables directly from the sb% mem
     lun = 100
 
+    !< 1.0 test if anything would be written out at this timestep
+    !! 
+    ! set to FALSE as default
+    l_land_plant_output = .FALSE.
+    l_soil_output       = .FALSE.
+    ! test if TRUE
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-        !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
-        !! 
-        !! same for write_output_flux
-        IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
-       
-           !> 1.0 check output start & end, and write pools if appropriate with output_interval
-           !! 
-           !! 
-           IF(.NOT. l_transient_spinup .AND. &
-              time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
-             IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
-                & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
+        ! special fluxnet simulations; run only if 'special case: fluxnet output' is not active, or active & after spinup
+        IF (fluxnet_output_status < 3) THEN 
+          ! after spinup, when doing transient simulations
+          ! output start & end
+          IF(.NOT. l_transient_spinup .AND. &
+             & time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+            ! matching output_interval
+            IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
+               & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
+              ! set TRUE
+              l_land_plant_output = .TRUE.
+            END IF
+          END IF
+        END IF
+      CASE('soil')
+        ! after spinup, when doing transient simulations
+        ! output start & end
+        IF(.NOT. l_transient_spinup .AND. &
+           & time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+          ! matching output_interval
+          IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
+             & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
+            ! set TRUE
+            l_soil_output = .TRUE.
+          END IF
+        END IF
+    END SELECT
+
+
+    !< 2.0  output
+    !! 
+    !! land/plant
+    !! land/soil
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+        ! output T/F
+        IF (l_land_plant_output) THEN 
+
               write(lun,'(13F12.6)') time_d,veg_pool%leaf%carbon(ipoi),&
                 veg_pool%fine_root%carbon(ipoi),veg_pool%sap_wood%carbon(ipoi),&
                 veg_pool%heart_wood%carbon(ipoi),veg_pool%coarse_root%carbon(ipoi),&
@@ -675,10 +798,13 @@ CONTAINS
                 calc_delta_N15(veg_pool%seed_bed%nitrogen(ipoi),veg_pool%seed_bed%nitrogen15(ipoi)), &
                 calc_delta_N15(veg_total_biomass%nitrogen(ipoi),veg_total_biomass%nitrogen15(ipoi))
               lun=lun+1
+              ! soilpoolPhysics
               write(lun,'(20F16.6)') time_d, &
-                                    w_soil_root(ipoi),  w_soil_root_pot(ipoi), &
-                                    beta_soil_gs(ipoi), beta_soil_ps(ipoi), &
-                                    w_soil_sl(ipoi,:),  t_soil_sl(ipoi,:)
+                                     w_soil_root(ipoi),  w_soil_root_pot(ipoi), &
+                                     beta_soil_gs(ipoi), beta_soil_ps(ipoi)
+              lun=lun+1
+              ! soilpoolPhysics_lay
+              write(lun,'(20F16.6)') time_d, w_soil_sl(ipoi,:), t_soil_sl(ipoi,:)
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
                                      SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))      , & 
@@ -872,128 +998,133 @@ CONTAINS
                 growing_season_float, & 
                 cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
-             END IF
-           END IF
-        END IF  ! on/off switch specific to 'special case: fluxnet output'
-      CASE('soil')
-        IF(.NOT. l_transient_spinup .AND. &
-           time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
-          IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
-             & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
+              lun=lun+1
+        END IF  ! write output T/F (l_land_plant_output)
+    END SELECT  ! select land/plant
 
-             write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),&
-                            sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),&
-                            sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),&
-                            sb%pool%fungi%carbon%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk),&
-                            sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon%ptr(ics:ice,:,iblk),&
-                            sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
-             lun=lun+1
 
-             dC13soluable_litter(:,:)   = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk))
-             dC13polymeric_litter(:,:)  = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
-             dC13woody_litter(:,:)      = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk))
-             dC13dom(:,:)               = calc_delta_C13(sb%pool%dom%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%dom%carbon13%ptr(ics:ice,:,iblk))
-             dC13dom_assoc(:,:)         = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk))
-             dC13fungi(:,:)             = calc_delta_C13(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%fungi%carbon13%ptr(ics:ice,:,iblk))
-             dC13mycorrhiza(:,:)        = calc_delta_C13(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%mycorrhiza%carbon13%ptr(ics:ice,:,iblk))
-             dC13microbial(:,:)         = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk))
-             dC13residue(:,:)           = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%residue%carbon13%ptr(ics:ice,:,iblk))
-             dC13residue_assoc(:,:)     = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                                          sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
-             write(lun,'(100F12.6)') time_d,dC13soluable_litter(ipoi,:),&
-                                     dC13polymeric_litter(ipoi,:),dC13woody_litter(ipoi,:),dC13dom(ipoi,:),dC13dom_assoc(ipoi,:),& 
-                                     dC13fungi(ipoi,:),dC13mycorrhiza(ipoi,:),dC13microbial(ipoi,:),dC13residue(ipoi,:),&
-                                     dC13residue_assoc(ipoi,:)
-             lun=lun+1
+    !! land & soil
+    !! detailed data per layer only for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+    CASE('land','soil')
+      ! output T/F
+      IF (l_land_plant_output .OR. l_soil_output) THEN 
+        SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
+        CASE('simple_1d','jsm')
+          ! soilpoolCOrg_lay
+          write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk),&
+              sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk),sb%pool%woody_litter%carbon%ptr(ichu,:,iblk),&
+              sb%pool%dom%carbon%ptr(ichu,:,iblk),sb%pool%dom_assoc%carbon%ptr(ichu,:,iblk),&
+              sb%pool%fungi%carbon%ptr(ichu,:,iblk),sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk),&
+              sb%pool%microbial%carbon%ptr(ichu,:,iblk),sb%pool%residue%carbon%ptr(ichu,:,iblk),&
+              sb%pool%residue_assoc%carbon%ptr(ichu,:,iblk)
+          lun=lun+1
+          ! soilpoolNOrg_lay
+          write(lun,'(100F16.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk),&
+              sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk),&
+              sb%pool%dom%nitrogen%ptr(ichu,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ichu,:,iblk),&
+              sb%pool%fungi%nitrogen%ptr(ichu,:,iblk),sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk),&
+              sb%pool%microbial%nitrogen%ptr(ichu,:,iblk),sb%pool%residue%nitrogen%ptr(ichu,:,iblk),&
+              sb%pool%residue_assoc%nitrogen%ptr(ichu,:,iblk)
+          lun=lun+1
+          ! soilpoolPOrg_lay
+          write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ichu,:,iblk),&
+              sb%pool%polymeric_litter%phosphorus%ptr(ichu,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ichu,:,iblk),&
+              sb%pool%dom%phosphorus%ptr(ichu,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ichu,:,iblk),&
+              sb%pool%fungi%phosphorus%ptr(ichu,:,iblk),sb%pool%mycorrhiza%phosphorus%ptr(ichu,:,iblk),&
+              sb%pool%microbial%phosphorus%ptr(ichu,:,iblk),sb%pool%residue%phosphorus%ptr(ichu,:,iblk),&
+              sb%pool%residue_assoc%phosphorus%ptr(ichu,:,iblk)
+          lun=lun+1
+          ! soilpoolInNOrg_lay
+          write(lun,'(60F18.6)') time_d, &
+            nh4_assoc(ipoi,:), nh4_solute(ipoi,:),no3_solute(ipoi,:)  , &
+            calc_delta_N15(nh4_assoc(ipoi,:) ,nh4_n15_assoc(ipoi,:))  , &
+            calc_delta_N15(nh4_solute(ipoi,:),nh4_n15_solute(ipoi,:)) , &
+            calc_delta_N15(no3_solute(ipoi,:),no3_n15_solute(ipoi,:))
+          lun=lun+1
+          ! soilpoolInPOrg_lay
+          write(lun,'(50F16.6)') time_d, &
+            po4_assoc_fast(ipoi,:), po4_assoc_slow(ipoi,:), po4_occluded(ipoi,:), po4_solute(ipoi,:)!, po4_primary(ipoi,:)
+          lun=lun+1
+          ! soilpooldC13org_lay
+          dC13soluable_litter(ipoi,:)   = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%soluable_litter%carbon13%ptr(ichu,:,iblk))
+          dC13polymeric_litter(ipoi,:)  = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%polymeric_litter%carbon13%ptr(ichu,:,iblk))
+          dC13woody_litter(ipoi,:)      = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%woody_litter%carbon13%ptr(ichu,:,iblk))
+          dC13dom(ipoi,:)               = calc_delta_C13(sb%pool%dom%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%dom%carbon13%ptr(ichu,:,iblk))
+          dC13dom_assoc(ipoi,:)         = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%dom_assoc%carbon13%ptr(ichu,:,iblk))
+          dC13fungi(ipoi,:)             = calc_delta_C13(sb%pool%fungi%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%fungi%carbon13%ptr(ichu,:,iblk))
+          dC13mycorrhiza(ipoi,:)        = calc_delta_C13(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%mycorrhiza%carbon13%ptr(ichu,:,iblk))
+          dC13microbial(ipoi,:)         = calc_delta_C13(sb%pool%microbial%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%microbial%carbon13%ptr(ichu,:,iblk))
+          dC13residue(ipoi,:)           = calc_delta_C13(sb%pool%residue%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%residue%carbon13%ptr(ichu,:,iblk))
+          dC13residue_assoc(ipoi,:)     = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ichu,:,iblk), &
+                                                      sb%pool%residue_assoc%carbon13%ptr(ichu,:,iblk))
+          write(lun,'(100F12.6)') time_d,dC13soluable_litter(ipoi,:),&
+                                 dC13polymeric_litter(ipoi,:),dC13woody_litter(ipoi,:),dC13dom(ipoi,:),dC13dom_assoc(ipoi,:),& 
+                                 dC13fungi(ipoi,:),dC13mycorrhiza(ipoi,:),dC13microbial(ipoi,:),dC13residue(ipoi,:),&
+                                 dC13residue_assoc(ipoi,:)
+          lun=lun+1
+          ! soilpooldC14org_lay
+          write(lun,'(100F12.6)') time_d,&
+            calc_delta_C14(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%soluable_litter%carbon14%ptr(ichu,:,iblk),dC13soluable_litter(ipoi,:)),&
+            calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%polymeric_litter%carbon14%ptr(ichu,:,iblk),dC13polymeric_litter(ipoi,:)),&
+            calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%woody_litter%carbon14%ptr(ichu,:,iblk),dC13woody_litter(ipoi,:)),&
+            calc_delta_C14(sb%pool%dom%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%dom%carbon14%ptr(ichu,:,iblk),dC13dom(ipoi,:)),&
+            calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%dom_assoc%carbon14%ptr(ichu,:,iblk),dC13dom_assoc(ipoi,:)),&
+            calc_delta_C14(sb%pool%fungi%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%fungi%carbon14%ptr(ichu,:,iblk),dC13fungi(ipoi,:)),&
+            calc_delta_C14(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%mycorrhiza%carbon14%ptr(ichu,:,iblk),dC13mycorrhiza(ipoi,:)),&
+            calc_delta_C14(sb%pool%microbial%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%microbial%carbon14%ptr(ichu,:,iblk),dC13microbial(ipoi,:)),&
+            calc_delta_C14(sb%pool%residue%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%residue%carbon14%ptr(ichu,:,iblk),dC13residue(ipoi,:)),&
+            calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ichu,:,iblk), &
+                            sb%pool%residue_assoc%carbon14%ptr(ichu,:,iblk),dC13residue_assoc(ipoi,:))
+          lun=lun+1
+          ! soilpooldN15org_lay
+          write(lun,'(100F16.6)') time_d, &
+            calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%soluable_litter%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%polymeric_litter%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%woody_litter%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%dom%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%dom%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%dom_assoc%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%fungi%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%fungi%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%mycorrhiza%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%microbial%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%residue%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%residue%nitrogen15%ptr(ichu,:,iblk)), &
+            calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ichu,:,iblk), &
+                            sb%pool%residue_assoc%nitrogen15%ptr(ichu,:,iblk))
+          lun=lun+1
+          ! soil_diagnostics_lay
+          write(lun,'(100F12.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:)
+          lun=lun+1
+        END SELECT  ! simple_1d/jsm
+      END IF        ! l_land_plant_output .OR. l_soil_output
+    END SELECT      ! land/soil
 
-             write(lun,'(100F12.6)') time_d,&
-                calc_delta_C14(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk),dC13soluable_litter),&
-                calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk),dC13polymeric_litter),&
-                calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk),dC13woody_litter),&
-                calc_delta_C14(sb%pool%dom%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%dom%carbon14%ptr(ics:ice,:,iblk),dC13dom),&
-                calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk),dC13dom_assoc),&
-                calc_delta_C14(sb%pool%fungi%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%fungi%carbon14%ptr(ics:ice,:,iblk),dC13fungi),&
-                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
-                calc_delta_C14(sb%pool%mycorrhiza%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%mycorrhiza%carbon14%ptr(ics:ice,:,iblk),dC13mycorrhiza),&
-                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
-                calc_delta_C14(sb%pool%residue%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%residue%carbon14%ptr(ics:ice,:,iblk),dC13residue),&
-                calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk),dC13residue_assoc)
-             lun=lun+1
- 
-             write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),&
-                    sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
-                    sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),&
-                    sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk),&
-                    sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),&
-                    sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)
-             lun=lun+1
-
-             write(lun,'(100F12.6)') time_d, &
-                calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%fungi%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%fungi%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%mycorrhiza%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%mycorrhiza%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk)), &
-                calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
-             lun=lun+1
-
-             write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk),&
-                  sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk),&
-                  sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
-                  sb%pool%fungi%phosphorus%ptr(ics:ice,:,iblk),sb%pool%mycorrhiza%phosphorus%ptr(ics:ice,:,iblk),&
-                  sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
-                  sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
-             lun=lun+1
-
-             write(lun,'(100F12.6)') time_d,nh4_solute(ipoi,:),no3_solute(ipoi,:), &
-!                                  calc_delta_N15(nh4_solute(ipoi,:),nh4_n15_solute(ipoi,:)), &            
-!                                  calc_delta_N15(no3_solute(ipoi,:),no3_n15_solute(ipoi,:)), &            
-                                  nh4_assoc(ipoi,:) !, &
-!                                  calc_delta_N15(nh4_assoc(ipoi,:),nh4_n15_assoc(ipoi,:))
-             lun=lun+1
-
-             write(lun,'(100F12.6)') time_d,po4_solute(ipoi,:),po4_assoc_fast(ipoi,:),po4_assoc_slow(ipoi,:), po4_occluded(ipoi,:)
-             lun=lun+1
-
-             write(lun,'(100F12.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:)
-             
-          ENDIF
-       ENDIF 
-    END SELECT
 
 ! Pass back values to process memory
 #define Passback_veg_pool
@@ -1032,6 +1163,7 @@ CONTAINS
     dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
@@ -1039,6 +1171,7 @@ CONTAINS
                                                    ice, &
                                                    nc, &
                                                    nsoil_sb 
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
@@ -1051,12 +1184,14 @@ CONTAINS
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
+    ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
+
 
 
 
@@ -1080,7 +1215,8 @@ CONTAINS
     !> 2.2 define open() statements for file output
     !! 
     !! 
-    lun = 100 + 30
+    lun = 100 + 30    ! -> max of 30 files for pool output
+    
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -1112,6 +1248,7 @@ CONTAINS
         lun=lun+1
         fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
 
       CASE('canopy') ! subset of CASE('land','plant')
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -1125,6 +1262,7 @@ CONTAINS
         lun=lun+1
         fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
 
       CASE('soil')
         fname = 'soilfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -1133,7 +1271,7 @@ CONTAINS
         fname = 'soilfluxdC13'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxDC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxdC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -1142,15 +1280,26 @@ CONTAINS
         fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'mineralPflux'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         
     END SELECT
+
+    !! land & soil
+    !! detailed data per layer only for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','soil')
+        SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
+          CASE('simple_1d','jsm')
+            fname = 'soilfluxP_lay'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+        END SELECT
+    END SELECT
+
 
     !> 3.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_writing_flux(nsoil_sb)
+    CALL init_output_writing_flux(nsoil_sb, dsl4jsb_Config(SB_)%sb_model_scheme)
 
   END SUBROUTINE open_flux_output_files
 
@@ -1160,20 +1309,24 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_writing_flux(nsoil_sb)
+  SUBROUTINE init_output_writing_flux(nsoil_sb, sb_model_scheme)
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     ! 
-    INTEGER,INTENT(in) :: nsoil_sb
+    INTEGER,       INTENT(in) :: nsoil_sb
+    CHARACTER(15), INTENT(in) :: sb_model_scheme
+    ! ---------------------------
     ! 0.2 Local
-    INTEGER :: lun,isoil
-    CHARACTER(2) :: layerstr
-    CHARACTER(200) :: p1str,p2str,p3str,p4str,p5str,p6str
+    INTEGER         :: lun,isoil
+    CHARACTER(2)    :: layerstr
+    CHARACTER(200)  :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str,p11str,p12str,p13str,p14str
+
 
     !> 1.0 write headers
     !!
-    !! lun of fluxes starts at a multiple of 100, plus 30
+    !! lun of fluxes starts at a multiple of 100, plus 30 (any lun > 129 in pool output throws an exception)
     lun = 100 + 30
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
@@ -1198,9 +1351,10 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2', &
                           ' Leaching_d15NH4 Leaching_d15NO3'
         lun=lun+1
-        ! sb_massBalance_..txt
+        ! sb_massBalance_*.txt
         WRITE(lun,'(2a)') 'Time sb_dPoolC sb_dPoolN sb_dPoolP sb_dPoolC13 sb_dPoolC14 sb_dPoolN15 ', &
                           'sb_totalFluxC sb_totalFluxN sb_totalFluxP sb_totalFluxC13 sb_totalFluxC14 sb_totalFluxN15'
+        lun=lun+1
 
       CASE('canopy') ! subset of CASE('land','plant')
         ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
@@ -1212,42 +1366,79 @@ CONTAINS
         WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+        lun=lun+1
 
       CASE('soil')
+        ! soilfluxC
+        WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
+        lun=lun+1  
+         ! soilfluxdC13
         WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
         lun=lun+1   
+        ! soilfluxdC14
         WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
-        lun=lun+1   
-        WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
-        lun=lun+1   
+        lun=lun+1 
+        ! soilfluxN  
         WRITE(lun,'(a)') 'Time Litterfall NetMinNH4 NetMinNO3 LeachingOrg' 
         lun=lun+1   
+        ! soilfluxP
         WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
         lun=lun+1
 
-         p1str=''
-         p2str=''
-         p3str=''
-         p4str=''
-         p5str=''
-         p6str=''
-         DO isoil = 1, nsoil_sb
-            IF(isoil<10) THEN 
-              WRITE(layerstr,'(I1)') isoil
-            ELSE
-              WRITE(layerstr,'(I2)') isoil
-            ENDIF
-            WRITE(p1str,'(a)') TRIM(p1str)//' Adsorp_L'//TRIM(layerstr)
-            WRITE(p2str,'(a)') TRIM(p2str)//' MicUpt_L'//TRIM(layerstr)
-            WRITE(p3str,'(a)') TRIM(p3str)//' Weath_L'//TRIM(layerstr)
-            WRITE(p4str,'(a)') TRIM(p4str)//' Ocl_L'//TRIM(layerstr)
-            WRITE(p5str,'(a)') TRIM(p5str)//' Desorp_L'//TRIM(layerstr)
-            WRITE(p6str,'(a)') TRIM(p6str)//' Biochem_min_L'//TRIM(layerstr)
-
-         ENDDO
-         WRITE(lun,'(31a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
-         
     END SELECT
+
+    
+    !! land & soil
+    !! detailed data per layer only for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','soil')
+        SELECT CASE(TRIM(sb_model_scheme))
+          CASE('simple_1d','jsm')
+            ! soilfluxP_lay
+            p1str=''
+            p2str=''
+            p3str=''
+            p4str=''
+            p5str=''
+            p6str=''
+            p7str=''
+            p8str=''
+            p9str=''
+            p10str=''
+            p11str=''
+            p12str=''
+            p13str=''
+            p14str=''
+            DO isoil = 1, nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              ENDIF
+              WRITE(p1str,'(a)') TRIM(p1str)//' Adsorp_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' Weath_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' Ocl_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' Desorp_L'//TRIM(layerstr)
+
+              WRITE(p5str,'(a)') TRIM(p5str)//' NetMin_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' Biochem_min_L'//TRIM(layerstr)
+              WRITE(p7str,'(a)') TRIM(p7str)//' Mic_upt_L'//TRIM(layerstr)
+              WRITE(p8str,'(a)') TRIM(p8str)//' Plant_upt_L'//TRIM(layerstr)
+              !WRITE(p9str,'(a)') TRIM(p9str)//' Myco_upt_L'//TRIM(layerstr)
+
+              WRITE(p10str,'(a)') TRIM(p10str)//' Trans_solute_L'//TRIM(layerstr)
+              WRITE(p11str,'(a)') TRIM(p11str)//' Trans_assoc_fast_L'//TRIM(layerstr)
+              WRITE(p12str,'(a)') TRIM(p12str)//' Trans_assoc_slow_L'//TRIM(layerstr)
+              WRITE(p13str,'(a)') TRIM(p13str)//' Trans_occluded_L'//TRIM(layerstr)
+              !WRITE(p14str,'(a)') TRIM(p14str)//' Trans_primary_L'//TRIM(layerstr)
+            END DO
+            WRITE(lun,'(15a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),             TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str)
+              !TRIM(p8str),TRIM(p9str),TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
+            lun=lun+1
+        END SELECT
+    END SELECT
+    
   END SUBROUTINE init_output_writing_flux
 
 
@@ -1266,9 +1457,12 @@ CONTAINS
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
 
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(SB_)
+
     ! Use of process memories
-    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
-    dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
@@ -1276,6 +1470,7 @@ CONTAINS
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1381,18 +1576,30 @@ CONTAINS
     REAL(wp), SAVE                        :: sb_total_flux_carbon13_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
-    REAL(wp), DIMENSION(5), SAVE          :: adsorpt = 0.0_wp, &
-                                             net_min = 0.0_wp, &
-                                             ocl = 0.0_wp, &
-                                             weath = 0.0_wp, &
-                                             biochem_min = 0.0_wp, &
-                                             desorp = 0.0_wp    
-    REAL(wp), SAVE                        :: dtime_one = 1.0_wp ! just 1.0    
+    !! hardcoded soillayer number  nsoil_sb !!
+    REAL(wp), DIMENSION(5), SAVE          :: adsorpt_po4_acc = 0.0_wp     , &  
+                                             net_min_po4_lay_acc = 0.0_wp     , &
+                                             ocl_po4_acc = 0.0_wp         , &
+                                             weath_po4_acc = 0.0_wp       , &
+                                             biochem_min_po4_acc = 0.0_wp , &
+                                             desorp_po4_acc = 0.0_wp      , &
+                                             plant_upt_po4_acc = 0.0_wp   , &
+                                             mic_upt_po4_acc = 0.0_wp     , &
+                                             myco_upt_po4_acc = 0.0_wp    , &
+                                             trans_solute_po4_acc = 0.0_wp      , &
+                                             trans_assoc_fast_po4_acc = 0.0_wp  , &
+                                             trans_assoc_slow_po4_acc = 0.0_wp  , &
+                                             trans_occluded_po4_acc = 0.0_wp    , &
+                                             trans_primary_po4_acc = 0.0_wp
+    LOGICAL                               :: l_flux_calc_acc_output, &  !< do variable accumulation and enable output
+                                             l_flux_output_interval     !< do output at this timestep and set accumulation variables to zero
+    REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0    
     INTEGER                               :: iblk, ics, ice, nc, ichu
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory),    POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory),    POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                !     TYPE(t_assimi_memory), POINTER :: assimi__mem
@@ -1505,8 +1712,10 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-!    dsl4jsb_Get_config(xx_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
@@ -1516,9 +1725,6 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
@@ -1620,32 +1826,64 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !> 0.9 init
+    !! 
     ichu = ics  ! the chunk number for output using variables directly from the sb% mem
 
 
+    !< 1.0 test if anything would be calculated or/and written out at this timestep
+    !! 
+    ! set to FALSE as default
+    l_flux_calc_acc_output = .FALSE.
+    l_flux_output_interval = .FALSE.
+    !! test if TRUE
+    ! after spinup, when doing transient simulations
+    ! output start & end
+    IF(.NOT. l_transient_spinup .AND. &
+       & time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+      ! set TRUE
+      l_flux_calc_acc_output = .TRUE.
+    END IF
+    ! special fluxnet output
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        IF (l_flux_calc_acc_output .AND. fluxnet_output_status < 3) THEN  ! if l_flux_calc_acc_output==TRUE and fluxnet_output_status < 3
+          l_flux_calc_acc_output = .TRUE.
+        ELSE
+          l_flux_calc_acc_output = .FALSE.
+        END IF
+    END SELECT
+    ! matching output_interval
+    IF(MODULO(time_d, output_interval_flux) < eps4 .OR. &
+       & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
+      ! set TRUE
+      l_flux_output_interval = .TRUE.
+    END IF
+    ! accumulate fluxes across the timesteps of one interval:
+    ! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
+    ! for any interval larger timestep multiply by dtime
+    IF(output_interval_flux < 1.0_wp) THEN
+      dtime_one = 1.0_wp                 ! interval = timestep
+    ELSE
+      dtime_one = dtime / 1000000.0_wp   ! interval > timestep
+    END IF
+
+
+    !< 2.0  output
+    !! 
+    !! land/plant/canopy
+    !! soil
+    !! land/soil
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')
 
-        !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
-        !! 
+        !! run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
         !! same for write_output_pool
         IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
-    
-           !> 1.0 check output start & end, and write pools if appropriate with output_interval
+           !! accumulate fluxes across the timesteps of one interval
            !! 
-           !! 
-           IF(.NOT. l_transient_spinup .AND. &
-              time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
-       
-             !> 1.1 accumulate fluxes across the timesteps of one interval
-             !! 
-             !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
-             !! for any interval larger timestep multiply by dtime
-             IF(output_interval_flux < 1.0_wp) THEN
-                 dtime_one = 1.0_wp                 ! interval = timestep
-               ELSE
-                 dtime_one = dtime / 1000000.0_wp      ! interval > timestep
-             END IF
+           IF(l_flux_calc_acc_output) THEN
+
              gpp_acc          = gpp_acc           + gross_assimilation(ipoi)                 * dtime_one
              growth_resp_acc  = growth_resp_acc   + growth_respiration(ipoi)                 * dtime_one
              maint_resp_acc   = maint_resp_acc    + maint_respiration(ipoi)                  * dtime_one
@@ -1749,10 +1987,8 @@ CONTAINS
 
              !> 1.2 write fluxes and set to zero
              !!
-             !!  
-             IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
-                & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
-       
+             IF(l_flux_output_interval) THEN
+
                IF(ndat_acc > 1) THEN
                  gc_acc = gc_acc / ndat_acc
                  ga_acc = ga_acc / ndat_acc
@@ -1820,6 +2056,7 @@ CONTAINS
                                         sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
                                         sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
                                         sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
+                   lun=lun+1
 
                  CASE('canopy') ! subset of CASE('land','plant')
                    ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
@@ -1845,9 +2082,10 @@ CONTAINS
                    ENDIF
                    write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
-               END SELECT
+                   lun=lun+1
+               END SELECT ! land/plant & canopy
 
-               ! set zero
+               !! set acc variables zero
                gpp_acc           = 0.0_wp
                growth_resp_acc   = 0.0_wp
                maint_resp_acc    = 0.0_wp
@@ -1923,26 +2161,15 @@ CONTAINS
                sb_total_flux_carbon13_acc    = 0.0_wp
                sb_total_flux_carbon14_acc    = 0.0_wp
                sb_total_flux_nitrogen15_acc  = 0.0_wp
-             END IF
-           END IF
-        END IF  ! on/off switch specific to 'special case: fluxnet output'
-      CASE('soil')
-           !> 1.0 check output start & end, and write pools if appropriate with output_interval
-           !! 
-           !! 
-           IF(.NOT. l_transient_spinup .AND. &
-              time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
-       
-             !> 1.1 accumulate fluxes across the timesteps of one interval
-             !! 
-             !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
-             !! for any interval larger timestep multiply by dtime
-             IF(output_interval_flux < 1.0_wp) THEN
-                 dtime_one = 1.0_wp                     ! interval = timestep
-               ELSE
-                 dtime_one = dtime / 1000000.0_wp      ! interval > timestep
-             END IF
+             END IF ! l_flux_output_interval
+           END IF   ! l_flux_calc_acc_output
+        END IF      ! on/off switch specific to 'special case: fluxnet output'
 
+      !! soil 
+      CASE('soil')
+
+           IF(l_flux_calc_acc_output) THEN
+       
              litterfallC_acc = litterfallC_acc + (veg_litterfall%leaf%carbon(ipoi) + & 
                                       veg_litterfall%fine_root%carbon(ipoi) + veg_litterfall%coarse_root%carbon(ipoi) + &
                                       veg_litterfall%sap_wood%carbon(ipoi) + veg_litterfall%heart_wood%carbon(ipoi) + &
@@ -1992,44 +2219,32 @@ CONTAINS
              leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(ichu,options%nsoil_sb,iblk) * &
                                     1000000.0_wp * dtime_one/dtime
 
-             adsorpt      = adsorpt + sb%fast_adsorption_po4%ptr(ichu,:,iblk) * soil_depth_sl(ipoi,:) * &
-                              dtime_one * 1000000.0_wp
-             net_min      = net_min + sb%net_mineralisation_po4%ptr(ichu,:,iblk) * soil_depth_sl(ipoi,:) * &
-                              dtime_one * 1000000.0_wp
-             weath        = weath + sb%weathering_po4%ptr(ichu,:,iblk) * soil_depth_sl(ipoi,:) * &
-                              dtime_one * 1000000.0_wp
-             ocl          = ocl + sb%occlusion_po4%ptr(ichu,:,iblk) * soil_depth_sl(ipoi,:) * &
-                              dtime_one * 1000000.0_wp
-             desorp       = desorp + sb%slow_sorption_po4%ptr(ichu,:,iblk) * soil_depth_sl(ipoi,:) * &
-                              dtime_one * 1000000.0_wp
-             biochem_min  = biochem_min + sb%biochem_mineralisation_po4%ptr(ichu,:,iblk) * soil_depth_sl(ipoi,:) * &
-                              dtime_one * 1000000.0_wp
-
-
-             IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
-                & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
+             IF(l_flux_output_interval) THEN
 
                lun = 100 + 30
+               ! soilfluxC
                write(lun,'(8F16.6)') time_d, litterfallC_acc, het_respC_acc, leachingCorg_acc
                lun = lun + 1
+               ! soilfluxdC13
                dC13litterfall = calc_delta_C13(litterfallC_acc,litterfallC13_acc)
-               dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
-               dC13leaching = calc_delta_C13(leachingCorg_acc,leachingC13org_acc)
+               dC13het_resp   = calc_delta_C13(het_respC_acc,het_respC13_acc)
+               dC13leaching   = calc_delta_C13(leachingCorg_acc,leachingC13org_acc)
                write(lun,'(8F12.6)') time_d, dC13litterfall, dC13het_resp, dC13leaching 
                lun = lun + 1
+               ! soilfluxdC14
                write(lun,'(8F12.6)') time_d, & 
                    calc_delta_C14(litterfallC_acc,litterfallC14_acc,dC13litterfall), &
                    calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
                    calc_delta_C14(leachingCorg_acc,leachingC14org_acc,dC13leaching)
                lun = lun + 1
-               write(lun,'(8F16.6)') time_d, litterfallN_acc, net_min_nh4_acc, net_min_no3_acc, & 
-                                     leachingNorg_acc
+               ! soilfluxN
+               write(lun,'(8F16.6)') time_d, litterfallN_acc, net_min_nh4_acc, net_min_no3_acc, leachingNorg_acc
                lun = lun + 1
+               ! soilfluxP
                write(lun,'(8F16.6)') time_d, litterfallP_acc, net_min_po4_acc, leachingPorg_acc
-
                lun = lun + 1
-               write(lun,'(31F16.6)') time_d, adsorpt(:), net_min(:) , weath(:), ocl(:), desorp(:), biochem_min(:) 
-
+               
+               !! set acc variables to zero
                litterfallC_acc = 0.0_wp
                het_respC_acc = 0.0_wp
                leachingCorg_acc = 0.0_wp
@@ -2046,18 +2261,82 @@ CONTAINS
                litterfallP_acc = 0.0_wp
                net_min_po4_acc = 0.0_wp
                leachingPorg_acc = 0.0_wp
-               !fast_adsorp_po4_acc(:) = 0.0_wp
-               adsorpt(:) = 0.0_wp
-               net_min(:) = 0.0_wp
-               weath(:) = 0.0_wp
-               ocl(:) = 0.0_wp
-               desorp(:) = 0.0_wp
-               biochem_min(:) = 0.0_wp
 
-             ENDIF
-          ENDIF
+             END IF   ! l_flux_output_interval
+          END IF      ! l_flux_calc_acc_output
+    END SELECT        ! land/plant/canopy & soil
 
-    END SELECT
+
+    !! land & soil
+    !! detailed data per layer only for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+    CASE('land','soil')
+      IF (l_flux_calc_acc_output) THEN
+        SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
+        CASE('simple_1d','jsm')
+          ! soilfluxP_lay
+          ! accumulate variables
+          adsorpt_po4_acc(:)          = adsorpt_po4_acc(:) + sb%fast_adsorption_po4%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          net_min_po4_lay_acc(:)      = net_min_po4_lay_acc(:) + sb%net_mineralisation_po4%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          weath_po4_acc(:)            = weath_po4_acc(:) + sb%weathering_po4%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          ocl_po4_acc(:)              = ocl_po4_acc(:) + sb%occlusion_po4%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          desorp_po4_acc(:)           = desorp_po4_acc(:) + sb%slow_sorption_po4%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          biochem_min_po4_acc(:)      = biochem_min_po4_acc(:) + sb%biochem_mineralisation_po4%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          plant_upt_po4_acc(:)        = plant_upt_po4_acc(:) + sb%plant_uptake_po4_sl%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          ! mic_upt_po4_acc(:)          = mic_upt_po4_acc(:) + sb%microbial_uptake_po4_sl%ptr(ichu,:,iblk) * &
+          !                                 soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          myco_upt_po4_acc(:)         = myco_upt_po4_acc(:) + sb%mycorrhiza_uptake_po4_sl%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          trans_solute_po4_acc(:)     = trans_solute_po4_acc(:) + sb%transport_po4_solute%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          trans_assoc_fast_po4_acc(:) = trans_assoc_fast_po4_acc(:) + sb%transport_po4_assoc_fast%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          trans_assoc_slow_po4_acc(:) = trans_assoc_slow_po4_acc(:) + sb%transport_po4_assoc_slow%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          trans_occluded_po4_acc(:)   = trans_occluded_po4_acc(:) + sb%transport_po4_occluded%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          ! trans_primary_po4_acc(:)    = trans_primary_po4_acc(:) + sb%transport_po4_primary%ptr(ichu,:,iblk) * &
+          !                                 soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+
+          ! write output & zero acc variables
+          IF(l_flux_output_interval) THEN
+
+            write(lun,'(141F14.6)') time_d, &
+            adsorpt_po4_acc(:), weath_po4_acc(:), ocl_po4_acc(:), desorp_po4_acc(:), &
+            net_min_po4_lay_acc(:), biochem_min_po4_acc(:),                      plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
+            !net_min_po4_lay_acc(:), biochem_min_po4_acc(:), mic_upt_po4_acc(:), plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
+            trans_solute_po4_acc(:), trans_assoc_fast_po4_acc(:) , trans_assoc_slow_po4_acc(:), trans_occluded_po4_acc(:)!, &
+            !trans_primary_po4_acc(:)
+
+            !! set acc variables to zero
+            adsorpt_po4_acc(:)            = 0.0_wp
+            net_min_po4_lay_acc(:)        = 0.0_wp
+            weath_po4_acc(:)              = 0.0_wp
+            ocl_po4_acc(:)                = 0.0_wp
+            desorp_po4_acc(:)             = 0.0_wp
+            biochem_min_po4_acc(:)        = 0.0_wp
+            plant_upt_po4_acc(:)          = 0.0_wp 
+            mic_upt_po4_acc(:)            = 0.0_wp
+            myco_upt_po4_acc(:)           = 0.0_wp  
+            trans_solute_po4_acc(:)       = 0.0_wp
+            trans_assoc_fast_po4_acc(:)   = 0.0_wp
+            trans_assoc_slow_po4_acc(:)   = 0.0_wp
+            trans_occluded_po4_acc(:)     = 0.0_wp
+            trans_primary_po4_acc(:)      = 0.0_wp
+          END IF      ! l_flux_output_interval
+        END SELECT    ! simple_1d/jsm
+      END IF          ! l_flux_calc_acc_output
+    END SELECT        ! land/soil
+
+
+
 
 ! Pass back values to process memory
 #define Passback_veg_litterfall
