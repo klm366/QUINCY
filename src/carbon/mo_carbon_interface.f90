@@ -138,7 +138,6 @@ CONTAINS
     REAL(wp), allocatable        :: precip_total(:)
     CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
 
-
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)

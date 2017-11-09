@@ -413,7 +413,7 @@ CONTAINS
 !!$       END IF
 !!$ tr
 
-       leaf_shedding = MAX(LAI * LAI_shed_constant / 86400 * dtime ,LAI_previous - LAI)  !! Leaf shedding is assured at a minimum constant rate 
+       leaf_shedding = MAX(LAI * LAI_shed_constant,LAI_previous - LAI)  !! Leaf shedding is assured at a minimum constant rate 
                                                                         !! which maybe exceeded by the decrease in LAI.       
 
        C_2_litter_greenPool =  &                                     !! Maximally the whole carbon from the green pool is transfered
@@ -461,7 +461,7 @@ CONTAINS
                                                                                      !! Assuming that forests continously die at the inverse lifetime of trees
        C_2_litter_woodPool = Cpool_woods /              &                            ! The bigger tau gets, the weaker the C pools will be depreciated:
                                                                                      ! tau_Cpool_woods: [years] -> [timestep]
-                             &  (tau_Cpool_woods * 365._wp * time_steps_per_day )  !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
+                             &  (tau_Cpool_woods * 365._wp )                         !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
        Cpool_litter_wood_ag = Cpool_litter_wood_ag      &                            !! .. is put partly into the above ground woody litter pool
             + frac_wood_aboveGround*C_2_litter_woodPool
        ! R: only for spitfire
@@ -481,7 +481,7 @@ CONTAINS
        !!    Note also that the green litter pool has no fixed C/N-ratio (therefore no compensation
        !!    flux is needed)
 
-       C_2_litter_greenPool = Cpool_reserve / ( tau_Cpool_reserve * time_steps_per_day )
+       C_2_litter_greenPool = Cpool_reserve / tau_Cpool_reserve
        IF (is_crop) THEN
           Cflx_2_crop_harvest = Cflx_2_crop_harvest + &
               frac_green_aboveGround * frac_C_crop_harvest * C_2_litter_greenPool
@@ -501,7 +501,7 @@ CONTAINS
        !!
        d_Cpool_slow = &
             -MIN(alpha_mod**kappa * q10**((topSoilTemp - referenceTemp_Q10)/10._wp)  / & !! Slow soil respiration
-            ( tau_Cpool_slow  * time_steps_per_day ),1._wp)  * Cpool_slow                                          !! .. according to Q10-model
+            tau_Cpool_slow,1._wp)  * Cpool_slow                                          !! .. according to Q10-model
        Cpool_slow = Cpool_slow + d_Cpool_slow                 !! Remove respired Carbon (note the negative sign!)
 
        Cflx_slow_2_atmos            = -d_Cpool_slow          !! Remember the decomposition flux to the atmosphere (CO2-release)
@@ -610,8 +610,7 @@ CONTAINS
        ! Update Green Litter Pools (litter from dead leaves, fruits, debris from bark and fine roots)
 
        decompRate_litter_green =  &                                     !! decomposition rate of green litter according to Q10 model
-            -MIN(alpha_mod**kappa * q10**((topSoilTemp - referenceTemp_Q10)/10._wp)/ &
-                       & (tau_Cpool_litter_green * time_steps_per_day ),1._wp)
+            -MIN(alpha_mod**kappa * q10**((topSoilTemp - referenceTemp_Q10)/10._wp)/ tau_Cpool_litter_green,1._wp)
 
        d_Cpool_litter_green_ag      = decompRate_litter_green * Cpool_litter_green_ag_pot     !! Decomposition of green plant litter
        Cpool_litter_green_ag_pot    = Cpool_litter_green_ag_pot + d_Cpool_litter_green_ag
@@ -621,9 +620,9 @@ CONTAINS
        ! Update Wood Litter Pools (litter from all dead woody material, above and below ground)
 
        d_Cpool_litter_wood_ag = -MIN(q10**((topSoilTemp - referenceTemp_Q10)/10._wp)  / &   !! Decomposition of woody litter
-            ( tau_Cpool_litter_wood * time_steps_per_day) ,1._wp) * Cpool_litter_wood_ag_pot                         !! .. according to Q10-model
+            tau_Cpool_litter_wood,1._wp) * Cpool_litter_wood_ag_pot                         !! .. according to Q10-model
        d_Cpool_litter_wood_bg = -MIN(q10**((topSoilTemp - referenceTemp_Q10)/10._wp)  / &   !! Decomposition of woody litter
-            ( tau_Cpool_litter_wood * time_steps_per_day),1._wp) * Cpool_litter_wood_bg_pot                         !! .. according to Q10-model
+            tau_Cpool_litter_wood,1._wp) * Cpool_litter_wood_bg_pot                         !! .. according to Q10-model
        !! .. without soil moisture dependence
        Cpool_litter_wood_ag_pot = Cpool_litter_wood_ag_pot + d_Cpool_litter_wood_ag
        Cpool_litter_wood_bg_pot = Cpool_litter_wood_bg_pot + d_Cpool_litter_wood_bg
@@ -729,7 +728,7 @@ CONTAINS
 
           !! call yasso for leaf litter; this time with nutrient effects
           CALL yasso(Yasso_io_pools(1:9), Weather, leafLitter, LeafLit_coefV,               & 
-                           sizeZero, Yasso_out, frac_green_aboveGround, NPP_2_rootExudates, time_steps_per_day, redFact_Nlimitation)
+                           sizeZero, Yasso_out, frac_green_aboveGround, NPP_2_rootExudates,redFact_Nlimitation)
 
           YCpool_acid_ag1         =Yasso_out(1)
           YCpool_water_ag1        =Yasso_out(2)
@@ -742,12 +741,12 @@ CONTAINS
           YCpool_humus_1          =Yasso_out(9)
 
 
-          ! rescale respiration (from leaf litter decomposition) from "per current timestep" to "per second"
-          soilResp_rate = Yasso_out(10) / dtime 
+          ! rescale respiration (from leaf litter decomposition) from "per day" to "per second"
+          soilResp_rate = Yasso_out(10) / sec_per_day 
 
           !! call yasso for woody litter; this time with nutrient effects
           CALL yasso(Yasso_io_pools(10:18), Weather, C_2_litter_woodPool, WoodLit_coefV,       & 
-                           WoodLitterSize, Yasso_out, frac_wood_aboveGround, 0.0_wp, time_steps_per_day, redFact_Nlimitation) ! no exudates
+                           WoodLitterSize, Yasso_out, frac_wood_aboveGround, 0.0_wp, redFact_Nlimitation) ! no exudates
   
           YCpool_acid_ag2         =Yasso_out(1)
           YCpool_water_ag2        =Yasso_out(2)
@@ -760,26 +759,26 @@ CONTAINS
           YCpool_humus_2          =Yasso_out(9)
        
           !! Yasso total respiration
-          ! add respiration from wood litter decomposition and rescale respiration from "per current timestep" to "per second"
-           soilResp_rate = soilResp_rate  + Yasso_out(10) / dtime 
+          ! add respiration from wood litter decomposition and rescale respiration from "per day" to "per second"
+           soilResp_rate = soilResp_rate  + Yasso_out(10) / sec_per_day
 
        ! always:
        !! ============== Decay of crop harvest =============
 
-       Cflx_crop_harvest_2_atmos = Cpool_crop_harvest / (tau_Cpool_crop_harvest * time_steps_per_day)
+       Cflx_crop_harvest_2_atmos = Cpool_crop_harvest / tau_Cpool_crop_harvest
        Cpool_crop_harvest = Cpool_crop_harvest - Cflx_crop_harvest_2_atmos
-       soilResp_rate = soilResp_rate - Cflx_crop_harvest_2_atmos / dtime
-       !soilResp_rate_pot = soilResp_rate_pot - Cflx_crop_harvest_2_atmos / dtime
+       soilResp_rate = soilResp_rate - Cflx_crop_harvest_2_atmos / sec_per_day
+       !soilResp_rate_pot = soilResp_rate_pot - Cflx_crop_harvest_2_atmos / sec_per_day
 
 
        !! ============== COMPUTE Herbivory RESPIRATION =====
 
-       Cflx_herbivory_2_atm = -(Cflx_faeces_2_atm) /dtime
+       Cflx_herbivory_2_atm = -(Cflx_faeces_2_atm) /sec_per_day
 
        !! ============== Litter and herbivory diagnostics (flux from day-1 to s-1)
-       Cflx_litterTotal = Cflx_litterTotal /dtime
-       Cflx_herbivory    = Green_2_herbivory / dtime
-       Cflx_herbivory_LG = Cflx_faeces_2_LG / dtime   ! DSG: goes into yasso
+       Cflx_litterTotal = Cflx_litterTotal /sec_per_day
+       Cflx_herbivory    = Green_2_herbivory / sec_per_day
+       Cflx_herbivory_LG = Cflx_faeces_2_LG / sec_per_day   ! DSG: goes into yasso
 
 
 
@@ -1173,7 +1172,7 @@ CONTAINS
 
 
   PURE SUBROUTINE yasso (Yasso_io_pools, Weather, litter, Lit_coefV,WoodLitterSize, Yasso_out, frac_aboveground, &
-                         NPP_2_rootExudates, time_steps_per_day, redFact_Nlimit)
+                         NPP_2_rootExudates, redFact_Nlimit)
     !! DSG: 11.03.2013
     !! modified Yasso soil C model using an Euler scheme and readable coding style
     !! AWEN (Acid, Water, Ethanol, Nonsoluble) pools are the yasso pools without the humus pools.
@@ -1188,9 +1187,9 @@ CONTAINS
     !!                            3. daily litter flux and NPP_2_rootExudates
     !!                            4. PFT specific parameters
     !!
-    !! Even when this subroutine is called every time step, the dimensions of the variables refere to years!
-    !! Output pools: AWEN + humus
-    !! The routine must be called twice, first for non-woody litter then for woody litter
+    !! Even when this subroutine is called every day, the dimensions of the variables refere to years!
+    !! output pools: AWEN + humus 
+    !! The routine must be called twice, first for non-woody litter, then for woody litter
     !!-------------------------------------------------------------------------------------------------------------------------
     !! Yasso - Soil carbon model (Jari Liski)
     !!
@@ -1218,7 +1217,6 @@ CONTAINS
     REAL(wp),                INTENT(IN)  :: frac_aboveground   ! parameter to seperate litter influx into above- and belowground 
                                                                !     part                                                   [ ]
     REAL(wp),                INTENT(IN)  :: NPP_2_rootExudates ! root exudates [daily]                                [mol(C)/m2/day]
-    INTEGER,                 INTENT(IN)  :: time_steps_per_day
 
     REAL(wp), DIMENSION(16), INTENT(OUT) :: Yasso_out          ! updated Yasso pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
                                                                ! & Cflx_2_humus (11) [mol(c)/m2/d] ... see update_Cpools for more 
@@ -1272,10 +1270,10 @@ CONTAINS
     REAL(wp)     :: Cflx_2_humusAG                 ! Gain flux of humus pool; from ag only [mol(c)/m2/a]
     REAL(wp)     :: Cflx_2_humusBG                 ! Gain flux of humus pool; from bg only [mol(c)/m2/a]
     
-    ! Respiration is output of Yasso
-    REAL(wp)     :: soilResp_rateYasso             ! Flux to the atmosphere                     [mol(c)/m2/timestep]
-    REAL(wp)     :: soilResp_rateLitterAG          ! Flux to the atmosphere; from AWEN ag only  [mol(c)/m2/timestep]
-    REAL(wp)     :: soilResp_rateLitterBG          ! Flux to the atmosphere; from AWEN bg only  [mol(c)/m2/timestep]
+    ! Respiration is output of Yasso therefore a daily flux 
+    REAL(wp)     :: soilResp_rateYasso             ! Flux to the atmosphere                [mol(c)/m2/d]  
+    REAL(wp)     :: soilResp_rateLitterAG          ! Flux to the atmosphere; from AWEN ag only  [mol(c)/m2/d]
+    REAL(wp)     :: soilResp_rateLitterBG          ! Flux to the atmosphere; from AWEN bg only  [mol(c)/m2/d]
 
     ! Decomposition rates [1/a]
     REAL(wp)     :: d_acid
@@ -1352,8 +1350,8 @@ CONTAINS
 
     ! time stepping; the parameterization of yasso is done on a annual time
     ! step, thus the fluxes have to be scaled up to annual rates. 
-    REAL(wp)     :: dt                      ! "* dt" later scales year to timestep
-    dt = 1.0_wp/days_per_year/time_steps_per_day
+    REAL(wp)     :: dt
+    dt = 1.0_wp/days_per_year   
 
     IF(PRESENT(redFact_Nlimit)) THEN ! nitrogen cycle active & we know already the Nlimitation factor
         redFactor  = redFact_Nlimit
@@ -1617,13 +1615,13 @@ CONTAINS
     IF (.NOT.PRESENT(redFact_Nlimit)) THEN
        ! the routine might have been called to diagnose the nutrient demand, so we give out 
        ! 1. flux for immobilisation: this is the sum of all carbon coming from the non-humus pools to humus
-       Yasso_out(11)           = Cflx_2_humusAG * dt ! per timestep ! the flux is positive
-       Yasso_out(12)           = Cflx_2_humusBG * dt ! per timestep ! the flux is positive
+       Yasso_out(11)           = Cflx_2_humusAG * dt ! daily ! the flux is positive
+       Yasso_out(12)           = Cflx_2_humusBG * dt ! daily ! the flux is positive
        ! 2. flux for mineralisation:  this is the flux from humus to atmosphere (Cflx_slow_2_atmos)
        Yasso_out(13)           =  - Cflx_from_humus * dt ! daily ! sign CHECKED!
        ! ... as well as all fluxes from AWEN pools to atmosphere
-       Yasso_out(14)           = -soilResp_rateLitterAG * dt !per timestep ! the flux is negative
-       Yasso_out(15)           = -soilResp_rateLitterBG * dt !per timestep ! the flux is negative
+       Yasso_out(14)           = -soilResp_rateLitterAG * dt !daily ! the flux is negative
+       Yasso_out(15)           = -soilResp_rateLitterBG * dt !daily ! the flux is negative
        ! 3. decomposition rate for Npool litter green 
        Yasso_out(16)           = d_litter_green
     ENDIF
