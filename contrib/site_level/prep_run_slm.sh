@@ -117,7 +117,7 @@ flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set t
 soil_depth=5.7                  # meters
 
 # simulation length & output
-simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 116 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
+simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
