@@ -65,6 +65,9 @@ MODULE mo_sb_constants
       microbial_cue, &           !< microbial carbon-use efficiency
       microbial_cue_max, &       !< maximum microbial carbon-use efficiency
       microbial_cue_min, &       !< minimum microbial carbon-use efficiency
+      microbial_cn_max, &        !< maximum microbial C:N [mol/mol]
+      microbial_cn_min, &        !< minimum microbial C:N [mol/mol]
+      f_mic_cn, &                !< slope of microbial C:N to soil NH4 [kg/mol] 
       residue_cue                !< carbon-use efficiency of residue formation
 
   ! additional microbial parameters for JSM implementation
@@ -250,7 +253,11 @@ CONTAINS
     microbial_cue       = 0.392_wp                               ! COMISSION paper
     microbial_cue_max   = 0.6_wp                                 ! Manzoni et al. 2008
     microbial_cue_min   = 0.3_wp                                 ! Manzoni et al. 2008
+    microbial_cn_max    = 13._wp  * molar_mass_N / molar_mass_C  ! Manzoni et al. 2008, slightly tighter than than (was 13)
+    microbial_cn_min    = 5._wp * molar_mass_N / molar_mass_C    ! Manzoni et al. 2008
+    f_mic_cn            = 51000.0_wp                             ! calibrated to correspond to CENTURY (minimum reached at 2gN/m2)
     residue_cue         = 0.1_wp                                 ! made-up
+
    
     ! additional microbial parameters for JSM implementation
     k_mort_microbial    = 7.48_wp * 1E-8
@@ -322,16 +329,16 @@ CONTAINS
     km_mic_biochem_po4    = 0.1_wp / molar_mass_C ![mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
 
     ! Nitrification, Denitrification parameters
-    lambda_anvf            = 1.8_wp         ! fitted from Zaehle et al. 2011, NatGeo 
+    lambda_anvf            = 1.3_wp         ! fitted from Zaehle et al. 2011, NatGeo 
     k_anvf                 = 3.0_wp         ! fitted from Zaehle et al. 2011, NatGeo
     ea_nitrification       = 80000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
     ed_nitrification       = 200000._wp     ! Xu-Ri & Prentice, 2008, to fit their function
-    t_opt_nitrification    = 331.15_wp      ! Xu-Ri & Prentice, 2008, to fit their function 
+    t_opt_nitrification    = 311.15_wp      ! Xu-Ri & Prentice, 2008, to fit their function 
     f_nit_noy              = 0.02           ! Xu-Ri & Prentice, 2008
     f_nit_n2o              = 0.002          ! Xu-Ri & Prentice, 2008
     ea_denitrification     = 47000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
-    vmax_nitrification     = 0.1_wp / one_day * 1.e6             ! Xu-Ri & Prentice, 2008, 10% / day
-    vmax_denitrification   = 0.1_wp / one_day * 1.e6          ! Xu-Ri & Prentice, 2008, 10% / day
+    vmax_nitrification     = 0.4_wp / one_day * 1.e6_wp       ! Xu-Ri & Prentice, 2008, 10% / day at 20°C
+    vmax_denitrification   = 0.1_wp / one_day * 1.e6_wp       ! Xu-Ri & Prentice, 2008, 10% / day
     km_denitrification_c   = 0.017 * 1000.0_wp / molar_mass_C ! Xu-Ri & Prentice, 2008   
     km_denitrification_no3 = 0.083 * 1000.0_wp / molar_mass_N ! Xu-Ri & Prentice, 2008
     f_denit_noy            = 0.002          ! Xu-Ri & Prentice, 2008

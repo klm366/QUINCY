@@ -99,7 +99,7 @@ Matter entering the fast and slow SOM pool (Eq. \ref{eq:sb:simple_om_dynamics}) 
 \Phi^{*}_{l \rightarrow f, NH_4} = \frac{\eta_{max,C}}{\chi_{SOM}^{C:N}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})
 \end{equation} 
 
-where $\tau^{*}_i$ are the temperature and moisture constrained turnover times (Eq. \ref{eq:simple_som_turnover}). The actual immobilisation rate is limited to the amount of ammonium (\chem{NH_4} available, subject to co-occurring potential N uptake from plants and mycorrhiza ($U^{*}_{NH_4,plant}$; $U^{*}_{NH_4,myc}$, respectively, Eq. \ref{eq:sb:simple_potential_uptake}), and nitrifiers ($U^{*}_{nit}$; Eq. \ref{eq:sb:simple_nitrification}).
+where $\tau^{*}_i$ are the temperature and moisture constrained turnover times (Eq. \ref{eq:simple_som_turnover}). The actual immobilisation rate is limited to the amount of ammonium (\chem{NH_4} available, subject to co-occurring potential N uptake from plants and mycorrhiza ($U^{*}_{NH_4,plant}$; $U^{*}_{NH_4,myc}$, respectively, Eq. \ref{eq:sb:simple_potential_uptake}), and nitrifiers ($U^{*}_{nit}$; Eq. \ref{eq:sb:simple_dynamic_nitrification}). Note that the uptake of ammonium is limited with a Michelis-Menten Kintetic, as for the plant and mycorrhiza uptake to redue accessibility of N at very low values. $\chi_{SOM}^{C:N}$ of the fast pool is assumed to decrease linearly with the available \chem{NH_4} solute concentration following the logic of \cite{Parton:1993ud} between a minimum and maximum C:N ratio, whereas $\chi_{SOM}^{C:N}$ of the slow pool is assumed to be constant. 
 
 \begin{equation}\label{eq:sb:simple_act_n_immobilisation}
 \Phi_{l \rightarrow f, NH_4} = \frac{\Phi^{*}_{l \rightarrow f, NH_4} \times NH_4}{max(NH_4, U^{*}_{NH_4,plant} + U^{*}_{NH_4,myc} + U^{*}_{nit} + \Phi^{*}_{l \rightarrow f, NH_4})}   
@@ -265,6 +265,8 @@ $\eta_{C,max}$ & maximum carbon-use efficiency of microbial growth & \texttt{mic
 $\eta_{N}$ & nitrogen-use efficiency of microbial growth & \texttt{microbial\_nue} & & \ref{eq:sb:simple_pot_n_immobilisation} &  0.8 & \cite{Manzoni:2008hw}\\
 $\eta_{P}$ & phosphorus-use efficiency of microbial growth & \texttt{microbial\_pue} & & \ref{eq:sb:simple_pot_p_immobilisation} &  0.8 & \cite{Manzoni:2008hw}\\
 $\chi_{SOM}^{C:N}$ & C:N ratio of SOM pools & \texttt{microbial\_cn} & mol / mol & \ref{eq:sb:simple_pot_n_immobilisation} & 11.6 & \\
+$\chi_{SOM,max}^{C:N}$ & C:N ratio of SOM pools & \texttt{microbial\_cn\_max} & mol / mol & \ref{eq:sb:simple_pot_n_immobilisation} & 15.1 & \cite{Manzoni:2008hw}\\
+$\chi_{SOM,min}^{C:N}$ & C:N ratio of SOM pools & \texttt{microbial\_cn\_min} & mol / mol & \ref{eq:sb:simple_pot_n_immobilisation} & 5.8 & \cite{Manzoni:2008hw}\\
 $\chi_{SOM}^{N:P}$ & N:P ratio of SOM pools & \texttt{microbial\_np} & mol / mol & \ref{eq:sb:simple_pot_p_immobilisation} & 31.0 & \\
 \hline 
 \end{tabularx}
@@ -296,14 +298,14 @@ $f_{nit}$ & fixed fraction of net N mineralisation lost & \texttt{f\_loss\_nmin}
 \hline 
 Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
 \hline 
-$\lambda_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & \texttt{lambda\_anvf} & & \ref{eq:sb:simple_dynamic_nitrification} & 1.8 & calibrated from \cite{Zaehle:2010cz} \\
+$\lambda_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & \texttt{lambda\_anvf} & & \ref{eq:sb:simple_dynamic_nitrification} & 1.3 & calibrated from \cite{Zaehle:2010cz} \\
 $k_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & \texttt{k\_anvf} & & \ref{eq:sb:simple_dynamic_nitrification} & 3 &  calibrated from \cite{Zaehle:2010cz} \\
 $v_{max,nit}$ & maximum nitrification rate & \texttt{vmax\_nitrification} & \unit{day^|{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & 0.1 & \cite{XURI:2008jq} \\
 $f_{nit,noy}$ & fraction of nitrification lost to \chem{NO_y} & \texttt{f\_nit\_noy} &  & \ref{eq:sb:simple_dynamic_nitrification_prod} & 0.02 & \cite{XURI:2008jq} \\
 $f_{nit,n2o}$ & fraction of nitrification lost to \chem{N_2O} & \texttt{f\_nit\_n2o} &  & \ref{eq:sb:simple_dynamic_nitrification_prod} & 0.002 & \cite{XURI:2008jq} \\
 $E_{a,nit}$ & activation energy of nitrification & \texttt{ea\_nitrification} & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & 80000 & calibrated after \cite{XURI:2008jq} \\
 $E_{d,nit}$ & de-activation energy of nitrification & \texttt{ed\_nitrification} & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & 220000 & calibrated after \cite{XURI:2008jq}\\
-$T_{opt,nit}$ & optimum temperature for nitrification & \texttt{t\_opt\_nit} & K & \ref{eq:sb:simple_dynamic_nitrification} & 331.15 & \cite{XURI:2008jq} \\
+$T_{opt,nit}$ & optimum temperature for nitrification & \texttt{t\_opt\_nit} & K & \ref{eq:sb:simple_dynamic_nitrification} & 311.15 & \cite{XURI:2008jq} \\
 $v_{max,denit}$ & maximum denitrification rate & \texttt{vmax\_denitrification} & \unit{day^|{-1}} & \ref{eq:sb:simple_dynamic_denitrification} & 0.1 & \cite{XURI:2008jq} \\
 $km_{denit,mic}$ & half-saturation constant C of denitrification & \texttt{km\_denitrification\_c} & mol / m3 &  \ref{eq:sb:simple_dynamic_denitrification_prod}  & 1.416 & \cite{XURI:2008jq} \\
 $km_{denit,NO_3}$ & half-saturation constant \chem{NO_3} of denitrification & \texttt{km\_denitrification\_no3} & mol / m3 &  \ref{eq:sb:simple_dynamic_denitrification_prod}  & 0.6916  & \cite{XURI:2008jq} \\

@@ -86,6 +86,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
 
     ! Get local variables from options argument
     iblk  = options%iblk
@@ -129,6 +130,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sat_sl)               ! in
 
 
 
@@ -164,7 +166,7 @@ CONTAINS
     rtm_gasdiffusion     = calc_temperature_rate_modifier(t_soil_sl,ea_gasdiffusion) 
     rmm_nitrification    = calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) 
     rmm_gasdiffusion     = 1.0_wp - calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) 
-    anaerobic_volume_fraction_sl = calc_anaerobic_volume_fraction(w_soil_sl,w_soil_fc_sl,lambda_anvf,k_anvf) 
+    anaerobic_volume_fraction_sl = calc_anaerobic_volume_fraction(w_soil_sl,w_soil_sat_sl,lambda_anvf,k_anvf) 
 
   END SUBROUTINE update_sb_rate_modifier
 
@@ -375,13 +377,13 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(w_soil_sl,w_soil_fc_sl,lambda,k) RESULT(rate_modifier)
+  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(w_soil_sl,w_soil_sat_sl,lambda,k) RESULT(rate_modifier)
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
-    REAL(wp), INTENT(in)  :: w_soil_fc_sl        !< soil moisture at field capacity [m]
+    REAL(wp), INTENT(in)  :: w_soil_sat_sl       !< soil moisture at saturation [m]
     REAL(wp), INTENT(in)  :: lambda              !< lambda in Weibull function 
     REAL(wp), INTENT(in)  :: k                   !< k in Weibull function
     REAL(wp)              :: rate_modifier       !< oxygen availability rate modifier [unitless] 
@@ -390,11 +392,11 @@ CONTAINS
     REAL(wp)              :: air_filled_pore_space
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
 
-    air_filled_pore_space = (w_soil_fc_sl - w_soil_sl ) / w_soil_fc_sl
+    air_filled_pore_space = (w_soil_sat_sl - w_soil_sl ) / w_soil_sat_sl
     IF(air_filled_pore_space > eps4) THEN
        rate_modifier = 1.0_wp - exp(-(lambda * (1.0_wp - air_filled_pore_space))**k) 
     ELSE 
-       rate_modifier = 1._wp 
+       rate_modifier = 1._wp - exp(-(lambda * (1.0_wp - eps4))**k)
     ENDIF
 
   END FUNCTION calc_anaerobic_volume_fraction
