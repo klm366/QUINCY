@@ -217,7 +217,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":e:f:c:m:r:y:o:b:z:h" opt; do
+while getopts ":e:f:c:m:s:r:y:o:b:z:n:h" opt; do
   case "$opt" in
   "e")
     echo "   experimentalID=""$OPTARG"
@@ -246,6 +246,22 @@ while getopts ":e:f:c:m:r:y:o:b:z:h" opt; do
   "m")
     echo "   slmModel=""$OPTARG"
     slmModel="$OPTARG"
+    ;;
+  "s")
+    case "$OPTARG" in
+    "s0d")
+      echo "   sb_model_scheme=simple_0d (only one soil layer)"
+      sb_model_scheme="simple_0d"
+      ;;
+    "s1d")
+      echo "   sb_model_scheme=simple_1d (multiple soil layers)"
+      sb_model_scheme="simple_1d"
+      ;;
+    "jsm")
+      echo "   sb_model_scheme=jsm (full-featured soil model)"
+      sb_model_scheme="jsm"
+      ;;
+    esac
     ;;
   "y")
     echo "   simulation_length_number=""$OPTARG"
@@ -327,10 +343,18 @@ while getopts ":e:f:c:m:r:y:o:b:z:h" opt; do
       ;;
     "F")
       echo "   flag_mycorrhiza=""$OPTARG"
-      echo "     mycorrhiza not active!"
+      echo "     Mycorrhiza are not active at all!"
       flag_mycorrhiza="$OPTARG"
       ;;
     esac
+    ;;
+  "n")
+    echo "   your custom siteList filename is: ""$OPTARG"
+    if [ $customSiteList == "F" ]
+     then
+      echo "     Anyway, you did not enable the use of this custom file (customSiteList is set to F), to enable you could use the option: -c T"
+    fi
+    customSiteListFileName="$OPTARG"
     ;;
   \?)
     echo "     Invalid option: -$OPTARG"
@@ -356,6 +380,11 @@ while getopts ":e:f:c:m:r:y:o:b:z:h" opt; do
     echo " -m set slmModel"
     echo "    Arguments to -m:"
     echo "       land plant soil canopy"
+    echo " -s set the soil model"
+    echo "    Arguments to -s:"
+    echo "       s0d: simple_0d"
+    echo "       s1d: simple_1d"
+    echo "       jsm: jsm"
     echo " -y set simulation length"
     echo "    Arguments to -y:"
     echo "       any integer value"
@@ -381,6 +410,9 @@ while getopts ":e:f:c:m:r:y:o:b:z:h" opt; do
     echo "    Arguments to -z:"
     echo "       T: TRUE  - mycorrhiza are simulated"
     echo "       F: FALSE - mycorrhiza are NOT simulated"
+    echo " -n define name of your custom site list"
+    echo "    Any filename is possible, give the full name."
+    echo "       e.g.: my_site_list.dat"
     exit 1
     ;;
   esac
