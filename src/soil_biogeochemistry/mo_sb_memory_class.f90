@@ -201,6 +201,7 @@ MODULE mo_sb_memory_class
                                     po4_assoc_fast     , &  !< fast minerally associated phosphate  [mol m-3]
                                     po4_assoc_slow     , &  !< slow minerally associated phosphate  [mol m-3] 
                                     po4_occluded       , &  !< occluded phosphate [mol m-3] 
+                                    po4_primary        , &  !< primary phosphate mineral [mol m-3] 
                                     po4_solute              !< phophate in soil solution [mol m-3] 
 
     ! transport fluxes 
@@ -220,6 +221,7 @@ MODULE mo_sb_memory_class
                                     transport_po4_assoc_fast     , &  !< transport of fast minerally associated phosphate  [mol m-3 timestep-1]
                                     transport_po4_assoc_slow     , &  !< transport of slow minerally associated phosphate  [mol m-3 timestep-1] 
                                     transport_po4_occluded       , &  !< transport of occluded phosphate [mol m-3 timestep-1] 
+                                    transport_po4_primary        , &  !< transport of primary phosphate [mol m-3 timestep-1] 
                                     transport_po4_solute              !< transport of minerally associated phosphate  [mol m-3 timestep-1]
 
     ! temperature response functions
@@ -259,6 +261,11 @@ MODULE mo_sb_memory_class
                                     plant_uptake_no3_sl,          &  !< plant uptake of N    [mol m-3 s-1]
                                     plant_uptake_no3_n15_sl,      &  !< plant uptake of N15  [mol m-3 s-1] 
                                     plant_uptake_po4_sl,          &  !< plant uptake of P  [mol m-3 s-1]
+                                    microbial_uptake_nh4_sl,      &  !< microbial uptake of N    [mol m-3 s-1]
+                                    microbial_uptake_nh4_n15_sl,  &  !< microbial uptake of N15  [mol m-3 s-1] 
+                                    microbial_uptake_no3_sl,      &  !< microbial uptake of N    [mol m-3 s-1]
+                                    microbial_uptake_no3_n15_sl,  &  !< microbial uptake of N15  [mol m-3 s-1] 
+                                    microbial_uptake_po4_sl,      &  !< microbial uptake of P  [mol m-3 s-1]
                                     mycorrhiza_uptake_nh4_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
                                     mycorrhiza_uptake_nh4_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
                                     mycorrhiza_uptake_no3_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
@@ -1216,6 +1223,14 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'po4_primary', mem%po4_primary, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'po4_solute', mem%po4_solute, &
             hgrid, surface, &
@@ -1345,6 +1360,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL jsb_add_var(mem, 'transport_po4_primary', mem%transport_po4_primary, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue  
+
       CALL jsb_add_var(mem, 'transport_po4_solute', mem%transport_po4_solute, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -1592,7 +1615,47 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
   
+      CALL jsb_add_var(mem, 'microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_uptake_po4_sl_sl', mem%microbial_uptake_po4_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &

@@ -410,9 +410,9 @@ CONTAINS
               WRITE(p2str,'(a)') TRIM(p2str)//' PO4assoc_slow_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' PO4assoc_occl_L'//TRIM(layerstr)
               WRITE(p4str,'(a)') TRIM(p4str)//' PO4solute_L'//TRIM(layerstr)
-              !WRITE(p5str,'(a)') TRIM(p5str)//' PO4primary_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' PO4primary_L'//TRIM(layerstr)
             ENDDO
-            WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)!,TRIM(p5str)
+            WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str)
             lun=lun+1
             
             ! dC13 dC14 dN15
@@ -593,7 +593,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: po4_assoc_fast
     dsl4jsb_Real3D_onChunk      :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk      :: po4_occluded
-!    dsl4jsb_Real3D_onChunk      :: po4_primary
+    dsl4jsb_Real3D_onChunk      :: po4_primary
     dsl4jsb_Real3D_onChunk      :: qmax_org
     dsl4jsb_Real3D_onChunk      :: qmax_po4
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
@@ -671,7 +671,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_fast)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_assoc_slow)
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_occluded)
-!    dsl4jsb_Get_var3D_onChunk(SB_,  po4_primary)
+    dsl4jsb_Get_var3D_onChunk(SB_,  po4_primary)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_org)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
@@ -1044,7 +1044,7 @@ CONTAINS
           lun=lun+1
           ! soilpoolInPOrg_lay
           write(lun,'(50F16.6)') time_d, &
-            po4_assoc_fast(ipoi,:), po4_assoc_slow(ipoi,:), po4_occluded(ipoi,:), po4_solute(ipoi,:)!, po4_primary(ipoi,:)
+            po4_assoc_fast(ipoi,:), po4_assoc_slow(ipoi,:), po4_occluded(ipoi,:), po4_solute(ipoi,:), po4_primary(ipoi,:)
           lun=lun+1
           ! soilpooldC13org_lay
           dC13soluable_litter(ipoi,:)   = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk), &
@@ -1424,17 +1424,16 @@ CONTAINS
               WRITE(p6str,'(a)') TRIM(p6str)//' Biochem_min_L'//TRIM(layerstr)
               WRITE(p7str,'(a)') TRIM(p7str)//' Mic_upt_L'//TRIM(layerstr)
               WRITE(p8str,'(a)') TRIM(p8str)//' Plant_upt_L'//TRIM(layerstr)
-              !WRITE(p9str,'(a)') TRIM(p9str)//' Myco_upt_L'//TRIM(layerstr)
+              WRITE(p9str,'(a)') TRIM(p9str)//' Myco_upt_L'//TRIM(layerstr)
 
               WRITE(p10str,'(a)') TRIM(p10str)//' Trans_solute_L'//TRIM(layerstr)
               WRITE(p11str,'(a)') TRIM(p11str)//' Trans_assoc_fast_L'//TRIM(layerstr)
               WRITE(p12str,'(a)') TRIM(p12str)//' Trans_assoc_slow_L'//TRIM(layerstr)
               WRITE(p13str,'(a)') TRIM(p13str)//' Trans_occluded_L'//TRIM(layerstr)
-              !WRITE(p14str,'(a)') TRIM(p14str)//' Trans_primary_L'//TRIM(layerstr)
+              WRITE(p14str,'(a)') TRIM(p14str)//' Trans_primary_L'//TRIM(layerstr)
             END DO
             WRITE(lun,'(15a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-              TRIM(p8str),             TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str)
-              !TRIM(p8str),TRIM(p9str),TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
+              TRIM(p8str),TRIM(p9str),TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
             lun=lun+1
         END SELECT
     END SELECT
@@ -2290,8 +2289,8 @@ CONTAINS
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
           plant_upt_po4_acc(:)        = plant_upt_po4_acc(:) + sb%plant_uptake_po4_sl%ptr(ichu,:,iblk) * &
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
-          ! mic_upt_po4_acc(:)          = mic_upt_po4_acc(:) + sb%microbial_uptake_po4_sl%ptr(ichu,:,iblk) * &
-          !                                 soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          mic_upt_po4_acc(:)          = mic_upt_po4_acc(:) + sb%microbial_uptake_po4_sl%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
           myco_upt_po4_acc(:)         = myco_upt_po4_acc(:) + sb%mycorrhiza_uptake_po4_sl%ptr(ichu,:,iblk) * &
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
           trans_solute_po4_acc(:)     = trans_solute_po4_acc(:) + sb%transport_po4_solute%ptr(ichu,:,iblk) * &
@@ -2302,18 +2301,17 @@ CONTAINS
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
           trans_occluded_po4_acc(:)   = trans_occluded_po4_acc(:) + sb%transport_po4_occluded%ptr(ichu,:,iblk) * &
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
-          ! trans_primary_po4_acc(:)    = trans_primary_po4_acc(:) + sb%transport_po4_primary%ptr(ichu,:,iblk) * &
-          !                                 soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
+          trans_primary_po4_acc(:)    = trans_primary_po4_acc(:) + sb%transport_po4_primary%ptr(ichu,:,iblk) * &
+                                          soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
 
           ! write output & zero acc variables
           IF(l_flux_output_interval) THEN
 
             write(lun,'(141F14.6)') time_d, &
             adsorpt_po4_acc(:), weath_po4_acc(:), ocl_po4_acc(:), desorp_po4_acc(:), &
-            net_min_po4_lay_acc(:), biochem_min_po4_acc(:),                      plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
-            !net_min_po4_lay_acc(:), biochem_min_po4_acc(:), mic_upt_po4_acc(:), plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
-            trans_solute_po4_acc(:), trans_assoc_fast_po4_acc(:) , trans_assoc_slow_po4_acc(:), trans_occluded_po4_acc(:)!, &
-            !trans_primary_po4_acc(:)
+            net_min_po4_lay_acc(:), biochem_min_po4_acc(:), mic_upt_po4_acc(:), plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
+            trans_solute_po4_acc(:), trans_assoc_fast_po4_acc(:) , trans_assoc_slow_po4_acc(:), trans_occluded_po4_acc(:), &
+            trans_primary_po4_acc(:)
 
             !! set acc variables to zero
             adsorpt_po4_acc(:)            = 0.0_wp
