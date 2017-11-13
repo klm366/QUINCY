@@ -153,7 +153,7 @@ CONTAINS
          fname = 'vegpoolC'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpooldC13dC14'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpooldC13DC14'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'vegpoolN'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -162,7 +162,7 @@ CONTAINS
          fname = 'vegpoolP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpoold15N'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpooldN15'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'soilpoolPhysics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -180,7 +180,7 @@ CONTAINS
          fname = 'ecopoolCNP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpooldCdN'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpooldC13DC14dN15'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -283,7 +283,7 @@ CONTAINS
                           'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
          lun=lun+1
          WRITE(lun,'(2a)') 'Time Leaf_d15N FineRoot_d15N SapWood_d15N HeartWood_d15N CoarseRoot_d15N ', & 
-                          'Fruit_d15N Labile_d15N Reserve_d15N SeedBank_d15N Total_d15N'
+                          'Fruit_dN15 Labile_dN15 Reserve_dN15 SeedBank_dN15 Total_dN15'
          lun=lun+1
          ! soilpoolPhysics
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS '
@@ -387,9 +387,9 @@ CONTAINS
               WRITE(p1str,'(a)') TRIM(p1str)//' NH4assoc_L'//TRIM(layerstr)
               WRITE(p2str,'(a)') TRIM(p2str)//' NH4solute_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' NO3solute_L'//TRIM(layerstr)
-              WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NH4assoc_L'//TRIM(layerstr)
-              WRITE(p5str,'(a)') TRIM(p5str)//' d15N_NH4solute_L'//TRIM(layerstr)
-              WRITE(p6str,'(a)') TRIM(p6str)//' d15N_NO3solute_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' dN15_NH4assoc_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' dN15_NH4solute_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' dN15_NO3solute_L'//TRIM(layerstr)
             END DO
             WRITE(lun,'(7a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
             lun=lun+1
