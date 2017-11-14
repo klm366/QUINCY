@@ -74,11 +74,6 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
                                              apparent_mic_cue     , &
                                              apparent_mic_cn      , &
-                                             mic_uptake_nh4_sl    , &
-                                             mic_uptake_nh4_n15_sl, &
-                                             mic_uptake_no3_sl    , &
-                                             mic_uptake_no3_n15_sl, &
-                                             mic_uptake_po4_sl    , &
                                              biomineralisation_po4, &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
                                              rtm_decomposition_act, &
@@ -154,6 +149,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_sl
@@ -274,6 +274,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)
@@ -340,7 +345,7 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    mic_uptake_no3_sl = 0.0_wp
+    microbial_uptake_no3_sl = 0.0_wp
 
     !> 1.0 Set values of soil profile variables to allow switching between simple_0d and simple1d in the 
     !!     following routines 
@@ -530,8 +535,8 @@ CONTAINS
                                 denitrification_n2(:,:), &
                                 biomineralisation_po4(:,:), &
                                 sb_loss, &
-                                mic_uptake_nh4_sl(:,:), &
-                                mic_uptake_po4_sl(:,:), &
+                                microbial_uptake_nh4_sl(:,:), &
+                                microbial_uptake_po4_sl(:,:), &
                                 apparent_mic_cue(:,:))
 
     IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')THEN
@@ -554,8 +559,8 @@ CONTAINS
                                           plant_uptake_no3_sl, &      
                                           mycorrhiza_uptake_nh4_sl, & 
                                           mycorrhiza_uptake_no3_sl, & 
-                                          mic_uptake_nh4_sl, &        
-                                          mic_uptake_no3_sl, &        
+                                          microbial_uptake_nh4_sl, &        
+                                          microbial_uptake_no3_sl, &        
                                           nitrification_no3, &        
                                           nitrification_noy, &        
                                           nitrification_n2o, &        
@@ -568,8 +573,8 @@ CONTAINS
                                           plant_uptake_no3_n15_sl, &      
                                           mycorrhiza_uptake_nh4_n15_sl, & 
                                           mycorrhiza_uptake_no3_n15_sl, & 
-                                          mic_uptake_nh4_n15_sl, &        
-                                          mic_uptake_no3_n15_sl, &        
+                                          microbial_uptake_nh4_n15_sl, &        
+                                          microbial_uptake_no3_n15_sl, &        
                                           nitrification_no3_n15, &        
                                           nitrification_noy_n15, &        
                                           nitrification_n2o_n15, &        
@@ -582,9 +587,9 @@ CONTAINS
     CALL calc_SOM_formation(options, &
                             apparent_mic_cue(:,:), &
                             apparent_mic_cn(:,:), &
-                            mic_uptake_nh4_sl(:,:), &
-                            mic_uptake_nh4_n15_sl, &        
-                            mic_uptake_po4_sl(:,:), &
+                            microbial_uptake_nh4_sl(:,:), &
+                            microbial_uptake_nh4_n15_sl, &        
+                            microbial_uptake_po4_sl(:,:), &
                             sb_loss, &
                             het_respiration(:,:), &
                             het_respiration_c13(:,:), &
@@ -1559,8 +1564,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      denitrification_n2, &
                                      biomineralisation_po4, &
                                      sb_loss, &
-                                     mic_uptake_nh4_sl, &
-                                     mic_uptake_po4_sl, &
+                                     microbial_uptake_nh4_sl, &
+                                     microbial_uptake_po4_sl, &
                                      apparent_mic_cue )
 
     USE mo_sb_constants,            ONLY: microbial_cue_max, microbial_cue_min, microbial_cn, microbial_np, &
@@ -1589,8 +1594,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        denitrification_n2, &         !< denitrification rate [mol / m3 / timestep]
                                                                        biomineralisation_po4         !< biomineralisation rate [mol / m3 / timestep]
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                       !< decomposition of SOM and litter pools [mol / m3 / timestep]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: mic_uptake_nh4_sl, &          !< microbial immobilisation of NH4 [mol / m3 / timestep]
-                                                                       mic_uptake_po4_sl, &          !< microbial immobilisation of PO4 [mol / m3 / timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: microbial_uptake_nh4_sl, &    !< microbial immobilisation of NH4 [mol / m3 / timestep]
+                                                                       microbial_uptake_po4_sl, &    !< microbial immobilisation of PO4 [mol / m3 / timestep]
                                                                        apparent_mic_cue              !< apparent microbial carbon-use-efficiency
     ! ---------------------------
     ! 0.2 Local
@@ -1608,26 +1613,26 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                     (sb_loss%soluable_litter%carbon(:,:) + & 
                      sb_loss%polymeric_litter%carbon(:,:)) 
     
-    mic_uptake_nh4_sl(:,:) = growth_c(:,:) / apparent_mic_cn(:,:) - & 
+    microbial_uptake_nh4_sl(:,:) = growth_c(:,:) / apparent_mic_cn(:,:) - & 
                              microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
                                               sb_loss%polymeric_litter%nitrogen(:,:))
     !! limit uptake rate at low nitrogen assuming a Michaelis-Menten Kinetic 
     hlp1(:,:) = 1.25_wp * nh4_solute(:,:) / ( km2_uptake_nh4_act(:,:) + nh4_solute(:,:) )
-    mic_uptake_nh4_sl(:,:) = mic_uptake_nh4_sl(:,:) * MIN(hlp1(:,:),1.0_wp)
+    microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) * MIN(hlp1(:,:),1.0_wp)
 
     !> 1.2  Limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
     !!
-    WHERE(mic_uptake_nh4_sl(:,:)>=0.0_wp)
-       hlp1(:,:) = mic_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
+    WHERE(microbial_uptake_nh4_sl(:,:)>=0.0_wp)
+       hlp1(:,:) = microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
        hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:)) 
            WHERE(hlp1(:,:) > eps8)
-              mic_uptake_nh4_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_sl(:,:) / hlp1(:,:) 
+              microbial_uptake_nh4_sl(:,:)   = hlp2(:,:) * microbial_uptake_nh4_sl(:,:) / hlp1(:,:) 
               plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
               nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
               mycorrhiza_uptake_nh4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_sl(:,:) / hlp1(:,:)
            ELSEWHERE
-              mic_uptake_nh4_sl(:,:) = 0.0_wp
+              microbial_uptake_nh4_sl(:,:) = 0.0_wp
               plant_uptake_nh4_sl(:,:) = 0.0_wp 
               nitrification_no3(:,:) = 0.0_wp 
               mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
@@ -1635,7 +1640,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         ENDWHERE
     ELSEWHERE
        hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
-       hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - mic_uptake_nh4_sl(:,:)
+       hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - microbial_uptake_nh4_sl(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:)) 
            WHERE(hlp1(:,:) > eps8)
               plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
@@ -1670,7 +1675,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
    
     !> 2.1 calculate C growth based on N availability
     !!
-    growth_n(:,:) = apparent_mic_cn(:,:) * ( mic_uptake_nh4_sl(:,:) + & 
+    growth_n(:,:) = apparent_mic_cn(:,:) * ( microbial_uptake_nh4_sl(:,:) + & 
                                              microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
                                              sb_loss%polymeric_litter%nitrogen(:,:))) 
 
@@ -1694,9 +1699,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                        (sb_loss%soluable_litter%nitrogen(:,:) + & 
                         sb_loss%polymeric_litter%nitrogen(:,:)) 
     hlp2(:,:) = 1.0_wp
-    WHERE(mic_uptake_nh4_sl(:,:)<hlp1(:,:))
+    WHERE(microbial_uptake_nh4_sl(:,:)<hlp1(:,:))
        WHERE(hlp1(:,:)>eps8)
-           hlp2(:,:) = mic_uptake_nh4_sl(:,:) / hlp1(:,:)
+           hlp2(:,:) = microbial_uptake_nh4_sl(:,:) / hlp1(:,:)
        ELSEWHERE
            hlp2(:,:) = 0.0_wp
        ENDWHERE
@@ -1716,7 +1721,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDWHERE 
 
     !> 3.0 calculate potential microbial P uptake from soluable pool (mol /m3 / timestep) 
-    mic_uptake_po4_sl(:,:) =  apparent_mic_cue(:,:) / apparent_mic_cn(:,:) / microbial_np * & 
+    microbial_uptake_po4_sl(:,:) =  apparent_mic_cue(:,:) / apparent_mic_cn(:,:) / microbial_np * & 
                                 (sb_loss%soluable_litter%carbon(:,:) + &
                                   sb_loss%polymeric_litter%carbon(:,:)) - &
                               microbial_pue * & 
@@ -1725,23 +1730,23 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 3.1 constrain P uptake by microbes and plants to the available sum of P from P_soluable, 
     !!     biomineralisation and transport (mol /m3 / timestep)   
-    WHERE(mic_uptake_po4_sl(:,:)>0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
-       hlp1(:,:) = mic_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:)
+    WHERE(microbial_uptake_po4_sl(:,:)>0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
+       hlp1(:,:) = microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:)
        hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:))
           WHERE(hlp1(:,:) > eps8)
-             mic_uptake_po4_sl(:,:)        = hlp2(:,:) * mic_uptake_po4_sl(:,:) / hlp1(:,:) 
+             microbial_uptake_po4_sl(:,:)        = hlp2(:,:) * microbial_uptake_po4_sl(:,:) / hlp1(:,:) 
              plant_uptake_po4_sl(:,:)      = hlp2(:,:) * plant_uptake_po4_sl(:,:) / hlp1(:,:) 
              mycorrhiza_uptake_po4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_po4_sl(:,:) / hlp1(:,:) 
           ELSEWHERE
-             mic_uptake_po4_sl(:,:)        = 0.0_wp
+             microbial_uptake_po4_sl(:,:)        = 0.0_wp
              plant_uptake_po4_sl(:,:)      = 0.0_wp
              mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp 
           ENDWHERE
        ENDWHERE
-    ELSEWHERE ! if microbes release P, constrain plant uptake to available P, note the negative sign of mic_uptake_po4_sl(:,:)
+    ELSEWHERE ! if microbes release P, constrain plant uptake to available P, note the negative sign of microbial_uptake_po4_sl(:,:)
        hlp1(:,:) = plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) 
-       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:) - mic_uptake_po4_sl(:,:)
+       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:) - microbial_uptake_po4_sl(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:))
           WHERE(hlp1(:,:) > eps8)
              plant_uptake_po4_sl(:,:)      = hlp2(:,:) * plant_uptake_po4_sl(:,:) / hlp1(:,:) 
@@ -1755,7 +1760,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 3.2 Limit biomineralisation to the actual rate of biomineralisation required to meet microbial and plant demands
     !!      and substract from slow=residue pool 
-    biomineralisation_po4(:,:) = MAX(mic_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) - & 
+    biomineralisation_po4(:,:) = MAX(microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) - & 
                                      (po4_solute(:,:) + transport_po4_solute(:,:)),0.0_wp)
     sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
                                                      biomineralisation_po4(:,:)
@@ -1830,8 +1835,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                           plant_uptake_no3_sl, &      
                                           mycorrhiza_uptake_nh4_sl, & 
                                           mycorrhiza_uptake_no3_sl, & 
-                                          mic_uptake_nh4_sl, &        
-                                          mic_uptake_no3_sl, &        
+                                          microbial_uptake_nh4_sl, &        
+                                          microbial_uptake_no3_sl, &        
                                           nitrification_no3, &        
                                           nitrification_noy, &        
                                           nitrification_n2o, &        
@@ -1844,8 +1849,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                           plant_uptake_no3_n15_sl, &      
                                           mycorrhiza_uptake_nh4_n15_sl, & 
                                           mycorrhiza_uptake_no3_n15_sl, & 
-                                          mic_uptake_nh4_n15_sl, &        
-                                          mic_uptake_no3_n15_sl, &        
+                                          microbial_uptake_nh4_n15_sl, &        
+                                          microbial_uptake_no3_n15_sl, &        
                                           nitrification_no3_n15, &        
                                           nitrification_noy_n15, &        
                                           nitrification_n2o_n15, &        
@@ -1867,8 +1872,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        plant_uptake_no3_sl, &      !< NO3 uptake by plants [mol / m3 / timestep]
                                                                        mycorrhiza_uptake_nh4_sl, & !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                                        mycorrhiza_uptake_no3_sl, & !< NO3 uptake by mycorrhiza [mol / m3 / timestep]
-                                                                       mic_uptake_nh4_sl, &        !< NH4 uptake by microbes [mol / m3 / timestep]
-                                                                       mic_uptake_no3_sl, &        !< NH4 uptake by microbes [mol / m3 / timestep]
+                                                                       microbial_uptake_nh4_sl, &        !< NH4 uptake by microbes [mol / m3 / timestep]
+                                                                       microbial_uptake_no3_sl, &        !< NH4 uptake by microbes [mol / m3 / timestep]
                                                                        nitrification_no3, &        !< nitrification to NO3 [mol / m3 / timestep]
                                                                        nitrification_noy, &        !< nitrification to NOy [mol / m3 / timestep]
                                                                        nitrification_n2o, &        !< nitrification to N2O [mol / m3 / timestep]
@@ -1881,8 +1886,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        plant_uptake_no3_n15_sl, &      !< 15NO3 uptake by plants [mol / m3 / timestep]
                                                                        mycorrhiza_uptake_nh4_n15_sl, & !< 15NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                                        mycorrhiza_uptake_no3_n15_sl, & !< 15NO3 uptake by mycorrhiza [mol / m3 / timestep]
-                                                                       mic_uptake_nh4_n15_sl, &        !< 15NH4 uptake by microbes [mol / m3 / timestep]
-                                                                       mic_uptake_no3_n15_sl, &        !< 15NH4 uptake by microbes [mol / m3 / timestep]
+                                                                       microbial_uptake_nh4_n15_sl, &        !< 15NH4 uptake by microbes [mol / m3 / timestep]
+                                                                       microbial_uptake_no3_n15_sl, &        !< 15NH4 uptake by microbes [mol / m3 / timestep]
                                                                        nitrification_no3_n15, &        !< nitrification to 15NO3 [mol / m3 / timestep]
                                                                        nitrification_noy_n15, &        !< nitrification to 15NOy [mol / m3 / timestep]
                                                                        nitrification_n2o_n15, &        !< nitrification to 15N2O [mol / m3 / timestep]
@@ -1898,7 +1903,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     ! fraction of NH4 that is consumed
     WHERE(nh4_solute(:,:)>eps8)
-       hlp1(:,:) = MAX((plant_uptake_nh4_sl(:,:) + mycorrhiza_uptake_nh4_sl(:,:) + mic_uptake_nh4_sl(:,:) + & 
+       hlp1(:,:) = MAX((plant_uptake_nh4_sl(:,:) + mycorrhiza_uptake_nh4_sl(:,:) + microbial_uptake_nh4_sl(:,:) + & 
                     nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) / nh4_solute(:,:),eps8)
     ELSEWHERE
        hlp1(:,:) = 1.0_wp
@@ -1917,7 +1922,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                         calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_plant_uptake_nh4*hlp2(:,:)) 
     mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * & 
                                         calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_plant_uptake_nh4*hlp2(:,:)) 
-    mic_uptake_nh4_n15_sl(:,:)   = mic_uptake_nh4_sl(:,:) * & 
+    microbial_uptake_nh4_n15_sl(:,:)   = microbial_uptake_nh4_sl(:,:) * & 
                                    calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_mic_uptake_nh4*hlp2(:,:))
     nitrification_no3_n15(:,:)   = nitrification_no3(:,:) * &
                                    calc_fractionation(nh4_solute(:,:),nh4_n15_solute(:,:),eta_nitrate_production*hlp2(:,:))
@@ -1928,21 +1933,21 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.2 contrain 15NH4 fluxes to available 15NH4
     !!
-    hlp1(:,:) = plant_uptake_nh4_n15_sl(:,:) + mycorrhiza_uptake_nh4_n15_sl(:,:) + mic_uptake_nh4_n15_sl(:,:) + & 
+    hlp1(:,:) = plant_uptake_nh4_n15_sl(:,:) + mycorrhiza_uptake_nh4_n15_sl(:,:) + microbial_uptake_nh4_n15_sl(:,:) + & 
                 nitrification_no3_n15(:,:) + nitrification_noy_n15(:,:) + nitrification_n2o_n15(:,:)
     hlp2(:,:) = nh4_n15_solute + transport_nh4_n15_solute(:,:) 
     WHERE(hlp2 < hlp1(:,:))
        WHERE(hlp1>eps8)
           plant_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
           mycorrhiza_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
-          mic_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
+          microbial_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * microbial_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
           nitrification_no3_n15(:,:)   = hlp2(:,:) * nitrification_no3_n15(:,:) / hlp1(:,:)
           nitrification_noy_n15(:,:)   = hlp2(:,:) * nitrification_noy_n15(:,:) / hlp1(:,:)
           nitrification_n2o_n15(:,:)   = hlp2(:,:) * nitrification_n2o_n15(:,:) / hlp1(:,:)
        ELSEWHERE
           plant_uptake_nh4_n15_sl(:,:) = 0.0_wp 
           mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_wp 
-          mic_uptake_nh4_n15_sl(:,:)   = 0.0_wp
+          microbial_uptake_nh4_n15_sl(:,:)   = 0.0_wp
           nitrification_no3_n15(:,:)   = 0.0_wp
           nitrification_noy_n15(:,:)   = 0.0_wp
           nitrification_n2o_n15(:,:)   = 0.0_wp
@@ -1954,7 +1959,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     ! fraction of NO3 that is consumed
     WHERE(no3_solute(:,:)>eps8)
-       hlp1(:,:) = MAX((plant_uptake_no3_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + mic_uptake_no3_sl(:,:) + & 
+       hlp1(:,:) = MAX((plant_uptake_no3_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + microbial_uptake_no3_sl(:,:) + & 
                     denitrification_noy(:,:) + denitrification_n2o(:,:) + denitrification_n2(:,:)) / no3_solute(:,:),eps8)
     ELSEWHERE
        hlp1(:,:) = 1.0_wp
@@ -1971,7 +1976,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                         calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_plant_uptake_no3*hlp2(:,:))
     mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) * & 
                                         calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_plant_uptake_no3*hlp2(:,:))
-    mic_uptake_no3_n15_sl(:,:)   = mic_uptake_no3_sl(:,:) * & 
+    microbial_uptake_no3_n15_sl(:,:)   = microbial_uptake_no3_sl(:,:) * & 
                                    calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_mic_uptake_no3*hlp2(:,:)) 
     denitrification_noy_n15(:,:) = denitrification_noy(:,:) * & 
                                    calc_fractionation(no3_solute(:,:),no3_n15_solute(:,:),eta_denitrification*hlp2(:,:))
@@ -1982,21 +1987,21 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 2.2 contrain 15NO3 fluxes to available 15NO3
     !!
-    hlp1(:,:) = plant_uptake_no3_n15_sl(:,:) + mycorrhiza_uptake_no3_n15_sl(:,:) + mic_uptake_no3_n15_sl(:,:) + & 
+    hlp1(:,:) = plant_uptake_no3_n15_sl(:,:) + mycorrhiza_uptake_no3_n15_sl(:,:) + microbial_uptake_no3_n15_sl(:,:) + & 
                 denitrification_noy_n15(:,:) + denitrification_n2o_n15(:,:) + denitrification_n2_n15(:,:)
     hlp2(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
     WHERE(hlp2 < hlp1(:,:))
        WHERE(hlp1>eps8)
           plant_uptake_no3_n15_sl(:,:) = hlp2(:,:) * plant_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
           mycorrhiza_uptake_no3_n15_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
-          mic_uptake_no3_n15_sl(:,:)   = hlp2(:,:) * mic_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
+          microbial_uptake_no3_n15_sl(:,:)   = hlp2(:,:) * microbial_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
           denitrification_noy_n15(:,:)   = hlp2(:,:) * denitrification_noy_n15(:,:) / hlp1(:,:)
           denitrification_n2o_n15(:,:)   = hlp2(:,:) * denitrification_n2o_n15(:,:) / hlp1(:,:)
           denitrification_n2_n15(:,:)   = hlp2(:,:) * denitrification_n2_n15(:,:) / hlp1(:,:)
        ELSEWHERE
           plant_uptake_no3_n15_sl(:,:) = 0.0_wp 
           mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_wp 
-          mic_uptake_no3_n15_sl(:,:)   = 0.0_wp
+          microbial_uptake_no3_n15_sl(:,:)   = 0.0_wp
           denitrification_noy_n15(:,:)   = 0.0_wp
           denitrification_n2o_n15(:,:)   = 0.0_wp
           denitrification_n2_n15(:,:)   = 0.0_wp
@@ -2020,9 +2025,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   SUBROUTINE calc_SOM_formation(options, &                       ! in 
                                 apparent_mic_cue, &
                                 apparent_mic_cn, &
-                                mic_uptake_nh4_sl, &
-                                mic_uptake_nh4_n15_sl, &
-                                mic_uptake_po4_sl, &
+                                microbial_uptake_nh4_sl, &
+                                microbial_uptake_nh4_n15_sl, &
+                                microbial_uptake_po4_sl, &
                                 sb_loss, &
                                 het_respiration, &               ! out
                                 het_respiration_c13, &
@@ -2043,9 +2048,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: apparent_mic_cue, &           !< apparent carbon-use efficiency of microbial uptake
                                                                        apparent_mic_cn, &            !< apparent carbon-nitrogen ratio of microbial uptake [mol/mol]
-                                                                       mic_uptake_nh4_sl, &          !< microbial NH4 uptake [mol / m3 / timestep]
-                                                                       mic_uptake_nh4_n15_sl, &      !< microbial 15NH4 uptake [mol / m3 / timestep]
-                                                                       mic_uptake_po4_sl             !< microbial PO4 uptake [mol / m3 / timestep]
+                                                                       microbial_uptake_nh4_sl, &          !< microbial NH4 uptake [mol / m3 / timestep]
+                                                                       microbial_uptake_nh4_n15_sl, &      !< microbial 15NH4 uptake [mol / m3 / timestep]
+                                                                       microbial_uptake_po4_sl             !< microbial PO4 uptake [mol / m3 / timestep]
     TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
@@ -2070,12 +2075,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                           microbial_nue * &
                                                           (sb_loss%soluable_litter%nitrogen(:,:) + &  
                                                            sb_loss%polymeric_litter%nitrogen(:,:)) + & 
-                                                          mic_uptake_nh4_sl(:,:) 
+                                                          microbial_uptake_nh4_sl(:,:) 
     sb_formation%microbial%phosphorus(:,:) = sb_formation%microbial%phosphorus(:,:) + & 
                                                             microbial_pue * &
                                                             (sb_loss%soluable_litter%phosphorus(:,:) + &  
                                                              sb_loss%polymeric_litter%phosphorus(:,:)) + & 
-                                                            mic_uptake_po4_sl(:,:) 
+                                                            microbial_uptake_po4_sl(:,:) 
     sb_formation%microbial%carbon13(:,:) = sb_formation%microbial%carbon13(:,:) + & 
                                                         apparent_mic_cue(:,:) * & 
                                                         (sb_loss%soluable_litter%carbon13(:,:) + &  
@@ -2088,7 +2093,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                           microbial_nue * &
                                                           (sb_loss%soluable_litter%nitrogen15(:,:) + &  
                                                            sb_loss%polymeric_litter%nitrogen15(:,:)) + &
-                                                           mic_uptake_nh4_n15_sl(:,:) 
+                                                           microbial_uptake_nh4_n15_sl(:,:) 
 
     het_respiration(:,:)     = het_respiration(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
                                                       (sb_loss%soluable_litter%carbon(:,:) + &  
@@ -2099,15 +2104,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
                                                           (sb_loss%soluable_litter%carbon14(:,:) + &  
                                                            sb_loss%polymeric_litter%carbon14(:,:))
-    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) - mic_uptake_nh4_sl(:,:) + &  
+    net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) - microbial_uptake_nh4_sl(:,:) + &  
                                                                 (1.0_wp - microbial_nue) * &
                                                                 (sb_loss%soluable_litter%nitrogen(:,:) + &  
                                                                  sb_loss%polymeric_litter%nitrogen(:,:))
-    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) - mic_uptake_po4_sl(:,:) + & 
+    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) - microbial_uptake_po4_sl(:,:) + & 
                                                                 (1.0_wp - microbial_pue) * &
                                                                 (sb_loss%soluable_litter%phosphorus(:,:) + &  
                                                                  sb_loss%polymeric_litter%phosphorus(:,:))
-    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) - mic_uptake_nh4_n15_sl(:,:) + & 
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) - microbial_uptake_nh4_n15_sl(:,:) + & 
                                                                 (1.0_wp - microbial_nue) * &
                                                                 (sb_loss%soluable_litter%nitrogen15(:,:) + &  
                                                                  sb_loss%polymeric_litter%nitrogen15(:,:))

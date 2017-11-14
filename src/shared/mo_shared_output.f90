@@ -1576,15 +1576,15 @@ CONTAINS
     REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
     !! hardcoded soillayer number  nsoil_sb !!
-    REAL(wp), DIMENSION(5), SAVE          :: adsorpt_po4_acc = 0.0_wp     , &  
-                                             net_min_po4_lay_acc = 0.0_wp     , &
-                                             ocl_po4_acc = 0.0_wp         , &
-                                             weath_po4_acc = 0.0_wp       , &
-                                             biochem_min_po4_acc = 0.0_wp , &
-                                             desorp_po4_acc = 0.0_wp      , &
-                                             plant_upt_po4_acc = 0.0_wp   , &
-                                             mic_upt_po4_acc = 0.0_wp     , &
-                                             myco_upt_po4_acc = 0.0_wp    , &
+    REAL(wp), DIMENSION(5), SAVE          :: adsorpt_po4_acc = 0.0_wp           , &  
+                                             net_min_po4_lay_acc = 0.0_wp       , &
+                                             ocl_po4_acc = 0.0_wp               , &
+                                             weath_po4_acc = 0.0_wp             , &
+                                             biochem_min_po4_acc = 0.0_wp       , &
+                                             desorp_po4_acc = 0.0_wp            , &
+                                             plant_upt_po4_acc = 0.0_wp         , &
+                                             microbial_upt_po4_acc = 0.0_wp     , &
+                                             myco_upt_po4_acc = 0.0_wp          , &
                                              trans_solute_po4_acc = 0.0_wp      , &
                                              trans_assoc_fast_po4_acc = 0.0_wp  , &
                                              trans_assoc_slow_po4_acc = 0.0_wp  , &
@@ -2289,7 +2289,7 @@ CONTAINS
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
           plant_upt_po4_acc(:)        = plant_upt_po4_acc(:) + sb%plant_uptake_po4_sl%ptr(ichu,:,iblk) * &
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
-          mic_upt_po4_acc(:)          = mic_upt_po4_acc(:) + sb%microbial_uptake_po4_sl%ptr(ichu,:,iblk) * &
+          microbial_upt_po4_acc(:)    = microbial_upt_po4_acc(:) + sb%microbial_uptake_po4_sl%ptr(ichu,:,iblk) * &
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
           myco_upt_po4_acc(:)         = myco_upt_po4_acc(:) + sb%mycorrhiza_uptake_po4_sl%ptr(ichu,:,iblk) * &
                                           soil_depth_sl(ipoi,:) * dtime_one * 1000000.0_wp
@@ -2309,7 +2309,7 @@ CONTAINS
 
             write(lun,'(141F14.6)') time_d, &
             adsorpt_po4_acc(:), weath_po4_acc(:), ocl_po4_acc(:), desorp_po4_acc(:), &
-            net_min_po4_lay_acc(:), biochem_min_po4_acc(:), mic_upt_po4_acc(:), plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
+            net_min_po4_lay_acc(:), biochem_min_po4_acc(:), microbial_upt_po4_acc(:), plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
             trans_solute_po4_acc(:), trans_assoc_fast_po4_acc(:) , trans_assoc_slow_po4_acc(:), trans_occluded_po4_acc(:), &
             trans_primary_po4_acc(:)
 
@@ -2321,7 +2321,7 @@ CONTAINS
             desorp_po4_acc(:)             = 0.0_wp
             biochem_min_po4_acc(:)        = 0.0_wp
             plant_upt_po4_acc(:)          = 0.0_wp 
-            mic_upt_po4_acc(:)            = 0.0_wp
+            microbial_upt_po4_acc(:)      = 0.0_wp
             myco_upt_po4_acc(:)           = 0.0_wp  
             trans_solute_po4_acc(:)       = 0.0_wp
             trans_assoc_fast_po4_acc(:)   = 0.0_wp

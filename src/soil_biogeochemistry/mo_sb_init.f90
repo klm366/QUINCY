@@ -93,6 +93,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_occluded
     dsl4jsb_Real3D_onChunk :: ph_sl
     dsl4jsb_Real3D_onChunk :: lithology_class_sl
+    dsl4jsb_Real3D_onChunk :: po4_primary
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -132,6 +133,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded) 
     dsl4jsb_Get_var3D_onChunk(SB_,       ph_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       lithology_class_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)
     ! Get process memory pool structures
 #define Get_sb_pool
 #include "slm_pools_a_incl.f90"
@@ -175,6 +177,9 @@ CONTAINS
              nh4_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
              no3_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
              po4_solute(:,1) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
+             
+             ! initialise mineral soil P pools
+             po4_primary(:,1) = 100.0_wp / molar_mass_P	
           ELSE 
              sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
@@ -200,6 +205,9 @@ CONTAINS
                 no3_solute(:,isoil) = 0.1_wp 
                 po4_solute(:,isoil) = 0.01_wp 
              ENDDO
+             
+             ! initialise mineral soil P pools
+             po4_primary(:,1) = 100.0_wp / molar_mass_P	
           ENDIF
  
           ! metabolic litter all other elements
@@ -284,11 +292,11 @@ CONTAINS
          ! initialise diffusion by bioturbation
          k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 
 
-		 ! initialise mineral soil P pools
+         ! initialise mineral soil P pools
          po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
          po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
          po4_occluded(:,:)   = 150.0_wp / molar_mass_P		 
-		 
+         po4_primary(:,1)    = 100.0_wp / molar_mass_P			 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
  

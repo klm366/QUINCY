@@ -75,9 +75,6 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
 !!
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: mic_uptake_nh4, mic_uptake_nh4_n15, & 
-                                                               mic_uptake_no3, mic_uptake_no3_n15, & 
-                                                               mic_uptake_po4
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ---------------------------
@@ -116,6 +113,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: weathering_po4
     dsl4jsb_Real3D_onChunk :: occlusion_po4
     dsl4jsb_Real3D_onChunk :: slow_sorption_po4
@@ -195,6 +197,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)           ! out
@@ -262,17 +269,21 @@ rmm_desorption = 1.0_wp
     CALL calc_inorganic_uptake(nh4_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
                                vmax_mic_uptake_nh4, km_mic_uptake_nh4, vmax_plant_uptake_nh4, km_plant_uptake_nh4, & 
-                               mic_uptake_nh4(:,:), plant_uptake_nh4_sl(:,:))
-    mic_uptake_nh4_n15(:,:)      = mic_uptake_nh4(:,:)      * calc_fractionation(nh4_solute,nh4_n15_solute,eta_mic_uptake_nh4)
-    plant_uptake_nh4_n15_sl(:,:) = plant_uptake_nh4_sl(:,:) * calc_fractionation(nh4_solute,nh4_n15_solute,eta_plant_uptake_nh4)
+                               microbial_uptake_nh4_sl(:,:), plant_uptake_nh4_sl(:,:))
+    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_sl(:,:) * &
+                                          calc_fractionation(nh4_solute,nh4_n15_solute,eta_mic_uptake_nh4)
+    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_sl(:,:) * &
+                                          calc_fractionation(nh4_solute,nh4_n15_solute,eta_plant_uptake_nh4)
 
     !> X.2 NO3
     CALL calc_inorganic_uptake(no3_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
                                vmax_mic_uptake_no3, km_mic_uptake_no3, vmax_plant_uptake_no3, km_plant_uptake_no3, & 
-                               mic_uptake_no3(:,:), plant_uptake_no3_sl(:,:))
-    mic_uptake_no3_n15(:,:)      = mic_uptake_no3(:,:)      * calc_fractionation(no3_solute,no3_n15_solute,eta_mic_uptake_no3)
-    plant_uptake_no3_n15_sl(:,:) = plant_uptake_no3_sl(:,:) * calc_fractionation(no3_solute,no3_n15_solute,eta_plant_uptake_no3)
+                               microbial_uptake_no3_sl(:,:), plant_uptake_no3_sl(:,:))
+    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_sl(:,:) * &
+                                          calc_fractionation(no3_solute,no3_n15_solute,eta_mic_uptake_no3)
+    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_sl(:,:) * &
+                                          calc_fractionation(no3_solute,no3_n15_solute,eta_plant_uptake_no3)
 
     !> X.3 PO4
 
@@ -284,21 +295,27 @@ rmm_desorption = 1.0_wp
                             sb_pool%residue%phosphorus(:,:), sb_pool%residue_assoc%phosphorus(:,:), &
                             sb_loss%polymeric_litter%phosphorus(:,:), sb_loss%dom_assoc%phosphorus(:,:), &
                             sb_loss%residue%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), po4_assoc_slow(:,:), &
-                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
+                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), &
+                            weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
 
     !! Microbial and plant P uptake
     !!
     CALL calc_po4_uptake_ECA(sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), po4_solute(:,:), &
                                 rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                                qmax_po4(:,:), po4_assoc_fast(:,:), mic_uptake_po4(:,:), plant_uptake_po4_sl(:,:), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4)
+                                qmax_po4(:,:), po4_assoc_fast(:,:), microbial_uptake_po4_sl(:,:), &
+                                plant_uptake_po4_sl(:,:), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4)
 
     !! P adsorption
     !!
-    CALL calc_adsorption_po4(options, po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), qmax_po4(:,:), &
-                               weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), percolation_sl(:,:), bulk_dens_corr_sl(:,:), &
-                               gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
-                               mic_uptake_po4(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
-                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_CLE_po4, dsl4jsb_Config(SB_)%flag_sb_LK_po4)
+    CALL calc_adsorption_po4(options, po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), &
+                               qmax_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
+                               percolation_sl(:,:), bulk_dens_corr_sl(:,:), &
+                               gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), &
+                               sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
+                               microbial_uptake_po4_sl(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
+                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+                               dsl4jsb_Config(SB_)%flag_sb_CLE_po4, &
+                               dsl4jsb_Config(SB_)%flag_sb_LK_po4)
 
     !> 2.0 Litter-related fluxes  
     !!
@@ -342,8 +359,8 @@ rmm_desorption = 1.0_wp
     !! 
     CALL calc_microbial_growth(options,sb_pool%dom,sb_pool%microbial, & 
                                rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:), &
-                               mic_uptake_nh4(:,:),mic_uptake_nh4_n15(:,:), & 
-                               mic_uptake_no3(:,:),mic_uptake_no3_n15(:,:), mic_uptake_po4(:,:), &
+                               microbial_uptake_nh4_sl(:,:),microbial_uptake_nh4_n15_sl(:,:), & 
+                               microbial_uptake_no3_sl(:,:),microbial_uptake_no3_n15_sl(:,:), microbial_uptake_po4_sl(:,:), &
                                sb_loss%dom,sb_formation%microbial, &
                                het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:), &
                                net_mineralisation_nh4(:,:),net_mineralisation_nh4_n15(:,:), & 
