@@ -39,10 +39,10 @@ CONTAINS
 
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
-                                                  standard_press_srf
+                                                  standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_shared_constants,                ONLY: molar_mass_N
     USE mo_veg_constants,                   ONLY: fresp_growth
-    USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14
+    USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, itree
 
@@ -284,8 +284,8 @@ CONTAINS
           ELSE
              hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
           ENDIF
-          veg_pool%seed_bed%carbon14    = veg_pool%seed_bed%carbon * &
-                                          calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
+          veg_pool%seed_bed%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
+                                       veg_pool%seed_bed%carbon 
 
           veg_pool%seed_bed%nitrogen15  = veg_pool%seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
@@ -313,8 +313,8 @@ CONTAINS
           ELSE
              hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
           ENDIF
-          veg_pool%reserve%carbon14   = veg_pool%reserve%carbon * &
-                                        calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
+          veg_pool%reserve%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
+                                      veg_pool%reserve%carbon 
 
           veg_pool%reserve%nitrogen15 = veg_pool%reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
         END IF

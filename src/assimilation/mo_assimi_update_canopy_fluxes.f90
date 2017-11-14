@@ -71,8 +71,8 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: icanopy     ! for looping across ncanopy layers
-    REAL(wp),DIMENSION(options%nc)        :: ga,hlp1       ! dummy variable
+    INTEGER                               :: icanopy    ! for looping across ncanopy layers
+    REAL(wp),DIMENSION(options%nc)        :: ga,hlp1    ! dummy variable
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
@@ -267,21 +267,24 @@ CONTAINS
         gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
 
         WHERE(gross_assimilation_cl(:,icanopy) > eps8)
-           hlp1(:)                      = discrimination_ps(co2_conc_leaf_cl(:,icanopy)     , &
-                                             co2_mixing_ratio(:)   , &
-                                             'C13'              , &
-                                             lctlib%ps_pathway)
+           ! C13 flux associated with photosynthesis
+           hlp1(:)                   = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
+                                                         co2_mixing_ratio(:)        , &
+                                                         'C13'                      , &
+                                                         lctlib%ps_pathway)
            gross_assimilation_C13(:) = gross_assimilation_C13(:) + gross_assimilation_cl(:,icanopy) * &
-                                             lai_cl(:,icanopy) * &
-                                             calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C13(:), hlp1(:))
-           hlp1(:)                      = discrimination_ps(co2_conc_leaf_cl(:,icanopy)     , &
-                                             co2_mixing_ratio(:)   , &
-                                             'C14'              , &
-                                             lctlib%ps_pathway)
-           gross_assimilation_C14(:) = gross_assimilation_C14(:) + gross_assimilation_cl(:,icanopy) * &
-                                             lai_cl(:,icanopy) * &
-                                             calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:), &
-                                                                hlp1(:), scale_correction_C14)
+                                       lai_cl(:,icanopy)                                            * &
+                                       calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C13(:), hlp1(:))
+
+           ! C14 flux associated with photosynthesis
+           hlp1(:)                      = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
+                                                            co2_mixing_ratio(:)        , &
+                                                            'C14'                      , &
+                                                            lctlib%ps_pathway)
+           gross_assimilation_C14(:) = gross_assimilation_C14(:) + gross_assimilation_cl(:,icanopy)  * &
+                                       lai_cl(:,icanopy)                                             * & 
+                                       calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:),&
+                                                          hlp1(:), co2_mixing_ratio_C13(:))
         END WHERE
 
         net_assimilation(:)       = net_assimilation(:)       + net_assimilation_cl(:,icanopy)       * &

@@ -41,6 +41,8 @@ mo_sb_init.o: \
   mo_jsb_process_class.o \
   mo_shared_isotope.o \
   mo_shared_constants.o \
+  mo_assimi_constants.o \
+  mo_assimi_update_canopy_fluxes.o \
   mo_soil_config_class.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \

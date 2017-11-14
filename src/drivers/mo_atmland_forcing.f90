@@ -347,66 +347,44 @@ CONTAINS
     rain_r      = rain_r      / one_day
     snow_r      = snow_r      / one_day
 
-    !> 4.0 update forcing variables based on 'read data'
+    !> 4.0 forcing timing data and actual forcing values
     !!
-    wind_10m(:)             = wind_air_r
-    ! neutral drag coefficient, assuminging a 12 metre tall forest
-    ! In JSBACH 4, this is divided by stepen and grav, so these are multiplied here... 
-    drag_srf(:)             = (( 0.41 / log( (22._wp - 2.0_wp/3._wp * 12._wp)/1.0_wp) )**2)
-    ga(:)                   = drag_srf(:) * wind_10m(:) 
-    drag_srf(:)             = drag_srf(:) * 1800._wp * grav 
-    IF (forcing_options%flag_read_dC13) THEN
-      hlp1(:)               = calc_mixing_ratio_C13C12(co2_dc13_r)
-    ELSE
-      hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
-    END IF
-    DO ichunk = 1,nc
-      co2_mixing_ratio_C13(ichunk) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1(ichunk))
-    END DO
-    IF (forcing_options%flag_read_DC14) THEN
-      hlp1(:)               = calc_mixing_ratio_C14C(co2_dc13_r, co2_dc14_r)
-    ELSE
-      hlp1(:)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
-    END IF
-    co2_mixing_ratio_C14(:) = hlp1(:) * co2_mixing_ratio_r
+    forcing_options%forcing_year  = NINT(year)
+    forcing_options%forcing_doy   = NINT(day)
+    forcing_options%forcing_hour  = hour
+
+    !> 5.0 update forcing variables based on 'read data'
+    !!
+    t_air(:)           =         t_air_r
+    q_air(:)           =         q_air_r
+    rain(:)            =         rain_r
+    snow(:)            =         snow_r
+    wind_air(:)        =         wind_air_r
+    wind_10m(:)        =         wind_air_r
+    press_srf(:)       =         press_srf_r
+
+    lw_srf_down(:)     =         lw_srf_down_r
+    swvis_srf_down(:)  =         swvis_srf_down_r
     cos_zenith_angle(:)     = calc_solar_angle(grid%lat,grid%lon,time)                      
     swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
     swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
     swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r
     swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down_r, sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
 
-    !> 5.0 pass values read from file (i.e. scalar values) to ics-ice
-    !! 
-    !! forcing timing data and actual forcing values
-    forcing_options%forcing_year  = NINT(year)
-    forcing_options%forcing_doy   = NINT(day)
-    forcing_options%forcing_hour  = hour
-    t_air(:)           =         t_air_r
-    q_air(:)           =         q_air_r
-    rain(:)            =         rain_r
-    snow(:)            =         snow_r
-    wind_air(:)        =         wind_air_r
-    !wind_10m(:)        =         wind_10m(:)       
-    lw_srf_down(:)     =         lw_srf_down_r
-    swvis_srf_down(:)  =         swvis_srf_down_r
-    !swnir_srf_down(:)  =         swnir_srf_down(:) 
-    !swpar_srf_down(:)  =         swpar_srf_down(:) 
-    !swpar_fdiffuse(:)  =         swpar_fdiffuse(:) 
-    press_srf(:)       =         press_srf_r
-    !drag_srf(:)        =         drag_srf(:)       
-
-! ? no values read from file or calculated, just set to zero above
-    ! t_acoef(:)         =         t_acoef(:)        
-    ! t_bcoef(:)         =         t_bcoef(:)        
-    ! q_acoef(:)         =         q_acoef(:)        
-    ! q_bcoef(:)         =         q_bcoef(:)        
-    ! pch(:)             =         pch(:)            
-    
-    !cos_zenith_angle(:)      =   cos_zenith_angle(:)     
     co2_mixing_ratio(:)      =   co2_mixing_ratio_r
-    !co2_mixing_ratio_C13(:)  =   co2_mixing_ratio_C13(:) 
-    !co2_mixing_ratio_C14(:)  =   co2_mixing_ratio_C14(:) 
-    !ga(:)                    =   ga(:)         
+    IF (forcing_options%flag_read_dC13) THEN
+      hlp1(:)               = calc_mixing_ratio_C13C12(co2_dc13_r)
+    ELSE
+      hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
+    END IF
+    co2_mixing_ratio_C13(:) = co2_mixing_ratio(:) / (1._wp + 1._wp/hlp1(:))
+    IF (forcing_options%flag_read_DC14) THEN
+      hlp1(:)               = calc_mixing_ratio_C14C(co2_dc13_r, co2_dc14_r)
+    ELSE
+      hlp1(:)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
+    END IF
+    co2_mixing_ratio_C14(:) = hlp1(:) * co2_mixing_ratio(:) 
+
     SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
       CASE ("none")
         nhx_deposition(:)    =   0.0_wp

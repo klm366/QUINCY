@@ -35,8 +35,13 @@ CONTAINS
     USE mo_base_config_class,     ONLY: base_config  
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14
+    USE mo_atmland_constants,     ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
+                                        def_co2_deltaC13, def_co2_deltaC14
+    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14, &
+                                        calc_fractionation
     USE mo_shared_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
+    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_sb_jsm_processes
     USE mo_sb_jsm_transport
     USE mo_veg_constants,         ONLY: itree
@@ -64,7 +69,7 @@ CONTAINS
     INTEGER                                      :: isoil
     INTEGER                                      :: iblk, ics, ice, nc
     INTEGER                                      :: nsoil_sb
-    REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6
+    REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,frac_c13,frac_c14
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -145,6 +150,19 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    IF(lctlib%ps_pathway == ic3phot)THEN
+       hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+    ELSE
+       hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+    ENDIF
+    frac_c13 = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
+
+    IF(lctlib%ps_pathway == ic3phot)THEN
+       hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+    ELSE
+       hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+    ENDIF
+    frac_c14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1)
 
     !> 1.0 all soil models
     !! 
@@ -215,10 +233,8 @@ CONTAINS
                                                                     (25._wp * molar_mass_N / molar_mass_C)
           sb_pool%soluable_litter%phosphorus(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / & 
                                                                     (14._wp * molar_mass_P / molar_mass_N) 
-          sb_pool%soluable_litter%carbon13(:,:)   = sb_pool%soluable_litter%carbon(:,:) / & 
-                                                                    (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb_pool%soluable_litter%carbon14(:,:)   = sb_pool%soluable_litter%carbon(:,:) * & 
-                                                                    calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb_pool%soluable_litter%carbon13(:,:)   = sb_pool%soluable_litter%carbon(:,:) * frac_c13
+          sb_pool%soluable_litter%carbon14(:,:)   = sb_pool%soluable_litter%carbon(:,:) * frac_c14 
           sb_pool%soluable_litter%nitrogen15(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / & 
                                                                     (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           ! non-woody litter all other elements
@@ -226,10 +242,8 @@ CONTAINS
                                                                     (100._wp * molar_mass_N / molar_mass_C)
           sb_pool%polymeric_litter%phosphorus(:,:) = sb_pool%polymeric_litter%nitrogen(:,:) / & 
                                                                     (14._wp * molar_mass_P / molar_mass_N) 
-          sb_pool%polymeric_litter%carbon13(:,:)   = sb_pool%polymeric_litter%carbon(:,:) / & 
-                                                                    (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb_pool%polymeric_litter%carbon14(:,:)   = sb_pool%polymeric_litter%carbon(:,:) * & 
-                                                                    calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb_pool%polymeric_litter%carbon13(:,:)   = sb_pool%polymeric_litter%carbon(:,:) * frac_c13
+          sb_pool%polymeric_litter%carbon14(:,:)   = sb_pool%polymeric_litter%carbon(:,:) * frac_c14
           sb_pool%polymeric_litter%nitrogen15(:,:) = sb_pool%polymeric_litter%nitrogen(:,:) / & 
                                                                     (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           ! woody litter all other elements
@@ -237,29 +251,23 @@ CONTAINS
                                                                 (260._wp * molar_mass_N / molar_mass_C)
           sb_pool%woody_litter%phosphorus(:,:) = sb_pool%woody_litter%nitrogen(:,:) / & 
                                                                 (14._wp * molar_mass_P / molar_mass_N) 
-          sb_pool%woody_litter%carbon13(:,:)   = sb_pool%woody_litter%carbon(:,:) / & 
-                                                                (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb_pool%woody_litter%carbon14(:,:)   = sb_pool%woody_litter%carbon(:,:) * & 
-                                                                calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb_pool%woody_litter%carbon13(:,:)   = sb_pool%woody_litter%carbon(:,:) * frac_c13
+          sb_pool%woody_litter%carbon14(:,:)   = sb_pool%woody_litter%carbon(:,:) * frac_c14
           sb_pool%woody_litter%nitrogen15(:,:) = sb_pool%woody_litter%nitrogen(:,:) / & 
                                                                 (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
           ! fast pool (=microbial) all other elements
           sb_pool%microbial%nitrogen(:,:)   = sb_pool%microbial%carbon(:,:) / microbial_cn
           sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np 
-          sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) / & 
-                                                             (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * & 
-                                                             calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c13
+          sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c14
           sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
           sb_pool%residue%nitrogen(:,:)   = sb_pool%residue%carbon(:,:) / microbial_cn
           sb_pool%residue%phosphorus(:,:) = sb_pool%residue%nitrogen(:,:) / microbial_np 
-          sb_pool%residue%carbon13(:,:)   = sb_pool%residue%carbon(:,:) / & 
-                                                             (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-          sb_pool%residue%carbon14(:,:)   = sb_pool%residue%carbon(:,:) * & 
-                                                             calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb_pool%residue%carbon13(:,:)   = sb_pool%residue%carbon(:,:) * frac_c13
+          sb_pool%residue%carbon14(:,:)   = sb_pool%residue%carbon(:,:) * frac_c14 
           sb_pool%residue%nitrogen15(:,:) = sb_pool%residue%nitrogen(:,:) / & 
                                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
@@ -272,8 +280,8 @@ CONTAINS
          sb_pool%microbial%carbon(:,:)     = min_mic_biomass
          sb_pool%microbial%nitrogen(:,:)   = sb_pool%microbial%carbon(:,:) / microbial_cn 
          sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np
-         sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-         sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+         sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c13 
+         sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c14 
          sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
      
          ! some initial values for testing
@@ -297,6 +305,7 @@ CONTAINS
          po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
          po4_occluded(:,:)   = 150.0_wp / molar_mass_P		 
          po4_primary(:,1)    = 100.0_wp / molar_mass_P			 
+
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
  
