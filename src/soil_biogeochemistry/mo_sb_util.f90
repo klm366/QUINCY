@@ -83,6 +83,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
@@ -182,6 +187,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorption_po4)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_n15_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_n15_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)   ! out
@@ -278,6 +288,11 @@ CONTAINS
     plant_uptake_no3_sl(:,:)          = zero
     plant_uptake_no3_n15_sl(:,:)      = zero
     plant_uptake_po4_sl(:,:)          = zero
+    microbial_uptake_nh4_sl(:,:)      = zero
+    microbial_uptake_nh4_n15_sl(:,:)  = zero
+    microbial_uptake_no3_sl(:,:)      = zero
+    microbial_uptake_no3_n15_sl(:,:)  = zero
+    microbial_uptake_po4_sl(:,:)      = zero
     weathering_po4(:,:)               = zero
     occlusion_po4(:,:)                = zero
     slow_sorption_po4(:,:)            = zero
