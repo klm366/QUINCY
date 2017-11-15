@@ -310,7 +310,7 @@ CONTAINS
       END IF
       IF ( (this%process_action(iproc) == INHERIT_ ) .AND.                          &
         &  (.NOT. (l_disturb_active .AND. &
-        &          process_name == 'disturb' .AND. this%name(1:3) == 'pft') ) &
+        &          process_name == 'disturb' .AND. this%lcts(1)%lib_id /= 0 ) ) &
         &  ) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
@@ -676,11 +676,11 @@ CONTAINS
         END IF
       ELSE ! this%process_action(task%process_id) < AGGREGATE_ ; e.g. SKIP_ or INHERIT_
         IF (ASSOCIATED(this%next_sibling_tile)) THEN
-          IF (this%next_sibling_tile%Has_children()) THEN
-            CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)
-          ELSE
+          ! IF (this%next_sibling_tile%Has_children()) THEN
+            ! CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)
+          ! ELSE
             CALL model%Goto(this%next_sibling_tile, l_debug)
-          END IF
+          ! END IF
         ELSE IF (ASSOCIATED(this%parent_tile)) THEN
           !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
           msg%action = model%Get_action('AGGREGATE')
