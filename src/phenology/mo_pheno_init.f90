@@ -141,7 +141,7 @@ CONTAINS
     !    disturbance process to calcultate fuel). As it is calculated for each tile from two corresponding values
     !    of the lctlib, it is not necesseary to calculate it for each time step again as in JSBACH3.
     ! Calculate veg_frac_correction
-    IF ( tile%name(1:3) == 'pft' ) THEN ! only if the present tile is a pft!
+    IF ( tile%lcts(1)%lib_id /= 0 ) THEN ! only if the present tile is a pft!
       dsl4jsb_var2D_onDomain(PHENO_, veg_frac_correction) =   &
         & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
     END IF
