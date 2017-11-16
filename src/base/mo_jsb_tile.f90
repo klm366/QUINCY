@@ -246,7 +246,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
+    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
@@ -463,7 +463,7 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)
       END IF
-      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+      IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract=return_pointer(:,:))
       ELSE
@@ -478,7 +478,7 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)//'_max'
       END IF
-      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+      IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract_max=return_pointer(:,:))
       ELSE
