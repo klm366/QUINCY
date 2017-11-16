@@ -152,7 +152,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER     :: model                  ! the model structure
-    ! READ() input variables for: land plant canopy (these variable names can differ from column names in forcing files)
+    ! READ() input variables for: land plant canopy and soil (these variable names can differ from column names in forcing files)
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
@@ -490,7 +490,8 @@ CONTAINS
                      percolation_sl_r(1:nsoil_sb), root_fraction_sl_r(1:nsoil_sb), &
                      veg_pool_fine_root_carbon_r, &
                      nhx_deposition_r, noy_deposition_r, &
-                     nhx_dn15_deposition_r, noy_dn15_deposition_r
+                     nhx_dn15_deposition_r, noy_dn15_deposition_r, &
+                     p_deposition_r
 
     ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
     ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
@@ -507,7 +508,8 @@ CONTAINS
                      percolation_sl_r(1:nsoil_sb), root_fraction_sl_r(1:nsoil_sb), &
                      veg_pool_fine_root_carbon_r, &
                      nhx_deposition_r, noy_deposition_r, &
-                     nhx_dn15_deposition_r, noy_dn15_deposition_r
+                     nhx_dn15_deposition_r, noy_dn15_deposition_r, &
+                     p_deposition_r
     END IF
 
     !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
@@ -629,10 +631,11 @@ CONTAINS
     ENDDO
     veg__mem%pool%fine_root%carbon%ptr(ics:ice,iblk)   = veg_pool_fine_root_carbon_r
 
-    nhx_deposition(:)    = nhx_deposition_r
-    noy_deposition(:)    = noy_deposition_r
+    nhx_deposition(:)     = nhx_deposition_r
+    noy_deposition(:)     = noy_deposition_r
     nhx_n15_deposition(:) = nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(nhx_dn15_deposition_r))
     nhx_n15_deposition(:) = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(noy_dn15_deposition_r))
+    p_deposition(:)       = p_deposition_r
 
     END SELECT  ! land plant canopy vs soil
 

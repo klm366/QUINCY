@@ -2362,7 +2362,7 @@ CONTAINS
   !! 
   !! lun: start at 100 + 60
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
+  SUBROUTINE open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile
@@ -2376,13 +2376,14 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
-    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
-                                                   ics, &
-                                                   ice, &
-                                                   nc 
+    TYPE(t_slm_tile), INTENT(in)          :: tile           !< data structure for dynamic vegetation and soil variables
+    INTEGER,          INTENT(in)          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+                                             ics, &
+                                             ice, &
+                                             nc, &
+                                             nsoil_sb 
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
+    TYPE(t_jsb_model),POINTER             :: model
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
     CHARACTER(30)  :: opt           ! option according to namlist parameters
@@ -2424,10 +2425,11 @@ CONTAINS
     lun=lun+1
     fname = 'veglitterfall'//'_timestep'//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
 
     !> 3.0 write column headers into output files
     !! 
-    CALL init_output_files_soil_forcing
+    CALL init_output_files_soil_forcing(nsoil_sb)
 
   END SUBROUTINE open_output_files_soil_forcing
 
@@ -2438,25 +2440,45 @@ CONTAINS
   !! complete litterfall output (used as input for the stand alone soil model) \n
   !! and some soilphysics variables
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_files_soil_forcing
+  SUBROUTINE init_output_files_soil_forcing(nsoil_sb)
 
     IMPLICIT NONE
     ! 0.1 InOut
-    ! 
+    INTEGER, INTENT(in)       :: nsoil_sb
     ! 0.2 Local
-    INTEGER :: lun
+    INTEGER                   :: lun, isoil
+    CHARACTER(2)              :: layerstr
+    CHARACTER(200)            :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
 
     !> 1.0 write headers
     !!
     !! lun of fluxes starts at a multiple of 100, plus 60
     lun = 100 + 60
-    WRITE(lun,'(5a)') 'Time ', &
-                      'Soil_temperature*soil_layer Soil_moisture*soil_layer ', &
-                      'Percolation*soil_layer ', &
-                      'Root_fraction*soil_layer ', &
-                      'Veg_pool_fine_root_Carbon'
-
-    lun=lun+1   
+    
+    ! soilphysics
+    p1str=''
+    p2str=''
+    p3str=''
+    p4str=''
+    DO isoil = 1,nsoil_sb
+      IF(isoil<10) THEN 
+        WRITE(layerstr,'(I1)') isoil
+      ELSE
+        WRITE(layerstr,'(I2)') isoil
+      END IF
+      WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
+      WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
+      WRITE(p3str,'(a)') TRIM(p3str)//' PercolationSoil_L'//TRIM(layerstr)
+      WRITE(p4str,'(a)') TRIM(p4str)//' RootFractionSoil_L'//TRIM(layerstr)
+    END DO
+    WRITE(lun,'(9a)') 'Time ', &
+                      TRIM(p1str), TRIM(p2str), TRIM(p3str), TRIM(p4str), &
+                      'VegPoolFineRootCarbon', &
+                      'nhx_deposition noy_deposition ', &
+                      'nhx_dn15_deposition noy_dn15_deposition ', &
+                      'p_deposition '
+    lun=lun+1
+    ! veglitterfall
     WRITE(lun,'(10a)')  'Time ', &
                         'leafC leafN leafP leafC13 leafC14 leafN15 ' , &
                         'fine_rootC fine_rootN fine_rootP fine_rootC13 fine_rootC14 fine_rootN15 ' , &
@@ -2467,6 +2489,7 @@ CONTAINS
                         'reserveC reserveN reserveP reserveC13 reserveC14 reserveN15 ' , &
                         'fruitC fruitN fruitP fruitC13 fruitC14 fruitN15 ' , &
                         'seed_bedC seed_bedN seed_bedP seed_bedC13 seed_bedC14 seed_bedN15'
+    lun=lun+1
 
   END SUBROUTINE init_output_files_soil_forcing
 
@@ -2524,6 +2547,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: noy_deposition 
     dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition 
     dsl4jsb_Real2D_onChunk      :: noy_n15_deposition 
+    dsl4jsb_Real2D_onChunk      :: p_deposition 
     ! SOIL_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
@@ -2540,6 +2564,8 @@ CONTAINS
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
@@ -2547,13 +2573,12 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)                         
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
@@ -2579,19 +2604,20 @@ CONTAINS
        time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 + 60
-      write(lun,'(70F18.6)') time_d         , &
+      write(lun,'(50F18.8)') time_d            , &  ! 4 * x soillayer + 6 variables + time_d
         ! per variable values per soil layer is written out
         ! number of soil layers == options%nsoil_sb  (default = 5)
         t_soil_sl(ipoi,:)                      , &
         w_soil_sl(ipoi,:)                      , &
         percolation_sl(ipoi,:)                 , &
         root_fraction_sl(ipoi,:)               , &
-        veg_pool%fine_root%carbon(ipoi)     , &
+        veg_pool%fine_root%carbon(ipoi)        , &
         nhx_deposition(ipoi)                   , &
         noy_deposition(ipoi)                   , &
         calc_delta_N15(nhx_deposition(ipoi),nhx_n15_deposition(ipoi)), &
-        calc_delta_N15(noy_deposition(ipoi),noy_n15_deposition(ipoi))
-
+        calc_delta_N15(noy_deposition(ipoi),noy_n15_deposition(ipoi)), &
+        p_deposition(ipoi)
+      lun=lun+1
 
       !> convert 13C and 14C in delta notation
       !! 
@@ -2634,44 +2660,54 @@ CONTAINS
       dN15_fruit       = calc_delta_N15(veg_litterfall%fruit%nitrogen(ipoi),veg_litterfall%fruit%nitrogen15(ipoi))
       dN15_seed_bed    = calc_delta_N15(veg_litterfall%seed_bed%nitrogen(ipoi),veg_litterfall%seed_bed%nitrogen15(ipoi))
 
-      lun=lun+1
-      write(lun,'(55F18.6)') time_d, &
+      write(lun,'(60F18.8)') time_d, &   ! 6 variables for (currently) 9 elements + time_d = 55
         ! leaf
-        veg_litterfall%leaf%carbon(ipoi)*1000._wp, veg_litterfall%leaf%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%leaf%carbon(ipoi)*1000._wp, &
+        veg_litterfall%leaf%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%leaf%phosphorus(ipoi)*1000000._wp    , &
         dC13_leaf, DC14_leaf, dN15_leaf, & 
         ! fine_root
-        veg_litterfall%fine_root%carbon(ipoi)*1000._wp, veg_litterfall%fine_root%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%fine_root%carbon(ipoi)*1000._wp, &
+        veg_litterfall%fine_root%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%fine_root%phosphorus(ipoi)*1000000._wp   , &
         dC13_fine_root, DC14_fine_root, dN15_fine_root, & 
         ! coarse_root
-        veg_litterfall%coarse_root%carbon(ipoi)*1000._wp, veg_litterfall%coarse_root%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%coarse_root%carbon(ipoi)*1000._wp, &
+        veg_litterfall%coarse_root%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%coarse_root%phosphorus(ipoi)*1000000._wp   , &
         dC13_coarse_root, DC14_coarse_root, dN15_coarse_root, & 
         ! sap_wood
-        veg_litterfall%sap_wood%carbon(ipoi)*1000._wp, veg_litterfall%sap_wood%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%sap_wood%carbon(ipoi)*1000._wp, &
+        veg_litterfall%sap_wood%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%sap_wood%phosphorus(ipoi)*1000000._wp    , &
         dC13_sap_wood, DC14_sap_wood, dN15_sap_wood, & 
         ! heart_wood
-        veg_litterfall%heart_wood%carbon(ipoi)*1000._wp, veg_litterfall%heart_wood%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%heart_wood%carbon(ipoi)*1000._wp, &
+        veg_litterfall%heart_wood%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%heart_wood%phosphorus(ipoi)*1000000._wp    , &
         dC13_heart_wood, DC14_heart_wood, dN15_heart_wood, & 
         ! labile
-        veg_litterfall%labile%carbon(ipoi)*1000._wp, veg_litterfall%labile%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%labile%carbon(ipoi)*1000._wp, &
+        veg_litterfall%labile%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%labile%phosphorus(ipoi)*1000000._wp    , &
         dC13_labile, DC14_labile, dN15_labile, & 
         ! reserve
-        veg_litterfall%reserve%carbon(ipoi)*1000._wp, veg_litterfall%reserve%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%reserve%carbon(ipoi)*1000._wp, &
+        veg_litterfall%reserve%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%reserve%phosphorus(ipoi)*1000000._wp   , &
         dC13_reserve, DC14_reserve, dN15_reserve, & 
         ! fruit
-        veg_litterfall%fruit%carbon(ipoi)*1000._wp, veg_litterfall%fruit%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%fruit%carbon(ipoi)*1000._wp, &
+        veg_litterfall%fruit%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%fruit%phosphorus(ipoi)*1000000._wp   , &
         dC13_fruit, DC14_fruit, dN15_fruit, & 
         ! seed_bed
-        veg_litterfall%seed_bed%carbon(ipoi)*1000._wp, veg_litterfall%seed_bed%nitrogen(ipoi)*1000000._wp, &
+        veg_litterfall%seed_bed%carbon(ipoi)*1000._wp, &
+        veg_litterfall%seed_bed%nitrogen(ipoi)*1000000._wp, &
         veg_litterfall%seed_bed%phosphorus(ipoi)*1000000._wp  , &
         dC13_seed_bed, DC14_seed_bed, dN15_seed_bed 
+      lun=lun+1
+
     END IF 
 
 ! Pass back values to process memory

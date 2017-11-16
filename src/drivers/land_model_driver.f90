@@ -216,7 +216,7 @@ PROGRAM land_model_driver
       CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
       CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
+        CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
       END IF
     CASE('test_canopy')
       ntimestep = 1

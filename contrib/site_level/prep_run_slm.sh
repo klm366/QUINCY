@@ -173,8 +173,8 @@ if [ $flag_generate_soil_forcing == "T" ]
   soil_moisture_scheme="layer"
   sb_model_scheme="simple_0d"
   sb_nloss_scheme="dynamic"
-  n_deposition_scheme="none"
-  p_deposition_scheme="none"
+  n_deposition_scheme="dynamic"
+  p_deposition_scheme="dynamic"
 
   bnf_scheme="standard"
   flag_mycorrhiza="F"
@@ -189,11 +189,11 @@ if [ $flag_generate_soil_forcing == "T" ]
   flag_tile_veg_dynamics="T" 
   soil_depth=5.7  
 
-  flag_read_dC13="F"
-  flag_read_dC14="F"
+  flag_read_dC13="T"    # 
+  flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
 
   simulation_length_number=${spinupLengthSoilForcing}
-  # forcing output is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
+  # the soil forcing is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
   output_interval_pool="weekly"
   output_interval_flux="weekly"
   let fd=spinupLengthSoilForcing-yearsSoilForcing+1
@@ -202,7 +202,7 @@ if [ $flag_generate_soil_forcing == "T" ]
 
   flag_oneYearForcing="F"
   soil_awc_prescribe=300.0
-  useSiteSpecificAWC="F"
+  useSiteSpecificAWC="T"
   soil_theta_prescribe=1.0
 fi
 
