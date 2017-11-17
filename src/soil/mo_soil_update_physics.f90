@@ -724,7 +724,7 @@ CONTAINS
           !> 2.2.6. diagnose deep drainage
           !!
           drainage(:) = drainage_sl(:,options%nsoil_sb) 
-          WHERE(percolation_sl(:,:) > eps8)
+          WHERE(w_soil_sl_old(:,:) > eps8)
              percolation_sl(:,:) = MIN(MAX((drainage_sl(:,:)/1000_wp * dtime) / & 
                                    w_soil_sl_old(:,:),-1.0_wp),1.0_wp)*1000._wp/dtime
           ELSEWHERE
