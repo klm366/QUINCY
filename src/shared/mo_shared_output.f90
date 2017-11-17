@@ -2473,7 +2473,7 @@ CONTAINS
     END DO
     WRITE(lun,'(9a)') 'Time ', &
                       TRIM(p1str), TRIM(p2str), TRIM(p3str), TRIM(p4str), &
-                      'VegPoolFineRootCarbon', &
+                      ' VegPoolFineRootCarbon ', &
                       'nhx_deposition noy_deposition ', &
                       'nhx_dn15_deposition noy_dn15_deposition ', &
                       'p_deposition '
