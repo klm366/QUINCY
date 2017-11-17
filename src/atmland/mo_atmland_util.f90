@@ -141,6 +141,7 @@ CONTAINS
     REAL(wp) :: a               ! Pa
     REAL(wp) :: b               ! no unit / einheitenlos
     REAL(wp) :: c               ! °C
+    REAL(wp) :: tmin            ! K 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_spec_humidity_sat'
 
 
@@ -152,8 +153,14 @@ CONTAINS
     a = 611.0_wp    
     b = 17.502_wp  
     c = 240.97_wp    
+    tmin = 150._wp
+
     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
-    esat = a * exp(b * (temp - Tzero)/(temp - Tzero + c))
+    IF(temp >= tmin) THEN
+       esat = a * exp(b * (temp - Tzero)/(temp - Tzero + c))
+    ELSE
+       esat = a * exp(b * (tmin - Tzero)/(tmin - Tzero + c))
+    ENDIF
     ! conversion to saturating specific humidity [kg kg-1]
     q_sat = eps_vpd * esat/(press_srf - (1.0_wp - eps_vpd) * esat)
 
