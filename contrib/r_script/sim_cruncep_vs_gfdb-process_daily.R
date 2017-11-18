@@ -38,16 +38,17 @@ for (s in 1:nsite) {
    site_str[s]<-tail(unlist(strsplit(dirnames[[s]],'/')),n=1)
 
    cpool<-read.table(paste(dirnames[[s]],'output/','vegpoolC_daily.txt',sep=''),header=T)
-   c1314pool<-read.table(paste(dirnames[[s]],'output/','vegpooldC13dC14_daily.txt',sep=''),header=T)
+   c1314pool<-read.table(paste(dirnames[[s]],'output/','vegpooldC13DC14_daily.txt',sep=''),header=T)
    npool<-read.table(paste(dirnames[[s]],'output/','vegpoolN_daily.txt',sep=''),header=T)
+   n15pool<-read.table(paste(dirnames[[s]],'output/','vegpooldN15_daily.txt',sep=''),header=T)
    ppool<-read.table(paste(dirnames[[s]],'output/','vegpoolP_daily.txt',sep=''),header=T)
-   h2opool<-read.table(paste(dirnames[[s]],'output/','vegpoolH2O_daily.txt',sep=''),header=T)
+   h2opool<-read.table(paste(dirnames[[s]],'output/','soilpoolPhysics_daily.txt',sep=''),header=T)
    diags<-read.table(paste(dirnames[[s]],'output/','veg_diagnostics_daily.txt',sep=''),header=T)
    cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_daily.txt',sep=''),header=T)
    nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_daily.txt',sep=''),header=T)
    pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_daily.txt',sep=''),header=T)
    cnp_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpoolOrg_daily.txt',sep=''),header=T)
-   c13c14_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpooldCdN_daily.txt',sep=''),header=T)
+   c13c14_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpooldC13DC14dN15_daily.txt',sep=''),header=T)
    cc13c14_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
    np_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxNP_daily.txt',sep=''),header=T)  
  
@@ -133,10 +134,10 @@ for (s in 1:nsite) {
    #isotope signature
    if(s==1) { 
       isotope_mean<-array(NA,c(nsite,3))
-      colnames(isotope_mean)<-c('Labile_dC13','Labile_DC14','HeartWood_DC14')
+      colnames(isotope_mean)<-c('Leaf_dC13','SapWood_DC14','HeartWood_DC14')
       isotope_std<-isotope_mean
    }
-   var_idx<-which(colnames(c1314pool)=='Labile_dC13'|colnames(c1314pool)=='Labile_DC14'|colnames(c1314pool)=='HeartWood_DC14')
+   var_idx<-which(colnames(c1314pool)=='Leaf_dC13'|colnames(c1314pool)=='SapWood_DC14'|colnames(c1314pool)=='HeartWood_DC14')
    for (var in var_idx) {
      hlp1<-aggregate(c1314pool[,var],list(yearidx),mean)
      isotope_mean[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-mean(hlp1$x,na.rm=TRUE)
