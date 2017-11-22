@@ -618,7 +618,7 @@ CONTAINS
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_grid,       ONLY: Get_grid
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout)          :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(in)             :: tile
     CLASS(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator
 
     INTEGER                   :: no_children
