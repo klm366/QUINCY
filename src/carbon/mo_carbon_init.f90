@@ -18,7 +18,7 @@ MODULE mo_carbon_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_time_iface,    ONLY: is_time_experiment_start, is_time_restart
+  USE mo_jsb_time,          ONLY: get_time_dt, is_time_experiment_start, is_time_restart
 
   dsl4jsb_Use_processes CARBON_
   dsl4jsb_Use_config(CARBON_)
@@ -37,13 +37,12 @@ CONTAINS
   !> Intialize carbon process (after memory has been set up)
   !
   SUBROUTINE carbon_init(tile)
-    USE mo_jsb_parallel,        ONLY: Get_omp_thread
-    USE mo_run_config,          ONLY: dtime   ! @todo replace by funktion in mo_jsb_time.f90 resp. mo_jsb_time_iface.f90
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_model), POINTER                :: model
     INTEGER                                   :: iblk, ics, ice, nc
-    INTEGER                                   :: no_omp_thread
+    REAL(wp)                                  :: dtime
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':carbon_init'
 
     dsl4jsb_Def_memory(CARBON_)
@@ -59,10 +58,7 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
 
-
-
-    ! Get local variables from options argument
-    no_omp_thread = Get_omp_thread()
+    dtime = get_time_dt()
 
     !R: Subroutine carbon_init should be called only if experiment is started or restarted. Therefore this is arbitary:
     !   IF (dsl4jsb_Config(CARBON_)%read_cpools   .AND.  (is_time_experiment_start() .OR. is_time_restart()  ) THEN
