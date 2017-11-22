@@ -129,8 +129,6 @@ CONTAINS
     ALLOCATE(model_config%output_tiles(i))
     model_config%output_tiles(1:i) = output_tiles(1:i)
 
-    CALL close_nml(nml_handler)
-
   END FUNCTION new_model_config
 
 #endif
