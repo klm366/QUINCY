@@ -143,6 +143,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_nir_dir(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
+  REAL(wp), ALLOCATABLE :: CO2_flux(:)
 
     NAMELIST /jsb_parallel_nml/     &
       nproca, npedim,             &
@@ -256,6 +257,7 @@ PROGRAM jsb4_driver
   ALLOCATE(alb_nir_dir(nproma))
   ALLOCATE(alb_vis_dif(nproma))
   ALLOCATE(alb_nir_dif(nproma))
+  ALLOCATE(CO2_flux(nproma))
 
   IF (.NOT. read_interface_vars) THEN
     CALL init_forcing(model_id)
@@ -374,7 +376,7 @@ PROGRAM jsb4_driver
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:), evapopot(:))
+        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot(:))
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
@@ -439,6 +441,7 @@ PROGRAM jsb4_driver
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
   DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
   DEALLOCATE(q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+  DEALLOCATE(CO2_flux)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
