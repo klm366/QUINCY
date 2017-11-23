@@ -182,6 +182,9 @@ CONTAINS
   !!  Soil Biology and Biochemistry 48, 28-38.
   !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
   !!
+  !! Soil temperatures (t_soil_sl) lower eps8 are caught by using eps8 instead of t_soil_sl for calculations, 
+  !!  that is, t_soil_sl is NOT modified in case: t_soil_sl < eps8
+  !! 
   !! Input: soil temperature, activiation energy 
   !!
   !! Output: rate modifier (unitless) 
@@ -199,12 +202,20 @@ CONTAINS
     REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless] 
     ! ---------------------------
     ! 0.2 Local
+    REAL(wp)              :: hlp           ! either t_soil_sl or eps8
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier'
 
-    IF(Ea>eps8)THEN
-       rate_modifier = exp(-Ea/r_gas*(1._wp/t_soil_sl - 1._wp/t_ref_tresponse))
+    ! temperature must not be negative in the below function
+    IF(t_soil_sl < eps8) THEN
+      hlp = eps8
     ELSE
-       rate_modifier = 1._wp
+      hlp = t_soil_sl
+    END IF
+
+    IF(Ea > eps8)THEN
+      rate_modifier = exp(-Ea/r_gas*(1._wp/hlp - 1._wp/t_ref_tresponse))
+    ELSE
+      rate_modifier = 1._wp
     ENDIF   
 
   END FUNCTION calc_temperature_rate_modifier

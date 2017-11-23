@@ -153,7 +153,7 @@ CONTAINS
     a = 611.0_wp    
     b = 17.502_wp  
     c = 240.97_wp    
-    tmin = 150._wp
+    tmin = 150._wp   ! for temperatures lower 50 K esat gets unreasonable numbers from the below calculations (very large / very small)
 
     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
     IF(temp >= tmin) THEN

@@ -334,6 +334,8 @@ CONTAINS
                                              wind_air     , & 
                                              t_srf_new    , & 
                                              hlp1 
+    ! LOGICAL, DIMENSION(options%nc)        :: info_catch_t_jump    ! for debug/ write out temperature jumps larger 15 K
+    ! INTEGER, SAVE                         :: timesteps_help = 0   ! for debug/ write out temperature jumps larger 15 K
 !!   REAL(wp), DIMENSION(options%nc) :: dQdT,s_old,t2s_conv,heat_tcoef, s_star, q_sat_star
 !!    REAL(wp), DIMENSION(options%nc) :: q_air_eff,q_sat_srf_eff,evapotranspiration
     INTEGER                               :: isoil,it
@@ -434,11 +436,11 @@ CONTAINS
     
         !> 2.7 Calculate explicit surface temperature 
         !!
-        t_srf_new = t_soil_sl(:,1) + (net_radiation(:) + sensible_heat_flx(:) + latent_heat_flx(:) + ground_heat_flx_old(:)) /  & 
+        t_srf_new(:) = t_soil_sl(:,1) + (net_radiation(:) + sensible_heat_flx(:) + latent_heat_flx(:) + ground_heat_flx_old(:)) /  & 
                                   (heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) * &
                                   dtime 
         ! time filtering for the re-calculation of the drag (JSBACH 3)
-        hlp1(:) = t_srf_old(:) + 0.1_wp * (t_soil_sl(:,1) - 2._wp * t_srf_old(:) + t_srf_new)
+        hlp1(:) = t_srf_old(:) + 0.1_wp * (t_soil_sl(:,1) - 2._wp * t_srf_old(:) + t_srf_new(:))
     
         ! recalculate time-filtered drag 
         IF(it==1) &
@@ -450,8 +452,27 @@ CONTAINS
 
     !> 3.0 update surface temperature and remember previous value
     !!
+    !! catching temperature changes to be not larger than 15 K
+    !! 
     t_srf_old(:) = t_soil_sl(:,1)
-    t_soil_sl(:,1) = t_srf_new
+    ! t_soil_sl(:,1) = t_srf_new(:)
+
+    ! timesteps_help = timesteps_help +1    ! uncomment for debug only (also see declaration above)
+    ! info_catch_t_jump(:) = .FALSE.        ! uncomment for debug only (also see declaration above)
+    WHERE (ABS(t_soil_sl(:,1) - t_srf_new(:)) > 15.0_wp)
+      ! info_catch_t_jump(:) = .TRUE.       ! uncomment for debug only (also see declaration above)
+      WHERE (t_soil_sl(:,1) < t_srf_new(:))
+        t_soil_sl(:,1) = t_soil_sl(:,1) + 15.0_wp
+      ELSE WHERE
+        t_soil_sl(:,1) = t_soil_sl(:,1) - 15.0_wp
+      END WHERE
+    ELSE WHERE
+      t_soil_sl(:,1) = t_srf_new(:)
+    END WHERE
+    ! ! write info if one or more values are TRUE -> uncomment for debug only
+    ! IF(ANY(info_catch_t_jump(:))) THEN
+    !   write(960,'(I14,20F26.8)') timesteps_help, t_srf_old(:), t_srf_new(:) - t_srf_old(:)
+    ! END IF
 
     !> 3.1 update deep surface temperatures and calculate ground heat flux
     !!
