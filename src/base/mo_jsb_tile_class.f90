@@ -620,7 +620,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: grid_id
     INTEGER, INTENT(in) :: no_of_children
-    CLASS(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator
+    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator
 
     TYPE(t_jsb_grid), POINTER :: grid
 
