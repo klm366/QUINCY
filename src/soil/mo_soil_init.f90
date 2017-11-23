@@ -167,26 +167,26 @@ CONTAINS
     !
     ! note that this assumes that the soil hydraulic properties are identical between the layers
     !
-    hlp1(:,:) = k_pwp_s * dsl4jsb_Config(SOIL_)%soil_sand + & 
-                k_pwp_c * dsl4jsb_Config(SOIL_)%soil_clay + &
-                k_pwp_sc * dsl4jsb_Config(SOIL_)%soil_sand * dsl4jsb_Config(SOIL_)%soil_clay + &
+    hlp1(:,:) = k_pwp_s * sand_sl(:,:) + & 
+                k_pwp_c * clay_sl(:,:) + &
+                k_pwp_sc * sand_sl(:,:) * clay_sl(:,:) + &
                 k_pwp_a
     theta_pwp_sl(:,:) = k_pwp_at + (1.0_wp + k_pwp_bt) * hlp1(:,:) 
 
     ! fractional water holding capacity at field capacity 
-    hlp1(:,:) = k_fc_s * dsl4jsb_Config(SOIL_)%soil_sand + &
-                k_fc_c * dsl4jsb_Config(SOIL_)%soil_clay + &
-                k_fc_sc * dsl4jsb_Config(SOIL_)%soil_sand * dsl4jsb_Config(SOIL_)%soil_clay + &
+    hlp1(:,:) = k_fc_s * sand_sl(:,:) + &
+                k_fc_c * clay_sl(:,:) + &
+                k_fc_sc * sand_sl(:,:) * clay_sl(:,:) + &
                 k_fc_a
     theta_fc_sl(:,:) = k_fc_at + (1.0_wp + k_fc_bt) * hlp1(:,:) + k_fc_ct * hlp1(:,:)**2
 
     ! fractional water holding capacity at saturation 
-    hlp1(:,:) = k_sat_s * dsl4jsb_Config(SOIL_)%soil_sand + & 
-                k_sat_c * dsl4jsb_Config(SOIL_)%soil_clay + &
-                k_sat_sc * dsl4jsb_Config(SOIL_)%soil_sand * dsl4jsb_Config(SOIL_)%soil_clay + &
+    hlp1(:,:) = k_sat_s * sand_sl(:,:) + & 
+                k_sat_c * clay_sl(:,:) + &
+                k_sat_sc * sand_sl(:,:) * clay_sl(:,:) + &
                 k_sat_a
     theta_sat_sl(:,:) = theta_fc_sl(:,:) + k_sat_at + (1.0_wp + k_sat_bt) * hlp1(:,:) - & 
-                        k_sat_ct * dsl4jsb_Config(SOIL_)%soil_sand + k_sat_dt 
+                        k_sat_ct * sand_sl(:,:) + k_sat_dt 
     
     ! parameters describing the moisture-tension curve                 
     ! note that for convenience, B has a negative sign and A is in MPa 
