@@ -492,7 +492,7 @@ CONTAINS
 
     ! If tile has children, create and register aggregator
     IF (this%Has_children()) THEN
-      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this)
+      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this%grid_id, this%Get_no_of_children())
       CALL this%Register_aggregator(aggregator_weighted_by_fract)
     END IF
 
