@@ -46,6 +46,9 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: fmaint_rate_base
     ! SB_CTL
     REAL(wp)           :: floss_nmin
+    REAL(wp)           :: tau_fast
+    REAL(wp)           :: tau_slow
+    REAL(wp)           :: residue_cue
 
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
@@ -96,6 +99,9 @@ CONTAINS
     REAL(wp)           :: fmaint_rate_base
     ! SB_CTL
     REAL(wp)           :: floss_nmin
+    REAL(wp)           :: tau_fast
+    REAL(wp)           :: tau_slow
+    REAL(wp)           :: residue_cue
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
@@ -122,8 +128,11 @@ CONTAINS
         f_resp_acclim             , &
         fmaint_rate_base
 
-    NAMELIST /sb_ctl/ &
-        floss_nmin
+    NAMELIST /sb_ctl/             &
+        floss_nmin                , &
+        tau_fast                  , &
+        tau_slow                  , &
+        residue_cue
 
     ! variables for reading model-options from namelist
     ! 
@@ -154,6 +163,9 @@ CONTAINS
     fmaint_rate_base            = missval
     ! SB_CTL
     floss_nmin                  = missval
+    tau_fast                    = missval
+    tau_slow                    = missval
+    residue_cue                 = missval
 
     ! read the namelist
     ! 
@@ -196,6 +208,9 @@ CONTAINS
     this%fmaint_rate_base            = fmaint_rate_base 
     ! SB_CTL
     this%floss_nmin                  = floss_nmin
+    this%tau_fast                    = tau_fast
+    this%tau_slow                    = tau_slow
+    this%residue_cue                 = residue_cue
 
   END SUBROUTINE Read_parameter_list
 
@@ -259,6 +274,9 @@ CONTAINS
 
     ! SB_CTL
     IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
+    IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast
+    IF (ABS(this%tau_slow             - missval) > eps8)  tau_slow              = this%tau_slow
+    IF (ABS(this%residue_cue          - missval) > eps8)  residue_cue           = this%residue_cue
 
   END SUBROUTINE set_parameter_values_with_list_values
 

@@ -25,6 +25,9 @@
 /
 &SB_CTL
   floss_nmin=NAN
+  tau_fast=NAN
+  tau_slow=NAN
+  residue_cue=NAN
 /
 &VEGETATION_CTL
   delta_n_fraction=NAN
