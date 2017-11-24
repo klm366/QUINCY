@@ -274,9 +274,9 @@ CONTAINS
 
     ! SB_CTL
     IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
-    IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast
+    IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
     IF (ABS(this%tau_slow             - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
-    IF (ABS(this%residue_cue          - missval) > eps8)  residue_cue           = this%residue_cue * one_year * one_day
+    IF (ABS(this%residue_cue          - missval) > eps8)  residue_cue           = this%residue_cue
 
   END SUBROUTINE set_parameter_values_with_list_values
 
