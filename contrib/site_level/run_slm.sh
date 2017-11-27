@@ -1,8 +1,10 @@
 #!/bin/bash
 
 ## 
-##
-## script to run simulations of SLM; i.e. one specific job (of an array, or a specific site)
+## script to run simulations of SLM; i.e. this script is called individually for each specific job (of an array, or a specific site)
+## 
+## this script is copied to /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ by the prep_run_slm.sh
+##  and the bsup runs it from there
 ##
 
 
@@ -21,7 +23,7 @@ singleSiteName=$3         # only provided if a single site should be simulated (
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-simFoldDefaultFiles="$simFold""$simDefaultFiles"   # namelist binary lctlib R-Script config-file (provided by prep_run_slm.sh)
+simFoldDefaultFiles="$simFold""$simDefaultFiles"  # this runscript, namelist, binary, lctlib, R-Script for postprocessing, config-file (provided by prep_run_slm.sh)
 
 
 ## job array ID & job index number ##
@@ -30,7 +32,8 @@ jobIndex=$LSB_JOBINDEX            # index number of the job (in the job array: 2
 
 
 ## read simulation config-file created by prep_run_slm.sh ##
-siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")    # -n  == quiet/silent
+# sed -n  == quiet/silent
+siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")  
 siteDataFoldForcing=$(sed -n 2p "$simFoldDefaultFiles""config.txt")   # folder at the Server containing the forcing files
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 forcingDataSet=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
@@ -91,15 +94,22 @@ fi
 ##############################################################################
 # define a site-specific job-folder within the simulation folder
 jobFold="$simFold""$(awk '{print $1}' <<< "$siteData")""/"
-# for parameter sensitivity simulations prepend a number: 1001 == 1st set of parameter value combinations in param_table.txt
+# for parameter sensitivity simulations prepend a number (where 1001 == 1st set of parameter value combinations in param_table.txt)
 if [ $doParamSensitivitySim == "T" ]; then
   paramSimNumber=$((1000 + $jobIndex - 1))
   jobFold="$simFold""$paramSimNumber""_""$(awk '{print $1}' <<< "$siteData")""/"
 fi
+
+## create job specific folder using the absolute path ##
+# "$bgiScratchUserFold""$jobName""/""$(awk '{print $1}' <<< "$siteData")""/"
 mkdir -p "$jobFold"
+
+## cd into job specific folder ##
 cd "$jobFold"           ## cd into job specific folder ##
 jobErrFold="./error/"
-mkdir -p "$jobErrFold"  # folder for error files and out files of this job
+jobOutFold="./std_out/"
+mkdir -p "$jobErrFold"  # folder for error files of this job
+mkdir -p "$jobOutFold"  # folder for files with std output of this job
 
 ## copy files specific to this job into the job folder ##
 # namelist, binary, lctlib, R-Script
@@ -174,7 +184,9 @@ case "$pftName" in
 esac
 
 
+######################################################################
 ## manipulate the namelist - parameters specific to this job / site ##
+######################################################################
  # function: pass the variable_name ($1) & the new_value ($2)
  # $slmNamelist refers to the namelist file name, assuming the namelist file is located in the current folder !
 function changeNamelistValue {
@@ -238,6 +250,9 @@ fi
 ## sync all data with the filesystem ##
 sync
 
+# 2do: create new folder at local scratch & copy the complete jobfolder content to this local folder and cd into this folder and rm all files from jobfolder at network/scratch
+#      check space available in scratch beforehand: df -h /scratch/
+
 ## get start-time of simulation
 startTime=$(date -u +%F_%X_%Z)
 
@@ -258,9 +273,9 @@ if [ $specialFluxnetOutput == "T" ]; then
 fi
 
 ## cleanup some job specific files ##
-rm ./*.dat  # forcing file(s)
-rm ./"$slmRscript"
-rm ./"$slmBinary"
+rm ./*.dat                  #  forcing file(s) (climate.dat for SLM land)
+rm ./"$slmRscript"          #  R script for postprocessing
+rm ./"$slmBinary"           #  the binary
 [ $specialFluxnetOutput == "T" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
 sync
 
@@ -269,8 +284,10 @@ mkdir -p ./input
 mkdir -p ./output
 mkdir -p ./postprocessing
 sync
-mv ./"$slmNamelist"         ./input
-mv ./"$slmLctlib"           ./input
+mv ./"$slmNamelist"         ./input               #  namelist.slm
+mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_slm_nlct8.def
+mv ./*.txt                  ./output              #  the output files SLM created at runtime
+mv ./*.pdf                  ./postprocessing      #  a .pdf file is created for all SLM models
 if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi
@@ -279,21 +296,18 @@ if [ $specialFluxnetOutput == "T" ]; then
   mv ./statistics*          ./postprocessing
   mv ./*.nc                 ./output 
 fi
-mv ./*.txt                  ./output 
-if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "canopy" ] # || [ "$slmModel" == "soil" ]
- then
-  mv ./*.pdf                  ./postprocessing
-fi
 
-## write time to file
-echo "#####"                              >  ./postprocessing/start_finish_sim_time.txt
-echo "$jobIndex"                          >> ./postprocessing/start_finish_sim_time.txt
-echo $(awk '{print $1}' <<< "$siteData")  >> ./postprocessing/start_finish_sim_time.txt
-echo "start:  ""$startTime"               >> ./postprocessing/start_finish_sim_time.txt
-echo "finish: ""$finishTime"              >> ./postprocessing/start_finish_sim_time.txt
-echo "  "                                 >> ./postprocessing/start_finish_sim_time.txt
+## write start & finish times of this job to file
+echo "#####"                              >  "$jobOutFold"start_finish_sim_time.txt
+echo "$jobIndex"                          >> "$jobOutFold"start_finish_sim_time.txt
+echo $(awk '{print $1}' <<< "$siteData")  >> "$jobOutFold"start_finish_sim_time.txt
+echo "start:  ""$startTime"               >> "$jobOutFold"start_finish_sim_time.txt
+echo "finish: ""$finishTime"              >> "$jobOutFold"start_finish_sim_time.txt
+echo "  "                                 >> "$jobOutFold"start_finish_sim_time.txt
 
 ## sync all written data with file system ##
 sync
+
+# 2do copy all files of this local folder back to the network/scratch jobfolder and sync and delete this local folder completely
 
 ## end run_slm.sh ##

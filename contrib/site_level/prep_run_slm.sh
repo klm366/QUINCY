@@ -462,7 +462,11 @@ validateOptionForcing="constant generate readfile"
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 mkdir -p "$bgiScratchUserFold"
-slmBinary="../../x86_64-intel/bin/land.x"                  ## just one binary for all models
+slmBinary="../../x86_64-intel/bin/land.x"                  ## just one binary for all SLM models land plant soil canopy test_canopy
+slmRunScriptJobFolder="./"
+slmRunScriptJobFilename="run_slm.sh"
+slmCleanupScriptFolder="./"
+slmCleanupScriptFilename="cleanup_slm_hpc_run.sh"
 slmNamelistFolder="../namelist/"
 slmNamelistFilename="namelist.slm"
 slmLctlibFolder="../../data/"
@@ -470,15 +474,19 @@ slmLctlibFilename="lctlib_slm_nlct8.def"
 slmParamSensiFolder="../parameter_list/"
 slmParamListDefaultFilename="param.listD"
 slmParamTableFilename="param_table.txt"
-slmParamListDefault="$slmParamSensiFolder""param.listD"
-slmParamTable="$slmParamSensiFolder""param_table.txt"
-slmNamelist="$slmNamelistFolder""$slmNamelistFilename"            ## just one namelist for all models
-slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                  ## Landcovertype library for SLM with 8 PFTs
-slmRscript="../r_script/postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
-slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
-slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"  ## just the R-Script for FLUXNET diagnostics 
-slmRscriptCompCruncepGfdb1="../r_script/sim_cruncep_vs_gfdb-process_daily.R"  ## just the R-Script for postprocessing simulation data for CRUNCEP vs GFDB
-slmRscriptCompCruncepGfdb2="../r_script/sim_cruncep_vs_gfdb-create_figs.R"    ## just the R-Script for creating comparision figures CRUNCEP vs GFDB
+# runscript cleanupscript namelist lctlib & parameter-variation files
+ slmRunScriptJob="$slmRunScriptJobFolder""$slmRunScriptJobFilename"         ## runscript runing a job
+ slmCleanupScript="$slmCleanupScriptFolder""$slmCleanupScriptFilename"      ## cleanup script started as extra job after simulations are done
+ slmNamelist="$slmNamelistFolder""$slmNamelistFilename"                     ## just one namelist for all models
+ slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                           ## Landcovertype library for SLM with 8 PFTs
+ slmParamListDefault="$slmParamSensiFolder""param.listD"                    ## kind of namelist with only the parameter of which the value is varied
+ slmParamTable="$slmParamSensiFolder""param_table.txt"                      ## table with values of this parameter
+# R scripts
+ slmRscript="../r_script/postprocessing_""$slmModel"".R"                       ## R-Script for postprocessing output data
+ slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"                       ## R-Script for converting output for FLUXNET 
+ slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"              ## R-Script for FLUXNET diagnostics 
+ slmRscriptCompCruncepGfdb1="../r_script/sim_cruncep_vs_gfdb-process_daily.R"  ## R-Script for postprocessing simulation data for CRUNCEP vs GFDB
+ slmRscriptCompCruncepGfdb2="../r_script/sim_cruncep_vs_gfdb-create_figs.R"    ## R-Script for creating comparision figures CRUNCEP vs GFDB
 
 
 ## experimental ID & simulation specific folders at scratch ##
@@ -598,12 +606,12 @@ fi
 
 
 ## set and create additional basic folders (within the basic simulation folder) ##
-mkdir -p "$simFold"
-mkdir -p "$simFoldDefaultFiles"
-mkdir -p "$simFoldOut"
-mkdir -p "$simFoldErr"
+mkdir -p "$simFold"                           # "$bgiScratchUserFold""$jobName""/"  e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/
+mkdir -p "$simFoldDefaultFiles"               # "$simFold""$simDefaultFiles"        e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/
+mkdir -p "$simFoldOut"                        # "$simFold""out""/"                  e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/out/
+mkdir -p "$simFoldErr"                        # "$simFold""error""/"                e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/error/
 if [ $paramSensitivitySim == "T" ]; then
-  mkdir -p "$simFoldParamSensiFiles"
+  mkdir -p "$simFoldParamSensiFiles"          # "$simFold""$simParamSensiFiles"     e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/parameter_sensitivity_files/
 fi
 
 
@@ -857,7 +865,7 @@ if [ $specialFluxnetOutput == "T" ]
     # check site data set
     if [ $forcingDataSet != "fluxnet" ] 
       then
-        echo "EXIT! You might want to use (a) FLUXNET site(s) when enabling special FLUXNET-Simulation output :) ."
+        echo "EXIT! You might want to use FLUXNET sites when enabling special FLUXNET-Simulation output :) ."
         exit
     fi
 fi
@@ -892,11 +900,11 @@ if [ "$memory" -lt "$lowestMem" ]
 fi
 
 
-## compile the -R argument (Reserved); specifically the "reserved memory"
+## compile the bsub -R argument (Reserved); specifically the "reserved memory"
 reservedArg="rusage[mem="$memory"]"
 
 
-## calculate memory (-M argument) from MB -> KB as needed by OpenLava
+## calculate memory (bsub -M argument) from MB -> KB as needed by OpenLava
 memory=$((memory * 1000))
 
 
@@ -919,6 +927,7 @@ fi
 if [ "$numberCpuMax" -lt "$lowestCpu" ]
  then
   echo "Note: This is a High Performance Cluster. You may consider running more than 4 simulations in parallel."
+  echo " Starting your jobs anyway ... "
  else
   if [ "$numberCpuMax" -gt "$largestCpu" ]
    then
@@ -958,7 +967,7 @@ if [ ! -e "$siteList" ]      # exit if non-existing
 fi	
 if [ ! -e "$slmRscript" ]    # exit if non-existing
   then
-	echo "EXIT! the R Script is missing"
+	echo "EXIT! the R Script for postprocessing output data is missing"
 	exit
 fi
 # in case of parameter sensitivity
@@ -980,7 +989,7 @@ if [ $paramSensitivitySim == "T" ]
     fi	
 fi
 
-## validate $singleSiteName if user wants to run SLM only at one specific site ##
+## validate $singleSiteName for running SLM at one specific site only ##
 # validate if $singleSiteName is not empty
 if [ ! -z "$singleSiteName" ]
  then
@@ -1004,6 +1013,7 @@ if [ $paramSensitivitySim == "T" ]
 fi
 
 ## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
+# /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/config.txt
 echo "$siteList"                                    >  "$simFoldDefaultFiles""config.txt"
 echo "$siteDataFoldForcing"                         >> "$simFoldDefaultFiles""config.txt"
 echo "$slmModel"                                    >> "$simFoldDefaultFiles""config.txt"
@@ -1026,11 +1036,13 @@ if [ $paramSensitivitySim == "T" ]; then
   #echo "$"                  >>  "$simFoldParamSensiFiles""param_config.txt"
 fi
 
-## copy namelist binary R-Scripts to simulation folder (i.e., at the scratch drive) ##
-cp "$slmBinary"     "$simFoldDefaultFiles"
-cp "$slmNamelist"   "$simFoldDefaultFiles"
-cp "$slmLctlib"     "$simFoldDefaultFiles"
-cp "$slmRscript"    "$simFoldDefaultFiles"
+## copy namelist binary R-Scripts to simulation folder: /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ ##
+cp "$slmRunScriptJob"   "$simFoldDefaultFiles"
+cp "$slmCleanupScript"  "$simFoldDefaultFiles"
+cp "$slmBinary"         "$simFoldDefaultFiles"
+cp "$slmNamelist"       "$simFoldDefaultFiles"
+cp "$slmLctlib"         "$simFoldDefaultFiles"
+cp "$slmRscript"        "$simFoldDefaultFiles"
 if [ $specialFluxnetOutput == "T" ]; then 
   cp "$slmRscript4fluxfile" "$simFoldDefaultFiles"
   cp "$slmRscript4fluxdiag" "$simFoldDefaultFiles"
@@ -1046,6 +1058,7 @@ fi
 
 ## syncronize all data with the file system ##
 sync
+
 
 ## define a function that manipulates the namelist && change namelist according to options ##
 # model: slm_model_name = land plant soil canopy
@@ -1067,7 +1080,12 @@ return 0                                                         # get return va
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 1.
 
+
+##################################################################################
+## namelist manipulation                                                        ##
+##################################################################################
 # change values in the namelist copied to the simulation folder at the scratch drive
+# this namelist is used for all sites
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue forcing_mode "$forcingMode"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
@@ -1213,7 +1231,10 @@ changeNamelistValue transient_spinup_years "$transient_spinup_years"
 changeNamelistValue transient_simulation_start_year "$transient_simulation_start_year"
   
 
-## start job with simulations by starting the job(array) -> run_slm.sh ##
+##################################################################################
+## start job with simulations by starting the job(array) -> run_slm.sh          ##
+##################################################################################
+# run_slm.sh was copied to "$simFoldDefaultFiles"
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
  then # job array #
   array="T"   # needed by cleanup_slm_hpc_run.sh
@@ -1226,20 +1247,21 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
   # submit job array starting at 2 because first line is the header
-  bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+  bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" "$simFoldDefaultFiles""$slmRunScriptJobFilename" "$jobName" "$simDefaultFiles"
 else # job with individual site #
   array="F"   # needed by cleanup_slm_hpc_run.sh
-  bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+  bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" "$simFoldDefaultFiles""$slmRunScriptJobFilename" "$jobName" "$simDefaultFiles" "$singleSiteName"
 fi
 
-
-## cleanup temporary files and folders via cleanup_slm_hpc_run.sh ##
+##################################################################################
+## cleanup temporary files and folders via cleanup_slm_hpc_run.sh               ##
+##################################################################################
 # this job is pending until the above started $jobName has ended
 sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
-cleanQueue="BTM all"
+cleanQueue="BTM io all"
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then cleanQueue="io BTM"; fi
-bsub -w "ended($jobName)" -q "$cleanQueue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" ./cleanup_slm_hpc_run.sh "$jobName" "$array" "$singleSiteName"
+bsub -w "ended($jobName)" -q "$cleanQueue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
 
 
 

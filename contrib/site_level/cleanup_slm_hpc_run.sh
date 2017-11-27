@@ -1,10 +1,11 @@
 #!/bin/bash
 
 ## 
-##
 ## script to cleanup temporary files and folders after a whole job-array of slm simulations was completed
-## called from the prep_run_slm.sh
-## this script will not be copied anywhere but remain at its place (contrib/site_level) and work from here
+## 
+## this script is copied to /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ by the prep_run_slm.sh
+##  and the bsup runs it from there
+## 
 
 
 ########################################################################################################
@@ -26,7 +27,7 @@ paramSensitivitySim=$(sed -n 9p "$simFold""default_files/config.txt" | awk '{pri
 compareSimCRUNCEPvsGFDB=$(sed -n 10p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
 
 
-## move job specific error file into the particular job folder ##
+## move job specific error & out files into the particular job folder ##
 if [ "$array" == "T" ]
  # $array == T
  then
@@ -39,7 +40,8 @@ if [ "$array" == "T" ]
         do
           errFileCount=$(($i +2))
           simCount=$((1000 + $i + 1))
-          mv "$simFold""error/err.""$errFileCount"".txt"  "$simFold""$simCount"_*/error
+          mv "$simFold""error/err.""$errFileCount"".txt"  "$simFold""$simCount"_*/error/
+          mv "$simFold""out/out.""$errFileCount"".txt"    "$simFold""$simCount"_*/std_out/
       done
   # normal simulations
   else
@@ -50,18 +52,20 @@ if [ "$array" == "T" ]
      else
       siteList=$(sed -n 1p "$simFold""default_files/config.txt")
     fi
-    # move error files
+    # move error & out files
     for i in "$simFold"error/*
      do
       siteNumber=$(awk -F "." '{print $2}' <<< $i)
       siteName=$(sed -n "$siteNumber"p "$siteList" | awk '{print $1}')
       mv "$simFold""error/err.""$siteNumber"".txt" "$simFold""$siteName""/error/"
+      mv "$simFold""out/out.""$siteNumber"".txt"   "$simFold""$siteName""/std_out/"
     done
   fi
  # $array == no
  else
   singleSiteName=$3               # name of the site
   mv "$simFold""error/err.txt" "$simFold""$singleSiteName""/error/"
+  mv "$simFold""out/out.txt"   "$simFold""$singleSiteName""/std_out/"
 fi
 
 ## create an md5sum file for all output files, i.e. files in the folder "output"
@@ -91,41 +95,32 @@ if [ $paramSensitivitySim == T ]; then
   rm -r "$simFold"parameter_sensitivity_files
 fi
 
-## create one pdf file from the postprocessing pdf of all sites
-if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] || [ "$slmModel" == "canopy" ] # || [ "$slmModel" == "soil" ]
- then
+## create one pdf file from the postprocessing pdf of all sites ##
+# currently only for the *plots.pdf but not the *plots_lay.pdf
+cd "$simFold"
+mkdir -p ./pdftmp
+count=100
 
-  cd "$simFold"
-  mkdir -p ./pdftmp
-  count=100
-
-  for site in $(ls -d ./*/)
-   do
-
-    siteBase=$(basename $site)  # just: HAR_01 SAS_04 TAP_67
-
-    if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ] && [ $siteBase != "parameter_list" ]
-    then
-      ((count++))
-
-      cp ./"$siteBase"/postprocessing/*plots.pdf  ./pdftmp/"$count"b.pdf
-
-      echo "$jobName"        > ./pdftmp/temp.txt
-      echo " "              >> ./pdftmp/temp.txt
-      echo " "              >> ./pdftmp/temp.txt
-      echo " "              >> ./pdftmp/temp.txt
-      echo "~color{1 0 0}"  >> ./pdftmp/temp.txt     # https://stackoverflow.com/questions/18422738/how-to-change-text-color-in-output-from-enscript
-      echo $siteBase        >> ./pdftmp/temp.txt
-      sync
-      enscript -e~ -q -B -f Courier20 -p ./pdftmp/"$count"a.ps ./pdftmp/temp.txt
-      sync
-      ps2pdf ./pdftmp/"$count"a.ps ./pdftmp/"$count"a.pdf
-
-    fi
-  done
-
-  pdftk ./pdftmp/*.pdf output ./postprocessing_all_sites.pdf
-  rm -r ./pdftmp
-fi
+for site in $(ls -d ./*/)
+ do
+  siteBase=$(basename $site)  # just: HAR_01 SAS_04 TAP_67
+  if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ] && [ $siteBase != "parameter_list" ]
+  then
+    ((count++))
+    cp ./"$siteBase"/postprocessing/*plots.pdf  ./pdftmp/"$count"b.pdf
+    echo "$jobName"        > ./pdftmp/temp.txt
+    echo " "              >> ./pdftmp/temp.txt
+    echo " "              >> ./pdftmp/temp.txt
+    echo " "              >> ./pdftmp/temp.txt
+    echo "~color{1 0 0}"  >> ./pdftmp/temp.txt     # https://stackoverflow.com/questions/18422738/how-to-change-text-color-in-output-from-enscript
+    echo $siteBase        >> ./pdftmp/temp.txt
+    sync
+    enscript -e~ -q -B -f Courier20 -p ./pdftmp/"$count"a.ps ./pdftmp/temp.txt
+    sync
+    ps2pdf ./pdftmp/"$count"a.ps ./pdftmp/"$count"a.pdf
+  fi
+done
+pdftk ./pdftmp/*.pdf output ./postprocessing_all_sites.pdf
+rm -r ./pdftmp
 
 # end cleanup #
