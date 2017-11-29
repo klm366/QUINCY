@@ -53,7 +53,7 @@ for (i in 1:nplot) {
   }
 }
 
-dev.off()
+garbage <- dev.off()
 
 
 # plot data with information per soil layer
@@ -96,5 +96,5 @@ if (any(flistLayFiles)){
       }
     }
   }
-  dev.off()
+  garbage <- dev.off()
 } # end: if (any(flistLayFiles))

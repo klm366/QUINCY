@@ -68,7 +68,7 @@ spinupLengthGFDB=300
 # T (True) or F (False) [large caps]
 paramSensitivitySim="F"
 # please provide the line number of the site you want to use in your "customSiteListFileName" >> line 2 to ...  (there is a header at line 1)
-paramSensitivitySiteNumber=5 
+paramSensitivitySiteNumber=2
 
 ##(4) generate forcing for stand alone soil model
 # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
@@ -141,7 +141,7 @@ flag_read_dC14="F"              # either use forcing dC14 or the prescribed defa
 ##>> details about the HPC, if unsure stick with the defaults <<################################
 queue="all"                  # available queues: all BTM io mpi_large  (for information on the queues run at pc026/28: bqueues -l)
 emailNotification="no"       # set either to yes or no (small caps)
-memory=1000                  # memory per job you may need [mega byte]; here provided in MB but recalculated to KB which is what OpenLava needs
+memory=1000                  # memory per job you may need [mega byte]; here provided in MB (default: 1000) but recalculated to KB which is what OpenLava needs
 numberCpuMax=80              # maximum number of simulations started in parallel
 
 
@@ -872,8 +872,8 @@ fi
 
 
 ## validate allocated memory ##
-lowestMem=10       # 10 Mb
-largestMem=50000   # 50 Gb
+lowestMem=200      # 200 MB
+largestMem=30000   # 30  GB
 # test memory empty or containing characters other then digits
 if [ -z $memory ]  # returns TRUE if unset or empty
  then
@@ -889,20 +889,19 @@ fi
 # test against useful min and max values
 if [ "$memory" -lt "$lowestMem" ]
  then
-  echo "EXIT! Please increase memory, you allocated less than 10Mb. Note, memory is defined with unit Kilobyte [Kb]."
+  echo "EXIT! Please increase memory, you allocated less than 200MB. Note, memory is defined with unit MegaByte [MB]."
   exit
  else
   if [ "$memory" -gt "$largestMem" ]
    then
-    echo "EXIT! Please decrease memory, you allocated more than 50Gb. Note, memory is allocated per job."
+    echo "EXIT! Please decrease memory, you allocated more than 30GB. Note, memory is allocated per job."
     exit
   fi
 fi
 
 
-## compile the bsub -R argument (Reserved); specifically the "reserved memory"
+## compile the bsub -R argument (Reserved) for "reserved memory" in MB
 reservedArg="rusage[mem="$memory"]"
-
 
 ## calculate memory (bsub -M argument) from MB -> KB as needed by OpenLava
 memory=$((memory * 1000))
@@ -1246,7 +1245,7 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   fi
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
-  # submit job array starting at 2 because first line is the header
+  # submit job array starting at 2 because first line (in the all_site_list.dat) is the header
   bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" "$simFoldDefaultFiles""$slmRunScriptJobFilename" "$jobName" "$simDefaultFiles"
 else # job with individual site #
   array="F"   # needed by cleanup_slm_hpc_run.sh
@@ -1257,12 +1256,12 @@ fi
 ## cleanup temporary files and folders via cleanup_slm_hpc_run.sh               ##
 ##################################################################################
 # this job is pending until the above started $jobName has ended
+# the memory requirement is set to 1GB
 sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
 cleanQueue="BTM io all"
-if [ $compareSimCRUNCEPvsGFDB == "T" ]; then cleanQueue="io BTM"; fi
-bsub -w "ended($jobName)" -q "$cleanQueue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
-
+# start the job
+bsub -w "ended($jobName)" -q "$cleanQueue" -M "1000000" -R "rusage[mem=1000]" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
 
 
 ## end prep_run_slm.sh ##

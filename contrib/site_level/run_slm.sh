@@ -14,7 +14,7 @@
 
 
 ## arguments passed to run_slm.sh ##
-jobName=$1                # a user specific alphanumeric string
+jobName=$1                # a user specific alphanumeric string: "exp_""$experimentalID"
 simDefaultFiles=$2        # name of folder with binary namelist lctlib R-Script in $bgiScratchUserFold/slm/$jobName
 singleSiteName=$3         # only provided if a single site should be simulated (not for param sensitivity), else a job array will be run
 
@@ -93,7 +93,8 @@ fi
 ## job specific actions start here ###########################################
 ##############################################################################
 # define a site-specific job-folder within the simulation folder
-jobFold="$simFold""$(awk '{print $1}' <<< "$siteData")""/"
+siteName="$(awk '{print $1}' <<< "$siteData")"
+jobFold="$simFold""$siteName""/"
 # for parameter sensitivity simulations prepend a number (where 1001 == 1st set of parameter value combinations in param_table.txt)
 if [ $doParamSensitivitySim == "T" ]; then
   paramSimNumber=$((1000 + $jobIndex - 1))
@@ -246,12 +247,33 @@ if [ $doParamSensitivitySim == "T" ]; then
   done
 fi
 
-
 ## sync all data with the filesystem ##
 sync
 
-# 2do: create new folder at local scratch & copy the complete jobfolder content to this local folder and cd into this folder and rm all files from jobfolder at network/scratch
-#      check space available in scratch beforehand: df -h /scratch/
+
+#############################################################################################
+## move the job folder to the local scratch/ at the HPC node and work from there           ##
+#############################################################################################
+## if more than 14GB space is available at this local scratch
+scratchSpace=$(df /scratch/ | grep "scratch" | awk '{print $4}')
+localScratch="FALSE"
+if [ "$scratchSpace" -gt "15000000" ]
+ then
+  localScratch="TRUE"
+
+  ## working in the scratch folder at the node
+  mkdir -p /scratch/"$username"
+  mkdir -p /scratch/"$username"/"$jobName""$jobIndex""$siteName"
+  rm -rf   /scratch/"$username"/"$jobName""$jobIndex""$siteName"/*     # remove any files just in the unlikely case the folder did already exist 
+  cd       /scratch/"$username"/"$jobName""$jobIndex""$siteName"
+
+  ## copy all files (but not the folder) here
+  cp -r   "$jobFold"* ./ 
+  sync
+  ## remove all copied files from network/scratch
+  rm -rf  "$jobFold"*
+fi
+
 
 ## get start-time of simulation
 startTime=$(date -u +%F_%X_%Z)
@@ -287,13 +309,13 @@ sync
 mv ./"$slmNamelist"         ./input               #  namelist.slm
 mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_slm_nlct8.def
 mv ./*.txt                  ./output              #  the output files SLM created at runtime
-mv ./*.pdf                  ./postprocessing      #  a .pdf file is created for all SLM models
+mv ./*.pdf                  ./postprocessing      #  for all SLM models postprocessing is available & executed
 if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi
 if [ $specialFluxnetOutput == "T" ]; then 
-  mv ./summary*             ./postprocessing
-  mv ./statistics*          ./postprocessing
+  mv ./output/summary*      ./postprocessing
+  mv ./output/statistics*   ./postprocessing
   mv ./*.nc                 ./output 
 fi
 
@@ -308,6 +330,19 @@ echo "  "                                 >> "$jobOutFold"start_finish_sim_time.
 ## sync all written data with file system ##
 sync
 
-# 2do copy all files of this local folder back to the network/scratch jobfolder and sync and delete this local folder completely
+## cd back into the network/scratch & copy data there
+## if 
+if [ "$localScratch" == "TRUE" ]
+ then
+  cd "$jobFold"
+  cp -r   /scratch/"$username"/"$jobName""$jobIndex""$siteName"/* ./
+  sync         # sync the copied data, so that it is actually written to the harddrive
+  sleep 1      # an extra layer of security to ensure the data has been copied before removing job-folder from local scratch
+  # remove job-folder from local scratch
+  rm -rf  /scratch/"$username"/"$jobName""$jobIndex""$siteName"
+ else
+  echo " Did not use the local scratch/ of the node because it was not enough space available!"
+  echo " "
+fi
 
 ## end run_slm.sh ##

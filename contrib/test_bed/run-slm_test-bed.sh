@@ -211,6 +211,7 @@ while getopts ":p:m:y:o:b:z:h" opt; do
 done
 
 ## 
+echo " "
 echo -n " Processing your request, please hold ... "
 
 ## prepare Validation of user-defined model-options ##
@@ -638,12 +639,15 @@ echo -n "  ...  "
 compiler=$(sed -n 2p ./../../../build/Make.inc.local | awk '{print $3}')
 ./../../../"$compiler"/bin/land.x 
 echo "Simulation finished"
+echo " "
+echo "Running postprocessing ... "
 sync
 
 ## run R script for postprocessing ##
 Rscript --vanilla ./postprocessing_"$slmModel".R
 
 sync
+echo " "
 echo " ... done !"
 
 ## end of this script, confirmation about successful simulation is provided by the R script itself ##

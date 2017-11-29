@@ -41,7 +41,7 @@ for (i in 1:nplot) {
   }
 }
 
-dev.off()
+garbage <- dev.off()
 
 # message
 #print(" finished postprocessing SLM plant output !")
