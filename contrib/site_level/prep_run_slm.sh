@@ -419,6 +419,45 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:h" opt; do
 done
 
 
+## detect and deal with the fast / veryfast / extrafast argument that might be passed to the script ##
+# by using one of these arguments, essentially, the simulations are:
+# i)  bound to the 'all' queue
+# ii) the reserved memory per job is increased in a way that only a limited number of jobs (simulations) per node are possible
+fastOpt="FALSE"
+vfastOpt="FALSE"
+efastOpt="FALSE"
+fastArg="$(grep -w "fast" <<< "$@")"
+vfastArg="$(grep -w "veryfast" <<< "$@")"
+efastArg="$(grep -w "extrafast" <<< "$@")"
+# if the list of arguments to the prep_run_slm.sh script does contain 'fast', i.e. $fastArgs is not empty
+if [ ! -z "${fastArg// }" ]  # -z test is explicitly for: the length of string is zero
+ then 
+  fastOpt="TRUE"
+  queue="all"
+  memory=18000    # three jobs per all queue node | potentially 90 SLM jobs can run in parallel
+  echo "  Info: you opted for the fast mode, simulations are done at the all queue with a max of 3 SLM jobs per node."
+  echo " "
+fi
+# if the list of arguments to the prep_run_slm.sh script does contain 'veryfast', i.e. $vfastArgs is not empty
+if [ ! -z "${vfastArg// }" ]  # -z test is explicitly for: the length of string is zero
+ then 
+  vfastOpt="TRUE"
+  queue="all"
+  memory=28000     # two jobs per all queue node | potentially 60 SLM jobs can run in parallel
+  echo "  Info: you opted for the veryfast mode, simulations are done at the all queue with a max of 2 SLM jobs per node."
+  echo " "
+fi
+# if the list of arguments to the prep_run_slm.sh script does contain 'extrafast', i.e. $efastArgs is not empty
+if [ ! -z "${efastArg// }" ]  # -z test is explicitly for: the length of string is zero
+ then 
+  efastOpt="TRUE"
+  queue="all"
+  memory=58000     # one job per all queue node | note: the all queue consists of "only" 30 nodes
+  echo "  Info: you opted for the extrafast mode, simulations are done at the all queue with only 1 SLM job per node."
+  echo " "
+fi
+
+
 ## prepare Validation of user-defined model-options ##
 # Function to validate model-options provided by the user
 # $1 must be a part of $2 list, else the script is stopped
@@ -874,6 +913,11 @@ fi
 ## validate allocated memory ##
 lowestMem=200      # 200 MB
 largestMem=30000   # 30  GB
+# in case of using the "extrafast" option, the max memory allowed is increased, because that's how the "extrafast" option works
+if [ "$efastOpt" == "TRUE" ]
+ then
+   largestMem=59500   # 59.5 GB | a node of the all queue has 60 GB memory installed
+fi
 # test memory empty or containing characters other then digits
 if [ -z $memory ]  # returns TRUE if unset or empty
  then
