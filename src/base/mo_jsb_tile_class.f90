@@ -86,6 +86,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
     PROCEDURE                              :: Is_process_active
+    PROCEDURE                              :: Set_process_action => Set_process_action_tile
     PROCEDURE                              :: Set_process_action_parents
     PROCEDURE                              :: Register_aggregator
     PROCEDURE                              :: Get_aggregator
@@ -230,6 +231,22 @@ CONTAINS
     END SELECT
 
   END FUNCTION Is_process_active
+
+  SUBROUTINE Set_process_action_tile(this, iproc, action, action_to_parents)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+    INTEGER,                    INTENT(in)    :: iproc
+    INTEGER,                    INTENT(in)    :: action
+    INTEGER, OPTIONAL,          INTENT(in)    :: action_to_parents
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_process_action_tile'
+
+    this%process_action(iproc) = action
+
+    ! Propagate action action_to_parents to all parents of this tile
+    IF (PRESENT(action_to_parents)) CALL this%Set_process_action_parents(iproc, action_to_parents)
+
+  END SUBROUTINE Set_process_action_tile
 
   SUBROUTINE Set_process_action_parents(this, iproc, action)
 

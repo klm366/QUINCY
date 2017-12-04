@@ -185,19 +185,16 @@ CONTAINS
         END IF
 
         IF (PRESENT(process_actions)) THEN
-          return_ptr%process_action(iproc) = process_actions(j)
+          CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
         ELSE          ! use defaults if process_actions are not given
           IF (iproc == A2L_) THEN
-            return_ptr%process_action(iproc) = ON_TILE_
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
-            return_ptr%process_action(iproc) = ON_TILE_
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE
-            return_ptr%process_action(iproc) = ON_LEAFS_
+            CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
         END IF
-        ! All parents of this tile aggregate memory for this new process
-        CALL return_ptr%Set_process_action_parents(iproc, AGGREGATE_)
-        return_ptr%must_create_memory_parents(i) = .TRUE.
 !!$      ELSE IF (ASSOCIATED(return_ptr%prev_sibling)) THEN
 !!$        iproc = i
 !!$        SELECT TYPE (sibling => return_ptr%prev_sibling)
@@ -208,20 +205,14 @@ CONTAINS
         !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
-          CASE (SKIP_)
-            return_ptr%process_action(iproc) = SKIP_
-          CASE (INHERIT_)
-            return_ptr%process_action(iproc) = INHERIT_
-          CASE (ON_SUBTREE_)
-            return_ptr%process_action(iproc) = ON_SUBTREE_
-          CASE (ON_LEAFS_)
-            return_ptr%process_action(iproc) = ON_LEAFS_
+          CASE (SKIP_, INHERIT_, ON_SUBTREE_, ON_LEAFS_)
+            CALL return_ptr%Set_process_action(iproc, return_ptr%parent_tile%process_action(iproc))
             !return_ptr%parent_tile%process_action(iproc) = AGGREGATE_
           CASE (ON_TILE_)
             IF (iproc == L2A_) THEN
-              return_ptr%process_action(iproc) = SKIP_
+              CALL return_ptr%Set_process_action(iproc, SKIP_)
             ELSE
-              return_ptr%process_action(iproc) = INHERIT_
+              CALL return_ptr%Set_process_action(iproc, INHERIT_)
             END IF
           END SELECT
         !END IF

@@ -75,7 +75,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting carbon configuration')
 
     ! Set defaults
-    active                 = .TRUE.
+    active                 = .FALSE.
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     read_cpools            = .FALSE.
