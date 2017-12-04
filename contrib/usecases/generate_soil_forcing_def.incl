@@ -1,0 +1,67 @@
+# default SLM usecase: generate_soil_forcing_def
+# 
+# generate forcing for stand alone soil model:
+#  create additional output (veg litterfall + some soilphysics) used as input of the (standalone) soil model
+#  options apply specifically to the generation of soil forcing using the land model
+#
+
+echo " Simulation runs for soil_forcing creation:"
+echo " usecase='gen_soil_forcing_def' applying special settings to some options"
+echo " please run the simulations (prep_run_slm.sh) for FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
+echo " "
+echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
+echo "   (this script updates the soil forcing for FLUXNET and CRUNCEPv7, "
+echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
+echo " "
+
+experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
+if [ $forcingDataSet == "cruncep" ]
+ then
+  experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
+fi
+forcingMode="static"
+slmModel="land"
+
+spinupLengthSoilForcing=200   # years of spin-up before output is generated and saved
+yearsSoilForcing=1            # number of years of forcing to be generated and saved after spin-up
+
+customSiteList="F"
+singleSiteName=""
+specialFluxnetOutput="F"
+compareSimCRUNCEPvsGFDB="F"
+paramSensitivitySim="F"
+
+soil_moisture_scheme="layer"
+sb_model_scheme="simple_0d"
+sb_nloss_scheme="dynamic"
+n_deposition_scheme="dynamic"
+p_deposition_scheme="dynamic"
+
+bnf_scheme="standard"
+flag_mycorrhiza="F"
+
+flag_t_resp_acclimation="T"
+flag_t_jmax_acclimation="T"
+flag_optimal_Nfraction="F"
+ncanopy=10 
+canopy_layer_scheme="fapar"
+flag_optimal_Nleaf="F"
+flag_optimal_allocation="F"
+flag_tile_veg_dynamics="T" 
+soil_depth=5.7  
+
+flag_read_dC13="T"    # 
+flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
+
+simulation_length_number=${spinupLengthSoilForcing}
+# the soil forcing is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
+output_interval_pool="weekly"
+output_interval_flux="weekly"
+let fd=spinupLengthSoilForcing-yearsSoilForcing+1
+output_start_first_day_year=${fd}
+output_end_last_day_year=${spinupLengthSoilForcing}
+
+flag_oneYearForcing="F"
+soil_awc_prescribe=300.0
+useSiteSpecificAWC="T"
+soil_theta_prescribe=1.0

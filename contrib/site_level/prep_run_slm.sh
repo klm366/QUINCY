@@ -56,7 +56,7 @@ specialFluxnetOutput="F"
 
 ##(2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
-# when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", flag_generate_soil_forcing="F", specialFluxnetOutput="F"
+# when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", specialFluxnetOutput="F"
 # the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
 # you can run simulations for all/some CRUNCEPv7 sites of the "cue" set (cue_gfdb_sites*.dat) ; for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
 compareSimCRUNCEPvsGFDB="F"
@@ -70,14 +70,16 @@ paramSensitivitySim="F"
 # please provide the line number of the site you want to use in your "customSiteListFileName" >> line 2 to ...  (there is a header at line 1)
 paramSensitivitySiteNumber=2
 
-##(4) generate forcing for stand alone soil model
-# create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
-# T (True) or F (False) [large caps]
-flag_generate_soil_forcing="F"
-# years of spin-up before output is generated and saved
-spinupLengthSoilForcing=200 
-# number of years of forcing to be generated and saved after spin-up
-yearsSoilForcing=1 
+
+##>> default usecases <<################################################################################
+## simply un-comment the usecase you want to use
+## or run: prep_run_slm.sh -u usecase_name
+
+#usecase="generate_soil_forcing_def"
+#usecase="land_300yr_monthly_out_all_fluxnet_def"
+#usecase="land_300yr_monthly_out_cue_cruncep_def"
+#usecase="land_300yr_monthly_out_spp_cruncep_def"
+
 
 
 ##>> namelist.slm options <<############################################################################
@@ -145,66 +147,6 @@ memory=1000                  # memory per job you may need [mega byte]; here pro
 numberCpuMax=80              # maximum number of simulations started in parallel
 
 
-##>> flag_generate_soil_forcing options <<############################################################################
-## these option-values apply specifically to the generation of soil forcing ##########################################
-if [ $flag_generate_soil_forcing == "T" ]
- then
-  echo " Simulation runs for soil_forcing creation:"
-  echo " flag_generate_soil_forcing == T, applying special settings to some options"
-  echo " please run the simulations (prep_run_slm.sh) for FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
-  echo " "
-  echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
-  echo "   (this script updates the soil forcing for FLUXNET and CRUNCEPv7, "
-  echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
-  echo " "
-  experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
-  if [ $forcingDataSet == "cruncep" ]
-   then
-    experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
-  fi
-  forcingMode="static"
-  slmModel="land"
-
-  customSiteList="F"
-  specialFluxnetOutput="F"
-  compareSimCRUNCEPvsGFDB="F"
-  paramSensitivitySim="F"
-
-  soil_moisture_scheme="layer"
-  sb_model_scheme="simple_0d"
-  sb_nloss_scheme="dynamic"
-  n_deposition_scheme="dynamic"
-  p_deposition_scheme="dynamic"
-
-  bnf_scheme="standard"
-  flag_mycorrhiza="F"
-  
-  flag_t_resp_acclimation="T"
-  flag_t_jmax_acclimation="T"
-  flag_optimal_Nfraction="F"
-  ncanopy=10 
-  canopy_layer_scheme="fapar"
-  flag_optimal_Nleaf="F"
-  flag_optimal_allocation="F"
-  flag_tile_veg_dynamics="T" 
-  soil_depth=5.7  
-
-  flag_read_dC13="T"    # 
-  flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
-
-  simulation_length_number=${spinupLengthSoilForcing}
-  # the soil forcing is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
-  output_interval_pool="weekly"
-  output_interval_flux="weekly"
-  let fd=spinupLengthSoilForcing-yearsSoilForcing+1
-  output_start_first_day_year=${fd}
-  output_end_last_day_year=${spinupLengthSoilForcing}
-
-  flag_oneYearForcing="F"
-  soil_awc_prescribe=300.0
-  useSiteSpecificAWC="T"
-  soil_theta_prescribe=1.0
-fi
 
 
 ########################################################################################################
@@ -217,7 +159,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":e:f:c:m:s:r:y:o:b:z:n:h" opt; do
+while getopts ":e:f:c:m:s:r:y:o:b:z:n:u:h" opt; do
   case "$opt" in
   "e")
     echo "   experimentalID=""$OPTARG"
@@ -356,6 +298,10 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:h" opt; do
     fi
     customSiteListFileName="$OPTARG"
     ;;
+  "u")
+    usecase="$OPTARG"
+    echo "   usecase=""$OPTARG"
+    ;;
   \?)
     echo "     Invalid option: -$OPTARG"
     echo "     Use -h for help."
@@ -413,10 +359,33 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:h" opt; do
     echo " -n define name of your custom site list"
     echo "    Any filename is possible, give the full name."
     echo "       e.g.: my_site_list.dat"
+    echo " -u provide the name of a usecase, i.e. a file in contrib/usecases/ "
+    echo "    Any filename is possible, predefined and your custom ones."
+    echo "    Give only the filename, such as 'generate_soil_forcing_def', but without file extension '.incl'."
     exit 1
     ;;
   esac
 done
+
+
+## include usecase
+if [ ! -z "$usecase" ]            # if $usecase is not empty
+ then
+   usecaseFileIncl="../usecases/""$usecase".incl
+   if [ -e "$usecaseFileIncl" ]   # if $usecase file is present
+    then
+      . "$usecaseFileIncl"        # include text
+      echo " "
+      echo " Applying settings for usecase: ""$usecase"
+      echo " "
+   else 
+     echo " "
+     echo " You want to apply the settings of usecase: ""$usecase"
+     echo " This failed because the include file: ""$usecaseFileIncl"" is missing."
+     echo " EXIT!"
+     exit 1
+  fi   
+fi
 
 
 ## detect and deal with the fast / veryfast / extrafast argument that might be passed to the script ##
@@ -467,12 +436,12 @@ validate="$(grep -w "$1" <<< "$2")"
 if [ -z "${validate// }" ]  # the search term is available yes / no  [-z test is explicitly for: the length of string is zero]
  then 
   echo "EXIT! > ""$1"" <  is not a valid value for parameter ""$3"", please change and restart prep_run_slm.sh"
-  exit
+  exit 1
  else
   if [ -z $1 ]
    then
     echo "EXIT!  The value for parameter ""$3"" is empty but must contain a valid string, please change and restart prep_run_slm.sh"
-    exit
+    exit 1
   fi
 fi
 return 0
@@ -557,7 +526,7 @@ if [ -d "$simFold" ]
   case "$proceed" in
     n)
       echo "Ok, the script has stopped!"
-      exit
+      exit 1
       ;;
     y)
       echo "Ok, all previous data within the folder with this experimentalID will be deleted, and the script processes as normal."
@@ -571,7 +540,7 @@ if [ -d "$simFold" ]
       ;;
     *)
       echo "You entered any string other than y or n, so the script has stopped anyway."
-      exit
+      exit 1
   esac
 fi
 
@@ -607,7 +576,6 @@ validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optim
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
-validateUserConfigValues "$flag_generate_soil_forcing" "$validateFlags" "flag_generate_soil_forcing"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
 validateUserConfigValues "$flag_read_dC14" "$validateFlags" "flag_read_dC14"
@@ -624,7 +592,6 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   forcingMode="static"
   siteSelection="cue"
   paramSensitivitySim="F"
-  flag_generate_soil_forcing="F"
   specialFluxnetOutput="F"
   let simulation_length_number=spinupLengthGFDB+simulation_length_number
   output_interval_pool="daily"
@@ -635,7 +602,7 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
    then
     echo "EXIT! The GFDB file does not exist! You set the option compareSimCRUNCEPvsGFDB to T."
     echo " File location & name should be: ""$gfdbFile"
-    exit
+    exit 1
    else
     echo " "
     echo " You started simulations to compare CRUNCEP with GFDB data using a spin-up time of ""$spinupLengthGFDB"" years."
@@ -712,12 +679,12 @@ if [ $customSiteList == "T" ]
   if [ ! -e "$siteListFileName" ] # if file not exists
    then
     echo "EXIT! ""$siteListFileName"" does not exist! You set the option customSiteList to T."
-    exit
+    exit 1
    else 
     if [ ! -s "$siteListFileName" ] # if file is empty
      then 
     echo "EXIT! ""$siteListFileName"" has no content, i.e. is empty! You set the option customSiteList to T."
-    exit
+    exit 1
     fi
   fi
   # test if forcing data exist in the site-list-folder specified, for all sites specified in the custom site list
@@ -736,7 +703,7 @@ if [ $customSiteList == "T" ]
         then
           echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the forcingDataSet folder of: ""$forcingDataSet"" !"
           rm -r "$simFold"  # deleting the already created simulation folder
-          exit
+          exit 1
       fi
   done
   # copy custom site-list and set link to file accordingly
@@ -868,7 +835,7 @@ esac
 if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if removing alphanum _ - from jobName returns an non-empty string" then exit
  then
   echo "EXIT! Please use an experimental ID that is alphanumeric, i.e. without any special characters (_ and - are ok though)."
-  exit
+  exit 1
 fi
 
 
@@ -889,7 +856,7 @@ if [ $specialFluxnetOutput == "T" ]
       then
         echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
         rm -r "$simFold"  # deleting the already created simulation folder
-        exit
+        exit 1
       else
         echo " "
         echo "You just started simulations to generate FLUXNET diagnostics using the last full forcing period after ""$simulation_length_number"" years."
@@ -905,7 +872,7 @@ if [ $specialFluxnetOutput == "T" ]
     if [ $forcingDataSet != "fluxnet" ] 
       then
         echo "EXIT! You might want to use FLUXNET sites when enabling special FLUXNET-Simulation output :) ."
-        exit
+        exit 1
     fi
 fi
 
@@ -922,24 +889,24 @@ fi
 if [ -z $memory ]  # returns TRUE if unset or empty
  then
   echo "EXIT! No memory defined. Please define the memory per job you think is useful (and within a reasonable range)."
-  exit  
+  exit 1  
  else
   if [ ! -z $(echo $memory | tr -d "[:digit:]") ] # if "removing all digits" is not empty, i.e. other characters are included
    then
     echo "EXIT! The memory parameter contains characters other than digits. This is not working. Please use just numbers."
-    exit
+    exit 1
   fi
 fi
 # test against useful min and max values
 if [ "$memory" -lt "$lowestMem" ]
  then
   echo "EXIT! Please increase memory, you allocated less than 200MB. Note, memory is defined with unit MegaByte [MB]."
-  exit
+  exit 1
  else
   if [ "$memory" -gt "$largestMem" ]
    then
     echo "EXIT! Please decrease memory, you allocated more than 30GB. Note, memory is allocated per job."
-    exit
+    exit 1
   fi
 fi
 
@@ -958,12 +925,12 @@ largestCpu=100   # 100 parallel jobs
 if [ -z $numberCpuMax ]  # returns TRUE if unset or empty
  then
   echo "EXIT! No numberCpuMax values defined. Please define the number of CPUs that should run in parallel at the Cluster."
-  exit  
+  exit 1  
  else
   if [ ! -z $(echo $numberCpuMax | tr -d "[:digit:]") ] # if "removing all digits" is not empty, i.e. other characters are included
    then
     echo "EXIT! The numberCpuMax parameter contains characters other than digits. This is not working. Please use just numbers."
-    exit
+    exit 1
   fi
 fi
 # test against useful min and max values
@@ -976,7 +943,7 @@ if [ "$numberCpuMax" -lt "$lowestCpu" ]
    then
     echo "EXIT! Please decrease the number of parallel jobs, you aim at using more than 100 CPUs in parallel."
     echo "(Of course, technically you could use more than 100 CPUs. This limit is simply set to be nice with your colleagues.)"
-    exit
+    exit 1
   fi
 fi
 
@@ -991,27 +958,27 @@ fi
 if [ ! -e "$slmBinary" ]     # exit if non-existing
   then
 	echo "EXIT! binary is missing"
-	exit
+	exit 1
 fi
 if [ ! -e "$slmNamelist" ]   # exit if non-existing
   then
 	echo "EXIT! namelist is missing"
-	exit
+	exit 1
 fi
 if [ ! -e "$slmLctlib" ]   # exit if non-existing
   then
 	echo "EXIT! lctlib is missing"
-	exit
+	exit 1
 fi
 if [ ! -e "$siteList" ]      # exit if non-existing
   then
 	echo "EXIT! site-list-data file is missing"
-	exit
+	exit 1
 fi	
 if [ ! -e "$slmRscript" ]    # exit if non-existing
   then
 	echo "EXIT! the R Script for postprocessing output data is missing"
-	exit
+	exit 1
 fi
 # in case of parameter sensitivity
 if [ $paramSensitivitySim == "T" ]
@@ -1021,14 +988,14 @@ if [ $paramSensitivitySim == "T" ]
       then
     	echo "EXIT! the default parameter List (param.listD) is missing though needed for Parameter Sensitivity Simulations."
       echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create this file."
-    	exit
+    	exit 1
     fi
     # param_table.txt
     if [ ! -e "$slmParamTable" ]    # exit if non-existing
       then
     	echo "EXIT! the parameter Table (param_table.txt) is missing though needed for Parameter Sensitivity Simulations."
       echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create the table."
-    	exit
+    	exit 1
     fi	
 fi
 
@@ -1049,7 +1016,7 @@ if [ $paramSensitivitySim == "T" ]
     if [ $paramSensi_NumberCombinations -gt 994 ]
       then
         echo "EXIT !  You want to do ""$paramSensi_NumberCombinations"" simulations. That is too much. A number lower than 995 is necessary."
-        exit
+        exit 1
       else
         echo "The number of combinations of parameter values (i.e. simulations) is: ""$paramSensi_NumberCombinations"
     fi
@@ -1254,7 +1221,7 @@ if [ $flag_oneYearForcing == T ]
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
 fi
-if [ $flag_generate_soil_forcing == T ]
+if [ $usecase == "generate_soil_forcing_def" ]
   then
     changeNamelistValue flag_generate_soil_forcing ".TRUE."
   else
