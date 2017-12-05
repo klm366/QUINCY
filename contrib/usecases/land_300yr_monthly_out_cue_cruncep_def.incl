@@ -1,4 +1,4 @@
-# default SLM usecase: land_300yr_monthly_out_all_fluxnet_def
+# default SLM usecase: land_300yr_monthly_out_cue_cruncep_def
 # 
 # very basic usecase for running SLM land over 300 years
 #  sites: cue cruncep sites
