@@ -45,6 +45,18 @@ cp ./"$landNew"/"$vegPoolCFilename"_*     "$cVegPoolCNew"
 cp ./"$landOld"/"$ecopoolCNPFilename"_*   "$cEcoPoolOld"
 cp ./"$landNew"/"$ecopoolCNPFilename"_*   "$cEcoPoolNew"
 
+## check if files were successfully copied
+if [ ! -e "$cVegPoolCOld" ] || [ ! -e "$cVegPoolCNew" ] || [ ! -e "$cEcoPoolOld" ] || [ ! -e "$cEcoPoolNew" ]
+  then
+    echo " "
+    echo " One or many of the input files are not present. Stopping this script!"
+    echo " List of files in the temporary working folder (which will be removed now): "
+    ls -1  "$tempFolder"
+    echo " "
+    rm -rf "$tempFolder"
+    exit 1
+fi
+
 ## md5sum comparison
 md5VegPoolCOld=$(md5sum "$cVegPoolCOld" | awk '{print $1}')
 md5VegPoolCNew=$(md5sum "$cVegPoolCNew" | awk '{print $1}')
