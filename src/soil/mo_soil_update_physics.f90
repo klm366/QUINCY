@@ -60,7 +60,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc) :: rel_hum
+    REAL(wp), DIMENSION(options%nc)       :: rel_hum
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_physics'
     ! ---------------------------
@@ -567,7 +567,7 @@ CONTAINS
                                              w_soil_sl_old  , &
                                              k_diff         , &
                                              hlp1_2d
-    INTEGER :: isoil 
+    INTEGER :: isoil, ichunk 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_hydrology'
 
 
@@ -644,30 +644,32 @@ CONTAINS
                 ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
              END WHERE
           ENDDO
-          IF(sum(ftranspiration(:,:)) > eps8 ) THEN 
-             ftranspiration(:,:) = ftranspiration(:,:) / sum(ftranspiration(:,:))
-          ELSE 
-             ftranspiration(:,:) = 0.0_wp
-          ENDIF
+          DO ichunk = 1,options%nc
+            IF( SUM(ftranspiration(ichunk,:)) > eps8 ) THEN 
+               ftranspiration(ichunk,:) = ftranspiration(ichunk,:) / SUM(ftranspiration(ichunk,:))
+            ELSE 
+               ftranspiration(ichunk,:) = 0.0_wp
+            ENDIF
+          END DO
 
           !> 3.2.2 determine water balance of the top layer 
           !! infiltration rate (limited to attaining field capacity), surface runoff and deep drainage
           !! a fraction of runoff generation is leaked below the first layer
           !! a fraction of infiltration is leaked below the first layer (preferential flow) 
           ! first guess
-          infiltration(:) = MAX(MIN((w_soil_fc_sl(:,1) - w_soil_sl(:,1))*1000/dtime, & 
-                                    water_to_soil(:)) ,0.0_wp)
-          runoff(:) = MAX(water_to_soil(:) - infiltration(:), 0.0_wp)
+          infiltration(:) = MAX( MIN( (w_soil_fc_sl(:,1) - w_soil_sl(:,1))*1000/dtime, water_to_soil(:)), &
+                                 0.0_wp)
+          runoff(:)       = MAX(water_to_soil(:) - infiltration(:), 0.0_wp)
 
           ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
           drainage_sl(:,1) = drain_frac / soil_depth_sl(:,1) * infiltration(:) + fdrain_runoff * runoff(:)
-          runoff(:) = ( 1.0_wp - fdrain_runoff ) * runoff(:)  
-          infiltration(:) = ( 1.0_wp - drain_frac / soil_depth_sl(:,1) ) * infiltration(:)
+          runoff(:)        = ( 1.0_wp - fdrain_runoff ) * runoff(:)  
+          infiltration(:)  = ( 1.0_wp - drain_frac / soil_depth_sl(:,1) ) * infiltration(:)
 
           w_soil_sl(:,1) = w_soil_sl(:,1) + (infiltration(:) - &
-               evaporation(:) * fevaporation(:,1) - transpiration(:) * ftranspiration(:,1)) / 1000._wp * dtime
+                           evaporation(:) * fevaporation(:,1) - transpiration(:) * ftranspiration(:,1)) / 1000._wp * dtime
           WHERE(w_soil_sl(:,1) > w_soil_fc_sl(:,1))
-               runoff(:) = runoff(:) + (w_soil_sl(:,1) - w_soil_fc_sl(:,1))*1000._wp / dtime
+               runoff(:)      = runoff(:) + (w_soil_sl(:,1) - w_soil_fc_sl(:,1))*1000._wp / dtime
                w_soil_sl(:,1) = w_soil_fc_sl(:,1) 
           END WHERE 
 
