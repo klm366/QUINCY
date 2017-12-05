@@ -384,7 +384,9 @@ if [ ! -z "$usecase" ]            # if $usecase is not empty
      echo " This failed because the include file: ""$usecaseFileIncl"" is missing."
      echo " EXIT!"
      exit 1
-  fi   
+  fi
+else
+  usecase="none"
 fi
 
 
