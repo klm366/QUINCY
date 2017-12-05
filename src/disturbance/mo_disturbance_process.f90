@@ -418,8 +418,8 @@ CONTAINS
       air_temperature(:),   & ! Temperature of air [K]
       air_press(:)            ! Pressure of air [Pa]
 
-    REAL(wp), allocatable :: air_qsat(:), &
-                             relative_humidity_air(:)
+    REAL(wp) :: air_qsat(SIZE(air_moisture)), &
+                relative_humidity_air(SIZE(air_moisture))
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_relative_humidity_air'
 
