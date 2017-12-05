@@ -170,11 +170,13 @@ CONTAINS
     INTEGER,                INTENT(in)     :: ics, ice, iblk
     INTEGER,                INTENT(in)     :: no_children ! of the parent tile
     TYPE(t_jsb_var_real2d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
-    REAL(wp), allocatable                  :: var_collected(:,:)
+    REAL(wp), POINTER                      :: var_collected(:,:)
 
     INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Collect_var_real2d'
+
+    ALLOCATE(var_collected(ice-ics+1,no_children))
 
     DO i=1,no_children
        var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk, 1, 1, 1)
@@ -190,11 +192,15 @@ CONTAINS
     INTEGER,                INTENT(in)     :: ics, ice, iblk
     INTEGER,                INTENT(in)     :: no_children ! of the parent tile
     TYPE(t_jsb_var_real3d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
-    REAL(wp), allocatable                  :: var_collected(:,:,:)
+    REAL(wp), POINTER                      :: var_collected(:,:,:)
 
     INTEGER :: i !, iproc
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Collect_var_real3d'
+
+    ALLOCATE(var_collected(ice - ics + 1, &
+      &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%field, DIM=2), &
+      &                    no_children))
 
     DO i=1,no_children
        ! R: Unterschied zu %ptr(ics:ice,iblk) ???

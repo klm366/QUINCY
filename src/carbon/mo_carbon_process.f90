@@ -1094,8 +1094,7 @@ CONTAINS
     real(wp),intent(in)    :: WoodLitcoef(:,:,:)          ! Factor to spread woody litterfall into yasso pools [ ]
 
     ! locals
-    real(wp),allocatable   ::  Cpool_temp(:,:)
-
+    real(wp)               ::  Cpool_temp(SIZE(fract_st,1),SIZE(fract_st,2))
 
     ! Initializations
 

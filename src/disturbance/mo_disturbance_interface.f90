@@ -123,7 +123,7 @@ CONTAINS
     USE mo_carbon_interface,      ONLY: relocate_disturbed_carbon
     USE mo_disturbance_constants, ONLY: DIST_FIRE, DIST_WINDBREAK
     USE mo_jsb_time,              ONLY: is_newday
-    USE mo_jsb_tile_class,        ONLY: t_jsb_aggregator_weighted_by_fract
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -132,59 +132,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
 
-    LOGICAL, allocatable                      :: pft_mask(:), &            ! Dimension: (no_children).
-                                                                           ! True for pfts to which the disturbance should be applied.
-                                                 is_woody(:)               ! Dimension: no_children. True for woody pfts.
-
-    INTEGER, allocatable                      :: no_children, &            ! Number of existing sub tiles
-                                                 i, j                      ! Index numbers over children of the current tile
-
-    ! R: The DISTURB_ process is calculated on the veg tile, because fire needs "fuel", which is a sum over the child tiles!
-    !    Furthermore, the climate-buffers can be handled somewhat easier this way, as they have to be called only once...
-    !    However, windbreak as a process could have been calculated also on the child tiles.
-    !
-    ! R: These variables are needed for our calculations on the parent (=veg) tile, but we do not want them in the
-    !    memory of the parent as a collection of its child tiles. We want them on each child tile! Therefore will give
-    !    these parent results back to the corresponding childs at the end of this procedure.
-    ! The following variables all have the dimensions (ics:ice , no_children). ics:ice values do not change.
-    ! They all collect the corresponding variables of the child pfts
-    REAL(wp), allocatable                     :: veg_frac_correction_st(:,:),   &
-                                                 fract_st(:,:),                 &
-                                                 cover_frac_pot_st(:,:),        &
-                                                 burned_frac_st(:,:),           &
-                                                 damaged_frac_st(:,:),          &
-                                                 !
-                                                 Cpool_green_st(:,:),           &
-                                                 Cpool_woods_st(:,:),           &
-                                                 Cpool_reserve_st(:,:),         &
-                                                 carbon_2_GreenLitterPools_st(:,:), &
-                                                 carbon_2_WoodLitterPools_st(:,:),  &
-                                                 !
-                                                 YCpool_acid_ag1_st(:,:),       &
-                                                 YCpool_water_ag1_st(:,:),      &
-                                                 YCpool_ethanol_ag1_st(:,:),    &
-                                                 YCpool_nonsoluble_ag1_st(:,:), &
-                                                 !
-                                                 YCpool_acid_ag2_st(:,:),       &
-                                                 YCpool_water_ag2_st(:,:),      &
-                                                 YCpool_ethanol_ag2_st(:,:),    &
-                                                 YCpool_nonsoluble_ag2_st(:,:), &
-                                                 !
-                                                 YCpool_humus_1_st(:,:),        &
-                                                 YCpool_humus_2_st(:,:),        &
-                                                 carbon_2_atmos_st_ta(:,:),     &
-                                                 !
-                                                 YCpool_acid_bg1_st(:,:),       &
-                                                 YCpool_water_bg1_st(:,:),      &
-                                                 YCpool_ethanol_bg1_st(:,:),    &
-                                                 YCpool_nonsoluble_bg1_st(:,:), &
-                                                 YCpool_acid_bg2_st(:,:),       &
-                                                 YCpool_water_bg2_st(:,:),      &
-                                                 YCpool_ethanol_bg2_st(:,:),    &
-                                                 YCpool_nonsoluble_bg2_st(:,:)
-
-
-    INTEGER, allocatable                      :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice, nc
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_natural_disturbances'
 
@@ -209,7 +157,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: q_rel_air
     dsl4jsb_Real2D_onChunk :: wind_10m               ! 10m wind speed [m/s]
     dsl4jsb_Real2D_onChunk :: max_wind_10m_act
     dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m
@@ -279,6 +226,63 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: YCpool_humus_2_ta
     dsl4jsb_Real2D_onChunk :: carbon_2_atmos_ta
 
+    ! Locally allocated vectors
+    !
+    ! R: The DISTURB_ process is calculated on the veg tile, because fire needs "fuel", which is a sum over the child tiles!
+    !    Furthermore, the climate-buffers can be handled somewhat easier this way, as they have to be called only once...
+    !    However, windbreak as a process could have been calculated also on the child tiles.
+    !
+    ! R: These variables are needed for our calculations on the parent (=veg) tile, but we do not want them in the
+    !    memory of the parent as a collection of its child tiles. We want them on each child tile! Therefore will give
+    !    these parent results back to the corresponding childs at the end of this procedure.
+    ! The following variables all have the dimensions (ics:ice , no_children). ics:ice values do not change.
+    ! They all collect the corresponding variables of the child pfts
+    REAL(wp), POINTER                         :: veg_frac_correction_st(:,:),   &
+                                                 fract_st(:,:),                 &
+                                                 cover_frac_pot_st(:,:),        &
+                                                 burned_frac_st(:,:),           &
+                                                 damaged_frac_st(:,:),          &
+                                                 !
+                                                 Cpool_green_st(:,:),           &
+                                                 Cpool_woods_st(:,:),           &
+                                                 Cpool_reserve_st(:,:),         &
+                                                 carbon_2_GreenLitterPools_st(:,:), &
+                                                 carbon_2_WoodLitterPools_st(:,:),  &
+                                                 !
+                                                 YCpool_acid_ag1_st(:,:),       &
+                                                 YCpool_water_ag1_st(:,:),      &
+                                                 YCpool_ethanol_ag1_st(:,:),    &
+                                                 YCpool_nonsoluble_ag1_st(:,:), &
+                                                 !
+                                                 YCpool_acid_ag2_st(:,:),       &
+                                                 YCpool_water_ag2_st(:,:),      &
+                                                 YCpool_ethanol_ag2_st(:,:),    &
+                                                 YCpool_nonsoluble_ag2_st(:,:), &
+                                                 !
+                                                 YCpool_humus_1_st(:,:),        &
+                                                 YCpool_humus_2_st(:,:),        &
+                                                 carbon_2_atmos_st_ta(:,:),     &
+                                                 !
+                                                 YCpool_acid_bg1_st(:,:),       &
+                                                 YCpool_water_bg1_st(:,:),      &
+                                                 YCpool_ethanol_bg1_st(:,:),    &
+                                                 YCpool_nonsoluble_bg1_st(:,:), &
+                                                 YCpool_acid_bg2_st(:,:),       &
+                                                 YCpool_water_bg2_st(:,:),      &
+                                                 YCpool_ethanol_bg2_st(:,:),    &
+                                                 YCpool_nonsoluble_bg2_st(:,:)
+
+    REAL(wp), DIMENSION(options%nc) :: &
+      & q_rel_air
+
+    LOGICAL, allocatable                      :: pft_mask(:), &            ! Dimension: (no_children).
+                                                                           ! True for pfts to which the disturbance should be applied.
+                                                 is_woody(:)               ! Dimension: no_children. True for woody pfts.
+
+    INTEGER :: no_children, &            ! Number of existing sub tiles
+               i, j                      ! Index numbers over children of the current tile
+
+    CLASS(t_jsb_tile_abstract), POINTER :: child_tile_ptr ! pointer to the child tiles of this tile
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -286,8 +290,10 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
+    IF (.NOT. tile%Has_children()) CALL message(TRIM(routine), 'Tile '//TRIM(tile%name)//' has no PFT children')
+
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_active(DISTURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -396,27 +402,33 @@ CONTAINS
       ! R: The lctlib parameters have to be collected for all child pfts. This function is not present in dsl4jsb in the moment
       !    (dsl4jsb_Lctlib_param(dynamic_pft) is related to the current tile). However, this is one possibility:
       no_children = tile%Get_no_of_children()
-      DO i=1,no_children
-         j=i+1  ! lcts(1) is the current parent tile, lcts(2) is the first child tile
+      ALLOCATE(is_woody(no_children), pft_mask(no_children))
+      child_tile_ptr => tile%first_child_tile
+      i = 0
+      DO WHILE (ASSOCIATED(child_tile_ptr))
+        i = i + 1
+        ! Gather woody pfts
+        IF (model%lctlib(child_tile_ptr%lcts(1)%lib_id)%WOODY_PFT) THEN
+          is_woody(i) = .TRUE.
+        ELSE
+          is_woody(i) = .FALSE.
+        END IF
 
-         ! Gather woody pfts
-         IF (model%lctlib(tile%lcts(j)%lib_id)%WOODY_PFT) THEN
-           is_woody(i) = .TRUE.
-         ELSE
-           is_woody(i) = .FALSE.
-         END IF
-
-         ! Gather those pfts where disturbance should be applied
-         ! R: Same pft_mask is used for fire and windbreak in JS3. We could change this in the future.
-         IF ( model%lctlib(tile%lcts(j)%lib_id)%dynamic_pft .OR. &  ! 0 in lctlib means .FALSE.
-             (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. model%lctlib(tile%lcts(j)%lib_id)%pasture_pft) ) THEN
-           pft_mask(i) = .TRUE.
-         ELSE
-           pft_mask(i) = .FALSE.
-         END IF
+        ! Gather those pfts where disturbance should be applied
+        ! R: Same pft_mask is used for fire and windbreak in JS3. We could change this in the future.
+        IF ( model%lctlib(child_tile_ptr%lcts(1)%lib_id)%dynamic_pft .OR. &  ! 0 in lctlib means .FALSE.
+            (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. &
+              model%lctlib(child_tile_ptr%lcts(1)%lib_id)%pasture_pft) ) THEN
+          pft_mask(i) = .TRUE.
+        ELSE
+          pft_mask(i) = .FALSE.
+        END IF
+        child_tile_ptr => child_tile_ptr%next_sibling_tile
       END DO
+      NULLIFY(child_tile_ptr)
 
       ! Get fractions of the childs
+      ALLOCATE(fract_st(nc,no_children))
       SELECT TYPE (agg=>tile%aggregators(1)%p) ! First aggregator is in the moment aggregator_weighted_by_fract
           CLASS IS (t_jsb_aggregator_weighted_by_fract)
               fract_st(:,:) = agg%fractions(ics:ice,iblk,:) ! or also fract_st(:,:) = agg(ics:ice,iblk,:)
@@ -425,56 +437,57 @@ CONTAINS
       ! Collect variables from our child tiles
       SELECT TYPE (parentmem=>tile%mem(ASSIMI_)%p)
          CLASS IS (t_assimi_memory)
-            cover_frac_pot_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%cover_frac_pot ) ! in
+            cover_frac_pot_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%cover_frac_pot ) ! in
       END SELECT
       SELECT TYPE (parentmem=>tile%mem(PHENO_)%p)
          CLASS IS (t_pheno_memory)
-            veg_frac_correction_st(:,:) = parentmem%Collect_var_real2d(ics, ice, iblk, no_children, parentmem%veg_frac_correction) ! in
+            veg_frac_correction_st => parentmem%Collect_var_real2d(ics, ice, iblk, no_children, parentmem%veg_frac_correction) ! in
       END SELECT
       SELECT TYPE (parentmem=>tile%mem(DISTURB_)%p)
          CLASS IS (t_disturb_memory)
-            burned_frac_st(:,:) = parentmem%Collect_var_real2d(ics, ice, iblk, no_children,  parentmem%burned_frac ) ! inout
-            damaged_frac_st(:,:) = parentmem%Collect_var_real2d(ics, ice, iblk, no_children,  parentmem%damaged_frac ) ! inout
+            burned_frac_st => parentmem%Collect_var_real2d(ics, ice, iblk, no_children,  parentmem%burned_frac ) ! inout
+            damaged_frac_st => parentmem%Collect_var_real2d(ics, ice, iblk, no_children,  parentmem%damaged_frac ) ! inout
       END SELECT
 
       IF ( tile%Is_process_active(CARBON_) ) THEN
+        ALLOCATE(carbon_2_atmos_st_ta(nc,no_children))
         SELECT TYPE (parentmem=>tile%mem(CARBON_)%p)
          CLASS IS (t_carbon_memory)
-            Cpool_green_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%Cpool_green )     ! inout
-            Cpool_woods_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%Cpool_woods )     ! inout
-            Cpool_reserve_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%Cpool_reserve ) ! inout
-            carbon_2_GreenLitterPools_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,      &
+            Cpool_green_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%Cpool_green )     ! inout
+            Cpool_woods_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%Cpool_woods )     ! inout
+            Cpool_reserve_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%Cpool_reserve ) ! inout
+            carbon_2_GreenLitterPools_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,      &
                                                                               parentmem%carbon_2_GreenLitterPools )       ! inout
-            carbon_2_WoodLitterPools_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,       &
+            carbon_2_WoodLitterPools_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,       &
                                                                              parentmem%carbon_2_WoodLitterPools )         ! inout
             !
-            YCpool_acid_ag1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_acid_ag1 )   ! inout
-            YCpool_water_ag1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_water_ag1 ) ! inout
-            YCpool_ethanol_ag1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,            &
+            YCpool_acid_ag1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_acid_ag1 )   ! inout
+            YCpool_water_ag1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_water_ag1 ) ! inout
+            YCpool_ethanol_ag1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,            &
                                                                        parentmem%YCpool_ethanol_ag1 )                     ! inout
-            YCpool_nonsoluble_ag1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,         &
+            YCpool_nonsoluble_ag1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,         &
                                                                           parentmem%YCpool_nonsoluble_ag1 )               ! inout
-            YCpool_acid_ag2_st(:,:) = parentmem%Collect_var_real2d( ics, ice,  iblk, no_children, parentmem%YCpool_acid_ag2 )  ! inout
-            YCpool_water_ag2_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_water_ag2 ) ! inout
-            YCpool_ethanol_ag2_st(:,:) = parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,            &
+            YCpool_acid_ag2_st => parentmem%Collect_var_real2d( ics, ice,  iblk, no_children, parentmem%YCpool_acid_ag2 )  ! inout
+            YCpool_water_ag2_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_water_ag2 ) ! inout
+            YCpool_ethanol_ag2_st => parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,            &
                                                                        parentmem%YCpool_ethanol_ag2 )                     ! inout
-            YCpool_nonsoluble_ag2_st(:,:) = parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,         &
+            YCpool_nonsoluble_ag2_st => parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,         &
                                                                           parentmem%YCpool_nonsoluble_ag2 )               ! inout
-            YCpool_humus_1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_humus_1 ) ! inout
-            YCpool_humus_2_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_humus_2 ) ! inout
-            !carbon_2_atmos_st_ta(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%carbon_2_atmos ) ! inout
+            YCpool_humus_1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_humus_1 ) ! inout
+            YCpool_humus_2_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_humus_2 ) ! inout
+            !carbon_2_atmos_st_ta = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%carbon_2_atmos ) ! inout
             ! below ground
-            YCpool_acid_bg1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_acid_bg1 )  ! inout
-            YCpool_water_bg1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_water_bg1) ! inout
-            YCpool_ethanol_bg1_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,             &
+            YCpool_acid_bg1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_acid_bg1 )  ! inout
+            YCpool_water_bg1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children, parentmem%YCpool_water_bg1) ! inout
+            YCpool_ethanol_bg1_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,             &
                                                                        parentmem%YCpool_ethanol_bg1 )                          ! inout
-            YCpool_nonsoluble_bg1_st(:,:) = parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,         &
+            YCpool_nonsoluble_bg1_st => parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,         &
                                                                           parentmem%YCpool_nonsoluble_bg1 )                    ! inout
-            YCpool_acid_bg2_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%YCpool_acid_bg2)   ! inout
-            YCpool_water_bg2_st(:,:) = parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%YCpool_water_bg2) ! inout
-            YCpool_ethanol_bg2_st(:,:) = parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,            &
+            YCpool_acid_bg2_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%YCpool_acid_bg2)   ! inout
+            YCpool_water_bg2_st => parentmem%Collect_var_real2d( ics, ice, iblk, no_children,  parentmem%YCpool_water_bg2) ! inout
+            YCpool_ethanol_bg2_st => parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,            &
                                                                        parentmem%YCpool_ethanol_bg2 )                          ! inout
-            YCpool_nonsoluble_bg2_st(:,:) = parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,         &
+            YCpool_nonsoluble_bg2_st => parentmem%Collect_var_real2d( ics, ice,  iblk, no_children,         &
                                                                           parentmem%YCpool_nonsoluble_bg2 ) ! inout
         END SELECT
       ENDIF
@@ -756,7 +769,48 @@ CONTAINS
                                                 carbon_2_atmos_st_ta(:,:)    )
         END SELECT
       ENDIF
+
+      DEALLOCATE(is_woody, pft_mask)
+
+      DEALLOCATE(veg_frac_correction_st,   &
+                 fract_st,                 &
+                 cover_frac_pot_st,        &
+                 burned_frac_st,           &
+                 damaged_frac_st)
+
+      IF ( tile%Is_process_active(CARBON_) ) THEN
+        DEALLOCATE(Cpool_green_st,           &
+                   Cpool_woods_st,           &
+                   Cpool_reserve_st,         &
+                   carbon_2_GreenLitterPools_st, &
+                   carbon_2_WoodLitterPools_st,  &
+                   !
+                   YCpool_acid_ag1_st,       &
+                   YCpool_water_ag1_st,      &
+                   YCpool_ethanol_ag1_st,    &
+                   YCpool_nonsoluble_ag1_st, &
+                   !
+                   YCpool_acid_ag2_st,       &
+                   YCpool_water_ag2_st,      &
+                   YCpool_ethanol_ag2_st,    &
+                   YCpool_nonsoluble_ag2_st, &
+                   !
+                   YCpool_humus_1_st,        &
+                   YCpool_humus_2_st,        &
+                   carbon_2_atmos_st_ta,     &
+                   !
+                   YCpool_acid_bg1_st,       &
+                   YCpool_water_bg1_st,      &
+                   YCpool_ethanol_bg1_st,    &
+                   YCpool_nonsoluble_bg1_st, &
+                   YCpool_acid_bg2_st,       &
+                   YCpool_water_bg2_st,      &
+                   YCpool_ethanol_bg2_st,    &
+                   YCpool_nonsoluble_bg2_st)
+      END IF
+
     ENDIF ! is_newday
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_natural_disturbances

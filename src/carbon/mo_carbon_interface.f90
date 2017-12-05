@@ -344,7 +344,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snow
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -902,7 +902,6 @@ CONTAINS
                                        )
 
     USE mo_exception,             ONLY: message, finish
-    USE mo_hsm_class,             ONLY: t_State
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_disturbance_constants, ONLY: DIST_FIRE, DIST_WINDBREAK
 
@@ -956,14 +955,14 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     INTEGER                     :: iblk, ics, ice, nc
 
-    INTEGER                 :: pft
-    REAL(wp), allocatable   :: LeafLit_coef(:,:,:) ! Factor to seperate non woody litterfall into yasso pools
-                                                   ! (ics:ice,no_children,chemical_classes)
-    REAL(wp), allocatable   :: WoodLit_coef(:,:,:) ! Factor to seperate woody litterfall into yasso pools
-                                                   ! (ics:ice,no_children,chemical_classes)
+    INTEGER                 :: pft, i
+    REAL(wp), DIMENSION(options%nc,no_children,5) :: &
+      & LeafLit_coef, & ! Factor to seperate non woody litterfall into yasso pools
+                        ! (ics:ice,no_children,chemical_classes)
+      & WoodLit_coef    ! Factor to seperate woody litterfall into yasso pools
+                        ! (ics:ice,no_children,chemical_classes)
 
-    !CLASS(t_jsb_tile_abstract), POINTER :: act_subtile_ptr => null() ! actual pointer to the child tiles of this tile
-    CLASS(t_State), POINTER :: act_subtile_ptr => null() ! actual pointer to the child tiles of this tile
+    CLASS(t_jsb_tile_abstract), POINTER :: act_subtile_ptr ! pointer to the child tiles of this tile
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -1022,21 +1021,15 @@ CONTAINS
 
     ! R: We have to prepare the LeafLit_coef(ics:ice,no_children,chemical_classes) from the lct library
     !    dsl4jsb_Lctlib_param(LeafLit_coef(1:5))
-    DO pft=1,no_children
-       IF ( pft == 1 ) THEN
-          act_subtile_ptr => tile%first_child
-       ELSE
-          !act_subtile_ptr =>  act_subtile_ptr%next_sibling ! R: das geht bestimmt nicht, also wirds umständlich weil wir dann einen
-                                                            !    temporäten Pointer brauchen. Aber das macht die Funktion für uns:
-          act_subtile_ptr => tile%Get_next_sibling_tile()
-       END IF
-
-       SELECT TYPE (act_subtile_ptr)
-            CLASS IS (t_jsb_tile_abstract)
-            ! R: I'm not sure with DIM=2 ...
-            LeafLit_coef(1:nc,pft,1:5) = SPREAD( model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%LeafLit_coef(1:5), DIM=2,NCOPIES=nc)
-            WoodLit_coef(1:nc,pft,1:5) = SPREAD( model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%WoodLit_coef(1:5), DIM=2,NCOPIES=nc)
-       END SELECT
+    act_subtile_ptr => tile%first_child_tile
+    pft = 0
+    DO WHILE (ASSOCIATED(act_subtile_ptr))
+      pft = pft + 1
+      DO i=1,5
+        LeafLit_coef(1:nc,pft,i) = model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%LeafLit_coef(i)
+        WoodLit_coef(1:nc,pft,i) = model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%WoodLit_coef(i)
+      END DO
+      act_subtile_ptr => act_subtile_ptr%next_sibling_tile
     ENDDO
 
     ! call the relocation routines
