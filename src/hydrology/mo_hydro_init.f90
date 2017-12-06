@@ -19,7 +19,7 @@ MODULE mo_hydro_init
   USE mo_jsb_grid,          ONLY: Get_vgrid
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes HYDRO_, PHENO_
   dsl4jsb_Use_config(HYDRO_)
@@ -164,13 +164,13 @@ CONTAINS
         & fill_array = dsl4jsb_var_ptr(HYDRO_, pore_size_index))
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
 
-      ! Volumetric field capacity
+      ! Volumetric field capacity [m/m]
       ptr_2D => input_file%Read_2d(                         &
         & variable_name='soil_field_cap', & ! TODO change name in infile to w_soil_fcvol or another name that indicates "volumetric"
         & fill_array = dsl4jsb_var_ptr(HYDRO_, vol_field_cap))
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-      ! Get field capacity by multiplying volumetric field capacity with soil layer thicknesses
+      ! Get water content at field capacity by multiplying volumetric field capacity with soil layer thicknesses
       DO i=1,nsoil
         dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,i,:) = ptr_2D(:,:) * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
@@ -281,7 +281,7 @@ CONTAINS
       input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
 
       ! Initial snow depth
-      IF (ncfile_has_var(input_file%filename, 'snow')) THEN
+      IF (input_file%Has_var('snow')) THEN
         ptr_2D => input_file%Read_2d(         &
           & variable_name='snow',                     &
           & fill_array = dsl4jsb_var_ptr(HYDRO_, w_snow_soil))

@@ -32,6 +32,7 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: !X e.g: LAND_TYPE, LAKE_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
   USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
 
   IMPLICIT NONE

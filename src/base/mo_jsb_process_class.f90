@@ -20,7 +20,7 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
-  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_
+  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -42,7 +42,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_
+    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_
   END ENUM
 
   ! Process actions
@@ -78,11 +78,15 @@ CONTAINS
     CASE (ASSIMI_)
       return_value = 'assimi'
     CASE (PHENO_)
-      return_value = 'pheno'      
+      return_value = 'pheno'
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       return_value = 'hd'
 #endif
+    CASE (CARBON_)
+      return_value = 'carbon'
+    CASE (DISTURB_)
+      return_value = 'disturb'
     CASE DEFAULT
       return_value = ''
     END SELECT

@@ -18,20 +18,25 @@ MODULE mo_jsb_config_class
 
   PUBLIC :: t_jsb_config, t_jsb_config_p, t_jsb_model_config, new_model_config
 
+  ! Type for model configuration
   TYPE t_jsb_model_config
-    CHARACTER(len=filename_max)  :: grid_filename
-    CHARACTER(len=filename_max)  :: fract_filename
-    CHARACTER(len=30)            :: grid_name
-    CHARACTER(len=30)            :: usecase
-    CHARACTER(len=10)            :: hsm_mode
-    LOGICAL                      :: l_compat401      ! Use configuration compatible with jsbach 4.01
+    CHARACTER(len=filename_max)    :: grid_filename
+    CHARACTER(len=filename_max)    :: fract_filename
+    CHARACTER(len=30)              :: grid_name
+    CHARACTER(len=40)              :: usecase
+    LOGICAL                        :: use_lakes
+    CHARACTER(len=10)              :: hsm_mode
+    LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
+    CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   END TYPE t_jsb_model_config
 
+  ! Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
+    CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
@@ -65,18 +70,22 @@ CONTAINS
       grid_filename,          &
       grid_name
 
+    LOGICAL                     :: use_lakes
     LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
-    CHARACTER(len=30)           :: usecase
+    CHARACTER(len=40)           :: usecase
     CHARACTER(len=10)           :: hsm_mode
+    CHARACTER(len=10)           :: output_tiles(99)
 
     NAMELIST /jsb_model_nml/  &
+      use_lakes, &
       l_compat401, &
       usecase, &
       hsm_mode, &
-      fract_filename
+      fract_filename, &
+      output_tiles
 
-    INTEGER :: nml_handler, nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat, i
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_model_config'
 
@@ -85,12 +94,14 @@ CONTAINS
     ALLOCATE(model_config)
 
     ! Set defaults
-    l_compat401    = .FALSE.
-    grid_filename  = ''
-    grid_name      = ''
-    usecase        = ''
-    hsm_mode       = 'simple'
-    fract_filename = 'bc_land_frac.nc'
+    use_lakes       = .TRUE.
+    l_compat401     = .FALSE.
+    grid_filename   = ''
+    grid_name       = ''
+    usecase         = ''
+    hsm_mode        = 'simple'
+    fract_filename  = 'bc_land_frac.nc'
+    output_tiles(:) = ''
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -98,18 +109,30 @@ CONTAINS
     nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
 
+    ! Write resulting values in config memory
     model_config%grid_filename = grid_filename
     model_config%grid_name     = grid_name
 
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
+    CALL close_nml(nml_handler)
 
+    model_config%use_lakes      = use_lakes
     model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
     model_config%hsm_mode       = hsm_mode
     model_config%fract_filename = fract_filename
 
-    CALL close_nml(nml_handler)
+    DO i=1,99
+      IF (output_tiles(i) == '') EXIT
+    END DO
+    i = i - 1  ! Number of tile names in namelist variable output_tiles
+    IF (i == 0) THEN             ! Default is 'box' if no tiles specified in namelist
+      i = 1
+      output_tiles(1) = 'box'
+    END IF
+    ALLOCATE(model_config%output_tiles(i))
+    model_config%output_tiles(1:i) = output_tiles(1:i)
 
   END FUNCTION new_model_config
 

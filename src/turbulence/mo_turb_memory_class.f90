@@ -49,7 +49,7 @@ CONTAINS
 
   SUBROUTINE Init_turb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -83,6 +83,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=1.0_wp )
 
     CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                       &
@@ -91,6 +92,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=1.0_wp )
 
     ! Additional variables for all lcts except lakes
@@ -106,6 +108,7 @@ CONTAINS
         & t_cf('fact_q_air', '', ''),                                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & output_level=BASIC, &
         & initval_r=0.5_wp )
 
       CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,                             &
@@ -113,6 +116,7 @@ CONTAINS
         & t_cf('fact_qsat_srf', '', ''),                                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & output_level=BASIC, &
         & initval_r=0.5_wp )
 
       CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,                 &
@@ -120,6 +124,7 @@ CONTAINS
         & t_cf('fact_qsat_trans_srf', '', ''),                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & output_level=BASIC, &
         & initval_r=0.5_wp )
 
     END IF

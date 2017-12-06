@@ -74,6 +74,7 @@ MODULE mo_hsm_class
     PROCEDURE :: Init_state
     PROCEDURE :: Get_parent         => Get_parent_state
     PROCEDURE :: Get_parent_name    => Get_parent_name_state
+    PROCEDURE :: Set_no_of_children => Set_no_of_children_state
     PROCEDURE :: Get_no_of_children => Get_no_of_children_state
     PROCEDURE :: Get_pos_of_child   => Get_pos_of_child_state
     PROCEDURE :: Has_children       => Has_children_state
@@ -346,9 +347,33 @@ CONTAINS
 
   END FUNCTION Is_first_child_state
 
-  FUNCTION Get_no_of_children_state(this) RESULT(return_value)
+  SUBROUTINE Set_no_of_children_state(this, no_of_children)
 
     CLASS(t_State), INTENT(inout) :: this
+    INTEGER,        INTENT(in)    :: no_of_children
+
+    CLASS(t_State), POINTER :: current
+
+    IF (this%no_of_children >= 0) THEN
+      RETURN
+    END IF
+
+    IF (this%Has_children()) THEN
+      this%no_of_children = 1
+      current => this%first_child
+      DO WHILE (.NOT. current%Is_last_child())
+        current => current%next_sibling
+        this%no_of_children = this%no_of_children + 1
+      END DO
+    ELSE
+      this%no_of_children = 0
+    END IF
+
+  END SUBROUTINE Set_no_of_children_state
+
+  FUNCTION Get_no_of_children_state(this) RESULT(return_value)
+
+    CLASS(t_State), INTENT(in)    :: this
     INTEGER                       :: return_value
 
     CLASS(t_State), POINTER :: current
@@ -368,7 +393,6 @@ CONTAINS
     ELSE
       return_value = 0
     END IF
-    this%no_of_children = return_value
 
   END FUNCTION Get_no_of_children_state
 
@@ -948,13 +972,13 @@ CONTAINS
       IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
       DO WHILE (ASSOCIATED(state))
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
-        this%source(no_omp_thread)%p => state
+        this%source(no_omp_thread)%p => state  ! Set source always to the previous state. This is to find back again later.
         tmp_msg => state%Process_message(this, new_msg)
         IF (ASSOCIATED(new_msg)) THEN
         !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
           DEALLOCATE(new_msg)
         END IF
-        new_msg => tmp_msg
+        new_msg => tmp_msg ! Set new message to the "result" of last message
         CALL this%Process_exit_to_LCA()
         IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN      ! State transition taken (i.e. already exited to LCA)
           ! Execute entry and start messages to target

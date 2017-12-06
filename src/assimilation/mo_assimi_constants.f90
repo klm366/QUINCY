@@ -41,7 +41,7 @@ MODULE mo_assimi_constants
          ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air: 
                           FCI1C3        = 0.87_wp, & ! For C3 plants
                           FCI1C4        = 0.67_wp, & ! For C4 plants
-         ! Factors needed to calculate NPP_rate:                  
+         ! Factors needed to calculate NPP_pot_rate:                  
                           f_aut_leaf    = 0.40_wp, & ! leaf fraction of plant-total (autotrophic) respiration
                           cCost         = 1.25_wp    ! relative costs (measured in carbon) to produce 1 unit of carbon                          
 
