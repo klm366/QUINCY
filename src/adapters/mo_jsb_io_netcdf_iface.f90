@@ -92,7 +92,7 @@ CONTAINS
       netcdf_open_input_generic%type      = 1
       ! netcdf_open_input%stream_id = openInputFile(TRIM(filename), patch, read_netcdf_broadcast_method)
       netcdf_open_input_generic%file_id = openInputFile(TRIM(filename))
-      netcdf_open_input_generic%is_open = netcdf_open_input_generic%file_id >= 0
+      netcdf_open_input_generic%is_open = netcdf_open_input_generic%file_id > 0
 #else
       netcdf_open_input_generic%type = 2
 
@@ -128,7 +128,7 @@ CONTAINS
       ! netcdf_open_input_patch%stream_id = openInputFile(TRIM(filename), patch, read_netcdf_broadcast_method)
       netcdf_open_input_patch%stream_id = openInputFile(TRIM(filename), patch)
       netcdf_open_input_patch%file_id   = netcdf_open_input_patch%stream_id%file_id
-      netcdf_open_input_patch%is_open   = netcdf_open_input_patch%file_id >= 0
+      netcdf_open_input_patch%is_open   = netcdf_open_input_patch%file_id > 0
 #else
       CALL finish(TRIM(routine), 'Incompatible combination patch/no-ICON')
 #endif
@@ -420,12 +420,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_file_has_dim'
 
-    IF (.NOT. my_process_is_stdio()) RETURN
+    IF (my_process_is_stdio()) THEN
+      IF (.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
 
-    IF (.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
-
-    status = nf_inq_dimid(input_file%file_id, TRIM(dimname), dimid)
-    netcdf_file_has_dim = (status == NF_NOERR)
+      status = nf_inq_dimid(input_file%file_id, TRIM(dimname), dimid)
+      netcdf_file_has_dim = (status == NF_NOERR)
+    END IF
 
     CALL p_bcast(netcdf_file_has_dim, p_io)
 
@@ -440,10 +440,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_file_has_var'
 
-    IF (.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
+    IF (my_process_is_stdio()) THEN
+      IF(.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
 
-    status = nf_inq_varid(input_file%file_id, TRIM(varname), varid)
-    netcdf_file_has_var = (status == NF_NOERR)
+      status = nf_inq_varid(input_file%file_id, TRIM(varname), varid)
+      netcdf_file_has_var = (status == NF_NOERR)
+    END IF
 
     CALL p_bcast(netcdf_file_has_var, p_io)
 
