@@ -200,7 +200,7 @@ CONTAINS
         IF(source_element - source_isotope > eps8) THEN
            Rsource = source_isotope / ( source_element - source_isotope )
         ELSE 
-           Rsource = 1.0_wp
+           Rsource = 0.0_wp
         ENDIF
 
         ! molar mixing ratio of the isotope with the main element in the product of the reaction
