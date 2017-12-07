@@ -18,10 +18,13 @@ MODULE mo_jsb_io_iface
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
   USE mo_io_config,     ONLY: lnetcdf_flt64_output
-  USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, &
+  USE mo_cdi,           ONLY: DATATYPE_FLT32 => CDI_DATATYPE_FLT32, &
+                            & DATATYPE_FLT64 => CDI_DATATYPE_FLT64, &
+                            & DATATYPE_PACK16 => CDI_DATATYPE_PACK16, &
+                            & DATATYPE_PACK24 => CDI_DATATYPE_PACK24, &
                             & ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND, &
                             & FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
-                            & TSTEP_CONSTANT, TSTEP_INSTANT, &
+                            & TSTEP_CONSTANT => TIME_CONSTANT, TSTEP_INSTANT, &
                             & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
                             & zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
                             & zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
