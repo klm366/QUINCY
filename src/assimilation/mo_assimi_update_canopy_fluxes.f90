@@ -13,10 +13,11 @@ MODULE mo_assimi_update_canopy_fluxes
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
+  USE mo_jsb_control,           ONLY: debug_on
   USE mo_assimi_constants,      ONLY: ic3phot, ic4phot, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
   USE mo_veg_constants,         ONLY: itree, igrass, fmaint_rate_base
+  USE mo_exception,             ONLY: message
 
-   
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
   dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -138,8 +139,8 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)

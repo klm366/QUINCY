@@ -67,7 +67,6 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_base_config), INTENT(inout) :: config    !< config type for base
     ! 0.2 Local
-    LOGICAL           :: active
     ! variables for reading from namlist, identical to variable-name in namelist
     ! BASE_CTL
     REAL(wp)          :: dtime_step_length_sec   ! model-variable: dtime 

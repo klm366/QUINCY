@@ -15,6 +15,8 @@ MODULE mo_atmland_interface
 
   USE mo_kind,                    ONLY: wp
   USE mo_exception,               ONLY: finish
+  USE mo_jsb_control,             ONLY: debug_on
+  USE mo_exception,               ONLY: message
   USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
   USE mo_jsb_var_class,           ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -172,8 +174,8 @@ CONTAINS
     END IF
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(A2L_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(A2L_)) RETURN
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
@@ -314,8 +316,8 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(L2A_)) RETURN   ! ask for all processes considered here ?
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(L2A_)) RETURN   ! ask for all processes considered here ?
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config

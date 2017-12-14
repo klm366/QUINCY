@@ -9,9 +9,9 @@
 !!
 MODULE mo_base_memory
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                ONLY: wp
   USE mo_jsb_lct_class
-  USE mo_jsb_memory_class,        ONLY: t_jsb_memory_p
+  USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p
 
   IMPLICIT NONE
 
@@ -25,7 +25,10 @@ MODULE mo_base_memory
     TYPE(t_jsb_lct)                   :: lcts      !< data on land cover type of the tile
     CLASS(t_jsb_memory_p), POINTER    :: mem(:)
     INTEGER                           :: owner_model_id = 0   ! necessary for using lctlib
-  END TYPE t_slm_tile  
+    CHARACTER(len=10)                 :: name
+  CONTAINS
+    PROCEDURE                         :: Is_process_active
+  END type t_slm_tile
 
   !-----------------------------------------------------------------------------------------------------
   !> type definition of model\%options needed in t_jsb_model
@@ -69,6 +72,23 @@ MODULE mo_base_memory
   PUBLIC  :: t_slm_tile, t_jsb_task_options
   PUBLIC  :: grid
  
-!CONTAINS
+CONTAINS
+
+  FUNCTION Is_process_active(this, iproc) RESULT(return_value)
+
+    CLASS(t_slm_tile), INTENT(in) :: this
+    INTEGER,                    INTENT(in) :: iproc
+    LOGICAL                                :: return_value
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Is_process_active'
+
+    return_value = .FALSE.
+
+    SELECT TYPE (this)
+    CLASS IS (t_slm_tile)
+      return_value = ASSOCIATED(this%mem(iproc)%p)
+    END SELECT
+
+  END FUNCTION Is_process_active
 
 END MODULE mo_base_memory

@@ -6,6 +6,8 @@ mo_pheno_interface.o: \
 mo_pheno_update_phenology.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_jsb_control.o \
+  mo_exception.o \
   mo_base_memory.o \
   mo_jsb_model_class.o \
   mo_jsb_class.o \
@@ -43,6 +45,7 @@ mo_pheno_constants.o: \
 
 mo_pheno_init.o: \
   mo_kind.o \
+  mo_jsb_control.o \
   mo_exception.o \
   mo_base_memory.o \
   mo_jsb_model_class.o \

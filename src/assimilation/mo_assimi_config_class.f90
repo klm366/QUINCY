@@ -10,12 +10,17 @@
 !!
 MODULE mo_assimi_config_class
 !#ifndef __NO_JSBACH__
+  ! -------------------------------------------------------------------------------------------------------
+  ! Used variables of module
 
-  USE mo_kind,              ONLY: wp, eps4
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: eps4
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
+  ! -------------------------------------------------------------------------------------------------------
+  ! Module variables
   IMPLICIT NONE
   
   INTEGER, SAVE :: assimi_ncanopy
@@ -39,7 +44,7 @@ MODULE mo_assimi_config_class
     REAL(wp), ALLOCATABLE   :: canopy_layer_depth(:)      !< depth of each single canopy layer
   CONTAINS
     PROCEDURE :: Init => Init_assimi_config
-  END Type t_assimi_config
+  END type t_assimi_config
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_config_class'
@@ -52,14 +57,18 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_assimi_config(config)   ! 'config' == t_assimi_config, see ABSTRACT INTERFACE -> SUBROUTINE Init_config(config)
+
 !    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 !    using the old JSBACH3 functions instead of wrappers implemented in JSBACH4 -> mo_jsb_namelist_iface
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+
     ! 0.1 InOut
     CLASS(t_assimi_config), INTENT(inout) :: config    !< config type for assimi
+
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    !LOGICAL         :: active
+    LOGICAL                     :: active
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL         :: flag_optimal_Nfraction     , &
                        flag_t_resp_acclimation    , &
                        flag_t_jmax_acclimation
@@ -70,13 +79,15 @@ CONTAINS
     REAL(wp)        :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
-    NAMELIST /assimilation_ctl/       & 
-        flag_optimal_Nfraction          , &
-        flag_t_resp_acclimation         , &
-        flag_t_jmax_acclimation         , &
-        ncanopy                         , &
+    NAMELIST /assimilation_ctl/    &
+         active,                   &
+         ic_filename,              &
+         bc_filename,              &
+        flag_optimal_Nfraction,    &
+        flag_t_resp_acclimation,   &
+        flag_t_jmax_acclimation,   &
+        ncanopy,                   &
         canopy_layer_scheme
-
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -84,22 +95,25 @@ CONTAINS
     ! extinction coefficient for canopy layer depth calculation
     k_canopy_layer = 0.7_wp
 
-
     CALL message(TRIM(routine), 'Starting assimi configuration')
 
     ! Set defaults
+    active              = .TRUE.
+    bc_filename         = 'bc_land_assimi.nc'
+    ic_filename         = 'ic_land_assimi.nc'
     flag_optimal_Nfraction         = .FALSE.      ! .TRUE. .FALSE.
     flag_t_resp_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
-    ncanopy                        = 20           ! (default for FAPAR based canopy layers would be 10)
+    ncanopy             = 20                      ! (default for FAPAR based canopy layers would be 10)
     canopy_layer_scheme            = "standard"   ! 
 
     ! read the namelist
-    ! 
     ! &ASSIMILATION_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
+
     nml_unit = position_nml('ASSIMILATION_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, assimilation_ctl)
+
     CALL close_nml(nml_handler)
 
     ! pass values as read from file

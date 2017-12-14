@@ -13,6 +13,7 @@ MODULE mo_rad_init
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
 
   IMPLICIT NONE
   PRIVATE
@@ -66,8 +67,8 @@ CONTAINS
     nc      = options%nc    
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config

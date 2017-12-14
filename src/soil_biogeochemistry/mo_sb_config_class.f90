@@ -11,13 +11,14 @@
 MODULE mo_sb_config_class
 !#ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
+
   PUBLIC :: t_sb_config
 
   !-----------------------------------------------------------------------------------------------------
@@ -43,11 +44,9 @@ MODULE mo_sb_config_class
     INTEGER               :: nwrb_taxonomy_class
     REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
     INTEGER               :: lithology_class
-
-    CONTAINS
-      PROCEDURE :: Init => Init_sb_config
-  END Type t_sb_config
-
+   CONTAINS
+     PROCEDURE :: Init => Init_sb_config
+  END type t_sb_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'
 
@@ -62,11 +61,14 @@ CONTAINS
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
     USE mo_base_config_class,  ONLY: base_config
+
     ! 0.1 InOut
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
+
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    LOGICAL               :: active
+    LOGICAL  :: active
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
     LOGICAL               :: flag_sb_prescribe_nh4
@@ -84,9 +86,10 @@ CONTAINS
     INTEGER               :: nwrb_taxonomy_class
     REAL(wp)              :: soil_ph
     INTEGER               :: lithology_class
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
+      active,                      &
+      ic_filename, bc_filename,    &
                       sb_model_scheme      ,  &
                       sb_nloss_scheme      ,  &
                       flag_sb_prescribe_nh4,  &
@@ -104,15 +107,18 @@ CONTAINS
                       nwrb_taxonomy_class  ,  &
                       soil_ph              ,  &
                       lithology_class
-     
-     
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
+
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
 
     ! Set defaults
+    active          = .TRUE.
+    ic_filename     = 'ic_land_srf.nc'
+    bc_filename     = 'bc_land_srf.nc'
     sb_model_scheme             = "simple_0d"       ! simple_0d simple_1d jsm
     sb_nloss_scheme             = "fixed"           ! none fixed dynamic 
     flag_sb_prescribe_nh4       = .FALSE.
@@ -132,11 +138,16 @@ CONTAINS
     lithology_class             = 1
 
     ! read the namelist
-    ! 
     ! &SOIL_BIOGEOCHEMISTRY_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
+
     nml_unit = position_nml('SOIL_BIOGEOCHEMISTRY_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
+
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
+
     CALL close_nml(nml_handler)
 
     SELECT CASE (TRIM(sb_model_scheme))

@@ -13,6 +13,7 @@ land_model_driver.o: \
 
 mo_land_model_interface.o: \
   mo_kind.o \
+  mo_jsb_control.o \
   mo_jsb_model_class.o \
   mo_base_memory.o \
   mo_base_config_class.o \
@@ -49,6 +50,7 @@ mo_test_canopy_model.o: \
   mo_assimi_config_class.o \
   mo_atmland_interface.o \
   mo_rad_interface.o \
+  mo_veg_canopy.o \
   mo_assimi_interface.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \
@@ -57,6 +59,8 @@ mo_test_canopy_model.o: \
 
 mo_atmland_forcing.o: \
   mo_kind.o \
+  mo_exception.o \
+  mo_jsb_control.o \
   mo_exception.o \
   mo_jsb_class.o \
   mo_jsb_process_class.o \

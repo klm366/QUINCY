@@ -17,7 +17,8 @@ MODULE mo_rad_update_radiation
 
   USE mo_kind,                  ONLY: wp, eps8
   USE mo_rad_constants
-
+  USE mo_jsb_control,           ONLY: debug_on
+  USE mo_exception,             ONLY: message
 
   IMPLICIT NONE
 
@@ -122,8 +123,8 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(VEG_)) RETURN   ! ask for all processes considered here ?
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN   ! ask for all processes considered here ?
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)

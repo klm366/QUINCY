@@ -637,7 +637,7 @@ echo -n "  ...  "
 
 ## run the SLM binary (always compiled as land.x) ##
 compiler=$(sed -n 2p ./../../../build/Make.inc.local | awk '{print $3}')
-./../../../"$compiler"/bin/land.x 
+time ./../../../"$compiler"/bin/land.x 
 echo "Simulation finished"
 echo " "
 echo "Running postprocessing ... "

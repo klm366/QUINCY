@@ -14,7 +14,8 @@ MODULE mo_veg_update_pools
 
   USE mo_kind
   USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
-
+  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_exception,           ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -157,8 +158,8 @@ CONTAINS
     nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)

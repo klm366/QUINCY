@@ -11,9 +11,10 @@
 MODULE mo_soil_config_class
 !#ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp, eps8
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: eps8
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -46,10 +47,9 @@ MODULE mo_soil_config_class
     REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
     REAL(wp)              :: bulk_density    
     CHARACTER(15)         :: soil_moisture_scheme !< soil moisture "prescribed|bucke|layer"
-    CONTAINS
-      PROCEDURE :: Init => Init_soil_config
-  END Type t_soil_config
-
+  CONTAINS
+    PROCEDURE :: Init => Init_soil_config
+  END TYPE t_soil_config
 
   INTEGER, PARAMETER :: max_soil_layers = 20  ! consistent with JSBACH4
 
@@ -65,8 +65,10 @@ CONTAINS
   SUBROUTINE Init_soil_config(config)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+
     ! 0.1 InOut
     CLASS(t_soil_config), INTENT(inout) :: config    !< config type for soil
+
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL  :: active
@@ -85,9 +87,10 @@ CONTAINS
     REAL(wp) :: bulk_density
     CHARACTER(15) :: soil_moisture_scheme
     INTEGER  :: i   ! looping
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /soil_ctl/       & 
+      & active,                                 &
                           nsoil_energy    , &
                           nsoil_water     , &
                           dz_energy       , &
@@ -101,15 +104,18 @@ CONTAINS
                           soil_silt       , &
                           soil_clay       , &
                           bulk_density    , &
-                          soil_moisture_scheme  
-     
+                          soil_moisture_scheme, &
+      & ic_filename, bc_filename
 
     ! variables for reading model-options from namelist
-    INTEGER  :: nml_handler, nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
     CALL message(TRIM(routine), 'Starting soil configuration')
 
     ! Set defaults
+    active          = .TRUE.
     nsoil_energy                  = 5
     nsoil_water                   = 5
     dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
@@ -126,14 +132,21 @@ CONTAINS
     soil_clay                     = 0.3_wp
     bulk_density                  = 1500.0_wp
     soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
+    ic_filename      = 'ic_land_soil.nc'
+    bc_filename      = 'bc_land_soil.nc'
 
     ! read the namelist
-    ! 
     ! &SOIL_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
+
     nml_unit = position_nml('SOIL_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, soil_ctl)
+
     CALL close_nml(nml_handler)
+
+    config%active        = active
+    config%ic_filename   = ic_filename
+    config%bc_filename   = bc_filename
 
     ! allocate vectors
     ALLOCATE(config%soil_depth_energy(nsoil_energy))

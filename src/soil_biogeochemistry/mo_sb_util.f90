@@ -11,8 +11,10 @@ MODULE mo_sb_util
 #include "dsl_jsbach.inc"
 !#ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish
+  USE mo_kind,        ONLY: wp
+  USE mo_exception,   ONLY: finish
+  USE mo_jsb_control, ONLY: debug_on
+  USE mo_exception,   ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -148,8 +150,8 @@ CONTAINS
     nc    = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (.NOT. tile%Is_process_active(SB_)) RETURN
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config

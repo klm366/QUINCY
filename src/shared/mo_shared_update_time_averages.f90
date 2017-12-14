@@ -14,12 +14,12 @@ MODULE mo_shared_update_time_averages
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                    ONLY: wp, eps8
+  USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
   USE mo_jsb_model_class,         ONLY: t_jsb_model
-
 
   IMPLICIT NONE
 
@@ -178,7 +178,7 @@ CONTAINS
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(VEG_)) RETURN   ! ask for all processes considered here ?
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
@@ -584,7 +584,7 @@ CONTAINS
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(VEG_)) RETURN   ! ask for all processes considered here ?
-!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)

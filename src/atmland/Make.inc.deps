@@ -15,7 +15,8 @@ mo_atmland_interface.o: \
   mo_jsb_var_class.o \
   mo_jsb_process_class.o \
   mo_a2l_memory_class.o \
-  mo_l2a_memory_class.o
+  mo_l2a_memory_class.o \
+  mo_jsb_control.o
 
 mo_l2a_memory_class.o: \
   mo_kind.o \
