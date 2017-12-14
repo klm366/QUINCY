@@ -428,7 +428,7 @@ CONTAINS
       & apar_per_lai_cl,         & ! Absorbed PAR of canopy layer.
       & CO2_mol_mixing_ratio,    & ! CO2 substance mixing ratio [molCO2/molDryAir]
       & N_scaling_factors,       & ! Enzymatic scaling with canopy height
-      & canopy_cond_cl,          & ! Input only for the water limited case here
+      & canopy_cond_cl             ! Input only for the water limited case here
 
     REAL(wp), INTENT(out) ::     &
       & CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers):

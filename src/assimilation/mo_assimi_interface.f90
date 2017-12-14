@@ -615,7 +615,6 @@ CONTAINS
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(CarboxRate),   &
         & dsl4jsb_Lctlib_param(ETransport),   &
-        & dsl4jsb_Lctlib,                     & ! in
         & t_air(:),                           & ! in
         & press_srf(:),                       & ! in
         & par_down_mol(:),                    & ! in
