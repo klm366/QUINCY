@@ -32,7 +32,7 @@ MODULE mo_jsb_time_iface
   USE mo_ha_dyn_config,          ONLY: ha_dyn_config
   USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
     &                                  calculate_time_interpolation_weights
-  USE mo_echam_phy_config,       ONLY: echam_phy_tc, dt_zero
+  USE mo_mpi_phy_config,         ONLY: mpi_phy_config, mpi_phy_tc, dt_zero
   USE mo_master_config,          ONLY: isRestart
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
@@ -341,8 +341,8 @@ CONTAINS
     INTEGER          :: dt_rad
 
     current = get_time_current()
-    IF (echam_phy_tc(model_id)%dt_rad > dt_zero) THEN
-      dt_rad = getTotalSecondsTimeDelta(echam_phy_tc(model_id)%dt_rad, current)
+    IF (mpi_phy_tc(model_id)%dt_rad > dt_zero) THEN
+      dt_rad = getTotalSecondsTimeDelta(mpi_phy_tc(model_id)%dt_rad, current)
       ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(current), dt_rad) == 0
     ELSE
       ltrig_rad_m1 = .FALSE.
