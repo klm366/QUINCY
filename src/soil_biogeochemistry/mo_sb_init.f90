@@ -195,9 +195,15 @@ CONTAINS
              nh4_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
              no3_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
              po4_solute(:,1) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
-             
-             ! initialise mineral soil P pools
-             po4_primary(:,1) = 100.0_wp / molar_mass_P	
+
+             ! inital Qmax based on current soil carbon content
+             bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
+             qmax_po4(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_po4_mineral)
+		         ! initialise mineral soil P pools
+             po4_assoc_fast(:,1) = po4_solute(:,1) * qmax_po4(:,1) / (po4_solute(:,1) + km_adsorpt_po4 * bulk_dens_corr_sl(:,1))
+             po4_assoc_slow(:,1) = 70.0_wp / molar_mass_P
+             po4_occluded(:,1)   = 150.0_wp / molar_mass_P	
+             po4_primary(:,1)    = 100.0_wp / molar_mass_P	
           ELSE 
              sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
@@ -209,6 +215,9 @@ CONTAINS
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
+             nh4_solute(:,1) = 0.1_wp
+             no3_solute(:,1) = 0.1_wp 
+             po4_solute(:,1) = 0.01_wp  
              DO isoil=2,options%nsoil_sb
                 sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
@@ -223,9 +232,15 @@ CONTAINS
                 no3_solute(:,isoil) = 0.1_wp 
                 po4_solute(:,isoil) = 0.01_wp 
              ENDDO
-             
-             ! initialise mineral soil P pools
-             po4_primary(:,1) = 100.0_wp / molar_mass_P	
+
+             ! inital Qmax based on current soil carbon content
+             bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
+             qmax_po4(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_po4_mineral)
+		     ! initialise mineral soil P pools
+             po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
+             po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
+             po4_occluded(:,:)   = 150.0_wp / molar_mass_P	
+             po4_primary(:,:)    = 100.0_wp / molar_mass_P	
           ENDIF
  
           ! metabolic litter all other elements
@@ -303,9 +318,9 @@ CONTAINS
          ! initialise mineral soil P pools
          po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
          po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
-         po4_occluded(:,:)   = 150.0_wp / molar_mass_P		 
-         po4_primary(:,1)    = 100.0_wp / molar_mass_P			 
-
+         po4_occluded(:,:)   = 150.0_wp / molar_mass_P	
+         po4_primary(:,:)    = 100.0_wp / molar_mass_P	 
+		 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
  

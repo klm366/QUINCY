@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_constants
-    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax
+    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax, calc_adsorption_po4
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_N15N14
 
     ! Use of process configurations (t_PROC_config)
@@ -74,7 +74,7 @@ CONTAINS
     INTEGER                               :: nsoil_sb
     INTEGER                               :: isoil
 !!
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon,hlp1
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon, p_deposition_sl, hlp1
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
@@ -93,6 +93,8 @@ CONTAINS
     ! SOIL
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    dsl4jsb_Real3D_onChunk :: percolation_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: total_flux_carbon
     dsl4jsb_Real2D_onChunk :: total_flux_nitrogen
@@ -143,6 +145,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: weathering_po4
     dsl4jsb_Real3D_onChunk :: occlusion_po4
     dsl4jsb_Real3D_onChunk :: slow_sorption_po4
@@ -166,6 +169,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
     dsl4jsb_Real3D_onChunk :: transport_po4_occluded
+    dsl4jsb_Real3D_onChunk :: transport_po4_primary
     dsl4jsb_Real3D_onChunk :: transport_noy
     dsl4jsb_Real3D_onChunk :: transport_noy_n15
     dsl4jsb_Real3D_onChunk :: transport_n2o
@@ -182,12 +186,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk :: po4_occluded
+    dsl4jsb_Real3D_onChunk :: po4_primary
     dsl4jsb_Real3D_onChunk :: noy 
     dsl4jsb_Real3D_onChunk :: noy_n15
     dsl4jsb_Real3D_onChunk :: n2o 
     dsl4jsb_Real3D_onChunk :: n2o_n15
     dsl4jsb_Real3D_onChunk :: n2
     dsl4jsb_Real3D_onChunk :: n2_n15
+    dsl4jsb_Real3D_onChunk :: rtm_sorption
+    dsl4jsb_Real3D_onChunk :: rtm_desorption
+    dsl4jsb_Real3D_onChunk :: rmm_sorption
+    dsl4jsb_Real3D_onChunk :: rmm_desorption
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
@@ -220,6 +229,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
@@ -269,6 +280,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! in
@@ -286,6 +298,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_primary)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15)           ! in 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! in
@@ -302,6 +315,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded)                ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)                 ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       noy)                         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15)                     ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       n2o)                         ! inout
@@ -314,6 +328,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorption_po4)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)                ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)              ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
@@ -338,7 +356,7 @@ CONTAINS
 #undef Get_sb_mycorrhiza_export
 
 
-
+    p_deposition_sl(:,:) = 0.0_wp
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
@@ -367,7 +385,7 @@ CONTAINS
        sb_pool%woody_litter%phosphorus(:,:) + sb_pool%fungi%phosphorus(:,:) + &
        sb_pool%mycorrhiza%phosphorus(:,:) + sb_pool%microbial%phosphorus(:,:) + &
        sb_pool%residue%phosphorus(:,:) + sb_pool%residue_assoc%phosphorus(:,:) + &
-       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:)
+       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:) + po4_primary(:,:)
     sb_delta_pools%carbon13(:,:) = &
        sb_pool%dom%carbon13(:,:) + sb_pool%dom_assoc%carbon13(:,:) + &
        sb_pool%soluable_litter%carbon13(:,:) + sb_pool%polymeric_litter%carbon13(:,:) + &
@@ -463,12 +481,6 @@ CONTAINS
     !! Output: updated pool sizes
     sb_pool = sb_pool + sb_formation - sb_loss + sb_transport 
 
-    !> 3.1 update diagnostics and other state variables depending on organic matter content 
-    !!
-    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
-    bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
-    qmax_org = calc_qmax(bulk_dens_corr_sl,qmax_org_mineral_default)
-    qmax_po4 = calc_qmax(bulk_dens_corr_sl,qmax_po4_mineral)
 
     !> 4.0 update of inorganic pools
     !!
@@ -504,24 +516,75 @@ CONTAINS
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-    !> 4.2 update of mineral P pools
+    !> 4.2 atmospheric deposition
     !!
-    po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + weathering_po4(:,:) &
-                          + biochem_mineralisation_po4(:,:) + transport_po4_solute(:,:) - fast_adsorption_po4(:,:)) * dtime/1.e6_wp
-    po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (fast_adsorption_po4 - slow_sorption_po4 + transport_po4_assoc_fast) * dtime/1.e6_wp
-    po4_assoc_slow(:,:) = po4_assoc_slow(:,:) + (slow_sorption_po4 - occlusion_po4 + transport_po4_assoc_slow) * dtime/1.e6_wp
-    po4_occluded(:,:)   = po4_occluded(:,:)   + (occlusion_po4 + transport_po4_occluded) * dtime/1.e6_wp
+    nh4_solute(:,1)      = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    po4_solute(:,1)      = po4_solute(:,1)     + p_deposition(:)   / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) !µmol P / m3 / s
+    nh4_n15_solute(:,1)  = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
+                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
+                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+
+    !> 4.3 update of mineral P pools
+    !!
+    IF(.NOT.dsl4jsb_Config(SB_)%flag_sb_prescribe_po4)THEN
+       IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d" .OR. TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d" ) THEN
+            CALL calc_pinorg_dynamics( options, &
+                                       dtime, &
+                                       TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
+                                       po4_solute(:,:), &
+                                       po4_assoc_fast(:,:), &
+                                       po4_assoc_slow(:,:), &
+                                       root_fraction_sl(:,:), &
+                                       bulk_dens_corr_sl(:,:), &
+                                       p_deposition_sl(:,:), &
+                                       rtm_sorption(:,:), &
+                                       rmm_sorption(:,:), &
+                                       rtm_desorption(:,:), &
+                                       rmm_desorption(:,:), &
+                                       biochem_mineralisation_po4(:,:), &
+                                       mycorrhiza_uptake_po4_sl(:,:), &
+                                       plant_uptake_po4_sl(:,:), &
+                                       microbial_uptake_po4_sl(:,:), &
+                                       net_mineralisation_po4(:,:), &
+                                       transport_po4_solute(:,:), &
+                                       transport_po4_assoc_fast(:,:), &
+                                       transport_po4_assoc_slow(:,:), &
+                                       weathering_po4(:,:), &
+                                       slow_sorption_po4(:,:), &
+                                       occlusion_po4(:,:), &
+                                       fast_adsorption_po4(:,:))
+
+       ELSEIF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm" ) THEN
+            fine_root_carbon = root_fraction_sl * 600._wp !temporary solution
+            CALL calc_adsorption_po4(options, fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), bulk_dens_corr_sl(:,:), &
+                                       po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
+                                       weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
+                                       transport_po4_solute(:,:), transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), &
+                                       gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), sb_pool%microbial%carbon(:,:),  &
+                                       microbial_uptake_po4_sl(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
+                                       TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_CLE_po4, dsl4jsb_Config(SB_)%flag_sb_LK_po4)
+            po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + weathering_po4(:,:) &
+                                  + biochem_mineralisation_po4(:,:) + transport_po4_solute(:,:) - fast_adsorption_po4(:,:)) * dtime/1.e6_wp
+            po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (fast_adsorption_po4 - slow_sorption_po4 + transport_po4_assoc_fast) * dtime/1.e6_wp
+    
+       ENDIF
+
+       po4_assoc_slow(:,:) = po4_assoc_slow(:,:) + (slow_sorption_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime/1.e6_wp
+       po4_occluded(:,:)   = po4_occluded(:,:)   + (occlusion_po4(:,:) + transport_po4_occluded(:,:)) * dtime/1.e6_wp
+       po4_primary(:,:)    = po4_primary(:,:)    + ( - weathering_po4(:,:) + transport_po4_primary(:,:)) * dtime/1.e6_wp
+
+    ENDIF
 
 
-    !> 4.3 atmospheric deposition
+    !> 4.4 update diagnostics and other state variables depending on organic matter content 
     !!
-    nh4_solute(:,1)     = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    no3_solute(:,1)     = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    po4_solute(:,1)     = po4_solute(:,1)     + p_deposition(:)   / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    nh4_n15_solute(:,1) = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
-                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
-    no3_n15_solute(:,1) = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
-                                                ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
+    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
+    bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
+    qmax_org = calc_qmax(bulk_dens_corr_sl,qmax_org_mineral_default)
+    qmax_po4 = calc_qmax(bulk_dens_corr_sl,qmax_po4_mineral)
 
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
        hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
@@ -562,7 +625,7 @@ CONTAINS
        sb_pool%woody_litter%phosphorus(:,:) + sb_pool%fungi%phosphorus(:,:) + &
        sb_pool%mycorrhiza%phosphorus(:,:) + sb_pool%microbial%phosphorus(:,:) + &
        sb_pool%residue%phosphorus(:,:) + sb_pool%residue_assoc%phosphorus(:,:) + &
-       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:)) - &
+       po4_solute(:,:) + po4_occluded(:,:) + po4_assoc_slow(:,:) + po4_assoc_fast(:,:) + po4_primary(:,:)) - &
        sb_delta_pools%phosphorus(:,:)
     sb_delta_pools%carbon13(:,:) = &
        (sb_pool%dom%carbon13(:,:) + sb_pool%dom_assoc%carbon13(:,:) + &
@@ -597,26 +660,28 @@ CONTAINS
       veg_exudation%carbon                                                    - &
       SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:), DIM=2)  - &
       SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
-    total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen        + &
+    total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen    + &
       veg_litterfall%fine_root%nitrogen + veg_litterfall%coarse_root%nitrogen + &
       veg_litterfall%sap_wood%nitrogen  + veg_litterfall%heart_wood%nitrogen  + &
       veg_litterfall%labile%nitrogen    + veg_litterfall%reserve%nitrogen     + &
       veg_litterfall%fruit%nitrogen     + veg_litterfall%seed_bed%nitrogen    + &
-      SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp           + &
-      veg_exudation%nitrogen                                                      - &
-      SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2)    - &
-      (leaching_nh4_solute(:) + leaching_no3_solute(:)                                + &
-       emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)            + &
-       SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                       + &
+      SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp   + &
+      (nhx_deposition(:) + noy_deposition(:)) * dtime/1.e6_wp                 + & 
+      veg_exudation%nitrogen                                                  - &
+      SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2)     - &
+      (leaching_nh4_solute(:) + leaching_no3_solute(:)                        + &
+       emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)   + &
+       SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)              + &
        SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                       
-    total_flux_phosphorus(:) =                  veg_litterfall%leaf%phosphorus        + &
+    total_flux_phosphorus(:) =                  veg_litterfall%leaf%phosphorus    + &
       veg_litterfall%fine_root%phosphorus + veg_litterfall%coarse_root%phosphorus + &
       veg_litterfall%sap_wood%phosphorus  + veg_litterfall%heart_wood%phosphorus  + &
       veg_litterfall%labile%phosphorus    + veg_litterfall%reserve%phosphorus     + &
       veg_litterfall%fruit%phosphorus     + veg_litterfall%seed_bed%phosphorus    + &
-      veg_exudation%phosphorus                                                        - &
-      SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:), DIM=2)      - &
-      (leaching_po4_solute(:)                                                             + &
+      p_deposition(:) * dtime/1.e6_wp                                             + &
+      veg_exudation%phosphorus                                                    - &
+      SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:), DIM=2)       - &
+      (leaching_po4_solute(:)                                                     + &
        SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
     total_flux_carbon13(:) =                  veg_litterfall%leaf%carbon13        + &
       veg_litterfall%fine_root%carbon13 + veg_litterfall%coarse_root%carbon13 + &
@@ -634,17 +699,20 @@ CONTAINS
       veg_exudation%carbon14                                                      - &
       SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:), DIM=2)    - &
       SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
-    total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15          + &
+    total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15      + &
       veg_litterfall%fine_root%nitrogen15 + veg_litterfall%coarse_root%nitrogen15   + &
       veg_litterfall%sap_wood%nitrogen15  + veg_litterfall%heart_wood%nitrogen15    + &
       veg_litterfall%labile%nitrogen15    + veg_litterfall%reserve%nitrogen15       + &
       veg_litterfall%fruit%nitrogen15     + veg_litterfall%seed_bed%nitrogen15      + &
-      SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp             + &
-      veg_exudation%nitrogen15                                                          - &
-      SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:), DIM=2)        - &
-      (leaching_nh4_n15_solute(:) - leaching_no3_n15_solute(:)                              - &
-       emission_nh3_n15(:) - emission_noy_n15(:) - emission_n2o_n15(:) - emission_n2_n15(:) + &
-       SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                        + &
+      SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp     + &
+      (nhx_deposition(:) + noy_deposition(:)) /                                       & 
+         ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) *dtime/1.e6_wp         + &
+      veg_exudation%nitrogen15                                                      - &
+      SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:), DIM=2)         - &
+      (leaching_nh4_n15_solute(:) + leaching_no3_n15_solute(:)                      + &
+       emission_nh3_n15(:) + emission_noy_n15(:) + emission_n2o_n15(:)              + & 
+       emission_n2_n15(:)                                                           + &
+       SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                + &
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
 
@@ -668,5 +736,178 @@ CONTAINS
 #undef Passback_sb_mycorrhiza_export
 
   END SUBROUTINE update_sb_pools
+
+
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to update_sb_pools
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Subroutine to calculate fast_adsorption_po4 based on Langmuir equilibrium(Yang et al. 2014)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_pinorg_dynamics(options, &
+                                  dtime, &
+                                  sb_model_scheme, &
+                                  po4_solute, &
+                                  po4_assoc_fast, &
+                                  po4_assoc_slow, &
+                                  root_fraction_sl, &
+                                  bulk_dens_corr_sl, &
+                                  p_deposition_sl, &
+                                  rtm_sorption, &
+                                  rmm_sorption, &
+                                  rtm_desorption, &
+                                  rmm_desorption, &
+                                  biochem_mineralisation_po4, &
+                                  mycorrhiza_uptake_po4_sl, &
+                                  plant_uptake_po4_sl, &
+                                  microbial_uptake_po4_sl, &
+                                  net_mineralisation_po4, &
+                                  transport_po4_solute, &
+                                  transport_po4_assoc_fast, &
+                                  transport_po4_assoc_slow, &
+                                  weathering_po4, &
+                                  occlusion_po4, &
+                                  slow_sorption_po4, &
+                                  fast_adsorption_po4)
+
+    USE mo_sb_constants
+
+    IMPLICIT NONE
+    ! 0.1 inout
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
+    REAL(wp),                                         INTENT(in)    :: dtime                         !< length of one time step in seconds
+    CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
+                                                                       root_fraction_sl, &           !< fraction of root mass in layer
+                                                                       bulk_dens_corr_sl, &          !< bulk density of the mineral soil [kg / m3]
+                                                                       p_deposition_sl, &            !< actual P deposition rate, [µmol P / m3 / s]
+                                                                       rtm_sorption, &               !< temperature response scalar for po4 sorption
+                                                                       rtm_desorption, &             !< temperature response scalar for po4 desorption
+                                                                       rmm_sorption, &               !< moisture response scalar for po4 sorption
+                                                                       rmm_desorption, &             !< moisture response scalar for po4 desorption
+                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [mol / m3 / timestep]
+                                                                       transport_po4_solute, &       !< transport of soluble PO4 [mol / m3 / timestep]
+                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [mol / m3 / timestep]
+                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [mol / m3 / timestep]
+                                                                       weathering_po4                !< phosphorus weathering rate [mol P / m3 / timestep]   
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
+                                                                       po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
+                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [mol / m3 / timestep]
+                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [mol / m3 / timestep]
+                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [mol / m3 / timestep]
+                                                                       occlusion_po4, &              !< phosphorus occlusion rate [mol P / m3 / timestep]
+                                                                       net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
+                                                                       slow_sorption_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: fast_adsorption_po4           !< phosphorus adsorption rate, solute --> assoc_fast [mol P / m3 / timestep]
+
+
+    ! 0.2 local
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3, hlp4, hlp5
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: km_adsorpt_po4_act, qmax_po4_mineral_act, k_desorpt_po4_act, k_adsorpt_po4_act, &
+                                                        rtm_sorption_act, rmm_sorption_act, rtm_desorption_act, rmm_desorption_act, bulk_dens_corr_sl_act 
+    INTEGER                                          :: isoil                !< loop over options%nsoil_sb                        
+    CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_pinorg_dynamics'
+
+    ! 0.3 rate responsers for 1d and 0d soil model
+    IF (sb_model_scheme=="simple_0d") THEN
+      rtm_sorption_act(:,:) = 0.0_wp 
+      rmm_sorption_act(:,:) = 0.0_wp
+      rtm_desorption_act(:,:) = 0.0_wp 
+      rmm_desorption_act(:,:) = 0.0_wp
+      k_adsorpt_po4_act(:,:) = 0.0_wp 
+      k_desorpt_po4_act(:,:) = 0.0_wp
+      km_adsorpt_po4_act(:,:) = 0.0_wp
+      qmax_po4_mineral_act(:,:) = 0.0_wp
+      bulk_dens_corr_sl_act(:,:) = 0.0_wp
+      DO isoil = 1,options%nsoil_sb
+         rtm_sorption_act(:,1) = rtm_sorption_act(:,1) + & 
+                                         rtm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
+         rmm_sorption_act(:,1) = rmm_sorption_act(:,1) + & 
+                                         rmm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
+         rtm_desorption_act(:,1) = rtm_desorption_act(:,1) + & 
+                                         rtm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
+         rmm_desorption_act(:,1) = rmm_desorption_act(:,1) + & 
+                                         rmm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
+         bulk_dens_corr_sl_act(:,1) = bulk_dens_corr_sl_act(:,1)+ & 
+                                         bulk_dens_corr_sl(:,isoil) * root_fraction_sl(:,isoil) 
+      ENDDO
+      k_adsorpt_po4_act(:,1) = rtm_sorption_act(:,1) * rmm_sorption_act(:,1) * k_adsorpt_po4
+      k_desorpt_po4_act(:,1) = rtm_desorption_act(:,1) * rmm_desorption_act(:,1) * k_desorpt_po4
+      km_adsorpt_po4_act(:,1) = bulk_dens_corr_sl_act(:,1) * km_adsorpt_po4
+      qmax_po4_mineral_act(:,1) = bulk_dens_corr_sl_act(:,1) * qmax_po4_mineral
+    ELSEIF (sb_model_scheme=="simple_1d") THEN
+      k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * rmm_sorption(:,:) * k_adsorpt_po4
+      k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * rmm_desorption(:,:) * k_desorpt_po4
+      km_adsorpt_po4_act(:,:) = bulk_dens_corr_sl(:,:) * km_adsorpt_po4
+      qmax_po4_mineral_act(:,:) = bulk_dens_corr_sl(:,:) * qmax_po4_mineral
+    ENDIF
+
+    !> 1.0 limit to possible assoc_slow, 0d model
+    !!
+    IF (sb_model_scheme=="simple_0d") THEN
+      hlp1(:,1) = k_desorpt_po4_act(:,1) * po4_assoc_slow(:,1) * dtime
+      hlp2(:,1) = k_adsorpt_po4_act(:,1) * po4_assoc_fast(:,1) * dtime
+      hlp3(:,1) = po4_assoc_slow(:,1) + hlp2(:,1) - hlp1(:,1)  - occlusion_po4(:,1) * dtime / 1000000._wp
+      WHERE (hlp3(:,1) < eps8)
+        hlp3(:,1) = po4_assoc_slow(:,1) + hlp2(:,1)
+        hlp4(:,1) = hlp1(:,1) + occlusion_po4(:,1) * dtime / 1000000._wp
+        hlp1(:,1) = hlp1(:,1) * hlp3(:,1) / hlp4(:,1)
+        occlusion_po4(:,1) = occlusion_po4(:,1) * hlp3(:,1) / hlp4(:,1)
+        slow_sorption_po4(:,1) = (hlp2(:,1) - hlp1(:,1)) / dtime * 1000000._wp
+      ENDWHERE
+    !> 1.1 Langmuir equilibrium between soluble P and labile P, 0d model
+    !!
+      fast_adsorption_po4(:,:) = 0.0_wp
+      hlp1(:,:) = 0.0_wp; hlp2(:,:) = 0.0_wp; hlp4(:,:) = 0.0_wp; hlp3(:,:) = 0.0_wp; hlp5(:,:) = 0.0_wp
+      hlp1(:,1) = (po4_solute(:,1) + km_adsorpt_po4_act(:,1))**2.0_wp / &
+                  ((po4_solute(:,1) + km_adsorpt_po4_act(:,1))**2.0_wp + qmax_po4_mineral_act(:,1) * km_adsorpt_po4_act(:,1))
+      hlp2(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
+            (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_sorption_po4(:,1))) * dtime / 1000000._wp
+
+      hlp5(:,1) = po4_solute(:,1) + hlp1(:,1)*hlp2(:,1)
+      WHERE (po4_solute(:,1) < lmr_soluble_po4_min .AND. hlp5(:,1)<0.0_wp)
+        hlp1(:,1) = po4_solute(:,1)/(po4_solute(:,1)+po4_assoc_fast(:,1))
+      ENDWHERE
+
+      fast_adsorption_po4(:,1) = hlp2(:,1) + slow_sorption_po4(:,1) * dtime / 1000000._wp - hlp1(:,1) * hlp2(:,1)
+      fast_adsorption_po4(:,1) = fast_adsorption_po4(:,1) / dtime * 1000000._wp 
+
+    !> 2.0 limit to possible assoc_slow, 1d model
+    !!
+    ELSEIF (sb_model_scheme=="simple_1d") THEN
+      hlp1(:,:) = k_desorpt_po4_act(:,:) * po4_assoc_slow(:,:) * dtime
+      hlp2(:,:) = k_adsorpt_po4_act(:,:) * po4_assoc_fast(:,:) * dtime
+      hlp3(:,:) = po4_assoc_slow(:,:) + hlp2(:,:) - hlp1(:,:) + (transport_po4_assoc_slow(:,:) - occlusion_po4(:,:)) * dtime / 1000000._wp
+      WHERE (hlp3(:,:) < eps8)
+        hlp3(:,:) = po4_assoc_slow(:,:) + transport_po4_assoc_slow(:,:) * dtime / 1000000._wp + hlp2(:,:)
+        hlp4(:,:) = hlp1(:,:) + occlusion_po4(:,:) * dtime / 1000000._wp
+        hlp1(:,:) = hlp1(:,:) * hlp3(:,:) / hlp4(:,:)
+        occlusion_po4(:,:) = occlusion_po4(:,:) * hlp3(:,:) / hlp4(:,:)
+        slow_sorption_po4(:,:) = (hlp2(:,:) - hlp1(:,:)) / dtime * 1000000._wp
+      ENDWHERE
+    !> 2.1 Langmuir equilibrium between soluble P and labile P, 1d model
+    !!
+      hlp1(:,:) = (po4_solute(:,:) + km_adsorpt_po4_act(:,:))**2.0_wp / &
+                  ((po4_solute(:,:) + km_adsorpt_po4_act(:,:))**2.0_wp + qmax_po4_mineral_act(:,:) * km_adsorpt_po4_act(:,:))
+      hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
+            (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_sorption_po4(:,:)) + transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
+      hlp5(:,:) = po4_solute(:,:) + hlp1(:,:)*hlp2(:,:)
+      WHERE (po4_solute(:,:) < lmr_soluble_po4_min .AND. hlp5(:,:)<0.0_wp)
+        hlp1(:,:) = po4_solute(:,:)/(po4_solute(:,:)+po4_assoc_fast(:,:))
+      ENDWHERE
+
+      fast_adsorption_po4(:,:) = hlp2(:,:) + (slow_sorption_po4(:,:) - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp - hlp1(:,:) * hlp2(:,:)
+      fast_adsorption_po4(:,:) = fast_adsorption_po4(:,:) / dtime * 1000000._wp 
+    ENDIF
+
+    !> 3.0 update pools, both 1d and 0d
+    !!
+    po4_solute(:,:) = po4_solute(:,:) + hlp1(:,:)*hlp2(:,:)
+    po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (1 - hlp1(:,:))*hlp2(:,:)
+
+
+  END SUBROUTINE calc_pinorg_dynamics
 
 END MODULE mo_sb_update_pools

@@ -373,10 +373,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_particle_transport_wrapper(options, particle_fluxrate, soil_depth_sl, &
                                           sb_pool, nh4_solute, nh4_assoc, no3_solute, po4_solute, po4_assoc_fast, & 
-                                          po4_assoc_slow, po4_occluded, nh4_n15_solute, nh4_n15_assoc, no3_n15_solute, & 
+                                          po4_assoc_slow, po4_occluded, po4_primary, nh4_n15_solute, nh4_n15_assoc, no3_n15_solute, & 
                                           sb_transport, transport_nh4_solute, transport_nh4_assoc, transport_no3_solute, & 
                                           transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, & 
-                                          transport_po4_occluded, transport_nh4_n15_solute, &
+                                          transport_po4_occluded, transport_po4_primary, transport_nh4_n15_solute, &
                                           transport_nh4_n15_assoc, transport_no3_n15_solute)
                                           
     dsl4slm_Use_memory_a_sb
@@ -395,6 +395,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_occluded               !< occluded PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_primary                !< occluded PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_n15_solute             !< N15H4 pool in soil solution [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_n15_assoc              !< minerally associated N15H4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: no3_n15_solute             !< N15O3 pool in soil solution [mol/m3]
@@ -406,6 +407,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_assoc_fast   !< rate of associated PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_assoc_slow   !< rate of associated PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_occluded     !< rate of associated PO4 transport [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_primary      !< rate of associated PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_n15_solute   !< rate of solute N15H4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_no3_n15_solute   !< rate of solute N15O3 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_n15_assoc    !< rate of associated N15H4 transport [mol/m3/timestep]
@@ -578,6 +580,7 @@ CONTAINS
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_assoc_fast,transport_po4_assoc_fast) 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_assoc_slow,transport_po4_assoc_slow) 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_occluded,transport_po4_occluded) 
+    CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,po4_primary,transport_po4_primary) 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,nh4_n15_solute,transport_nh4_n15_solute) 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,nh4_n15_assoc,transport_nh4_n15_assoc) 
     CALL calc_particle_transport(options,particle_fluxrate,soil_depth_sl,no3_n15_solute,transport_no3_n15_solute) 

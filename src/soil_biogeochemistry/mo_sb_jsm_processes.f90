@@ -391,14 +391,17 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_flux_po4(microbial_carbon, dom_carbon, dom_phosphorus, &
                                             rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &
+                                            rtm_sorption, rmm_sorption, rtm_desorption, rmm_desorption, &
                                             polymeric_litter_po4, dom_assoc_po4, &
                                             residue_po4, residue_assoc_po4, &
                                             loss_polymeric_litter_po4, loss_dom_assoc_po4, &
-                                            loss_residue_po4, loss_residue_assoc_po4, assoc_slow, &
+                                            loss_residue_po4, loss_residue_assoc_po4, & 
+                                            solute, assoc_fast, assoc_slow, po4_primary, &
                                             biochem_min_po4, gross_mineralisation_po4, weathering_po4, occlusion_po4, slow_sorption_po4)
 
 
-    USE mo_sb_constants
+    USE mo_sb_constants,        ONLY: vmax_biochem_po4, km_mic_biochem_po4, km_mic_uptake, vmax_mic_uptake, microbial_pue, &
+                                      k_weath_mineral, k_occlude_po4, k_desorpt_po4, k_adsorpt_po4, km_dip_biochem_po4
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -409,11 +412,18 @@ CONTAINS
     REAL(wp), INTENT(in)            :: rmm_mic_uptake            !< moisture rate modifier for microbial (and plant) uptake
     REAL(wp), INTENT(in)            :: rtm_hsc                   !< temperature rate modifier for half_saturation constants
     REAL(wp), INTENT(in)            :: rmm_hsc                   !< moisture rate modifier for half_saturation constants
+    REAL(wp), INTENT(in)            :: rtm_sorption              !< temperature rate modifier for sorption
+    REAL(wp), INTENT(in)            :: rmm_sorption              !< moisture rate modifier for sorption
+    REAL(wp), INTENT(in)            :: rtm_desorption            !< temperature rate modifier for desorption
+    REAL(wp), INTENT(in)            :: rmm_desorption            !< moisture rate modifier for desorption
     REAL(wp), INTENT(in)            :: polymeric_litter_po4      !< PO4 in the polymeric litter pool [mol/m3]
     REAL(wp), INTENT(in)            :: dom_assoc_po4             !< PO4 in the mineral associated dom pool [mol/m3]
     REAL(wp), INTENT(in)            :: residue_po4               !< PO4 in the microbial necromass pool [mol/m3]
     REAL(wp), INTENT(in)            :: residue_assoc_po4         !< PO4 in the mineral associated microbial necromass pool [mol/m3]
+    REAL(wp), INTENT(in)            :: solute                    !< soluble po4 pool [mol/m3]
     REAL(wp), INTENT(in)            :: assoc_slow                !< slow minerally associated PO4 pool [mol/m3]
+    REAL(wp), INTENT(in)            :: assoc_fast                !< fast minerally associated PO4 pool [mol/m3]
+    REAL(wp), INTENT(in)            :: po4_primary               !< primary PO4 pool [mol/m3]
     REAL(wp), INTENT(inout)         :: loss_polymeric_litter_po4 !< loss of PO4 in the polymeric litter pool [mol/m3]
     REAL(wp), INTENT(inout)         :: loss_dom_assoc_po4        !< loss of PO4 in the mineral associated dom pool [mol/m3]
     REAL(wp), INTENT(inout)         :: loss_residue_po4          !< loss of PO4 in the microbial necromass pool [mol/m3]
@@ -422,7 +432,7 @@ CONTAINS
     REAL(wp), INTENT(out)           :: gross_mineralisation_po4  !< phosphorus gross(biological) mineralization rate, [µmol P /m3 /s]
     REAL(wp), INTENT(out)           :: weathering_po4            !< phosphorus weathering rate [µmol P / m3 / s]
     REAL(wp), INTENT(out)           :: occlusion_po4             !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P / m3 / s]
-    REAL(wp), INTENT(out)           :: slow_sorption_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
+    REAL(wp), INTENT(out)           :: slow_sorption_po4         !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
     ! 0.2 Local
     REAL(wp)                        :: hlp1, hlp2, uptake_c, f_uptake, uptake_p
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_flux_po4'
@@ -432,7 +442,9 @@ CONTAINS
     !> 1.0 Calculates the biochemical P mineralization, and the loss of the contributing pools.
     !! P is assumed to clevage out from poly litter, dom associated, residue and residue associated 
     hlp1 = (polymeric_litter_po4 + dom_assoc_po4 + residue_po4 + residue_assoc_po4)
-    biochem_min_po4 = rtm_mic_uptake * rmm_mic_uptake * vmax_biochem_po4 * hlp1 * microbial_carbon / (km_mic_biochem_po4 + microbial_carbon)
+    hlp2 = rtm_hsc * rmm_hsc * km_dip_biochem_po4 / (rtm_hsc * rmm_hsc * km_dip_biochem_po4 + solute)
+    biochem_min_po4 = rtm_mic_uptake * rmm_mic_uptake * vmax_biochem_po4 * hlp1 * hlp2 * &
+                      microbial_carbon / (rtm_hsc * rmm_hsc * km_mic_biochem_po4 + microbial_carbon)
     IF (hlp1 > eps8) THEN
         hlp2 = polymeric_litter_po4 / hlp1
         loss_polymeric_litter_po4 = biochem_min_po4 * hlp2 * dtime
@@ -464,9 +476,12 @@ CONTAINS
 
     !> 3.0 Pi fluxes between different mineral P pools
     !! weathering, occlusion and slow exchange between sorbed and labile P pools
-    weathering_po4 = rtm_hsc * rmm_hsc * k_weath_mineral * 1.e6_wp
+    weathering_po4 = rtm_hsc / rmm_hsc * k_weath_mineral * po4_primary * 1.e6_wp
     occlusion_po4 = assoc_slow * k_occlude_po4 * 1.e6_wp
-    slow_sorption_po4 = k_desorpt_po4 * (eq_sorp_mineral_po4 - assoc_slow) * 1.e6_wp
+
+    hlp1 = rtm_desorption * rmm_desorption * k_desorpt_po4 * assoc_slow 
+    hlp2 = rtm_sorption * rmm_sorption * k_adsorpt_po4 * assoc_fast     
+    slow_sorption_po4 = (hlp2 - hlp1) * 1.e6_wp
 
   END SUBROUTINE calc_flux_po4
 
@@ -485,7 +500,8 @@ CONTAINS
                                              rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &
                                              qmax_po4, assoc_fast, microbial_uptake, plant_uptake, flag_sb_ECA_upt_po4)
 
-    USE mo_sb_constants
+    USE mo_sb_constants,    ONLY: f_mic_carrier_po4, km_mic_uptake_po4, km_plant_uptake_po4, f_plant_carrier_po4, &
+                                  km_adsorpt_po4, k_mic_uptake_po4, k_plant_uptake_po4, vmax_mic_uptake_po4, vmax_plant_uptake_po4
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -499,7 +515,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: qmax_po4                  !< sorption capacity of po4 to mineral soil [mol P / m3]
     REAL(wp), INTENT(in)    :: assoc_fast                !< fast minerally associated PO4 pool [mol/m3]
     LOGICAL,  INTENT(in)    :: flag_sb_ECA_upt_po4       !< uptake option for P, TRUE: ECA; FALSE: non-ECA
-    REAL(wp), INTENT(out)   :: microbial_uptake                !< microbial uptake flux (µmol / m3 / s)
+    REAL(wp), INTENT(out)   :: microbial_uptake          !< microbial uptake flux (µmol / m3 / s)
     REAL(wp), INTENT(out)   :: plant_uptake              !< plant uptake flux (µmol / m3 / s)
 
 
@@ -558,9 +574,11 @@ CONTAINS
   !!
   !! Output: adsorption rate
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_adsorption_po4(options, solute, assoc_fast, assoc_slow, occluded, qmax_po4, &
-                                        weathering_po4, occlusion_po4, slow_sorption_po4, percolation_sl, bulk_dens_corr_sl, &
-                                        gross_mineralisation_po4, biochem_min_po4, microbial_carbon, fine_root_carbon, &
+SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition_sl, bulk_dens_corr_sl, &
+                                        solute, assoc_fast, assoc_slow, &
+                                        weathering_po4, occlusion_po4, slow_sorption_po4, &
+                                        transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, &
+                                        gross_mineralisation_po4, biochem_min_po4, microbial_carbon, &
                                         microbial_uptake, plant_uptake, fast_adsorption_po4, &
                                         sb_adsorp_scheme, flag_sb_CLE_po4, flag_sb_LK_po4)
 
@@ -568,45 +586,41 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_jsb_task_options), INTENT(in)                             :: options           !< model options
-    CHARACTER(len=*), INTENT(in)                                     :: sb_adsorp_scheme  !< eca_full; 2: eca_part (only uptake, not for adsorption); 3: eca_none
-    LOGICAL,          INTENT(in)                                     :: flag_sb_CLE_po4   !< T: Constant Langmuir Equilibrium; F: non-Equilibrium
-    LOGICAL,          INTENT(in)                                     :: flag_sb_LK_po4    !< T: Langmuir kinetics for adsorption; F: adsorption calculated based on other fluxes
+    TYPE(t_jsb_task_options)                        , INTENT(in)     :: options           !< model options
+    CHARACTER(len=*)                                , INTENT(in)     :: sb_adsorp_scheme  !< eca_full; 2: eca_part (only uptake, not for adsorption); 3: eca_none
+    LOGICAL                                         , INTENT(in)     :: flag_sb_CLE_po4   !< T: Constant Langmuir Equilibrium; F: non-Equilibrium
+    LOGICAL                                         , INTENT(in)     :: flag_sb_LK_po4    !< T: Langmuir kinetics for adsorption; F: adsorption calculated based on other fluxes
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: fine_root_carbon  !< fine_root density (mol / m3)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: solute            !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: assoc_fast        !< fast minerally associated PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: assoc_slow        !< slow minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: occluded          !< occluded PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: qmax_po4          !< sorption capacity of po4 to mineral soil [mol P / m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: percolation_sl    !< fraction of pool transported up or down per second
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: bulk_dens_corr_sl !< bulk density of the mineral soil [kg / m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: microbial_carbon  !< microbial carbon density (mol / m3)
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: fine_root_carbon  !< fine_root density (mol / m3)
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: gross_mineralisation_po4  !< phosphorus biochemical mineralization rate, [µmol P /m3 /s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: biochem_min_po4   !< phosphorus biochemical mineralization rate, [µmol P /m3 /s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: p_deposition_sl   !< p deposition [µmol P / m3 / s]    
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: weathering_po4    !< phosphorus weathering rate [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: occlusion_po4     !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: slow_sorption_po4 !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)    :: fast_adsorption_po4 !< phosphorus adsorption rate, solute --> assoc_fast [µmol P / m3 / s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: microbial_uptake    !< microbial uptake flux (µmol / m3 / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_solute      !< transport of soluble PO4 [µmol P / m3 / s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_fast  !< transport of fast_assoc_po4 [µmol P / m3 / s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_slow  !< transport of slow_assoc_po4 [µmol P / m3 / s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: bulk_dens_corr_sl !< bulk density of the mineral soil [kg / m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: microbial_carbon  !< microbial carbon density (mol / m3)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: gross_mineralisation_po4  !< phosphorus gross mineralization rate, [µmol P /m3 /s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: biochem_min_po4   !< phosphorus biochemical mineralization rate, [µmol P /m3 /s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)    :: fast_adsorption_po4       !< phosphorus adsorption rate, solute --> assoc_fast [µmol P / m3 / s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: microbial_uptake        !< microbial uptake flux (µmol / m3 / s)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: plant_uptake      !< plant uptake flux (µmol / m3 / s)
 
 
 
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,hlp9,scal
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: perco_po4, desorp_f_po4, adsorpt_f_po4, &
-                                                                       lab_po4, avail_sorption_sites
-    INTEGER                                                         :: isoil
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,hlp9,scal, &
+                                                                       perco_po4, desorp_f_po4, adsorpt_f_po4, lab_po4, avail_sorption_sites
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_adsorption_po4'
     ! ---------------------------
 
-    !> 0.3 percolation flux and available sorption sites for po4
-    perco_po4(:,1) = - percolation_sl(:,1) * solute(:,1)/1000_wp
-    DO isoil = 2 , options%nsoil_sb
-        perco_po4(:,isoil) = percolation_sl(:,isoil-1) /1000_wp * solute(:,isoil-1) - percolation_sl(:,isoil) / &
-                              1000_wp * solute(:,isoil)
-    ENDDO
+    !> 0.3 percolation flux (including deposition) and available sorption sites for po4
+    perco_po4(:,:) = p_deposition_sl(:,:) + transport_po4_solute(:,:)
     avail_sorption_sites = qmax_po4 - assoc_fast
 
 
@@ -632,7 +646,7 @@ CONTAINS
             adsorpt_f_po4 = hlp3 * solute / hlp2
             desorp_f_po4 = assoc_fast * k_desorp_f_po4
 
-            hlp6 = ((weathering_po4 + biochem_min_po4 + gross_mineralisation_po4)/1.e6_wp + desorp_f_po4 + perco_po4(:,:)) * dtime
+            hlp6 = ((weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4) * dtime
 
             hlp9 = ((microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4) * dtime
 
@@ -658,6 +672,7 @@ CONTAINS
         ELSE
         !> 2.2 By default, full ECA only applies to Langmuir kinetics; option with non-Equilibrium
         !! Langmuir equilibrium is not constantly maintained
+            scal = 1.0_wp
             hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
             hlp5 = avail_sorption_sites
             hlp2 = hlp4 + solute + hlp5 + &
@@ -670,13 +685,15 @@ CONTAINS
         !> 2.2.1 limit to possible P sources
         !!
             hlp1 = (microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4)/1.e6_wp + desorp_f_po4 + perco_po4(:,:)
+            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4
 
-            WHERE((hlp1 + solute / dtime) > hlp6 .AND. solute > eps8)
-               microbial_uptake = microbial_uptake    / hlp1 * hlp6
-               plant_uptake     = plant_uptake  / hlp1 * hlp6
-               adsorpt_f_po4    = adsorpt_f_po4 / hlp1 * hlp6
+            WHERE(hlp1 > (hlp6 + solute / dtime) .AND. solute > eps8)
+               scal=(hlp6 + solute / dtime)/hlp1
+               microbial_uptake = microbial_uptake    / hlp1 * (hlp6 + solute / dtime)
+               plant_uptake     = plant_uptake  / hlp1 * (hlp6 + solute / dtime)
+               adsorpt_f_po4    = adsorpt_f_po4 / hlp1 * (hlp6 + solute / dtime)
             ENDWHERE
+            fast_adsorption_po4 = adsorpt_f_po4 - desorp_f_po4
         ENDIF
 
 
@@ -698,15 +715,15 @@ CONTAINS
         !! 
             hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
             hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 - &
-                    (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp + perco_po4(:,:)
+            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
+                    (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
             WHERE (hlp6 * dtime + solute + assoc_fast < eps8 .AND. solute > eps8)
                 hlp1 = microbial_uptake + plant_uptake
                 hlp3 = (hlp6 + hlp1) * dtime + solute + assoc_fast
                 microbial_uptake = microbial_uptake / hlp1 * hlp3
                 plant_uptake = plant_uptake / hlp1 * hlp3
-                hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 - &
-                        (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp + perco_po4(:,:)
+                hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
+                        (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
             ENDWHERE
             fast_adsorption_po4 = hlp2 * hlp6 + slow_sorption_po4
 
@@ -719,12 +736,12 @@ CONTAINS
 
         !> 3.3.1 limit to possible solution (P sources)
             hlp1 = (microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4)/1.e6_wp + desorp_f_po4 + perco_po4(:,:)
+            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4
 
             WHERE((hlp1 + solute / dtime) > hlp6 .AND. solute > eps8)
-               microbial_uptake = microbial_uptake    / hlp1 * hlp6
-               plant_uptake     = plant_uptake  / hlp1 * hlp6
-               adsorpt_f_po4    = adsorpt_f_po4 / hlp1 * hlp6
+               microbial_uptake = microbial_uptake / hlp1 * hlp6
+               plant_uptake     = plant_uptake     / hlp1 * hlp6
+               adsorpt_f_po4    = adsorpt_f_po4    / hlp1 * hlp6
             ENDWHERE
         ENDIF
 
@@ -744,15 +761,15 @@ CONTAINS
         !! 
             hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
             hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 - &
-                    (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp + perco_po4(:,:)
+            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
+                    (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
             WHERE (hlp6 * dtime + solute + assoc_fast < eps8 .AND. solute > eps8)
                 hlp1 = microbial_uptake + plant_uptake
                 hlp3 = (hlp6 + hlp1) * dtime + solute + assoc_fast
                 microbial_uptake = microbial_uptake / hlp1 * hlp3
                 plant_uptake = plant_uptake / hlp1 * hlp3
-                hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 - &
-                        (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp + perco_po4(:,:)
+                hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
+                        (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
             ENDWHERE
             fast_adsorption_po4 = hlp2 * hlp6 + slow_sorption_po4
 
@@ -766,12 +783,12 @@ CONTAINS
         !> 4.3.1 limit to possible P sources
         !!
             hlp1 = (microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4)/1.e6_wp + desorp_f_po4 + perco_po4(:,:)
+            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4
 
             WHERE((hlp1 + solute / dtime) > hlp6 .AND. solute > eps8)
-               microbial_uptake = microbial_uptake    / hlp1 * hlp6
-               plant_uptake     = plant_uptake  / hlp1 * hlp6
-               adsorpt_f_po4    = adsorpt_f_po4 / hlp1 * hlp6
+               microbial_uptake = microbial_uptake / hlp1 * hlp6
+               plant_uptake     = plant_uptake     / hlp1 * hlp6
+               adsorpt_f_po4    = adsorpt_f_po4    / hlp1 * hlp6
             ENDWHERE
         ENDIF
 
@@ -882,8 +899,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_microbial_growth(options,pool_dom,pool_microbial, & 
                                    rtm_mic_uptake,rmm_mic_uptake,rtm_hsc,rmm_hsc, &
-                                   microbial_uptake_nh4,microbial_uptake_nh4_n15, &
-                                   microbial_uptake_no3,microbial_uptake_no3_n15,microbial_uptake_po4, &
+                                   microbial_uptake_nh4_sl,microbial_uptake_nh4_n15_sl, &
+                                   microbial_uptake_no3_sl,microbial_uptake_no3_n15_sl,microbial_uptake_po4_sl, &
                                    loss_dom,formation_microbial, &
                                    het_respiration,het_respiration_c13,het_respiration_c14, &
                                    net_mineralisation_nh4,net_mineralisation_nh4_n15, &
@@ -904,11 +921,11 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_mic_uptake      !< moisture rate modifier [-]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_hsc             !< temperature rate modifier [-]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_hsc             !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_nh4      !< microbial uptake rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_nh4_n15  !< microbial uptake rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_no3      !< microbial uptake rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_no3_n15  !< microbial uptake rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_po4      !< microbial uptake rate [µmol P/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_no3_n15_sl  !< microbial uptake rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_uptake_po4_sl      !< microbial uptake rate [µmol P/m3/s]
     TYPE(t_sb_element_a),                             INTENT(inout) :: loss_dom            !< microbial death [mol/m3/timestep]
     TYPE(t_sb_element_a),                             INTENT(inout) :: formation_microbial !< DOM formation from microbial death [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration     !< respiration rate [µmol C/m3/s]
@@ -959,8 +976,10 @@ CONTAINS
     !> 1.1 microbial growth rates in µmol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
     !! 
     growth_c(:,:) = microbial_cue * uptake_c(:,:) 
-    growth_n(:,:) = (microbial_nue * uptake_n(:,:) + microbial_uptake_nh4(:,:) + microbial_uptake_no3(:,:)) * microbial_cn
-    growth_p(:,:) = (microbial_pue * uptake_p(:,:) + microbial_uptake_po4(:,:)) * microbial_np * microbial_cn
+    growth_n(:,:) = (microbial_nue * uptake_n(:,:) + &
+                     microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn
+    growth_p(:,:) = (microbial_pue * uptake_p(:,:) + &
+                      microbial_uptake_po4_sl(:,:)) * microbial_np * microbial_cn
     WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
        ! carbon uptake is limiting
        growth(:,:) = growth_c(:,:)
@@ -988,18 +1007,17 @@ CONTAINS
     WHERE(growth(:,:) < growth_n(:,:)) 
        ! inorganic N immobilisation flux in agreement with C growth
        hlp1(:,:) = MAX(growth / microbial_cn - microbial_nue * uptake_n(:,:),0.0_wp)
-       WHERE(microbial_uptake_nh4(:,:) + microbial_uptake_no3(:,:) > eps8)
-          scal(:,:) = hlp1(:,:) / (microbial_uptake_nh4(:,:) + microbial_uptake_no3(:,:)) 
+       WHERE(microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:) > eps8)
+          scal(:,:) = hlp1(:,:) / (microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) 
        ELSEWHERE
           scal(:,:) = 0.0_wp
        ENDWHERE
-       microbial_uptake_nh4(:,:)     = microbial_uptake_nh4(:,:)     * scal(:,:) 
-       microbial_uptake_nh4_n15(:,:) = microbial_uptake_nh4_n15(:,:) * scal(:,:)
-       microbial_uptake_no3(:,:)     = microbial_uptake_no3(:,:)     * scal(:,:) 
-       microbial_uptake_no3_n15(:,:) = microbial_uptake_no3_n15(:,:) * scal(:,:)
+       microbial_uptake_nh4_sl(:,:)     = microbial_uptake_nh4_sl(:,:)     * scal(:,:) 
+       microbial_uptake_nh4_n15_sl(:,:) = microbial_uptake_nh4_n15_sl(:,:) * scal(:,:)
+       microbial_uptake_no3_sl(:,:)     = microbial_uptake_no3_sl(:,:)     * scal(:,:) 
+       microbial_uptake_no3_n15_sl(:,:) = microbial_uptake_no3_n15_sl(:,:) * scal(:,:)
        WHERE(uptake_n(:,:) > eps8)
-          microbial_nue_eff(:,:) = ( growth / microbial_cn - microbial_uptake_nh4(:,:) - microbial_uptake_no3(:,:) ) / &
-                                    uptake_n(:,:)
+          microbial_nue_eff(:,:) = ( growth / microbial_cn - microbial_uptake_nh4_sl(:,:) - microbial_uptake_no3_sl(:,:) ) / uptake_n(:,:)
        ENDWHERE
     ENDWHERE
     gross_mineralisation_nh4(:,:)     = (1._wp - microbial_nue_eff(:,:)) * uptake_n(:,:) 
@@ -1012,10 +1030,10 @@ CONTAINS
     microbial_pue_eff(:,:) = microbial_pue
     WHERE(growth(:,:) < growth_p(:,:))  
        ! inorganic P immobilisation flux, in agreement with C and N uptake
-       microbial_uptake_po4(:,:) = MAX(growth / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0)
+       microbial_uptake_po4_sl(:,:) = MAX(growth / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0)
        ! In the case that the source C:N:P is too tight for microbes, cause gross mineralisation
        WHERE(uptake_p(:,:) > eps8)
-          microbial_pue_eff(:,:) = ( growth / microbial_cn / microbial_np - microbial_uptake_po4(:,:) ) / uptake_p(:,:)
+          microbial_pue_eff(:,:) = ( growth / microbial_cn / microbial_np - microbial_uptake_po4_sl(:,:) ) / uptake_p(:,:)
        ENDWHERE
     ENDWHERE
     gross_mineralisation_po4(:,:) = (1._wp - microbial_pue_eff(:,:)) * uptake_p(:,:)
@@ -1030,21 +1048,21 @@ CONTAINS
                                         (1._wp - microbial_cue_eff(:,:)) * uptake_dom(:,:) 
 
     !! nitrogen
-    net_mineralisation_nh4(:,:)       = gross_mineralisation_nh4(:,:) - microbial_uptake_nh4(:,:)
-    net_mineralisation_no3(:,:)       = - microbial_uptake_no3(:,:)
+    net_mineralisation_nh4(:,:)       = gross_mineralisation_nh4(:,:) - microbial_uptake_nh4_sl(:,:)
+    net_mineralisation_no3(:,:)       = - microbial_uptake_no3_sl(:,:)
     uptake_dom(:,:)                   = f_uptake(:,:) * pool_dom%nitrogen(:,:)
     loss_dom%nitrogen(:,:)            = loss_dom%nitrogen(:,:) + uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%nitrogen(:,:) = formation_microbial%nitrogen(:,:) + & 
                                           (microbial_nue_eff(:,:) * uptake_dom(:,:) + & 
-                                          microbial_uptake_nh4(:,:) + microbial_uptake_no3(:,:)) * dtime / 1000000.0_wp 
+                                          microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * dtime / 1000000.0_wp 
    
     !! phosphorus
-    net_mineralisation_po4(:,:)         = gross_mineralisation_po4(:,:) - microbial_uptake_po4(:,:)
+    net_mineralisation_po4(:,:)         = gross_mineralisation_po4(:,:) - microbial_uptake_po4_sl(:,:)
     uptake_dom(:,:)                     = f_uptake(:,:) * pool_dom%phosphorus(:,:)
     loss_dom%phosphorus(:,:)            = loss_dom%phosphorus(:,:) + uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%phosphorus(:,:) = formation_microbial%phosphorus(:,:) + & 
                                             (microbial_pue_eff(:,:) * uptake_dom(:,:) + & 
-                                            microbial_uptake_po4(:,:)) * dtime / 1000000.0_wp 
+                                            microbial_uptake_po4_sl(:,:)) * dtime / 1000000.0_wp 
    
     !! carbon13
     uptake_dom(:,:)                   = f_uptake(:,:) * pool_dom%carbon13(:,:)
@@ -1061,13 +1079,13 @@ CONTAINS
     het_respiration_c14(:,:)          = het_respiration_c14(:,:) + (1._wp - microbial_cue_eff(:,:) ) * uptake_dom(:,:)
 
     !! nitrogen15
-    net_mineralisation_nh4_n15(:,:)     = gross_mineralisation_nh4_n15(:,:) - microbial_uptake_nh4_n15(:,:)
-    net_mineralisation_no3_n15(:,:)     = - microbial_uptake_no3_n15(:,:)
+    net_mineralisation_nh4_n15(:,:)     = gross_mineralisation_nh4_n15(:,:) - microbial_uptake_nh4_n15_sl(:,:)
+    net_mineralisation_no3_n15(:,:)     = - microbial_uptake_no3_n15_sl(:,:)
     uptake_dom(:,:)                     = f_uptake(:,:) * pool_dom%nitrogen15(:,:)
     loss_dom%nitrogen15(:,:)            = loss_dom%nitrogen15(:,:) + uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%nitrogen15(:,:) = formation_microbial%nitrogen15(:,:) + & 
                                             (microbial_nue * uptake_dom(:,:) + & 
-                                            microbial_uptake_nh4_n15(:,:) + microbial_uptake_no3_n15(:,:)) * dtime / 1000000.0_wp
+                                                            microbial_uptake_nh4_n15_sl(:,:) + microbial_uptake_no3_n15_sl(:,:)) * dtime / 1000000.0_wp
 
   END SUBROUTINE calc_microbial_growth
 

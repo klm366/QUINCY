@@ -60,7 +60,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
-
+    dsl4jsb_Use_memory(A2L_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -71,7 +71,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: nsoil_sb
+    INTEGER                               :: nsoil_sb, isoil
     INTEGER                               :: iblk, ics, ice, nc
 !!
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon
@@ -83,12 +83,15 @@ CONTAINS
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(VEG_) 
+    dsl4jsb_Def_memory(A2L_)                             ! TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
     ! SOIL_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl 
+    ! A2L
+    dsl4jsb_Real2D_onChunk :: p_deposition
     ! SB_
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
@@ -131,6 +134,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk :: po4_occluded
+    dsl4jsb_Real3D_onChunk :: po4_primary
     dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
@@ -141,6 +145,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
     dsl4jsb_Real3D_onChunk :: transport_po4_occluded
+    dsl4jsb_Real3D_onChunk :: transport_po4_primary
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
@@ -169,7 +174,10 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(A2L_)
     ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
@@ -215,6 +223,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded)                ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)                 ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
@@ -225,6 +234,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_primary)       ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
@@ -254,11 +264,11 @@ CONTAINS
 
 !BLARPP
 !percolation_sl(:,options%nsoil_sb) = 0.0_wp
-rmm_mic_uptake = 1.0_wp
-rmm_depolymerisation = 1.0_wp
-rmm_hsc = 1.0_wp
-rmm_sorption = 1.0_wp
-rmm_desorption = 1.0_wp
+! rmm_mic_uptake = 1.0_wp
+! rmm_depolymerisation = 1.0_wp
+! rmm_hsc = 1.0_wp
+! rmm_sorption = 1.0_wp
+! rmm_desorption = 1.0_wp
 
     fine_root_carbon(:,:) = root_fraction_sl(:,:) * 600._wp 
     !fine_root_carbon(:,:) = root_fraction_sl(:,:) * veg_pool%fine_root%carbon(:)
@@ -291,12 +301,13 @@ rmm_desorption = 1.0_wp
     !!
     CALL calc_flux_po4(sb_pool%microbial%carbon(:,:), sb_pool%dom%carbon(:,:),sb_pool%dom%phosphorus(:,:),&
                             rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                            rtm_sorption(:,:), rmm_sorption(:,:), rtm_desorption(:,:), rmm_desorption(:,:), &
                             sb_pool%polymeric_litter%phosphorus(:,:), sb_pool%dom_assoc%phosphorus(:,:), &
                             sb_pool%residue%phosphorus(:,:), sb_pool%residue_assoc%phosphorus(:,:), &
                             sb_loss%polymeric_litter%phosphorus(:,:), sb_loss%dom_assoc%phosphorus(:,:), &
-                            sb_loss%residue%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), po4_assoc_slow(:,:), &
-                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), &
-                            weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
+                            sb_loss%residue%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), & 
+                            po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_primary(:,:), &
+                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
 
     !! Microbial and plant P uptake
     !!
@@ -307,15 +318,15 @@ rmm_desorption = 1.0_wp
 
     !! P adsorption
     !!
-    CALL calc_adsorption_po4(options, po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), &
-                               qmax_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
-                               percolation_sl(:,:), bulk_dens_corr_sl(:,:), &
-                               gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), &
-                               sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
-                               microbial_uptake_po4_sl(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
-                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
-                               dsl4jsb_Config(SB_)%flag_sb_CLE_po4, &
-                               dsl4jsb_Config(SB_)%flag_sb_LK_po4)
+!    CALL calc_adsorption_po4(options, po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), &
+!                               qmax_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
+!                               percolation_sl(:,:), bulk_dens_corr_sl(:,:), &
+!                               gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), &
+!                               sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
+!                               microbial_uptake_po4_sl(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
+!                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+!                               dsl4jsb_Config(SB_)%flag_sb_CLE_po4, &
+!                               dsl4jsb_Config(SB_)%flag_sb_LK_po4)
 
     !> 2.0 Litter-related fluxes  
     !!
@@ -413,14 +424,12 @@ rmm_desorption = 1.0_wp
                                     soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), & 
                                     sb_formation, sb_loss) 
     CALL calc_particle_transport_wrapper(options, particle_fluxrate(:,:), soil_depth_sl(:,:), &
-                                    sb_pool, &
-                                    nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
-                                    po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), & 
+                                    sb_pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
+                                    po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), po4_primary(:,:), & 
                                     nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
-                                    sb_transport, &
-                                    transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
+                                    sb_transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
                                     transport_no3_solute(:,:), transport_po4_solute(:,:), & 
-                                    transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), transport_po4_occluded(:,:), & 
+                                    transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), transport_po4_occluded(:,:), transport_po4_primary(:,:), & 
                                     transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), transport_no3_n15_solute(:,:))
 
     !> 6.0 convert inorganic transport fluxes to µmol m3 s-1
@@ -432,6 +441,7 @@ rmm_desorption = 1.0_wp
     transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) * 1.e6_wp / dtime
     transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) * 1.e6_wp / dtime
     transport_po4_occluded(:,:)   = transport_po4_occluded(:,:) * 1.e6_wp / dtime
+    transport_po4_primary(:,:)    = transport_po4_primary(:,:) * 1.e6_wp / dtime
     transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) * 1.e6_wp / dtime
     transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) * 1.e6_wp / dtime
     transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:)  * 1.e6_wp / dtime

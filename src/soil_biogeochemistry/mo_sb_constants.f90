@@ -50,7 +50,8 @@ MODULE mo_sb_constants
       k_desorpt_det, &
       k_adsorpt_nh4, &
       k_desorpt_nh4, &
-      k_desorpt_po4, &            ! < Slow (de)sorption rate (between sorbed Pi and labile Pi) of PO4, [mol kg-1 soil s-1]
+      k_desorpt_po4, &            ! < Slow desorption rate (between sorbed Pi and labile Pi) of PO4, [mol kg-1 soil s-1], simple model
+      k_adsorpt_po4, &            ! < Slow adsorption rate (between sorbed Pi and labile Pi) of PO4, [mol kg-1 soil s-1], simple model
       k_adsorpt_f_po4, &          ! < fast adsorption rate (from soluble Pi to labile Pi) of PO4, [[kg soil mol-1 P s-1]]
       k_desorp_f_po4, &           ! < fast desorption rate (from labile Pi to soluble Pi) of PO4, [s-1]
       k_adsorpt_s_po4, &          ! < slow adsorption rate (from soluble Pi to sorbed Pi) of PO4, [[kg soil mol-1 P s-1]]
@@ -177,13 +178,15 @@ MODULE mo_sb_constants
       eta_ammonification, &      !< fractionation of N15 due to microbial ammonification (per mill)
       eta_volatilisation_nh3     !< fractionation of N15 due to NH3 volatilisation (per mill)
 
-  ! soil Pi fluxes
-  REAL(wp), SAVE :: &
-      k_weath_mineral, &         !< Weathering coefficient of mineral soil [mol P kg-1 mineral soil s-1]
+   ! soil Pi fluxes
+   REAL(wp), SAVE :: &
+      k_weath_mineral, &         !< Weathering coefficient of mineral soil [s-1]
       eq_sorp_mineral_po4, &     !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
-      k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [mol P kg-1 mineral soil s-1]
+      k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [s-1]
       vmax_biochem_po4, &        !< Maximum PO4 biochemical mineralization rate [s-1], MM kinetics (potentially also for ECA)
-      km_mic_biochem_po4         !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
+      km_mic_biochem_po4, &      !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
+      km_dip_biochem_po4, &      !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
+      lmr_soluble_po4_min        !< Minimum PO4 concentration for Langmuir isotherm so that partitioning is overtaken by po4_soluble/po4_assoc_fast
 
    ! only temporarily
    REAL(wp), SAVE :: & 
@@ -239,8 +242,9 @@ CONTAINS
     k_desorpt_det       = 2065.491_wp / one_year / one_day
     k_adsorpt_nh4       = 0.0_wp
     k_desorpt_nh4       = 0.0_wp
+    k_adsorpt_po4       = 0.001_wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014
+    k_desorpt_po4       = 0.00022_wp / 30.0_wp / one_day               ! [s-1], simple model, Yang et al. 2014
     k_adsorpt_f_po4     = 2000._wp*57.9_wp/3600._wp   ! [kg soil mol-1 P s-1], based on Van der Zee et al. 1989
-    k_desorpt_po4       = 0.0_wp                ! [mol kg-1 soil s-1], estimated from McGechan and Lewis 2002
     k_desorp_f_po4      = 0.14_wp / 3600._wp ! [s-1], Van der Zee et al. 1989
     k_desorp_s_po4      = 0.0_wp                ! [kg soil mol-1 P s-1], McGechan and Lewis 2002
     k_adsorpt_s_po4     = 0.0_wp               ! [s-1], McGechan and Lewis 2002
@@ -322,11 +326,15 @@ CONTAINS
     f_plant_carrier_po4   = 0.1_wp / 80._wp ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     qmax_po4_mineral      = 0.134_wp / molar_mass_P ! [mol P kg-1 soil], Olander and Vitousek 2005
     km_adsorpt_po4        = 0.075_wp / molar_mass_P ! [mol P kg-1 soil], Wang et al. 2010
-    k_weath_mineral       = 0.025_wp / molar_mass_P / one_year / one_day ! [mol P m-3 s-1], Wang et al. 2010
+
+
+    k_weath_mineral       = 0.001_wp / 30.0_wp / one_day ! [s-1], Yang et al. 2014
     eq_sorp_mineral_po4   = 80._wp / molar_mass_P ![mol P m-3] ! random guess based on init value of assoc_slow
     k_occlude_po4         = 1E-6_wp / 30._wp / one_day ! s-1, Yang et al. 2014
     vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day ![s-1], estimated from Bunemann et al. 2016, LUS site
     km_mic_biochem_po4    = 0.1_wp / molar_mass_C ![mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
+    km_dip_biochem_po4    = 0.001_wp  !estimated
+    lmr_soluble_po4_min   = 0.00001_wp  !estimated from plot
 
     ! Nitrification, Denitrification parameters
     lambda_anvf            = 1.3_wp         ! fitted from Zaehle et al. 2011, NatGeo 

@@ -109,6 +109,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
     dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
     dsl4jsb_Real3D_onChunk :: transport_po4_occluded
+    dsl4jsb_Real3D_onChunk :: transport_po4_primary
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
@@ -204,6 +205,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_primary)       ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2)                ! out
@@ -313,6 +315,7 @@ CONTAINS
     transport_po4_assoc_fast(:,:)     = zero 
     transport_po4_assoc_slow(:,:)     = zero 
     transport_po4_occluded(:,:)       = zero 
+    transport_po4_primary(:,:)        = zero 
     transport_nh4_n15_solute(:,:)     = zero 
     transport_nh4_n15_assoc(:,:)      = zero 
     transport_no3_n15_solute(:,:)     = zero 

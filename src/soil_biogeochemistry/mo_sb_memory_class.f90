@@ -31,9 +31,7 @@ MODULE mo_sb_memory_class
   PUBLIC :: sb_pool, sb_formation, sb_loss, sb_transport    ! *slmtemp
   PUBLIC :: sb_delta_pools, sb_mycorrhiza_export            ! *slmtemp
 
-
-
-  INTEGER, PARAMETER :: max_no_of_vars      = 140  !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 150   !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -1608,7 +1606,7 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'plant_uptake_po4_sl_sl', mem%plant_uptake_po4_sl, &
+      CALL jsb_add_var(mem, 'plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
@@ -1648,7 +1646,7 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'microbial_uptake_po4_sl_sl', mem%microbial_uptake_po4_sl, &
+      CALL jsb_add_var(mem, 'microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

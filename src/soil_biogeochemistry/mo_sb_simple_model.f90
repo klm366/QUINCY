@@ -57,9 +57,9 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4jsb_Use_memory(A2L_)    
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,       ONLY: sb_pool, sb_formation, sb_loss, sb_transport, sb_mycorrhiza_export
-
 
     IMPLICIT NONE
     ! ---------------------------
@@ -74,7 +74,6 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
                                              apparent_mic_cue     , &
                                              apparent_mic_cn      , &
-                                             biomineralisation_po4, &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
                                              rtm_decomposition_act, &
                                              rmm_decomposition_act, & 
@@ -91,6 +90,12 @@ CONTAINS
                                              rmm_nitrification_act, &
                                              rtm_gasdiffusion_act, &
                                              rmm_gasdiffusion_act, &
+                                             p_deposition_act, &
+                                             k_weath_mineral_act, &
+                                             k_adsorpt_po4_act, &
+                                             k_desorpt_po4_act, &
+                                             km_dip_biochem_po4_act, &
+                                             qmax_po4_mineral_act, &
                                              anaerobic_volume_fraction_act
     INTEGER                               :: nsoil_sb
     INTEGER                               :: iblk, ics, ice, nc
@@ -104,10 +109,14 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
+    dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
     ! VEG_
     dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
     dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
+    ! Declare pointers to variables in memory
+    ! A2L
+    dsl4jsb_Real2D_onChunk :: p_deposition
     ! SOIL_ 2D
     dsl4jsb_Real2D_onChunk :: drainage_fraction 
     ! SOIL_ 3D
@@ -128,10 +137,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rtm_nitrification
     dsl4jsb_Real3D_onChunk :: rtm_denitrification
     dsl4jsb_Real3D_onChunk :: rtm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: rtm_sorption
+    dsl4jsb_Real3D_onChunk :: rtm_desorption
     dsl4jsb_Real3D_onChunk :: rmm_decomposition 
     dsl4jsb_Real3D_onChunk :: rmm_hsc
     dsl4jsb_Real3D_onChunk :: rmm_nitrification
     dsl4jsb_Real3D_onChunk :: rmm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: rmm_sorption
+    dsl4jsb_Real3D_onChunk :: rmm_desorption
     dsl4jsb_Real3D_onChunk :: anaerobic_volume_fraction_sl 
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
@@ -159,9 +172,16 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: weathering_po4
+    dsl4jsb_Real3D_onChunk :: occlusion_po4
+    dsl4jsb_Real3D_onChunk :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
     dsl4jsb_Real3D_onChunk :: transport_po4_solute
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc_fast 
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc_slow 
+    dsl4jsb_Real3D_onChunk :: transport_po4_occluded
     dsl4jsb_Real3D_onChunk :: transport_noy
     dsl4jsb_Real3D_onChunk :: transport_n2o
     dsl4jsb_Real3D_onChunk :: transport_n2 
@@ -171,9 +191,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: nh4_solute 
     dsl4jsb_Real3D_onChunk :: no3_solute
     dsl4jsb_Real3D_onChunk :: po4_solute 
+    dsl4jsb_Real3D_onChunk :: po4_assoc_fast 
+    dsl4jsb_Real3D_onChunk :: po4_assoc_slow
+    dsl4jsb_Real3D_onChunk :: po4_occluded
+    dsl4jsb_Real3D_onChunk :: po4_primary
     dsl4jsb_Real3D_onChunk :: k_bioturb 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
+    dsl4jsb_Real3D_onChunk :: qmax_po4
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
@@ -227,7 +252,10 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(A2L_)
     ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_n_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)
     ! ---------------------------
@@ -253,10 +281,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_nitrification)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_denitrification)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_gasdiffusion)
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_decomposition)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_nitrification)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_gasdiffusion)
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)
     dsl4jsb_Get_var3D_onChunk(SB_,       anaerobic_volume_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
@@ -284,21 +316,33 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
     dsl4jsb_Get_var3D_onChunk(SB_,       n2o) 
     dsl4jsb_Get_var3D_onChunk(SB_,       n2) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2) 
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_occluded)                ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)                 ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15) 
@@ -366,6 +410,12 @@ CONTAINS
                                rtm_denitrification(:,:), &
                                rtm_gasdiffusion(:,:), &
                                rmm_gasdiffusion(:,:), &
+                               rtm_sorption(:,:), &
+                               rtm_desorption(:,:), &
+                               rmm_sorption(:,:), &
+                               rmm_desorption(:,:), &
+                               bulk_dens_corr_sl(:,:), &
+                               p_deposition(:), &
                                anaerobic_volume_fraction_sl(:,:), &
                                root_fraction_act_sl(:,:), &
                                km1_uptake_nh4_act(:,:), &
@@ -384,6 +434,11 @@ CONTAINS
                                rtm_denitrification_act(:,:), &
                                rtm_gasdiffusion_act(:,:), &
                                rmm_gasdiffusion_act(:,:), &
+                               p_deposition_act(:,:), &
+                               k_weath_mineral_act(:,:), &
+                               k_adsorpt_po4_act(:,:), &
+                               k_desorpt_po4_act(:,:), &
+                               km_dip_biochem_po4_act(:,:), &
                                anaerobic_volume_fraction_act(:,:) )
 
     !> 2.0 Calculate potential rates of uptake and losses
@@ -442,15 +497,8 @@ CONTAINS
                                            sb_pool, &
                                            sb_loss )
 
-    !> 2.5 Calculate the potential PO4 biomineralisation rate 
-    !!
-    CALL calc_potential_biomineralisation_rate(options, &                  
-                                               rtm_decomposition_act(:,:), &
-                                               rmm_decomposition_act(:,:), &
-                                               sb_pool%residue%phosphorus(:,:), & 
-                                               biomineralisation_po4(:,:) )
 
-    !> 2.6 Loss pathways for the dynamic loss calculation scheme 
+    !> 2.5 Loss pathways for the dynamic loss calculation scheme 
     !!
     IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')THEN
        CALL calc_potential_nitrification_denitrification_rate(options, &
@@ -510,6 +558,38 @@ CONTAINS
 
     ENDIF  ! IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')
 
+    !> 2.6 transport due to bioturbation
+    !!
+    IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=='simple_1d')THEN
+       k_bioturb(:,:) = calc_bioturbation_rate(options, bulk_dens_corr_sl(:,:))
+       CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
+                                                sb_pool%microbial, sb_pool%residue, & 
+                                                sb_transport%microbial, sb_transport%residue, &
+                                                po4_assoc_fast, po4_assoc_slow, po4_occluded, &
+                                                transport_po4_assoc_fast, transport_po4_assoc_slow, & 
+                                                transport_po4_occluded)
+    ENDIF
+
+    !> 2.7 Calculate the potential PO4 flux rate: biomineralisation, weathering, slow sorption, occlusion 
+    !!
+    CALL calc_potential_p_flux_rate(options, &                  
+                                    rtm_decomposition_act(:,:), &
+                                    rmm_decomposition_act(:,:), &
+                                    km_dip_biochem_po4_act(:,:), &
+                                    po4_solute(:,:), &
+                                    po4_assoc_fast(:,:), &
+                                    po4_assoc_slow(:,:), &
+                                    po4_occluded(:,:), &
+                                    po4_primary(:,:), &
+                                    k_weath_mineral_act(:,:), &
+                                    k_adsorpt_po4_act(:,:), &
+                                    k_desorpt_po4_act(:,:), &
+                                    sb_pool%residue%phosphorus(:,:), & 
+                                    weathering_po4(:,:), &
+                                    occlusion_po4(:,:), &
+                                    slow_sorption_po4(:,:), &
+                                    biochem_mineralisation_po4(:,:))
+
     !> 3.0 Actual fluxes of in and out of SOM 
     !!
  
@@ -520,9 +600,14 @@ CONTAINS
                                 nh4_solute(:,:), &
                                 no3_solute(:,:), &
                                 po4_solute(:,:), &
+                                po4_assoc_fast(:,:), &
                                 transport_nh4_solute(:,:), &
                                 transport_no3_solute(:,:), &
                                 transport_po4_solute(:,:), &
+                                transport_po4_assoc_fast(:,:), &
+                                weathering_po4(:,:), &
+                                p_deposition_act(:,:), &
+                                slow_sorption_po4(:,:), &
                                 apparent_mic_cn(:,:), &
                                 km2_uptake_nh4_act(:,:), &
                                 plant_uptake_nh4_sl(:,:), &
@@ -533,7 +618,7 @@ CONTAINS
                                 mycorrhiza_uptake_po4_sl(:,:), &
                                 nitrification_no3(:,:), &
                                 denitrification_n2(:,:), &
-                                biomineralisation_po4(:,:), &
+                                biochem_mineralisation_po4(:,:), &
                                 sb_loss, &
                                 microbial_uptake_nh4_sl(:,:), &
                                 microbial_uptake_po4_sl(:,:), &
@@ -613,14 +698,6 @@ CONTAINS
                                                    sb_formation )
     ENDIF
 
-    !> 3.4 transport due to bioturbation
-    !!
-    IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=='simple_1d')THEN
-       k_bioturb(:,:) = calc_bioturbation_rate(options, bulk_dens_corr_sl(:,:))
-       CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
-                                                sb_pool%microbial, sb_pool%residue, & 
-                                                sb_transport%microbial, sb_transport%residue)
-    ENDIF
 
     !> 4.0 Mycorrhiza dynamics 
     !! 
@@ -693,6 +770,9 @@ CONTAINS
     mycorrhiza_uptake_no3_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._wp
     mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) / dtime * 1000000._wp
     mycorrhiza_uptake_po4_sl(:,:) = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._wp 
+    microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) / dtime * 1000000._wp 
+    microbial_uptake_no3_sl(:,:) = microbial_uptake_no3_sl(:,:) / dtime * 1000000._wp 
+    microbial_uptake_po4_sl(:,:) = microbial_uptake_po4_sl(:,:) / dtime * 1000000._wp 
 
     volatilisation_nh4(:,:) = volatilisation_nh4(:,:) / dtime * 1000000._wp
     nitrification_no3(:,:) = nitrification_no3(:,:) / dtime * 1000000._wp 
@@ -705,6 +785,9 @@ CONTAINS
     transport_nh4_solute(:,:) = transport_nh4_solute(:,:) / dtime * 1000000._wp
     transport_no3_solute(:,:) = transport_no3_solute(:,:) / dtime * 1000000._wp
     transport_po4_solute(:,:) = transport_po4_solute(:,:) / dtime * 1000000._wp
+    transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) / dtime * 1000000._wp
+    transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) / dtime * 1000000._wp
+    transport_po4_occluded(:,:) = transport_po4_occluded(:,:) / dtime * 1000000._wp
     transport_noy(:,:) = transport_noy(:,:) / dtime * 1000000._wp
     transport_n2o(:,:) = transport_n2o(:,:) / dtime * 1000000._wp
     transport_n2(:,:) = transport_n2(:,:) / dtime * 1000000._wp
@@ -721,6 +804,8 @@ CONTAINS
     plant_uptake_no3_n15_sl(:,:) = plant_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp 
     mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp 
     mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
+    microbial_uptake_nh4_n15_sl(:,:) = microbial_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
+    microbial_uptake_no3_n15_sl(:,:) = microbial_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
 
     volatilisation_nh4_n15(:,:) = volatilisation_nh4_n15(:,:) / dtime * 1000000._wp
     nitrification_no3_n15(:,:) = nitrification_no3_n15(:,:) / dtime * 1000000._wp 
@@ -741,6 +826,11 @@ CONTAINS
     emission_noy_n15(:) = emission_noy_n15(:) / dtime * 1000000._wp
     emission_n2o_n15(:) = emission_n2o_n15(:) / dtime * 1000000._wp
     emission_n2_n15(:) = emission_n2_n15(:) / dtime * 1000000._wp
+
+    weathering_po4(:,:) = weathering_po4(:,:) / dtime * 1000000._wp
+    occlusion_po4(:,:) = occlusion_po4(:,:) / dtime * 1000000._wp
+    slow_sorption_po4(:,:) = slow_sorption_po4(:,:) / dtime * 1000000._wp
+    biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._wp
 
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
@@ -793,6 +883,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                     rtm_denitrification, &
                                     rtm_gasdiffusion, &
                                     rmm_gasdiffusion, &
+                                    rtm_sorption, &
+                                    rtm_desorption, &
+                                    rmm_sorption, &
+                                    rmm_desorption, &
+                                    bulk_dens_corr_sl, &
+                                    p_deposition, &
                                     anaerobic_volume_fraction_sl, &
                                     root_fraction_act_sl, &              ! out
                                     km1_uptake_nh4_act, &
@@ -811,16 +907,23 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                     rtm_denitrification_act, &
                                     rtm_gasdiffusion_act, &
                                     rmm_gasdiffusion_act, &
+                                    p_deposition_act, &
+                                    k_weath_mineral_act, &
+                                    k_adsorpt_po4_act, &
+                                    k_desorpt_po4_act, &
+                                    km_dip_biochem_po4_act, &
                                     anaerobic_volume_fraction_act )
 
     USE mo_sb_constants,            ONLY: km_denitrification_c, km_denitrification_no3, km1_up_nh4, km1_up_no3, & 
-                                          km1_up_po4, km2_up_nh4, km2_up_no3, km2_up_po4,microbial_cn_max,microbial_cn_min,f_mic_cn
+                                          km1_up_po4, km2_up_nh4, km2_up_no3, km2_up_po4,microbial_cn_max,microbial_cn_min, &
+                                          f_mic_cn, k_weath_mineral, k_desorpt_po4, k_adsorpt_po4, km_dip_biochem_po4
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                    INTENT(in)  :: options
     TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                       !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                            INTENT(in)  :: sb_model_scheme              !< from sb config
+    REAL(wp), DIMENSION(options%nc),             INTENT(in)  :: p_deposition                 !< p deposition, [µmol m-2 s-1]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3] 
@@ -835,6 +938,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 rtm_denitrification, &       !< temperature response scalar for denitrification
                                                                 rtm_gasdiffusion, &          !< temperature response scalar for gas diffusion
                                                                 rmm_gasdiffusion, &          !< moisture response scalar for gas diffusion
+                                                                rtm_sorption, &              !< temperature response scalar for po4 sorption
+                                                                rtm_desorption, &            !< temperature response scalar for po4 desorption
+                                                                rmm_sorption, &              !< moisture response scalar for po4 sorption
+                                                                rmm_desorption, &            !< moisture response scalar for po4 desorption
+                                                                bulk_dens_corr_sl, &         !< bulk density of the soil layer, [kg/m3]
                                                                 anaerobic_volume_fraction_sl !< anaerobic volume fraction
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: &
                                                                 root_fraction_act_sl, &      !< actual fraction of root mass in layer
@@ -854,9 +962,17 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 rtm_denitrification_act, &   !< actual temperature response scalar for denitrification
                                                                 rtm_gasdiffusion_act, &      !< actual temperature response scalar for gas diffusion
                                                                 rmm_gasdiffusion_act, &      !< actual moisture response scalar for gas diffusion
+                                                                p_deposition_act, &          !< actual p deposition, [mol m-3 timestep-1]
+                                                                k_weath_mineral_act, &       !< actual weathering rate for primary P [s-1]
+                                                                k_adsorpt_po4_act, &         !< actual adsorption rate for fast_assoc_po4 [s-1]
+                                                                k_desorpt_po4_act, &         !< actual desorption rate for slow_assoc_po4 [s-1]
+                                                                km_dip_biochem_po4_act, &    !< actual km for soluble P control on biochem_mineralisation_po4
                                                                 anaerobic_volume_fraction_act!< actual anaerobic volume fraction
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc) :: root_depth_avg       !< average rooting depth [m]
+    REAL(wp), DIMENSION(options%nc) :: root_depth_avg, &       !< average rooting depth [m]
+                                       rtm_hsc_act, rmm_hsc_act, & 
+                                       rtm_sorption_act, rmm_sorption_act, &
+                                       rtm_desorption_act, rmm_desorption_act
     INTEGER                         :: isoil                !< loop over options%nsoil_sb
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_vertical_profile'
 
@@ -872,6 +988,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       km2_uptake_nh4_act(:,:) = km2_up_nh4
       km2_uptake_no3_act(:,:) = km2_up_no3
       km2_uptake_po4_act(:,:) = km2_up_po4
+      km_dip_biochem_po4_act (:,:) = km_dip_biochem_po4
       km_denitrification_c_act(:,:) = km_denitrification_c
       km_denitrification_no3_act(:,:) = km_denitrification_no3
       root_depth_avg(:) = sum(root_fraction_sl(:,:)*soil_depth_sl(:,:),DIM=2)
@@ -882,6 +999,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
          km2_uptake_nh4_act(:,1) = km2_up_nh4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
          km2_uptake_no3_act(:,1) = km2_up_no3 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
          km2_uptake_po4_act(:,1) = km2_up_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
+         km_dip_biochem_po4_act(:,1) = km_dip_biochem_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
          km_denitrification_c_act(:,1) = km_denitrification_c / soil_depth_sl(:,1) * root_depth_avg(:)
          km_denitrification_no3_act(:,1) = km_denitrification_no3 / soil_depth_sl(:,1) * root_depth_avg(:)
       ENDWHERE
@@ -897,6 +1015,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       rtm_gasdiffusion_act(:,:) = 0.0_wp 
       rmm_gasdiffusion_act(:,:) = 0.0_wp 
       anaerobic_volume_fraction_act(:,:) = 0.0_wp 
+      rtm_hsc_act(:) = 0.0_wp 
+      rmm_hsc_act(:) = 0.0_wp 
+      rtm_sorption_act(:) = 0.0_wp 
+      rmm_sorption_act(:) = 0.0_wp
+      rtm_desorption_act(:) = 0.0_wp 
+      rmm_desorption_act(:) = 0.0_wp
+      k_weath_mineral_act(:,:) = 0.0_wp 
+      k_adsorpt_po4_act(:,:) = 0.0_wp 
+      k_desorpt_po4_act(:,:) = 0.0_wp 
       DO isoil = 1,options%nsoil_sb
          rtm_decomposition_act(:,1) = rtm_decomposition_act(:,1) + & 
                                          rtm_decomposition(:,isoil) * root_fraction_sl(:,isoil)
@@ -914,7 +1041,22 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                          rmm_gasdiffusion(:,isoil) * root_fraction_sl(:,isoil)
          anaerobic_volume_fraction_act(:,1) = anaerobic_volume_fraction_act(:,1) + & 
                                          anaerobic_volume_fraction_sl(:,isoil) * root_fraction_sl(:,isoil)
+         rtm_hsc_act(:) = rtm_hsc_act(:) + & 
+                                         rtm_hsc(:,isoil) * root_fraction_sl(:,isoil)
+         rmm_hsc_act(:) = rmm_hsc_act(:) + & 
+                                         rmm_hsc(:,isoil) * root_fraction_sl(:,isoil)
+         rtm_sorption_act(:) = rtm_sorption_act(:) + & 
+                                         rtm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
+         rmm_sorption_act(:) = rmm_sorption_act(:) + & 
+                                         rmm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
+         rtm_desorption_act(:) = rtm_desorption_act(:) + & 
+                                         rtm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
+         rmm_desorption_act(:) = rmm_desorption_act(:) + & 
+                                         rmm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
       ENDDO
+      k_weath_mineral_act(:,1) = rtm_hsc_act(:) / rmm_hsc_act(:) * k_weath_mineral
+      k_adsorpt_po4_act(:,1) = rtm_sorption_act(:) * rmm_sorption_act(:) * k_adsorpt_po4
+      k_desorpt_po4_act(:,1) = rtm_desorption_act(:) * rmm_desorption_act(:) * k_desorpt_po4
     !> 2.0 Case of 1d model, simply copy values
     !!
     ELSE 
@@ -925,6 +1067,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       km2_uptake_nh4_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:)
       km2_uptake_no3_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:)
       km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:)
+      km_dip_biochem_po4_act(:,:) = km_dip_biochem_po4 * rtm_hsc(:,:) * rmm_hsc(:,:)
       km_denitrification_c_act(:,:) = km_denitrification_c
       km_denitrification_no3_act(:,:) = km_denitrification_no3
       apparent_mic_cn(:,:) = MAX(microbial_cn_max - f_mic_cn * nh4_solute(:,:)/bulk_dens_sl(:,:), &
@@ -937,9 +1080,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       rtm_denitrification_act(:,:) = rtm_denitrification(:,:)
       rtm_gasdiffusion_act(:,:) = rtm_gasdiffusion(:,:)
       rmm_gasdiffusion_act(:,:) = rmm_gasdiffusion(:,:) 
+      k_weath_mineral_act(:,:) = rtm_hsc(:,:) / rmm_hsc(:,:) * k_weath_mineral
+      k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * rmm_sorption(:,:) * k_adsorpt_po4
+      k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * rmm_desorption(:,:) * k_desorpt_po4
       anaerobic_volume_fraction_act(:,:) = anaerobic_volume_fraction_sl(:,:) 
 
     ENDIF
+
+    p_deposition_act(:,:) = 0.0_wp
+    p_deposition_act(:,1) = p_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
   END SUBROUTINE calc_vertical_profile
 
@@ -1035,7 +1184,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      veg_pool_fine_root_carbon(:) / soil_depth_sl(:,isoil) * dtime/1.e6_wp
    
     END DO    
-  
+
   END SUBROUTINE calc_potential_plant_uptake_rate
 
   !-----------------------------------------------------------------------------------------------------
@@ -1304,7 +1453,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        transport_nh4_n15_solute(:,1) = - fleach_nh4 * nh4_n15_solute(:,1) * drainage_fraction(:) * dtime
        transport_no3_solute(:,1)     = - no3_solute(:,1) * drainage_fraction(:) * dtime
        transport_no3_n15_solute(:,1) = - no3_n15_solute(:,1) * drainage_fraction(:) * dtime
-       transport_po4_solute(:,1)     = - fleach_po4 * po4_solute(:,1) * drainage_fraction(:) * dtime
+       transport_po4_solute(:,1)     = - po4_solute(:,1) * drainage_fraction(:) * dtime
 
        ! record leaching losses as [mol m-2 timestep-1] 
        leaching_nh4_solute(:)     = -transport_nh4_solute(:,1) * soil_depth_sl(:,1)
@@ -1326,7 +1475,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
          CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                           no3_n15_solute(:,:),transport_no3_n15_solute(:,:),leaching_no3_n15_solute(:))
          CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                          fleach_po4 * po4_solute(:,:),transport_po4_solute(:,:),leaching_po4_solute(:))
+                                          po4_solute(:,:),transport_po4_solute(:,:),leaching_po4_solute(:))
        ENDIF
     ENDIF
   
@@ -1502,15 +1651,28 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   !> Calculate potential biomineralisation rate 
   !!  dP/dt = - f(T)*g(M)/tau_pool * P
+  !> Calculate weathering rate, slow adsorption rate and occlusion rate based on Yang et al. 2014
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_potential_biomineralisation_rate(options, &                      ! in 
+  SUBROUTINE calc_potential_p_flux_rate(options, &                      ! in 
                                                    rtm_decomposition_act, &
                                                    rmm_decomposition_act, &
+                                                   km_dip_biochem_po4_act, &
+                                                   po4_solute, &
+                                                   po4_assoc_fast, &
+                                                   po4_assoc_slow, &
+                                                   po4_occluded, &
+                                                   po4_primary, &
+                                                   k_weath_mineral_act, &
+                                                   k_adsorpt_po4_act, &
+                                                   k_desorpt_po4_act, &
                                                    sb_pool_residue_phosphorus, & 
-                                                   biomineralisation_po4 )         ! out 
+                                                   weathering_po4, &
+                                                   occlusion_po4, &
+                                                   slow_sorption_po4, &
+                                                   biochem_mineralisation_po4 )         ! out 
 
-    USE mo_sb_constants,            ONLY: tau_biomineralisation 
+    USE mo_sb_constants,            ONLY: tau_biomineralisation, k_occlude_po4
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1518,19 +1680,43 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     TYPE(t_jsb_task_options),                         INTENT(in)  :: options                    !< dimensions
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: rtm_decomposition_act, &   !< temperature response of decomposition
                                                                      rmm_decomposition_act, &   !< moisture response of decomposition
+                                                                     km_dip_biochem_po4_act, &  !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
+                                                                     po4_solute, &              !< soluble PO4 pool [mol/m3]
+                                                                     po4_assoc_fast, &          !< fast minerally associated PO4 pool [mol/m3]
+                                                                     po4_assoc_slow, &          !< slow minerally associated PO4 pool [mol/m3]
+                                                                     po4_occluded, &            !< occluded PO4 pool [mol/m3]
+                                                                     po4_primary, &             !< primary PO4 pool [mol/m3]
+                                                                     k_weath_mineral_act, &     !< actual weathering rate for primary P [s-1]
+                                                                     k_adsorpt_po4_act, &       !< actual adsorption rate for fast_assoc_po4 [s-1]
+                                                                     k_desorpt_po4_act, &       !< actual desorption rate for slow_assoc_po4 [s-1]
                                                                      sb_pool_residue_phosphorus !< slow SOM P pool [mol / m3] 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: biomineralisation_po4      !< potential biomineralisation rate [mol / m3 / timestep] 
-    ! ---------------------------
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: weathering_po4, &          !< phosphorus weathering rate [mol P / m3 / timestep]
+                                                                     occlusion_po4, &           !< phosphorus occlusion rate, assoc_slow --> occluded [mol P / m3 / timestep]
+                                                                     slow_sorption_po4, &       !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
+                                                                     biochem_mineralisation_po4 !< potential biomineralisation rate [mol / m3 / timestep]
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_biomineralisation_rate'
+    ! 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_p_flux_rate'
+
+    !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
+    !!
+    weathering_po4 = k_weath_mineral_act * po4_primary * dtime
+    !> 1.1 Calculate P occlusion rate from occluded PO4 pool (mol /m3 / timestep)
+    occlusion_po4 = po4_assoc_slow * k_occlude_po4 * dtime
+    !> 1.2 Calculate P slow adsorption rate (mol /m3 / timestep)
+    hlp1 = k_desorpt_po4_act * po4_assoc_slow * dtime
+    hlp2 = k_adsorpt_po4_act * po4_assoc_fast * dtime
+    slow_sorption_po4 = hlp2 - hlp1  
+
+    !> 2.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
+    !!
+    hlp1 = km_dip_biochem_po4_act / (km_dip_biochem_po4_act + po4_solute)
+    biochem_mineralisation_po4(:,:) = rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_biomineralisation * & 
+                                 dtime * sb_pool_residue_phosphorus(:,:) * hlp1
 
 
-    !> 1.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
-    !! 
-    biomineralisation_po4(:,:) = rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_biomineralisation * & 
-                                 dtime * sb_pool_residue_phosphorus(:,:) 
-
-  END SUBROUTINE calc_potential_biomineralisation_rate
+  END SUBROUTINE calc_potential_p_flux_rate
   
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to update_sb_simple_model
@@ -1549,9 +1735,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      nh4_solute, &
                                      no3_solute, &
                                      po4_solute, &
+                                     po4_assoc_fast, &
                                      transport_nh4_solute, &
                                      transport_no3_solute, &
                                      transport_po4_solute, &
+                                     transport_po4_assoc_fast, &
+                                     weathering_po4, &
+                                     p_deposition_act, &
+                                     slow_sorption_po4, &
                                      apparent_mic_cn , &
                                      km2_uptake_nh4_act, & 
                                      plant_uptake_nh4_sl, &
@@ -1562,7 +1753,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      mycorrhiza_uptake_po4_sl, &
                                      nitrification_no3, &
                                      denitrification_n2, &
-                                     biomineralisation_po4, &
+                                     biochem_mineralisation_po4, &
                                      sb_loss, &
                                      microbial_uptake_nh4_sl, &
                                      microbial_uptake_po4_sl, &
@@ -1579,9 +1770,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute, &                 !< NH4 in solution [mol / m3] 
                                                                        no3_solute, &                 !< NO3 in solution [mol / m3]
                                                                        po4_solute, &                 !< PO4 in solution [mol / m3]
+                                                                       po4_assoc_fast, &             !< labile mineral P [mol / m3]
                                                                        transport_nh4_solute, &       !< transport of NH4 [mol / m3 / timestep]
                                                                        transport_no3_solute, &       !< transport of NO3 [mol / m3 / timestep]
-                                                                       transport_po4_solute, &       !< transport of PO4 [mol / m3 / timestep]
+                                                                       transport_po4_solute, &       !< transport of soluble PO4 [mol / m3 / timestep]
+                                                                       transport_po4_assoc_fast, &   !< transport of labile PO4 [mol / m3 / timestep]
+                                                                       weathering_po4, &             !< weathering of po4 [mol / m3 / timestep]
+                                                                       slow_sorption_po4, &          !< po4 desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
+                                                                       p_deposition_act, &           !< actual P deposition rate, [mol / m3 / timestep]
                                                                        apparent_mic_cn, &            !< apparent microbial carbon-nitrogen ratio [mol/mol]
                                                                        km2_uptake_nh4_act            !< actual km2 for NH4 uptake [mol / m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: plant_uptake_nh4_sl, &        !< plant NH4 uptake [mol / m3 / timestep]
@@ -1592,7 +1788,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [mol / m3 / timestep]
                                                                        nitrification_no3, &          !< nitrification rate [mol / m3 / timestep]
                                                                        denitrification_n2, &         !< denitrification rate [mol / m3 / timestep]
-                                                                       biomineralisation_po4         !< biomineralisation rate [mol / m3 / timestep]
+                                                                       biochem_mineralisation_po4    !< biomineralisation rate [mol / m3 / timestep]
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                       !< decomposition of SOM and litter pools [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: microbial_uptake_nh4_sl, &    !< microbial immobilisation of NH4 [mol / m3 / timestep]
                                                                        microbial_uptake_po4_sl, &    !< microbial immobilisation of PO4 [mol / m3 / timestep]
@@ -1732,21 +1928,25 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!     biomineralisation and transport (mol /m3 / timestep)   
     WHERE(microbial_uptake_po4_sl(:,:)>0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
        hlp1(:,:) = microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:)
-       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:)
-       WHERE(hlp2(:,:) < hlp1(:,:))
+!       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biochem_mineralisation_po4(:,:) + weathering_po4(:,:) + &
+!                   p_deposition_act(:,:) + po4_assoc_fast(:,:) + transport_po4_assoc_fast(:,:) - slow_sorption_po4(:,:)
+      hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) 
+      WHERE(hlp2(:,:) < hlp1(:,:))
           WHERE(hlp1(:,:) > eps8)
-             microbial_uptake_po4_sl(:,:)        = hlp2(:,:) * microbial_uptake_po4_sl(:,:) / hlp1(:,:) 
+             microbial_uptake_po4_sl(:,:)  = hlp2(:,:) * microbial_uptake_po4_sl(:,:) / hlp1(:,:) 
              plant_uptake_po4_sl(:,:)      = hlp2(:,:) * plant_uptake_po4_sl(:,:) / hlp1(:,:) 
              mycorrhiza_uptake_po4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_po4_sl(:,:) / hlp1(:,:) 
           ELSEWHERE
-             microbial_uptake_po4_sl(:,:)        = 0.0_wp
+             microbial_uptake_po4_sl(:,:)  = 0.0_wp
              plant_uptake_po4_sl(:,:)      = 0.0_wp
              mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp 
           ENDWHERE
        ENDWHERE
     ELSEWHERE ! if microbes release P, constrain plant uptake to available P, note the negative sign of microbial_uptake_po4_sl(:,:)
        hlp1(:,:) = plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) 
-       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biomineralisation_po4(:,:) - microbial_uptake_po4_sl(:,:)
+!       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biochem_mineralisation_po4(:,:) + weathering_po4(:,:) + &
+!                   p_deposition_act(:,:) + po4_assoc_fast(:,:) + transport_po4_assoc_fast(:,:) - slow_sorption_po4(:,:) - microbial_uptake_po4_sl(:,:)
+       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) - microbial_uptake_po4_sl(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:))
           WHERE(hlp1(:,:) > eps8)
              plant_uptake_po4_sl(:,:)      = hlp2(:,:) * plant_uptake_po4_sl(:,:) / hlp1(:,:) 
@@ -1760,10 +1960,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 3.2 Limit biomineralisation to the actual rate of biomineralisation required to meet microbial and plant demands
     !!      and substract from slow=residue pool 
-    biomineralisation_po4(:,:) = MAX(microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) - & 
-                                     (po4_solute(:,:) + transport_po4_solute(:,:)),0.0_wp)
     sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
-                                                     biomineralisation_po4(:,:)
+                                                     biochem_mineralisation_po4(:,:)
   
   END SUBROUTINE calc_actual_flux_rates
   
@@ -2295,7 +2493,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_bioturbation_transport_wrapper(options, k_bioturb, soil_depth_sl, &
                                                  pool_microbial, pool_residue, &
-                                                 transport_microbial, transport_residue)
+                                                 transport_microbial, transport_residue, & 
+                                                 po4_assoc_fast, po4_assoc_slow, po4_occluded, &
+                                                 transport_po4_assoc_fast, transport_po4_assoc_slow, & 
+                                                 transport_po4_occluded)
 
     USE mo_sb_jsm_transport,        ONLY: calc_bioturbation_transport
     dsl4slm_Use_memory_a_sb
@@ -2304,13 +2505,18 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial         !< microbial pool [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue           !< microbial residue pool [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_microbial    !< rate of microbial transport [mol/m3/timestep]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_residue      !< rate of microbial residue transport [mol/m3/timestep]
-    ! ---------------------------
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: k_bioturb                  !< diffusion factor for bioturbation 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl              !< depth of each soil layer [m] 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_occluded               !< occluded PO4 pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial             !< microbial pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue               !< microbial residue pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_microbial        !< rate of microbial transport [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: transport_residue          !< rate of microbial residue transport [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_assoc_fast   !< rate of fast associated PO4 transport [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_assoc_slow   !< rate of slow associated PO4 transport [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_occluded     !< rate of occluded PO4 transport [mol/m3/timestep]
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
 
@@ -2345,6 +2551,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                         pool_residue%carbon14(:,:),transport_residue%carbon14(:,:))
     CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
                                         pool_residue%nitrogen15(:,:),transport_residue%nitrogen15(:,:))
+
+    !> 2.0 inorganic pools
+    !!
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
+                                        po4_assoc_fast,transport_po4_assoc_fast) 
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
+                                        po4_assoc_slow,transport_po4_assoc_slow) 
+    CALL calc_bioturbation_transport(options,k_bioturb,soil_depth_sl, & 
+                                        po4_occluded,transport_po4_occluded) 
 
   END SUBROUTINE calc_bioturbation_transport_wrapper
 

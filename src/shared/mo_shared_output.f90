@@ -1240,7 +1240,10 @@ CONTAINS
         fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxNP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -1343,10 +1346,15 @@ CONTAINS
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
-        WRITE(lun,'(2a)') 'Time HetResp HetResp_dC13 HetResp_DC14'
+        WRITE(lun,'(a)') 'Time HetResp HetResp_dC13 HetResp_DC14'
         lun=lun+1
+        ! soilfluxN
         WRITE(lun,'(2a)') 'Time NDeposition Nfix_asymb Net_Mineralisation_NH4 Nitrification Denitrification Emission_NOY ', &
-                          'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3 Net_Mineralisation_PO4 Leaching_PO4' 
+                          'Emission_N2O Emission_N2 Leaching_NH4 Leaching_NO3' 
+        lun=lun+1
+        ! soilfluxP
+        WRITE(lun,'(2a)') 'Time PDeposition Leaching_PO4 Net_Mineralisation_PO4 Weathering_PO4 Occlusion_PO4 ', &
+                          'Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
         WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2', &
                           ' Leaching_d15NH4 Leaching_d15NO3'
@@ -1381,8 +1389,10 @@ CONTAINS
         ! soilfluxN  
         WRITE(lun,'(a)') 'Time Litterfall NetMinNH4 NetMinNO3 LeachingOrg' 
         lun=lun+1   
-        ! soilfluxP
-        WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
+        ! soilfluxP  (plus litterfall compared to land soilfluxP output file)
+        WRITE(lun,'(3a)') 'Time Litterfall ', &
+                          'PDeposition Leaching_PO4 Net_Mineralisation_PO4 Weathering_PO4 Occlusion_PO4 ', &
+                          'Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
 
     END SELECT
@@ -1531,7 +1541,7 @@ CONTAINS
     REAL(wp), SAVE                        :: albedo_acc          = 0.0_wp
     REAL(wp), SAVE                        :: appfd_acc           = 0.0_wp
     INTEGER,  SAVE                        :: ndat_acc            = 0 
-    ! soil - local accumulation variables
+    ! soil - local accumulation variables (partly also used for land output)
     REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC14_acc   = 0.0_wp
@@ -1544,7 +1554,6 @@ CONTAINS
     REAL(wp), SAVE                        :: leachingC13org_acc  = 0.0_wp
     REAL(wp), SAVE                        :: leachingC14org_acc  = 0.0_wp
     REAL(wp), SAVE                        :: leachingNorg_acc    = 0.0_wp
-    REAL(wp), SAVE                        :: leachingPorg_acc    = 0.0_wp
     REAL(wp), SAVE                        :: net_min_nh4_acc     = 0.0_wp
     REAL(wp), SAVE                        :: net_min_no3_acc     = 0.0_wp
     REAL(wp), SAVE                        :: net_min_po4_acc     = 0.0_wp
@@ -1560,7 +1569,13 @@ CONTAINS
     REAL(wp), SAVE                        :: leaching_nh4_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: leaching_no3_acc    = 0.0_wp
     REAL(wp), SAVE                        :: leaching_no3_n15_acc = 0.0_wp
+    REAL(wp), SAVE                        :: p_deposition_acc = 0.0_wp
     REAL(wp), SAVE                        :: leaching_po4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: weathering_po4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: occlusion_po4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: slow_sorption_po4_acc    = 0.0_wp
+    REAL(wp), SAVE                        :: fast_adsorption_po4_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: biochem_mineralisation_po4_acc  = 0.0_wp
     REAL(wp), SAVE                        :: asymb_n_fixation_acc = 0.0_wp
     REAL(wp), SAVE                        :: asymb_n_fixation_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: sb_delta_pools_carbon_acc     = 0.0_wp
@@ -1614,6 +1629,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: noy_deposition
     dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition
     dsl4jsb_Real2D_onChunk      :: noy_n15_deposition
+    dsl4jsb_Real2D_onChunk      :: p_deposition
     dsl4jsb_Real2D_onChunk      :: rain 
     dsl4jsb_Real2D_onChunk      :: snow
     ! L2A_
@@ -1693,10 +1709,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: denitrification_n2o
     dsl4jsb_Real3D_onChunk      :: asymb_n_fixation 
     dsl4jsb_Real3D_onChunk      :: asymb_n_fixation_n15 
-    dsl4jsb_Real3D_onChunk      :: fast_adsorption_po4
     dsl4jsb_Real3D_onChunk      :: weathering_po4
     dsl4jsb_Real3D_onChunk      :: occlusion_po4
     dsl4jsb_Real3D_onChunk      :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk      :: fast_adsorption_po4
     dsl4jsb_Real3D_onChunk      :: biochem_mineralisation_po4
 !! *slmtemp
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1730,6 +1746,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow) 
     ! ---------------------------
@@ -1807,6 +1824,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  denitrification_n2o)
     dsl4jsb_Get_var3D_onChunk(SB_,  asymb_n_fixation)
     dsl4jsb_Get_var3D_onChunk(SB_,  asymb_n_fixation_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,  slow_sorption_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  fast_adsorption_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  weathering_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  occlusion_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  biochem_mineralisation_po4)
+    
+    
     ! Get process memory pool structures
 #define Get_veg_litterfall
 #define Get_veg_exudation
@@ -1942,8 +1966,8 @@ CONTAINS
              het_respC_acc   = het_respC_acc   + SUM(het_respiration(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              het_respC13_acc = het_respC13_acc + SUM(het_respiration_c13(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             ! Nitrogen
              net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              nitrification_acc   = nitrification_acc + & 
                                     SUM((nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + nitrification_n2o(ipoi,:)) * &
                                     soil_depth_sl(ipoi,:)) * dtime_one
@@ -1960,10 +1984,25 @@ CONTAINS
              leaching_nh4_n15_acc = leaching_nh4_n15_acc + leaching_nh4_n15_solute(ipoi) * dtime_one
              leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(ipoi) * dtime_one
              leaching_no3_n15_acc = leaching_no3_n15_acc + leaching_no3_n15_solute(ipoi) * dtime_one
-             leaching_po4_acc = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one
              asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)) * dtime_one
              asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(ipoi,:)*soil_depth_sl(ipoi,:)) * &
                                           dtime_one
+             ! Phosphorus
+             p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
+             leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
+             net_min_po4_acc        = net_min_po4_acc + &
+                                        SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
+             weathering_po4_acc     = weathering_po4_acc + &
+                                        SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             occlusion_po4_acc      = occlusion_po4_acc + &
+                                        SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             slow_sorption_po4_acc  = slow_sorption_po4_acc + &
+                                        SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             fast_adsorption_po4_acc        = fast_adsorption_po4_acc + &
+                                                SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
+                                                SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+
              ! for mass balance checks in SB_
               sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
                                                 SUM(sb%delta_pools%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
@@ -2035,10 +2074,16 @@ CONTAINS
                                           calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp)
 
                    lun=lun+1
+                   ! soilfluxN
                    write(lun,'(20F18.8)') time_d,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, &
                                           nitrification_acc, denitrification_acc, & 
                                           emission_noy_acc,emission_n2o_acc,emission_n2_acc,leaching_nh4_acc, & 
-                                          leaching_no3_acc,net_min_po4_acc,leaching_po4_acc
+                                          leaching_no3_acc
+                   lun=lun+1
+                   ! soilfluxP
+                   write(lun,'(20F18.8)') time_d, p_deposition_acc, leaching_po4_acc, net_min_po4_acc, &
+                                          weathering_po4_acc, occlusion_po4_acc, &
+                                          slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
                    lun=lun+1
                    write(lun,'(20F18.8)') time_d, & 
                          calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
@@ -2132,7 +2177,6 @@ CONTAINS
                het_respC13_acc   = 0.0_wp
                het_respC14_acc   = 0.0_wp
                net_min_nh4_acc   = 0.0_wp
-               net_min_po4_acc   = 0.0_wp
                nitrification_acc = 0.0_wp
                denitrification_acc = 0.0_wp
                emission_noy_acc = 0.0_wp
@@ -2145,9 +2189,16 @@ CONTAINS
                leaching_nh4_n15_acc = 0.0_wp
                leaching_no3_acc = 0.0_wp
                leaching_no3_n15_acc = 0.0_wp
-               leaching_po4_acc = 0.0_wp
                asymb_n_fixation_acc = 0.0_wp
                asymb_n_fixation_n15_acc = 0.0_wp
+               p_deposition_acc              = 0.0_wp
+               leaching_po4_acc              = 0.0_wp
+               net_min_po4_acc               = 0.0_wp
+               weathering_po4_acc            = 0.0_wp
+               occlusion_po4_acc             = 0.0_wp
+               slow_sorption_po4_acc         = 0.0_wp
+               fast_adsorption_po4_acc       = 0.0_wp
+               biochem_mineralisation_po4_acc = 0.0_wp
                sb_delta_pools_carbon_acc     = 0.0_wp
                sb_delta_pools_nitrogen_acc   = 0.0_wp
                sb_delta_pools_phosphorus_acc = 0.0_wp
@@ -2205,7 +2256,6 @@ CONTAINS
              het_respC14_acc = het_respC14_acc + SUM(het_respiration_c14(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              net_min_no3_acc = net_min_no3_acc + SUM(net_mineralisation_no3(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             net_min_po4_acc = net_min_po4_acc + SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
 
              leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(ichu,options%nsoil_sb,iblk) * &
                                     1000000.0_wp * dtime_one/dtime
@@ -2215,8 +2265,24 @@ CONTAINS
                                     1000000.0_wp * dtime_one/dtime
              leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(ichu,options%nsoil_sb,iblk) * &
                                     1000000.0_wp * dtime_one/dtime
-             leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(ichu,options%nsoil_sb,iblk) * &
-                                    1000000.0_wp * dtime_one/dtime
+            !  leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(ichu,options%nsoil_sb,iblk) * &
+            !                         1000000.0_wp * dtime_one/dtime
+
+             ! Phosphorus
+             p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
+             leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
+             net_min_po4_acc        = net_min_po4_acc + &
+                                        SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
+             weathering_po4_acc     = weathering_po4_acc + &
+                                        SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             occlusion_po4_acc      = occlusion_po4_acc + &
+                                        SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             slow_sorption_po4_acc  = slow_sorption_po4_acc + &
+                                        SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             fast_adsorption_po4_acc        = fast_adsorption_po4_acc + &
+                                                SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
+                                                SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
 
              IF(l_flux_output_interval) THEN
 
@@ -2240,7 +2306,10 @@ CONTAINS
                write(lun,'(8F16.6)') time_d, litterfallN_acc, net_min_nh4_acc, net_min_no3_acc, leachingNorg_acc
                lun = lun + 1
                ! soilfluxP
-               write(lun,'(8F16.6)') time_d, litterfallP_acc, net_min_po4_acc, leachingPorg_acc
+               write(lun,'(20F18.8)') time_d, litterfallP_acc, &
+                                      p_deposition_acc, leaching_po4_acc, net_min_po4_acc, &
+                                      weathering_po4_acc, occlusion_po4_acc, &
+                                      slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
                lun = lun + 1
                
                !! set acc variables to zero
@@ -2257,9 +2326,16 @@ CONTAINS
                net_min_nh4_acc = 0.0_wp
                net_min_no3_acc = 0.0_wp
                leachingNorg_acc = 0.0_wp
-               litterfallP_acc = 0.0_wp
-               net_min_po4_acc = 0.0_wp
-               leachingPorg_acc = 0.0_wp
+               litterfallP_acc               = 0.0_wp
+               p_deposition_acc              = 0.0_wp
+               leaching_po4_acc              = 0.0_wp
+               net_min_po4_acc               = 0.0_wp
+               weathering_po4_acc            = 0.0_wp
+               occlusion_po4_acc             = 0.0_wp
+               slow_sorption_po4_acc         = 0.0_wp
+               fast_adsorption_po4_acc       = 0.0_wp
+               biochem_mineralisation_po4_acc = 0.0_wp
+
 
              END IF   ! l_flux_output_interval
           END IF      ! l_flux_calc_acc_output
@@ -2307,7 +2383,7 @@ CONTAINS
           ! write output & zero acc variables
           IF(l_flux_output_interval) THEN
 
-            write(lun,'(141F14.6)') time_d, &
+            write(lun,'(141F20.10)') time_d, &
             adsorpt_po4_acc(:), weath_po4_acc(:), ocl_po4_acc(:), desorp_po4_acc(:), &
             net_min_po4_lay_acc(:), biochem_min_po4_acc(:), microbial_upt_po4_acc(:), plant_upt_po4_acc(:), myco_upt_po4_acc(:), &
             trans_solute_po4_acc(:), trans_assoc_fast_po4_acc(:) , trans_assoc_slow_po4_acc(:), trans_occluded_po4_acc(:), &
