@@ -211,8 +211,8 @@ CONTAINS
     tau_metabolic_litter  = 0.066_wp * one_year * one_day
     tau_structural_litter = 0.245_wp * one_year * one_day
     tau_woody_litter      = 10._wp * one_year * one_day ! 10 years 
-    tau_fast              = 5._wp * one_year * one_day
-    tau_slow              = 50._wp * one_year * one_day
+    tau_fast              = 3._wp * one_year * one_day
+    tau_slow              = 150._wp * one_year * one_day
     tau_biomineralisation = 5._wp * one_year * one_day
 
     ! temperature and moisture rate modifiers 
