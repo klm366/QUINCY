@@ -97,13 +97,14 @@ CONTAINS
     REAL(wp), INTENT(in) ::   &
       & CarboxRate,           &
       & ETransport,           &
-      & t_air,                & ! Atmosphere temperature (lowest layer) in Kelvin
-      & press_srf,            & ! Surface pressure
-      & par_down_mol,         & ! Downward PAR flux in mol (photons)/(m^2 s)
-      & apar_per_lai_cl,      & ! Absorbed PAR of canopy layer.
-      & CO2_mol_mixing_ratio, & ! CO2 substance mixing ratio [molCO2/molDryAir]
-      & N_scaling_factors,    & ! Enzymatic scaling with canopy height
-      & canopy_cond_cl          ! Canopy conductance per canopy layer for water-unlimited case
+      & t_air,                &  ! Atmosphere temperature (lowest layer) in Kelvin
+      & press_srf,            &  ! Surface pressure
+      & par_down_mol,         &  ! Downward PAR flux in mol (photons)/(m^2 s)
+      & apar_per_lai_cl,      &  ! Absorbed PAR of canopy layer.
+      & CO2_mol_mixing_ratio, &  ! CO2 substance mixing ratio [molCO2/molDryAir]
+      & N_scaling_factors        ! Enzymatic scaling with canopy height
+    REAL(wp), INTENT(out) ::  &
+      & canopy_cond_cl           ! Canopy conductance per canopy layer for water-unlimited case
 
     ! Local variables
 
@@ -427,9 +428,11 @@ CONTAINS
       & apar_per_lai_cl,         & ! Absorbed PAR of canopy layer.
       & CO2_mol_mixing_ratio,    & ! CO2 substance mixing ratio [molCO2/molDryAir]
       & N_scaling_factors,       & ! Enzymatic scaling with canopy height
+      & canopy_cond_cl,          & ! Input only for the water limited case here
+
+    REAL(wp), INTENT(out) ::     &
       & CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers):
                                    ! Output only for the water limited case here
-      & canopy_cond_cl,          & ! Input only for the water limited case here
       & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S] and canopy layer
       & dark_respiration_cl,     & ! Dark respiration per canopy layer
       & carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
