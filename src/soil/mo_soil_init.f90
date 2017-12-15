@@ -55,7 +55,8 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER                  :: model
     TYPE(t_lctlib_element), POINTER                  :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, theta_pwp_sl, theta_fc_sl, theta_sat_sl
-    INTEGER                                          :: isoil
+    REAL(wp), DIMENSION(options%nc)                  :: soil_awc, hlp2
+    INTEGER                                          :: nsoil_sb, isoil
     INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
     ! ---------------------------
@@ -91,10 +92,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk    :: silt_sl
     dsl4jsb_Real3D_onChunk    :: clay_sl
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SOIL_)) RETURN
@@ -153,7 +155,7 @@ CONTAINS
     ! the bedrock depth just read in.
     dsl4jsb_var3D_onDomain(SOIL_, soil_depth_sl) = soil_depth_to_layers_2d( &
       & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
-      & dsl4jsb_Config(SOIL_)%dz_water(1:options%nsoil_sb))    ! Soil layer thicknesses from namelist
+      & dsl4jsb_Config(SOIL_)%dz_water(1:nsoil_sb))    ! Soil layer thicknesses from namelist
 
     bulk_dens_sl(:,:)   = dsl4jsb_Config(SOIL_)%bulk_density 
     heat_capa_sl(:,:)   = soil_heat_cap
@@ -199,15 +201,29 @@ CONTAINS
     saxtonC(:,:) = 3.0_wp - 2._wp * saxtonB
 
     ! rooting depth given by prescribed AWC
-    root_depth(:) = MAX(dsl4jsb_Config(SOIL_)%soil_depth_water(1), & 
-                        ( dsl4jsb_Config(SOIL_)%soil_awc_prescribe / 1000._wp )/ (theta_fc_sl(:,1) - theta_pwp_sl(:,1))) 
+    ! soil water in the rooting zone [m]
+    soil_awc(:) = 0._wp
+    w_soil_root_pwp(:) = 0._wp
+    w_soil_root_fc(:) = 0._wp
+    root_depth(:) = 0._wp
+    DO isoil=1,nsoil_sb
+      hlp1(:,isoil)= dsl4jsb_Config(SOIL_)%dz_water(isoil) * (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
+      soil_awc(:) = soil_awc(:) + hlp1(:,isoil)
+      WHERE (soil_awc(:) < (dsl4jsb_Config(SOIL_)%soil_awc_prescribe / 1000._wp)) 
+        root_depth(:)       = root_depth(:) + dsl4jsb_Config(SOIL_)%dz_water(isoil)
+        w_soil_root_pwp(:)  = w_soil_root_pwp(:) + theta_pwp_sl(:,isoil) * dsl4jsb_Config(SOIL_)%dz_water(isoil)
+        w_soil_root_fc(:)   = w_soil_root_fc(:) + theta_fc_sl(:,isoil) * dsl4jsb_Config(SOIL_)%dz_water(isoil)
+      ELSEWHERE
+        hlp2(:)             = MAX(0._wp, dsl4jsb_Config(SOIL_)%soil_awc_prescribe / 1000._wp - soil_awc(:) + hlp1(:,isoil))
+        root_depth(:)       = root_depth(:) + hlp2(:) / (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
+        w_soil_root_pwp(:)  = w_soil_root_pwp(:) + theta_pwp_sl(:,isoil) * hlp2(:) / (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
+        w_soil_root_fc(:)   = w_soil_root_fc(:) + theta_fc_sl(:,isoil) * hlp2(:) / (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
+      END WHERE
+    END DO
 
     ! water in the surface reservoir [m]
     w_skin(:) = 0.0_wp
 
-    ! soil water in the rooting zone [m]
-    w_soil_root_pwp(:)    = theta_pwp_sl(:,1) * root_depth(:) 
-    w_soil_root_fc(:)     = theta_fc_sl(:,1) * root_depth(:) 
     ! adjust initial water amount to prescribed theta 
     w_soil_root(:)        = w_soil_root_pwp(:) + & 
                             dsl4jsb_Config(SOIL_)%soil_theta_prescribe * (w_soil_root_fc(:) - w_soil_root_pwp(:)) 
@@ -222,8 +238,8 @@ CONTAINS
     root_fraction_sl(:,1) = &  
           (1._wp - exp(-lctlib%k_root_dist * dsl4jsb_Config(SOIL_)%soil_depth_water(1))) / &
           (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
-    ! layer 2 -> options%nsoil_sb
-    DO isoil=2,options%nsoil_sb
+    ! layer 2 -> nsoil_sb
+    DO isoil=2,nsoil_sb
        WHERE(root_depth(:) > dsl4jsb_Config(SOIL_)%soil_depth_water(isoil-1))
           WHERE(root_depth(:) > dsl4jsb_Config(SOIL_)%soil_depth_water(isoil))
              root_fraction_sl(:,isoil) = & 
@@ -245,7 +261,7 @@ CONTAINS
     w_soil_pwp_sl(:,:) = 0.0_wp
     w_soil_fc_sl(:,:) = 0.0_wp
     w_soil_sat_sl(:,:) = 0.0_wp
-    DO isoil=1,options%nsoil_sb
+    DO isoil=1,nsoil_sb
        WHERE(soil_depth_sl(:,isoil) > 0.0_wp) 
           w_soil_pwp_sl(:,isoil) = theta_pwp_sl(:,isoil) * soil_depth_sl(:,isoil) 
           w_soil_fc_sl(:,isoil)  = theta_fc_sl(:,isoil) * soil_depth_sl(:,isoil) 
