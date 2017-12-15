@@ -33,6 +33,12 @@ mo_rad_init.o: \
   mo_jsb_process_class.o \
   mo_rad_memory_class.o
 
+mo_rad_config_class.o: \
+  mo_kind.o \
+  mo_namelist.o \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_jsb_config_class.o
 
 mo_rad_memory_class.o: \
   mo_kind.o \

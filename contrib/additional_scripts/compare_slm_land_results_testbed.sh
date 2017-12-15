@@ -9,7 +9,6 @@
 
 # Your options:
 # give the folder names of the simulation results in the test_bed/
-landPath="../test_bed"
 landOld="land_old"
 landNew="land"
 
@@ -41,10 +40,10 @@ cEcoPoolOld="$tempFolder"ecopoolcnp_old.txt
 cEcoPoolNew="$tempFolder"ecopoolcnp_new.txt
 
 ## copy the files there
-cp "$landPath"/"$landOld"/"$vegPoolCFilename"_*     "$cVegPoolCOld"
-cp "$landPath"/"$landNew"/"$vegPoolCFilename"_*     "$cVegPoolCNew"
-cp "$landPath"/"$landOld"/"$ecopoolCNPFilename"_*   "$cEcoPoolOld"
-cp "$landPath"/"$landNew"/"$ecopoolCNPFilename"_*   "$cEcoPoolNew"
+cp ./"$landOld"/"$vegPoolCFilename"_*     "$cVegPoolCOld"
+cp ./"$landNew"/"$vegPoolCFilename"_*     "$cVegPoolCNew"
+cp ./"$landOld"/"$ecopoolCNPFilename"_*   "$cEcoPoolOld"
+cp ./"$landNew"/"$ecopoolCNPFilename"_*   "$cEcoPoolNew"
 
 ## check if files were successfully copied
 if [ ! -e "$cVegPoolCOld" ] || [ ! -e "$cVegPoolCNew" ] || [ ! -e "$cEcoPoolOld" ] || [ ! -e "$cEcoPoolNew" ]
