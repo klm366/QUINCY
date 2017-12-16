@@ -122,7 +122,7 @@ CONTAINS
 
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -159,6 +159,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'swvis_srf_net', mem%swvis_srf_net,                  &
@@ -167,6 +168,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'swnir_srf_net', mem%swnir_srf_net,                  &
@@ -175,6 +177,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'lw_srf_net', mem%lw_srf_net,                        &
@@ -183,6 +186,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'rad_srf_net', mem%rad_srf_net,                      &
@@ -191,6 +195,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_background', mem%alb_background,  &
@@ -199,6 +204,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'alb_vis', mem%alb_vis,                                &
@@ -207,6 +213,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir', mem%alb_nir,                                &
@@ -215,6 +222,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_snow', mem%alb_vis_snow,      &
@@ -222,6 +230,7 @@ CONTAINS
         & t_cf('albedo_vis_snow', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_snow', mem%alb_nir_snow,      &
@@ -229,6 +238,7 @@ CONTAINS
         & t_cf('albedo_nir_snow', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
     END IF
@@ -244,6 +254,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir_lnd', mem%alb_nir_lnd,                        &
@@ -252,6 +263,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
     END IF
@@ -266,6 +278,7 @@ CONTAINS
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir_soil', mem%alb_nir_soil,      &
@@ -273,6 +286,7 @@ CONTAINS
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil, &
@@ -280,6 +294,7 @@ CONTAINS
         & t_cf('alb_vis_mineralsoil', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil, &
@@ -287,6 +302,7 @@ CONTAINS
         & t_cf('alb_nir_mineralsoil', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
     END IF
@@ -301,6 +317,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir_can', mem%alb_nir_can,        &
@@ -309,6 +326,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'snow_age', mem%snow_age,       &
@@ -337,6 +355,7 @@ CONTAINS
         & t_cf('Downward PAR flux in [W/m^2]', '', ''),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'par_down_mol', mem%par_down_mol, &
@@ -344,13 +363,15 @@ CONTAINS
         & t_cf('Downward PAR flux in mol (photons)', '', ''),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
-      CALL jsb_add_var( mem, 'faPAR', mem%faPAR,   &
+      CALL jsb_add_var( mem, 'fapar', mem%faPAR,   &
         & hgrid, surface,                                                    &
         & t_cf('Fraction of PAR absorbed by the canopy', '', ''),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                           &
+        & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'par_down_mol_nacc', mem%par_down_mol_nacc, &
@@ -434,6 +455,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'rad_net_lice', mem%rad_net_lice,                      &
@@ -442,6 +464,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
+        & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr,                        &
@@ -449,6 +472,7 @@ CONTAINS
         & t_cf('albedo_lwtr', '', 'Albedo of open water on lakes'),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
       CALL jsb_add_var( mem, 'albedo_lice', mem%albedo_lice,                        &
@@ -456,6 +480,7 @@ CONTAINS
         & t_cf('albedo_lice', '', 'Albedo of ice on lake water'),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
 
     END IF

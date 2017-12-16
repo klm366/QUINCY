@@ -20,6 +20,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_process_class, ONLY: ASSIMI_
+  USE mo_jsb_varlist,      ONLY: BASIC, MEDIUM, FULL
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes HYDRO_, SSE_
@@ -161,7 +162,7 @@ CONTAINS
 
   SUBROUTINE Init_hydro_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var, VARNAME_LEN
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -214,6 +215,7 @@ CONTAINS
       & t_cf('fraction of snow on surface', '-', ''),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                              &
+      & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'w_snow', mem%w_snow,      &
@@ -221,6 +223,7 @@ CONTAINS
       & t_cf('Water content of snow reservoir on surface', 'm water equivalent', ''), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                              &
+      & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
@@ -230,6 +233,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Potential evapotranspiration/sublimation
@@ -249,7 +253,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    ! Potential evapotranspiration/sublimation
     CALL jsb_add_var( mem, 'snowmelt', mem%snowmelt,                                     &
       & hgrid, surface,                                                                  &
       & t_cf('snow_melt', 'kg m-2 s-1', 'Snow melt on surface'),                         &
@@ -378,6 +381,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'q_snocpymlt', mem%q_snocpymlt,                               &
@@ -386,6 +390,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL jsb_add_var( mem, 'fract_water', mem%fract_water,                     &
+        & hgrid, surface,                                                        &
+        & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
@@ -543,18 +555,12 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( mem, 'fract_water', mem%fract_water, &
-        & hgrid, surface,                                                            &
-        & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
       CALL jsb_add_var( mem, 'w_skin', mem%w_skin,      &
         & hgrid, surface,                                                       &
         & t_cf('skin_reservoir', 'm water equivalent', 'Water content in skin reservoir of surface'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'snow_accum', mem%snow_accum,                   &
@@ -616,6 +622,7 @@ CONTAINS
         & t_cf('Water content in the whole soil column', 'm water equivalent', ''),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_sl', mem%w_soil_sl,     &
@@ -703,6 +710,7 @@ CONTAINS
         & t_cf('fraction of snow on canopy', '-', ''),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_snow_can', mem%w_snow_can,     &
@@ -710,6 +718,7 @@ CONTAINS
         & t_cf('Water content of snow reservoir on canopy', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_root', mem%w_soil_root,         &
@@ -778,6 +787,7 @@ CONTAINS
         & t_cf('fraction of snow on glacier', '-', ''),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_glac', mem%w_glac,  &
@@ -785,6 +795,7 @@ CONTAINS
         & t_cf('water_glac', 'm water equivalent', 'Water content of glacier including snow'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=20.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'runoff_glac', mem%runoff_glac,  &
@@ -822,6 +833,7 @@ CONTAINS
         & t_cf('fract_snow_lice', '-', 'fraction of snow on lake ice (rel. to ice fraction)'),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'w_snow_lice', mem%w_snow_lice,  &
@@ -829,6 +841,7 @@ CONTAINS
         & t_cf('w_snow_lice', 'm water equivalent', 'Water content of snow reservoir on lake ice'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                              &
+        & output_level=BASIC, &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF

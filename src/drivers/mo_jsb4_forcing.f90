@@ -64,7 +64,7 @@ MODULE mo_jsb4_forcing
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing
+  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, sat_specific_humidity
 
   ! --- CONSTANTS
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsbalone_forcing'

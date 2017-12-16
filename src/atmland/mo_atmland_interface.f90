@@ -21,12 +21,13 @@ MODULE mo_atmland_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-  dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, RAD_
+  dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, RAD_, CARBON_
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(CARBON_)
 
   IMPLICIT NONE
   PRIVATE
@@ -150,6 +151,7 @@ CONTAINS
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
+    & CO2_flux,                                                                      &
     & t_lwtr, t_lice,                                                                &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
@@ -170,12 +172,14 @@ CONTAINS
       & ice_fract_lake(:),                                                           &
       & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
       & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
-      & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:)
+      & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
+      & CO2_flux(:)
 
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(CARBON_)
 
     INTEGER ::  iblk, ics, ice, i
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
@@ -194,6 +198,9 @@ CONTAINS
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
+    IF (tile%Is_process_active(CARBON_)) THEN
+      dsl4jsb_Get_memory(CARBON_)
+    END IF
 
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
       ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the whole grid 
@@ -227,6 +234,17 @@ CONTAINS
       IF (PRESENT(alb_vis_dif))   alb_vis_dif(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
       IF (PRESENT(alb_nir_dir))   alb_nir_dir(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
       IF (PRESENT(alb_nir_dif))   alb_nir_dif(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+      IF (PRESENT(CO2_flux)) THEN
+        IF (tile%Is_process_active(CARBON_)) THEN
+                                  CO2_flux(:)         = fact_land(:) *                              &
+          &                             (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                             )
+        ELSE
+                                  CO2_flux(:)         = 0._wp
+        END IF
+      END IF
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lwtr)
       IF (PRESENT(t_lice))            t_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lice)
@@ -261,6 +279,17 @@ CONTAINS
       IF (PRESENT(alb_vis_dif))     alb_vis_dif(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
       IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
       IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+      IF (PRESENT(CO2_flux)) THEN
+        IF (tile%Is_process_active(CARBON_)) THEN
+                                  CO2_flux(:)         = fact_land(:) *                              &
+          &                             (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                             )
+        ELSE
+                                  CO2_flux(:)         = 0._wp
+        END IF
+      END IF
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(t_lice))            t_lice(:)            = 0._wp                                   ! Temporary

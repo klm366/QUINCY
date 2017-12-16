@@ -96,7 +96,7 @@ MODULE mo_jsb_lctlib_class
                                                   !! .. forests this is closely related to the yield, usually measured in
                                                   !! .. m^3(wood)/hectar)
     REAL(wp) :: ClumpinessFactor      !! Factor to calculate vegetation clumpiness:
-                                                  !!    veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
+                                                  !! Former in JSBACH3:   veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
                                                   !! converting natural PFTs into agricultural PFTs
     REAL(wp) :: frac_wood_2_onSite    !! Fraction of wood pool to anthropogenically controlled onSite pool wenn
                                                   !! converting natural PFTs into agricultural PFTs

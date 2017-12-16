@@ -22,8 +22,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
     &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
-  ! USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_msg
-  USE mo_jsb_task_class,      ONLY: t_jsb_process_task
+  USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
   USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
 
   IMPLICIT NONE
@@ -34,6 +33,7 @@ MODULE mo_jsb_tile
   TYPE, EXTENDS(t_jsb_tile_abstract) :: t_jsb_tile
     LOGICAL :: must_create_memory_parents(max_no_of_processes)    !< helper variable
     TYPE(t_jsb_model),         POINTER :: model => NULL()
+    LOGICAL :: in_var_groups
   CONTAINS
     PROCEDURE :: Init      => Init_tile
     PROCEDURE :: Init_vars => Init_vars_on_tile
@@ -171,11 +171,11 @@ CONTAINS
       j = 0
       IF (PRESENT(processes)) THEN
         IF (SIZE(processes) > 0) THEN
-          j = one_of(i, processes) ! i counts through the number of all processes, j is the number of the i-process
-                                   ! within the processes vector (input)
+          j = one_of(i, processes) ! i counts through the number of all processes; j is the number of the i-process within
+                                   ! the explicitly defined input processes for this tile (e.g. defined in init_usecase)
         END IF
       END IF
-      IF (j > 0) THEN
+      IF (j > 0) THEN ! the i-process was explicitly defined for this tile
         iproc = processes(j)
 
         IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
@@ -185,43 +185,34 @@ CONTAINS
         END IF
 
         IF (PRESENT(process_actions)) THEN
-          return_ptr%process_action(iproc) = process_actions(j)
-        ELSE
+          CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
+        ELSE          ! use defaults if process_actions are not given
           IF (iproc == A2L_) THEN
-            return_ptr%process_action(iproc) = ON_TILE_
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
-            return_ptr%process_action(iproc) = ON_TILE_
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE
-            return_ptr%process_action(iproc) = ON_LEAFS_
+            CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
         END IF
-        ! All parents of this tile aggregate memory for this new process
-        CALL return_ptr%Set_process_action_parents(iproc, AGGREGATE_)
-        return_ptr%must_create_memory_parents(i) = .TRUE.
 !!$      ELSE IF (ASSOCIATED(return_ptr%prev_sibling)) THEN
 !!$        iproc = i
 !!$        SELECT TYPE (sibling => return_ptr%prev_sibling)
 !!$        CLASS IS (t_jsb_tile_abstract)
 !!$          return_ptr%process_action(iproc) = sibling%process_action(iproc)
 !!$        END SELECT
-      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN
+      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN  ! the i-process was NOT explicitly defined for this tile
         !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
-          CASE (SKIP_)
-            return_ptr%process_action(iproc) = SKIP_
-          CASE (INHERIT_)
-            return_ptr%process_action(iproc) = INHERIT_
-          CASE (ON_SUBTREE_)
-            return_ptr%process_action(iproc) = ON_SUBTREE_
-          CASE (ON_LEAFS_)
-            return_ptr%process_action(iproc) = ON_LEAFS_
+          CASE (SKIP_, INHERIT_, ON_SUBTREE_, ON_LEAFS_)
+            CALL return_ptr%Set_process_action(iproc, return_ptr%parent_tile%process_action(iproc))
             !return_ptr%parent_tile%process_action(iproc) = AGGREGATE_
           CASE (ON_TILE_)
             IF (iproc == L2A_) THEN
-              return_ptr%process_action(iproc) = SKIP_
+              CALL return_ptr%Set_process_action(iproc, SKIP_)
             ELSE
-              return_ptr%process_action(iproc) = INHERIT_
+              CALL return_ptr%Set_process_action(iproc, INHERIT_)
             END IF
           END SELECT
         !END IF
@@ -236,7 +227,7 @@ CONTAINS
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
-  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions)
+  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
@@ -246,13 +237,15 @@ CONTAINS
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
+    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
     CHARACTER(len=*),  INTENT(in)    :: prefix         ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
     LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
+    LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
@@ -271,6 +264,7 @@ CONTAINS
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=VARNAME_LEN) :: name
     INTEGER                    :: ilct, i, no_of_children, child_no
+    LOGICAL                    :: l_disturb_active
 
     INTEGER :: isteptype
 
@@ -295,8 +289,22 @@ CONTAINS
 
       process_name = Get_process_name(iproc)
 
-      IF (this%process_action(iproc) == INHERIT_) THEN
+      ! R: TBD: workaround until we have something like process_actions=FOR_CHILDS: 
+      !    For disturbance we want to calculate on a parent tile, but the results
+      !    differ for each child tile. Therefore we have to create a own memory 
+      !    on the pfts tiles even when the process_action is now INHERIT on the pfts!
+      l_disturb_active = .FALSE.
+      IF (ASSOCIATED(this%parent_tile)) THEN
+        IF (this%parent_tile%Is_process_active(DISTURB_)) THEN
+          l_disturb_active = .TRUE.
+        END IF
+      END IF
+      IF ( (this%process_action(iproc) == INHERIT_ ) .AND.                          &
+        &  (.NOT. (l_disturb_active .AND. &
+        &          process_name == 'disturb' .AND. this%lcts(1)%lib_id /= 0 ) ) &
+        &  ) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
+        this%mem(iproc)%p%in_var_groups = in_var_groups
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
           &                             ' on tile '//TRIM(this%name)//' to parent')
@@ -320,6 +328,7 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%no_of_children = no_of_children
+        this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
@@ -327,6 +336,7 @@ CONTAINS
         END IF
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
+
       END IF
 
       IF (this%must_create_memory_parents(iproc)) THEN
@@ -444,7 +454,7 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)
       END IF
-      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+      IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract=return_pointer(:,:))
       ELSE
@@ -459,7 +469,7 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)//'_max'
       END IF
-      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+      IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract_max=return_pointer(:,:))
       ELSE
@@ -473,7 +483,7 @@ CONTAINS
 
     ! If tile has children, create and register aggregator
     IF (this%Has_children()) THEN
-      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this)
+      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this%grid_id, this%Get_no_of_children())
       CALL this%Register_aggregator(aggregator_weighted_by_fract)
     END IF
 
@@ -514,6 +524,7 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
@@ -529,16 +540,18 @@ CONTAINS
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
 
+      process_name = Get_process_name(iproc)
+      ! if the current process is not on leafs of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
-        CYCLE
+        ! R: TBD: workaround until we have something like FOR_CHILDS see comments above
+        IF (.NOT. (this%Is_process_active(DISTURB_) .AND. process_name == 'disturb'  .AND.  this%name(1:3) == 'veg') ) THEN
+            CYCLE
+        END IF
       END SELECT
-
-      process_name = Get_process_name(iproc)
 
       no_of_children = this%Get_no_of_children()
       mem => this%mem(iproc)%p
-
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
         IF (no_of_children > 0) THEN
@@ -652,13 +665,13 @@ CONTAINS
             msg => NULL()
           END IF
         END IF
-      ELSE
+      ELSE ! this%process_action(task%process_id) < AGGREGATE_ ; e.g. SKIP_ or INHERIT_
         IF (ASSOCIATED(this%next_sibling_tile)) THEN
-          IF (this%next_sibling_tile%Has_children()) THEN
-            CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)
-          ELSE
+          ! IF (this%next_sibling_tile%Has_children()) THEN
+            ! CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)
+          ! ELSE
             CALL model%Goto(this%next_sibling_tile, l_debug)
-          END IF
+          ! END IF
         ELSE IF (ASSOCIATED(this%parent_tile)) THEN
           !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
           msg%action = model%Get_action('AGGREGATE')

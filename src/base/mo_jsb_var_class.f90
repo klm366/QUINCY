@@ -22,7 +22,7 @@ MODULE mo_jsb_var_class
     INTEGER                    :: type            ! REAL2D / REAL3D
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
-    INTEGER, ALLOCATABLE       :: child_idx(:)
+    INTEGER, ALLOCATABLE       :: child_idx(:)    ! Position-numbers of same variable for for the child tiles (according to mem%vars(:)).
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                   ! of those where variable doesn't exist

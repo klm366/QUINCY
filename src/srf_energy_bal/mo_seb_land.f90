@@ -78,7 +78,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean    
-    dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
+    dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
@@ -230,11 +230,11 @@ CONTAINS
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
                                      time_steps_per_day(),      & ! Input
-                                     previous_day_temp_mean(:), & ! Output (for summer- and evergreen)
+                                     previous_day_temp_mean(:), & ! InOut (for summer- and evergreen)
                                      day_temp_sum(:),           & ! InOut
-                                     previous_day_temp_min(:),  & ! Output (for crop)
+                                     previous_day_temp_min(:),  & ! InOut (for crop)
                                      day_temp_min(:),           & ! InOut
-                                     previous_day_temp_max(:),  & ! Output (for crop)
+                                     previous_day_temp_max(:),  & ! InOut (for crop)
                                      day_temp_max(:) )            ! InOut
 
     ! Update of pseudo-soil temperature for each time step
@@ -578,11 +578,11 @@ CONTAINS
                                                    t_air_in_Celcius,       & ! Input
                                                    !dtime,                  & ! Input
                                                    time_steps_per_day,     & ! Input
-                                                   previous_day_temp_mean, & ! Output
+                                                   previous_day_temp_mean, & ! InOut
                                                    day_temp_sum,           & ! InOut
-                                                   previous_day_temp_min,  & ! Output
+                                                   previous_day_temp_min,  & ! InOut
                                                    day_temp_min,           & ! InOut
-                                                   previous_day_temp_max,  & ! Output
+                                                   previous_day_temp_max,  & ! InOut
                                                    day_temp_max )            ! InOut
 
     !-----------------------------------------------------------------------
@@ -597,8 +597,8 @@ CONTAINS
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
-    REAL(wp),  intent(out)   :: previous_day_temp_mean, &
-                                previous_day_temp_min,  &
+    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! "in" because if it is not calculated new, it should remain
+                                previous_day_temp_min,  & ! as before. Without "in" it would be NaN in the output.
                                 previous_day_temp_max
 
     REAL(wp),  intent(inout) :: day_temp_sum,           &
