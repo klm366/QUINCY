@@ -22,7 +22,7 @@ sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm
 sb_nloss_scheme="dynamic"       # none fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
-flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 # BNF & Mycorrhiza
