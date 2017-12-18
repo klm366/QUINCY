@@ -2289,22 +2289,22 @@ CONTAINS
 
                lun = 100 + 30
                ! soilfluxC
-               write(lun,'(8F16.6)') time_d, litterfallC_acc, het_respC_acc, leachingCorg_acc
+               write(lun,'(8F18.8)') time_d, litterfallC_acc, het_respC_acc, leachingCorg_acc
                lun = lun + 1
                ! soilfluxdC13
                dC13litterfall = calc_delta_C13(litterfallC_acc,litterfallC13_acc)
                dC13het_resp   = calc_delta_C13(het_respC_acc,het_respC13_acc)
                dC13leaching   = calc_delta_C13(leachingCorg_acc,leachingC13org_acc)
-               write(lun,'(8F12.6)') time_d, dC13litterfall, dC13het_resp, dC13leaching 
+               write(lun,'(8F18.8)') time_d, dC13litterfall, dC13het_resp, dC13leaching 
                lun = lun + 1
                ! soilfluxdC14
-               write(lun,'(8F12.6)') time_d, & 
+               write(lun,'(8F18.8)') time_d, & 
                    calc_delta_C14(litterfallC_acc,litterfallC14_acc,dC13litterfall), &
                    calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
                    calc_delta_C14(leachingCorg_acc,leachingC14org_acc,dC13leaching)
                lun = lun + 1
                ! soilfluxN
-               write(lun,'(8F16.6)') time_d, litterfallN_acc, net_min_nh4_acc, net_min_no3_acc, leachingNorg_acc
+               write(lun,'(8F18.8)') time_d, litterfallN_acc, net_min_nh4_acc, net_min_no3_acc, leachingNorg_acc
                lun = lun + 1
                ! soilfluxP
                write(lun,'(20F18.8)') time_d, litterfallP_acc, &

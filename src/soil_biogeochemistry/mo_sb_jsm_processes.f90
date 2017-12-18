@@ -447,18 +447,18 @@ CONTAINS
                       microbial_carbon / (rtm_hsc * rmm_hsc * km_mic_biochem_po4 + microbial_carbon)
     IF (hlp1 > eps8) THEN
         hlp2 = polymeric_litter_po4 / hlp1
-        loss_polymeric_litter_po4 = biochem_min_po4 * hlp2 * dtime
+        loss_polymeric_litter_po4 = loss_polymeric_litter_po4 + biochem_min_po4 * hlp2 * dtime
         hlp2 = dom_assoc_po4 / hlp1
-        loss_dom_assoc_po4 = biochem_min_po4 * hlp2 * dtime
+        loss_dom_assoc_po4 = loss_dom_assoc_po4 + biochem_min_po4 * hlp2 * dtime
         hlp2 = residue_po4 / hlp1
-        loss_residue_po4 = biochem_min_po4 * hlp2 * dtime
+        loss_residue_po4 = loss_residue_po4 + biochem_min_po4 * hlp2 * dtime
         hlp2 = residue_assoc_po4 / hlp1
-        loss_residue_assoc_po4 = biochem_min_po4 * hlp2 * dtime
+        loss_residue_assoc_po4 = loss_residue_assoc_po4 + biochem_min_po4 * hlp2 * dtime
     ELSE
-        loss_polymeric_litter_po4 = 0.0_wp
-        loss_dom_assoc_po4        = 0.0_wp
-        loss_residue_po4          = 0.0_wp
-        loss_residue_assoc_po4    = 0.0_wp
+        loss_polymeric_litter_po4 = 0.0_wp + loss_polymeric_litter_po4
+        loss_dom_assoc_po4        = 0.0_wp + loss_dom_assoc_po4
+        loss_residue_po4          = 0.0_wp + loss_residue_po4
+        loss_residue_assoc_po4    = 0.0_wp + loss_residue_assoc_po4
     ENDIF
     biochem_min_po4 = biochem_min_po4 * 1.e6_wp
 
@@ -1345,8 +1345,13 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         a1 = opt1 * (Km + solute + Pin)
         a4 = opt3 * (Km + solute + Pin) + Smax * Pup
         a5 = Pup * opt3
-        k1 = (a4-a2+sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
-        k2 = (a4-a2-sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
+        IF (((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1))<eps8) THEN
+          k1=0._wp
+          k2=0._wp
+        ELSE
+          k1 = (a4-a2+sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
+          k2 = (a4-a2-sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
+        ENDIF
         IF ( k1<(solute + Pin)/Pup .AND. k1>eps8) THEN
             opt2 = k1
         ELSEIF (k2<(solute + Pin)/Pup .AND. k2>eps8) THEN
@@ -1362,8 +1367,13 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         a1 = opt1 * (Km + solute + Pin)
         a4 = opt3 * (Km + solute + Pin) + Smax * Pup
         a5 = Pup * opt3
-        k1 = (a4-a2+sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
-        k2 = (a4-a2-sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
+        IF (((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1))<eps8) THEN
+          k1=0._wp
+          k2=0._wp
+        ELSE
+          k1 = (a4-a2+sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
+          k2 = (a4-a2-sqrt((a4-a2)*(a4-a2)-4._wp*a5*(a3-a1)))/(2._wp*a5)
+        ENDIF
         IF ( k1<1._wp .AND. k1>eps8) THEN
             opt2 = k1
         ELSEIF (k2<1._wp .AND. k2>eps8) THEN
@@ -1432,7 +1442,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
 
     !> 1.0 Determine available sorption sites [mol C m-3]
     !!
-    avail_sorption_sites(:,:) = qmax_org(:,:) - (pool_dom_assoc%carbon(:,:) + pool_residue_assoc%carbon(:,:))
+    avail_sorption_sites(:,:) = MAX(0._wp, qmax_org(:,:) - (pool_dom_assoc%carbon(:,:) + pool_residue_assoc%carbon(:,:)))
 
     !> 2.0 mineral association of DOM
     sorption_rate(:,:)   = k_adsorpt_dom * rtm_sorption(:,:)   * rmm_sorption(:,:) * avail_sorption_sites(:,:) 
