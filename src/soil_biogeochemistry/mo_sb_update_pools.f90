@@ -59,7 +59,7 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
     dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation
+    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_pool
     dsl4jsb_Use_memory(A2L_)
 
     IMPLICIT NONE
@@ -338,6 +338,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
     ! Get process memory pool structures
+    dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
 #define Get_veg_exudation
 #define Get_sb_pool
@@ -559,7 +560,10 @@ CONTAINS
                                        fast_adsorption_po4(:,:))
 
        ELSEIF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm" ) THEN
-            fine_root_carbon = root_fraction_sl * 600._wp !temporary solution
+            DO isoil = 1,nsoil_sb
+              fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+            ENDDO
+            !fine_root_carbon = root_fraction_sl * 600._wp !temporary solution
             CALL calc_adsorption_po4(options, fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), bulk_dens_corr_sl(:,:), &
                                        po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
                                        weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &

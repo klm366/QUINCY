@@ -270,8 +270,10 @@ CONTAINS
 ! rmm_sorption = 1.0_wp
 ! rmm_desorption = 1.0_wp
 
-    fine_root_carbon(:,:) = root_fraction_sl(:,:) * 600._wp 
-    !fine_root_carbon(:,:) = root_fraction_sl(:,:) * veg_pool%fine_root%carbon(:)
+!    fine_root_carbon(:,:) = root_fraction_sl(:,:) * 600._wp 
+    DO isoil = 1,nsoil_sb
+       fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+    ENDDO
 
     !> X.0 Inorganic N assimilation
     !!
