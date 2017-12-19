@@ -76,6 +76,7 @@ CONTAINS
                 nsoil_water
     REAL(wp) :: dz_energy(max_soil_layers)
     REAL(wp) :: dz_water(max_soil_layers)
+    REAL(wp) :: soil_depth_profile(max_soil_layers)
     REAL(wp) :: wsr_capacity    , &
                 wsn_capacity    , &
                 soil_depth   
@@ -88,6 +89,9 @@ CONTAINS
     CHARACTER(15) :: soil_moisture_scheme
     INTEGER  :: i   ! looping
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+
+    REAL(wp) :: k_soil_profile  = 0.25_wp
+    REAL(wp) :: min_layer_depth = 0.065_wp
 
     NAMELIST /soil_ctl/       & 
       & active,                                 &
@@ -155,11 +159,27 @@ CONTAINS
     ALLOCATE(config%dz_water (nsoil_water ))
 
     ! check initialisation of number of soil layers
-    IF (nsoil_water .LE. 0) CALL finish('Init_soil_config','Initialization with non positive number of soil layers')
-    ! *slmdev
-    IF (nsoil_water .NE. 5) CALL finish('Init_soil_config','Initialization with other than 5 soil layers not possible for now in SLM')
+    IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) & 
+        CALL finish('Init_soil_config','Number of soil layers needs to be between 5 and 20.')
+    IF (nsoil_water .NE. nsoil_energy) & 
+        CALL finish('Init_soil_config','Initialization with different numbers of soil layers for energy and water not supported.')
+
+    ! If not using 5 layers, estimate depth profile to mimick standard JSB4 profile
+    IF(nsoil_water > 5) THEN
+       DO i=1,nsoil_water
+         soil_depth_profile(i) = min_layer_depth * & 
+                                 exp(k_soil_profile * i * REAL(max_soil_layers)/REAL(nsoil_water)) - & 
+                                 min_layer_depth
+       ENDDO 
+       dz_energy(1) = min_layer_depth
+       DO i=2,nsoil_water
+         dz_energy(i) = MAX(min_layer_depth,soil_depth_profile(i) - soil_depth_profile(i-1))
+       ENDDO
+       dz_water(:) = dz_energy(:)
+    ENDIF
 
     IF (soil_depth .LE. 0.0_wp) CALL finish('Init_soil_config','Initialization with non positive soil depth')
+    IF (soil_depth .GT. SUM(dz_energy)) CALL finish('Init_soil_config','Initialization of soil depth larger than soil profile not possible')
 
     ! check input for soil_moisture_scheme 
     SELECT CASE (TRIM(soil_moisture_scheme))
