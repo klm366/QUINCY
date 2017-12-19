@@ -28,6 +28,7 @@ MODULE mo_jsb_process_factory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
+  USE mo_fage_memory_class,    ONLY: t_fage_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -53,8 +54,12 @@ MODULE mo_jsb_process_factory
   USE mo_carbon_config_class,   ONLY: t_carbon_config  
   USE mo_disturb_interface,     ONLY: Register_disturb_tasks
   USE mo_disturb_config_class,  ONLY: t_disturb_config  
+
+  USE mo_fage_interface,      ONLY: Register_fage_tasks
+  USE mo_fage_config_class,   ONLY: t_fage_config  
   
-  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_
+  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , &
+    & DISTURB_, FAGE_
 
   IMPLICIT NONE
   PRIVATE
@@ -114,6 +119,9 @@ CONTAINS
     CASE (DISTURB_)
       CALL Register_disturb_tasks(return_ptr, model_id)
       ALLOCATE(t_disturb_config::return_ptr%config)
+    CASE (FAGE_)
+      CALL Register_fage_tasks(return_ptr, model_id)
+      ALLOCATE(t_fage_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -137,6 +145,7 @@ CONTAINS
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
+    USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -183,6 +192,9 @@ CONTAINS
     CASE (DISTURB_)
       ALLOCATE(t_disturb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_disturb_vars
+    CASE (FAGE_)
+      ALLOCATE(t_fage_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_fage_vars
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))

@@ -178,6 +178,7 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_carbon_init,         ONLY: carbon_init
     !USE mo_disturb_init,       ONLY: disturb_init
+    USE mo_fage_init,           ONLY: fage_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -186,13 +187,14 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
-    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_
+    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FAGE_
     dsl4jsb_Use_config(PHENO_)
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
+    dsl4jsb_Use_config(FAGE_)
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
@@ -200,6 +202,7 @@ CONTAINS
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
+    dsl4jsb_Def_config(FAGE_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -244,6 +247,7 @@ CONTAINS
       dsl4jsb_Get_config(RAD_)
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(DISTURB_)
+      dsl4jsb_Get_config(FAGE_)
       dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
@@ -312,6 +316,10 @@ CONTAINS
     END IF
     IF (model%processes(DISTURB_)%p%config%active) THEN
        CALL model%Queue_task(DISTURB_, "natural_disturbances")
+    END IF
+    !TODO-JN: should this happen after or before PHENO? 
+    IF (model%processes(FAGE_)%p%config%active) THEN
+       CALL model%Queue_task(FAGE_, "ageing")
     END IF
     CALL model%Queue_task(TURB_,   "humidity_scaling")
     CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
@@ -389,6 +397,10 @@ CONTAINS
       !IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
       !  CALL disturb_init(tile)
       !END IF
+
+      IF (one_of(tile%process_action(FAGE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL fage_init(tile)
+      END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN

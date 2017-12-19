@@ -477,7 +477,7 @@ CONTAINS
       CALL Create_zaxis(new%cdiZaxisID, new%echamZaxisID, &
         & cdi_axis_type, length, new%name, new%levels(1:length), new%units, new%longname, &
         & new%lbounds(1:length), new%ubounds(1:length))
-      WRITE(message_text, '(A,A,2I3)') 'Created new vgrid: name, ID, length= ',TRIM(new%name), new%cdiZaxisID, length
+      WRITE(message_text, '(A,A,2I4)') 'Created new vgrid: name, ID, length = ',TRIM(new%name), new%cdiZaxisID, length
       CALL message(TRIM(routine), message_text)
     ELSE
       new%cdiZaxisID = cdi_zaxis_ids(idx)

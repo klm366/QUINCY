@@ -14,7 +14,8 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_
+  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, &
+    & CARBON_, DISTURB_, FAGE_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -328,7 +329,9 @@ CONTAINS
 
           DO i=1,npft
             pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
-             & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+              & processes       = (/FAGE_/), &
+              & process_actions = (/ON_TILE_/), &
+              & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
           END DO
           ! DO i=1,npft
           !   pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
@@ -709,6 +712,8 @@ CONTAINS
           DO i=1,npft
             WRITE(pft_shortname, "(A3,I2.2)") "pft", i
             pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
+              & processes       = (/FAGE_/), &
+              & process_actions = (/ON_TILE_/), &
               & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
 
             !TODO-JN-COHORTS should check which pft is a forest type?
