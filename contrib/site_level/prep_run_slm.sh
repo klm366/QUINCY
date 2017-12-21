@@ -117,6 +117,7 @@ flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set t
 
 # soil model options
 soil_depth=5.7                  # meters
+nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
 
 # simulation length & output
 simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
@@ -841,6 +842,22 @@ if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if r
 fi
 
 
+# test number of soil layers against min and max values (5:20)
+if [ "$nsoil_layer" -lt 5 ]
+ then
+  echo " "
+  echo " You aim at using ""$nsoil_layer"" soil layers, where the minimum number is 5. nsoil_layer is now set to 5"
+  nsoil_layer=5
+ else
+  if [ "$nsoil_layer" -gt 20 ]
+   then
+    echo " "
+    echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
+    nsoil_layer=20
+  fi
+fi
+
+
 ## set mycorrhiza flag_myco_* flags to FALSE if mycorrhiza are disabled overall
 if [ $flag_mycorrhiza == "F" ]
  then
@@ -1237,6 +1254,8 @@ changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 changeNamelistValue soil_depth "$soil_depth"
+changeNamelistValue nsoil_energy "$nsoil_layer"
+changeNamelistValue nsoil_water "$nsoil_layer"
 changeNamelistValue transient_spinup_start_year "$transient_spinup_start_year"
 changeNamelistValue transient_spinup_end_year "$transient_spinup_end_year"
 changeNamelistValue transient_spinup_years "$transient_spinup_years"

@@ -23,11 +23,8 @@ MODULE mo_assimi_config_class
   ! Module variables
   IMPLICIT NONE
   
-  INTEGER, SAVE :: assimi_ncanopy
-  
   PRIVATE
   PUBLIC :: t_assimi_config
-  PUBLIC :: assimi_ncanopy                  ! used in mo_slm_varlist  *slmtemp
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the assimilation process, derived from t_jsb_config
@@ -80,9 +77,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
     NAMELIST /assimilation_ctl/    &
-         active,                   &
-         ic_filename,              &
-         bc_filename,              &
+        active,                    &
+        ic_filename,               &
+        bc_filename,               &
         flag_optimal_Nfraction,    &
         flag_t_resp_acclimation,   &
         flag_t_jmax_acclimation,   &
@@ -98,13 +95,13 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting assimi configuration')
 
     ! Set defaults
-    active              = .TRUE.
-    bc_filename         = 'bc_land_assimi.nc'
-    ic_filename         = 'ic_land_assimi.nc'
+    active                         = .TRUE.
+    bc_filename                    = 'bc_land_assimi.nc'
+    ic_filename                    = 'ic_land_assimi.nc'
     flag_optimal_Nfraction         = .FALSE.      ! .TRUE. .FALSE.
     flag_t_resp_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
-    ncanopy             = 20                      ! (default for FAPAR based canopy layers would be 10)
+    ncanopy                        = 20           ! (default for FAPAR based canopy layers would be 10)
     canopy_layer_scheme            = "standard"   ! 
 
     ! read the namelist
@@ -117,11 +114,13 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
+    config%active                        = active
+    config%ic_filename                   = ic_filename
+    config%bc_filename                   = bc_filename
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
     config%ncanopy                       = ncanopy
-    assimi_ncanopy                       = ncanopy      ! *slmtemp
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
 
 

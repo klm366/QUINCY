@@ -11,10 +11,13 @@
 !!
 MODULE mo_slm_varlist
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_class,         ONLY: Get_model   ! *slmtemp 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
                                   t_jsb_var_logical2d                        , &                 ! *slmjsb4
@@ -264,10 +267,12 @@ CONTAINS
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
     initval_r)
 
-    USE mo_soil_config_class,               ONLY: soil_nsoil_water
-    USE mo_assimi_config_class,             ONLY: assimi_ncanopy
-    IMPLICIT NONE
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(SOIL_)
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
@@ -281,31 +286,39 @@ CONTAINS
     CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
     CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
     REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
-
+    ! ---------------------------
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_r3d'
+
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(SOIL_)
 
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
+    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(SOIL_)
+
+
     ! select nlevel according to process id 
+    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
     SELECT CASE(struct%owner_proc_id)
       CASE(5, 12) ! soil, sb
-        nlevel = soil_nsoil_water
+        nlevel = dsl4jsb_Config(SOIL_)%nsoil_water
       CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
-        nlevel = assimi_ncanopy
+        nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
       CASE DEFAULT
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = struct%no_of_vars + 1
     IF (pos_of_var > struct%max_no_of_vars) THEN
@@ -395,10 +408,12 @@ CONTAINS
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
     initval_r)
 
-    USE mo_soil_config_class,               ONLY: soil_nsoil_water
-    USE mo_assimi_config_class,             ONLY: assimi_ncanopy
-    IMPLICIT NONE
+    ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(SOIL_)
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
@@ -412,7 +427,7 @@ CONTAINS
     CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
     CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
     REAL(wp),         OPTIONAL, INTENT(in) :: initval_r ! value if var not available
-
+    ! ---------------------------
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
@@ -420,17 +435,25 @@ CONTAINS
     INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
 
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(SOIL_)
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
+    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(SOIL_)
+
+
     ! select nlevel according to process id 
+    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
     SELECT CASE(mem%owner_proc_id)
       CASE(5, 12) ! soil, sb
-        nlevel = soil_nsoil_water
+        nlevel = dsl4jsb_Config(SOIL_)%nsoil_water
       CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
-        nlevel = assimi_ncanopy
+        nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
       CASE DEFAULT
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT

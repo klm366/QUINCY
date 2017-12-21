@@ -75,7 +75,8 @@ if (any(flistLayFiles)){
       varNum <- varCol/ soilLayer
       mat=matrix(seq(1,2*round(soilLayer/2)+2,1),nrow=round(soilLayer/2)+1,ncol=2,byrow=T) 
       bottomMargin <- 18
-      if (soilLayer > 5) bottomMargin <- 6  # reduce bottom margin to leave enough space for plots if soil layer numers is large
+      if (soilLayer > 8) bottomMargin <- 8     # reduce bottom margin to leave enough space for plots if soil layer numers is large
+      if (soilLayer > 14) bottomMargin <- 0.1  # reduce bottom margin to leave enough space for plots if soil layer numers is very large
       
       xAxis <- tstep_pool
       if(grepl("flux",flist[i])) {

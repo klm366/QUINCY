@@ -25,6 +25,7 @@ flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
+
 # BNF & Mycorrhiza
 bnf_scheme="standard"           # none fixed standard optimal resistance
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
@@ -37,13 +38,17 @@ flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
 ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
 flag_tile_veg_dynamics="T"      # does also set "start_bareground"
+
 # soil model options
 soil_depth=5.7                  # meter
+nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
+
 # ECA and P cycle
 flag_sb_eca_upt_po4="T"         # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
 flag_sb_cle_po4="T"             # TRUE: Langmuir equilibrium is constantly maintained between solute P and labile P | FALSE: Langmuir equilibrium is not maintained
@@ -392,6 +397,22 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
 fi
 
 
+# test number of soil layers against min and max values (5:20)
+if [ "$nsoil_layer" -lt 5 ]
+ then
+  echo " "
+  echo " You aim at using ""$nsoil_layer"" soil layers, where the minimum number is 5. nsoil_layer is now set to 5"
+  nsoil_layer=5
+ else
+  if [ "$nsoil_layer" -gt 20 ]
+   then
+    echo " "
+    echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
+    nsoil_layer=20
+  fi
+fi
+
+
 ## set mycorrhiza flag_myco_* flags to FALSE if mycorrhiza are disabled overall
 if [ $flag_mycorrhiza == "F" ]
  then
@@ -544,6 +565,8 @@ changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 changeNamelistValue soil_depth "$soil_depth"
+changeNamelistValue nsoil_energy "$nsoil_layer"
+changeNamelistValue nsoil_water "$nsoil_layer"
 changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
 
 # forcingDataSet (not for test_canopy)

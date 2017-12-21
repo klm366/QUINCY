@@ -274,10 +274,10 @@ CONTAINS
 
     WHERE(soil_depth_sl(:,:)>eps8)
        hlp1(:,:) = MIN(w_soil_fc_sl(:,:),w_soil_sl(:,:))/soil_depth_sl(:,:)
+       w_soil_pot_sl(:,:) = saxtonA * hlp1(:,:) ** saxtonB
     ELSEWHERE
-       hlp1(:,:) = 0.0_wp 
+       w_soil_pot_sl(:,:) = 0.0_wp 
     ENDWHERE
-    w_soil_pot_sl(:,:) = saxtonA * hlp1(:,:) ** saxtonB
 
   END SUBROUTINE soil_init
 

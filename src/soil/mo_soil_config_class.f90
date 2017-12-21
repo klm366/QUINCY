@@ -19,11 +19,9 @@ MODULE mo_soil_config_class
 
   IMPLICIT NONE
   
-  INTEGER, SAVE :: soil_nsoil_water
-  
   PRIVATE
   PUBLIC :: t_soil_config
-  PUBLIC :: soil_nsoil_water                 ! used in mo_slm_varlist  *slmtemp
+  PUBLIC :: max_soil_layers
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil process, derived from t_jsb_config
@@ -94,7 +92,9 @@ CONTAINS
     REAL(wp) :: min_layer_depth = 0.065_wp
 
     NAMELIST /soil_ctl/       & 
-      & active,                                 &
+                          active          , &
+                          ic_filename     , &
+                          bc_filename     , &
                           nsoil_energy    , &
                           nsoil_water     , &
                           dz_energy       , &
@@ -108,8 +108,7 @@ CONTAINS
                           soil_silt       , &
                           soil_clay       , &
                           bulk_density    , &
-                          soil_moisture_scheme, &
-      & ic_filename, bc_filename
+                          soil_moisture_scheme
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
@@ -119,7 +118,9 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil configuration')
 
     ! Set defaults
-    active          = .TRUE.
+    active                        = .TRUE.
+    ic_filename                   = 'ic_land_soil.nc'
+    bc_filename                   = 'bc_land_soil.nc'
     nsoil_energy                  = 5
     nsoil_water                   = 5
     dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
@@ -136,8 +137,6 @@ CONTAINS
     soil_clay                     = 0.3_wp
     bulk_density                  = 1500.0_wp
     soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
-    ic_filename      = 'ic_land_soil.nc'
-    bc_filename      = 'bc_land_soil.nc'
 
     ! read the namelist
     ! &SOIL_CTL
@@ -147,10 +146,6 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, soil_ctl)
 
     CALL close_nml(nml_handler)
-
-    config%active        = active
-    config%ic_filename   = ic_filename
-    config%bc_filename   = bc_filename
 
     ! allocate vectors
     ALLOCATE(config%soil_depth_energy(nsoil_energy))
@@ -194,9 +189,11 @@ CONTAINS
     ENDSELECT
 
     ! pass values as read from file
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
     config%nsoil_energy              = nsoil_energy
     config%nsoil_water               = nsoil_water
-    soil_nsoil_water                 = nsoil_water          ! *slmtemp
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
     config%soil_moisture_scheme      = soil_moisture_scheme

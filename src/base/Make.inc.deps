@@ -117,6 +117,7 @@ mo_slm_varlist.o: \
   mo_base_memory.o \
   mo_jsb_class.o \
   mo_jsb_var_class.o \
+  mo_jsb_process_class.o \
   mo_assimi_config_class.o \
   mo_soil_config_class.o \
   mo_jsb_memory_class.o \
@@ -139,5 +140,3 @@ mo_jsb_grid_class.o: \
   mo_io_units.o \
   mo_exception.o \
   mo_jsb_domain_iface.o
-
-

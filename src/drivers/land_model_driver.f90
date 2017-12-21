@@ -127,9 +127,9 @@ PROGRAM land_model_driver
   !! 
   TYPE(t_slm_tile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
                                            !! in jsbach4 tile is created in mo_jsb_model_usecases
-  iblk     = 5
-  ics      = 3
-  ice      = 3
+  iblk     = 1
+  ics      = 1
+  ice      = 1
   nc       = ice - ics + 1                 ! (end-number - start-number + 1)
   nsoil_sb = -1                            ! namelist parameter
   CALL init_model(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)  !< model init : mo_jsb_model_init 
