@@ -1252,6 +1252,9 @@ CONTAINS
         fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        fname = 'mycofluxCNP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
         fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
@@ -1359,8 +1362,12 @@ CONTAINS
         WRITE(lun,'(2a)') 'Time PDeposition Leaching_PO4 Net_Mineralisation_PO4 Weathering_PO4 Occlusion_PO4 ', &
                           'Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
+        ! soilfluxdN
         WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2', &
                           ' Leaching_d15NH4 Leaching_d15NO3'
+        lun=lun+1
+        ! mycofluxCNP
+        WRITE(lun,'(a)') 'Time mycoExportC mycoExportN mycoExportP mycoExportC13 mycoExportC14 mycoExportN15'
         lun=lun+1
         ! sb_massBalance_*.txt
         WRITE(lun,'(2a)') 'Time sb_dPoolC sb_dPoolN sb_dPoolP sb_dPoolC13 sb_dPoolC14 sb_dPoolN15 ', &
@@ -1594,6 +1601,12 @@ CONTAINS
     REAL(wp), SAVE                        :: sb_total_flux_carbon13_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_c_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_n_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_p_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_c13_acc = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_c14_acc = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_n15_acc = 0.0_wp
     !! hardcoded max soil layer number (20)
     REAL(wp), DIMENSION(max_soil_layers), SAVE :: &
                                              adsorpt_po4_acc = 0.0_wp           , &  
@@ -2008,7 +2021,19 @@ CONTAINS
                                                 SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
                                                 SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-
+             ! Mycorrhiza
+             myco_export_c_acc   = myco_export_c_acc    + SUM(sb%mycorrhiza_export%carbon%ptr(ichu,:,iblk) * &
+                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myco_export_n_acc   = myco_export_n_acc    + SUM(sb%mycorrhiza_export%nitrogen%ptr(ichu,:,iblk) * &
+                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myco_export_p_acc   = myco_export_p_acc    + SUM(sb%mycorrhiza_export%phosphorus%ptr(ichu,:,iblk) * &
+                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myco_export_c13_acc = myco_export_c13_acc  + SUM(sb%mycorrhiza_export%carbon13%ptr(ichu,:,iblk) * &
+                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myco_export_c14_acc = myco_export_c14_acc  + SUM(sb%mycorrhiza_export%carbon14%ptr(ichu,:,iblk) * &
+                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myco_export_n15_acc = myco_export_n15_acc  + SUM(sb%mycorrhiza_export%nitrogen15%ptr(ichu,:,iblk) * &
+                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
              ! for mass balance checks in SB_
               sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
                                                 SUM(sb%delta_pools%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
@@ -2091,6 +2116,7 @@ CONTAINS
                                           weathering_po4_acc, occlusion_po4_acc, &
                                           slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
                    lun=lun+1
+                   ! soilfluxdN
                    write(lun,'(20F18.8)') time_d, & 
                          calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
                          calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
@@ -2099,6 +2125,11 @@ CONTAINS
                          calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
                          calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
                          calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc)
+                   lun=lun+1
+                   ! mycofluxCNP
+                   write(lun,'(7F20.10)') time_d, & 
+                                         myco_export_c_acc, myco_export_n_acc, myco_export_p_acc, &
+                                         myco_export_c13_acc, myco_export_c14_acc , myco_export_n15_acc
                    lun=lun+1
                    ! sb_massBalance_..txt
                    write(lun,'(13F24.12)') time_d, &
@@ -2197,26 +2228,32 @@ CONTAINS
                leaching_no3_n15_acc = 0.0_wp
                asymb_n_fixation_acc = 0.0_wp
                asymb_n_fixation_n15_acc = 0.0_wp
-               p_deposition_acc              = 0.0_wp
-               leaching_po4_acc              = 0.0_wp
-               net_min_po4_acc               = 0.0_wp
-               weathering_po4_acc            = 0.0_wp
-               occlusion_po4_acc             = 0.0_wp
-               slow_sorption_po4_acc         = 0.0_wp
-               fast_adsorption_po4_acc       = 0.0_wp
+               p_deposition_acc               = 0.0_wp
+               leaching_po4_acc               = 0.0_wp
+               net_min_po4_acc                = 0.0_wp
+               weathering_po4_acc             = 0.0_wp
+               occlusion_po4_acc              = 0.0_wp
+               slow_sorption_po4_acc          = 0.0_wp
+               fast_adsorption_po4_acc        = 0.0_wp
                biochem_mineralisation_po4_acc = 0.0_wp
-               sb_delta_pools_carbon_acc     = 0.0_wp
-               sb_delta_pools_nitrogen_acc   = 0.0_wp
-               sb_delta_pools_phosphorus_acc = 0.0_wp
-               sb_delta_pools_carbon13_acc   = 0.0_wp
-               sb_delta_pools_carbon14_acc   = 0.0_wp
-               sb_delta_pools_nitrogen15_acc = 0.0_wp
-               sb_total_flux_carbon_acc      = 0.0_wp
-               sb_total_flux_nitrogen_acc    = 0.0_wp
-               sb_total_flux_phosphorus_acc  = 0.0_wp
-               sb_total_flux_carbon13_acc    = 0.0_wp
-               sb_total_flux_carbon14_acc    = 0.0_wp
-               sb_total_flux_nitrogen15_acc  = 0.0_wp
+               myco_export_c_acc              = 0.0_wp
+               myco_export_n_acc              = 0.0_wp
+               myco_export_p_acc              = 0.0_wp
+               myco_export_c13_acc            = 0.0_wp
+               myco_export_c14_acc            = 0.0_wp
+               myco_export_n15_acc            = 0.0_wp
+               sb_delta_pools_carbon_acc      = 0.0_wp
+               sb_delta_pools_nitrogen_acc    = 0.0_wp
+               sb_delta_pools_phosphorus_acc  = 0.0_wp
+               sb_delta_pools_carbon13_acc    = 0.0_wp
+               sb_delta_pools_carbon14_acc    = 0.0_wp
+               sb_delta_pools_nitrogen15_acc  = 0.0_wp
+               sb_total_flux_carbon_acc       = 0.0_wp
+               sb_total_flux_nitrogen_acc     = 0.0_wp
+               sb_total_flux_phosphorus_acc   = 0.0_wp
+               sb_total_flux_carbon13_acc     = 0.0_wp
+               sb_total_flux_carbon14_acc     = 0.0_wp
+               sb_total_flux_nitrogen15_acc   = 0.0_wp
              END IF ! l_flux_output_interval
            END IF   ! l_flux_calc_acc_output
         END IF      ! on/off switch specific to 'special case: fluxnet output'

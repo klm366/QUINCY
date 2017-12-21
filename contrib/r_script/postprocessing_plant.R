@@ -20,7 +20,8 @@ flist_pool = c(flist_pool,Sys.glob(paste0("soilpool*","_",tstep_pool,"*.txt")))
 flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*","_",tstep_pool,"*.txt"))) 
 flist_pool = c(flist_pool,Sys.glob(paste0("ecopool*","_",tstep_pool,"*.txt")))  
 # get flux output files  
-flist_flux = Sys.glob(paste0("vegflux*","_",tstep_pool,"*.txt")) 
+flist_flux = Sys.glob(paste0("vegflux*","_",tstep_pool,"*.txt"))
+flist_flux = c(flist_flux,Sys.glob(paste0("mycoflux*","_",tstep_pool,"*.txt")))
 
   #create overall file list
 flist=c(flist_pool,flist_flux)
