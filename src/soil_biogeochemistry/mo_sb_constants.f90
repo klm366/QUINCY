@@ -255,6 +255,7 @@ CONTAINS
     microbial_nue       = 0.8_wp                                 ! Manzoni et al. 2008
     microbial_pue       = 0.8_wp                                 ! Manzoni et al. 2008
     microbial_cue       = 0.392_wp                               ! COMISSION paper
+    microbial_cue       = 0.3_wp                               ! COMISSION paper
     microbial_cue_max   = 0.6_wp                                 ! Manzoni et al. 2008
     microbial_cue_min   = 0.3_wp                                 ! Manzoni et al. 2008
     microbial_cn_max    = 13._wp  * molar_mass_N / molar_mass_C  ! Manzoni et al. 2008, slightly tighter than than (was 13)
