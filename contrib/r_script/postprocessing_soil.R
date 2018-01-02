@@ -99,12 +99,22 @@ if (any(flistLayFiles)){
       countVar <- 0
       for (v in 1:varNum) {
         layout(mat)
-        par(mai=c(0.6,0.8,0,0),oma=c(bottomMargin,1,1,1)) # oma = outer margins
+        par(mai=c(0.3,0.4,0,0),oma=c(bottomMargin,0.2,1.2,0.2)) # oma = outer margins
         a <- soilLayer *countVar +2
         b <- a + soilLayer -1
         dat2 <- dat[,a:b]
+        # variable name
+        vName<-colnames(dat2[1])
+        vName<-substr(vName, 1, nchar(vName)-3)
         for (j in 1:soilLayer) {
-          plot(1:rowNum, dat2[,j],ylab=colnames(dat2)[j],type='l',xlab=xAxis, mgp=c(1.84, 0.64, 0))
+          if (j < 10){ yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-1, nchar(colnames(dat2)[j]))
+          } else       yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-2, nchar(colnames(dat2)[j]))
+          plot(1:rowNum, dat2[,j], 
+            ylab=yAxisLabel, xlab=xAxis, 
+            type='l',
+            tck=0.02, mgp=c(1.2, 0.14, 0))
+          if (j == 1) mtext(vName, cex=0.9, side=3, line=0.04, adj=0,col="red3")
+          if (j == 2) mtext(flist[i], cex=0.8, side=3, line=0.04, adj=0)
         }
         countVar <- countVar +1
       }
