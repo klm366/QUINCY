@@ -34,7 +34,6 @@ MODULE mo_shared_output
   REAL(wp), SAVE :: output_interval_pool   ! equals 'dtime/one_day' or is a mulitple of it
   REAL(wp), SAVE :: output_interval_flux   ! equals 'dtime/one_day' or is a mulitple of it
   INTEGER, PRIVATE :: ipoi = 1             ! the chunk in ics:ice of which data will be written to file; per default = 1
-                                           ! please see ichu in the below code -> used for sb% variables and may set to ichu = ics
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
@@ -100,7 +99,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
-    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
                                                    nc, &
@@ -498,7 +497,9 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,        ONLY: veg_pool, veg_total_biomass
+    dsl4slm_Use_memory_a_sb
+    USE mo_veg_memory_class,      ONLY: veg_pool, veg_total_biomass
+    USE mo_sb_memory_class,       ONLY: sb_pool
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -529,7 +530,7 @@ CONTAINS
                                          :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
                                             dC13dom,dC13dom_assoc,dC13fungi,dC13mycorrhiza,dC13microbial, & 
                                             dC13residue,dC13residue_assoc
-    INTEGER                              :: iblk, ics, ice, nc, ichu
+    INTEGER                              :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_pool'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -598,13 +599,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: qmax_org
     dsl4jsb_Real3D_onChunk      :: qmax_po4
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
-!! *slmtemp
-    TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN   ! ask for all processes considered here ?
@@ -679,13 +679,12 @@ CONTAINS
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_total_biomass
+#define Get_sb_pool
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
 #undef Get_veg_total_biomass
+#undef Get_sb_pool
 
-
-!! *slmtemp
-    sb      => sb__mem  
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -695,7 +694,6 @@ CONTAINS
 
     !< 0.9 init local variables
     !! 
-    ichu = ics    ! the chunk number for output using variables directly from the sb% mem
     lun = 100
 
     !< 1.0 test if anything would be written out at this timestep
@@ -808,24 +806,24 @@ CONTAINS
               write(lun,'(41F16.6)') time_d, w_soil_sl(ipoi,:), t_soil_sl(ipoi,:)
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
-                                     SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))      , & 
-                                     SUM(sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))    , & 
-                                     SUM(sb%pool%soluable_litter%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))  , & 
-                                     SUM(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))     , & 
-                                     SUM(sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   , & 
-                                     SUM(sb%pool%polymeric_litter%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)) , & 
-                                     SUM(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         , & 
-                                     SUM(sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))       , & 
-                                     SUM(sb%pool%woody_litter%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))     , & 
-                                     SUM(sb%pool%microbial%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            , & 
-                                     SUM(sb%pool%microbial%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))          , & 
-                                     SUM(sb%pool%microbial%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))        , & 
-                                     SUM(sb%pool%residue%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))              , & 
-                                     SUM(sb%pool%residue%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            , & 
-                                     SUM(sb%pool%residue%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))          , & 
-                                     SUM(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))           , &
-                                     SUM(sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         , &
-                                     SUM(sb%pool%mycorrhiza%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))       
+                                     SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))      , & 
+                                     SUM(sb_pool%soluable_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))    , & 
+                                     SUM(sb_pool%soluable_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))  , & 
+                                     SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     , & 
+                                     SUM(sb_pool%polymeric_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))   , & 
+                                     SUM(sb_pool%polymeric_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:)) , & 
+                                     SUM(sb_pool%woody_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))         , & 
+                                     SUM(sb_pool%woody_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))       , & 
+                                     SUM(sb_pool%woody_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))     , & 
+                                     SUM(sb_pool%microbial%carbon(ipoi,:)*soil_depth_sl(ipoi,:))            , & 
+                                     SUM(sb_pool%microbial%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))          , & 
+                                     SUM(sb_pool%microbial%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))        , & 
+                                     SUM(sb_pool%residue%carbon(ipoi,:)*soil_depth_sl(ipoi,:))              , & 
+                                     SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))            , & 
+                                     SUM(sb_pool%residue%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))          , & 
+                                     SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*soil_depth_sl(ipoi,:))           , &
+                                     SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         , &
+                                     SUM(sb_pool%mycorrhiza%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))       
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
                                      SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
@@ -836,56 +834,56 @@ CONTAINS
                                      SUM(n2(ipoi,:)*soil_depth_sl(ipoi,:))  
               lun=lun+1
               write(lun,'(30F16.6)') time_d, &
-                                     SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))     + & 
-                                      SUM(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))     + & 
-                                      SUM(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         + &
-                                      SUM(sb%pool%microbial%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            + &
-                                      SUM(sb%pool%residue%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))              + & 
-                                      SUM(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))           , &
-                                     SUM(sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))       + &
-                                      SUM(sb%pool%microbial%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))          + &
-                                      SUM(sb%pool%residue%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            + & 
-                                      SUM(sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         , &
+                                     SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     + & 
+                                      SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     + & 
+                                      SUM(sb_pool%woody_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))         + &
+                                      SUM(sb_pool%microbial%carbon(ipoi,:)*soil_depth_sl(ipoi,:))            + &
+                                      SUM(sb_pool%residue%carbon(ipoi,:)*soil_depth_sl(ipoi,:))              + & 
+                                      SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*soil_depth_sl(ipoi,:))           , &
+                                     SUM(sb_pool%soluable_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%polymeric_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%woody_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))       + &
+                                      SUM(sb_pool%microbial%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))          + &
+                                      SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
+                                      SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         , &
                                      SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(noy(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2o(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2(ipoi,:)*soil_depth_sl(ipoi,:))                                        , &     
-                                     SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))     + & 
-                                      SUM(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))     + & 
-                                      SUM(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         + &
-                                      SUM(sb%pool%microbial%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            + &
-                                      SUM(sb%pool%residue%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))              + & 
-                                      SUM(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))           + &
+                                     SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     + & 
+                                      SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     + & 
+                                      SUM(sb_pool%woody_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))         + &
+                                      SUM(sb_pool%microbial%carbon(ipoi,:)*soil_depth_sl(ipoi,:))            + &
+                                      SUM(sb_pool%residue%carbon(ipoi,:)*soil_depth_sl(ipoi,:))              + & 
+                                      SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*soil_depth_sl(ipoi,:))           + &
                                       veg_total_biomass%carbon(ipoi)                                         , &
-                                     SUM(sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))       + &
-                                      SUM(sb%pool%microbial%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))          + &
-                                      SUM(sb%pool%residue%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            + & 
-                                      SUM(sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         + &
+                                     SUM(sb_pool%soluable_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%polymeric_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%woody_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))       + &
+                                      SUM(sb_pool%microbial%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))          + &
+                                      SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
+                                      SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         + &
                                       SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + &
                                       SUM(noy(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2o(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2(ipoi,:)*soil_depth_sl(ipoi,:))                                        + &     
                                       veg_total_biomass%nitrogen(ipoi)                                       , &
-                                     SUM(sb%pool%soluable_litter%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%polymeric_litter%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%woody_litter%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))       + &
-                                      SUM(sb%pool%microbial%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))          + &
-                                      SUM(sb%pool%residue%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            + & 
-                                      SUM(sb%pool%mycorrhiza%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         + &
+                                     SUM(sb_pool%soluable_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%polymeric_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%woody_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))       + &
+                                      SUM(sb_pool%microbial%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))          + &
+                                      SUM(sb_pool%residue%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
+                                      SUM(sb_pool%mycorrhiza%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))         + &
                                       SUM(po4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       veg_total_biomass%phosphorus(ipoi)                                     , &
-                                     SUM(sb%pool%soluable_litter%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%polymeric_litter%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))   + & 
-                                      SUM(sb%pool%woody_litter%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))       + &
-                                      SUM(sb%pool%microbial%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))          + &
-                                      SUM(sb%pool%residue%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))            + & 
-                                      SUM(sb%pool%mycorrhiza%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))         + &
+                                     SUM(sb_pool%soluable_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%polymeric_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
+                                      SUM(sb_pool%woody_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))       + &
+                                      SUM(sb_pool%microbial%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))          + &
+                                      SUM(sb_pool%residue%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
+                                      SUM(sb_pool%mycorrhiza%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))         + &
                                       SUM(nh4_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(no3_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + &
                                       SUM(noy_n15(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
@@ -894,24 +892,24 @@ CONTAINS
                                       veg_total_biomass%nitrogen15(ipoi)
  
 
-              dC13soluable_litter(ipoi,1)  = calc_delta_C13(SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*&
+              dC13soluable_litter(ipoi,1)  = calc_delta_C13(SUM(sb_pool%soluable_litter%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
-                                              SUM(sb%pool%soluable_litter%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)))
-              dC13polymeric_litter(ipoi,1) = calc_delta_C13(SUM(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk)*&
+                                              SUM(sb_pool%soluable_litter%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
+              dC13polymeric_litter(ipoi,1) = calc_delta_C13(SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
-                                              SUM(sb%pool%polymeric_litter%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)))
-              dC13woody_litter(ipoi,1)     = calc_delta_C13(SUM(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk)*&
+                                              SUM(sb_pool%polymeric_litter%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
+              dC13woody_litter(ipoi,1)     = calc_delta_C13(SUM(sb_pool%woody_litter%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
-                                              SUM(sb%pool%woody_litter%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)))
-              dC13microbial(ipoi,1)        = calc_delta_C13(SUM(sb%pool%microbial%carbon%ptr(ichu,:,iblk)*&
+                                              SUM(sb_pool%woody_litter%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
+              dC13microbial(ipoi,1)        = calc_delta_C13(SUM(sb_pool%microbial%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
-                                              SUM(sb%pool%microbial%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)))
-              dC13residue(ipoi,1)          = calc_delta_C13(SUM(sb%pool%residue%carbon%ptr(ichu,:,iblk)*&
+                                              SUM(sb_pool%microbial%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
+              dC13residue(ipoi,1)          = calc_delta_C13(SUM(sb_pool%residue%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
-                                              SUM(sb%pool%residue%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)))
-              dC13mycorrhiza(ipoi,1)       = calc_delta_C13(SUM(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk)*&
+                                              SUM(sb_pool%residue%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
+              dC13mycorrhiza(ipoi,1)       = calc_delta_C13(SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
-                                              SUM(sb%pool%mycorrhiza%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)))
+                                              SUM(sb_pool%mycorrhiza%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
 
               lun=lun+1
               write(lun,'(20F14.6)') time_d, &
@@ -921,28 +919,28 @@ CONTAINS
                 dC13microbial(ipoi,1), &
                 dC13residue(ipoi,1), & 
                 dC13mycorrhiza(ipoi,1), &
-                calc_delta_C14(SUM(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
-                               SUM(sb%pool%soluable_litter%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
+                calc_delta_C14(SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%soluable_litter%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)), &
                                     dC13soluable_litter(ipoi,1)) , &
-                calc_delta_C14(SUM(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
-                               SUM(sb%pool%polymeric_litter%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
+                calc_delta_C14(SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%polymeric_litter%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)), &
                                     dC13polymeric_litter(ipoi,1)), &
-                calc_delta_C14(SUM(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
-                               SUM(sb%pool%woody_litter%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
+                calc_delta_C14(SUM(sb_pool%woody_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%woody_litter%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)), &
                                     dC13woody_litter(ipoi,1))        , &
-                calc_delta_C14(SUM(sb%pool%microbial%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
-                               SUM(sb%pool%microbial%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), dC13microbial(ipoi,1)), &
-                calc_delta_C14(SUM(sb%pool%residue%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
-                               SUM(sb%pool%residue%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), dC13residue(ipoi,1)), &
-                calc_delta_C14(SUM(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)), &
-                               SUM(sb%pool%mycorrhiza%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:)),dC13mycorrhiza(ipoi,1)), &
-                calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ichu,1,iblk),&
-                                sb%pool%soluable_litter%nitrogen15%ptr(ichu,1,iblk)), &
-                calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ichu,1,iblk),&
-                                sb%pool%polymeric_litter%nitrogen15%ptr(ichu,1,iblk)), &
-                calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ichu,1,iblk),sb%pool%woody_litter%nitrogen15%ptr(ichu,1,iblk)), &
-                calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ichu,1,iblk),sb%pool%microbial%nitrogen15%ptr(ichu,1,iblk)), &
-                calc_delta_N15(sb%pool%residue%nitrogen%ptr(ichu,1,iblk),sb%pool%residue%nitrogen15%ptr(ichu,1,iblk)), &
+                calc_delta_C14(SUM(sb_pool%microbial%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%microbial%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)), dC13microbial(ipoi,1)), &
+                calc_delta_C14(SUM(sb_pool%residue%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%residue%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)), dC13residue(ipoi,1)), &
+                calc_delta_C14(SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%mycorrhiza%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)),dC13mycorrhiza(ipoi,1)), &
+                calc_delta_N15(sb_pool%soluable_litter%nitrogen(ipoi,1),&
+                                sb_pool%soluable_litter%nitrogen15(ipoi,1)), &
+                calc_delta_N15(sb_pool%polymeric_litter%nitrogen(ipoi,1),&
+                                sb_pool%polymeric_litter%nitrogen15(ipoi,1)), &
+                calc_delta_N15(sb_pool%woody_litter%nitrogen(ipoi,1),sb_pool%woody_litter%nitrogen15(ipoi,1)), &
+                calc_delta_N15(sb_pool%microbial%nitrogen(ipoi,1),sb_pool%microbial%nitrogen15(ipoi,1)), &
+                calc_delta_N15(sb_pool%residue%nitrogen(ipoi,1),sb_pool%residue%nitrogen15(ipoi,1)), &
                 calc_delta_N15(nh4_solute(ipoi,1),nh4_n15_solute(ipoi,1)), &
                 calc_delta_N15(no3_solute(ipoi,1),no3_n15_solute(ipoi,1))
               
@@ -1013,28 +1011,28 @@ CONTAINS
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE('simple_1d','jsm')
           ! soilpoolCOrg_lay
-          write(lun,'(201F16.6)') time_d,sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk),&
-              sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk),sb%pool%woody_litter%carbon%ptr(ichu,:,iblk),&
-              sb%pool%dom%carbon%ptr(ichu,:,iblk),sb%pool%dom_assoc%carbon%ptr(ichu,:,iblk),&
-              sb%pool%fungi%carbon%ptr(ichu,:,iblk),sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk),&
-              sb%pool%microbial%carbon%ptr(ichu,:,iblk),sb%pool%residue%carbon%ptr(ichu,:,iblk),&
-              sb%pool%residue_assoc%carbon%ptr(ichu,:,iblk)
+          write(lun,'(201F16.6)') time_d,sb_pool%soluable_litter%carbon(ipoi,:),&
+              sb_pool%polymeric_litter%carbon(ipoi,:),sb_pool%woody_litter%carbon(ipoi,:),&
+              sb_pool%dom%carbon(ipoi,:),sb_pool%dom_assoc%carbon(ipoi,:),&
+              sb_pool%fungi%carbon(ipoi,:),sb_pool%mycorrhiza%carbon(ipoi,:),&
+              sb_pool%microbial%carbon(ipoi,:),sb_pool%residue%carbon(ipoi,:),&
+              sb_pool%residue_assoc%carbon(ipoi,:)
           lun=lun+1
           ! soilpoolNOrg_lay
-          write(lun,'(201F16.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk),&
-              sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk),&
-              sb%pool%dom%nitrogen%ptr(ichu,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ichu,:,iblk),&
-              sb%pool%fungi%nitrogen%ptr(ichu,:,iblk),sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk),&
-              sb%pool%microbial%nitrogen%ptr(ichu,:,iblk),sb%pool%residue%nitrogen%ptr(ichu,:,iblk),&
-              sb%pool%residue_assoc%nitrogen%ptr(ichu,:,iblk)
+          write(lun,'(201F16.6)') time_d,sb_pool%soluable_litter%nitrogen(ipoi,:),&
+              sb_pool%polymeric_litter%nitrogen(ipoi,:),sb_pool%woody_litter%nitrogen(ipoi,:),&
+              sb_pool%dom%nitrogen(ipoi,:),sb_pool%dom_assoc%nitrogen(ipoi,:),&
+              sb_pool%fungi%nitrogen(ipoi,:),sb_pool%mycorrhiza%nitrogen(ipoi,:),&
+              sb_pool%microbial%nitrogen(ipoi,:),sb_pool%residue%nitrogen(ipoi,:),&
+              sb_pool%residue_assoc%nitrogen(ipoi,:)
           lun=lun+1
           ! soilpoolPOrg_lay
-          write(lun,'(201F16.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ichu,:,iblk),&
-              sb%pool%polymeric_litter%phosphorus%ptr(ichu,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ichu,:,iblk),&
-              sb%pool%dom%phosphorus%ptr(ichu,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ichu,:,iblk),&
-              sb%pool%fungi%phosphorus%ptr(ichu,:,iblk),sb%pool%mycorrhiza%phosphorus%ptr(ichu,:,iblk),&
-              sb%pool%microbial%phosphorus%ptr(ichu,:,iblk),sb%pool%residue%phosphorus%ptr(ichu,:,iblk),&
-              sb%pool%residue_assoc%phosphorus%ptr(ichu,:,iblk)
+          write(lun,'(201F16.6)') time_d,sb_pool%soluable_litter%phosphorus(ipoi,:),&
+              sb_pool%polymeric_litter%phosphorus(ipoi,:),sb_pool%woody_litter%phosphorus(ipoi,:),&
+              sb_pool%dom%phosphorus(ipoi,:),sb_pool%dom_assoc%phosphorus(ipoi,:),&
+              sb_pool%fungi%phosphorus(ipoi,:),sb_pool%mycorrhiza%phosphorus(ipoi,:),&
+              sb_pool%microbial%phosphorus(ipoi,:),sb_pool%residue%phosphorus(ipoi,:),&
+              sb_pool%residue_assoc%phosphorus(ipoi,:)
           lun=lun+1
           ! soilpoolInNOrg_lay
           write(lun,'(121F18.6)') time_d, &
@@ -1048,26 +1046,26 @@ CONTAINS
             po4_assoc_fast(ipoi,:), po4_assoc_slow(ipoi,:), po4_occluded(ipoi,:), po4_solute(ipoi,:), po4_primary(ipoi,:)
           lun=lun+1
           ! soilpooldC13org_lay
-          dC13soluable_litter(ipoi,:)   = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%soluable_litter%carbon13%ptr(ichu,:,iblk))
-          dC13polymeric_litter(ipoi,:)  = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%polymeric_litter%carbon13%ptr(ichu,:,iblk))
-          dC13woody_litter(ipoi,:)      = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%woody_litter%carbon13%ptr(ichu,:,iblk))
-          dC13dom(ipoi,:)               = calc_delta_C13(sb%pool%dom%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%dom%carbon13%ptr(ichu,:,iblk))
-          dC13dom_assoc(ipoi,:)         = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%dom_assoc%carbon13%ptr(ichu,:,iblk))
-          dC13fungi(ipoi,:)             = calc_delta_C13(sb%pool%fungi%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%fungi%carbon13%ptr(ichu,:,iblk))
-          dC13mycorrhiza(ipoi,:)        = calc_delta_C13(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%mycorrhiza%carbon13%ptr(ichu,:,iblk))
-          dC13microbial(ipoi,:)         = calc_delta_C13(sb%pool%microbial%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%microbial%carbon13%ptr(ichu,:,iblk))
-          dC13residue(ipoi,:)           = calc_delta_C13(sb%pool%residue%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%residue%carbon13%ptr(ichu,:,iblk))
-          dC13residue_assoc(ipoi,:)     = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ichu,:,iblk), &
-                                                      sb%pool%residue_assoc%carbon13%ptr(ichu,:,iblk))
+          dC13soluable_litter(ipoi,:)   = calc_delta_C13(sb_pool%soluable_litter%carbon(ipoi,:), &
+                                                      sb_pool%soluable_litter%carbon13(ipoi,:))
+          dC13polymeric_litter(ipoi,:)  = calc_delta_C13(sb_pool%polymeric_litter%carbon(ipoi,:), &
+                                                      sb_pool%polymeric_litter%carbon13(ipoi,:))
+          dC13woody_litter(ipoi,:)      = calc_delta_C13(sb_pool%woody_litter%carbon(ipoi,:), &
+                                                      sb_pool%woody_litter%carbon13(ipoi,:))
+          dC13dom(ipoi,:)               = calc_delta_C13(sb_pool%dom%carbon(ipoi,:), &
+                                                      sb_pool%dom%carbon13(ipoi,:))
+          dC13dom_assoc(ipoi,:)         = calc_delta_C13(sb_pool%dom_assoc%carbon(ipoi,:), &
+                                                      sb_pool%dom_assoc%carbon13(ipoi,:))
+          dC13fungi(ipoi,:)             = calc_delta_C13(sb_pool%fungi%carbon(ipoi,:), &
+                                                      sb_pool%fungi%carbon13(ipoi,:))
+          dC13mycorrhiza(ipoi,:)        = calc_delta_C13(sb_pool%mycorrhiza%carbon(ipoi,:), &
+                                                      sb_pool%mycorrhiza%carbon13(ipoi,:))
+          dC13microbial(ipoi,:)         = calc_delta_C13(sb_pool%microbial%carbon(ipoi,:), &
+                                                      sb_pool%microbial%carbon13(ipoi,:))
+          dC13residue(ipoi,:)           = calc_delta_C13(sb_pool%residue%carbon(ipoi,:), &
+                                                      sb_pool%residue%carbon13(ipoi,:))
+          dC13residue_assoc(ipoi,:)     = calc_delta_C13(sb_pool%residue_assoc%carbon(ipoi,:), &
+                                                      sb_pool%residue_assoc%carbon13(ipoi,:))
           write(lun,'(201F16.6)') time_d, &
                                   dC13soluable_litter(ipoi,:), dC13polymeric_litter(ipoi,:), &
                                   dC13woody_litter(ipoi,:),    dC13dom(ipoi,:), &
@@ -1077,49 +1075,49 @@ CONTAINS
           lun=lun+1
           ! soilpooldC14org_lay
           write(lun,'(201F16.6)') time_d,&
-            calc_delta_C14(sb%pool%soluable_litter%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%soluable_litter%carbon14%ptr(ichu,:,iblk),dC13soluable_litter(ipoi,:)),&
-            calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%polymeric_litter%carbon14%ptr(ichu,:,iblk),dC13polymeric_litter(ipoi,:)),&
-            calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%woody_litter%carbon14%ptr(ichu,:,iblk),dC13woody_litter(ipoi,:)),&
-            calc_delta_C14(sb%pool%dom%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%dom%carbon14%ptr(ichu,:,iblk),dC13dom(ipoi,:)),&
-            calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%dom_assoc%carbon14%ptr(ichu,:,iblk),dC13dom_assoc(ipoi,:)),&
-            calc_delta_C14(sb%pool%fungi%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%fungi%carbon14%ptr(ichu,:,iblk),dC13fungi(ipoi,:)),&
-            calc_delta_C14(sb%pool%mycorrhiza%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%mycorrhiza%carbon14%ptr(ichu,:,iblk),dC13mycorrhiza(ipoi,:)),&
-            calc_delta_C14(sb%pool%microbial%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%microbial%carbon14%ptr(ichu,:,iblk),dC13microbial(ipoi,:)),&
-            calc_delta_C14(sb%pool%residue%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%residue%carbon14%ptr(ichu,:,iblk),dC13residue(ipoi,:)),&
-            calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ichu,:,iblk), &
-                            sb%pool%residue_assoc%carbon14%ptr(ichu,:,iblk),dC13residue_assoc(ipoi,:))
+            calc_delta_C14(sb_pool%soluable_litter%carbon(ipoi,:), &
+                            sb_pool%soluable_litter%carbon14(ipoi,:),dC13soluable_litter(ipoi,:)),&
+            calc_delta_C14(sb_pool%polymeric_litter%carbon(ipoi,:), &
+                            sb_pool%polymeric_litter%carbon14(ipoi,:),dC13polymeric_litter(ipoi,:)),&
+            calc_delta_C14(sb_pool%woody_litter%carbon(ipoi,:), &
+                            sb_pool%woody_litter%carbon14(ipoi,:),dC13woody_litter(ipoi,:)),&
+            calc_delta_C14(sb_pool%dom%carbon(ipoi,:), &
+                            sb_pool%dom%carbon14(ipoi,:),dC13dom(ipoi,:)),&
+            calc_delta_C14(sb_pool%dom_assoc%carbon(ipoi,:), &
+                            sb_pool%dom_assoc%carbon14(ipoi,:),dC13dom_assoc(ipoi,:)),&
+            calc_delta_C14(sb_pool%fungi%carbon(ipoi,:), &
+                            sb_pool%fungi%carbon14(ipoi,:),dC13fungi(ipoi,:)),&
+            calc_delta_C14(sb_pool%mycorrhiza%carbon(ipoi,:), &
+                            sb_pool%mycorrhiza%carbon14(ipoi,:),dC13mycorrhiza(ipoi,:)),&
+            calc_delta_C14(sb_pool%microbial%carbon(ipoi,:), &
+                            sb_pool%microbial%carbon14(ipoi,:),dC13microbial(ipoi,:)),&
+            calc_delta_C14(sb_pool%residue%carbon(ipoi,:), &
+                            sb_pool%residue%carbon14(ipoi,:),dC13residue(ipoi,:)),&
+            calc_delta_C14(sb_pool%residue_assoc%carbon(ipoi,:), &
+                            sb_pool%residue_assoc%carbon14(ipoi,:),dC13residue_assoc(ipoi,:))
           lun=lun+1
           ! soilpooldN15org_lay
           write(lun,'(201F16.6)') time_d, &
-            calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%soluable_litter%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%polymeric_litter%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%woody_litter%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%dom%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%dom%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%dom_assoc%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%fungi%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%fungi%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%mycorrhiza%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%mycorrhiza%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%microbial%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%residue%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%residue%nitrogen15%ptr(ichu,:,iblk)), &
-            calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ichu,:,iblk), &
-                            sb%pool%residue_assoc%nitrogen15%ptr(ichu,:,iblk))
+            calc_delta_N15(sb_pool%soluable_litter%nitrogen(ipoi,:), &
+                            sb_pool%soluable_litter%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%polymeric_litter%nitrogen(ipoi,:), &
+                            sb_pool%polymeric_litter%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%woody_litter%nitrogen(ipoi,:), &
+                            sb_pool%woody_litter%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%dom%nitrogen(ipoi,:), &
+                            sb_pool%dom%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%dom_assoc%nitrogen(ipoi,:), &
+                            sb_pool%dom_assoc%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%fungi%nitrogen(ipoi,:), &
+                            sb_pool%fungi%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%mycorrhiza%nitrogen(ipoi,:), &
+                            sb_pool%mycorrhiza%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%microbial%nitrogen(ipoi,:), &
+                            sb_pool%microbial%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%residue%nitrogen(ipoi,:), &
+                            sb_pool%residue%nitrogen15(ipoi,:)), &
+            calc_delta_N15(sb_pool%residue_assoc%nitrogen(ipoi,:), &
+                            sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
           ! soil_diagnostics_lay
           write(lun,'(41F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:)
@@ -1132,9 +1130,11 @@ CONTAINS
 ! Pass back values to process memory
 #define Passback_veg_pool
 #define Passback_veg_total_biomass
+#define Passback_sb_pool
 #include "slm_pools_a_incl.f90"
 #undef Passback_veg_pool
 #undef Passback_veg_total_biomass
+#undef Passback_sb_pool
 
   END SUBROUTINE write_output_pool
 
@@ -1169,7 +1169,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
-    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+    INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
                                                    nc, &
@@ -1532,7 +1532,9 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
+    dsl4slm_Use_memory_a_sb
     USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use
+    USE mo_sb_memory_class,       ONLY: sb_transport, sb_mycorrhiza_export, sb_delta_pools
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -1686,7 +1688,7 @@ CONTAINS
     LOGICAL                               :: l_flux_calc_acc_output, &  !< do variable accumulation and enable output
                                              l_flux_output_interval     !< do output at this timestep and set accumulation variables to zero
     REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0    
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb, ichu
+    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -1794,10 +1796,16 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk      :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk      :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_no3_sl
-!! *slmtemp
-    TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
+    dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk      :: microbial_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk      :: transport_po4_solute
+    dsl4jsb_Real3D_onChunk      :: transport_po4_assoc_fast
+    dsl4jsb_Real3D_onChunk      :: transport_po4_assoc_slow
+    dsl4jsb_Real3D_onChunk      :: transport_po4_occluded
+    dsl4jsb_Real3D_onChunk      :: transport_po4_primary
     ! Get local variables from options argument
     iblk     = options%iblk
     ics      = options%ics
@@ -1914,31 +1922,39 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  biochem_mineralisation_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  plant_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  plant_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  plant_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_assoc_fast)
+    dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_assoc_slow)
+    dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_occluded)
+    dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_primary)
 
     
     ! Get process memory pool structures
 #define Get_veg_litterfall
 #define Get_veg_exudation
 #define Get_veg_reserve_use
+#define Get_sb_transport
+#define Get_sb_mycorrhiza_export
+#define Get_sb_delta_pools
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_litterfall
 #undef Get_veg_exudation
 #undef Get_veg_reserve_use
+#undef Get_sb_transport
+#undef Get_sb_mycorrhiza_export
+#undef Get_sb_delta_pools
 
     
-!! *slmtemp
-    sb      => sb__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
-    !> 0.9 init
-    !! 
-    ichu = ics  ! the chunk number for output using variables directly from the sb% mem
 
 
     !< 1.0 test if anything would be calculated or/and written out at this timestep
@@ -2075,46 +2091,46 @@ CONTAINS
              asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(ipoi,:)*soil_depth_sl(ipoi,:)) * &
                                           dtime_one
              ! Phosphorus
-             p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
-             leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
-             net_min_po4_acc        = net_min_po4_acc + &
-                                        SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
-             weathering_po4_acc     = weathering_po4_acc + &
-                                        SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             occlusion_po4_acc      = occlusion_po4_acc + &
-                                        SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             slow_sorption_po4_acc  = slow_sorption_po4_acc + &
-                                        SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             p_deposition_acc               = p_deposition_acc + p_deposition(ipoi) * dtime_one
+             leaching_po4_acc               = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
+             net_min_po4_acc                = net_min_po4_acc + &
+                                              SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
+             weathering_po4_acc             = weathering_po4_acc + &
+                                              SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             occlusion_po4_acc              = occlusion_po4_acc + &
+                                              SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             slow_sorption_po4_acc          = slow_sorption_po4_acc + &
+                                              SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              fast_adsorption_po4_acc        = fast_adsorption_po4_acc + &
-                                                SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+                                              SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
-                                                SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+                                              SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              ! Mycorrhiza
-             myco_export_c_acc   = myco_export_c_acc    + SUM(sb%mycorrhiza_export%carbon%ptr(ichu,:,iblk) * &
+             myco_export_c_acc   = myco_export_c_acc    + SUM(sb_mycorrhiza_export%carbon(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_n_acc   = myco_export_n_acc    + SUM(sb%mycorrhiza_export%nitrogen%ptr(ichu,:,iblk) * &
+             myco_export_n_acc   = myco_export_n_acc    + SUM(sb_mycorrhiza_export%nitrogen(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_p_acc   = myco_export_p_acc    + SUM(sb%mycorrhiza_export%phosphorus%ptr(ichu,:,iblk) * &
+             myco_export_p_acc   = myco_export_p_acc    + SUM(sb_mycorrhiza_export%phosphorus(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_c13_acc = myco_export_c13_acc  + SUM(sb%mycorrhiza_export%carbon13%ptr(ichu,:,iblk) * &
+             myco_export_c13_acc = myco_export_c13_acc  + SUM(sb_mycorrhiza_export%carbon13(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_c14_acc = myco_export_c14_acc  + SUM(sb%mycorrhiza_export%carbon14%ptr(ichu,:,iblk) * &
+             myco_export_c14_acc = myco_export_c14_acc  + SUM(sb_mycorrhiza_export%carbon14(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_n15_acc = myco_export_n15_acc  + SUM(sb%mycorrhiza_export%nitrogen15%ptr(ichu,:,iblk) * &
+             myco_export_n15_acc = myco_export_n15_acc  + SUM(sb_mycorrhiza_export%nitrogen15(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
              ! for mass balance checks in SB_
               sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
-                                                SUM(sb%delta_pools%carbon%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
+                                                SUM(sb_delta_pools%carbon(ipoi,:)*soil_depth_sl(ipoi,:))
               sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + &
-                                                SUM(sb%delta_pools%nitrogen%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
+                                                SUM(sb_delta_pools%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))
               sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + &
-                                                SUM(sb%delta_pools%phosphorus%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
+                                                SUM(sb_delta_pools%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))
               sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + &
-                                                SUM(sb%delta_pools%carbon13%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
+                                                SUM(sb_delta_pools%carbon13(ipoi,:)*soil_depth_sl(ipoi,:))
               sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + &
-                                                SUM(sb%delta_pools%carbon14%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
+                                                SUM(sb_delta_pools%carbon14(ipoi,:)*soil_depth_sl(ipoi,:))
               sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + &
-                                                SUM(sb%delta_pools%nitrogen15%ptr(ichu,:,iblk)*soil_depth_sl(ipoi,:))
+                                                SUM(sb_delta_pools%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))
               sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(ipoi)
               sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(ipoi)
               sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(ipoi)
@@ -2368,15 +2384,15 @@ CONTAINS
              net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              net_min_no3_acc = net_min_no3_acc + SUM(net_mineralisation_no3(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
 
-             leachingCorg_acc   = leachingCorg_acc   - sb%transport%dom%carbon%ptr(ichu,options%nsoil_sb,iblk) * &
+             leachingCorg_acc   = leachingCorg_acc   - sb_transport%dom%carbon(ipoi,options%nsoil_sb) * &
                                     1000000.0_wp * dtime_one/dtime
-             leachingC13org_acc = leachingC13org_acc - sb%transport%dom%carbon13%ptr(ichu,options%nsoil_sb,iblk) * &
+             leachingC13org_acc = leachingC13org_acc - sb_transport%dom%carbon13(ipoi,options%nsoil_sb) * &
                                     1000000.0_wp * dtime_one/dtime
-             leachingC14org_acc = leachingC14org_acc - sb%transport%dom%carbon14%ptr(ichu,options%nsoil_sb,iblk) * &
+             leachingC14org_acc = leachingC14org_acc - sb_transport%dom%carbon14(ipoi,options%nsoil_sb) * &
                                     1000000.0_wp * dtime_one/dtime
-             leachingNorg_acc   = leachingNorg_acc   - sb%transport%dom%nitrogen%ptr(ichu,options%nsoil_sb,iblk) * &
+             leachingNorg_acc   = leachingNorg_acc   - sb_transport%dom%nitrogen(ipoi,options%nsoil_sb) * &
                                     1000000.0_wp * dtime_one/dtime
-            !  leachingPorg_acc   = leachingPorg_acc   - sb%transport%dom%phosphorus%ptr(ichu,options%nsoil_sb,iblk) * &
+            !  leachingPorg_acc   = leachingPorg_acc   - sb_transport%dom%phosphorus(ipoi,options%nsoil_sb) * &
             !                         1000000.0_wp * dtime_one/dtime
 
              ! Phosphorus
@@ -2485,33 +2501,33 @@ CONTAINS
                                                     mycorrhiza_uptake_no3_sl(ipoi,:) * dtime_one
           ! P
           adsorpt_po4_acc(1:nsoil_sb)          = adsorpt_po4_acc(1:nsoil_sb) + &
-                                                 sb%fast_adsorption_po4%ptr(ichu,:,iblk) * dtime_one
+                                                 fast_adsorption_po4(ipoi,:) * dtime_one
           net_min_po4_lay_acc(1:nsoil_sb)      = net_min_po4_lay_acc(1:nsoil_sb) + &
-                                                 sb%net_mineralisation_po4%ptr(ichu,:,iblk) * dtime_one
+                                                 net_mineralisation_po4(ipoi,:) * dtime_one
           weath_po4_acc(1:nsoil_sb)            = weath_po4_acc(1:nsoil_sb) + &
-                                                 sb%weathering_po4%ptr(ichu,:,iblk) * dtime_one
+                                                 weathering_po4(ipoi,:) * dtime_one
           ocl_po4_acc(1:nsoil_sb)              = ocl_po4_acc(1:nsoil_sb) + &
-                                                 sb%occlusion_po4%ptr(ichu,:,iblk) * dtime_one
+                                                 occlusion_po4(ipoi,:) * dtime_one
           desorp_po4_acc(1:nsoil_sb)           = desorp_po4_acc(1:nsoil_sb) + &
-                                                 sb%slow_sorption_po4%ptr(ichu,:,iblk) * dtime_one
+                                                 slow_sorption_po4(ipoi,:) * dtime_one
           biochem_min_po4_acc(1:nsoil_sb)      = biochem_min_po4_acc(1:nsoil_sb) + &
-                                                 sb%biochem_mineralisation_po4%ptr(ichu,:,iblk) * dtime_one
+                                                 biochem_mineralisation_po4(ipoi,:) * dtime_one
           plant_upt_po4_acc(1:nsoil_sb)        = plant_upt_po4_acc(1:nsoil_sb) + &
-                                                 sb%plant_uptake_po4_sl%ptr(ichu,:,iblk) * dtime_one
+                                                 plant_uptake_po4_sl(ipoi,:) * dtime_one
           microbial_upt_po4_acc(1:nsoil_sb)    = microbial_upt_po4_acc(1:nsoil_sb) + &
-                                                 sb%microbial_uptake_po4_sl%ptr(ichu,:,iblk) * dtime_one
+                                                 microbial_uptake_po4_sl(ipoi,:) * dtime_one
           myco_upt_po4_acc(1:nsoil_sb)         = myco_upt_po4_acc(1:nsoil_sb) + &
-                                                 sb%mycorrhiza_uptake_po4_sl%ptr(ichu,:,iblk) * dtime_one
+                                                 mycorrhiza_uptake_po4_sl(ipoi,:) * dtime_one
           trans_solute_po4_acc(1:nsoil_sb)     = trans_solute_po4_acc(1:nsoil_sb) + &
-                                                 sb%transport_po4_solute%ptr(ichu,:,iblk) * dtime_one
+                                                 transport_po4_solute(ipoi,:) * dtime_one
           trans_assoc_fast_po4_acc(1:nsoil_sb) = trans_assoc_fast_po4_acc(1:nsoil_sb) + &
-                                                 sb%transport_po4_assoc_fast%ptr(ichu,:,iblk) * dtime_one
+                                                 transport_po4_assoc_fast(ipoi,:) * dtime_one
           trans_assoc_slow_po4_acc(1:nsoil_sb) = trans_assoc_slow_po4_acc(1:nsoil_sb) + &
-                                                 sb%transport_po4_assoc_slow%ptr(ichu,:,iblk) * dtime_one
+                                                 transport_po4_assoc_slow(ipoi,:) * dtime_one
           trans_occluded_po4_acc(1:nsoil_sb)   = trans_occluded_po4_acc(1:nsoil_sb) + &
-                                                 sb%transport_po4_occluded%ptr(ichu,:,iblk) * dtime_one
+                                                 transport_po4_occluded(ipoi,:) * dtime_one
           trans_primary_po4_acc(1:nsoil_sb)    = trans_primary_po4_acc(1:nsoil_sb) + &
-                                                 sb%transport_po4_primary%ptr(ichu,:,iblk) * dtime_one
+                                                 transport_po4_primary(ipoi,:) * dtime_one
 
           ! write output & zero acc variables
           IF(l_flux_output_interval) THEN
@@ -2577,10 +2593,16 @@ CONTAINS
 #define Passback_veg_litterfall
 #define Passback_veg_exudation
 #define Passback_veg_reserve_use
+#define Passback_sb_transport
+#define Passback_sb_mycorrhiza_export
+#define Passback_sb_delta_pools
 #include "slm_pools_a_incl.f90"
 #undef Passback_veg_litterfall
 #undef Passback_veg_exudation
 #undef Passback_veg_reserve_use
+#undef Passback_sb_transport
+#undef Passback_sb_mycorrhiza_export
+#undef Passback_sb_delta_pools
 
   END SUBROUTINE write_output_flux
 
@@ -2614,7 +2636,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile), INTENT(in)          :: tile           !< data structure for dynamic vegetation and soil variables
-    INTEGER,          INTENT(in)          :: iblk, &        !< iBlock, iChunkStart, iChunkEnd, number of chunks
+    INTEGER,          INTENT(in)          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                              ics, &
                                              ice, &
                                              nc, &
