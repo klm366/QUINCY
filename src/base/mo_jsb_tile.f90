@@ -243,7 +243,7 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist,         ONLY: t_jsb_varlist, jsb_add_var, VARNAME_LEN
-    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
+    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TIME_VARYING, TIME_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
@@ -272,7 +272,7 @@ CONTAINS
     CHARACTER(len=VARNAME_LEN) :: name
     INTEGER                    :: ilct, i, no_of_children, child_no
 
-    INTEGER :: isteptype
+    INTEGER :: timetype
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
@@ -377,9 +377,9 @@ CONTAINS
     IF (parent_tile_name == '') parent_tile_name = 'grid box  '
 
     IF (l_fixed_fractions) THEN
-      isteptype = TSTEP_CONSTANT
+      timetype = TIME_CONSTANT
     ELSE
-      isteptype = TSTEP_INSTANT
+      timetype = TIME_VARYING
     END IF
 
     ! Add fraction(s) of this tile to stream
@@ -389,7 +389,7 @@ CONTAINS
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, timetype=timetype)
     CALL this%Set_fract_ptr(tmp_fract)
 
     CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tmp_fract,                         &
@@ -398,7 +398,7 @@ CONTAINS
       &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, timetype=timetype)
     CALL this%Set_fract_max_ptr(tmp_fract)
 
     CALL jsb_add_var(TRIM(varlist_name), 'fract_old', tmp_fract,                                 &
@@ -407,7 +407,7 @@ CONTAINS
       &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, timetype=timetype)
     CALL this%Set_fract_old_ptr(tmp_fract)
 
     CALL jsb_add_var(TRIM(varlist_name), 'fract_max_old', tmp_fract,                         &
@@ -416,7 +416,7 @@ CONTAINS
       &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, timetype=timetype)
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -501,7 +501,7 @@ CONTAINS
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
-        & initval_r=0.0_wp, isteptype=isteptype)
+        & initval_r=0.0_wp, timetype=timetype)
 
     END DO
 

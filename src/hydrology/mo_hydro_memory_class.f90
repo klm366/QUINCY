@@ -163,7 +163,7 @@ CONTAINS
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+                                    TIME_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -325,7 +325,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+      & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
     CALL jsb_add_var( mem, 'oro_stddev', mem%oro_stddev,                             &
       & hgrid, surface,                                                              &
@@ -333,7 +333,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+      & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -403,7 +403,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'soil_depth_sl', mem%soil_depth_sl,                     &
         & hgrid, soil_w,                                                                     &
@@ -411,7 +411,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
         CALL jsb_add_var( mem, 'fract_org_sl', mem%fract_org_sl,                    &
@@ -429,7 +429,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_field_cap', mem%vol_field_cap,               &
         & hgrid, surface,                                                      &
@@ -437,7 +437,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_field_cap_sl', mem%vol_field_cap_sl,         &
         & hgrid, soil_w,                                                       &
@@ -453,7 +453,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_p_wilt_sl', mem%vol_p_wilt_sl,               &
         & hgrid, soil_w,                                                       &
@@ -469,7 +469,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_porosity_sl', mem%vol_porosity_sl,           &
         & hgrid, soil_w,                                                       &
@@ -485,7 +485,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'pore_size_index_sl', mem%pore_size_index_sl,     &
         & hgrid, soil_w,                                                       &
@@ -501,7 +501,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'bclapp_sl', mem%bclapp_sl,                       &
         & hgrid, soil_w,                                                       &
@@ -509,7 +509,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'matrix_pot', mem%matrix_pot,                     &
         & hgrid, surface,                                                      &
@@ -517,7 +517,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'matrix_pot_sl', mem%matrix_pot_sl,               &
         & hgrid, soil_w,                                                       &
@@ -533,7 +533,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'hyd_cond_sat_sl', mem%hyd_cond_sat_sl,           &
         & hgrid, soil_w,                                                       &
@@ -541,7 +541,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'fract_water', mem%fract_water, &
         & hgrid, surface,                                                            &
@@ -689,14 +689,14 @@ CONTAINS
         & t_cf('rooting_depth', '', ''),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'root_depth_sl', mem%root_depth_sl,           &
         & hgrid, soil_w,                                                                      &
         & t_cf('root_depth_layer', 'm', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'fract_snow_can', mem%fract_snow_can, &
         & hgrid, surface,                                                          &

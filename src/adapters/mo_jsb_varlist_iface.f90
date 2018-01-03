@@ -95,7 +95,7 @@ CONTAINS
 
   SUBROUTINE add_var_list_element_r2d(this_list, name, ptr,                             &
     hgrid, vgrid, cf, grib2, code, table, ldims, gdims, levelindx, loutput, lcontainer, &
-    lrestart, lrestart_cont, initval_r, isteptype,                                      &
+    lrestart, lrestart_cont, initval_r, timetype, isteptype,                            &
     resetval_r, lmiss, missval_r, tlev_source, info, p5,                                &
     verbose, new_element                                                                &
     )
@@ -117,6 +117,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: timetype            ! time type
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
@@ -146,7 +147,7 @@ CONTAINS
 #ifdef __ICON__
     CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_SURFACE, cf, grib2, &
       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
-      initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
+      initval=initval_r, timetype=timetype, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r, &
       tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
 
       element => find_list_element(this_list, TRIM(name))
@@ -181,7 +182,7 @@ CONTAINS
 
   SUBROUTINE add_var_list_element_r3d(this_list, name, ptr,                             &
     hgrid, vgrid, cf, grib2, code, table, ldims, gdims, levelindx, loutput, lcontainer, &
-    lrestart, lrestart_cont, initval_r, isteptype,                                      &
+    lrestart, lrestart_cont, initval_r, timetype, isteptype,                            &
     resetval_r, lmiss, missval_r, tlev_source, info, p5,                                &
     verbose, new_element                                                                &
     )
@@ -203,6 +204,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: timetype            ! time type
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
@@ -232,7 +234,7 @@ CONTAINS
 #ifdef __ICON__
     CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_DEPTH_BELOW_LAND, cf, grib2, &
       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
-      initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
+      initval=initval_r, timetype=timetype, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r, &
       tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
 
       element => find_list_element(this_list, TRIM(name))

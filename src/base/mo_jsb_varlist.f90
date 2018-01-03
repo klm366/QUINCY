@@ -63,7 +63,7 @@ CONTAINS
   SUBROUTINE jsb_add_var_list_element_r2d(mem, name, var,       &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
     loutput, lcontainer,                                        &
-    lrestart, lrestart_cont, initval_r, isteptype,              &
+    lrestart, lrestart_cont, initval_r, timetype, isteptype,    &
     resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source, &
     info, verbose, new_element, cdiTimeID                       &
     )
@@ -84,6 +84,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: timetype            ! time type
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
@@ -93,7 +94,7 @@ CONTAINS
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
-    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
+    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARYING/TIME_CONSTANT)
 
     REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -134,7 +135,7 @@ CONTAINS
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
+      initval_r=initval_r, timetype=timetype, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
 
@@ -162,7 +163,7 @@ CONTAINS
   SUBROUTINE jsb_add_var_list_element_r3d(mem, name, var,        &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
-    lrestart, lrestart_cont, initval_r, isteptype,               &
+    lrestart, lrestart_cont, initval_r, timetype, isteptype,     &
     resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source,  &
     info, verbose, new_element, cdiTimeID                        &
     )
@@ -183,6 +184,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: timetype            ! time type
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
@@ -192,7 +194,7 @@ CONTAINS
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER,   OPTIONAL  :: new_element           ! pointer to new var list element
-    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
+    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARYING/TIME_CONSTANT)
 
     REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -249,7 +251,7 @@ CONTAINS
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
+      initval_r=initval_r, timetype=timetype, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
 
@@ -277,7 +279,7 @@ CONTAINS
   SUBROUTINE jsb_add_var_list_element_r2d_tile(varlist_name, name, ptr, &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
     loutput, lcontainer,                                        &
-    lrestart, lrestart_cont, initval_r, isteptype,              &
+    lrestart, lrestart_cont, initval_r, timetype, isteptype,    &
     resetval_r, lmiss, missval_r, tlev_source, info,            &
     verbose, new_element, cdiTimeID                             &
     )
@@ -297,6 +299,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: timetype            ! time type
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
@@ -305,7 +308,7 @@ CONTAINS
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
-    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
+    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARYING/TIME_CONSTANT)
 
 !!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -341,7 +344,7 @@ CONTAINS
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
+      initval_r=initval_r, timetype=timetype, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc)
 
   END SUBROUTINE jsb_add_var_list_element_r2d_tile

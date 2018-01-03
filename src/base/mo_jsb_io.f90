@@ -8,7 +8,7 @@ MODULE mo_jsb_io
     ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
     GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
-    TSTEP_CONSTANT, TSTEP_INSTANT,                                     &
+    TIME_CONSTANT, TIME_VARYING,                                       &
     zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy,             &
     cdiDefMissval, read_io_namelist
 

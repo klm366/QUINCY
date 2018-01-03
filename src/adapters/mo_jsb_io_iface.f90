@@ -24,7 +24,7 @@ MODULE mo_jsb_io_iface
                             & DATATYPE_PACK24 => CDI_DATATYPE_PACK24, &
                             & ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND, &
                             & FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
-                            & TSTEP_CONSTANT => TIME_CONSTANT, TSTEP_INSTANT, &
+                            & TIME_CONSTANT, TIME_VARYING, &
                             & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
                             & zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
                             & zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
@@ -44,7 +44,7 @@ MODULE mo_jsb_io_iface
             ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND,               &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
             GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, &
-            ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, TSTEP_INSTANT, &
+            ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TIME_CONSTANT, TIME_VARYING, &
             zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
             zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
             zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &

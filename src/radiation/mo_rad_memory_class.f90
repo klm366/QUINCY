@@ -124,7 +124,7 @@ CONTAINS
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+                                    TIME_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -199,7 +199,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                       &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp, timetype=TIME_CONSTANT )
 
       CALL jsb_add_var( mem, 'alb_vis', mem%alb_vis,                                &
         & hgrid, surface,                                                           &
