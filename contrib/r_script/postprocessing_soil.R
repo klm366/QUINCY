@@ -106,7 +106,7 @@ if (any(flistLayFiles)){
         # variable name
         vName<-colnames(dat2[1])
         vName<-substr(vName, 1, nchar(vName)-3)
-        for (j in 1:soilLayer) {
+        for (j in soilLSeq) {
           if (j < 10){ yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-1, nchar(colnames(dat2)[j]))
           } else       yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-2, nchar(colnames(dat2)[j]))
           plot(1:rowNum, dat2[,j], 
@@ -142,7 +142,7 @@ if (any(flistLayFiles)){
   } else if (tstep_pool == "yearly"){    timeFac <- 1 }
   spanRows <- timeFac * spanTime
 
-  pdf("soil_model_plots_prof.pdf", paper="a4", height=10, width=8, pointsize=12, 
+  pdf("soil_model_plots_prof.pdf", paper="a4", height=9.2, width=7.8, pointsize=12, 
       bg="white", family="Helvetica", version="1.6")
   print(paste0("Creating: soil_model_plots_prof.pdf from the last ",spanTime," simulation years."))
   # loop over all output files
@@ -168,18 +168,31 @@ if (any(flistLayFiles)){
         rowE <- nrow(vDat)
         if (rowE > spanRows){ rowS <- rowE - spanRows
         } else              { rowS <- 1  }
-        # calc mean per row for the last 10 years of simulated data, or all data im simulation time is < 10 yr
+        # calc mean and SD per row for the last 10 years of simulated data, or all data im simulation time is < 10 yr
         vMean<-apply(vDat[rowS:rowE,], 2, mean)
+        vSD  <-apply(vDat[rowS:rowE,], 2, sd)
+        # prepare visualization of SD
+        vSDup<-vMean+vSD
+        vSDdn<-vMean-vSD
         # variable name
         vName<-colnames(vDat[1])
         vName<-substr(vName, 1, nchar(vName)-3)
+        # set margins
+        par(oma=c(0.2,0.2,0.2,0.2),mar=c(7.2,2.4,1.2,0.4),xpd=FALSE)
         # plot as line and points
-        plot(vMean,1:soilLayer,
+        plot(vMean,soilLSeq,
              type="l",
              ylab="soil layers",xlab=vName,
              ylim=rev(range(soilLSeq)),
-             main=paste0(vName,"  from ",flist[i]))
-        points(vMean,1:soilLayer)
+             xlim=c(min(vSDdn),max(vSDup)),
+             main=paste0(vName,"    from ",flist[i]),
+             tck=0.01, mgp=c(1.2, 0.14, 0))
+        arrows(vSDup, soilLSeq, vSDdn, soilLSeq, code=3, length=0.0, angle=90, col="orange3")
+        points(vMean,soilLSeq, pch=21)
+        par(xpd=NA)
+        legend(min(vSDdn), max(soilLSeq)+0.12*max(soilLSeq), 
+                c(paste0("Mean over last ",spanTime," years."),"SD of mean",paste0("The mean was calculated from ",tstep_pool," model output.")), 
+                cex=0.8, col=c("black","orange3",NA), pch=c(21,NA,NA), lty=c(NA,1,NA), box.col = "gray80")
         countVar <- countVar +1
       }
     }
