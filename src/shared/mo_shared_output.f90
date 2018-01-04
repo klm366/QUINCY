@@ -2534,7 +2534,10 @@ CONTAINS
 
             ! soilfluxC_lay
             write(lun,'(61F20.10)') time_d, &
-              het_respiration_lay_acc(1:nsoil_sb), het_respiration_c13_lay_acc(1:nsoil_sb), het_respiration_c14_lay_acc(1:nsoil_sb)
+              het_respiration_lay_acc(1:nsoil_sb), & 
+              calc_delta_C13(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c13_lay_acc(1:nsoil_sb)), & 
+              calc_delta_C14(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c14_lay_acc(1:nsoil_sb), &
+                             calc_delta_C13(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c13_lay_acc(1:nsoil_sb)))
             lun = lun + 1
             ! soilfluxN_lay
             write(lun,'(141F20.10)') time_d, &
