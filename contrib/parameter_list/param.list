@@ -27,6 +27,7 @@
   floss_nmin=NAN
   tau_fast=NAN
   tau_slow=NAN
+  microbial_cue=NAN
   residue_cue=NAN
 /
 &VEGETATION_CTL

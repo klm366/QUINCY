@@ -41,15 +41,15 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf                        !< maximum rate of N fixation
     REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
-	  REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
+    REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
     ! SB_CTL
     REAL(wp)           :: floss_nmin
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
+    REAL(wp)           :: microbial_cue
     REAL(wp)           :: residue_cue
-
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
     PROCEDURE :: set_param => set_parameter_values_with_list_values
@@ -94,13 +94,14 @@ CONTAINS
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
-	  REAL(wp)           :: offset_bnf
+    REAL(wp)           :: offset_bnf
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
     ! SB_CTL
     REAL(wp)           :: floss_nmin
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
+    REAL(wp)           :: microbial_cue
     REAL(wp)           :: residue_cue
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
@@ -124,7 +125,7 @@ CONTAINS
         cost_n_fixation_min       , &
         vmax_bnf                  , &
         k_bnf                     , &
-		    offset_bnf                , &
+        offset_bnf                , &
         f_resp_acclim             , &
         fmaint_rate_base
 
@@ -132,6 +133,7 @@ CONTAINS
         floss_nmin                , &
         tau_fast                  , &
         tau_slow                  , &
+        microbial_cue             , &
         residue_cue
 
     ! variables for reading model-options from namelist
@@ -158,13 +160,14 @@ CONTAINS
     cost_n_fixation_min         = missval
     vmax_bnf                    = missval
     k_bnf                       = missval
-	  offset_bnf                  = missval
+    offset_bnf                  = missval
     f_resp_acclim               = missval
     fmaint_rate_base            = missval
     ! SB_CTL
     floss_nmin                  = missval
     tau_fast                    = missval
     tau_slow                    = missval
+    microbial_cue               = missval
     residue_cue                 = missval
 
     ! read the namelist
@@ -203,13 +206,14 @@ CONTAINS
     this%cost_n_fixation_min         = cost_n_fixation_min
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
-	  this%offset_bnf                  = offset_bnf
+    this%offset_bnf                  = offset_bnf
     this%f_resp_acclim               = f_resp_acclim
     this%fmaint_rate_base            = fmaint_rate_base 
     ! SB_CTL
     this%floss_nmin                  = floss_nmin
     this%tau_fast                    = tau_fast
     this%tau_slow                    = tau_slow
+    this%microbial_cue               = microbial_cue
     this%residue_cue                 = residue_cue
 
   END SUBROUTINE Read_parameter_list
@@ -266,9 +270,9 @@ CONTAINS
                                                                                     (one_day*one_year) *1.e6_wp
     IF (ABS(this%k_bnf                - missval) > eps8)  k_bnf                 = this%k_bnf / &
                                                                                     (molar_mass_C/molar_Mass_N)
-    IF (ABS(this%offset_bnf           - missval) > eps8)  offset_bnf            = this%offset_bnf * 2.0_wp * &
-																					(transform_cost_nh4*transform_cost_no3)/ &
-																					(transform_cost_nh4+transform_cost_no3)
+    IF (ABS(this%offset_bnf           - missval) > eps8)  offset_bnf            = this%offset_bnf * 2.0_wp * & 
+                                                                                    (transform_cost_nh4*transform_cost_no3)/ &
+                                                                                    (transform_cost_nh4+transform_cost_no3)
     IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
@@ -276,6 +280,7 @@ CONTAINS
     IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
     IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
     IF (ABS(this%tau_slow             - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
+    IF (ABS(this%microbial_cue        - missval) > eps8)  microbial_cue         = this%microbial_cue
     IF (ABS(this%residue_cue          - missval) > eps8)  residue_cue           = this%residue_cue
 
   END SUBROUTINE set_parameter_values_with_list_values
