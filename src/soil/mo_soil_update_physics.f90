@@ -335,6 +335,7 @@ CONTAINS
                                              wind_air     , & 
                                              t_srf_new    , & 
                                              hlp1 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: ground_heat_flx_sl              !< soil temperature [K]
     ! LOGICAL, DIMENSION(options%nc)        :: info_catch_t_jump    ! for debug/ write out temperature jumps larger 15 K
     ! INTEGER, SAVE                         :: timesteps_help = 0   ! for debug/ write out temperature jumps larger 15 K
 !!   REAL(wp), DIMENSION(options%nc) :: dQdT,s_old,t2s_conv,heat_tcoef, s_star, q_sat_star
@@ -433,7 +434,7 @@ CONTAINS
         !> 2.6 calculate sensible heat flux (W m-2), negative here for JSBACH flux convention 
         !!
         sensible_heat_flx(:) = heat_tcoef(:) * & 
-                               (t_bcoef - surface_dry_static_energy(t_soil_sl(:,1),q_sat_srf(:))) 
+                               (t_bcoef(:) - surface_dry_static_energy(t_soil_sl(:,1),0.5_wp*q_sat_srf(:)+0.5_wp*q_air(:))) 
     
         !> 2.7 Calculate explicit surface temperature 
         !!
@@ -475,18 +476,25 @@ CONTAINS
     !   write(960,'(I14,20F26.8)') timesteps_help, t_srf_old(:), t_srf_new(:) - t_srf_old(:)
     ! END IF
 
-    !> 3.1 update deep surface temperatures and calculate ground heat flux
+    !> 3.1 calculate ground heat flux and update deep surface temperatures 
     !!
+    ground_heat_flx_sl(:,:) = 0.0_wp 
+    DO isoil = 1,options%nsoil_sb-1
+      WHERE(soil_depth_sl(:,isoil) > eps8)
+           ground_heat_flx_sl(:,isoil) = therm_cond_sl(:,isoil) * & 
+                                         (t_soil_sl(:,isoil+1)-t_soil_sl(:,isoil)) / & 
+                                         ((soil_depth_sl(:,isoil)+soil_depth_sl(:,isoil+1))/2.0_wp)
+      END WHERE 
+    ENDDO 
+    ground_heat_flx(:) = ground_heat_flx_sl(:,1) 
+    ground_heat_flx_old(:) = ground_heat_flx(:)
+
     DO isoil = 2,options%nsoil_sb
       WHERE(soil_depth_sl(:,isoil) > eps8)
-           hlp1(:) = (t_soil_sl(:,isoil)-t_soil_sl(:,isoil-1)) * therm_cond_sl(:,isoil) / & 
-                     (soil_depth_sl(:,isoil)/2.0_wp+soil_depth_sl(:,isoil-1)/2.0_wp)
-           t_soil_sl(:,isoil) = t_soil_sl(:,isoil) - hlp1(:) * dtime / & 
-                      (heat_capa_sl(:,isoil) * bulk_dens_sl(:,isoil) * soil_depth_sl(:,isoil)) 
+         t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + (ground_heat_flx_sl(:,isoil) - ground_heat_flx_sl(:,isoil-1)) * dtime / & 
+                                                   (heat_capa_sl(:,isoil) * bulk_dens_sl(:,isoil) * soil_depth_sl(:,isoil)) 
       END WHERE 
-      IF(isoil==2) ground_heat_flx(:) = hlp1(:) 
     ENDDO 
-    ground_heat_flx_old(:) = ground_heat_flx(:)
  
   END SUBROUTINE calc_surface_energy_balance
 
@@ -705,6 +713,17 @@ CONTAINS
           ELSEWHERE
              k_diff(:,:) = 0.0_wp
           END WHERE          
+
+          !! update soil water potential for diffusion calculation
+          WHERE(soil_depth_sl(:,:) > eps8)
+             ! Campbell applies only water content below field capacity
+             hlp1_2d(:,:) = MIN(w_soil_fc_sl(:,:),w_soil_sl(:,:)) / soil_depth_sl
+             ! for numerical reasons, constrain to minimum water potential 
+             hlp1_2d(:,:) = MAX(exp(log(wpot_min/saxtonA(:,:))/saxtonB(:,:)),hlp1_2d(:,:)) 
+          ELSEWHERE
+             hlp1_2d(:,:) = exp(log(wpot_min/saxtonA(:,:))/saxtonB(:,:)) 
+          ENDWHERE
+          w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
 
           DO isoil = 2,options%nsoil_sb
              ! weighted mean of diffusivity (m/s)
