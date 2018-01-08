@@ -109,7 +109,6 @@ CONTAINS
     INTEGER        :: lun           ! logical unit number
     INTEGER        :: max_lun_pool  ! currently 129
     CHARACTER(100) :: fname         ! filename
-    CHARACTER(30)  :: opt           ! option according to namlist parameters
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_pool_output_files'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -127,7 +126,6 @@ CONTAINS
 
     !> 1.0 init
     max_lun_pool          = 129
-    opt                   = " "
     output_interval_pool  = 0.0_wp
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
@@ -135,58 +133,49 @@ CONTAINS
     output_interval_pool = calc_output_time_interval()
 
 
-    !> 2.1 get options (opt) for filenames
-    !! 
-    !! 
-    IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
-!    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza) opt = trim(opt) // "_myco"
-     
-
-    !> 2.2 define open() statements for file output
+    !> 2.1 define open() statements for file output
     !! 
     !! 
     lun = 100 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-         fname = 'vegpoolC'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpoolC'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpooldC13DC14'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpooldC13DC14'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpoolN'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpoolN'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpoolP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpoolP'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'vegpooldN15'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'vegpooldN15'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpoolPhysics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolPhysics'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpoolPhysics_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolPhysics_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpoolOrg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolOrg'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpoolInOrg'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolInOrg'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'ecopoolCNP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'ecopoolCNP'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpooldC13DC14dN15'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpooldC13DC14dN15'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'veg_diagnostics'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'veg_diagnostics'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
 
@@ -198,38 +187,38 @@ CONTAINS
       CASE('land','soil')
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
-            fname = 'soilpoolCOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpoolCOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpoolNOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpoolNOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpoolPOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpoolPOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpoolInNOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpoolInNOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpoolInPOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpoolInPOrg_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpooldC13org_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpooldC13org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpooldC14org_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpooldC14org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpooldN15org_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soilpooldN15org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soil_diagnostics_lay'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+            fname = 'soil_diagnostics_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
         END SELECT
     END SELECT
 
 
-    !> 2.3  test if lun for pools is too big
+    !> 2.2  test if lun for pools is too big
     !! 
     IF (lun > max_lun_pool) THEN
        WRITE(message_text,'(a)') 'lun of pools is too big, reaching values that are reserved for lun of flux output'
@@ -1179,7 +1168,6 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
-    CHARACTER(30)  :: opt           ! option according to namlist parameters
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_flux_output_files'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -1196,10 +1184,7 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
 
 
-
-
     !> 1.0 init
-    opt = " "
     output_interval_flux = 0.0_wp
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
@@ -1207,86 +1192,78 @@ CONTAINS
     output_interval_flux = calc_output_time_interval()
 
 
-    !> 2.1 get options (opt) for filenames
-    !! 
-    !! 
-    IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
-!    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza) opt = trim(opt) // "_myco"
-
-    !> 2.2 define open() statements for file output
+    !> 2.0 define open() statements for file output
     !! 
     !! 
     lun = 100 + 30    ! -> max of 30 files for pool output
     
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'mycofluxCNP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'mycofluxCNP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
 
       CASE('canopy') ! subset of CASE('land','plant')
-        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
 
       CASE('soil')
-        fname = 'soilfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxdC13'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxdC13'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxdC14'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxdC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         
@@ -1298,13 +1275,13 @@ CONTAINS
       CASE('land','soil')
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
-            fname = 'soilfluxC_lay'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+            fname = 'soilfluxC_lay'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilfluxN_lay'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+            fname = 'soilfluxN_lay'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilfluxP_lay'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+            fname = 'soilfluxP_lay'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
         END SELECT
@@ -2648,7 +2625,6 @@ CONTAINS
     TYPE(t_jsb_model),POINTER             :: model
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
-    CHARACTER(30)  :: opt           ! option according to namlist parameters
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_output_files_soil_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -2663,33 +2639,21 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
 
-
-
-    !> 1.0 init
-    opt = " "
-
     !! 
     !! output interval will be always timestep !
     !! 
 
-    !> 2.0 get options (opt) for filenames
-    !! 
-    IF (dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
-!    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza) opt = trim(opt) // "_myco"
-
-    !> 2.1 define open() statements for file output
+    !> 1.0 define open() statements for file output
     !! 
     lun = 100 + 60
-    fname = 'soilphysics'//'_timestep'//TRIM(opt)//'.txt'
+    fname = 'soilphysics'//'_timestep.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'veglitterfall'//'_timestep'//TRIM(opt)//'.txt'
+    fname = 'veglitterfall'//'_timestep.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
 
-    !> 3.0 write column headers into output files
+    !> 2.0 write column headers into output files
     !! 
     CALL init_output_files_soil_forcing(nsoil_sb)
 
