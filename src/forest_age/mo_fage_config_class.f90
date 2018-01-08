@@ -23,8 +23,7 @@ MODULE mo_fage_config_class
   PUBLIC :: t_fage_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_fage_config
-    INTEGER               :: &
-      & max_age              !Maximum age tracked  
+    INTEGER                   :: max_age         !Maximum age tracked  
   CONTAINS
     PROCEDURE             :: Init => Init_fage_config
   END type t_fage_config
@@ -54,10 +53,8 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
     INTEGER :: i
-    REAL(wp), ALLOCATABLE :: age_fract_init(:)
-
-    TYPE(t_jsb_vgrid), POINTER :: forest_age ! grid cell fraction per age
-
+    REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
+    TYPE(t_jsb_vgrid), POINTER :: forest_age
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fage_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting fage configuration')
@@ -78,7 +75,7 @@ CONTAINS
     config%bc_filename         = bc_filename
     config%max_age             = max_age
 
-    ALLOCATE(age_fract_init(max_age))
+    ALLOCATE(fage_grid_levels(max_age))
 
 !TODO-JN: check max_age > 0 < 1000
 
@@ -89,11 +86,11 @@ CONTAINS
     IF (.NOT. active) RETURN
 
     DO i=1,max_age
-      age_fract_init = REAL(i)
+      fage_grid_levels = REAL(i)
     END DO
 
-    forest_age  => new_vgrid('forest_age_fract', ZAXIS_DEPTH_BELOW_LAND, max_age, &
-      & levels  = age_fract_init, &
+    forest_age  => new_vgrid('forest_age', ZAXIS_DEPTH_BELOW_LAND, max_age, &
+      & levels  = fage_grid_levels, &
 !      & levels  = REAL((/ i, 1:max_age /),wp),                         &
       & units='y')
     CALL register_vgrid(forest_age)
@@ -101,7 +98,7 @@ CONTAINS
     WRITE(message_text, *) 'Tracked forest ages [y]: ', max_age
     CALL message(TRIM(routine), message_text)
 
-    DEALLOCATE(age_fract_init)
+    DEALLOCATE(fage_grid_levels)
 
   END SUBROUTINE Init_fage_config
 

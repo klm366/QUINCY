@@ -32,13 +32,10 @@ MODULE mo_fage_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    INTEGER,  INTENT(in) :: &
-      & nidx, nage
-    LOGICAL,   INTENT(in)    :: is_newyear
-    REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: &
-      & fract_per_age
-    REAL(wp), INTENT(inout), DIMENSION(nidx) :: &
-      & mean_age
+    INTEGER,  INTENT(in)    ::  nidx, nage
+    LOGICAL,  INTENT(in)    :: is_newyear
+    REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age
+    REAL(wp), INTENT(inout), DIMENSION(nidx) :: mean_age
 
     !-----------------------------------------------------------------------
     !  LOCAL

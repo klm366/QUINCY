@@ -18,11 +18,9 @@ MODULE mo_fage_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message, message_text
 
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -114,13 +112,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age
 
-    INTEGER                                :: iblk, ics, ice, nc
-    REAL(wp)                               :: dtime
-    REAL(wp) :: wgt1, wgt2
-    INTEGER  :: nmw1,nmw2
-
+    INTEGER  :: iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fage'
 
     ! ---------------------------
@@ -128,8 +121,6 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    dtime   = options%dtime
-
 
     IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
 
@@ -142,8 +133,8 @@ CONTAINS
     dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
 
-    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)      ! inout
-    dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age) ! in
+    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
+    dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
 
     CALL ageing(nc, dsl4jsb_Config(FAGE_)%max_age, is_newyear(), fract_per_age(:,:), mean_age(:))
 

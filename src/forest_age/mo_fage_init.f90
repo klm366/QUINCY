@@ -22,7 +22,6 @@ MODULE mo_fage_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
 
-
   dsl4jsb_Use_processes FAGE_
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_memory(FAGE_)
@@ -99,8 +98,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER :: &
-      & ptr_2D(:,:)
+    REAL(wp), POINTER :: ptr_2D(:,:)
 
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: forest_age
