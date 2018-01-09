@@ -104,6 +104,7 @@ fi
 ## create job specific folder using the absolute path ##
 # "$bgiScratchUserFold""$jobName""/""$(awk '{print $1}' <<< "$siteData")""/"
 mkdir -p "$jobFold"
+sync
 
 ## cd into job specific folder ##
 cd "$jobFold"           ## cd into job specific folder ##
@@ -111,6 +112,7 @@ jobErrFold="./error/"
 jobOutFold="./std_out/"
 mkdir -p "$jobErrFold"  # folder for error files of this job
 mkdir -p "$jobOutFold"  # folder for files with std output of this job
+sync
 
 ## copy files specific to this job into the job folder ##
 # namelist, binary, lctlib, R-Script
@@ -183,7 +185,7 @@ case "$pftName" in
     echo "EXIT!  no such PFT is known by the run_slm.sh script: ""$pftName"
     exit 
 esac
-
+sync
 
 ######################################################################
 ## manipulate the namelist - parameters specific to this job / site ##
@@ -249,7 +251,7 @@ fi
 
 ## sync all data with the filesystem ##
 sync
-
+sleep 0.5s
 
 #############################################################################################
 ## move the job folder to the local scratch/ at the HPC node and work from there           ##
