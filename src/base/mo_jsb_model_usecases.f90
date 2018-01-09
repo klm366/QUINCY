@@ -716,7 +716,7 @@ CONTAINS
               WRITE(pft_shortname, "(A3,I2.2)") "pft", i
               pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
                 & processes       = (/FAGE_/), &
-                & process_actions = (/ON_SUBTREE_/), &
+                & process_actions = (/ON_TILE_/), &
                 & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
 
               DO j=1,ncohorts
