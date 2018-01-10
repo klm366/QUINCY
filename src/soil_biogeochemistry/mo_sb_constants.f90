@@ -42,8 +42,8 @@ MODULE mo_sb_constants
       k_diff_org, &                !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]                       
       rho_bulk_org, &              !< bulk density of organic material [kg m-3]
       carbon_per_dryweight_SOM, &  !< C per unit dryweight SOM [gC / gOM] 
-      sorp_cap_org, &              !< sorption capacity of organic matter [kg C kg-1 OM]
-      qmax_org_mineral_default, &  !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
+      qmax_org_om, &               !< sorption capacity of organic matter [mol C kg-1 OM] 
+      qmax_org_mineral, &          !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
       k_adsorpt_dom, & 
       k_desorpt_dom, &
       k_adsorpt_det, &
@@ -234,8 +234,8 @@ CONTAINS
     k_diff_org          = 0.286933_wp / 8.0_wp / one_year / one_day
     rho_bulk_org        = 150.3935_wp 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
-    sorp_cap_org        = 0.0_wp
-    qmax_org_mineral_default = 0.055_wp / molar_mass_C * 1000._wp 
+    qmax_org_om         = 0.0_wp
+    qmax_org_mineral    = 0.055_wp / molar_mass_C * 1000._wp 
     k_adsorpt_dom       = 843.391_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s
     k_desorpt_dom       = 4301.741_wp / one_year / one_day
     k_adsorpt_det       = 6733.843_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s

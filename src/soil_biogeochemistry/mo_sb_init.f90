@@ -200,7 +200,8 @@ CONTAINS
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
              bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-             qmax_po4(:,:)            = calc_qmax(bulk_dens_corr_sl(:,:),qmax_po4_mineral)
+             qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                                  qmax_po4_mineral,qmax_po4_mineral)
 
              ! initialise mineral soil P pools
              po4_assoc_fast(:,1) = po4_solute(:,1) * qmax_po4(:,1) / (po4_solute(:,1) + km_adsorpt_po4 * bulk_dens_corr_sl(:,1))
@@ -239,7 +240,8 @@ CONTAINS
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
              bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-             qmax_po4(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_po4_mineral)
+             qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                                  qmax_po4_mineral,qmax_po4_mineral)
 
              ! initialise mineral soil P pools
              po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
@@ -313,9 +315,11 @@ CONTAINS
 
          ! inital Qmax based on current soil carbon content
          bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
-         bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-         qmax_org(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_org_mineral_default)
-         qmax_po4(:,:) = calc_qmax(bulk_dens_corr_sl(:,:),qmax_po4_mineral)
+         bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
+         qmax_org(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                              qmax_org_om,qmax_org_mineral)
+         qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                                  qmax_po4_mineral,qmax_po4_mineral)
  
          ! initialise diffusion by bioturbation
          k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 

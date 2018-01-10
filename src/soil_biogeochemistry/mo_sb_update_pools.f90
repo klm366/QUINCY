@@ -588,8 +588,8 @@ CONTAINS
     !!
     bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
-    qmax_org = calc_qmax(bulk_dens_corr_sl,qmax_org_mineral_default)
-    qmax_po4 = calc_qmax(bulk_dens_corr_sl,qmax_po4_mineral)
+    qmax_org = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_org_om,qmax_org_mineral)
+    qmax_po4 = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_mineral,qmax_po4_mineral)
 
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
        hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)

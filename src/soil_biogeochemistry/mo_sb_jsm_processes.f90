@@ -1192,39 +1192,28 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl) RESULT(bulk_dens_corr_sl)
 
-    USE mo_sb_constants,          ONLY: rho_bulk_org 
     USE mo_shared_constants,      ONLY: molar_mass_C 
+    USE mo_sb_constants,          ONLY: rho_bulk_org, carbon_per_dryweight_SOM 
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: bulk_soil_carbon_sl     !< soil carbon contributing to density [mol C / m3] 
-    REAL(wp), INTENT(in) :: bulk_dens_sl             !< bulk density of the mineral soil [kg / m3]
+    REAL(wp), INTENT(in) :: bulk_dens_sl            !< bulk density of the mineral soil [kg / m3]
     REAL(wp)             :: bulk_dens_corr_sl       !< combined bulk density of the mineral and organic soil [kg / m3]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: fract_org
+    REAL(wp)                    :: om_dens_sl       ! organic matter density [kg / m3] 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_density_correction'
 
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
- 
-    !> 1.0 calculate organic mass fraction per soil layer 
+    !> 1.0 calculate organic matter density per soil layer [kg / m3]
     !!
-    IF(bulk_soil_carbon_sl * molar_mass_C + bulk_dens_sl > eps8)THEN
-       fract_org = bulk_soil_carbon_sl * molar_mass_C/1000._wp / & 
-                   (bulk_soil_carbon_sl * molar_mass_C/1000._wp + bulk_dens_sl)
-    ELSE 
-       fract_org = 0.0_wp
-    ENDIF
+    om_dens_sl = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp 
 
     !> 2.0 actual bulk density of the soil 
     !!
-    bulk_dens_corr_sl = bulk_dens_sl * rho_bulk_org / & 
-                          (fract_org * bulk_dens_sl + (1._wp - fract_org ) * rho_bulk_org)
+    bulk_dens_corr_sl = MAX(rho_bulk_org, om_dens_sl + bulk_dens_sl - & 
+                            om_dens_sl * bulk_dens_sl / rho_bulk_org) 
 
   END FUNCTION calc_bulk_density_correction 
 
@@ -1240,19 +1229,32 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
   !!
   !! Output: sorption capacity for organic material 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_qmax(bulk_dens_corr_sl, maxcapacity) RESULT(qmax)
+  ELEMENTAL FUNCTION calc_qmax(bulk_soil_carbon_sl, bulk_dens_sl, qmax_om, qmax_min) RESULT(qmax)
+
+    USE mo_shared_constants,      ONLY: molar_mass_C
+    USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: bulk_dens_corr_sl     !< combined bulk density of the mineral and organic soil [kg / m3]
-    REAL(wp), INTENT(in) :: maxcapacity           !< maximium sorption capacity per kg soil
-    REAL(wp)             :: qmax                  !< maximum sorption capacity of the soil [kg C / m3] or [mol P / m3]
+    REAL(wp), INTENT(in) :: bulk_soil_carbon_sl   !< organic carbon content of the soil layer [mol C / m3]
+    REAL(wp), INTENT(in) :: bulk_dens_sl          !< bulk density of the mineral soil [kg / m3]
+    REAL(wp), INTENT(in) :: qmax_om               !< maximium sorption capacity on OM [mol / kg]
+    REAL(wp), INTENT(in) :: qmax_min              !< maximium sorption capacity on  mineral soil [mol / kg]
+    REAL(wp)             :: qmax                  !< maximum sorption capacity of the soil [mol / m3] 
     ! ---------------------------
     ! 0.2 Local
+    REAL(wp)                    :: vol_fraction_om
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax'
 
-    qmax = bulk_dens_corr_sl * maxcapacity
+    ! calculate volume fraction filled by organic material 
+    ! given assumed density and carbon content of OM
+    vol_fraction_om = MIN(bulk_soil_carbon_sl * molar_mass_C / 1000._wp / & 
+                          carbon_per_dryweight_SOM / rho_bulk_org, 1.0_wp)
+
+    ! maximum sorption capacity per soil volume as the mix of OM and mineral sorption (mol/m3
+    qmax = vol_fraction_om           * qmax_om  * rho_bulk_org + & 
+           (1._wp - vol_fraction_om) * qmax_min * bulk_dens_sl 
 
   END FUNCTION calc_qmax
 
