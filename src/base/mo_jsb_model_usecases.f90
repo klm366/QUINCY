@@ -707,6 +707,7 @@ CONTAINS
           & fract_varname='fract_veg')
 
           DO i=1,npft
+            ! TODO-JN: decide on ForestFlag vs is_Woody! (model%lctlib(pft_ids(i))%WOODY_PFT)
             IF (.NOT. model%lctlib(pft_ids(i))%ForestFlag) THEN 
               WRITE(pft_shortname, "(A3,I2.2)") "pft", i
               pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &

@@ -6,6 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
+!! Julia Nabel (2018-01-10): added optional functionality: forest regrowth (l_forestRegrowth)
+!!                           (derive maxLAI from biomass via allometric relationships)
 !!
 MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
@@ -27,7 +29,8 @@ MODULE mo_pheno_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes SEB_, A2L_, RAD_, HYDRO_, ASSIMI_, PHENO_
+  dsl4jsb_Use_processes SEB_, A2L_, RAD_, HYDRO_, ASSIMI_, PHENO_, CARBON_ 
+      ! JN 10.01.18 CARBON_: only required with l_forestRegrowth = true 
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(SEB_)
@@ -43,6 +46,8 @@ MODULE mo_pheno_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
+
+  dsl4jsb_Use_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true 
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -187,9 +192,10 @@ CONTAINS
 
     ! Declarations
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
-                                       calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology
+                                       calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
+                                       track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day    
-    USE mo_jsb_time,             ONLY: is_newday, timeStep_in_days, time_steps_per_day
+    USE mo_jsb_time,             ONLY: is_newyear, is_newday, timeStep_in_days, time_steps_per_day
     USE mo_pheno_constants,      ONLY: PhenoParam
     USE mo_jsb_grid_class,       ONLY: t_jsb_grid
     USE mo_jsb_grid,             ONLY: Get_grid
@@ -207,21 +213,21 @@ CONTAINS
     INTEGER                                :: day_of_year
 
     REAL(wp), DIMENSION(options%nc)        :: w_soil_filling,  &
-                                              t_air_in_Celcius
-
-    REAL(wp)                               :: LaiMax_corrected
+                                              t_air_in_Celcius, &
+                                              LaiMax_corrected
 
     TYPE(t_jsb_grid),  POINTER             :: grid
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(ASSIMI_)
-    dsl4jsb_Def_config(PHENO_)   
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true 
 
     ! Declare pointers for variables in memory
     INTEGER                :: ncanopy     ! number of canopy layers
@@ -253,6 +259,20 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
+
+    ! JN 10.01.18 only required with l_forestRegrowth = true 
+    dsl4jsb_Real2D_onChunk :: Cpool_green
+    dsl4jsb_Real2D_onChunk :: Cpool_reserve
+    dsl4jsb_Real2D_onChunk :: Cpool_woods
+    dsl4jsb_Real2D_onChunk :: current_max_green
+    dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green
+    dsl4jsb_Real2D_onChunk :: log_number_of_individuals
+    dsl4jsb_Real2D_onChunk :: number_of_individuals
+    dsl4jsb_Real2D_onChunk :: biomass_per_individual
+    dsl4jsb_Real2D_onChunk :: leafC_per_individual
+    dsl4jsb_Real2D_onChunk :: leafC
+    dsl4jsb_Real2D_onChunk :: maxLAI_allom
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction
 
     ! Local variables
     CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_phenology_logrop'
@@ -287,6 +307,29 @@ CONTAINS
     lat     => grid%lat(ics:ice, iblk)
 
     !first_call_phenology_this_day  => model%processes(PHENO_)%config%first_call_phenology_this_day(ics:ice,iblk)
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+
+      !ASSERTION: l_forestRegrowth can only run when the CARBON process is active
+      ! TODO-JN: ask Reiner where this should be tested for - can/how already in config? 
+      IF ( .NOT. tile%Is_process_active(CARBON_)) THEN
+        CALL finish(TRIM(routine), 'Forest regrowth can only be switched on when the CARBON process is active, too')
+      ENDIF
+
+      dsl4jsb_Get_memory(CARBON_)
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_green)             ! in
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_reserve)           ! in
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_woods)             ! in
+
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    current_max_green)       ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_carbon_at_max_green) ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    log_number_of_individuals)  ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)      ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC_per_individual)    ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC)                   ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)     ! inout
+    END IF
 
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                  ! in
@@ -356,7 +399,43 @@ CONTAINS
       & day_NPP_sum(:)            & ! InOut
       & )
 
+    ! JN 10.01.18
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      ! to represent forest regrowth LAI needs to be dependant on the available leaf carbon
+      ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI 
+      ! from the available biomass via allometric relationships
+      ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
+      IF(is_newyear()) THEN
+        CALL derive_maxLai_according_to_allometric_relationships( &
+          & dsl4jsb_Lctlib_param(clumpinessFactor), & ! <- in
+          & Cpool_woods(:),                         & ! <- in
+          & current_max_green(:),                   & ! <- InOut
+          & veg_carbon_at_max_green(:),             & ! <- InOut
+          & log_number_of_individuals(:),           & ! <- InOut
+          & number_of_individuals(:),               & ! <- InOut
+          & biomass_per_individual(:),              & ! <- InOut
+          & leafC_per_individual(:),                & ! <- InOut
+          & leafC(:),                               & ! <- InOut
+          & veg_frac_correction(:),                 & ! <- InOut
+          & maxLAI_allom(:)                         & ! <- InOut
+          & )
+      ENDIF
 
+      ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
+      IF(is_newday()) THEN
+        CALL track_max_green_pool(&
+          & Cpool_green(:),                       & ! <- in
+          & Cpool_reserve(:),                     & ! <- in
+          & Cpool_woods(:),                       & ! <- in
+          & current_max_green(:),                 & ! <- InOut
+          & veg_carbon_at_max_green(:)            & ! <- InOut
+          & )
+      ENDIF
+    ENDIF
+
+
+    ! JN 10.01.18: if l_forestRegrowth = true, the maxLai of forest pfts can be variable over time and space, therefore 
+    !              LaiMax_corrected is now a vector!
     ! R: laiMax_dyn was included to avoid longterm negative NPP. It is reduced if NPP is negative over a year and increased
     !    if NPP is positive (subroutine update_maximum_lai). So if NPP is negative the lai gets very small.
     !    As this scheme wasn't used, it is unnecessary to implement it into JSBACH4.
@@ -388,14 +467,20 @@ CONTAINS
     !        CALL finish("update_phenology","ERROR: LAI larger than maximum LAI on input")
     ! END IF
 
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+       LaiMax_corrected(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
+    ELSE
+     ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
+     ! which is for each vegetated tile taken from MaxLAI in the lct library.
+       LaiMax_corrected(:) = dsl4jsb_Lctlib_param(MaxLAI)
+    END IF
+
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird: 
     ! Secure minimum Max-LAI 
-    IF(dsl4jsb_Lctlib_param(MaxLAI) < PhenoParam%all%LAI_negligible) THEN
-       LaiMax_corrected = PhenoParam%all%LAI_negligible
-       lai = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
-    ELSE   
-       LaiMax_corrected = dsl4jsb_Lctlib_param(MaxLAI)
-    END IF    
+    WHERE (LaiMax_corrected(:) < PhenoParam%all%LAI_negligible)
+       LaiMax_corrected(:) = PhenoParam%all%LAI_negligible
+       lai(:) = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
+    END WHERE
 
     ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
@@ -411,7 +496,7 @@ CONTAINS
          & lat(:),                        & ! <- in
          & previous_day_temp_mean(:),     & ! <- in
          & pseudo_soil_temp(:),           & ! <- in
-         & LaiMax_corrected,              & ! <- in
+         & LaiMax_corrected(:),           & ! <- in
          & days_since_growth_begin_SG(:), & ! <- inout
          & chill_days_SG(:),              & ! <- inout
          & heat_sum_SG(:),                & ! <- inout
@@ -430,7 +515,7 @@ CONTAINS
          & lat(:),                        & ! <- in
          & previous_day_temp_mean(:),     & ! <- in
          & pseudo_soil_temp(:),           & ! <- in
-         & LaiMax_corrected,              & ! <- in
+         & LaiMax_corrected(:),           & ! <- in
          & days_since_growth_begin_EG(:), & ! <- inout
          & chill_days_EG(:),              & ! <- inout
          & heat_sum_EG(:),                & ! <- inout
@@ -449,7 +534,7 @@ CONTAINS
         & NPP_pot_rate_ca(:),              & ! <- in
         & lat(:),                   & ! <- in
         & pseudo_soil_temp(:),      & ! <- in
-        & LaiMax_corrected,         & ! <- in
+        & LaiMax_corrected(:),      & ! <- in
         & previous_day_NPP_pot_rate_ca(:), & ! <- in
         & w_soil_filling(:),        & ! <- in
         & previous_day_temp_min,    & ! <- in
@@ -468,7 +553,7 @@ CONTAINS
       CALL calc_raingreen_phenology( &
         & timeStep_in_days(),        & ! <- in (function)
         & w_soil_filling(:),         & ! <- in
-        & LaiMax_corrected,          & ! <- in
+        & LaiMax_corrected(:),       & ! <- in
         & previous_day_NPP_pot_rate_ca(:),  & ! <- in
         & lai(:)                     & ! <- inout
         & )
@@ -480,7 +565,7 @@ CONTAINS
          & t_air_in_Celcius(:),      & ! <- in
          & timeStep_in_days(),       & ! <- in
          & w_soil_filling(:),        & ! <- in
-         & LaiMax_corrected,         & ! <- in
+         & LaiMax_corrected(:),      & ! <- in
          & previous_day_NPP_pot_rate_ca(:), & ! <- in
          & lai(:)                    & ! <- inout
          & )

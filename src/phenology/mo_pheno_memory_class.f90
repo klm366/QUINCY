@@ -6,7 +6,10 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
+!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth 
+!!                          (derive maxLAI from biomass via allometric relationships)
 !!
+
 
 MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
@@ -33,7 +36,7 @@ MODULE mo_pheno_memory_class
 
   PUBLIC :: t_pheno_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 100
 
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
     TYPE(t_jsb_var_real2d)           ::                   &
@@ -64,6 +67,22 @@ MODULE mo_pheno_memory_class
       & previous_day_NPP_pot_rate_ca, & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
                                       ! at previous day, because not known for current day; updated at ..
                                       ! the beginning of each new day (stream)
+
+!TODO-JN -> TODO-KN after testing several of these can get local variables instead of output vars!? 
+                                      !! JN: variables required when l_forestRegrowth = true, i.e. when the 
+                                      !      maxLAI is derived from biomass via allometric relationships
+      & current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)] 
+                                      ! since last maxLAI calculation
+      & veg_carbon_at_max_green,    & ! Total vegetation carbon [mol(C) m-2(canopy)] 
+                                      ! at the time of the green pool maximum (current_max_green)
+      & number_of_individuals,      & ! Number of individuals in last calculation [trees ha-1]
+      & biomass_per_individual,     & ! Biomass per individual according to allometric relationships [kg/tree]
+      & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
+      & leafC,                      & ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
+      & log_number_of_individuals,  & ! Log nr ind
+      & maxLAI_allom,               & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]: 
+                                      ! Current max LAI according to allometric relationships 
+
       ! & laiMax_dyn,                 & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
       !                                 ! coming from JSBACH, but smaller than that value when NPP is negative for more
       !                                 ! than 1 year. (stream)
@@ -79,11 +98,12 @@ MODULE mo_pheno_memory_class
       & chill_days_SG,              & ! Number of chill days --- needed for the phenology of summer- and
       & chill_days_EG,              & ! evergreens (stream)
       & veg_frac_correction           ! Factor representing clumpyness of vegetation (for each tile type).
-                                      ! To write it in the output file we define it as 2d even when there is no change
-                                      ! between gridcells as it is in fact a 1d constant for each tile.
                                       ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                       ! canopy area = veg_frac_correction * tile area.
                                       ! var (tile area) = veg_frac_correction * var(canopy area).
+                                      ! l_forestRegrowth = true it changes over time and is spatially variable, 
+                                      ! if l_forestRegrowth = false there is no change between gridcells 
+                                      ! and it is a 1d constant for each tile in this case.
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
@@ -286,11 +306,62 @@ CONTAINS
 
         CALL jsb_add_var( mem, 'veg_frac_correction', mem%veg_frac_correction, &
           & hgrid, surface,                                                    &
-          & t_cf('Correction factor to convert tile to canopy area', '', '') , &
+          & t_cf('veg_frac_correction', '', 'Correction factor to convert tile to canopy area  1-exp(-maxLai/clumpinessFactor)') , &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & lrestart=.FALSE.,                                                  &
+          & lrestart=.TRUE.,                                                  &
           & initval_r=0.0_wp )
+
+        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
+            & hgrid, surface,                                                    &
+            & t_cf('maxLAI_allom', 'm^2(leaf)/m^2(ground)', 'maximum LAI according to allometric relationships'),  &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'current_max_green', mem%current_max_green,      &
+            & hgrid, surface,                                                    &
+            & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'veg_carbon_at_max_green', mem%veg_carbon_at_max_green, &
+            & hgrid, surface,                                                    &
+            & t_cf('veg_carbon_at_max_green', 'mol(C) m-2(canopy)', 'Total vegetation carbon at green pool maximum'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'number_of_individuals', mem%number_of_individuals, &
+            & hgrid, surface,                                                    &
+            & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_wp)
+          CALL jsb_add_var( mem,'biomass_per_individual', mem%biomass_per_individual, &
+            & hgrid, surface,                                                    &
+            & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'leafC_per_individual', mem%leafC_per_individual, &
+            & hgrid, surface,                                                    &
+            & t_cf('leafC_per_individual', 'kg/tree', 'Leaf C per individual according to allometric relationships'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'leafC', mem%leafC, &
+            & hgrid, surface,                                                    &
+            & t_cf('leafC', 'mol(C) m-2(canopy)', 'Leaf C according to allometric relationships'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'log_number_of_individuals', mem%log_number_of_individuals,    &
+            & hgrid, surface,                                                    &
+            & t_cf('log_number_of_individuals', '', 'Log nr of individuals'),           &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
+        END IF
 
       END IF
 

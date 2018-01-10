@@ -6,6 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
+!! Julia Nabel (2018-01-10): added processes to provide optional functionality: forest regrowth (l_forestRegrowth)
+!!                           (derive maxLAI from biomass via allometric relationships)
 !!
 MODULE mo_pheno_process
 #ifndef __NO_JSBACH__
@@ -18,7 +20,7 @@ MODULE mo_pheno_process
 
    PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, calc_previous_day_NPP, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
-             get_foliage_projected_cover   
+             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool 
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
@@ -878,7 +880,75 @@ MODULE mo_pheno_process
 
      RETURN
 
-   END SUBROUTINE calc_grass_phenology   
+  END SUBROUTINE calc_grass_phenology
+
+
+  ELEMENTAL SUBROUTINE derive_maxLai_according_to_allometric_relationships( & 
+                                          & clumpinessFactor,               & ! <- in
+                                          & Cpool_woods,                    & ! <- in
+                                          & current_max_green,              & ! <- InOut
+                                          & veg_carbon_at_max_green,        & ! <- InOut
+                                          & log_number_of_individuals,      & ! <- InOut
+                                          & number_of_individuals,          & ! <- InOut
+                                          & biomass_per_individual,         & ! <- InOut
+                                          & leafC_per_individual,           & ! <- InOut
+                                          & leafC,                          & ! <- InOut
+                                          & veg_frac_correction,            & ! <- InOut
+                                          & maxLAI_allom )                    ! <- inout
+
+     !-----------------------------------------------------------------------
+     !  DECLARATIONS
+     USE mo_pheno_constants, ONLY: PhenoParam
+
+     !-----------------------------------------------------------------------
+     !  ARGUMENTS
+     REAL(wp), intent(in)    :: Cpool_woods, clumpinessFactor
+     REAL(wp), intent(inout) :: current_max_green,              & 
+                              & veg_carbon_at_max_green,        & 
+                              & log_number_of_individuals,      &
+                              & number_of_individuals,          & 
+                              & biomass_per_individual,         & 
+                              & leafC_per_individual,           & 
+                              & leafC,                          &
+                              & veg_frac_correction,            &
+                              & maxLAI_allom
+
+     !-----------------------------------------------------------------------
+     !  LOCAL VARIABLES     TODO_JN -> KN select those from above which are only required internally
+
+
+     !-----------------------------------------------------------------------
+     ! CONTENT
+
+     ! TODO-JN: implement
+     maxLAI_allom = 2.0
+     veg_frac_correction = 1.0_wp - exp(-maxLAI_allom / clumpinessFactor )
+
+     RETURN
+
+  END SUBROUTINE derive_maxLai_according_to_allometric_relationships
+
+
+  ELEMENTAL SUBROUTINE track_max_green_pool( & 
+                                          & Cpool_green,                    & ! <- in
+                                          & Cpool_woods,                    & ! <- in
+                                          & Cpool_reserve,                  & ! <- in
+                                          & current_max_green,              & ! <- InOut
+                                          & veg_carbon_at_max_green )         ! <- inout
+
+     !-----------------------------------------------------------------------
+     !  ARGUMENTS
+     REAL(wp), intent(in)    :: Cpool_green, Cpool_woods, Cpool_reserve
+     REAL(wp), intent(inout) :: current_max_green, veg_carbon_at_max_green
+
+     IF (current_max_green + EPSILON(1.0_wp) .LT. Cpool_green) THEN 
+       current_max_green = Cpool_green
+       veg_carbon_at_max_green = Cpool_green + Cpool_woods + Cpool_reserve 
+     ENDIF
+
+     RETURN
+
+  END SUBROUTINE track_max_green_pool
 
 
   ! --- get_letItDie() ----------------------------------------------------------------------------------------------------------------
@@ -969,6 +1039,9 @@ MODULE mo_pheno_process
     get_foliage_projected_cover = fpc_max * (1._wp - EXP(-lai/clumpiness))
 
   END FUNCTION get_foliage_projected_cover
+
+
+
 
 #endif
 END MODULE mo_pheno_process

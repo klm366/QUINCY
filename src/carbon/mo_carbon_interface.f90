@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-05)
+!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing MaxLai
 !!
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
@@ -34,6 +35,7 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(DISTURB_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -136,12 +138,15 @@ CONTAINS
     INTEGER                      :: no_omp_thread
     INTEGER                      :: ics, ice, iblk, nc
     INTEGER                      :: i, itile
-    REAL(wp), allocatable        :: precip_total(:)
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
+    REAL(wp), allocatable        :: precip_total(:) !@todo: allocateable and used but never allocated!
+    REAL(wp), DIMENSION(options%nc) :: MaxLai !TODO-JN: this is how it is done in mo_sse_interface
+    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
+
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
@@ -361,6 +366,7 @@ CONTAINS
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
@@ -580,9 +586,19 @@ CONTAINS
        pseudo_temp_yDay   = pseudo_temp
        pseudo_precip_yDay = pseudo_precip
 
+       ! In case of l_forestRegrowth = true the maximum LAI can change over time
+       IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          MaxLai = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
+       ELSE
+        ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
+        ! which is for each vegetated tile taken from MaxLAI in the lct library.
+          MaxLai = dsl4jsb_Lctlib_param(MaxLAI)
+       END IF
+
        ! Now update the C pools
        CALL calc_Cpools(      LAI_yDayMean,                                     & ! in
                               LAI_yyDayMean,                                    & ! in
+                              MaxLai,                                           & ! in
                               NPP_pot_yDayMean,                                 & ! in
                               topSoilTemp_yDayMean,                             & ! in
                               alpha_yDayMean,                                   & ! in
@@ -600,13 +616,6 @@ CONTAINS
                               dsl4jsb_Lctlib_param(Max_C_content_woods),        & ! in
                               dsl4jsb_Lctlib_param(specificLeafArea_C),         & ! in
                               dsl4jsb_Lctlib_param(reserveC2leafC),             & ! in
-                              dsl4jsb_Lctlib_param(MaxLAI),                     & ! in
-                                                                                  ! R: Rename MaxLAI in lctlib to
-                                                                                  !    LAI_max in JS3 comes from
-                                                                                  !    theLand%Vegetation%LAI_max,
-                                                                                  !    which is for each vegetated
-                                                                                  !    tile taken from MaxLAI
-                                                                                  !    in the lct library.
                               dsl4jsb_Lctlib_param(PhenologyType),              & ! in  R: is it crop?
                                                                                   ! If yes then this is 5!
                               !

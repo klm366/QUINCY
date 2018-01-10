@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
+!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
 !!
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
@@ -27,6 +28,7 @@ CONTAINS
   ! Calculations to allocate NPP to the plant C pools.
   elemental subroutine calc_Cpools( LAI,                       & ! in
                                     LAI_previous,              & ! in
+                                    max_LAI,                   & ! in
                                     NPPrate,                   & ! in
                                     topSoilTemp,               & ! in
                                     alpha,                     & ! in
@@ -43,7 +45,6 @@ CONTAINS
                                     Max_C_content_woods,       & ! in
                                     specific_leaf_area_C,      & ! in
                                     reserveC2leafC,            & ! in
-                                    max_LAI,                   & ! in
                                     !is_vegetation,             & ! in
                                     pheno_type,                & ! in
                                     !
@@ -110,6 +111,7 @@ CONTAINS
     ! Arguments
     real(wp),intent(in)    :: LAI                    ! Yesterdays mean LAI
     real(wp),intent(in)    :: LAI_previous           ! The day before yesterdays mean LAI
+    real(wp),intent(in)    :: max_LAI                ! Maximum value of LAI
     real(wp),intent(in)    :: NPPrate                ! Yesterdays mean NPPrate [mol(C)/m^2 s]
     real(wp),intent(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
     real(wp),intent(in)    :: alpha                  ! Yesterdays mean water stress factor (between 0 and 1)
@@ -126,7 +128,6 @@ CONTAINS
     real(wp),intent(in)    :: Max_C_content_woods    ! Maximum carbon content of wood pool (from lctLib)
     real(wp),intent(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     real(wp),intent(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
-    real(wp),intent(in)    :: max_LAI                ! Maximum value of LAI
     !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
     integer,intent(in)    :: pheno_type             ! crop =5
     !
