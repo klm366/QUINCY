@@ -141,6 +141,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
@@ -223,6 +224,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)               ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                  ! in

@@ -353,7 +353,7 @@ CONTAINS
     ! plant variables
     dphi(:)               = - lctlib%phi_leaf_min
     beta_sinklim_ps(:)    = 1.0_wp
-    leaf_cn_direction(:)  = 1.0_wp
+    leaf_cn_direction(:)  = 0.0_wp
     fn_oth_cl(:,:)        = 1.0_wp  ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
                                     ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
 

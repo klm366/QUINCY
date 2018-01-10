@@ -165,7 +165,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_veg_constants
 
-    USE mo_base_constants,      ONLY: one_day, one_year 
+    USE mo_base_constants,      ONLY: one_day, one_year
+    USE mo_kind,                ONLY: eps8
     USE mo_shared_constants,    ONLY: molar_mass_C, molar_mass_N
 
     IMPLICIT NONE
@@ -175,8 +176,8 @@ CONTAINS
 
 
   ! Respiration parameters
-      fresp_growth      = 0.25_wp 
-      fmaint_rate_base  = 1.0_wp 
+      fresp_growth      = 0.25_wp
+      fmaint_rate_base  = 1._wp 
       t_maint_k1        = 308.56_wp  
       t_maint_k2        = 56.02_wp 
       t_maint_k3        = 227.13_wp 

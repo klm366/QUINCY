@@ -167,6 +167,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_carbon_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
@@ -328,6 +332,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)                      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)      ! in
@@ -513,10 +521,14 @@ CONTAINS
                                         fleaf_sunlit_tcnl_mavg_cl(:,:)   , &
                                         ppfd_sunlit_tcnl_mavg_cl(:,:)    , &
                                         ppfd_shaded_tcnl_mavg_cl(:,:)    , &
-                                        uptake_n_tcnl_mavg               , &
-                                        growth_cn_tcnl_mavg              , &
-                                        npp_tcnl_mavg                    , &
-                                        leaf_cn_direction(:)             )    ! out
+                                        uptake_n_tcnl_mavg(:)            , &
+                                        growth_cn_tcnl_mavg(:)           , &
+                                        npp_tcnl_mavg(:)                 , &
+                                        reserve_carbon_tcnl_mavg(:)      , &
+                                        reserve_nitrogen_tcnl_mavg(:)    , &
+                                        labile_carbon_tcnl_mavg(:)       , &
+                                        labile_nitrogen_tcnl_mavg(:)      , &
+                                        leaf_cn_direction(:)              )
     END IF ! dsl4jsb_Config(VEG_)%flag_optimal_Nleaf
 
     CALL calc_stoichiometry_changes(lctlib                                    , & ! in

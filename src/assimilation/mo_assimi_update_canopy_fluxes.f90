@@ -558,7 +558,7 @@ CONTAINS
         !> @par ELSE: Case of direct and diffuse radiation
         ELSE
           !>  Theoretical cumulative N at co-limitation by Rubisco and
-          !!  light absorption in sunlit foliage (mmol[N]/m2))
+           !!  light absorption in sunlit foliage (mmol[N]/m2))
           nlim = -log(nco/(ppfd_sunlit_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
           nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 

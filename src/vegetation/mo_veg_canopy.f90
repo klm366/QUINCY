@@ -951,9 +951,12 @@ CONTAINS
                                         uptake_n                      , &
                                         growth_cn                     , &
                                         npp                           , &
+                                        reserve_carbon                , &
+                                        reserve_nitrogen              , &
+                                        labile_carbon                 , &
+                                        labile_nitrogen               , &
                                         leaf_cn_direction             )
-
-    USE mo_base_constants,        ONLY: dtime, one_day
+    USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_veg_constants,         ONLY: delta_n_leaf !, root2leaf_cn, wood2leaf_cn
 
 
@@ -990,8 +993,13 @@ CONTAINS
                                                        ppfd_shaded_tcnl_mavg_cl
     REAL(wp),DIMENSION(nc),           INTENT(in)    :: uptake_n, &
                                                        growth_cn,&
-                                                       npp
+                                                       npp, &
+                                                       reserve_carbon, &
+                                                       reserve_nitrogen, &
+                                                       labile_carbon, &
+                                                       labile_nitrogen
     REAL(wp),DIMENSION(nc),           INTENT(inout) :: leaf_cn_direction
+
     ! ---------------------------
     ! 0.2 Local
     REAL(wp),DIMENSION(nc)                          :: leaf_nitrogen_new
@@ -1116,10 +1124,11 @@ CONTAINS
 !@todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functiong in 4D
 !@todo:leaf_cn_direction rename to veg%opt_leaf_cn_direction
 
-      leaf_cn_direction(ichunk) = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
+      leaf_cn_direction(ichunk) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
 
-      IF (uptake_n(ichunk) * growth_cn(ichunk) < npp(ichunk)) &
-          leaf_cn_direction(ichunk) = 0._wp
+      IF ((uptake_n(ichunk) * lctlib%tau_fine_root * one_year*one_day*1e-6 + labile_nitrogen(ichunk) + reserve_nitrogen(ichunk)) * growth_cn(ichunk) < &
+         (npp(ichunk)*lctlib%tau_leaf * 1e-6 * one_year*one_day + labile_carbon(ichunk) + reserve_carbon(ichunk))) &
+          leaf_cn_direction(ichunk) = - leaf_cn_direction(ichunk)
 
   ELSE    ! IF(veg_pool_leaf_nitrogen(ichunk) > eps4)
      leaf_cn_direction(ichunk) = 0.0_wp

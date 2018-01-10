@@ -561,6 +561,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_carbon_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
@@ -697,6 +701,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
+
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
@@ -805,8 +814,8 @@ CONTAINS
     beta_air_tcnl_mavg(:)         = calc_mavg(beta_air_tcnl_mavg(:), beta_air(:), &
                                                   mavg_period_tcnl,  do_calc=growing_season(:))
     uptake_n_tcnl_mavg         = calc_mavg(uptake_n_tcnl_mavg, &
-                                                  uptake_nh4(:)+uptake_no3(:)+n_fixation(:), &
-                                                  mavg_period_tcnl, do_calc=growing_season(:))
+                                                   unit_uptake_n_pot(:)*veg_pool%fine_root%carbon + n_fixation(:), &
+                                                  mavg_period_tgrowth, do_calc=growing_season(:))
 
     WHERE (growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
@@ -815,9 +824,16 @@ CONTAINS
     ENDWHERE
     growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
     npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
-
-
-
+   
+    labile_carbon_tcnl_mavg(:)        = calc_mavg(labile_carbon_tcnl_mavg(:), veg_pool%labile%carbon, &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    labile_nitrogen_tcnl_mavg(:)      = calc_mavg(labile_nitrogen_tcnl_mavg(:), veg_pool%labile%nitrogen, &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    reserve_carbon_tcnl_mavg(:)       = calc_mavg(reserve_carbon_tcnl_mavg(:), veg_pool%reserve%carbon, &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    reserve_nitrogen_tcnl_mavg(:)     = calc_mavg(reserve_nitrogen_tcnl_mavg(:), veg_pool%reserve%nitrogen, &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
     npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), npp(:), mavg_period_talloc, do_calc=growing_season(:))
