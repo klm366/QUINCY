@@ -569,7 +569,7 @@ CONTAINS
                                              water_to_skin, &
                                              water_to_soil, &
                                              w_soil_root_old, &
-                                             hlp1
+                                             hlp1,hlp2,hlp3
     REAL(wp),DIMENSION(options%nc,options%nsoil_sb) :: &   
                                              ftranspiration , &
                                              fevaporation   , &
@@ -734,7 +734,14 @@ CONTAINS
              hlp1(:) = hlp1(:) * dtime * & 
                        (w_soil_pot_sl(:,isoil-1) - w_soil_pot_sl(:,isoil)) * 1000.0_wp / grav / & 
                        (0.5_wp * (soil_depth_sl(:,isoil-1)+(soil_depth_sl(:,isoil))))
-             
+
+             ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
+             hlp3(:) = soil_depth_sl(:,isoil-1)/soil_depth_sl(:,isoil)             
+             hlp2(:) = (w_soil_sl(:,isoil-1) - w_soil_sl(:,isoil) * hlp3(:)) / (1._wp + hlp3(:))
+             WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
+             WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
+
+             ! update soil layers with diffusion
              w_soil_sl(:,isoil-1) = w_soil_sl(:,isoil-1) - hlp1(:)
              w_soil_sl(:,isoil) = w_soil_sl(:,isoil) + hlp1(:) 
              drainage_sl(:,isoil-1) = drainage_sl(:,isoil-1) + hlp1(:) * 1000._wp / dtime 
