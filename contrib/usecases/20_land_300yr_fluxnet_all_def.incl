@@ -1,4 +1,4 @@
-# default SLM usecase: land_300yr_monthly_out_all_fluxnet_def
+# default SLM usecase: 20_land_300yr_fluxnet_all_def
 # 
 # very basic usecase for running SLM land over 300 years
 #  sites: all fluxnet sites

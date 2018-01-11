@@ -72,14 +72,14 @@ paramSensitivitySiteNumber=2
 
 
 ##>> default usecases <<################################################################################
-## simply un-comment the usecase you want to use
-## or run: prep_run_slm.sh -u usecase_name
+## set the according 'usecase number' here (e.g. usecase="20")
+## or run: prep_run_slm.sh -u 'usecase number' (e.g. prep_run_slm.sh -u 20 )
+usecase=""
 
-#usecase="generate_soil_forcing_def"
-#usecase="land_300yr_monthly_out_all_fluxnet_def"
-#usecase="land_300yr_monthly_out_cue_cruncep_def"
-#usecase="land_300yr_monthly_out_spp_cruncep_def"
-
+# 01 generate_soil_forcing_def
+# 20 land_300yr_fluxnet_all_def
+# 21 land_300yr_cruncep_cue_def
+# 22 land_300yr_cruncep_spp_def
 
 
 ##>> namelist.slm options <<############################################################################
@@ -360,9 +360,8 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:u:h" opt; do
     echo " -n define name of your custom site list"
     echo "    Any filename is possible, give the full name."
     echo "       e.g.: my_site_list.dat"
-    echo " -u provide the name of a usecase, i.e. a file in contrib/usecases/ "
-    echo "    Any filename is possible, predefined and your custom ones."
-    echo "    Give only the filename, such as 'generate_soil_forcing_def', but without file extension '.incl'."
+    echo " -u provide the two-digit number of the usecase; for available usecases see contrib/usecases/ "
+    echo "    You can also create new custom usecase files."
     exit 1
     ;;
   esac
@@ -372,16 +371,17 @@ done
 ## include usecase
 if [ ! -z "$usecase" ]            # if $usecase is not empty
  then
-   usecaseFileIncl="../usecases/""$usecase".incl
+   usecaseFileIncl=$( echo "../usecases/""$usecase""_"* )
    if [ -e "$usecaseFileIncl" ]   # if $usecase file is present
     then
       . "$usecaseFileIncl"        # include text
       echo " "
       echo " Applying settings for usecase: ""$usecase"
+      echo "   usecase file: ""$usecaseFileIncl"
       echo " "
    else 
      echo " "
-     echo " You want to apply the settings of usecase: ""$usecase"
+     echo " You want to apply the settings of usecase number: ""$usecase"
      echo " This failed because the include file: ""$usecaseFileIncl"" is missing."
      echo " EXIT!"
      exit 1
@@ -1240,7 +1240,7 @@ if [ $flag_oneYearForcing == T ]
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
 fi
-if [ $usecase == "generate_soil_forcing_def" ]
+if [ $usecase == "01" ]  # usecase file: 01_generate_soil_forcing_def
   then
     changeNamelistValue flag_generate_soil_forcing ".TRUE."
   else

@@ -1,12 +1,18 @@
-# default SLM usecase: generate_soil_forcing_def
+# default SLM usecase: 01_generate_soil_forcing_def
 # 
 # generate forcing for stand alone soil model:
 #  create additional output (veg litterfall + some soilphysics) used as input of the (standalone) soil model
 #  options apply specifically to the generation of soil forcing using the land model
 #
+# necessary settings for the prep_run_slm.sh:
+#  forcingDataSet fluxnet/cruncep
+#  siteSelection cue/spp
+#  soil_depth 5.7/9.5
+#  nsoil_layer 5/9/15
+#
 
 echo " Simulation runs for soil_forcing creation:"
-echo " usecase='gen_soil_forcing_def' applying special settings to some options"
+echo " usecase='01_generate_soil_forcing_def' applying special settings to some options"
 echo " please run the simulations (prep_run_slm.sh) for FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
 echo " "
 echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
@@ -32,7 +38,7 @@ compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
 soil_moisture_scheme="layer"
-sb_model_scheme="simple_0d"
+sb_model_scheme="simple_1d"
 sb_nloss_scheme="dynamic"
 n_deposition_scheme="dynamic"
 p_deposition_scheme="dynamic"
@@ -48,7 +54,6 @@ canopy_layer_scheme="fapar"
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T" 
-soil_depth=5.7  
 
 flag_read_dC13="T"    # 
 flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
