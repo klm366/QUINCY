@@ -588,11 +588,11 @@ CONTAINS
 
        ! In case of l_forestRegrowth = true the maximum LAI can change over time
        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-          MaxLai = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
+          MaxLai(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
        ELSE
         ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
         ! which is for each vegetated tile taken from MaxLAI in the lct library.
-          MaxLai = dsl4jsb_Lctlib_param(MaxLAI)
+          MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
        END IF
 
        ! Now update the C pools

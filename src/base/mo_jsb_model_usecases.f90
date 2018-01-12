@@ -513,12 +513,18 @@ CONTAINS
           !         Dies habe ich mit "IF ( tile%Is_process_active(CARBON_) ) THEN" gemacht.
           !
           !
+          ! veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          !   & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_,   DISTURB_/), &
+          !   & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
+          !   & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          !   & fract_varname='fract_veg')
+            !& fract_varname='landnoglacier')
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_,   DISTURB_/), &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_ /), &!,   DISTURB_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &!, ON_TILE_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
-            !& fract_varname='landnoglacier')
+
 
                DO i=1,npft
                  pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &

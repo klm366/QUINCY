@@ -15,6 +15,9 @@ MODULE mo_jsb_lctlib_class
   ! Authors: Reiner Schnur, 7/2003
   !          Christian H. Reick, 8/2003
   !
+  !! @par Revision History
+  !! Julia Nabel (2018-01-10): added params for optional functionality in PHENO_: forest regrowth (l_forestRegrowth)
+  !!                           (derive maxLAI from biomass via allometric relationships)
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
   USE mo_kind,         ONLY: wp
   USE mo_exception,    ONLY: message_text, finish
@@ -70,6 +73,11 @@ MODULE mo_jsb_lctlib_class
                                                   !! ... none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     REAL(wp) :: MaxLAI                !! Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
     REAL(wp) :: specificLeafArea_C    !! Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
+    ! ++ additional parameters required when l_forestRegrowth = true  --------------------------------------------------------
+    REAL(wp) :: alpha_nr_ind          !! Parameter of self-thinning relationship
+    REAL(wp) :: beta_nr_ind           !! Parameter of self-thinning relationship
+    REAL(wp) :: alpha_leaf            !! Parameter of relationship between total biomass per ind and leaf biomass 
+    REAL(wp) :: beta_leaf             !! Parameter of relationship between total biomass per ind and leaf biomass
 
      ! --- Parameters used in Knorr Phenology scheme ---------------------------------------------------------------------------
     REAL(wp) :: knorr_Tau_w           !! Time before leaf shedding  [days]
@@ -225,6 +233,10 @@ CONTAINS
     LOGICAL            :: exist_MaxLAI                 = .FALSE.
     LOGICAL            :: exist_StemArea               = .FALSE.
     LOGICAL            :: exist_specificLeafArea_C     = .FALSE.
+    LOGICAL            :: exist_alpha_nr_ind           = .FALSE.
+    LOGICAL            :: exist_beta_nr_ind            = .FALSE.
+    LOGICAL            :: exist_alpha_leaf             = .FALSE.
+    LOGICAL            :: exist_beta_leaf              = .FALSE.
     LOGICAL            :: exist_knorr_Tau_w            = .FALSE.
     LOGICAL            :: exist_knorr_T_phi            = .FALSE.
     LOGICAL            :: exist_knorr_T_r              = .FALSE.
@@ -441,6 +453,18 @@ CONTAINS
           CASE ('specificleafarea_c')                                  ! Carbon content per leaf area for LoGro-P
              READ(line(pos:length),*) lctlib(1:nlct)%specificLeafArea_C
              exist_specificLeafArea_C = .TRUE.
+          CASE ('alpha_nr_ind')                                              ! Maximum LAI for LoGro-P
+             READ(line(pos:length),*) lctlib(1:nlct)%alpha_nr_ind
+             exist_alpha_nr_ind = .TRUE.
+          CASE ('beta_nr_ind')                                              ! Maximum LAI for LoGro-P
+             READ(line(pos:length),*) lctlib(1:nlct)%beta_nr_ind
+             exist_beta_nr_ind = .TRUE.
+          CASE ('alpha_leaf')                                              ! Maximum LAI for LoGro-P
+             READ(line(pos:length),*) lctlib(1:nlct)%alpha_leaf
+             exist_alpha_leaf = .TRUE.
+          CASE ('beta_leaf')                                              ! Maximum LAI for LoGro-P
+             READ(line(pos:length),*) lctlib(1:nlct)%beta_leaf
+             exist_beta_leaf = .TRUE.
           CASE ('knorr_tau_w')                                         ! time before leaf shedding
              READ(line(pos:length),*) lctlib(1:nlct)%knorr_Tau_w
              exist_knorr_tau_w = .TRUE.
@@ -679,6 +703,14 @@ CONTAINS
             CALL finish('init_lctlib','No data for StemArea found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_specificLeafArea_C) &
             CALL finish('init_lctlib','No data for specificLeafArea_C found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_alpha_nr_ind) &
+            CALL finish('init_lctlib','No data for alpha_nr_ind found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_beta_nr_ind) &
+            CALL finish('init_lctlib','No data for beta_nr_ind found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_alpha_leaf) &
+            CALL finish('init_lctlib','No data for alpha_leaf found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_beta_leaf) &
+            CALL finish('init_lctlib','No data for beta_leaf found in '//TRIM(lctlib_file_name))
 
       IF(.NOT. exist_knorr_tau_w) &
         CALL finish('init_lctlib','No data for knorr_Tau_w found in '//TRIM(lctlib_file_name))
@@ -901,6 +933,10 @@ CONTAINS
        CALL p_bcast(lctlib(:)%MaxLAI, p_io)
        CALL p_bcast(lctlib(:)%StemArea, p_io)
        CALL p_bcast(lctlib(:)%specificLeafArea_C, p_io)
+       CALL p_bcast(lctlib(:)%alpha_nr_ind, p_io)
+       CALL p_bcast(lctlib(:)%beta_nr_ind, p_io)
+       CALL p_bcast(lctlib(:)%alpha_leaf, p_io)
+       CALL p_bcast(lctlib(:)%beta_leaf, p_io)
        CALL p_bcast(lctlib(:)%knorr_Tau_w, p_io)
        CALL p_bcast(lctlib(:)%knorr_T_phi, p_io)
        CALL p_bcast(lctlib(:)%knorr_T_r, p_io)

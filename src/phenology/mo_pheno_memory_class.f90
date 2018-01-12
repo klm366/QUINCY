@@ -36,7 +36,7 @@ MODULE mo_pheno_memory_class
 
   PUBLIC :: t_pheno_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 100
+  INTEGER, PARAMETER :: max_no_of_vars = 40
 
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
     TYPE(t_jsb_var_real2d)           ::                   &

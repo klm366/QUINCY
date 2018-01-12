@@ -400,7 +400,7 @@ CONTAINS
       & )
 
     ! JN 10.01.18
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    IF ((dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag))) THEN
       ! to represent forest regrowth LAI needs to be dependant on the available leaf carbon
       ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI 
       ! from the available biomass via allometric relationships
@@ -675,6 +675,10 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
+
+IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
+ENDIF
 
     !X Implementation: Start your process scheme here...
     !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen pheno Tasks aggregiert werden sollen.

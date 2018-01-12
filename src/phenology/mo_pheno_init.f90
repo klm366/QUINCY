@@ -142,7 +142,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
     END IF
 
-    !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time 
+    !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
     ! TODO-JN: decide on ForestFlag vs is_Woody!
     IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
       dsl4jsb_var2D_onDomain(PHENO_, veg_frac_correction) =   &
