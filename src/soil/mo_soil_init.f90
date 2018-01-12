@@ -12,7 +12,7 @@ MODULE mo_soil_init
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp,eps8
-  USE mo_exception,             ONLY: message
+  USE mo_exception,             ONLY: message_text, finish, message
   USE mo_jsb_control,           ONLY: debug_on
 
   IMPLICIT NONE
@@ -56,7 +56,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER                  :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, theta_pwp_sl, theta_fc_sl, theta_sat_sl
     REAL(wp), DIMENSION(options%nc)                  :: soil_awc, hlp2
-    INTEGER                                          :: nsoil_sb, isoil
+    INTEGER                                          :: nsoil_sb, isoil, ichunk
     INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
     ! ---------------------------
@@ -157,6 +157,15 @@ CONTAINS
       & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
       & dsl4jsb_Config(SOIL_)%dz_water(1:nsoil_sb))    ! Soil layer thicknesses from namelist
 
+    ! check if last soil layer has a thickness larger zero
+    DO ichunk  = 1,nc
+      IF (soil_depth_sl(ichunk,nsoil_sb) .LT. eps8) THEN
+        WRITE(message_text,*) 'The last soil layer has a thickness < eps8. Increase soil_depth from ', soil_depth, &
+                              ' to at least ', SUM(dsl4jsb_Config(SOIL_)%dz_water(1:nsoil_sb-1)), ' but better ', &
+                              SUM(dsl4jsb_Config(SOIL_)%dz_water(1:nsoil_sb)), ' and re-start the simulation.'
+        CALL finish(TRIM(routine), message_text)
+      END IF  
+    END DO
     bulk_dens_sl(:,:)   = dsl4jsb_Config(SOIL_)%bulk_density 
     heat_capa_sl(:,:)   = soil_heat_cap
     therm_cond_sl(:,:)  = soil_therm_cond
