@@ -6,25 +6,47 @@
 #
 # necessary settings for the prep_run_slm.sh:
 #  forcingDataSet fluxnet/cruncep
-#  siteSelection cue/spp
-#  soil_depth 5.7/9.5
-#  nsoil_layer 5/9/15
+#  siteSelection  cue/spp
+#  soil_depth     any between 5.7 and 9.5
+#  nsoil_layer    either 5, 9 or 15
 #
 
 echo " Simulation runs for soil_forcing creation:"
-echo " usecase='01_generate_soil_forcing_def' applying special settings to some options"
-echo " please run the simulations (prep_run_slm.sh) for FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
+echo "  usecase='01_generate_soil_forcing_def' applying special settings to some options"
+echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
+echo "    FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
+echo "    each for nsoil_layer = 5  with soil_depth 5.7"
+echo "    each for nsoil_layer = 9  with soil_depth 9.5"
+echo "    each for nsoil_layer = 15 with soil_depth 9.5"
 echo " "
 echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
 echo "   (this script updates the soil forcing for FLUXNET and CRUNCEPv7, "
 echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
 echo " "
 
+# set experimentalID according to site dataset
 experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
 if [ $forcingDataSet == "cruncep" ]
  then
   experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
 fi
+
+# add number of soil layers to experimentalID
+if [ $nsoil_layer -eq 5 ]
+  then
+    experimentalID="$experimentalID"_sl5
+elif [ $nsoil_layer -eq 9 ]
+  then
+    experimentalID="$experimentalID"_sl9
+elif [ $nsoil_layer -eq 15 ]
+  then
+    experimentalID="$experimentalID"_sl15
+else
+  echo "Note: soil forcing can be created only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
+  echo "EXIT!"
+  exit 1
+fi
+
 forcingMode="static"
 slmModel="land"
 
@@ -38,7 +60,7 @@ compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
 soil_moisture_scheme="layer"
-sb_model_scheme="simple_1d"
+sb_model_scheme="simple_0d"
 sb_nloss_scheme="dynamic"
 n_deposition_scheme="dynamic"
 p_deposition_scheme="dynamic"
@@ -70,3 +92,5 @@ flag_oneYearForcing="F"
 soil_awc_prescribe=300.0
 useSiteSpecificAWC="T"
 soil_theta_prescribe=1.0
+
+queue="io"

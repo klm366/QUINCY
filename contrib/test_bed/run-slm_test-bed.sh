@@ -340,12 +340,33 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
         ;;
       "face")
         siteDataSetFull="FACE"
+        if [ $slmModel == "soil" ]
+          then
+            echo " Sorry, no soil_forcing files for FACE sites yet."
+            echo " EXIT!"
+            exit 1
+        fi
         ;;
       esac
 
+      # soil / met forcing
       if [ $slmModel == "soil" ]
         then
-          forcing="soil_forcing"
+          #forcing="soil_forcing"
+          if [ $nsoil_layer -eq 5 ]
+            then
+              forcing="soil_forcing_sl5"
+          elif [ $nsoil_layer -eq 9 ]
+            then
+              forcing="soil_forcing_sl9"
+          elif [ $nsoil_layer -eq 15 ]
+            then
+              forcing="soil_forcing_sl15"
+          else
+            echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
+            echo "EXIT!"
+            exit 1
+          fi
         else # land plant canopy
           forcing="met_forcing"
       fi 

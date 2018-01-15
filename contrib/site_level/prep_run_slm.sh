@@ -629,15 +629,21 @@ case "$forcingDataSet" in
 "fluxnet")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/"
   #siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET2/"
-  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"   # evaluation data; 'FLUXNET' is a symlink
   ;;
 "cruncep")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv7/"
-  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/CRUNCEPv7/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "face")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FACE/"
-  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FACE/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  if [ $slmModel == "soil" ]
+    then
+      echo " Sorry, no soil_forcing files for FACE sites yet."
+      echo " EXIT!"
+      exit 1
+  fi
   ;;
 esac
 
@@ -654,7 +660,20 @@ case "$slmModel" in
   siteDataFoldForcing="$siteDataFold""met_forcing/"
   ;;
 "soil")
-  siteDataFoldForcing="$siteDataFold""soil_forcing/"
+  if [ $nsoil_layer -eq 5 ]
+    then
+      siteDataFoldForcing="$siteDataFold""soil_forcing_sl5/"
+  elif [ $nsoil_layer -eq 9 ]
+    then
+      siteDataFoldForcing="$siteDataFold""soil_forcing_sl9/"
+  elif [ $nsoil_layer -eq 15 ]
+    then
+      siteDataFoldForcing="$siteDataFold""soil_forcing_sl15/"
+  else
+    echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
+    echo "EXIT!"
+    exit 1
+  fi
   ;;
 esac
 

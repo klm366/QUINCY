@@ -27,14 +27,10 @@ userName="$USER"
 mainPathServer="/Net/Groups/BGI/data/Model/SLM1/input/point/"
 pathServerF="$mainPathServer""FLUXNET2/"
 pathServerC="$mainPathServer""CRUNCEPv7/"
-soilForce="soil_forcing/"
+#pathServerA="$mainPathServer""FACE/"
 
 ## source folders - where the simulation results have been stored
 pathSourceBase="/Net/Groups/BGI/scratch/""$userName""/slm/"
-pathSourceBase="/Net/Groups/BGI/scratch/""$userName""/slm/"
-expNameF="exp_create_soil_forc_fluxnet"
-expNameCC="exp_create_soil_forc_cruncep_cue"
-expNameCS="exp_create_soil_forc_cruncep_spp"
 
 # different file names for CRUNCEPv7 depending on the forcing mode
 # e.g.: VAL_1901-2015.dat / VAL_1984-2013.dat (transient / static)
@@ -44,20 +40,38 @@ if [ $forcingMode == "transient" ]
   crunYears="_1901-2015"
 fi
 
-
-## remove old soil_forcing
-rm -f "$pathServerF""$soilForce"*lit.dat
-rm -f "$pathServerF""$soilForce"*sph.dat
-rm -f "$pathServerC""$soilForce"*lit.dat
-rm -f "$pathServerC""$soilForce"*sph.dat
-sync
-echo " Old soil_forcing files deleted"
+# get current date (yyyy-mm-dd) for renaming folders in user scratch
+currDate=$(date +%F)
 
 
-## copy new soil_forcing files ##
+## loop over potential numbers of soil layers present: 5 9 15
+for sl in 5 9 15
+ do
+  echo " "
+  echo " Running soil_forcing update for ""$sl"" soil layers."
+  echo " "
 
-## Fluxnet
-echo " Copying Fluxnet soil_forcing from :""$pathSourceBase""$expNameF"
+## set the soil_forcing folder for the particular sl number at the server where the soil_forcing files are stored
+soilForce="soil_forcing_sl""$sl""/"
+
+## set the experimentalID folder names in the user scratch/slm/ folder containing the simulation results
+expNameF="exp_create_soil_forc_fluxnet_sl""$sl"
+expNameCC="exp_create_soil_forc_cruncep_cue_sl""$sl"
+expNameCS="exp_create_soil_forc_cruncep_spp_sl""$sl"
+
+
+## delete old and copy new soil_forcing files ##
+
+## Fluxnet ##
+if [ -d "$pathSourceBase""$expNameF" ] # if folder is present, i.e., new soil_forcing files were created
+ then
+
+  echo " Removing old Fluxnet soil_forcing"
+  rm -f "$pathServerF""$soilForce"*lit.dat
+  rm -f "$pathServerF""$soilForce"*sph.dat
+  sync && sleep 0.5
+
+  echo " Copying Fluxnet soil_forcing from :""$pathSourceBase""$expNameF"
   for site in $(ls -d "$pathSourceBase""$expNameF"/*/)
    do
 
@@ -66,19 +80,28 @@ echo " Copying Fluxnet soil_forcing from :""$pathSourceBase""$expNameF"
     if [ $siteBase != "x_binary" ]
     then
 
-      #echo $siteBase
       filenameBase=$(ls -la "$pathServerF""met_forcing/" | grep "$siteBase" | awk '{print $9}' | rev | cut -c5- |rev)
-      #echo $filenameBase
-
       echo "  site: "$filenameBase
+
+      # copy new soil_forcing files
       cp "$pathSourceBase""$expNameF""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerF""$soilForce""$filenameBase""_lit.dat"
       cp "$pathSourceBase""$expNameF""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerF""$soilForce""$filenameBase""_sph.dat"
     fi
     sync
-  done
+  done # loop over all sites for which soil_forcing was created
+  
+  ## appending current date to simulation results folders at your scratch
+  mv "$pathSourceBase""$expNameF"  "$pathSourceBase""$expNameF"_"$currDate"
+fi     # if new soil_forcing was created
+
 
 ## Cruncep CUE
-echo " Copying Cruncep soil_forcing from :""$pathSourceBase""$expNameCC"
+if [ -d "$pathSourceBase""$expNameCC" ] # if folder is present, i.e., new soil_forcing files were created
+ then
+
+  echo " "
+  echo " Removing old cruncep CUE soil_forcing files, and "
+  echo " Copying cruncep CUE soil_forcing from :""$pathSourceBase""$expNameCC"
   for site in $(ls -d "$pathSourceBase""$expNameCC"/*/)
    do
 
@@ -93,22 +116,34 @@ echo " Copying Cruncep soil_forcing from :""$pathSourceBase""$expNameCC"
 
         # get a short version of siteBase FLA_01 -> FLA (which is consistent with the name of the met forcing file)
         siteBaseShort=$(echo $siteBase | cut -c1-3)
-        # #echo $siteBase
-        # filenameBase=$(ls -la "$pathServerC""met_forcing/" | grep "$siteBaseShort" | awk '{print $9}' | rev | cut -c5- |rev)
-        # #echo $filenameBase
-
-        # echo "  site: "$filenameBase
         echo  "  site: ""$siteBaseShort""_""$numStrg"
+
+        # delete old soil_forcing files of this site
+        rm -f "$pathServerC""$soilForce""$siteBaseShort"*lit.dat
+        rm -f "$pathServerC""$soilForce""$siteBaseShort"*sph.dat
+        sync && sleep 0.2
+
+        # copy new soil_forcing files
         cp "$pathSourceBase""$expNameCC""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerC""$soilForce""$siteBaseShort""$crunYears""_lit.dat"
         cp "$pathSourceBase""$expNameCC""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerC""$soilForce""$siteBaseShort""$crunYears""_sph.dat"
 
       fi # only _01 sites
-    fi # not x_binary
+    fi   # not x_binary
     sync
-  done
+  done # loop over all sites for which soil_forcing was created
+  
+  ## appending current date to simulation results folders at your scratch
+  mv "$pathSourceBase""$expNameCC" "$pathSourceBase""$expNameCC"_"$currDate"
+fi     # if new soil_forcing was created
+
 
 ## Cruncep SPP
-echo " Copying Cruncep soil_forcing from :""$pathSourceBase""$expNameCS"
+if [ -d "$pathSourceBase""$expNameCS" ] # if folder is present, i.e., new soil_forcing files were created
+ then
+
+  echo " "
+  echo " Removing old cruncep SPP soil_forcing files, and "
+  echo " Copying cruncep SPP soil_forcing from :""$pathSourceBase""$expNameCS"
   for site in $(ls -d "$pathSourceBase""$expNameCS"/*/)
    do
 
@@ -116,36 +151,33 @@ echo " Copying Cruncep soil_forcing from :""$pathSourceBase""$expNameCS"
 
     if [ $siteBase != "x_binary" ]
     then
-      # # only for the _01 sites
-      # numStrg=$(echo $siteBase | rev | cut -c1-2 | rev)  
-      # if [ "$numStrg" == "01" ]
-      #  then
-
-        # get a short version of siteBase FLA_01 -> FLA (which is the name of the forcing file)
+        # the two SPP sites have a *_01 name, so do not need to sort out the *_01 folder as needed for CUE
+        # get a short version of siteBase BBR_01 -> BBR (which is the name of the forcing file)
         siteBaseShort=$(echo $siteBase | cut -c1-3)
-        # #echo $siteBase
-        # filenameBase=$(ls -la "$pathServerC""met_forcing/" | grep "$siteBaseShort" | awk '{print $9}' | rev | cut -c5- |rev)
-        # #echo $filenameBase
+        echo  "  site: ""$siteBaseShort""_01"
+
+        # delete old soil_forcing files of this site
+        rm -f "$pathServerC""$soilForce""$siteBaseShort"*lit.dat
+        rm -f "$pathServerC""$soilForce""$siteBaseShort"*sph.dat
+        sync && sleep 0.2
 
         # echo "  site: "$filenameBase
-        echo  "  site: ""$siteBaseShort""_01"
         cp "$pathSourceBase""$expNameCS""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerC""$soilForce""$siteBaseShort""$crunYears""_lit.dat"
         cp "$pathSourceBase""$expNameCS""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerC""$soilForce""$siteBaseShort""$crunYears""_sph.dat"
 
-      # fi # only _01 sites
     fi # not x_binary
     sync
-  done
-
-
-## appending current date to simulation results folders at your scratch
-currDate=$(date +%F)
-mv "$pathSourceBase""$expNameF"  "$pathSourceBase""$expNameF""$currDate"
-mv "$pathSourceBase""$expNameCC" "$pathSourceBase""$expNameCC""$currDate"
-mv "$pathSourceBase""$expNameCS" "$pathSourceBase""$expNameCS""$currDate"
+  done # loop over all sites for which soil_forcing was created
+  
+  ## appending current date to simulation results folders at your scratch
+  mv "$pathSourceBase""$expNameCS" "$pathSourceBase""$expNameCS"_"$currDate"
+fi     # if new soil_forcing was created
 
 sync
-echo "> New soil_forcing was copied to the ""$mainPathServer""* soil_forcing folders (replacing old data) <"
+done  ## loop over soil layers
 
+echo " "
+echo "> New soil_forcing was copied to the ""$mainPathServer""* soil_forcing folders (replacing old data) <"
+echo " "
 
 ## fin ##
