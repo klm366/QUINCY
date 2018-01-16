@@ -79,7 +79,6 @@ MODULE mo_pheno_memory_class
       & biomass_per_individual,     & ! Biomass per individual according to allometric relationships [kg/tree]
       & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
       & leafC,                      & ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
-      & log_number_of_individuals,  & ! Log nr ind
       & maxLAI_allom,               & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]: 
                                       ! Current max LAI according to allometric relationships 
 
@@ -309,16 +308,20 @@ CONTAINS
           & t_cf('veg_frac_correction', '', 'Correction factor to convert tile to canopy area  1-exp(-maxLai/clumpinessFactor)') , &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & lrestart=.TRUE.,                                                  &
+          & lrestart=.TRUE.,                                                   &
           & initval_r=0.0_wp )
 
+!TODO-JN: nochmal Reiner ansprechen, hier gibt es ja jetzt einen Haufen von Variablen, die 
+!         nur für pft1-4 interessant wären und für die anderen nicht -> doch als eigenen prozess???
+! hmmm, KN fragen, welche davon überhaupt als nicht lokale gebraucht werden... die meisten können 
+! vermutlich lokal bzw lpost = false sein! 
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
             & hgrid, surface,                                                    &
             & t_cf('maxLAI_allom', 'm^2(leaf)/m^2(ground)', 'maximum LAI according to allometric relationships'),  &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
           CALL jsb_add_var( mem,'current_max_green', mem%current_max_green,      &
             & hgrid, surface,                                                    &
             & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &
@@ -355,12 +358,6 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'log_number_of_individuals', mem%log_number_of_individuals,    &
-            & hgrid, surface,                                                    &
-            & t_cf('log_number_of_individuals', '', 'Log nr of individuals'),           &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
         END IF
 
       END IF

@@ -264,9 +264,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: Cpool_green
     dsl4jsb_Real2D_onChunk :: Cpool_reserve
     dsl4jsb_Real2D_onChunk :: Cpool_woods
+
     dsl4jsb_Real2D_onChunk :: current_max_green
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green
-    dsl4jsb_Real2D_onChunk :: log_number_of_individuals
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
     dsl4jsb_Real2D_onChunk :: leafC_per_individual
@@ -322,7 +322,6 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    current_max_green)       ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_carbon_at_max_green) ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    log_number_of_individuals)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)      ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC_per_individual)    ! inout
@@ -407,19 +406,23 @@ CONTAINS
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear()) THEN
         CALL derive_maxLai_according_to_allometric_relationships( &
-          & dsl4jsb_Lctlib_param(clumpinessFactor), & ! <- in
-          & Cpool_woods(:),                         & ! <- in
-          & current_max_green(:),                   & ! <- InOut
-          & veg_carbon_at_max_green(:),             & ! <- InOut
-          & log_number_of_individuals(:),           & ! <- InOut
-          & number_of_individuals(:),               & ! <- InOut
-          & biomass_per_individual(:),              & ! <- InOut
-          & leafC_per_individual(:),                & ! <- InOut
-          & leafC(:),                               & ! <- InOut
-          & veg_frac_correction(:),                 & ! <- InOut
-          & maxLAI_allom(:)                         & ! <- InOut
+          & dsl4jsb_Lctlib_param(alpha_nr_ind),       & ! <- in
+          & dsl4jsb_Lctlib_param(beta_nr_ind),        & ! <- in
+          & dsl4jsb_Lctlib_param(alpha_leaf),         & ! <- in
+          & dsl4jsb_Lctlib_param(beta_leaf),          & ! <- in
+          & dsl4jsb_Lctlib_param(clumpinessFactor),   & ! <- in
+          & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! <- in
+          & Cpool_woods(:),                           & ! <- in
+          & current_max_green(:),                     & ! <- InOut
+          & veg_carbon_at_max_green(:),               & ! <- InOut
+          & number_of_individuals(:),                 & ! <- InOut
+          & biomass_per_individual(:),                & ! <- InOut
+          & leafC_per_individual(:),                  & ! <- InOut
+          & leafC(:),                                 & ! <- InOut
+          & veg_frac_correction(:),                   & ! <- InOut
+          & maxLAI_allom(:)                           & ! <- InOut
           & )
-      ENDIF
+      END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday()) THEN
@@ -676,9 +679,9 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
 
-IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-    dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
-ENDIF
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+        dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
+    ENDIF
 
     !X Implementation: Start your process scheme here...
     !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen pheno Tasks aggregiert werden sollen.

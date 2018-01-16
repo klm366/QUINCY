@@ -304,13 +304,22 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
-      lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+!JN: switched off because the jsb driver currently cannot deal with lakes!
+       ! lake_tile => t_jsb_tile('lake', 'Lake tile', &
+       !   & processes=      (/SEB_,     HYDRO_  /), &
+       !   & process_actions=(/ON_TILE_, ON_TILE_/), &
+       !   & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+
+       ! land_tile => t_jsb_tile('land', 'Land tile', &
+       !   & processes=      (/SEB_/),     &
+       !   & process_actions=(/ON_TILE_/), &
+       !   & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
 
       land_tile => t_jsb_tile('land', 'Land tile', &
         & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        & lct=t_jsb_lct(LAND_TYPE), &
+        & parent=box_tile, &
+        & fract_varname='equal')   ! Fraction = 1.
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
           & processes = (/HYDRO_, SSE_/), &
@@ -470,15 +479,22 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
-       lake_tile => t_jsb_tile('lake', 'Lake tile', &
-         & processes=      (/SEB_,     HYDRO_  /), &
-         & process_actions=(/ON_TILE_, ON_TILE_/), &
-         & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+!JN: switched off because the jsb driver currently cannot deal with lakes!
+       ! lake_tile => t_jsb_tile('lake', 'Lake tile', &
+       !   & processes=      (/SEB_,     HYDRO_  /), &
+       !   & process_actions=(/ON_TILE_, ON_TILE_/), &
+       !   & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
 
-       land_tile => t_jsb_tile('land', 'Land tile', &
-         & processes=      (/SEB_/),     &
-         & process_actions=(/ON_TILE_/), &
-         & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+       ! land_tile => t_jsb_tile('land', 'Land tile', &
+       !   & processes=      (/SEB_/),     &
+       !   & process_actions=(/ON_TILE_/), &
+       !   & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), &
+        & parent=box_tile, &
+        & fract_varname='equal')   ! Fraction = 1.
 
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes =       (/HYDRO_,   SSE_/),     &
@@ -513,18 +529,12 @@ CONTAINS
           !         Dies habe ich mit "IF ( tile%Is_process_active(CARBON_) ) THEN" gemacht.
           !
           !
-          ! veg_tile => t_jsb_tile('veg', 'Veg tile', &
-          !   & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_,   DISTURB_/), &
-          !   & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
-          !   & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          !   & fract_varname='fract_veg')
+           veg_tile => t_jsb_tile('veg', 'Veg tile', &
+             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_,   DISTURB_/), &
+             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
+             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+             & fract_varname='fract_veg')
             !& fract_varname='landnoglacier')
-          veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    CARBON_ /), &!,   DISTURB_/), &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &!, ON_TILE_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-            & fract_varname='fract_veg')
-
 
                DO i=1,npft
                  pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
@@ -692,13 +702,22 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
-      lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+!JN: switched off because the jsb driver currently cannot deal with lakes!
+       ! lake_tile => t_jsb_tile('lake', 'Lake tile', &
+       !   & processes=      (/SEB_,     HYDRO_  /), &
+       !   & process_actions=(/ON_TILE_, ON_TILE_/), &
+       !   & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+
+       ! land_tile => t_jsb_tile('land', 'Land tile', &
+       !   & processes=      (/SEB_/),     &
+       !   & process_actions=(/ON_TILE_/), &
+       !   & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
 
       land_tile => t_jsb_tile('land', 'Land tile', &
         & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        & lct=t_jsb_lct(LAND_TYPE), &
+        & parent=box_tile, &
+        & fract_varname='equal')   ! Fraction = 1.
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
           & processes = (/HYDRO_, SSE_/), &

@@ -148,7 +148,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(PHENO_, veg_frac_correction) =   &
         & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
     ! @todo: do not rely on the lib_id but use a flag instead!
-    ELSEIF (tile%lcts(1)%lib_id /= 0)  THEN ! only required if tile is a pft
+    ELSE IF (tile%lcts(1)%lib_id /= 0)  THEN ! only required if tile is a pft
       dsl4jsb_var2D_onDomain(PHENO_, veg_frac_correction) =   &
         & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
     END IF
