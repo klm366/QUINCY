@@ -255,6 +255,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
 
     ! Local variables
+    LOGICAL :: l_newday
+    REAL(wp) :: timestep  ! Timestep in days
+
     CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_phenology_logrop'
 
     ! Set local variables from options argument
@@ -327,6 +330,9 @@ CONTAINS
     END IF
 
     ! Initialization of local variables
+    l_newday = is_newday()
+    timestep = timeStep_in_days()
+
     t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
 
     day_of_year  = INT(get_year_day(get_time_current()))
@@ -349,7 +355,7 @@ CONTAINS
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
     CALL calc_previous_day_NPP(   &
-      & is_newday(),              & ! Input
+      & l_newday,                 & ! Input
       & NPP_pot_rate_ca(:),       & ! Input
       & dtime,                    & ! Input
       & previous_day_NPP_pot_rate_ca(:), & ! Output (for crop and raingreen)
@@ -405,8 +411,8 @@ CONTAINS
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
       CALL calc_summergreen_phenology(   &
          & day_of_year,                   & ! <- in
-         & is_newday(),                   & ! <- in (function)
-         & timeStep_in_days(),            & ! <- in (function)
+         & l_newday,                      & ! <- in
+         & timestep,                      & ! <- in
          & NPP_pot_rate_ca(:),                   & ! <- in
          & lat(:),                        & ! <- in
          & previous_day_temp_mean(:),     & ! <- in
@@ -425,8 +431,8 @@ CONTAINS
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
        CALL calc_evergreen_phenology(     &
          & day_of_year,                   & ! <- in
-         & is_newday(),                   & ! <- in
-         & timeStep_in_days(),            & ! <- in
+         & l_newday,                      & ! <- in
+         & timestep,                      & ! <- in
          & lat(:),                        & ! <- in
          & previous_day_temp_mean(:),     & ! <- in
          & pseudo_soil_temp(:),           & ! <- in
@@ -444,8 +450,8 @@ CONTAINS
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
       CALL calc_crop_phenology(     &
         & day_of_year,              & ! <- in
-        & is_newday(),              & ! <- in (function)
-        & timeStep_in_days(),       & ! <- in (function)
+        & l_newday,                 & ! <- in
+        & timestep,                 & ! <- in
         & NPP_pot_rate_ca(:),              & ! <- in
         & lat(:),                   & ! <- in
         & pseudo_soil_temp(:),      & ! <- in
@@ -466,7 +472,7 @@ CONTAINS
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
       CALL calc_raingreen_phenology( &
-        & timeStep_in_days(),        & ! <- in (function)
+        & timestep,                  & ! <- in
         & w_soil_filling(:),         & ! <- in
         & LaiMax_corrected,          & ! <- in
         & previous_day_NPP_pot_rate_ca(:),  & ! <- in
@@ -478,7 +484,7 @@ CONTAINS
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
        CALL calc_grass_phenology(    &
          & t_air_in_Celcius(:),      & ! <- in
-         & timeStep_in_days(),       & ! <- in
+         & timestep,                 & ! <- in
          & w_soil_filling(:),        & ! <- in
          & LaiMax_corrected,         & ! <- in
          & previous_day_NPP_pot_rate_ca(:), & ! <- in

@@ -408,7 +408,9 @@ CONTAINS
 
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterunlimited( &
-        & dsl4jsb_Lctlib,                    & ! in
+        & dsl4jsb_Lctlib_param(C4Flag),      &
+        & dsl4jsb_Lctlib_param(CarboxRate),  &
+        & dsl4jsb_Lctlib_param(ETransport),  &
         & t_air(:),                          & ! in
         & press_srf(:),                      & ! in
         & par_down_mol(:),                   & ! in
@@ -609,23 +611,25 @@ CONTAINS
     END DO
 
     DO icanopy=1,ncanopy
-       CALL calc_assimilation_waterlimited(                      &
-                             dsl4jsb_Lctlib,                     & ! in
-                             t_air(:),                           & ! in
-                             press_srf(:),                       & ! in
-                             par_down_mol(:),                    & ! in
-                             apar_per_lai_cl(:,icanopy),         & ! in
-                             CO2_air_mol(:),                     & ! in
-                             assimi_scaling_fact_cl(:,icanopy),  & ! in
-                             CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
-                             canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
-                             gross_assimilation_cl(:,icanopy),   & ! out
-                             dark_respiration_cl(:,icanopy),     & ! out
-                             carbox_rate_max_cl(:,icanopy),      & ! out
-                             e_transport_rate_max_cl(:,icanopy), & ! out
-                             carbox_rate_cl(:,icanopy),          & ! out
-                             e_transport_rate_cl(:,icanopy)      & ! out
-                             )
+      CALL calc_assimilation_waterlimited(    &
+        & dsl4jsb_Lctlib_param(C4Flag),       &
+        & dsl4jsb_Lctlib_param(CarboxRate),   &
+        & dsl4jsb_Lctlib_param(ETransport),   &
+        & t_air(:),                           & ! in
+        & press_srf(:),                       & ! in
+        & par_down_mol(:),                    & ! in
+        & apar_per_lai_cl(:,icanopy),         & ! in
+        & CO2_air_mol(:),                     & ! in
+        & assimi_scaling_fact_cl(:,icanopy),  & ! in
+        & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
+        & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
+        & gross_assimilation_cl(:,icanopy),   & ! out
+        & dark_respiration_cl(:,icanopy),     & ! out
+        & carbox_rate_max_cl(:,icanopy),      & ! out
+        & e_transport_rate_max_cl(:,icanopy), & ! out
+        & carbox_rate_cl(:,icanopy),          & ! out
+        & e_transport_rate_cl(:,icanopy)      & ! out
+        & )
     END DO
 
 

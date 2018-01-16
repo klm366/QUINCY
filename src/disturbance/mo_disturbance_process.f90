@@ -326,7 +326,7 @@ CONTAINS
     fire_rel_hum_threshold_expanded(1:nc) = dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold
     DO itile = 1,no_children
        ! See X1. This should be moved to the interface and give the results as arguments
-       IF ( is_woody(no_children) ) THEN  ! Woody Type
+       IF ( is_woody(itile) ) THEN  ! Woody Type
          fire_minimum(1:nc) = dsl4jsb_Config(DISTURB_)%fire_minimum_woody
          fire_tau        = dsl4jsb_Config(DISTURB_)%fire_tau_woody
        ELSE                             ! all other types

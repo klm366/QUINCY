@@ -347,10 +347,9 @@ CONTAINS
 
   END FUNCTION Is_first_child_state
 
-  SUBROUTINE Set_no_of_children_state(this, no_of_children)
+  SUBROUTINE Set_no_of_children_state(this)
 
     CLASS(t_State), INTENT(inout) :: this
-    INTEGER,        INTENT(in)    :: no_of_children
 
     CLASS(t_State), POINTER :: current
 
@@ -373,26 +372,16 @@ CONTAINS
 
   FUNCTION Get_no_of_children_state(this) RESULT(return_value)
 
-    CLASS(t_State), INTENT(in)    :: this
+    CLASS(t_State), INTENT(inout) :: this
     INTEGER                       :: return_value
 
     CLASS(t_State), POINTER :: current
 
-    IF (this%no_of_children >= 0) THEN
-      return_value = this%no_of_children
-      RETURN
+    IF (this%no_of_children < 0) THEN
+      CALL this%Set_no_of_children()
     END IF
 
-    IF (this%Has_children()) THEN
-      return_value = 1
-      current => this%first_child
-      DO WHILE (.NOT. current%Is_last_child())
-        current => current%next_sibling
-        return_value = return_value + 1
-      END DO
-    ELSE
-      return_value = 0
-    END IF
+    return_value = this%no_of_children
 
   END FUNCTION Get_no_of_children_state
 
