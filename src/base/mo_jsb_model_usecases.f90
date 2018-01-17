@@ -83,9 +83,11 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
+#ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
       CALL box_tile%Set_process_action(HD_, ON_TILE_)
     END IF
+#endif
 
       ! Create sub-tiles
       IF (model%config%use_lakes) THEN
@@ -158,9 +160,11 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
+#ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
       CALL box_tile%Set_process_action(HD_, ON_TILE_)
     END IF
+#endif
 
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
