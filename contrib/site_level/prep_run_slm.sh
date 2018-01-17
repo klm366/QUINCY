@@ -59,9 +59,11 @@ specialFluxnetOutput="F"
 # when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", specialFluxnetOutput="F"
 # the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
 # you can run simulations for all/some CRUNCEPv7 sites of the "cue" set (cue_gfdb_sites*.dat) ; for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
+# data for comparison is all of the the daily model output following the spinupLengthGFDB
 compareSimCRUNCEPvsGFDB="F"
-# years of spin-up before output is saved
-spinupLengthGFDB=300
+# years of spin-up before output is saved (all output is used for simulation vs GFDB comparision)
+# in case of forcingMode is set to "transient" then transient_spinup_years=spinupLengthGFDB
+spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
@@ -80,6 +82,8 @@ usecase=""
 # 20 land_300yr_fluxnet_all_def
 # 21 land_300yr_cruncep_cue_def
 # 22 land_300yr_cruncep_spp_def
+# 80 baseline_fluxnet_def
+# 81 baseline_gfdb_cue_def
 
 
 ##>> namelist.slm options <<############################################################################
@@ -91,8 +95,6 @@ sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
-n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
-p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # BNF & Mycorrhiza
 bnf_scheme="standard"           # none fixed standard optimal resistance
@@ -139,6 +141,8 @@ useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" 
 soil_theta_prescribe=1.0        # float !
 flag_read_dC13="F"              # either use forcing dC13 or the prescribed default value
 flag_read_dC14="F"              # either use forcing dC14 or the prescribed default value
+n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 
 ##>> details about the HPC, if unsure stick with the defaults <<################################
@@ -587,32 +591,6 @@ validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivi
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
 
 
-## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
-# this may overwrite some options specifies above !
-if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
-  gfdbFile="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_cue_sites_01082017.csv"
-  forcingDataSet="cruncep"
-  forcingMode="static"
-  siteSelection="cue"
-  paramSensitivitySim="F"
-  specialFluxnetOutput="F"
-  let simulation_length_number=spinupLengthGFDB+simulation_length_number
-  output_interval_pool="daily"
-  output_interval_flux="daily"
-  let output_start_first_day_year=spinupLengthGFDB+output_start_first_day_year
-  let output_end_last_day_year=spinupLengthGFDB+output_end_last_day_year     
-  if [ ! -e "$gfdbFile" ] # if file not exists
-   then
-    echo "EXIT! The GFDB file does not exist! You set the option compareSimCRUNCEPvsGFDB to T."
-    echo " File location & name should be: ""$gfdbFile"
-    exit 1
-   else
-    echo " "
-    echo " You started simulations to compare CRUNCEP with GFDB data using a spin-up time of ""$spinupLengthGFDB"" years."
-    echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years after the spin-up."
-  fi
-fi
-
 
 ## set and create additional basic folders (within the basic simulation folder) ##
 mkdir -p "$simFold"                           # "$bgiScratchUserFold""$jobName""/"  e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/
@@ -779,7 +757,52 @@ else # the default case: $customSiteList == "F"
 fi
 
 
+## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
+# this may overwrite some options specifies above !
+if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
+  gfdbFile="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_cue_sites_01082017.csv"
+  forcingDataSet="cruncep"
+  siteSelection="cue"
+  paramSensitivitySim="F"
+  specialFluxnetOutput="F"
+  output_interval_pool="daily"
+  output_interval_flux="daily"
+  if [ $forcingMode == "static" ]
+   then
+    # output starts right after the spinup has finished (output is used for simulation vs GFDB comparision)
+    let simulation_length_number=spinupLengthGFDB+simulation_length_number
+    let output_start_first_day_year=spinupLengthGFDB+output_start_first_day_year
+    let output_end_last_day_year=spinupLengthGFDB+output_end_last_day_year
+  else
+    # transient simulations:
+    # overwrites the above setting for transient_spinup_years
+    transient_spinup_years="$spinupLengthGFDB"
+    # simulation_length_number does not change, its the number of years after the transient_spinup_years
+    # neither do the output_start* & output_end* years change
+    # note, in transient simulations the transient_spinup_years are counted within SLM from negative value to zero, which is when the simulation_length_number starts
+  fi
+  # checking GFDB file availability
+  if [ ! -e "$gfdbFile" ] # if file not exists
+   then
+    echo "EXIT! The GFDB file does not exist! You set the option compareSimCRUNCEPvsGFDB to T."
+    echo " File location & name should be: ""$gfdbFile"
+    exit 1
+   else
+    echo " "
+    echo " You started simulations to compare CRUNCEP with GFDB data using a spin-up time of ""$spinupLengthGFDB"" years."
+    if [ $forcingMode == "static" ]
+     then
+      echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years after the spin-up (static forcing mode)."
+    else
+      let startYearTransOut=transient_spinup_start_year+output_end_last_day_year-1
+      echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years starting in year ""$startYearTransOut"" (transient forcing mode)."
+    fi
+  fi
+fi
+
+
 ## evaluate options for the forcingMode == transient
+#  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB simulation settings if compareSimCRUNCEPvsGFDB == "T"
 if [ $forcingMode == "transient" ]
  then
    echo " "
@@ -819,8 +842,8 @@ if [ $forcingMode == "transient" ]
      echo "  You selected FLUXNET2 sites. This is just a warning, none of your options will be changed."
    fi
  else  
- # $forcingMode == "static"
- # set transient* parameter to default values
+ # if [ $forcingMode == "static" ]
+ # set transient* parameters to default values
   transient_spinup_start_year=1901
   transient_spinup_end_year=1930
   transient_spinup_years=500
