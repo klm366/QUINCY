@@ -889,9 +889,10 @@ CONTAINS
                              fract_fpc_max,    & ! maximum foliage projected cover
                              cos_zenith_angle, & ! cosinus of zenith angle of incoming radiation
                              StemArea
-    REAL(wp), INTENT(out) :: sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
-                                                 ! (Falling with rising LAI.)
-                             sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
+    REAL(wp), INTENT(inout) :: &
+      & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
+                            ! (Falling with rising LAI.)
+      & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
 
     ! ---------------------------
     ! Go
