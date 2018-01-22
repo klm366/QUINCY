@@ -146,7 +146,7 @@ p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 
 ##>> details about the HPC, if unsure stick with the defaults <<################################
-queue="all"                  # available queues: all BTM io mpi_large  (for information on the queues run at pc026/28: bqueues -l)
+queue="all"                  # available queues: all BTM io mpi_large io_perform (for information on the queues run at pc026/27/28: bqueues -l; io_perform selects only the new INTEL3 nodes: lshosts)
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000                  # memory per job you may need [mega byte]; here provided in MB (default: 1000) but recalculated to KB which is what OpenLava needs
 numberCpuMax=80              # maximum number of simulations started in parallel
@@ -328,6 +328,9 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:u:h" opt; do
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
     echo "       F: not using the custom site list"
+    echo " -n define name of your custom site list"
+    echo "    Any filename is possible, give the full name."
+    echo "       e.g.: my_site_list.dat"
     echo " -m set slmModel"
     echo "    Arguments to -m:"
     echo "       land plant soil canopy"
@@ -361,11 +364,8 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:u:h" opt; do
     echo "    Arguments to -z:"
     echo "       T: TRUE  - mycorrhiza are simulated"
     echo "       F: FALSE - mycorrhiza are NOT simulated"
-    echo " -n define name of your custom site list"
-    echo "    Any filename is possible, give the full name."
-    echo "       e.g.: my_site_list.dat"
     echo " -u provide the two-digit number of the usecase; for available usecases see contrib/usecases/ "
-    echo "    You can also create new custom usecase files."
+    echo "    You can also create new custom usecase files (see the wiki for explanation)."
     exit 1
     ;;
   esac
@@ -466,7 +466,7 @@ validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
 validateSBNLossScheme="none fixed dynamic"
 validateSBModelScheme="simple_0d simple_1d jsm"
-validateQueue="all io BTM mpi_large"
+validateQueue="all io BTM mpi_large io_perform"
 validateEmailNotification="yes no"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
@@ -974,6 +974,13 @@ fi
 
 ## compile the bsub -R argument (Reserved) for "reserved memory" in MB
 reservedArg="rusage[mem="$memory"]"
+# in case the io_perform "virtual" queue is selected, add also processor information to the -R argument and change queue to 'io'
+if [ "$queue" == "io_perform" ]
+ then
+  reservedArg="select[model==INTEL3] rusage[mem="$memory"]"
+  queue="io"      # because there is actually no queue 'io_perform'
+fi
+
 
 ## calculate memory (bsub -M argument) from MB -> KB as needed by OpenLava
 memory=$((memory * 1000))

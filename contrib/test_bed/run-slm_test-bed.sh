@@ -86,7 +86,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":p:m:y:o:b:z:h" opt; do
+while getopts ":p:m:s:y:o:b:z:h" opt; do
   case "$opt" in
   "p")
     echo "   plant_functional_type_id=""$OPTARG"
@@ -97,6 +97,22 @@ while getopts ":p:m:y:o:b:z:h" opt; do
   "m")
     echo "   slmModel=""$OPTARG"
     slmModel="$OPTARG"
+    ;;
+  "s")
+    case "$OPTARG" in
+    "s0d")
+      echo "   sb_model_scheme=simple_0d (only one soil layer)"
+      sb_model_scheme="simple_0d"
+      ;;
+    "s1d")
+      echo "   sb_model_scheme=simple_1d (multiple soil layers)"
+      sb_model_scheme="simple_1d"
+      ;;
+    "jsm")
+      echo "   sb_model_scheme=jsm (full-featured soil model)"
+      sb_model_scheme="jsm"
+      ;;
+    esac
     ;;
   "y")
     echo "   simulation_length_number=""$OPTARG"
@@ -189,6 +205,11 @@ while getopts ":p:m:y:o:b:z:h" opt; do
     echo " -m set slmModel"
     echo "    Arguments to -m:"
     echo "       land plant soil canopy"
+    echo " -s set the soil model"
+    echo "    Arguments to -s:"
+    echo "       s0d: simple_0d"
+    echo "       s1d: simple_1d"
+    echo "       jsm: jsm"    
     echo " -y set simulation length"
     echo "    Arguments to -y:"
     echo "       any integer value"
