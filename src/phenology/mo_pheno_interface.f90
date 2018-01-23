@@ -274,6 +274,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
     dsl4jsb_Real2D_onChunk :: veg_frac_correction
 
+    dsl4jsb_Real2D_onChunk :: prev_veg_c_at_max_green
+    dsl4jsb_Real2D_onChunk :: annual_veg_c_inc
+    dsl4jsb_Real2D_onChunk :: biennial_avg_veg_c_inc
+    dsl4jsb_Real2D_onChunk :: quinquennial_avg_veg_c_inc
+    dsl4jsb_Real2D_onChunk :: decennial_avg_veg_c_inc
+
     ! Local variables
     CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_phenology_logrop'
 
@@ -328,6 +334,12 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC)                   ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)     ! inout
+
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    prev_veg_c_at_max_green)     ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    annual_veg_c_inc)            ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    biennial_avg_veg_c_inc)      ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    quinquennial_avg_veg_c_inc)  ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    decennial_avg_veg_c_inc)     ! inout
     END IF
 
     ! Set pointers to variables in memory
@@ -415,6 +427,11 @@ CONTAINS
           & Cpool_woods(:),                           & ! <- in
           & current_max_green(:),                     & ! <- InOut
           & veg_carbon_at_max_green(:),               & ! <- InOut
+          & prev_veg_c_at_max_green(:),               & ! <- InOut
+          & annual_veg_c_inc(:),                      & ! <- InOut
+          & biennial_avg_veg_c_inc(:),                & ! <- InOut
+          & quinquennial_avg_veg_c_inc(:),            & ! <- InOut
+          & decennial_avg_veg_c_inc(:),               & ! <- InOut
           & number_of_individuals(:),                 & ! <- InOut
           & biomass_per_individual(:),                & ! <- InOut
           & leafC_per_individual(:),                  & ! <- InOut

@@ -893,6 +893,11 @@ MODULE mo_pheno_process
                                           & Cpool_woods,                    & ! <- in
                                           & current_max_green,              & ! <- InOut
                                           & veg_carbon_at_max_green,        & ! <- InOut
+                                          & prev_veg_c_at_max_green,        & ! <- InOut
+                                          & annual_veg_c_inc,               & ! <- InOut
+                                          & biennial_avg_veg_c_inc,         & ! <- InOut
+                                          & quinquennial_avg_veg_c_inc,     & ! <- InOut
+                                          & decennial_avg_veg_c_inc,        & ! <- InOut
                                           & number_of_individuals,          & ! <- InOut
                                           & biomass_per_individual,         & ! <- InOut
                                           & leafC_per_individual,           & ! <- InOut
@@ -915,6 +920,11 @@ MODULE mo_pheno_process
                               & Cpool_woods
     REAL(wp), intent(inout) ::  current_max_green,              & 
                               & veg_carbon_at_max_green,        & 
+                              & prev_veg_c_at_max_green,        & 
+                              & annual_veg_c_inc,               &
+                              & biennial_avg_veg_c_inc,         & 
+                              & quinquennial_avg_veg_c_inc,     & 
+                              & decennial_avg_veg_c_inc,        & 
                               & number_of_individuals,          & 
                               & biomass_per_individual,         & 
                               & leafC_per_individual,           & 
@@ -929,6 +939,14 @@ MODULE mo_pheno_process
     !-----------------------------------------------------------------------
     ! CONTENT
     kgPerHa = PhenoParam%FR%kgCtokg * PhenoParam%FR%kgCperMol * PhenoParam%FR%m2toha
+
+    ! calculate the (avg multi-) annual increment 
+    annual_veg_c_inc = veg_carbon_at_max_green - prev_veg_c_at_max_green
+    biennial_avg_veg_c_inc = biennial_avg_veg_c_inc - (biennial_avg_veg_c_inc / 2.0) + (annual_veg_c_inc / 2.0)
+    quinquennial_avg_veg_c_inc &
+      & = quinquennial_avg_veg_c_inc - (quinquennial_avg_veg_c_inc / 5.0) + (annual_veg_c_inc / 5.0)
+    decennial_avg_veg_c_inc &
+      & = decennial_avg_veg_c_inc - (decennial_avg_veg_c_inc / 10.0) + (annual_veg_c_inc / 10.0)
 
     !TODO-JN: discuss with Kim, if EPSILON(1.0_wp) would be sufficient for the test
     !For numerical reasons funct_allometry%FOM_alloc_vegetation_carbon_at_max_green_pool cannot be zero. 
@@ -959,7 +977,8 @@ MODULE mo_pheno_process
     ! recalculate correction factor for the canopy cover
     veg_frac_correction = 1.0_wp - exp(-maxLAI_allom / lctlib_clumpinessFactor )
 
-    ! set tracking variables to zero
+    ! reset tracking variables
+    prev_veg_c_at_max_green = veg_carbon_at_max_green
     veg_carbon_at_max_green = 0.0_wp
     current_max_green = 0.0_wp
 
