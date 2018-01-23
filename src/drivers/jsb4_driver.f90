@@ -346,9 +346,10 @@ PROGRAM jsb4_driver
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
       CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
-        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
-        & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-        & frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
+        & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
+        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse,                              &
+        & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
 
     DO iblk = 1, nblks
