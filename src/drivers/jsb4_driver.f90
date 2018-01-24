@@ -135,8 +135,6 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: evapotrans(:)
   REAL(wp), ALLOCATABLE :: evapopot(:)
 
-  REAL(wp), ALLOCATABLE :: CO2_flux(:) !!JN: hotfix to Reiners and Rainers checkin
-
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
@@ -146,6 +144,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_nir_dir(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
+  REAL(wp), ALLOCATABLE :: CO2_flux(:)
 
     NAMELIST /jsb_parallel_nml/     &
       nproca, npedim,             &
@@ -250,9 +249,6 @@ PROGRAM jsb4_driver
   ALLOCATE(s_srf(nproma))
   ALLOCATE(evapotrans(nproma))
   ALLOCATE(evapopot(nproma))
-
-  ALLOCATE(CO2_flux(nproma)) !!JN: hotfix to Reiners and Rainers checkin
-  
   ALLOCATE(latent_hflx(nproma))
   ALLOCATE(sensible_hflx(nproma))
   ALLOCATE(grnd_hflx(nproma))
@@ -262,6 +258,7 @@ PROGRAM jsb4_driver
   ALLOCATE(alb_nir_dir(nproma))
   ALLOCATE(alb_vis_dif(nproma))
   ALLOCATE(alb_nir_dif(nproma))
+  ALLOCATE(CO2_flux(nproma))
 
   IF (.NOT. read_interface_vars) THEN
     CALL init_forcing(model_id)
@@ -350,9 +347,10 @@ PROGRAM jsb4_driver
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
       CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
-        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
-        & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-        & frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
+        & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
+        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse,                              &
+        & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
 
     DO iblk = 1, nblks
@@ -445,6 +443,7 @@ PROGRAM jsb4_driver
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
   DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
   DEALLOCATE(q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+  DEALLOCATE(CO2_flux)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)

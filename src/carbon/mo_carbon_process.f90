@@ -47,6 +47,8 @@ CONTAINS
                                     reserveC2leafC,            & ! in
                                     !is_vegetation,             & ! in
                                     pheno_type,                & ! in
+                                    time_steps_per_day,        & ! in
+                                    dtime,                     & ! in
                                     !
                                     Cpool_green,               & ! inout
                                     Cpool_woods,               & ! inout
@@ -121,15 +123,17 @@ CONTAINS
     real(wp),intent(in)    :: frac_green_2_herbivory
     real(wp),intent(in)    :: tau_Cpool_litter_green ! Time constant by which green litter pool is depreciated  [days]
     real(wp),intent(in)    :: tau_Cpool_litter_wood  ! Time constant by which woody litter pool is depreciated  [days]
-    real(wp),intent(in)    :: tau_Cpool_woods        ! Time constant by which woods Pool is depreciated  [years]
-    real(wp),intent(in)    :: LAI_shed_constant      ! Leaf shedding at a constant rate for evergreens etc.
+    real(wp),intent(in)    :: tau_Cpool_woods        ! Time constant by which woods Pool is depreciated  !!! [years] !!!
+    real(wp),intent(in)    :: LAI_shed_constant      ! Leaf shedding at a constant rate for evergreens etc. [1/day]
     real(wp),intent(in)    :: frac_C_litter_green2atmos ! Fraction of heterotrophic loss of green litter pools emitted to
                                                         ! the atmosphere
     real(wp),intent(in)    :: Max_C_content_woods    ! Maximum carbon content of wood pool (from lctLib)
     real(wp),intent(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     real(wp),intent(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
     !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
-    integer,intent(in)    :: pheno_type             ! crop =5
+    integer,intent(in)     :: pheno_type             ! crop =5
+    integer,intent(in)     :: time_steps_per_day
+    real(wp),intent(in)    :: dtime
     !
     real(wp),intent(inout) :: Cpool_green            ! Green carbon pool: on input last value; updated on output 
                                                      !    [mol(C)/m^2(canopy)]
@@ -221,8 +225,8 @@ CONTAINS
     real(wp) :: d_Cpool_litter_green_ag, d_Cpool_litter_green_bg
     real(wp) :: d_Cpool_litter_wood_ag, d_Cpool_litter_wood_bg
     real(wp) :: Cpool_green_max,Cpool_reserve_optimal
-    real(wp) :: NPP_2_greenPool,NPP_2_woodPool,NPP_2_reservePool,NPP_2_rootExudates,Green_2_herbivory
-    real(wp) :: C_2_litter_greenPool,C_2_litter_woodPool
+    real(wp) :: NPP_2_greenPool, NPP_2_woodPool, NPP_2_reservePool, NPP_2_rootExudates, Green_2_herbivory
+    real(wp) :: C_2_litter_greenPool, C_2_litter_woodPool
     real(wp) :: excess_carbon
     real(wp) :: leaf_shedding
     real(wp) :: alpha_mod
@@ -409,6 +413,7 @@ CONTAINS
 !!$          leaf_shedding = LAI_previous - LAI                      !!    the leaf shedding is given by the decrease in LAI.
 !!$       END IF
 !!$ tr
+
        leaf_shedding = MAX(LAI * LAI_shed_constant,LAI_previous - LAI)  !! Leaf shedding is assured at a minimum constant rate 
                                                                         !! which maybe exceeded by the decrease in LAI.       
 
@@ -444,6 +449,7 @@ CONTAINS
 
        Cflx_faeces_2_LG  = Green_2_herbivory * frac_C_faeces2_LG             !! Cflux_faeces_2_LG to be stored in litter green pool
                                                                              !!      (not considered in Cflx_litterTotal) 
+                                                                             !!      (no life times (tau) enter Cflx_faeces_2_LG!)
        Cflx_faeces_2_atm = Green_2_herbivory * (1.0_wp - frac_C_faeces2_LG)  !! Cflux_faeces_2_atm to be lost to atmosphere 
                                                                              !!      (dk: not added to CO2?)
        Cpool_litter_green_ag = Cpool_litter_green_ag + Cflx_faeces_2_LG      !! Cflux_faeces_2_LG put into LG pool  
@@ -453,9 +459,11 @@ CONTAINS
        !! ---------------------------------------------------------------------------------
        !! 2. Wood shedding: Transfer of C from wood pool to wood litter pools
        !! 
-                                                            !! Assuming that forests continously die at the inverse lifetime of trees
-       C_2_litter_woodPool = Cpool_woods / tau_Cpool_woods !*365._wp     !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
-       Cpool_litter_wood_ag = Cpool_litter_wood_ag &                    !! .. is put partly into the above ground woody litter pool
+                                                                                     !! Assuming that forests continously die at the inverse lifetime of trees
+       C_2_litter_woodPool = Cpool_woods /              &                            ! The bigger tau gets, the weaker the C pools will be depreciated:
+                                                                                     ! tau_Cpool_woods: [years] -> [timestep]
+                             &  (tau_Cpool_woods * 365._wp )                         !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
+       Cpool_litter_wood_ag = Cpool_litter_wood_ag      &                            !! .. is put partly into the above ground woody litter pool
             + frac_wood_aboveGround*C_2_litter_woodPool
        ! R: only for spitfire
        ! if (present(frac_litter_wood_new))     litter_wood_new = frac_wood_aboveGround * C_2_litter_woodPool  
@@ -734,7 +742,7 @@ CONTAINS
           YCpool_humus_1          =Yasso_out(9)
 
 
-          !! update respiration with respiration from leaf litter decomposition
+          ! rescale respiration (from leaf litter decomposition) from "per day" to "per second"
           soilResp_rate = Yasso_out(10) / sec_per_day 
 
           !! call yasso for woody litter; this time with nutrient effects
@@ -752,9 +760,8 @@ CONTAINS
           YCpool_humus_2          =Yasso_out(9)
        
           !! Yasso total respiration
-          ! add respiration from wood litter decomposition
-           soilResp_rate = soilResp_rate  + Yasso_out(10) / sec_per_day 
-
+          ! add respiration from wood litter decomposition and rescale respiration from "per day" to "per second"
+           soilResp_rate = soilResp_rate  + Yasso_out(10) / sec_per_day
 
        ! always:
        !! ============== Decay of crop harvest =============
@@ -1088,8 +1095,7 @@ CONTAINS
     real(wp),intent(in)    :: WoodLitcoef(:,:,:)          ! Factor to spread woody litterfall into yasso pools [ ]
 
     ! locals
-    real(wp),allocatable   ::  Cpool_temp(:,:)
-
+    real(wp)               ::  Cpool_temp(SIZE(fract_st,1),SIZE(fract_st,2))
 
     ! Initializations
 
@@ -1166,24 +1172,24 @@ CONTAINS
 
 
   PURE SUBROUTINE yasso (Yasso_io_pools, Weather, litter, Lit_coefV,WoodLitterSize, Yasso_out, frac_aboveground, &
-                         root_exudates, redFact_Nlimit)
+                         NPP_2_rootExudates, redFact_Nlimit)
     !! DSG: 11.03.2013
     !! modified Yasso soil C model using an Euler scheme and readable coding style
+    !! AWEN (Acid, Water, Ethanol, Nonsoluble) pools are the yasso pools without the humus pools.
     !! JSBACH specific modification of model structure: AWEN pools are separated into aboveground and belowground pools
-    !! 
+    !!
     !! Herbivory flux is treated like normal litter, because the herbivory fluxes in JSBACH are not evaluated, yet.
     !! If the represenation of herbivory in JSBACH is evaluated I recommend to treat herbivory flux in YASSO different from general
     !! litter.
     !!
-    !! The routine needs as input 1. daily litter flux
-    !!                            2. Yasso pools
-    !!                            3. PFT specific parameters
+    !! The routine needs as input 1. Yasso pools
+    !!                            2. Weather: precipitation and Temperature
+    !!                            3. daily litter flux and NPP_2_rootExudates
+    !!                            4. PFT specific parameters
     !!
-    !! the subroutine runs on a annual time step only
-    !! output is on a daily timestep: respiration
+    !! Even when this subroutine is called every day, the dimensions of the variables refere to years!
     !! output pools: AWEN + humus 
-    !! The routine must be called twice, first for non-woody litter
-    !! then for woody litter
+    !! The routine must be called twice, first for non-woody litter, then for woody litter
     !!-------------------------------------------------------------------------------------------------------------------------
     !! Yasso - Soil carbon model (Jari Liski)
     !!
@@ -1197,23 +1203,24 @@ CONTAINS
     !! implementation: Tea Thum (FMI), Petri Räisänen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
-    USE mo_carbon_constants,       ONLY: sec_per_day, days_per_year, sec_per_year
-    USE mo_jsb_physical_constants, ONLY : tmelt
+    USE mo_carbon_constants,       ONLY: days_per_year, sec_per_year
+    USE mo_jsb_physical_constants, ONLY: tmelt
     IMPLICIT NONE
 
-    REAL(wp), DIMENSION(9),  INTENT(IN)  :: Yasso_io_pools    ! Yasso pools IN                                        [mol(c)/m2]
-    REAL(wp),                INTENT(IN)  :: WoodLitterSize    ! Size of woody litter; 
-                                                              !     is zero when the subroutine is called for non-woody litter
-    REAL(wp), DIMENSION(2),  INTENT(IN)  :: Weather           ! climatic drivers: air temperature and precipitation, 15-d means
-    REAL(wp),                INTENT(IN)  :: litter            ! fresh litter inputs  (above and belowground)         [mol(C)/m2/day]
-    REAL(wp), DIMENSION(5),  INTENT(IN)  :: Lit_coefV         ! fractions to seperate incoming litter to the yasso pool    [ ]
-    REAL(wp),                INTENT(IN)  :: frac_aboveground  ! parameter to seperate litter influx into above- and belowground 
-                                                              !     part                                                   [ ]
-    REAL(wp),                INTENT(IN)  :: root_exudates     ! root exudates                                        [mol(C)/m2/day]
+    REAL(wp), DIMENSION(9),  INTENT(IN)  :: Yasso_io_pools     ! Yasso pools IN                                        [mol(c)/m2]
+    REAL(wp),                INTENT(IN)  :: WoodLitterSize     ! Size of woody litter; 
+                                                               !     is zero when the subroutine is called for non-woody litter
+    REAL(wp), DIMENSION(2),  INTENT(IN)  :: Weather            ! climatic drivers: air temperature and precipitation, 15-d means
+                                                               ! Weather(1) in [K] ; Weather(2) in [mm/s]
+    REAL(wp),                INTENT(IN)  :: litter             ! fresh litter inputs  (above and belowground)         [mol(C)/m2/day]
+    REAL(wp), DIMENSION(5),  INTENT(IN)  :: Lit_coefV          ! fractions to seperate incoming litter to the yasso pool    [ ]
+    REAL(wp),                INTENT(IN)  :: frac_aboveground   ! parameter to seperate litter influx into above- and belowground 
+                                                               !     part                                                   [ ]
+    REAL(wp),                INTENT(IN)  :: NPP_2_rootExudates ! root exudates [daily]                                [mol(C)/m2/day]
 
-    REAL(wp), DIMENSION(16), INTENT(OUT) :: Yasso_out         ! updated Yasso pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
-                                                              ! & Cflx_2_humus (11) [mol(c)/m2/d] ... see update_Cpools for more 
-                                                              ! information
+    REAL(wp), DIMENSION(16), INTENT(OUT) :: Yasso_out          ! updated Yasso pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
+                                                               ! & Cflx_2_humus (11) [mol(c)/m2/d] ... see update_Cpools for more 
+                                                               ! information
 
     REAL(wp), OPTIONAL, INTENT(IN)       ::  redFact_Nlimit
 
@@ -1230,7 +1237,7 @@ CONTAINS
     
     REAL(wp)     :: YCpool_humus   
 
-    ! Yasso fluxes (internally used, therefore annual fluxes)  
+    ! Yasso fluxes (only internally used and therefore as annual fluxes)  
     REAL(wp)     :: Cflx_litter_2_acid             ! Litter influx to acid soluble pools    [mol(c)/m2/a]   
     REAL(wp)     :: Cflx_litter_2_water            ! Litter influx to water soluble pools   [mol(c)/m2/a]   
     REAL(wp)     :: Cflx_litter_2_ethanol          ! Litter influx to ethanol soluble pools [mol(c)/m2/a]   
@@ -1244,10 +1251,10 @@ CONTAINS
     REAL(wp)     :: Cflx_from_nonsoluble_ag        ! Loss flux of non soluble pool         [mol(c)/m2/a]
     
     REAL(wp)     :: Cflx_2_acid_ag                 ! Gain flux of acid soluble pool        [mol(c)/m2/a]
-    REAL(wp)     :: Cflx_2_water_ag                ! Gain flux of water soluble pool       [mol(c)/m2/a]              
+    REAL(wp)     :: Cflx_2_water_ag                ! Gain flux of water soluble pool       [mol(c)/m2/a]
     REAL(wp)     :: Cflx_2_ethanol_ag              ! Gain flux of ethanol soluble pool     [mol(c)/m2/a]
     REAL(wp)     :: Cflx_2_nonsoluble_ag           ! Gain flux of non soluble pool         [mol(c)/m2/a]
-     
+    
     ! Belowground
     REAL(wp)     :: Cflx_from_acid_bg              ! Loss flux of acid soluble pool        [mol(c)/m2/a]
     REAL(wp)     :: Cflx_from_water_bg             ! Loss flux of water soluble pool       [mol(c)/m2/a]
@@ -1256,7 +1263,7 @@ CONTAINS
     REAL(wp)     :: Cflx_from_humus                ! Loss flux of humus pool               [mol(c)/m2/a]
     
     REAL(wp)     :: Cflx_2_acid_bg                 ! Gain flux of acid soluble pool        [mol(c)/m2/a]
-    REAL(wp)     :: Cflx_2_water_bg                ! Gain flux of water soluble pool       [mol(c)/m2/a]              
+    REAL(wp)     :: Cflx_2_water_bg                ! Gain flux of water soluble pool       [mol(c)/m2/a]
     REAL(wp)     :: Cflx_2_ethanol_bg              ! Gain flux of ethanol soluble pool     [mol(c)/m2/a]
     REAL(wp)     :: Cflx_2_nonsoluble_bg           ! Gain flux of non soluble pool         [mol(c)/m2/a]
     REAL(wp)     :: Cflx_2_humus                   ! Gain flux of humus pool               [mol(c)/m2/a]
@@ -1302,7 +1309,7 @@ CONTAINS
     REAL(wp), PARAMETER   :: size_p1                    = -1.71_wp    ! first  order size dependence [1/cm]
     REAL(wp), PARAMETER   :: size_p2                    = 0.86_wp     ! second order size dependence [1/cm]
     REAL(wp), PARAMETER   :: size_p3                    = -0.306_wp   ! size dependence power [ ]
-    
+
     ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere 
     ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools, 
     ! therefore all fluxes are theoretically possible, however some of the fraction are zero which means the corresponding flux 
@@ -1343,7 +1350,7 @@ CONTAINS
 
     ! time stepping; the parameterization of yasso is done on a annual time
     ! step, thus the fluxes have to be scaled up to annual rates. 
-    REAL(wp)     :: dt                      ! time step of mo_update_CPools [year]             
+    REAL(wp)     :: dt
     dt = 1.0_wp/days_per_year   
 
     IF(PRESENT(redFact_Nlimit)) THEN ! nitrogen cycle active & we know already the Nlimitation factor
@@ -1386,7 +1393,7 @@ CONTAINS
      ! Change units of climatic forcing variables
      precip = Weather(2)*sec_per_year/1000._wp  ! mm/s -> m/a 
      temp   = Weather(1) - Tmelt                ! K -> C
-    
+
      ! Calculate annual litter influxes [mol(c)/m2/a]
      Cflx_litter_2_acid       = frac_litter_2_acid        *litter * days_per_year
      Cflx_litter_2_water      = frac_litter_2_water       *litter * days_per_year
@@ -1398,9 +1405,9 @@ CONTAINS
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!! START CALCULATION OF SOIL CARBON !!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
+
     ! 1. Calculate decomposition rates 
-     
+
      ! Temperature dependence of decomposition
      d_temp   = EXP(temp_p1*temp + temp_p2*temp**2.0_wp)  
      ! Precipitation dependence of decomposition
@@ -1416,21 +1423,21 @@ CONTAINS
 
      ! the decomposition of humus is not limited by nutrients; thus no redFactor
      d_humus      =  ref_decomp_rate_humus      *d_temp *d_precip           ! no size effect on humus 
-     
+
     ! 2. Calculate fluxes 
-     
+
      ! loss fluxes (negative values): 
-     Cflx_from_acid_ag         = YCpool_acid_ag       * d_acid        
-     Cflx_from_water_ag        = YCpool_water_ag      * d_water                  
-     Cflx_from_ethanol_ag      = YCpool_ethanol_ag    * d_ethanol             
-     Cflx_from_nonsoluble_ag   = YCpool_nonsoluble_ag * d_nonsoluble       
-     
-     Cflx_from_acid_bg         = YCpool_acid_bg       * d_acid        
-     Cflx_from_water_bg        = YCpool_water_bg      * d_water                  
-     Cflx_from_ethanol_bg      = YCpool_ethanol_bg    * d_ethanol             
-     Cflx_from_nonsoluble_bg   = YCpool_nonsoluble_bg * d_nonsoluble       
-     
-     Cflx_from_humus           = YCpool_humus         * d_humus         
+     Cflx_from_acid_ag         = YCpool_acid_ag       * d_acid
+     Cflx_from_water_ag        = YCpool_water_ag      * d_water
+     Cflx_from_ethanol_ag      = YCpool_ethanol_ag    * d_ethanol
+     Cflx_from_nonsoluble_ag   = YCpool_nonsoluble_ag * d_nonsoluble
+
+     Cflx_from_acid_bg         = YCpool_acid_bg       * d_acid
+     Cflx_from_water_bg        = YCpool_water_bg      * d_water
+     Cflx_from_ethanol_bg      = YCpool_ethanol_bg    * d_ethanol
+     Cflx_from_nonsoluble_bg   = YCpool_nonsoluble_bg * d_nonsoluble
+
+     Cflx_from_humus           = YCpool_humus         * d_humus
 
      ! gain fluxes (positive values): 
      ! fixed fractions of each loss flux enters another pool; REMARK: the fraction can be zero (see above why) 
@@ -1491,11 +1498,11 @@ CONTAINS
      ! the remaining fractions of the loss fluxes enter the atmosphere as respiration
      soilResp_rateYasso    =  (Cflx_from_acid_ag + Cflx_from_acid_bg)               &
                               * (1.0_wp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
-                              + (Cflx_from_water_ag + Cflx_from_water_bg)           &      
+                              + (Cflx_from_water_ag + Cflx_from_water_bg)           &
                               * (1.0_wp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
-                              + (Cflx_from_ethanol_ag + Cflx_from_ethanol_bg)       &     
+                              + (Cflx_from_ethanol_ag + Cflx_from_ethanol_bg)       &
                               * (1.0_wp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
-                              + (Cflx_from_nonsoluble_ag + Cflx_from_nonsoluble_bg) &  
+                              + (Cflx_from_nonsoluble_ag + Cflx_from_nonsoluble_bg) &
                               * (1.0_wp - N_2_A - N_2_W - N_2_E - AWEN_2_H)         &
                               + Cflx_from_humus 
 
@@ -1553,7 +1560,7 @@ CONTAINS
                                 + Cflx_2_water_bg                                   &
                                 + (1._wp - frac_aboveground) *                      &
                                   Cflx_litter_2_water) *dt                          &
-                              + root_exudates)                                    ! exudates are carbohydrates only and belowground
+                              + NPP_2_rootExudates)                                    ! exudates are carbohydrates only and belowground
      YCpool_ethanol_bg        = MAX(0.0_wp,                                         &
                               YCpool_ethanol_bg                                     &
                               + (Cflx_from_ethanol_bg                               &

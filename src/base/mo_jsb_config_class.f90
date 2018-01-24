@@ -24,6 +24,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max)    :: fract_filename
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
+    LOGICAL                        :: use_lakes
     CHARACTER(len=10)              :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
@@ -69,6 +70,7 @@ CONTAINS
       grid_filename,          &
       grid_name
 
+    LOGICAL                     :: use_lakes
     LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=40)           :: usecase
@@ -76,6 +78,7 @@ CONTAINS
     CHARACTER(len=10)           :: output_tiles(99)
 
     NAMELIST /jsb_model_nml/  &
+      use_lakes, &
       l_compat401, &
       usecase, &
       hsm_mode, &
@@ -91,6 +94,7 @@ CONTAINS
     ALLOCATE(model_config)
 
     ! Set defaults
+    use_lakes       = .TRUE.
     l_compat401     = .FALSE.
     grid_filename   = ''
     grid_name       = ''
@@ -111,8 +115,9 @@ CONTAINS
 
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
-!    CALL close_nml(nml_handler)
+    CALL close_nml(nml_handler)
 
+    model_config%use_lakes      = use_lakes
     model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
     model_config%hsm_mode       = hsm_mode
@@ -128,8 +133,6 @@ CONTAINS
     END IF
     ALLOCATE(model_config%output_tiles(i))
     model_config%output_tiles(1:i) = output_tiles(1:i)
-
-    CALL close_nml(nml_handler)
 
   END FUNCTION new_model_config
 

@@ -26,7 +26,6 @@ MODULE mo_carbon_interface
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, DISTURB_
@@ -135,13 +134,12 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
     LOGICAL                      :: lstart
-    INTEGER                      :: no_omp_thread
     INTEGER                      :: ics, ice, iblk, nc
+    REAL(wp)                     :: dtime
     INTEGER                      :: i, itile
-    REAL(wp), allocatable        :: precip_total(:) !@todo: allocateable and used but never allocated!
+    REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai !TODO-JN: this is how it is done in mo_sse_interface
     CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
-
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -344,25 +342,25 @@ CONTAINS
     !
     dsl4jsb_Real2D_onChunk :: veg_frac_correction
     dsl4jsb_Real2D_onChunk :: LAI 
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
 
     ! Set model and process config and memory
     model => Get_model(tile%owner_model_id)
     !grid => Get_grid(model%grid_id)
-
-    ! Set local variables from options argument
-    no_omp_thread = Get_omp_thread()
-    iblk    = model%options(no_omp_thread)%iblk
-    ics     = model%options(no_omp_thread)%ics
-    ice     = model%options(no_omp_thread)%ice
-    nc      = model%options(no_omp_thread)%nc
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -495,6 +493,7 @@ CONTAINS
     !
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
@@ -618,6 +617,8 @@ CONTAINS
                               dsl4jsb_Lctlib_param(reserveC2leafC),             & ! in
                               dsl4jsb_Lctlib_param(PhenologyType),              & ! in  R: is it crop?
                                                                                   ! If yes then this is 5!
+                              time_steps_per_day(),                             & ! in
+                              dtime,                                            & ! in
                               !
                               Cpool_green,                                      & ! inout
                               Cpool_woods,                                      & ! inout
@@ -701,29 +702,29 @@ CONTAINS
        ! ------------------------------------------------------------------------------------------------------------------------
 
        ! C pools
-       Cpool_green_ta           = Cpool_green           * veg_frac_correction
-       Cpool_woods_ta           = Cpool_woods           * veg_frac_correction
-       Cpool_reserve_ta         = Cpool_reserve         * veg_frac_correction
-       Cpool_crop_harvest_ta    = Cpool_crop_harvest    * veg_frac_correction
+       Cpool_green_ta           = Cpool_green           * veg_frac_correction * fract_fpc_max
+       Cpool_woods_ta           = Cpool_woods           * veg_frac_correction * fract_fpc_max
+       Cpool_reserve_ta         = Cpool_reserve         * veg_frac_correction * fract_fpc_max
+       Cpool_crop_harvest_ta    = Cpool_crop_harvest    * veg_frac_correction * fract_fpc_max
 
-       YCpool_acid_ag1_ta       = YCpool_acid_ag1       * veg_frac_correction
-       YCpool_water_ag1_ta      = YCpool_water_ag1      * veg_frac_correction
-       YCpool_ethanol_ag1_ta    = YCpool_ethanol_ag1    * veg_frac_correction
-       YCpool_nonsoluble_ag1_ta = YCpool_nonsoluble_ag1 * veg_frac_correction
-       YCpool_acid_bg1_ta       = YCpool_acid_bg1       * veg_frac_correction
-       YCpool_water_bg1_ta      = YCpool_water_bg1      * veg_frac_correction
-       YCpool_ethanol_bg1_ta    = YCpool_ethanol_bg1    * veg_frac_correction
-       YCpool_nonsoluble_bg1_ta = YCpool_nonsoluble_bg1 * veg_frac_correction
-       YCpool_humus_1_ta        = YCpool_humus_1        * veg_frac_correction
-       YCpool_acid_ag2_ta       = YCpool_acid_ag2       * veg_frac_correction
-       YCpool_water_ag2_ta      = YCpool_water_ag2      * veg_frac_correction
-       YCpool_ethanol_ag2_ta    = YCpool_ethanol_ag2    * veg_frac_correction
-       YCpool_nonsoluble_ag2_ta = YCpool_nonsoluble_ag2 * veg_frac_correction
-       YCpool_acid_bg2_ta       = YCpool_acid_bg2       * veg_frac_correction
-       YCpool_water_bg2_ta      = YCpool_water_bg2      * veg_frac_correction
-       YCpool_ethanol_bg2_ta    = YCpool_ethanol_bg2    * veg_frac_correction
-       YCpool_nonsoluble_bg2_ta = YCpool_nonsoluble_bg2 * veg_frac_correction
-       YCpool_humus_2_ta        = YCpool_humus_2        * veg_frac_correction
+       YCpool_acid_ag1_ta       = YCpool_acid_ag1       * veg_frac_correction * fract_fpc_max
+       YCpool_water_ag1_ta      = YCpool_water_ag1      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_ag1_ta    = YCpool_ethanol_ag1    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_ag1_ta = YCpool_nonsoluble_ag1 * veg_frac_correction * fract_fpc_max
+       YCpool_acid_bg1_ta       = YCpool_acid_bg1       * veg_frac_correction * fract_fpc_max
+       YCpool_water_bg1_ta      = YCpool_water_bg1      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_bg1_ta    = YCpool_ethanol_bg1    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_bg1_ta = YCpool_nonsoluble_bg1 * veg_frac_correction * fract_fpc_max
+       YCpool_humus_1_ta        = YCpool_humus_1        * veg_frac_correction * fract_fpc_max
+       YCpool_acid_ag2_ta       = YCpool_acid_ag2       * veg_frac_correction * fract_fpc_max
+       YCpool_water_ag2_ta      = YCpool_water_ag2      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_ag2_ta    = YCpool_ethanol_ag2    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_ag2_ta = YCpool_nonsoluble_ag2 * veg_frac_correction * fract_fpc_max
+       YCpool_acid_bg2_ta       = YCpool_acid_bg2       * veg_frac_correction * fract_fpc_max
+       YCpool_water_bg2_ta      = YCpool_water_bg2      * veg_frac_correction * fract_fpc_max
+       YCpool_ethanol_bg2_ta    = YCpool_ethanol_bg2    * veg_frac_correction * fract_fpc_max
+       YCpool_nonsoluble_bg2_ta = YCpool_nonsoluble_bg2 * veg_frac_correction * fract_fpc_max
+       YCpool_humus_2_ta        = YCpool_humus_2        * veg_frac_correction * fract_fpc_max
 
 
        C_sum_natural_ta =   Cpool_green_ta           + Cpool_woods_ta            &
@@ -739,17 +740,17 @@ CONTAINS
                           + YCpool_humus_1_ta        + YCpool_humus_2_ta
 
        ! C fluxes
-       soil_respiration_ta         = soil_respiration      * veg_frac_correction
-       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_frac_correction
-       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction
-       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction
-       NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction
-       GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction
-       litter_flux_ta              = litter_flux           * veg_frac_correction
-       root_exudates_ta            = root_exudates         * veg_frac_correction
-       Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction
-       ! Cflux_herbivory_LG_ta      = Cflux_herbivory_LG    * veg_frac_correction
-       ! Cflux_herbivory_2_atm_ta   = Cflux_herbivory_2_atm * veg_frac_correction
+       soil_respiration_ta         = soil_respiration      * veg_frac_correction * fract_fpc_max
+       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_frac_correction * fract_fpc_max
+       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction * fract_fpc_max
+       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction * fract_fpc_max
+       NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction * fract_fpc_max
+       GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction * fract_fpc_max
+       litter_flux_ta              = litter_flux           * veg_frac_correction * fract_fpc_max
+       root_exudates_ta            = root_exudates         * veg_frac_correction * fract_fpc_max
+       Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction * fract_fpc_max
+       ! Cflux_herbivory_LG_ta      = Cflux_herbivory_LG    * veg_frac_correction * fract_fpc_max
+       ! Cflux_herbivory_2_atm_ta   = Cflux_herbivory_2_atm * veg_frac_correction * fract_fpc_max
 
    END IF
 
@@ -758,17 +759,17 @@ CONTAINS
    ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
    CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction                          & ! Minus: atmosphere gain is positive
+              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
                        - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
 
 
    CO2_flx2atm_soilresp_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction                          & ! Minus: atmosphere gain is positive
+              (- veg_frac_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
                    * soil_respiration      )                    ! .. soil respiration
 
    CO2_flx2atm_herbivory_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction                          & ! Minus: atmosphere gain is positive
+              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * Cflux_herbivory_2_atm )                    ! .. herbivory
 
 
@@ -799,14 +800,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_C_NPP_pot_allocation'
 
     INTEGER  :: iblk, ics, ice, nc
-    INTEGER  :: no_omp_thread
 
-    ! Get local variables from options argument
-    !no_omp_thread = Get_omp_thread()
-    !iblk = options(no_omp_thread)%iblk
-    !ics  = options(no_omp_thread)%ics
-    !ice  = options(no_omp_thread)%ice
-    !nc   = options(no_omp_thread)%nc
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
@@ -916,7 +910,6 @@ CONTAINS
                                        )
 
     USE mo_exception,             ONLY: message, finish
-    USE mo_hsm_class,             ONLY: t_State
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_disturbance_constants, ONLY: DIST_FIRE, DIST_WINDBREAK
 
@@ -970,14 +963,14 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     INTEGER                     :: iblk, ics, ice, nc
 
-    INTEGER                 :: pft
-    REAL(wp), allocatable   :: LeafLit_coef(:,:,:) ! Factor to seperate non woody litterfall into yasso pools
-                                                   ! (ics:ice,no_children,chemical_classes)
-    REAL(wp), allocatable   :: WoodLit_coef(:,:,:) ! Factor to seperate woody litterfall into yasso pools
-                                                   ! (ics:ice,no_children,chemical_classes)
+    INTEGER                 :: pft, i
+    REAL(wp), DIMENSION(options%nc,no_children,5) :: &
+      & LeafLit_coef, & ! Factor to seperate non woody litterfall into yasso pools
+                        ! (ics:ice,no_children,chemical_classes)
+      & WoodLit_coef    ! Factor to seperate woody litterfall into yasso pools
+                        ! (ics:ice,no_children,chemical_classes)
 
-    !CLASS(t_jsb_tile_abstract), POINTER :: act_subtile_ptr => null() ! actual pointer to the child tiles of this tile
-    CLASS(t_State), POINTER :: act_subtile_ptr => null() ! actual pointer to the child tiles of this tile
+    CLASS(t_jsb_tile_abstract), POINTER :: act_subtile_ptr ! pointer to the child tiles of this tile
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -1036,21 +1029,15 @@ CONTAINS
 
     ! R: We have to prepare the LeafLit_coef(ics:ice,no_children,chemical_classes) from the lct library
     !    dsl4jsb_Lctlib_param(LeafLit_coef(1:5))
-    DO pft=1,no_children
-       IF ( pft == 1 ) THEN
-          act_subtile_ptr => tile%first_child
-       ELSE
-          !act_subtile_ptr =>  act_subtile_ptr%next_sibling ! R: das geht bestimmt nicht, also wirds umständlich weil wir dann einen
-                                                            !    temporäten Pointer brauchen. Aber das macht die Funktion für uns:
-          act_subtile_ptr => tile%Get_next_sibling_tile()
-       END IF
-
-       SELECT TYPE (act_subtile_ptr)
-            CLASS IS (t_jsb_tile_abstract)
-            ! R: I'm not sure with DIM=2 ...
-            LeafLit_coef(1:nc,pft,1:5) = SPREAD( model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%LeafLit_coef(1:5), DIM=2,NCOPIES=nc)
-            WoodLit_coef(1:nc,pft,1:5) = SPREAD( model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%WoodLit_coef(1:5), DIM=2,NCOPIES=nc)
-       END SELECT
+    act_subtile_ptr => tile%first_child_tile
+    pft = 0
+    DO WHILE (ASSOCIATED(act_subtile_ptr))
+      pft = pft + 1
+      DO i=1,5
+        LeafLit_coef(1:nc,pft,i) = model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%LeafLit_coef(i)
+        WoodLit_coef(1:nc,pft,i) = model%lctlib(act_subtile_ptr%lcts(1)%lib_id)%WoodLit_coef(i)
+      END DO
+      act_subtile_ptr => act_subtile_ptr%next_sibling_tile
     ENDDO
 
     ! call the relocation routines

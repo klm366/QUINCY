@@ -206,6 +206,14 @@ CONTAINS
         & output_level=BASIC, &
         & initval_r=0.0_wp )
 
+      CALL jsb_add_var( mem, 'veg_frac_correction', mem%veg_frac_correction, &
+        & hgrid, surface,                                                    &
+        & t_cf('veg_frac_correction', '', 'Correction factor to convert tile to canopy area  1-exp(-maxLai/clumpinessFactor)') , &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                  &
+        & initval_r=0.0_wp )
+
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
         CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,          &
@@ -312,14 +320,6 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
-
-        CALL jsb_add_var( mem, 'veg_frac_correction', mem%veg_frac_correction, &
-          & hgrid, surface,                                                    &
-          & t_cf('veg_frac_correction', '', 'Correction factor to convert tile to canopy area  1-exp(-maxLai/clumpinessFactor)') , &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix,                                                    &
-          & lrestart=.TRUE.,                                                   &
-          & initval_r=0.0_wp )
 
 !TODO-JN: nochmal Reiner ansprechen, hier gibt es ja jetzt einen Haufen von Variablen, die 
 !         nur für pft1-4 interessant wären und für die anderen nicht -> doch als eigenen prozess???

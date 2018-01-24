@@ -86,6 +86,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
     PROCEDURE                              :: Is_process_active
+    PROCEDURE                              :: Set_process_action => Set_process_action_tile
     PROCEDURE                              :: Set_process_action_parents
     PROCEDURE                              :: Register_aggregator
     PROCEDURE                              :: Get_aggregator
@@ -230,6 +231,22 @@ CONTAINS
     END SELECT
 
   END FUNCTION Is_process_active
+
+  SUBROUTINE Set_process_action_tile(this, iproc, action, action_to_parents)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+    INTEGER,                    INTENT(in)    :: iproc
+    INTEGER,                    INTENT(in)    :: action
+    INTEGER, OPTIONAL,          INTENT(in)    :: action_to_parents
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_process_action_tile'
+
+    this%process_action(iproc) = action
+
+    ! Propagate action action_to_parents to all parents of this tile
+    IF (PRESENT(action_to_parents)) CALL this%Set_process_action_parents(iproc, action_to_parents)
+
+  END SUBROUTINE Set_process_action_tile
 
   SUBROUTINE Set_process_action_parents(this, iproc, action)
 
@@ -613,29 +630,26 @@ CONTAINS
 
   END FUNCTION Get_aggregator
 
-  FUNCTION Create_aggregator_weighted_by_fract(tile) RESULT(aggregator)
+  FUNCTION Create_aggregator_weighted_by_fract(grid_id, no_of_children) RESULT(aggregator)
 
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_grid,       ONLY: Get_grid
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout)          :: tile
-    CLASS(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator
+    INTEGER, INTENT(in) :: grid_id
+    INTEGER, INTENT(in) :: no_of_children
+    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator
 
-    INTEGER                   :: no_children
     TYPE(t_jsb_grid), POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Create_aggregator_weighted_by_fract'
 
-    IF (.NOT. tile%Has_children()) CALL finish(TRIM(routine), 'This should not happen!')
+    IF (no_of_children < 1) CALL finish(TRIM(routine), 'This should not happen!')
 
-    ALLOCATE(t_jsb_aggregator_weighted_by_fract::aggregator)
+    ALLOCATE(aggregator)
     aggregator%name = 'weighted_by_fract'
 
-    grid => Get_grid(tile%grid_id)
-    no_children = tile%Get_no_of_children()
-    ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_children))
-
-    IF (debug_on()) CALL message(TRIM(routine), 'Created aggregator '//TRIM(aggregator%name)//' on tile '//TRIM(tile%name))
+    grid => Get_grid(grid_id)
+    ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
 
   END FUNCTION Create_aggregator_weighted_by_fract
 

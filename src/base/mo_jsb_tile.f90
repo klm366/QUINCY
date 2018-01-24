@@ -185,19 +185,16 @@ CONTAINS
         END IF
 
         IF (PRESENT(process_actions)) THEN
-          return_ptr%process_action(iproc) = process_actions(j)
+          CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
         ELSE          ! use defaults if process_actions are not given
           IF (iproc == A2L_) THEN
-            return_ptr%process_action(iproc) = ON_TILE_
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
-            return_ptr%process_action(iproc) = ON_TILE_
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE
-            return_ptr%process_action(iproc) = ON_LEAFS_
+            CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
         END IF
-        ! All parents of this tile aggregate memory for this new process
-        CALL return_ptr%Set_process_action_parents(iproc, AGGREGATE_)
-        return_ptr%must_create_memory_parents(i) = .TRUE.
 !!$      ELSE IF (ASSOCIATED(return_ptr%prev_sibling)) THEN
 !!$        iproc = i
 !!$        SELECT TYPE (sibling => return_ptr%prev_sibling)
@@ -208,20 +205,14 @@ CONTAINS
         !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
-          CASE (SKIP_)
-            return_ptr%process_action(iproc) = SKIP_
-          CASE (INHERIT_)
-            return_ptr%process_action(iproc) = INHERIT_
-          CASE (ON_SUBTREE_)
-            return_ptr%process_action(iproc) = ON_SUBTREE_
-          CASE (ON_LEAFS_)
-            return_ptr%process_action(iproc) = ON_LEAFS_
+          CASE (SKIP_, INHERIT_, ON_SUBTREE_, ON_LEAFS_)
+            CALL return_ptr%Set_process_action(iproc, return_ptr%parent_tile%process_action(iproc))
             !return_ptr%parent_tile%process_action(iproc) = AGGREGATE_
           CASE (ON_TILE_)
             IF (iproc == L2A_) THEN
-              return_ptr%process_action(iproc) = SKIP_
+              CALL return_ptr%Set_process_action(iproc, SKIP_)
             ELSE
-              return_ptr%process_action(iproc) = INHERIT_
+              CALL return_ptr%Set_process_action(iproc, INHERIT_)
             END IF
           END SELECT
         !END IF
@@ -246,7 +237,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
+    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
@@ -310,7 +301,7 @@ CONTAINS
       END IF
       IF ( (this%process_action(iproc) == INHERIT_ ) .AND.                          &
         &  (.NOT. (l_disturb_active .AND. &
-        &          process_name == 'disturb' .AND. this%name(1:3) == 'pft') ) &
+        &          process_name == 'disturb' .AND. this%lcts(1)%lib_id /= 0 ) ) &
         &  ) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
@@ -476,7 +467,7 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)
       END IF
-      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+      IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract=return_pointer(:,:))
       ELSE
@@ -491,7 +482,7 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)//'_max'
       END IF
-      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+      IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract_max=return_pointer(:,:))
       ELSE
@@ -505,7 +496,7 @@ CONTAINS
 
     ! If tile has children, create and register aggregator
     IF (this%Has_children()) THEN
-      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this)
+      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this%grid_id, this%Get_no_of_children())
       CALL this%Register_aggregator(aggregator_weighted_by_fract)
     END IF
 
@@ -689,11 +680,11 @@ CONTAINS
         END IF
       ELSE ! this%process_action(task%process_id) < AGGREGATE_ ; e.g. SKIP_ or INHERIT_
         IF (ASSOCIATED(this%next_sibling_tile)) THEN
-          IF (this%next_sibling_tile%Has_children()) THEN
-            CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)
-          ELSE
+          ! IF (this%next_sibling_tile%Has_children()) THEN
+            ! CALL model%Goto(this%next_sibling_tile%first_child_tile, l_debug)
+          ! ELSE
             CALL model%Goto(this%next_sibling_tile, l_debug)
-          END IF
+          ! END IF
         ELSE IF (ASSOCIATED(this%parent_tile)) THEN
           !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
           msg%action = model%Get_action('AGGREGATE')

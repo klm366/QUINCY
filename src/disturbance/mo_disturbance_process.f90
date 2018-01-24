@@ -15,7 +15,6 @@ MODULE mo_disturb_process
 
   USE mo_jsb_lctlib_class, ONLY: t_lctlib_element
   USE mo_exception,        ONLY: message, finish
-  USE mo_jsb_parallel,     ONLY: Get_omp_thread
   dsl4jsb_Use_processes  DISTURB_
   dsl4jsb_Use_config(DISTURB_)
 
@@ -262,7 +261,6 @@ CONTAINS
 
     ! Locals
     INTEGER  :: itile, nc
-    INTEGER  :: no_omp_thread
     REAL(wp) :: delta_time_yr, &
                  fire_tau
                 !fire_rel_hum_threshold, & ! maximal relative humidity for fire
@@ -282,8 +280,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(DISTURB_)
 
-    no_omp_thread = Get_omp_thread()
-    nc      = model%options(no_omp_thread)%nc
+    nc      = SIZE(fract_st, DIM=1)
 
     ! ---------------------------
     ! Go
@@ -323,10 +320,13 @@ CONTAINS
                                                                                         !     to the parent (=veg) tile area...
                                                                                         ! ... because the fract_st sum over DIM=2 is
                                                                                         ! always = 1...
+
+    ALLOCATE(fire_rel_hum_threshold_expanded(nc))
+    ALLOCATE(fire_minimum(nc))
     fire_rel_hum_threshold_expanded(1:nc) = dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold
     DO itile = 1,no_children
        ! See X1. This should be moved to the interface and give the results as arguments
-       IF ( is_woody(no_children) ) THEN  ! Woody Type
+       IF ( is_woody(itile) ) THEN  ! Woody Type
          fire_minimum(1:nc) = dsl4jsb_Config(DISTURB_)%fire_minimum_woody
          fire_tau        = dsl4jsb_Config(DISTURB_)%fire_tau_woody
        ELSE                             ! all other types
@@ -347,6 +347,7 @@ CONTAINS
         ENDIF
         !ENDDO
     ENDDO
+    DEALLOCATE(fire_rel_hum_threshold_expanded, fire_minimum)
 
   END SUBROUTINE burned_frac_jsbach
 
@@ -374,7 +375,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT) :: damaged_frac_st(:,:)
 
     ! Locals
-    INTEGER  :: itile, i, no_omp_thread
+    INTEGER  :: itile, i, nc
     REAL(wp) :: delta_time_yr
 
     ! See X1
@@ -382,7 +383,8 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(DISTURB_)
-    no_omp_thread = Get_omp_thread()
+
+    nc = SIZE(cover_frac_pot_st, DIM=1)
 
     ! ---------------------------
     ! Go
@@ -391,7 +393,7 @@ CONTAINS
     DO itile = 1,no_children
        IF (pft_mask(itile)) THEN
          ! where windbreak should occur
-         DO i = 1,model%options(no_omp_thread)%nc
+         DO i = 1,nc
             IF ( cover_frac_pot_st(i,itile) > EPSILON(1._wp) &
                  .AND.  prev_day_max_wind_10m(i) > max_wind_10m(i) * dsl4jsb_Config(DISTURB_)%wnd_threshold ) THEN
                damaged_frac_st(i,itile) =  MIN(1._wp - EPSILON(1._wp) / cover_frac_pot_st(i,itile),            &
@@ -418,8 +420,8 @@ CONTAINS
       air_temperature(:),   & ! Temperature of air [K]
       air_press(:)            ! Pressure of air [Pa]
 
-    REAL(wp), allocatable :: air_qsat(:), &
-                             relative_humidity_air(:)
+    REAL(wp) :: air_qsat(SIZE(air_moisture)), &
+                relative_humidity_air(SIZE(air_moisture))
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_relative_humidity_air'
 
@@ -448,19 +450,20 @@ CONTAINS
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
     ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-    USE mo_exception,            ONLY: message_text
-    USE mo_echam_convect_tables, ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_exception,              ONLY: message_text
+    USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_jsb_physical_constants, ONLY: rvd1
+
     INTEGER,  INTENT(IN) :: nc
-    REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
-    REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
-    REAL(wp), INTENT(OUT):: qsat(:)
+    REAL(wp), INTENT(IN) :: temp(nc)      ! Air temperature at level [K]
+    REAL(wp), INTENT(IN) :: pressure(nc)  ! Pressure at level [Pa]
+    REAL(wp), INTENT(OUT):: qsat(nc)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sat_specific_humidity'
 
-    INTEGER :: i
-    REAL(wp) :: vtmpc1
-    INTEGER, allocatable  :: it(:)
-    REAL(wp), allocatable :: tluc(:)
+    INTEGER  :: i
+    INTEGER  :: it(nc)
+    REAL(wp) :: tluc(nc)
 
     !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
     DO i = 1,nc
@@ -472,12 +475,11 @@ CONTAINS
       ENDIF
     ENDDO
 
-    vtmpc1 = 0.6077686814143877_wp
     it = NINT(temp*1000._wp)
     tluc = tlucua(it)
 
     WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
-      qsat = tluc / (pressure - vtmpc1*tluc)
+      qsat = tluc / (pressure - rvd1*tluc)
     ELSEWHERE
       qsat = HUGE(1._wp)
     END WHERE

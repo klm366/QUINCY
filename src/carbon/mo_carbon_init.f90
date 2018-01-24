@@ -18,7 +18,7 @@ MODULE mo_carbon_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_time_iface,    ONLY: is_time_experiment_start, is_time_restart
+  USE mo_jsb_time,          ONLY: get_time_dt, is_time_experiment_start, is_time_restart
 
   dsl4jsb_Use_processes CARBON_
   dsl4jsb_Use_config(CARBON_)
@@ -37,17 +37,12 @@ CONTAINS
   !> Intialize carbon process (after memory has been set up)
   !
   SUBROUTINE carbon_init(tile)
-    USE mo_jsb_parallel,        ONLY: Get_omp_thread
-#ifdef __ICON__
-  USE mo_run_config,          ONLY: dtime   ! @todo replace by funktion in mo_jsb_time.f90 resp. mo_jsb_time_iface.f90
-#else
-  USE mo_time_control,       ONLY: dtime => delta_time
-#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_model), POINTER                :: model
     INTEGER                                   :: iblk, ics, ice, nc
-    INTEGER                                   :: no_omp_thread
+    REAL(wp)                                  :: dtime
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':carbon_init'
 
     dsl4jsb_Def_memory(CARBON_)
@@ -63,10 +58,7 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
 
-
-
-    ! Get local variables from options argument
-    no_omp_thread = Get_omp_thread()
+    dtime = get_time_dt()
 
     !R: Subroutine carbon_init should be called only if experiment is started or restarted. Therefore this is arbitary:
     !   IF (dsl4jsb_Config(CARBON_)%read_cpools   .AND.  (is_time_experiment_start() .OR. is_time_restart()  ) THEN
@@ -78,13 +70,13 @@ CONTAINS
     !CALL carbon_init_bc(tile)
 
 
-    ! R: This should stand here because these variables are more technical constants (only depending only on dtime)
+    ! R: This should stand here because these variables are more technical constants (only depending on dtime)
     !    than a part of the carbon process parametrization. Furthermore they should be calculated only once when a simulation
     !    is started or restarted and not for each tile and for each time step again!
     !    It is not necessary to write and read them to/from the restart files.
     !    It is not necessary to write them to the output file.
     !    However, we could think about to kick them also out of the memory...
-    !    AND we should make the 1D, later, as soon as we do not want them in the output for debugging!
+    !    AND we should make them 1D, later, as soon as we do not want them in the output for debugging!
 
      !dsl4jsb_Get_var2D_onChunk(CARBON_,   F_pseudo_temp)    ! for this we would need iblk, but we want the whole field!
      F_pseudo_temp   => carbon__mem%F_pseudo_temp%ptr(:,:)   ! out

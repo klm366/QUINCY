@@ -100,7 +100,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting disturb configuration')
 
     ! Set defaults
-    active                 = .TRUE.
+    active                 = .FALSE.
     bc_filename            = 'bc_land_disturb.nc'
     ic_filename            = 'ic_land_disturb.nc'
     fire_algorithm         =  1
