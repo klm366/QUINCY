@@ -377,7 +377,7 @@ PROGRAM jsb4_driver
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot(:))
+        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot=evapopot(:))
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
