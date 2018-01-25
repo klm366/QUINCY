@@ -428,7 +428,8 @@ CONTAINS
     !!
     fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
 
-    CALL calc_nutrient_demand_scalar(veg_pool%labile%carbon(:)      , & 
+    CALL calc_nutrient_demand_scalar(lctlib%phenology_type, & 
+                                     veg_pool%labile%carbon(:)      , & 
                                      veg_pool%labile%nitrogen(:)    , & 
                                      veg_pool%labile%phosphorus(:)  , & 
                                      veg_pool%reserve%carbon(:)     , & 
@@ -773,7 +774,8 @@ CONTAINS
   !!   
   !! output: N and P demand scalar for root uptake 
   !----------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_nutrient_demand_scalar(labile_carbon, & 
+  ELEMENTAL SUBROUTINE calc_nutrient_demand_scalar(phenology_type, &
+                                                   labile_carbon, & 
                                                    labile_nitrogen, & 
                                                    labile_phosphorus, & 
                                                    reserve_carbon, & 
@@ -784,10 +786,12 @@ CONTAINS
 
     USE mo_veg_constants,       ONLY: lambda_n_demand, lambda_p_demand, labile_cn_min_uptake, labile_np_min_uptake
     USE mo_shared_constants,    ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     
     ! 0.1 InOut
+    INTEGER,                INTENT(in)  :: phenology_type            !< phenology type
     REAL(wp),               INTENT(in)  :: labile_carbon             !< labile pool carbon (mol C / m2)
     REAL(wp),               INTENT(in)  :: labile_nitrogen           !< labile pool nitrogen (mol N / m2)
     REAL(wp),               INTENT(in)  :: labile_phosphorus         !< labile pool phosphorus (mol P / m2)
@@ -797,20 +801,33 @@ CONTAINS
     REAL(wp),               INTENT(out) :: f_n_demand                !< root N uptake demand scalar (unitless)
     REAL(wp),               INTENT(out) :: f_p_demand                !< root P uptake demand scalar (unitless)
     ! 0.2 Local
+    REAL(wp)                    :: ns_carbon,ns_nitrogen,ns_phosphorus
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_demand_scalar'
 
 
     !> 1.0 Calculate an instantaneous scalar of nutrient demand
     !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
     !!
-    !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P
+    SELECT CASE (phenology_type)
+      CASE (ievergreen)
+         ! general case: labile pool concentrations are important for uptake
+         ns_carbon     = labile_carbon     * molar_mass_C
+         ns_nitrogen   = labile_nitrogen   * molar_mass_N
+         ns_phosphorus = labile_phosphorus * molar_mass_P
+      CASE (iraingreen,isummergreen,iperennial)
+         ! for decidous PFTs, include the reserve pool, as otherwise the end-of-the-growing season
+         ! retrieval of nutrients causes no nutrient uptake during the dormant period, even if 
+         ! the plants are nutrient stressed
+         ns_carbon     = (labile_carbon     + reserve_carbon)     * molar_mass_C
+         ns_nitrogen   = (labile_nitrogen   + reserve_nitrogen)   * molar_mass_N
+         ns_phosphorus = (labile_phosphorus + reserve_phosphorus) * molar_mass_P
+    END SELECT
 
     !> 1.1 N demand
     !!
-    IF(labile_carbon + reserve_carbon > eps8) THEN
+    IF(ns_carbon > eps8) THEN
       f_n_demand = 1._wp - exp(-(lambda_n_demand * &
-                                 MAX(1._wp/labile_cn_min_uptake - molar_mass_N/molar_mass_C * &
-                                 (labile_nitrogen+reserve_nitrogen) / (labile_carbon+reserve_carbon), 0._wp)) ** &
+                                 MAX(1._wp/labile_cn_min_uptake - ns_nitrogen / ns_carbon, 0._wp)) ** &
                                k_f_demand)
     ELSE
       f_n_demand = 1.0_wp
@@ -818,10 +835,9 @@ CONTAINS
 
     !> 1.2 P demand
     !!
-    IF(labile_nitrogen + reserve_nitrogen > eps8) THEN
+    IF(ns_nitrogen > eps8) THEN
       f_p_demand = 1._wp - exp(-(lambda_p_demand * &
-                                 MAX(1._wp/labile_np_min_uptake - molar_mass_P/molar_mass_N * &
-                                 (labile_phosphorus+reserve_phosphorus) / (labile_nitrogen+reserve_nitrogen), 0._wp)) ** &
+                                 MAX(1._wp/labile_np_min_uptake - ns_phosphorus / ns_nitrogen, 0._wp)) ** &
                                k_f_demand)
     ELSE
        f_p_demand = 1.0_wp
