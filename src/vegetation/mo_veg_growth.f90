@@ -1649,14 +1649,14 @@ CONTAINS
     !! accounting for losses to respiration and the nutrients currently required to grow these
     target_reserve_pool_carbon(:) = target_lai(:) / lctlib%sla * & 
            ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) + &
-             leaf2root_mass_ratio(:)/lctlib%tau_fine_root ) * (1._wp + fresp_growth)
+             1._wp/leaf2root_mass_ratio(:)/lctlib%tau_fine_root ) * (1._wp + fresp_growth)
     target_reserve_pool_nitrogen(:) = target_lai / lctlib%sla * & 
            ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) / &
-             target_cn_leaf(:) + leaf2root_mass_ratio(:) / lctlib%tau_fine_root / target_cn_fine_root(:)) 
+             target_cn_leaf(:) + 1._wp/leaf2root_mass_ratio(:) / lctlib%tau_fine_root / target_cn_fine_root(:)) 
     target_reserve_pool_phosphorus(:) = target_lai(:) / lctlib%sla * & 
            ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) / &
              target_cn_leaf(:) / target_np_leaf(:) + & 
-             leaf2root_mass_ratio(:)/lctlib%tau_fine_root / target_cn_fine_root(:) / target_np_fine_root(:))  
+             1._wp/leaf2root_mass_ratio(:)/lctlib%tau_fine_root / target_cn_fine_root(:) / target_np_fine_root(:))  
 
     !> 2.0 carbon reserve flow
     !! 
