@@ -876,8 +876,8 @@ CONTAINS
     & fract_fpc_max,      & ! in
     & cos_zenith_angle,   & ! in
     & StemArea,           & ! in
-    & sky_view_fract,     & ! out
-    & sky_view_fract_stem & ! out
+    & sky_view_fract,     & ! inout
+    & sky_view_fract_stem & ! inout
     & )
 
     ! Use declarations
