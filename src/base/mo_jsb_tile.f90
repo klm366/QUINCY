@@ -238,7 +238,6 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -264,7 +263,6 @@ CONTAINS
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=VARNAME_LEN) :: name
     INTEGER                    :: ilct, i, no_of_children, child_no
-    LOGICAL                    :: l_disturb_active
 
     INTEGER :: isteptype
 
@@ -289,20 +287,7 @@ CONTAINS
 
       process_name = Get_process_name(iproc)
 
-      ! R: TBD: workaround until we have something like process_actions=FOR_CHILDS: 
-      !    For disturbance we want to calculate on a parent tile, but the results
-      !    differ for each child tile. Therefore we have to create a own memory 
-      !    on the pfts tiles even when the process_action is now INHERIT on the pfts!
-      l_disturb_active = .FALSE.
-      IF (ASSOCIATED(this%parent_tile)) THEN
-        IF (this%parent_tile%Is_process_active(DISTURB_)) THEN
-          l_disturb_active = .TRUE.
-        END IF
-      END IF
-      IF ( (this%process_action(iproc) == INHERIT_ ) .AND.                          &
-        &  (.NOT. (l_disturb_active .AND. &
-        &          process_name == 'disturb' .AND. this%lcts(1)%lib_id /= 0 ) ) &
-        &  ) THEN
+      IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
         IF (debug_on()) &
@@ -524,7 +509,6 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
-    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
@@ -544,10 +528,7 @@ CONTAINS
       ! if the current process is not on leafs of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
-        ! R: TBD: workaround until we have something like FOR_CHILDS see comments above
-        IF (.NOT. (this%Is_process_active(DISTURB_) .AND. process_name == 'disturb'  .AND.  this%name(1:3) == 'veg') ) THEN
-            CYCLE
-        END IF
+        CYCLE
       END SELECT
 
       no_of_children = this%Get_no_of_children()

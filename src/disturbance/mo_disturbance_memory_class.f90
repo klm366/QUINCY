@@ -32,9 +32,6 @@ MODULE mo_disturb_memory_class
    TYPE(t_jsb_var_real2d) ::   &
       burned_frac,             & ! burned fraction of tile
       damaged_frac,            & ! windbreak fraction of tile
-      fuel,                    & ! R: Normalerweise wäre dies eine lokale Variable, weil sie nur für das veg Tile berechnet wird 
-                                 ! und nur für Feuer benötigt wird. Aber sie wird 1. nach dem Zeitschritt wieder verwendet und
-                                 ! sollte 2. im Output sein, da sie nicht nur technisch wichtig ist!
       q_rel_air_climbuf,       & ! Relative humiditiy of lowest air layer smoothed in time.
       q_rel_air_climbuf_yDay,  & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
                                  ! This is only needed for cbalone forcing!
@@ -94,14 +91,6 @@ CONTAINS
         & t_cf('damaged_frac', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
         & prefix, suffix,                                                                 &
-        & output_level=BASIC,                                                             &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-      CALL jsb_add_var( mem, 'fuel', mem%fuel,                                               &
-        & hgrid, surface,                                                                    &
-        & t_cf('fuel', 'mol(C)/m^2', 'Amount of carbon fuel for burned area calculations.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
         & output_level=BASIC,                                                             &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 

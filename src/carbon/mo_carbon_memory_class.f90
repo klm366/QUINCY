@@ -724,7 +724,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c2atmos', mem%carbon_2_atmos,                                                  &
         & hgrid, surface,                                                                                           &
-        & t_cf('carbon_2_atmos', 'mol(C) m-2(tile) s-1', 'Carbon flux into atmosphere.'),         &
+        & t_cf('carbon_2_atmos', 'mol(C) m-2(canopy) s-1', 'Carbon flux into atmosphere.'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
