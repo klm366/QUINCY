@@ -59,7 +59,10 @@ MODULE mo_rad_memory_class
       & alb_nir_can,           & !< Albedo of canopy (without snow cover) in NIR range. 
                                  !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
       & arad_vis_can,          & !< radiation in VIS range absorbed by the canopy      
-      & arad_nir_can             !< radiation in NIR range absorbed by the canopy
+      & arad_nir_can,          & !< radiation in NIR range absorbed by the canopy
+      & rfr_ratio_boc,         & !< red to far-red ratio at the bottom of the canopy
+      & rfr_ratio_boc_tvegdyn_mavg !< red to far-red ratio at the bottom of the canopy at the time-scale of vegetation dynamics
+
 
     TYPE(t_jsb_var_real2d)  :: &
                             appfd                           !< absorbed Photosynthetically Active Photon Flux Density
@@ -273,6 +276,22 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'appfd', mem%appfd, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'rfr_ratio_boc', mem%rfr_ratio_boc, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

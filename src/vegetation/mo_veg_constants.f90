@@ -118,12 +118,7 @@ MODULE mo_veg_constants
       lambda_est_temp      ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
       k_est_temp           ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
       lambda_est_moist     ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
-      k_est_moist          ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
-      ! these parameters are more canopy process related, but only useful for veg-dynamics?
-      toc_rfr_ratio        ,     &               !< top of the canopy red:farred ratio  (Kull & Kruij 1998)
-      k_r2fr_chl                   !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N); 
-                                                         !! (Kull & Krujit 1998 for the far red value, tuned to get a R:FR ratio
-                                                          !! of 0.15 at full canopy closure (a common value) 
+      k_est_moist                  !< parameter in the Weibull function controlling moisture-limited establishment 
 
   ! other
   REAL(wp), SAVE :: & 
@@ -244,8 +239,6 @@ CONTAINS
       k_est_temp         = 4.0_wp  
       lambda_est_moist   = 10._wp  
       k_est_moist        = 2.0_wp  
-      toc_rfr_ratio      = 1.2_wp  
-      k_r2fr_chl         = 0.0012_wp - 0.012_wp  
 
   ! other
       carbon_per_dryweight_leaf   = 0.48_wp  

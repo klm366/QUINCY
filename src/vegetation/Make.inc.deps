@@ -83,7 +83,6 @@ mo_veg_dynamics.o: \
   mo_shared_constants.o \
   mo_veg_memory_class.o \
   mo_veg_config_class.o \
-  mo_assimi_config_class.o \
   mo_veg_constants.o \
   mo_pheno_memory_class.o
 

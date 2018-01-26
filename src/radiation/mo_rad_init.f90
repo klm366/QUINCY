@@ -35,6 +35,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_rad_constants,         ONLY: rfr_ratio_toc
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(RAD_)
@@ -56,6 +57,8 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(RAD_)
     ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
@@ -79,6 +82,8 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------    
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
@@ -88,6 +93,8 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+    rfr_ratio_boc(:)                  = rfr_ratio_toc
+    rfr_ratio_boc_tvegdyn_mavg(:)     = rfr_ratio_boc(:) 
 
     ppfd_sunlit_tfrac_mavg_cl(:,:)    = 150.0_wp
     ppfd_sunlit_tcnl_mavg_cl(:,:)     = 150.0_wp

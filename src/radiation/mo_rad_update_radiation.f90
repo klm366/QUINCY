@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, &
-                                        rho2sbeta, k_csf, min_cos_zenith_angle_rad
+                                        rho2sbeta, k_csf, min_cos_zenith_angle_rad,rfr_ratio_toc, k_r2fr_chl
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -94,6 +94,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: arad_vis_can
     dsl4jsb_Real2D_onChunk :: arad_nir_can
     dsl4jsb_Real2D_onChunk :: appfd
+    dsl4jsb_Real2D_onChunk :: rfr_ratio_boc 
     dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk :: arad_sunlit_vis_cl
@@ -113,6 +114,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: net_radiation
     ! VEG_
     dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl 
+    dsl4jsb_Real3D_onChunk :: fn_chl_cl 
     dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: cumm_lai_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
@@ -161,6 +164,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)            ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)           ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)           ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! out
@@ -172,6 +176,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)              ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
 
@@ -247,6 +253,11 @@ CONTAINS
          ppfd_shaded_cl(:,icanopy) = 0.0_wp
       ENDWHERE
     END DO
+
+    !> 7.0 calculate forest floor red to far-red ratio
+    rfr_ratio_boc(:) = rfr_ratio_toc * & 
+                       exp( k_r2fr_chl * SUM(leaf_nitrogen_cl(:,:) * fn_chl_cl(:,:) * lai_cl(:,:), DIM=2)) 
+
 
   END SUBROUTINE update_radiation
 

@@ -488,7 +488,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl     ! RAD_
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc              ! RAD_
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -627,6 +629,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc) 
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
@@ -911,6 +915,8 @@ CONTAINS
 
     !> 1.8 averages at the vegetation dynamics time-scale
     an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
+                                          do_calc=(veg_pool%leaf%carbon(:) > eps8))
+    rfr_ratio_boc_tvegdyn_mavg(:) = calc_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), mavg_period_tvegdyn, &
                                           do_calc=(veg_pool%leaf%carbon(:) > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     !! t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true

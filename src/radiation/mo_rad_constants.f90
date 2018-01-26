@@ -32,6 +32,13 @@ MODULE mo_rad_constants
   REAL(wp), SAVE ::   &
       rad2ppfd              !< µmol /J
 
+  ! red to far red ratio calculations
+  REAL(wp), SAVE ::  &
+      rfr_ratio_toc, &      !< top of the canopy red:farred ratio  (Kull & Kruij 1998) 
+      k_r2fr_chl            !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N); 
+                            !! (Kull & Krujit 1998 for the far red value, tuned to get a R:FR ratio
+                            !! of 0.15 at full canopy closure (a common value) 
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_rad_constants'
 
 CONTAINS
@@ -60,6 +67,9 @@ CONTAINS
     def_alb_nir_soil          = 0.30_wp       !< default from Bonan 2008
 
     rad2ppfd                  = 4.6_wp        !< Monteith & Unsworth 1995 
+
+    rfr_ratio_toc             = 1.2_wp        !< Kull & Kruij 1998
+    k_r2fr_chl                = 0.0012_wp - 0.012_wp !<  Kull & Kruijt 1998
 
   END SUBROUTINE init_rad_constants
 END MODULE mo_rad_constants

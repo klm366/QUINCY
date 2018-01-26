@@ -42,13 +42,13 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall, veg_establishment
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
@@ -66,12 +66,14 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
+    ! RAD_
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
     ! PHENO_
     dsl4jsb_Logical2D_onChunk   :: growing_season
     ! SOIL_
@@ -82,9 +84,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
-    dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
-    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
-    dsl4jsb_Real3D_onChunk      :: lai_cl
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -99,13 +98,15 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(RAD_)                              ! rad__mem => rad_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
     ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)  ! in
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)       ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)     ! in
@@ -115,9 +116,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)    ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)       ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)              ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                 ! in
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall
@@ -154,13 +152,10 @@ CONTAINS
       !! 
       CALL calc_veg_establishment(options                         , & ! in
                                   lctlib                          , & 
-                                  dsl4jsb_Config(ASSIMI_)%ncanopy , &
                                   w_soil_root_theta(:)            , &
                                   growing_season(:)               , &
                                   t_air_week_mavg(:)              , &
-                                  leaf_nitrogen_cl(:,:)           , &
-                                  fn_chl_cl(:,:)                  , &
-                                  lai_cl(:,:)                     , &
+                                  rfr_ratio_boc_tvegdyn_mavg      , &     
                                   veg_pool%seed_bed               , &
                                   veg_establishment               )   ! out
 
@@ -273,16 +268,13 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_establishment(options             , &
-                                    lctlib              , &
-                                    ncanopy             , &
-                                    w_soil_root_theta   , &
-                                    growing_season      , &
-                                    t_air_week_mavg     , &
-                                    leaf_nitrogen_cl    , &
-                                    fn_chl_cl           , &
-                                    lai_cl              , &
-                                    veg_pool_seed_bed   , &
+  SUBROUTINE calc_veg_establishment(options                   , &
+                                    lctlib                    , &
+                                    w_soil_root_theta         , &
+                                    growing_season            , &
+                                    t_air_week_mavg           , &
+                                    rfr_ratio_boc_tvegdyn_mavg, &
+                                    veg_pool_seed_bed         , &
                                     veg_establishment )
 
 
@@ -296,26 +288,20 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),       INTENT(in)    :: options            !< model options
-    TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
-    INTEGER,                        INTENT(in)    :: ncanopy            !< number of canopy layer
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
-    LOGICAL , DIMENSION(:),         INTENT(in)    :: growing_season     !< growing season 
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
-    REAL(wp), DIMENSION(:,:),       INTENT(in)    :: leaf_nitrogen_cl,& !< leaf nitrogen per canopy layer
-                                                     fn_chl_cl,       & !< fraction of leaf nitrogen that is chlorophyll
-                                                     lai_cl             !< leaf area index of canopy layer 
-    TYPE(t_veg_element_a),          INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
-    TYPE(t_veg_element_a),          INTENT(inout) :: veg_establishment  !< vegetation establishment
+    TYPE(t_jsb_task_options),        INTENT(in)    :: options            !< model options
+    TYPE(t_lctlib_element),          INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
+    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
+    LOGICAL , DIMENSION(options%nc), INTENT(in)    :: growing_season     !< growing season 
+    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg !< red-farred ratio at the bottom of the canopy  
+    TYPE(t_veg_element_a),           INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
+    TYPE(t_veg_element_a),           INTENT(inout) :: veg_establishment  !< vegetation establishment
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc)               :: establishment_rate , &
-                                                     tc                 , &
-                                                     rfr_ratio          , &
                                                      flim_light         , &
                                                      flim_moist         , &
                                                      flim_temp
-    INTEGER                                       :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
 
 
@@ -324,12 +310,7 @@ CONTAINS
 
     !> 1.1 light limitation
     !! depending on the red to far-red ratio of the light at the bottom of the canopy
-    tc(:) = 0.0_wp
-    DO icanopy=1,ncanopy
-       tc(:) = tc(:) + leaf_nitrogen_cl(:,icanopy) * fn_chl_cl(:,icanopy) * lai_cl(:,icanopy)
-    ENDDO
-    rfr_ratio(:)  = toc_rfr_ratio * exp( k_r2fr_chl * tc(:)) 
-    flim_light(:) = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio(:))**lctlib%k_est_light)
+    flim_light(:) = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio_boc_tvegdyn_mavg(:))**lctlib%k_est_light)
 
     !> 1.2 temperature and soil moisture limitation 
     !! 
