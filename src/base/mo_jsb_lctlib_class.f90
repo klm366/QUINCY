@@ -474,8 +474,9 @@ CONTAINS
          !! k_rtos
          DO i=1,nlct
             IF(lctlib(i)%growthform /= igrass) THEN
-               lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
-                    lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
+               lctlib(i)%k_rtos = 1.2_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+               !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+               !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
             ELSE
                lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
             END IF
