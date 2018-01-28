@@ -125,7 +125,7 @@ CONTAINS
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
-    USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m, DIST_FIRE, DIST_WINDBREAK
+    USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -347,6 +347,8 @@ CONTAINS
     ! Go
 
     q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
+
+    ! For each time step update the climate buffer
 
     ! R: This may be later in a climbuf process for dynveg and disturbance.
     ! Maximum daily wind speed and relative air humidity smoothed in time
@@ -593,12 +595,7 @@ CONTAINS
     !dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m_act,       weighted_by_fract)
     !dsl4jsb_Aggregate_onChunk(DISTURB_, prev_day_max_wind_10m,  weighted_by_fract)
     !dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m,           weighted_by_fract)
-    !dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay, weighted_by_fract)
 
-    ! R: Die Effekte von Disturbance auf Carbon-Variablen wurden durch 
-    !    CALL relocate_disturbed_carbon ausgerechnet. Entsprechend wurden die C-Variablen
-    !    für das veg und dessen child tiles auch geändert. Nun müssen diese Änderungen aber
-    !    auch nach oben akkumuliert werden:
     IF ( tile%Is_process_active(CARBON_) ) THEN
        dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green,               weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods,               weighted_by_fract)

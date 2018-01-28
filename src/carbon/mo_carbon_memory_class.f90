@@ -109,9 +109,9 @@ MODULE mo_carbon_memory_class
       LAI_yyDayMean,              & ! previous previous day mean
       LAI_yDayMean,               & ! previous day mean
       NPP_pot_yDayMean,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(canopy) s)]
-      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
-                                    ! Actual NPP (after N-limitation and) excess carbon drop.
-                                    ! [mol(CO2)/(m^2(canopy) s)]
+      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after N-limitation and excess carbon drop.
+                                    ! "yDayMean" because the actual NPP depends on/is calculated from results of the 
+                                    ! previous day.
       GPP_yDayMean,               & !
       topSoilTemp_yDayMean,       & !
       alpha_yDayMean,             & !
@@ -309,11 +309,12 @@ CONTAINS
         & prefix, suffix,                                                                              &
         & lrestart=.TRUE., initval_r=3.0E-5_wp ) ! initval taken from JSBACH3, arbitary.
 
-      CALL jsb_add_var( mem, 'topsoiltemp', mem%topSoilTemp,                             &
+      CALL jsb_add_var( mem, 'topsoiltemp', mem%topSoilTemp,                                           &
         & hgrid, surface,                                                                              &
-        & t_cf('topSoilTemp', 'K', 'Top soil temperature.'), &
+        & t_cf('topSoilTemp', 'K', 'Top soil temperature.'),                                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
+        & output_level=FULL,                                                                           &
         & lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
 
       CALL jsb_add_var( mem, 'alpha', mem%alpha,                                                       &
@@ -321,6 +322,7 @@ CONTAINS
         & t_cf('alpha', '-', 'Water Stress Coefficient. Relative soil moisture.'),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
+        & output_level=FULL,                                                                           &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3's alpha_yDayMean
 
 
@@ -712,6 +714,7 @@ CONTAINS
         &  green litter pools.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
+        & output_level=MEDIUM,                                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c2woodlitterpools', mem%carbon_2_WoodLitterPools,                             &
@@ -720,6 +723,7 @@ CONTAINS
         & woody litter pools..'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
+        & output_level=MEDIUM,                                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c2atmos', mem%carbon_2_atmos,                                                  &
@@ -727,6 +731,7 @@ CONTAINS
         & t_cf('carbon_2_atmos', 'mol(C) m-2(canopy) s-1', 'Carbon flux into atmosphere.'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
+        & output_level=MEDIUM,                                                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 

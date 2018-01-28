@@ -303,7 +303,7 @@ CONTAINS
     ELSE
       CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
     END IF
-    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed") ! Should be called with and without ASSIMI,
+    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed") ! Should be called with and without the ASSIMI process,
                                                            ! and before assimilation
     ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN

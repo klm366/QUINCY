@@ -27,9 +27,9 @@ CONTAINS
   ! Calculations to allocate NPP to the plant C pools.
   elemental subroutine calc_Cpools( LAI,                       & ! in
                                     LAI_previous,              & ! in
-                                    NPPrate,                   & ! in
+                                    NPP_pot_yDayMean,          & ! in
                                     topSoilTemp,               & ! in
-                                    alpha,                     & ! in
+                                    alpha_yDayMean,            & ! in
                                     !
                                     frac_npp_2_woodPool,       & ! in
                                     frac_npp_2_reservePool,    & ! in
@@ -67,7 +67,7 @@ CONTAINS
                                     Cflx_herbivory,            & ! out
                                     Cflx_herbivory_LG,         & ! out
                                     Cflx_herbivory_2_atm,      & ! out
-                                    NPP_act,                   & ! out
+                                    NPP_act_yDayMean,          & ! out
                                     !
                                     !frac_litter_wood_new,      & ! inout, optional; R: only for spitfire
                                     ! Yasso variables
@@ -112,9 +112,9 @@ CONTAINS
     ! Arguments
     real(wp),intent(in)    :: LAI                    ! Yesterdays mean LAI
     real(wp),intent(in)    :: LAI_previous           ! The day before yesterdays mean LAI
-    real(wp),intent(in)    :: NPPrate                ! Yesterdays mean NPPrate [mol(C)/m^2 s]
+    real(wp),intent(in)    :: NPP_pot_yDayMean       ! Yesterdays mean NPP rate [mol(C)/m^2 s]
     real(wp),intent(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
-    real(wp),intent(in)    :: alpha                  ! Yesterdays mean water stress factor (between 0 and 1)
+    real(wp),intent(in)    :: alpha_yDayMean         ! Yesterdays mean water stress factor (between 0 and 1)
     real(wp),intent(in)    :: frac_npp_2_woodPool    ! Fraction of NPP to be put maximally into the green pool
     real(wp),intent(in)    :: frac_npp_2_reservePool ! Fraction of NPP to be put into the optimally into the reserve pool
     real(wp),intent(in)    :: frac_npp_2_exudates    ! Fraction of NPP to be put into the optimally into the root exudates
@@ -165,7 +165,7 @@ CONTAINS
     real(wp),intent(out)   :: Cflx_herbivory         !
     real(wp),intent(out)   :: Cflx_herbivory_LG      !
     real(wp),intent(out)   :: Cflx_herbivory_2_atm   !
-    real(wp),intent(out)   :: NPP_act                ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
+    real(wp),intent(out)   :: NPP_act_yDayMean       ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
     !real(wp),optional,intent(inout) :: frac_litter_wood_new   ! new fraction in above ground wood litter pool  
@@ -316,7 +316,7 @@ CONTAINS
 
     soilResp_rate            = 0.0_wp
     !soilResp_rate_pot        = 0.0_wp
-    NPP_act                  = 0.0_wp
+    NPP_act_yDayMean         = 0.0_wp
    ! redFact_Nlimitation      = 1.0_wp
 
     ! R: only for spitfire:
@@ -333,8 +333,8 @@ CONTAINS
        is_crop = .FALSE.
     END IF
 
-    alpha_mod = max(alpha_min,(alpha-alpha_critical)/(1._wp-alpha_critical)) !! modified soil moist. such that heterotrophic
-                                                                             !!     respiration is zero below alpha_critical
+    ! modified soil moist. such that heterotrophic respiration is zero below alpha_critical
+    alpha_mod = MAX(alpha_min, (alpha_yDayMean - alpha_critical) / (1._wp - alpha_critical))
 
     ! Initializations
     NPP_flux_correction   = 0.0_wp
@@ -417,8 +417,8 @@ CONTAINS
                                                                         !! which maybe exceeded by the decrease in LAI.       
 
        C_2_litter_greenPool =  &                                     !! Maximally the whole carbon from the green pool is transfered
-          min(greenC2leafC * leaf_shedding / specific_leaf_area_C, & !!    by leaf and root shedding to the green litter pool
-          Cpool_green)                                               
+          MIN(greenC2leafC * leaf_shedding / specific_leaf_area_C, & !!    by leaf and root shedding to the green litter pool
+              Cpool_green)
        Cpool_green = Cpool_green - C_2_litter_greenPool              !! This removes carbon from the green pool
        excess_carbon = max(0.0_wp,Cpool_green - Cpool_green_max)     !! If by the reduction of LAI the maximum value of the green
                                                                      !!    pool is still smaller than the current value, there is 
@@ -518,8 +518,8 @@ CONTAINS
        !! Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to 
        !!    avaialable Nitrogen)
 
-       if(NPPrate <= 0.0_wp) then                                      !! In case of negative or zero NPP
-          NPP_2_reservePool =  NPPrate  * sec_per_day                  !! .. the plant looses C and  
+       if(NPP_pot_yDayMean <= 0.0_wp) then                             !! In case of negative or zero NPP
+          NPP_2_reservePool =  NPP_pot_yDayMean * sec_per_day          !! .. the plant looses C and  
           Cpool_reserve     = Cpool_reserve + NPP_2_reservePool        !! .. we try to take it from the reserve pool 
           if(Cpool_reserve < 0.0_wp) then                              !! But if thereby the reserve pool gets negative 
              NPP_2_reservePool = NPP_2_reservePool - Cpool_reserve     !! .. we absorb negative NPP only up to zero reseve pool and 
@@ -537,12 +537,12 @@ CONTAINS
 
        else  !! NPP is positive                                                            
 
-          NPP_2_woodPool    = frac_npp_2_woodPool * NPPrate * sec_per_day    !! NPP it is distributed according to predefined 
-                                                                             !!    relative fraction
-          NPP_2_reservePool = frac_npp_2_reservePool * NPPrate * sec_per_day
-          NPP_2_rootExudates= frac_npp_2_exudates * NPPrate * sec_per_day
+          NPP_2_woodPool    = frac_npp_2_woodPool * NPP_pot_yDayMean * sec_per_day  !! NPP it is distributed according to predefined 
+                                                                                    !!    relative fraction
+          NPP_2_reservePool = frac_npp_2_reservePool * NPP_pot_yDayMean * sec_per_day
+          NPP_2_rootExudates= frac_npp_2_exudates * NPP_pot_yDayMean * sec_per_day
           NPP_2_greenPool   = (1.0_wp - frac_npp_2_woodPool - frac_npp_2_reservePool                 & 
-               - frac_npp_2_exudates) * NPPrate * sec_per_day
+               - frac_npp_2_exudates) * NPP_pot_yDayMean * sec_per_day
 
           !! Growth of Wood Pool (structural carbon of living plants)
 
@@ -712,12 +712,13 @@ CONTAINS
 
        !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
 
-       if(NPPrate > 0.0_wp) then 
-          NPP_act = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
+       if(NPP_pot_yDayMean > 0.0_wp) then 
+          NPP_act_yDayMean = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
                redFact_Nlimitation * (Cflx_NPP_2_green_pot + Cflx_NPP_2_wood_pot) + Cflx_NPP_2_reserve_pot &
                )/sec_per_day
        else
-          NPP_act = NPPrate + NPP_flux_correction  !dk: NPPrate negatave, NPP_flux_correction could not be removed from reserve pool
+          NPP_act_yDayMean = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero 
+                                                                     ! except Cpool_reserve was < 0.0_wp.
        endif
 
 

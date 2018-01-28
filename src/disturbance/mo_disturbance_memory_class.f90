@@ -33,7 +33,7 @@ MODULE mo_disturb_memory_class
       burned_frac,             & ! burned fraction of tile
       damaged_frac,            & ! windbreak fraction of tile
       q_rel_air_climbuf,       & ! Relative humiditiy of lowest air layer smoothed in time.
-      q_rel_air_climbuf_yDay,  & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
+      q_rel_air_climbuf_yday,  & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
                                  ! This is only needed for cbalone forcing!
       prev_day_max_wind_10m,   & ! for windbreak
       max_wind_10m,            & ! for windbreak
@@ -94,19 +94,20 @@ CONTAINS
         & output_level=BASIC,                                                             &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'q_rel_air_climbuf', mem%q_rel_air_climbuf,                                &
+      CALL jsb_add_var( mem, 'q_air_clim', mem%q_rel_air_climbuf,                                       &
         & hgrid, surface,                                                                               &
         & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JSBACH3; lrestart=true only necessary if we restart within a day
 
-      CALL jsb_add_var( mem, 'q_rel_air_climbuf_yDay', mem%q_rel_air_climbuf_yDay,                        &
+      CALL jsb_add_var( mem, 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                               &
         & hgrid, surface,                                                                                 &
-        & t_cf('q_rel_air_climbuf_yDay', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
+        & t_cf('q_rel_air_climbuf_yday', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
                                                  & at the end of the last day.'),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                                                 &
+        & output_level=BASIC,                                                                             &
         & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,    &
