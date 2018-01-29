@@ -27,10 +27,6 @@ MODULE mo_carbon_config_class
     LOGICAL                     :: read_cpools     ! Read Cpools from external File when model was 
                                                    ! newly startet (Cpools were initialized with fixed values) or
                                                    ! restarted (Cpools were initialized and afterwards overwritten with values from restartfile).
-    INTEGER                     :: fuel_algorithm  ! If the fire_algorithm in the process disturbance is set to 1 (jsbach default),
-                                                   ! this switch here selects the corresponding fuel algorithm: 0 : none, 1 : jsbach (default), 
-                                                   ! 2 : Arora and Boer (2005), 3 : Thonicke et al.(2001), 4 : Read/GFED
-
     REAL(wp)                    :: fire_frac_wood_2_atmos 
 
    CONTAINS
@@ -55,8 +51,6 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: read_cpools
-    INTEGER                     :: fuel_algorithm  ! Select fuel algorithm: 0 : none, 1 : jsbach (default), 
-                                                   ! 2 : Arora and Boer (2005), 3 : Thonicke et al.(2001), 4 : Read/GFED
     REAL(wp)                    :: fire_frac_wood_2_atmos
     ! LOGICAL           :: lemissions 
 
@@ -65,7 +59,6 @@ CONTAINS
          ic_filename,              &
          bc_filename,              &
          read_cpools,              &
-         fuel_algorithm,           &
          fire_frac_wood_2_atmos
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -79,7 +72,6 @@ CONTAINS
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     read_cpools            = .FALSE.
-    fuel_algorithm         = 0
     fire_frac_wood_2_atmos = FireFracWood2Atmos
 
     ! Read namelist
@@ -95,7 +87,6 @@ CONTAINS
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%read_cpools            = read_cpools
-    config%fuel_algorithm         = fuel_algorithm
     config%fire_frac_wood_2_atmos = fire_frac_wood_2_atmos
 
   END SUBROUTINE Init_carbon_config

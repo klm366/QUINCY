@@ -184,7 +184,6 @@ CONTAINS
     IF (is_newday()) THEN ! only once per day
 
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
-        CASE (0) !! No fuel algorithm
         CASE (1) !! jsbach algorithm
 
           CALL calc_fuel_jsbach( &

@@ -24,9 +24,9 @@ MODULE mo_fuel_config_class
   PUBLIC :: t_fuel_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_fuel_config
-    INTEGER           :: fuel_algorithm      ! Select fire algorithm: 0 : none, 1 : jsbach (default), 
-                                             ! 2 : Arora and Boer (2005) (not yet), 3 : Thonicke et al.(2001)
-   CONTAINS
+    INTEGER :: fuel_algorithm  ! Select fuel algorithm: 1 : jsbach (default), 2 : Arora and Boer (2005),
+                               !                        3 : Thonicke et al.(2001), 4 : Read/GFED
+  CONTAINS
      PROCEDURE :: Init => Init_fuel_config
   END type t_fuel_config
 
@@ -50,9 +50,9 @@ CONTAINS
     INTEGER                     :: fuel_algorithm
  
     NAMELIST /jsb_fuel_nml/     &
-         active,                   &
-         ic_filename,              &
-         bc_filename,              &
+         active,                &
+         ic_filename,           &
+         bc_filename,           &
          fuel_algorithm
 
     INTEGER :: nml_handler, nml_unit, istat
