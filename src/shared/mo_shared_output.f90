@@ -2692,8 +2692,8 @@ CONTAINS
       ELSE
         WRITE(layerstr,'(I2)') isoil
       END IF
-      WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
-      WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
+      WRITE(p1str,'(a)') TRIM(p1str)//' TemperatureSoil_L'//TRIM(layerstr)
+      WRITE(p2str,'(a)') TRIM(p2str)//' WaterContentSoil_L'//TRIM(layerstr)
       WRITE(p3str,'(a)') TRIM(p3str)//' PercolationSoil_L'//TRIM(layerstr)
       WRITE(p4str,'(a)') TRIM(p4str)//' RootFractionSoil_L'//TRIM(layerstr)
     END DO
