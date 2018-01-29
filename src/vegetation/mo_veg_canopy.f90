@@ -958,7 +958,7 @@ CONTAINS
                                         leaf_cn_direction             )
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_veg_constants,         ONLY: delta_n_leaf !, root2leaf_cn, wood2leaf_cn
-
+    USE mo_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1022,6 +1022,7 @@ CONTAINS
     REAL(wp)                                        :: anl, agl, rl
     REAL(wp)                                        :: hlp1
     REAL(wp)                                        :: direction
+    REAL(wp), DIMENSION(nc)                    :: ns_carbon,ns_nitrogen
     INTEGER                                         :: icanopy, dd, ichunk    ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
@@ -1030,6 +1031,18 @@ CONTAINS
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_tcnl_mavg_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_tcnl_mavg_cl(:,:)
 
+        SELECT CASE (lctlib%phenology_type)
+      CASE (ievergreen)
+         ! general case: labile pool concentrations are important for uptake
+         ns_carbon     = labile_carbon
+         ns_nitrogen   = labile_nitrogen
+      CASE (iraingreen,isummergreen,iperennial)
+         ! for decidous PFTs, include the reserve pool, as otherwise the end-of-the-growing season
+         ! retrieval of nutrients causes no nutrient uptake during the dormant period, even if 
+         ! the plants are nutrient stressed
+         ns_carbon     = (labile_carbon     + reserve_carbon)
+         ns_nitrogen   = (labile_nitrogen   + reserve_nitrogen)
+    END SELECT
 
     !> 1.0 ...
     !!
@@ -1126,9 +1139,9 @@ CONTAINS
 
       leaf_cn_direction(ichunk) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
 
-      IF ((uptake_n(ichunk) * lctlib%tau_fine_root * one_year*one_day*1e-6 + labile_nitrogen(ichunk) + reserve_nitrogen(ichunk)) * growth_cn(ichunk) < &
-         (npp(ichunk)*lctlib%tau_leaf * 1e-6 * one_year*one_day + labile_carbon(ichunk) + reserve_carbon(ichunk))) &
-          leaf_cn_direction(ichunk) = - leaf_cn_direction(ichunk)
+      IF ((uptake_n(ichunk) * lctlib%tau_fine_root * one_year*one_day*1e-6 + ns_nitrogen(ichunk)) * growth_cn(ichunk) < &
+         (npp(ichunk)*lctlib%tau_leaf * 1e-6 * one_year*one_day + ns_carbon(ichunk))) &
+          leaf_cn_direction(ichunk) = - 1._wp
 
   ELSE    ! IF(veg_pool_leaf_nitrogen(ichunk) > eps4)
      leaf_cn_direction(ichunk) = 0.0_wp

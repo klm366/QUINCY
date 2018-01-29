@@ -1344,6 +1344,7 @@ CONTAINS
     USE mo_base_constants,          ONLY: pi
     USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
+    USE mo_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1384,9 +1385,25 @@ CONTAINS
     REAL(wp)             :: k1_opt_w  , &
                             k2_opt_w
     REAL(wp)             :: k1_opt_n  , &
-                            k1_opt_p
+         k1_opt_p
+    REAL(wp)                    :: ns_carbon,ns_nitrogen,ns_phosphorus
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
 
+    
+    SELECT CASE (lctlib%phenology_type)
+      CASE (ievergreen)
+         ! general case: labile pool concentrations are important for uptake
+         ns_carbon     = labile_carbon
+         ns_nitrogen   = labile_nitrogen
+         ns_phosphorus = labile_phosphorus
+      CASE (iraingreen,isummergreen,iperennial)
+         ! for decidous PFTs, include the reserve pool, as otherwise the end-of-the-growing season
+         ! retrieval of nutrients causes no nutrient uptake during the dormant period, even if 
+         ! the plants are nutrient stressed
+         ns_carbon     = (labile_carbon     + reserve_carbon)
+         ns_nitrogen   = (labile_nitrogen   + reserve_nitrogen)
+         ns_phosphorus = (labile_phosphorus + reserve_phosphorus)
+    END SELECT
 
     !> 1.0 case growthform
     !! 
@@ -1430,12 +1447,12 @@ CONTAINS
            SELECT CASE (bnf_scheme)
            CASE("optimal")
               k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
-                   (labile_carbon + reserve_carbon - &
-                   (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                   (ns_carbon - &
+                   (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
                    MAX((unit_uptake_n + n_fixation) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
               k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
-                   (labile_carbon + reserve_carbon - &
-                   (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                   (ns_carbon - &
+                   (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
                    MAX(unit_uptake_p * growth_cp *lctlib%tau_fine_root*one_year*one_day,eps8)
               IF ( k1_opt_n >= k1_opt_p) THEN 
                  ! if N is more limiting than P
@@ -1447,14 +1464,14 @@ CONTAINS
               ENDIF
            CASE DEFAULT 
               k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
-                   (labile_carbon + reserve_carbon - &
-                   (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - &
+                   (ns_carbon - &
+                   (ns_nitrogen) * growth_cn) * 1.e6_wp - &
                    n_fixation * growth_cn*lctlib%tau_fine_root*one_year*one_day) / & 
                    MAX(unit_uptake_n * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
                
               k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
-                   (labile_carbon + reserve_carbon - &
-                   (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                   (ns_carbon - &
+                   (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
                    MAX(unit_uptake_p * growth_cp * lctlib%tau_fine_root*one_year*one_day, eps8)
               IF ( k1_opt_n >= k1_opt_p) THEN 
                  ! if N is more limiting than P
@@ -1504,12 +1521,12 @@ CONTAINS
             SELECT CASE (bnf_scheme)
               CASE("optimal")
                  k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
-                      (labile_carbon + reserve_carbon - &
-                      (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                      (ns_carbon - &
+                      (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
                       MAX((unit_uptake_n + n_fixation) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
                  k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
-                      (labile_carbon + reserve_carbon - &
-                      (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                      (ns_carbon - &
+                      (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
                       MAX(unit_uptake_p * growth_cp *lctlib%tau_fine_root*one_year*one_day,eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
@@ -1521,14 +1538,14 @@ CONTAINS
                  ENDIF
               CASE DEFAULT 
                  k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
-                      (labile_carbon + reserve_carbon - &
-                      (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - &
+                      (ns_carbon - &
+                      (ns_nitrogen) * growth_cn) * 1.e6_wp - &
                       n_fixation * growth_cn*lctlib%tau_fine_root*one_year*one_day) / & 
                       MAX(unit_uptake_n * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
                   
                  k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
-                      (labile_carbon + reserve_carbon - &
-                      (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                      (ns_carbon - &
+                      (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
                       MAX(unit_uptake_p * growth_cp * lctlib%tau_fine_root*one_year*one_day, eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
