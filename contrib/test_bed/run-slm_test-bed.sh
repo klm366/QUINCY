@@ -86,6 +86,15 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
+# check if '-o' option is used, if so, set all optimality flags to F per default
+argOpt_o="$(grep -w "\-o" <<< "$@")"
+if [ ! -z "${argOpt_o// }" ]  # the search term is available yes / no  [-z test is explicitly for: the length of string is zero]
+ then 
+  flag_optimal_Nfraction="F"
+  flag_optimal_Nleaf="F"
+  flag_optimal_allocation="F"
+fi
+# getopts
 while getopts ":p:m:s:y:o:b:z:h" opt; do
   case "$opt" in
   "p")
@@ -124,27 +133,29 @@ while getopts ":p:m:s:y:o:b:z:h" opt; do
   "o")
     case "$OPTARG" in
     "no")
-      echo "   no optimization"
+      echo "   no optimality"
       flag_optimal_Nfraction="F"
       flag_optimal_Nleaf="F"
       flag_optimal_allocation="F"
+      ;;
+    "all")
+      echo "   using optimal Nfraction"
+      echo "   using optimal Nleaf"      
+      echo "   using optimal Allocation"
+      flag_optimal_Nfraction="T"
+      flag_optimal_Nleaf="T"
+      flag_optimal_allocation="T"
       ;;
     "nf")
-      echo "   using only optimal Nfraction"
+      echo "   using optimal Nfraction"
       flag_optimal_Nfraction="T"
-      flag_optimal_Nleaf="F"
-      flag_optimal_allocation="F"
       ;;
     "nl")
-      echo "   using only optimal Nleaf"
-      flag_optimal_Nfraction="F"
+      echo "   using optimal Nleaf"
       flag_optimal_Nleaf="T"
-      flag_optimal_allocation="F"
       ;;
     "al")
-      echo "   using only optimal allocation"
-      flag_optimal_Nfraction="F"
-      flag_optimal_Nleaf="F"
+      echo "   using optimal Allocation"
       flag_optimal_allocation="T"
       ;;
     esac
@@ -214,12 +225,14 @@ while getopts ":p:m:s:y:o:b:z:h" opt; do
     echo "    Arguments to -y:"
     echo "       any integer value"
     echo "       note: this sets simulation output accordingly (1-x)"
-    echo " -o set the optimality scheme"
+    echo " -o set the optimality scheme(s)"
     echo "    Arguments to -o:"
-    echo "       no: no optimality"
-    echo "       nf: using only optimal Nfraction"
-    echo "       nl: using only optimal Nleaf"
-    echo "       al: using only optimal allocation"
+    echo "       no : no optimality"
+    echo "       all: all optimality schemes"
+    echo "       nf : using only optimal Nfraction"
+    echo "       nl : using only optimal Nleaf"
+    echo "       al : using only optimal allocation"
+    echo "    note: you can use the -o option multiple times as argument to the script, e.g., script.sh -o nf -o al"
     echo " -b set the N uptake scheme"
     echo "    Arguments to -b:"
     echo "       none: no BNF"
