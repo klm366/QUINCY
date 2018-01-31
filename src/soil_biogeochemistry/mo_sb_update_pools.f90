@@ -591,19 +591,38 @@ CONTAINS
     qmax_org = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_org_om,qmax_org_mineral)
     qmax_po4 = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_mineral,qmax_po4_mineral)
 
+    ! NH4
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
-       hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
-       nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
-       nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+      IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
+        hlp1(:,:) = 0.0_wp
+        hlp1(:,1) = nh4_solute_prescribe / soil_depth_sl(:,1) - nh4_solute(:,1)
+      ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
+        hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
+      END IF
+      nh4_solute(:,:)     = nh4_solute(:,:) + hlp1(:,:) 
+      nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
     ENDIF
+    ! NO3
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_no3)THEN
-       hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
-       no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
-       no3_n15_solute(:,:) = no3_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+      IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
+        hlp1(:,:) = 0.0_wp
+        hlp1(:,1) = no3_solute_prescribe / soil_depth_sl(:,1) - no3_solute(:,1)
+      ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
+        hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
+      END IF
+      no3_solute(:,:)     = no3_solute(:,:) + hlp1(:,:) 
+      no3_n15_solute(:,:) = no3_n15_solute(:,:) + hlp1(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
     ENDIF
+    ! PO4
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_po4)THEN
-       po4_solute(:,:) = po4_solute_prescribe 
+      IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
+        po4_solute(:,:) = 0.0_wp
+        po4_solute(:,1) = po4_solute_prescribe / soil_depth_sl(:,1)
+      ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
+        po4_solute(:,:) = po4_solute_prescribe
+      END IF
     ENDIF
+
 
     !> 5.0 infrastructure for mass balance checks (see also section 0.9)
     !!
@@ -656,7 +675,6 @@ CONTAINS
        sb_delta_pools%nitrogen15(:,:)
 
     !! fluxes
-
     total_flux_carbon(:) =                  veg_litterfall%leaf%carbon        + &
       veg_litterfall%fine_root%carbon + veg_litterfall%coarse_root%carbon + &
       veg_litterfall%sap_wood%carbon  + veg_litterfall%heart_wood%carbon  + &

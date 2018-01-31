@@ -46,7 +46,7 @@ CONTAINS
     USE mo_sb_jsm_processes
     USE mo_sb_jsm_transport
     USE mo_veg_constants,         ONLY: itree
-    USE mo_sb_constants
+    USE mo_sb_constants             ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
@@ -193,9 +193,9 @@ CONTAINS
              sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
              sb_pool%residue%carbon(:,1) = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
 
-             nh4_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
-             no3_solute(:,1) = 0.1_wp / dsl4jsb_Config(SOIL_)%dz_water(1)
-             po4_solute(:,1) = 0.01_wp / dsl4jsb_Config(SOIL_)%dz_water(1) 
+             nh4_solute(:,1) = nh4_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1)
+             no3_solute(:,1) = no3_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1)
+             po4_solute(:,1) = po4_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1) 
 
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)

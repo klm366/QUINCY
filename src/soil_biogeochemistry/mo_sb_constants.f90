@@ -375,7 +375,7 @@ CONTAINS
     ! BLARPP temporarily
     nh4_solute_prescribe = 0.1_wp
     no3_solute_prescribe = 0.1_wp
-    po4_solute_prescribe = 0.1_wp
+    po4_solute_prescribe = 0.01_wp
 
 
   END SUBROUTINE init_sb_constants
