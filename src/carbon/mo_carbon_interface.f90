@@ -49,7 +49,9 @@ MODULE mo_carbon_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC ::  Register_carbon_tasks , relocate_disturbed_carbon ! R: relocate_disturbed_carbon is not a carbon task but part of
+  PUBLIC ::  Register_carbon_tasks ,                         &
+               & rescale_carbon_upon_reference_area_change,  & ! 
+               & relocate_disturbed_carbon ! R: relocate_disturbed_carbon is not a carbon task but part of
                                                                !    the process disturbance only affecting the C pools.
                                                                !    It is called by tsk_natural_disturbances only if the
                                                                !    CARBON process is active. This logic follows JSBACH3, but
@@ -1158,6 +1160,127 @@ CONTAINS
 
   END SUBROUTINE relocate_disturbed_carbon
 
+
+  ! ================================================================================================================================
+  !>
+  !! @brief scales all carbon state variables upon reference area change
+  !!
+  !! @todo should probably get the information which state variables to scale from somewhere else!? 
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  SUBROUTINE rescale_carbon_upon_reference_area_change(tile, options, oldRefArea, newRefArea)
+
+    USE mo_exception,           ONLY: message, finish
+    USE mo_util,                ONLY: real2string
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)         :: options
+    REAL(wp),                   INTENT(in)         :: oldRefArea(:),  &
+                                                      newRefArea(:)
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    ! Local variables
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rescale_carbon_upon_reference_area_change'
+    INTEGER                     :: ics, ice, iblk
+
+    dsl4jsb_Real2D_onChunk ::  Cpool_green
+    dsl4jsb_Real2D_onChunk ::  Cpool_reserve 
+    dsl4jsb_Real2D_onChunk ::  Cpool_woods 
+    dsl4jsb_Real2D_onChunk ::  Cpool_crop_harvest
+
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag1
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_ag1
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_ag1
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_ag1 
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_bg1
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_bg1 
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg1 
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk ::  YCpool_humus_1 
+
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
+
+    ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1 
+    IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN 
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: Reference areas (here old) need to be >0 and <=1 - min: '&
+        & //real2string(MINVAL(oldRefArea)) //'; max: '//real2string(MAXVAL(oldRefArea))  )
+    ENDIF
+    IF ( ANY(newRefArea .LE. 0) .OR. ANY(newRefArea .GT. 1) ) THEN 
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: Reference areas (here new) need to be >0 and <=1 - min: '&
+        & //real2string(MINVAL(newRefArea)) //'; max: '//real2string(MAXVAL(newRefArea))  )
+    ENDIF
+
+    dsl4jsb_Get_memory(CARBON_)
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )               ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods )               ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest)         ! inout
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1)            ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1)         ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1)      ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1)            ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1)           ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1)         ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1)      ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1)             ! inout 
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2)           ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2)          ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2)        ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2)          ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2)        ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! inout 
+
+    Cpool_green           = Cpool_green           * (oldRefArea / newRefArea)
+    Cpool_woods           = Cpool_woods           * (oldRefArea / newRefArea)
+    Cpool_reserve         = Cpool_reserve         * (oldRefArea / newRefArea)
+    Cpool_crop_harvest    = Cpool_crop_harvest    * (oldRefArea / newRefArea)
+
+    YCpool_acid_ag1       = YCpool_acid_ag1       * (oldRefArea / newRefArea)
+    YCpool_water_ag1      = YCpool_water_ag1      * (oldRefArea / newRefArea)
+    YCpool_ethanol_ag1    = YCpool_ethanol_ag1    * (oldRefArea / newRefArea)
+    YCpool_nonsoluble_ag1 = YCpool_nonsoluble_ag1 * (oldRefArea / newRefArea)
+    YCpool_acid_bg1       = YCpool_acid_bg1       * (oldRefArea / newRefArea)
+    YCpool_water_bg1      = YCpool_water_bg1      * (oldRefArea / newRefArea)
+    YCpool_ethanol_bg1    = YCpool_ethanol_bg1    * (oldRefArea / newRefArea)
+    YCpool_nonsoluble_bg1 = YCpool_nonsoluble_bg1 * (oldRefArea / newRefArea)
+    YCpool_humus_1        = YCpool_humus_1        * (oldRefArea / newRefArea)
+    YCpool_acid_ag2       = YCpool_acid_ag2       * (oldRefArea / newRefArea)
+    YCpool_water_ag2      = YCpool_water_ag2      * (oldRefArea / newRefArea)
+    YCpool_ethanol_ag2    = YCpool_ethanol_ag2    * (oldRefArea / newRefArea)
+    YCpool_nonsoluble_ag2 = YCpool_nonsoluble_ag2 * (oldRefArea / newRefArea)
+    YCpool_acid_bg2       = YCpool_acid_bg2       * (oldRefArea / newRefArea)
+    YCpool_water_bg2      = YCpool_water_bg2      * (oldRefArea / newRefArea)
+    YCpool_ethanol_bg2    = YCpool_ethanol_bg2    * (oldRefArea / newRefArea)
+    YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2 * (oldRefArea / newRefArea)
+    YCpool_humus_2        = YCpool_humus_2        * (oldRefArea / newRefArea)
+
+
+  END SUBROUTINE rescale_carbon_upon_reference_area_change
 
 #endif
 END MODULE mo_carbon_interface

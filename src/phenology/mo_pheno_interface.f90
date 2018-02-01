@@ -191,6 +191,7 @@ CONTAINS
   SUBROUTINE update_phenology_logrop(tile, options)
 
     ! Declarations
+    USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
                                        track_max_green_pool, derive_maxlai_according_to_allometric_relationships
@@ -214,7 +215,8 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc)        :: w_soil_filling,  &
                                               t_air_in_Celcius, &
-                                              LaiMax_corrected
+                                              LaiMax_corrected, &
+                                              veg_frac_correction_old
 
     TYPE(t_jsb_grid),  POINTER             :: grid
 
@@ -423,6 +425,8 @@ CONTAINS
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear()) THEN
+        veg_frac_correction_old(:) = veg_frac_correction(:)
+
         CALL derive_maxLai_according_to_allometric_relationships( &
           & dsl4jsb_Lctlib_param(alpha_nr_ind),       & ! <- in
           & dsl4jsb_Lctlib_param(beta_nr_ind),        & ! <- in
@@ -445,6 +449,10 @@ CONTAINS
           & veg_frac_correction(:),                   & ! <- InOut
           & maxLAI_allom(:)                           & ! <- InOut
           & )
+
+        ! redistribute 
+        CALL rescale_carbon_upon_reference_area_change(tile, options, veg_frac_correction_old, veg_frac_correction)
+
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
