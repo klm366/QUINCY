@@ -281,13 +281,13 @@ CONTAINS
       IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
-                                  CO2_flux(:)         = fact_land(:) *                              &
-          &                             (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
-          &                             )
+                                  CO2_flux(:)           =                                             &
+          &                               (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
+          &                                 + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
+          &                                 + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                               )
         ELSE
-                                  CO2_flux(:)         = 0._wp
+                                    CO2_flux(:)         = 0._wp
         END IF
       END IF
 

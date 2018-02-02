@@ -29,9 +29,9 @@ CONTAINS
   elemental subroutine calc_Cpools( LAI,                       & ! in
                                     LAI_previous,              & ! in
                                     max_LAI,                   & ! in
-                                    NPPrate,                   & ! in
+                                    NPP_pot_yDayMean,          & ! in
                                     topSoilTemp,               & ! in
-                                    alpha,                     & ! in
+                                    alpha_yDayMean,            & ! in
                                     !
                                     frac_npp_2_woodPool,       & ! in
                                     frac_npp_2_reservePool,    & ! in
@@ -68,7 +68,7 @@ CONTAINS
                                     Cflx_herbivory,            & ! out
                                     Cflx_herbivory_LG,         & ! out
                                     Cflx_herbivory_2_atm,      & ! out
-                                    NPP_act,                   & ! out
+                                    NPP_act_yDayMean,          & ! out
                                     !
                                     !frac_litter_wood_new,      & ! inout, optional; R: only for spitfire
                                     ! Yasso variables
@@ -114,9 +114,9 @@ CONTAINS
     real(wp),intent(in)    :: LAI                    ! Yesterdays mean LAI
     real(wp),intent(in)    :: LAI_previous           ! The day before yesterdays mean LAI
     real(wp),intent(in)    :: max_LAI                ! Maximum value of LAI
-    real(wp),intent(in)    :: NPPrate                ! Yesterdays mean NPPrate [mol(C)/m^2 s]
+    real(wp),intent(in)    :: NPP_pot_yDayMean       ! Yesterdays mean NPP rate [mol(C)/m^2 s]
     real(wp),intent(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
-    real(wp),intent(in)    :: alpha                  ! Yesterdays mean water stress factor (between 0 and 1)
+    real(wp),intent(in)    :: alpha_yDayMean         ! Yesterdays mean water stress factor (between 0 and 1)
     real(wp),intent(in)    :: frac_npp_2_woodPool    ! Fraction of NPP to be put maximally into the green pool
     real(wp),intent(in)    :: frac_npp_2_reservePool ! Fraction of NPP to be put into the optimally into the reserve pool
     real(wp),intent(in)    :: frac_npp_2_exudates    ! Fraction of NPP to be put into the optimally into the root exudates
@@ -166,7 +166,7 @@ CONTAINS
     real(wp),intent(out)   :: Cflx_herbivory         !
     real(wp),intent(out)   :: Cflx_herbivory_LG      !
     real(wp),intent(out)   :: Cflx_herbivory_2_atm   !
-    real(wp),intent(out)   :: NPP_act                ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
+    real(wp),intent(out)   :: NPP_act_yDayMean       ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
     !real(wp),optional,intent(inout) :: frac_litter_wood_new   ! new fraction in above ground wood litter pool  
@@ -317,7 +317,7 @@ CONTAINS
 
     soilResp_rate            = 0.0_wp
     !soilResp_rate_pot        = 0.0_wp
-    NPP_act                  = 0.0_wp
+    NPP_act_yDayMean         = 0.0_wp
    ! redFact_Nlimitation      = 1.0_wp
 
     ! R: only for spitfire:
@@ -334,8 +334,8 @@ CONTAINS
        is_crop = .FALSE.
     END IF
 
-    alpha_mod = max(alpha_min,(alpha-alpha_critical)/(1._wp-alpha_critical)) !! modified soil moist. such that heterotrophic
-                                                                             !!     respiration is zero below alpha_critical
+    ! modified soil moist. such that heterotrophic respiration is zero below alpha_critical
+    alpha_mod = MAX(alpha_min, (alpha_yDayMean - alpha_critical) / (1._wp - alpha_critical))
 
     ! Initializations
     NPP_flux_correction   = 0.0_wp
@@ -418,8 +418,8 @@ CONTAINS
                                                                         !! which maybe exceeded by the decrease in LAI.       
 
        C_2_litter_greenPool =  &                                     !! Maximally the whole carbon from the green pool is transfered
-          min(greenC2leafC * leaf_shedding / specific_leaf_area_C, & !!    by leaf and root shedding to the green litter pool
-          Cpool_green)                                               
+          MIN(greenC2leafC * leaf_shedding / specific_leaf_area_C, & !!    by leaf and root shedding to the green litter pool
+              Cpool_green)
        Cpool_green = Cpool_green - C_2_litter_greenPool              !! This removes carbon from the green pool
        excess_carbon = max(0.0_wp,Cpool_green - Cpool_green_max)     !! If by the reduction of LAI the maximum value of the green
                                                                      !!    pool is still smaller than the current value, there is 
@@ -519,8 +519,8 @@ CONTAINS
        !! Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to 
        !!    avaialable Nitrogen)
 
-       if(NPPrate <= 0.0_wp) then                                      !! In case of negative or zero NPP
-          NPP_2_reservePool =  NPPrate  * sec_per_day                  !! .. the plant looses C and  
+       if(NPP_pot_yDayMean <= 0.0_wp) then                             !! In case of negative or zero NPP
+          NPP_2_reservePool =  NPP_pot_yDayMean * sec_per_day          !! .. the plant looses C and  
           Cpool_reserve     = Cpool_reserve + NPP_2_reservePool        !! .. we try to take it from the reserve pool 
           if(Cpool_reserve < 0.0_wp) then                              !! But if thereby the reserve pool gets negative 
              NPP_2_reservePool = NPP_2_reservePool - Cpool_reserve     !! .. we absorb negative NPP only up to zero reseve pool and 
@@ -538,12 +538,12 @@ CONTAINS
 
        else  !! NPP is positive                                                            
 
-          NPP_2_woodPool    = frac_npp_2_woodPool * NPPrate * sec_per_day    !! NPP it is distributed according to predefined 
-                                                                             !!    relative fraction
-          NPP_2_reservePool = frac_npp_2_reservePool * NPPrate * sec_per_day
-          NPP_2_rootExudates= frac_npp_2_exudates * NPPrate * sec_per_day
+          NPP_2_woodPool    = frac_npp_2_woodPool * NPP_pot_yDayMean * sec_per_day  !! NPP it is distributed according to predefined 
+                                                                                    !!    relative fraction
+          NPP_2_reservePool = frac_npp_2_reservePool * NPP_pot_yDayMean * sec_per_day
+          NPP_2_rootExudates= frac_npp_2_exudates * NPP_pot_yDayMean * sec_per_day
           NPP_2_greenPool   = (1.0_wp - frac_npp_2_woodPool - frac_npp_2_reservePool                 & 
-               - frac_npp_2_exudates) * NPPrate * sec_per_day
+               - frac_npp_2_exudates) * NPP_pot_yDayMean * sec_per_day
 
           !! Growth of Wood Pool (structural carbon of living plants)
 
@@ -713,12 +713,13 @@ CONTAINS
 
        !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
 
-       if(NPPrate > 0.0_wp) then 
-          NPP_act = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
+       if(NPP_pot_yDayMean > 0.0_wp) then 
+          NPP_act_yDayMean = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
                redFact_Nlimitation * (Cflx_NPP_2_green_pot + Cflx_NPP_2_wood_pot) + Cflx_NPP_2_reserve_pot &
                )/sec_per_day
        else
-          NPP_act = NPPrate + NPP_flux_correction  !dk: NPPrate negatave, NPP_flux_correction could not be removed from reserve pool
+          NPP_act_yDayMean = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero 
+                                                                     ! except Cpool_reserve was < 0.0_wp.
        endif
 
 
@@ -812,198 +813,147 @@ CONTAINS
   ! (Cpool_green_st, Cpool_reserve_st, Cpool_woods_st) is partly released to the atmosphere and partly relocated
   ! into the litter pools.
   !
-  subroutine relocate_carbon_fire(no_children,                     & ! in
-                                  burned_frac_st,                  & ! in from distrubed_frac_st
-                                  fract_st,                        & ! in
-                                  veg_frac_correction_st,          & ! in
-                                  fire_frac_wood_2_atmos,          & ! in
-                                  Cpool_green_st,                  & ! inout
-                                  Cpool_woods_st,                  & ! inout
-                                  Cpool_reserve_st,                & ! inout
-                                  carbon_2_atmos_st_ta,            & ! out
-                                  carbon_2_GreenLitterPools_st,    & ! inout, because relocate_carbon_fire is
-                                                                     ! called AFTER relocate_carbon_damage!
-                                  carbon_2_WoodLitterPools_st,     & ! inout, because relocate_carbon_fire is
-                                                                     ! called AFTER relocate_carbon_damage!
-                                  !Cpool_litter_green_ag,          & ! inout, optional
-                                  !Cpool_litter_green_bg,          & ! inout, optional
-                                  !Cpool_litter_wood_ag,           & ! inout, optional
-                                  !Cpool_litter_wood_bg,           & ! inout, optional
-                                  ! Yasso litter and soil carbon pools
-                                  YCpool_acid_ag1_st,              & ! inout,  necessary with yasso 
-                                  YCpool_acid_ag2_st,              & ! inout,  necessary with yasso
-                                  YCpool_water_ag1_st,             & ! inout,  necessary with yasso
-                                  YCpool_water_ag2_st,             & ! inout,  necessary with yasso
-                                  YCpool_ethanol_ag1_st,           & ! inout,  necessary with yasso
-                                  YCpool_ethanol_ag2_st,           & ! inout,  necessary with yasso
-                                  YCpool_nonsoluble_ag1_st,        & ! inout,  necessary with yasso
-                                  YCpool_nonsoluble_ag2_st,        & ! inout,  necessary with yasso
-                                  YCpool_acid_bg1_st,              & ! inout,  necessary with yasso
-                                  YCpool_acid_bg2_st,              & ! inout,  necessary with yasso
-                                  YCpool_water_bg1_st,             & ! inout,  necessary with yasso
-                                  YCpool_water_bg2_st,             & ! inout,  necessary with yasso
-                                  YCpool_ethanol_bg1_st,           & ! inout,  necessary with yasso
-                                  YCpool_ethanol_bg2_st,           & ! inout,  necessary with yasso
-                                  YCpool_nonsoluble_bg1_st,        & ! inout,  necessary with yasso
-                                  YCpool_nonsoluble_bg2_st,        & ! inout,  necessary with yasso
-                                  YCpool_humus_1_st,               & ! inout,  necessary with yasso
-                                  YCpool_humus_2_st,               & ! inout,  necessary with yasso
-                                  LeafLit_coef,                    & ! in, optional, necessary with yasso
-                                  WoodLitcoef                      & ! in, optional, necessary with yasso
-                                  )
+  subroutine relocate_carbon_fire( &
+    & burned_frac,                  & ! in from distrubed_frac
+    & fire_frac_wood_2_atmos,       & ! in
+    & LeafLit_coef,                 & ! in
+    & WoodLit_coef,                 & ! in
+    & Cpool_green,                  & ! inout
+    & Cpool_woods,                  & ! inout
+    & Cpool_reserve,                & ! inout
+    & carbon_2_atmos,               & ! out
+    & carbon_2_GreenLitterPools,    & ! inout, because relocate_carbon_fire is
+                                      ! called AFTER relocate_carbon_damage!
+    & carbon_2_WoodLitterPools,     & ! inout, because relocate_carbon_fire is
+                                      ! called AFTER relocate_carbon_damage!
+    & YCpool_acid_ag1,              & ! inout 
+    & YCpool_acid_ag2,              & ! inout
+    & YCpool_water_ag1,             & ! inout
+    & YCpool_water_ag2,             & ! inout
+    & YCpool_ethanol_ag1,           & ! inout
+    & YCpool_ethanol_ag2,           & ! inout
+    & YCpool_nonsoluble_ag1,        & ! inout
+    & YCpool_nonsoluble_ag2,        & ! inout
+    & YCpool_acid_bg1,              & ! inout
+    & YCpool_acid_bg2,              & ! inout
+    & YCpool_water_bg1,             & ! inout
+    & YCpool_water_bg2,             & ! inout
+    & YCpool_ethanol_bg1,           & ! inout
+    & YCpool_ethanol_bg2,           & ! inout
+    & YCpool_nonsoluble_bg1,        & ! inout
+    & YCpool_nonsoluble_bg2,        & ! inout
+    & YCpool_humus_1,               & ! inout
+    & YCpool_humus_2                & ! inout
+    & )
 
     USE mo_carbon_constants,  ONLY : frac_green_aboveGround, frac_wood_aboveGround
 
     ! Arguments
-    integer,intent(in)     :: no_children                      ! Number of tiles
-    real(wp),intent(in)    :: burned_frac_st(:,:)              ! Fraction of the vegetated area of each tile burned till the last
+    real(wp),intent(in)    :: burned_frac(:)              ! Fraction of the vegetated area of each tile burned till the last
                                                                ! call of this routine
-    real(wp),intent(in)    :: fract_st(:,:)                    ! Cover fractions
-    real(wp),intent(in)    :: veg_frac_correction_st(:,:)      ! Correction factor for cover fractions 1-exp(-LAI_max/2) (accounts
-                                                               ! for sparseness of vegetation)
     real(wp),intent(in)    :: fire_frac_wood_2_atmos           ! Fraction of above ground wood immediately emitted to atmosphere 
                                                                ! by fire
-    real(wp),intent(inout) :: Cpool_green_st(:,:)              ! Value of green carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_woods_st(:,:)              ! Value of wood carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_reserve_st(:,:)            ! Value of reserve carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(out)   :: carbon_2_atmos_st_ta(:,:)        ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
-    real(wp),intent(inout) :: carbon_2_GreenLitterPools_st(:,:) ! Amount of carbon relocated by wind and fire damage
-                                                                ! .. to the green litter pools [mol(C)/m^2(vegetated area)]
-    real(wp),intent(inout) :: carbon_2_WoodLitterPools_st(:,:)  ! Amount of carbon relocated by wind damage and fire
-                                                                ! .. to the wood litter pools [mol(C)/m^2(vegetated area)]
-
-    ! Cbalance litter pools
-    !real(wp),intent(inout),optional :: Cpool_litter_green_ag(:,:)    ! Above ground green litter carbon pool [mol(C)/m^2(canopy)]
-    !real(wp),intent(inout),optional :: Cpool_litter_green_bg(:,:)    ! Below ground green litter carbon pool [mol(C)/m^2(canopy)]
-    !real(wp),intent(inout),optional :: Cpool_litter_wood_ag(:,:)     ! Wood litter carbon pool [mol(C)/m^2(canopy)]
-    !real(wp),intent(inout),optional :: Cpool_litter_wood_bg(:,:)     ! Wood litter carbon pool [mol(C)/m^2(canopy)]
-
+    real(wp),intent(in)    :: LeafLit_coef(:)           ! Factor to spread non woody litterfall into yasso pools [ ]
+    real(wp),intent(in)    :: WoodLit_coef(:)           ! Factor to spread woody litterfall into yasso pools [ ]
+    real(wp),intent(inout) :: Cpool_green(:)              ! Value of green carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: Cpool_woods(:)              ! Value of wood carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: Cpool_reserve(:)            ! Value of reserve carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(out)   :: carbon_2_atmos(:)           ! Carbon immedieatly released by fire per tile [mol(C)m-2(canopy)]
+    real(wp),intent(inout) :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind and fire damage
+                                                                ! .. to the green litter pools [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage and fire
+                                                                ! .. to the wood litter pools [mol(C)/m^2(canopy)]
     !   YASSO
     ! SIZE CLASS 1 ; GREEN
     !   above ground C pools
-    real(wp),intent(inout) :: YCpool_acid_ag1_st(:,:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_ag1_st(:,:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_ag1_st(:,:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_ag1_st(:,:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_ag1(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_ag1(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_ag1(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_ag1(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     !   below ground C pools
-    real(wp),intent(inout) :: YCpool_acid_bg1_st(:,:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_bg1_st(:,:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_bg1_st(:,:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_bg1_st(:,:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_humus_1_st(:,:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_bg1(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_bg1(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_bg1(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_bg1(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_humus_1(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
     ! SIZE CLASS 2 ; WOOD
     !   above ground C pools
-    real(wp),intent(inout) :: YCpool_acid_ag2_st(:,:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_ag2_st(:,:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_ag2_st(:,:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_ag2_st(:,:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_ag2(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_ag2(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_ag2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_ag2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     !   below ground C pools  
-    real(wp),intent(inout) :: YCpool_acid_bg2_st(:,:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_bg2_st(:,:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_bg2_st(:,:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_bg2_st(:,:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_humus_2_st(:,:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_bg2(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_bg2(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_bg2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_bg2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_humus_2(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
 
-    !   parameters 
-    real(wp),intent(in),optional    :: LeafLit_coef(:,:,:)           ! Factor to spread non woody litterfall into yasso pools [ ]
-    real(wp),intent(in),optional    :: WoodLitcoef(:,:,:)            ! Factor to spread woody litterfall into yasso pools [ ]
-
+    ! Local variables
+    REAL(wp) :: factor(SIZE(burned_frac)) ! Helper
 
     !! diagnose amount of carbon released from the green and reserve pool to the green litter pools
     !! diagnose amount of carbon released from the wood pool to the woody litter pools
+    carbon_2_GreenLitterPools(:) = carbon_2_GreenLitterPools(:) + &
+      & (Cpool_green(:) + Cpool_reserve(:)) * (1._wp - frac_green_aboveGround) * burned_frac(:)
+    carbon_2_WoodLitterPools(:)  = carbon_2_WoodLitterPools(:) + &
+      & Cpool_woods(:) * (1._wp - fire_frac_wood_2_atmos * frac_wood_aboveGround) * burned_frac(:)
+
     !! determine amount of carbon released from the wood pool, living tissue pools, and litter pools to the atmosphere
+    carbon_2_atmos(:) = ( & 
+        ! take living parts of plants above ground:
+      & (Cpool_green(:) + Cpool_reserve(:)) * frac_green_aboveGround             &
+        ! now add the YASSO pools above ground:
+      & + YCpool_water_ag1(:) + YCpool_acid_ag1(:) + YCPool_ethanol_ag1(:)  &
+      & + YCpool_nonsoluble_ag1(:)                                                    &
+      & + YCpool_water_ag2(:) + YCpool_acid_ag2(:) + YCPool_ethanol_ag2(:)  &
+      & + YCpool_nonsoluble_ag2(:)                                                    &
+        ! now add the fire affected fraction of wood pools above ground:
+      & + Cpool_woods(:) * fire_frac_wood_2_atmos * frac_wood_aboveGround             &
+      & ) * burned_frac(:)
 
-    carbon_2_GreenLitterPools_st(:,:) = (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * (1._wp - frac_green_aboveGround) * &
-                                           fract_st(:,:) * veg_frac_correction_st(:,:) * burned_frac_st(:,:)
-    carbon_2_WoodLitterPools_st(:,:)  =  Cpool_woods_st(:,:) * (1._wp - fire_frac_wood_2_atmos * frac_wood_aboveGround) * &
-                                           fract_st(:,:) * veg_frac_correction_st(:,:) * burned_frac_st(:,:)
-
-    ! R: I think it would make sense to add a variable carbon_2_atmos_st (canopy!) even when it was not present in JS3.
-    !    However, in each case this has to be done and corresponds to JS3:
-    carbon_2_atmos_st_ta(:,:) = ( & ! take living parts of plants above ground:
-                                    (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * frac_green_aboveGround             &
-                                    ! now add the YASSO pools above ground:
-                                    + YCpool_water_ag1_st(:,:) + YCpool_acid_ag1_st(:,:) + YCPool_ethanol_ag1_st(:,:)  &
-                                    + YCpool_nonsoluble_ag1_st(:,:)                                                    &
-                                    + YCpool_water_ag2_st(:,:) + YCpool_acid_ag2_st(:,:) + YCPool_ethanol_ag2_st(:,:)  &
-                                    + YCpool_nonsoluble_ag2_st(:,:)                                                    &
-                                    ! now add the fire affected fraction of wood pools above ground:
-                                    + Cpool_woods_st(:,:) * fire_frac_wood_2_atmos * frac_wood_aboveGround             &
-                                )                                                                                      &
-                                ! and finally scale it to burned subtile area: mol(C)/m^2(canopy) to mol(C)/m^2(subtile)
-                                * fract_st(:,:) * veg_frac_correction_st(:,:) * burned_frac_st(:,:)
-
-
-    ! Sum carbon fluxes for all tiles
-
-    ! R: in JSBACH4 this is done by giving e.g. carbon_2_atmos_st_ta back to the carbon and then disturbance interface
-    !    and there it is handed down to its subtiles e.g. carbon_2_atmos! Then it is aggregated on the parent tile
-    !    with the corresponding aggregation procedure.
-    !carbon_2_GreenLitterPools(:) = carbon_2_GreenLitterPools(:) + SUM(carbon_2_GreenLitterPools_st(:,:),DIM=2)
-    !carbon_2_WoodLitterPools(:)  = carbon_2_WoodLitterPools(:)  + SUM(carbon_2_WoodLitterPools_st(:,:),DIM=2)
-    !carbon_2_atmos(:)            = SUM(carbon_2_atmos_st_ta(:,:),DIM=2)
 
     ! Lower down density of aboveground litter pools
-    YCpool_acid_ag1_st      (:,:) = YCpool_acid_ag1_st       (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
-    YCpool_water_ag1_st     (:,:) = YCpool_water_ag1_st      (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
-    YCpool_ethanol_ag1_st   (:,:) = YCpool_ethanol_ag1_st    (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
-    YCpool_nonsoluble_ag1_st(:,:) = YCpool_nonsoluble_ag1_st (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
+    factor(:) = 1._wp - burned_frac(:)
+    YCpool_acid_ag1      (:) = factor(:) * YCpool_acid_ag1       (:)
+    YCpool_water_ag1     (:) = factor(:) * YCpool_water_ag1      (:)
+    YCpool_ethanol_ag1   (:) = factor(:) * YCpool_ethanol_ag1    (:)
+    YCpool_nonsoluble_ag1(:) = factor(:) * YCpool_nonsoluble_ag1 (:)
 
-    YCpool_acid_ag2_st      (:,:) = YCpool_acid_ag2_st       (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
-    YCpool_water_ag2_st     (:,:) = YCpool_water_ag2_st      (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
-    YCpool_ethanol_ag2_st   (:,:) = YCpool_ethanol_ag2_st    (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
-    YCpool_nonsoluble_ag2_st(:,:) = YCpool_nonsoluble_ag2_st (:,:) * (1._wp - burned_frac_st(:,:))   ! lower down density
+    YCpool_acid_ag2      (:) = factor(:) * YCpool_acid_ag2       (:)
+    YCpool_water_ag2     (:) = factor(:) * YCpool_water_ag2      (:)
+    YCpool_ethanol_ag2   (:) = factor(:) * YCpool_ethanol_ag2    (:)
+    YCpool_nonsoluble_ag2(:) = factor(:) * YCpool_nonsoluble_ag2 (:)
 
     ! Add green and reserve vegetation carbon to belowground green litter pools
-    YCpool_acid_bg1_st      (:,:) = YCpool_acid_bg1_st       (:,:) +                                   &
-                                 ( 1._wp-frac_green_aboveGround) * burned_frac_st(:,:)              &
-                                  * (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * LeafLit_coef(:,:,1)
-    YCpool_water_bg1_st     (:,:) = YCpool_water_bg1_st      (:,:) +                                   &
-                                 ( 1._wp-frac_green_aboveGround) * burned_frac_st(:,:)              &
-                                  * (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * LeafLit_coef(:,:,2)
-    YCpool_ethanol_bg1_st   (:,:) = YCpool_ethanol_bg1_st    (:,:) +                                   &
-                                 ( 1._wp-frac_green_aboveGround) * burned_frac_st(:,:)              &
-                                  * (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * LeafLit_coef(:,:,3)
-    YCpool_nonsoluble_bg1_st(:,:) = YCpool_nonsoluble_bg1_st (:,:) +                                   &
-                                 ( 1._wp-frac_green_aboveGround) * burned_frac_st(:,:)              &
-                                  * (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * LeafLit_coef(:,:,4)
-    YCpool_humus_1_st       (:,:) = YCpool_humus_1_st        (:,:) +                                   &
-                                 ( 1._wp-frac_green_aboveGround) * burned_frac_st(:,:)              &
-                                  * (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) * LeafLit_coef(:,:,5)
+    factor(:) = (1._wp-frac_green_aboveGround) * burned_frac(:) * (Cpool_green(:) + Cpool_reserve(:))
+    YCpool_acid_bg1      (:) = YCpool_acid_bg1      (:) + factor(:) * LeafLit_coef(1)
+    YCpool_water_bg1     (:) = YCpool_water_bg1     (:) + factor(:) * LeafLit_coef(2)
+    YCpool_ethanol_bg1   (:) = YCpool_ethanol_bg1   (:) + factor(:) * LeafLit_coef(3)
+    YCpool_nonsoluble_bg1(:) = YCpool_nonsoluble_bg1(:) + factor(:) * LeafLit_coef(4)
+    YCpool_humus_1       (:) = YCpool_humus_1       (:) + factor(:) * LeafLit_coef(5)
 
     ! Add the remaings of burned wood to the aboveground wood pools:
-    YCpool_acid_ag2_st      (:,:) = YCpool_acid_ag2_st      (:,:)                                    & 
-                                +  ((1._wp - fire_frac_wood_2_atmos) * frac_wood_aboveGround)  &
-                                 * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,1)
-    YCpool_water_ag2_st     (:,:) = YCpool_water_ag2_st                                              & 
-                                +  ((1._wp - fire_frac_wood_2_atmos) * frac_wood_aboveGround)  &
-                                 * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,2)
-    YCpool_ethanol_ag2_st   (:,:) = YCpool_ethanol_ag2_st   (:,:)                                    & 
-                                +  ((1._wp - fire_frac_wood_2_atmos) * frac_wood_aboveGround)  &
-                                 * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,3)
-    YCpool_nonsoluble_ag2_st(:,:) = YCpool_nonsoluble_ag2_st(:,:)                                    & 
-                                 +  ((1._wp - fire_frac_wood_2_atmos) * frac_wood_aboveGround) &
-                                  * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,4)
-    YCpool_humus_2_st       (:,:) = YCpool_humus_2_st       (:,:)                                    &
-                                 +  ((1._wp - fire_frac_wood_2_atmos) * frac_wood_aboveGround) &
-                                  * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,5)
+    factor(:) = (1._wp-fire_frac_wood_2_atmos) * frac_wood_aboveGround * burned_frac(:) * Cpool_woods(:)
+    YCpool_acid_ag2      (:) = YCpool_acid_ag2      (:) + factor(:) * WoodLit_coef(1)
+    YCpool_water_ag2     (:) = YCpool_water_ag2     (:) + factor(:) * WoodLit_coef(2)
+    YCpool_ethanol_ag2   (:) = YCpool_ethanol_ag2   (:) + factor(:) * WoodLit_coef(3) 
+    YCpool_nonsoluble_ag2(:) = YCpool_nonsoluble_ag2(:) + factor(:) * WoodLit_coef(4) 
+    YCpool_humus_2       (:) = YCpool_humus_2       (:) + factor(:) * WoodLit_coef(5)
 
     ! Add the remaing of burned wood to the belowground wood pools:
-    YCpool_acid_bg2_st      (:,:) = &
-      YCpool_acid_bg2_st      (:,:) + (1._wp-frac_wood_aboveGround) * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,1)
-    YCpool_water_bg2_st     (:,:) = &
-      YCpool_water_bg2_st     (:,:) + (1._wp-frac_wood_aboveGround) * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,2)
-    YCpool_ethanol_bg2_st   (:,:) = &
-      YCpool_ethanol_bg2_st   (:,:) + (1._wp-frac_wood_aboveGround) * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,3)
-    YCpool_nonsoluble_bg2_st(:,:) = &
-      YCpool_nonsoluble_bg2_st(:,:) + (1._wp-frac_wood_aboveGround) * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,4)
-    YCpool_humus_2_st       (:,:) = &
-      YCpool_humus_2_st       (:,:) + (1._wp-frac_wood_aboveGround) * burned_frac_st(:,:) * Cpool_woods_st(:,:) * WoodLitcoef(:,:,5)
+    factor(:) = (1._wp-frac_wood_aboveGround) * burned_frac(:) * Cpool_woods(:)
+    YCpool_acid_bg2      (:) = YCpool_acid_bg2      (:) + factor(:) * WoodLit_coef(1)
+    YCpool_water_bg2     (:) = YCpool_water_bg2     (:) + factor(:) * WoodLit_coef(2)
+    YCpool_ethanol_bg2   (:) = YCpool_ethanol_bg2   (:) + factor(:) * WoodLit_coef(3)
+    YCpool_nonsoluble_bg2(:) = YCpool_nonsoluble_bg2(:) + factor(:) * WoodLit_coef(4)
+    YCpool_humus_2       (:) = YCpool_humus_2       (:) + factor(:) * WoodLit_coef(5)
 
     ! Lower down the carbon density of living plant pools
-    Cpool_green_st(:,:)   = Cpool_green_st(:,:)   * (1._wp - burned_frac_st(:,:))
-    Cpool_woods_st(:,:)   = Cpool_woods_st(:,:)   * (1._wp - burned_frac_st(:,:))
-    Cpool_reserve_st(:,:) = Cpool_reserve_st(:,:) * (1._wp - burned_frac_st(:,:))
+    factor(:) = 1._wp - burned_frac(:)
+    Cpool_green(:)   = Cpool_green(:)   * factor(:)
+    Cpool_woods(:)   = Cpool_woods(:)   * factor(:)
+    Cpool_reserve(:) = Cpool_reserve(:) * factor(:)
 
   end subroutine relocate_carbon_fire
 
@@ -1013,159 +963,118 @@ CONTAINS
   ! It is assumed that for the damaged area the carbon from the living plant pools (Cpool_green_st, Cpool_reserve_st and 
   ! Cpool_woods_st) is partly relocated into the litter pools.
   !
-  subroutine relocate_carbon_damage(no_children,                                         & ! in
-                                    damaged_frac_st,                                     & ! in
-                                    fract_st,                                            & ! in
-                                    veg_frac_correction_st,                              & ! in
-                                    Cpool_green_st,                                      & ! inout, optional
-                                    Cpool_woods_st,                                      & ! inout, optional
-                                    Cpool_reserve_st,                                    & ! inout, optional
-                                    carbon_2_GreenLitterPools_st,                        & ! out, because relocate_carbon_damage is 
-                                                                                           ! called before relocate_carbon_fire!
-                                    carbon_2_WoodLitterPools_st,                         & ! out, because relocate_carbon_damage is
-                                                                                           ! called before relocate_carbon_fire!
-                                    !Cpool_litter_green_ag,                              & ! inout, optional
-                                    !Cpool_litter_green_bg,                              & ! inout, optional
-                                    !Cpool_litter_wood_ag,                               & ! inout, optional
-                                    !Cpool_litter_wood_bg,                               & ! inout, optional
-                                    ! Yasso pools
-                                    YCpool_acid_ag1_st,       YCpool_acid_ag2_st,        & ! inout, necessary with yasso
-                                    YCpool_water_ag1_st,      YCpool_water_ag2_st,       & ! inout, necessary with yasso
-                                    YCpool_ethanol_ag1_st,    YCpool_ethanol_ag2_st,     & ! inout, necessary with yasso
-                                    YCpool_nonsoluble_ag1_st, YCpool_nonsoluble_ag2_st,  & ! inout, necessary with yasso
-                                    YCpool_acid_bg1_st,       YCpool_acid_bg2_st,        & ! inout, necessary with yasso
-                                    YCpool_water_bg1_st,      YCpool_water_bg2_st,       & ! inout, necessary with yasso
-                                    YCpool_ethanol_bg1_st,    YCpool_ethanol_bg2_st,     & ! inout, necessary with yasso
-                                    YCpool_nonsoluble_bg1_st, YCpool_nonsoluble_bg2_st,  & ! inout, necessary with yasso
-                                    YCpool_humus_1_st,        YCpool_humus_2_st,         & ! inout, necessary with yasso
-                                    LeafLit_coef,             WoodLitcoef                & ! in, necessary with yasso
-                                    )
+  subroutine relocate_carbon_damage(                 &
+    & damaged_frac,                                  & ! in
+    & LeafLit_coef,                                  & ! in
+    & WoodLit_coef,                                  & ! in
+    & Cpool_green,                                   & ! inout, optional
+    & Cpool_woods,                                   & ! inout, optional
+    & Cpool_reserve,                                 & ! inout, optional
+    & carbon_2_GreenLitterPools,                     & ! out, because relocate_carbon_damage is 
+                                                       ! called before relocate_carbon_fire!
+    & carbon_2_WoodLitterPools,                      & ! out, because relocate_carbon_damage is
+                                                       ! called before relocate_carbon_fire!
+    & YCpool_acid_ag1,       YCpool_acid_ag2,        & ! inout
+    & YCpool_water_ag1,      YCpool_water_ag2,       & ! inout
+    & YCpool_ethanol_ag1,    YCpool_ethanol_ag2,     & ! inout
+    & YCpool_nonsoluble_ag1, YCpool_nonsoluble_ag2,  & ! inout
+    & YCpool_acid_bg1,       YCpool_acid_bg2,        & ! inout
+    & YCpool_water_bg1,      YCpool_water_bg2,       & ! inout
+    & YCpool_ethanol_bg1,    YCpool_ethanol_bg2,     & ! inout
+    & YCpool_nonsoluble_bg1, YCpool_nonsoluble_bg2,  & ! inout
+    & YCpool_humus_1,        YCpool_humus_2          & ! inout
+    & )
 
     USE mo_carbon_constants,  ONLY : frac_green_aboveGround, frac_wood_aboveGround
 
     ! Arguments
-    integer,intent(in)     :: no_children                       ! Number of tiles
-    real(wp),intent(in)    :: damaged_frac_st(:,:)              ! Fraction of the vegetated area of each tile damaged till the last
+    real(wp),intent(in)    :: damaged_frac(:)              ! Fraction of the vegetated area of each tile damaged till the last
                                                                 ! call of this routine
-    real(wp),intent(in)    :: fract_st(:,:)                     ! Cover fractions subtiles
-    real(wp),intent(in)    :: veg_frac_correction_st(:,:)       ! Correction factor for cover fractions 1-exp(-LAI_max/2) (accounts
-                                                                !   for sparseness of vegetation)
-    real(wp),intent(inout) :: Cpool_green_st(:,:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_woods_st(:,:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_reserve_st(:,:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(out)   :: carbon_2_GreenLitterPools_st(:,:) ! Amount of carbon relocated by wind damage 
+    real(wp),intent(in)    :: LeafLit_coef(:)         ! Factor to spread non woody litter into yasso pools [ ]
+    real(wp),intent(in)    :: WoodLit_coef(:)         ! Factor to spread woody litterfall into yasso pools [ ]
+    real(wp),intent(inout) :: Cpool_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: Cpool_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: Cpool_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
+    real(wp),intent(out)   :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind damage 
                                                                 ! (and later also by fire)
-    real(wp),intent(out)   :: carbon_2_WoodLitterPools_st(:,:)  ! Amount of carbon relocated by wind damage 
+    real(wp),intent(out)   :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage 
                                                                 ! (and later also by fire)
-                                                                ! .. to the green litter pools [mol(C)/m^2(vegetated area)]
+                                                                ! .. to the green litter pools [mol(C)/m^2(canopy)]
 
-    !real(wp),intent(inout),optional :: Cpool_litter_green_ag(:,:)  ! Value of above ground green litter carbon pool 
-                                                                    !    [mol(C)/m^2(canopy)]
-    !real(wp),intent(inout),optional :: Cpool_litter_green_bg(:,:)  ! Value of below ground green litter carbon pool 
-                                                                    !    [mol(C)/m^2(canopy)]
-    !real(wp),intent(inout),optional :: Cpool_litter_wood_ag(:,:)   ! Value of wood litter carbon pool [mol(C)/m^2(canopy)]
-    !real(wp),intent(inout),optional :: Cpool_litter_wood_bg(:,:)   ! Value of wood litter carbon pool [mol(C)/m^2(canopy)]
-    !   YASSO 
+    !   YASSO
     ! Size class 1: green
     !   above ground C pools
-    real(wp),intent(inout) :: YCpool_acid_ag1_st(:,:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_ag1_st(:,:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_ag1_st(:,:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_ag1_st(:,:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_ag1(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_ag1(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_ag1(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_ag1(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     !   below ground C pools  
-    real(wp),intent(inout) :: YCpool_acid_bg1_st(:,:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_bg1_st(:,:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_bg1_st(:,:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_bg1_st(:,:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_humus_1_st(:,:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_bg1(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_bg1(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_bg1(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_bg1(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_humus_1(:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
     ! Size class 2: wood 
     !   above ground C pools
-    real(wp),intent(inout) :: YCpool_acid_ag2_st(:,:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_ag2_st(:,:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_ag2_st(:,:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_ag2_st(:,:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_acid_ag2(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_ag2(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_ag2(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_ag2(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     !   below ground C pools  
-    real(wp),intent(inout) :: YCpool_acid_bg2_st(:,:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_water_bg2_st(:,:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_ethanol_bg2_st(:,:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    real(wp),intent(inout) :: YCpool_nonsoluble_bg2_st(:,:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: YCpool_humus_2_st(:,:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
-    !   parameters
-    real(wp),intent(in)    :: LeafLit_coef(:,:,:)         ! Factor to spread non woody litter into yasso pools [ ]
-    real(wp),intent(in)    :: WoodLitcoef(:,:,:)          ! Factor to spread woody litterfall into yasso pools [ ]
+    real(wp),intent(inout) :: YCpool_acid_bg2(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_water_bg2(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_ethanol_bg2(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: YCpool_nonsoluble_bg2(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: YCpool_humus_2(:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
 
-    ! locals
-    real(wp)               ::  Cpool_temp(SIZE(fract_st,1),SIZE(fract_st,2))
+    ! Local variables
+    REAL(wp) :: factor(SIZE(damaged_frac))      ! Helper
 
     ! Initializations
 
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
-    !! determine amount of carbon relocated
 
-    carbon_2_WoodLitterPools_st(:,:)  = Cpool_woods_st(:,:) &
-                                          * fract_st(:,:) * veg_frac_correction_st(:,:) * damaged_frac_st(:,:)
-    carbon_2_GreenLitterPools_st(:,:) = (Cpool_green_st(:,:) + Cpool_reserve_st(:,:)) &
-                                          * fract_st(:,:) * veg_frac_correction_st(:,:) * damaged_frac_st(:,:)
+    carbon_2_WoodLitterPools(:)  = Cpool_woods(:) * damaged_frac(:)
+    carbon_2_GreenLitterPools(:) = (Cpool_green(:) + Cpool_reserve(:)) * damaged_frac(:)
 
     ! Add aboveground damaged green and reserve
-    Cpool_temp(:,:) = Cpool_green_st(:,:) + Cpool_reserve_st(:,:)
-    YCpool_acid_ag1_st      (:,:) = &
-       YCpool_acid_ag1_st      (:,:) + frac_green_aboveGround * damaged_frac_st(:,:) * LeafLit_coef(:,:,1) * Cpool_temp(:,:)
-    YCpool_water_ag1_st     (:,:) = &
-       YCpool_water_ag1_st     (:,:) + frac_green_aboveGround * damaged_frac_st(:,:) * LeafLit_coef(:,:,2) * Cpool_temp(:,:)
-    YCpool_ethanol_ag1_st   (:,:) = &
-       YCpool_ethanol_ag1_st   (:,:) + frac_green_aboveGround * damaged_frac_st(:,:) * LeafLit_coef(:,:,3) * Cpool_temp(:,:)
-    YCpool_nonsoluble_ag1_st(:,:) = &
-       YCpool_nonsoluble_ag1_st(:,:) + frac_green_aboveGround * damaged_frac_st(:,:) * LeafLit_coef(:,:,4) * Cpool_temp(:,:)
+    factor(:) = (Cpool_green(:) + Cpool_reserve(:)) * frac_green_aboveGround * damaged_frac(:)
+    YCpool_acid_ag1      (:) = YCpool_acid_ag1      (:) + factor(:) * LeafLit_coef(1)
+    YCpool_water_ag1     (:) = YCpool_water_ag1     (:) + factor(:) * LeafLit_coef(2)
+    YCpool_ethanol_ag1   (:) = YCpool_ethanol_ag1   (:) + factor(:) * LeafLit_coef(3)
+    YCpool_nonsoluble_ag1(:) = YCpool_nonsoluble_ag1(:) + factor(:) * LeafLit_coef(4)
 
     ! Add belowground damaged green and reserve
-    YCpool_acid_bg1_st      (:,:) =  YCpool_acid_bg1_st(:,:)     &
-                                 + (1._wp - frac_green_aboveGround) * damaged_frac_st(:,:) * LeafLit_coef(:,:,1) * Cpool_temp(:,:)
-    YCpool_water_bg1_st     (:,:) = YCpool_water_bg1_st(:,:)     &
-                                 + (1._wp - frac_green_aboveGround) * damaged_frac_st(:,:) * LeafLit_coef(:,:,2) * Cpool_temp(:,:)
-    YCpool_ethanol_bg1_st   (:,:) = YCpool_ethanol_bg1_st(:,:)   &
-                                 + (1._wp - frac_green_aboveGround) * damaged_frac_st(:,:) * LeafLit_coef(:,:,3) * Cpool_temp(:,:)
-    YCpool_nonsoluble_bg1_st(:,:) =YCpool_nonsoluble_bg1_st(:,:) &
-                                 + (1._wp - frac_green_aboveGround) * damaged_frac_st(:,:) * LeafLit_coef(:,:,4) * Cpool_temp(:,:)
-    YCpool_humus_1_st       (:,:) = YCpool_humus_1_st(:,:)       &
-                                 +                                    damaged_frac_st(:,:) * LeafLit_coef(:,:,5) * Cpool_temp(:,:)
+    factor(:) = (Cpool_green(:) + Cpool_reserve(:)) * (1._wp - frac_green_aboveGround) * damaged_frac(:)
+    YCpool_acid_bg1      (:) = YCpool_acid_bg1      (:) + factor(:) * LeafLit_coef(1)
+    YCpool_water_bg1     (:) = YCpool_water_bg1     (:) + factor(:) * LeafLit_coef(2)
+    YCpool_ethanol_bg1   (:) = YCpool_ethanol_bg1   (:) + factor(:) * LeafLit_coef(3)
+    YCpool_nonsoluble_bg1(:) = YCpool_nonsoluble_bg1(:) + factor(:) * LeafLit_coef(4)
+    factor(:) = (Cpool_green(:) + Cpool_reserve(:)) * damaged_frac(:)
+    YCpool_humus_1       (:) = YCpool_humus_1       (:) + factor(:) * LeafLit_coef(5)
 
     ! Add aboveground damaged wood
-    YCpool_acid_ag2_st      (:,:) = &
-       YCpool_acid_ag2_st      (:,:) + frac_wood_aboveGround  * damaged_frac_st(:,:) * WoodLitcoef(:,:,1) * Cpool_woods_st(:,:)
-    YCpool_water_ag2_st     (:,:) = &
-       YCpool_water_ag2_st     (:,:) + frac_wood_aboveGround  * damaged_frac_st(:,:) * WoodLitcoef(:,:,2) * Cpool_woods_st(:,:)
-    YCpool_ethanol_ag2_st   (:,:) = &
-       YCpool_ethanol_ag2_st   (:,:) + frac_wood_aboveGround  * damaged_frac_st(:,:) * WoodLitcoef(:,:,3) * Cpool_woods_st(:,:)
-    YCpool_nonsoluble_ag2_st(:,:) = &
-       YCpool_nonsoluble_ag2_st(:,:) + frac_wood_aboveGround  * damaged_frac_st(:,:) * WoodLitcoef(:,:,4) * Cpool_woods_st(:,:)
+    factor(:) = frac_wood_aboveGround  * damaged_frac(:) * Cpool_woods(:)
+    YCpool_acid_ag2      (:) = YCpool_acid_ag2      (:) + factor(:) * WoodLit_coef(1)
+    YCpool_water_ag2     (:) = YCpool_water_ag2     (:) + factor(:) * WoodLit_coef(2)
+    YCpool_ethanol_ag2   (:) = YCpool_ethanol_ag2   (:) + factor(:) * WoodLit_coef(3)
+    YCpool_nonsoluble_ag2(:) = YCpool_nonsoluble_ag2(:) + factor(:) * WoodLit_coef(4)
 
     ! Add belowground damaged wood
-    YCpool_acid_bg2_st      (:,:) = YCpool_acid_bg2_st(:,:)       &
-                               + (1._wp -frac_wood_aboveGround)  * damaged_frac_st(:,:) * WoodLitcoef(:,:,1) * Cpool_woods_st(:,:)
-    YCpool_water_bg2_st     (:,:) = YCpool_water_bg2_st(:,:)      &
-                               + (1._wp -frac_wood_aboveGround)  * damaged_frac_st(:,:) * WoodLitcoef(:,:,2) * Cpool_woods_st(:,:)
-    YCpool_ethanol_bg2_st   (:,:) =  YCpool_ethanol_bg2_st(:,:)   &
-                               + (1._wp -frac_wood_aboveGround)  * damaged_frac_st(:,:) * WoodLitcoef(:,:,3) * Cpool_woods_st(:,:)
-    YCpool_nonsoluble_bg2_st(:,:) = YCpool_nonsoluble_bg2_st(:,:) &
-                               + (1._wp -frac_wood_aboveGround)  * damaged_frac_st(:,:) * WoodLitcoef(:,:,4) * Cpool_woods_st(:,:)
-    YCpool_humus_2_st       (:,:) = YCpool_humus_2_st(:,:)        &
-                               +                                   damaged_frac_st(:,:) * WoodLitcoef(:,:,5) * Cpool_woods_st(:,:)
-
-    !! sum carbon fluxes for all tiles
-    ! R: in JSBACH4 this is done by giving carbon_2_WoodLitterPools_st back to the carbon and then the disturbance interface
-    !    and there it is handed down to its subtiles carbon_2_WoodLitterPools! Then it is aggregated on the parent tile
-    !    with the corresponding aggregation procedure.
-    !carbon_2_WoodLitterPools(:)  = SUM(carbon_2_WoodLitterPools_st(:,:),DIM=2)
-    !carbon_2_GreenLitterPools(:) = SUM(carbon_2_GreenLitterPools_st(:,:),DIM=2)
-    !carbon_2_atmos(:)            = SUM(carbon_2_atmos_tiled(:,:),DIM=2)
+    factor(:) = (1._wp - frac_wood_aboveGround)  * damaged_frac(:) * Cpool_woods(:)
+    YCpool_acid_bg2      (:) = YCpool_acid_bg2      (:) + factor(:) * WoodLit_coef(1)
+    YCpool_water_bg2     (:) = YCpool_water_bg2     (:) + factor(:) * WoodLit_coef(2)
+    YCpool_ethanol_bg2   (:) = YCpool_ethanol_bg2   (:) + factor(:) * WoodLit_coef(3)
+    YCpool_nonsoluble_bg2(:) = YCpool_nonsoluble_bg2(:) + factor(:) * WoodLit_coef(4)
+    factor(:) = Cpool_woods(:) * damaged_frac(:)
+    YCpool_humus_2       (:) = YCpool_humus_2       (:) + factor(:) * WoodLit_coef(5)
 
     ! Lower down the carbon density of living plant pools
-    Cpool_green_st(:,:)   = Cpool_green_st(:,:)   * (1._wp - damaged_frac_st(:,:))
-    Cpool_woods_st(:,:)   = Cpool_woods_st(:,:)   * (1._wp - damaged_frac_st(:,:))
-    Cpool_reserve_st(:,:) = Cpool_reserve_st(:,:) * (1._wp - damaged_frac_st(:,:))
-
+    factor(:) = 1._wp - damaged_frac(:)
+    Cpool_green(:)   = Cpool_green(:)   * factor(:)
+    Cpool_woods(:)   = Cpool_woods(:)   * factor(:)
+    Cpool_reserve(:) = Cpool_reserve(:) * factor(:)
 
   end subroutine relocate_carbon_damage
 

@@ -15,7 +15,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, &
-    & CARBON_, DISTURB_, FAGE_
+    & CARBON_, DISTURB_, FUEL_, FAGE_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -191,7 +191,7 @@ CONTAINS
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/), &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
@@ -225,8 +225,11 @@ CONTAINS
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
           END IF
+          IF (model%processes(FUEL_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+          END IF
           IF (model%processes(DISTURB_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(DISTURB_, ON_TILE_, AGGREGATE_)
+            CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
 
             DO i=1,npft
@@ -344,6 +347,9 @@ CONTAINS
 
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+          END IF
+          IF (model%processes(FUEL_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
           END IF
           IF (model%processes(DISTURB_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(DISTURB_, ON_TILE_, AGGREGATE_)

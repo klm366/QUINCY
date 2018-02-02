@@ -174,11 +174,12 @@ CONTAINS
     USE mo_sse_init,            ONLY: sse_init
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_rad_init,            ONLY: rad_init
-    ! USE mo_assimi_init,         ONLY: assimi_init
+    !USE mo_assimi_init,         ONLY: assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_carbon_init,         ONLY: carbon_init
-    !USE mo_disturb_init,       ONLY: disturb_init
     USE mo_fage_init,           ONLY: fage_init
+    USE mo_fuel_init,           ONLY: fuel_init
+    USE mo_disturb_init,        ONLY: disturb_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -187,21 +188,23 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
-    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FAGE_
+    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, FAGE_
     dsl4jsb_Use_config(PHENO_)
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
+    dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
-
+    
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
+    dsl4jsb_Def_config(FUEL_)
     dsl4jsb_Def_config(FAGE_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
@@ -304,7 +307,7 @@ CONTAINS
     ELSE
       CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
     END IF
-    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed") ! Should be called with and without ASSIMI,
+    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed") ! Should be called with and without the ASSIMI process,
                                                            ! and before assimilation
     ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
@@ -313,6 +316,9 @@ CONTAINS
     END IF
     IF (model%processes(CARBON_)%p%config%active) THEN
        CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+    END IF
+    IF (model%processes(FUEL_)%p%config%active) THEN
+      CALL model%Queue_task(FUEL_, "fuel")
     END IF
     IF (model%processes(DISTURB_)%p%config%active) THEN
        CALL model%Queue_task(DISTURB_, "natural_disturbances")
@@ -391,6 +397,10 @@ CONTAINS
 
       IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL carbon_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(FUEL_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL fuel_init(tile)
       END IF
 
       ! R: in the moment we do not need any initialization for disturbance:

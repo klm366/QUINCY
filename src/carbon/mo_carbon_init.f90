@@ -212,7 +212,8 @@ CONTAINS
       & variable_name='YCpool_nonsoluble_ag1',          &
       & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_ag1))
     dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1) >= 0._wp)
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1) >= 0._wp)
       
     !
     return_pointer => input_file%Read_2d(         &
@@ -237,7 +238,8 @@ CONTAINS
       & variable_name='YCpool_nonsoluble_bg1',          &
       & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_bg1))
     dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1) >= 0._wp)
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
       & variable_name='YCpool_humus_1',          &
@@ -267,7 +269,8 @@ CONTAINS
       & variable_name='YCpool_nonsoluble_ag2',          &
       & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_ag2))
     dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2) >= 0._wp)
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2) >= 0._wp)
 
     !
     return_pointer => input_file%Read_2d(         &
@@ -292,7 +295,8 @@ CONTAINS
       & variable_name='YCpool_nonsoluble_bg2',          &
       & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_bg2))
     dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2) >= 0._wp)
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
       & variable_name='YCpool_humus_2',          &

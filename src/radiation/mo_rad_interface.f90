@@ -901,8 +901,8 @@ CONTAINS
           & fract_fpc_max(:),               & ! in
           & cos_zenith_angle(:),            & ! in
           & dsl4jsb_Lctlib_param(StemArea), & ! in
-          & sky_view_fract(:),              & ! out
-          & sky_view_fract_stem(:)          & ! out
+          & sky_view_fract(:),              & ! inout
+          & sky_view_fract_stem(:)          & ! inout
           & )
 
         CALL Merge_albedos_of_vegtile(        &

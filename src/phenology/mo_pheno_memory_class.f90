@@ -113,6 +113,9 @@ MODULE mo_pheno_memory_class
                                       ! l_forestRegrowth = true it changes over time and is spatially variable, 
                                       ! if l_forestRegrowth = false there is no change between gridcells 
                                       ! and it is a 1d constant for each tile in this case.
+                                      ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
+                                      !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
+                                      ! var (tile area) = veg_frac_correction * var(canopy area)  * fract_fpc_max.
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
