@@ -58,11 +58,9 @@ MODULE mo_veg_constants
       lambda_sinklim_ps,    & !< lambda in photosynthesis response function to labile pool size 
       k_sinklim_ps,         & !< k in photosynthesis response function to labile pool size 
       beta_sinklim_ps_min,  & !< maximum downacclimation of photosynthetic capacity due to sink limitation 
-      lambda_n_demand,      & !< maximum CN of labile pool, needed for N demand
-      lambda_p_demand,      & !< ..
-      k_f_demand,           & !< ..
-      labile_cn_min_uptake, & !< minimum CN of labile pool, needed for N demand
-      labile_np_min_uptake    !< ..
+      fstore_leaf_max,      & !< maximum reserve storage in leaves relative to leaf mass
+      fstore_fine_root_max, & !< maximum reserve storage in fine roots relative to fine root mass
+      fstore_sap_wood_max     !< maximum reserve storage in sap wood relative to sap wood mass
 
   ! Resorption parameters
   REAL(wp), SAVE :: & 
@@ -74,9 +72,10 @@ MODULE mo_veg_constants
       wood2leaf_np,         & !< relative N:P of sapwood biomass compared to leaves (mol N / mol P)
       tau_nutrient_recycling  !< time scale of enzyme, RNA etc. turnover (as in return to labile pool!, days) 
 
-
   ! Parameters concerning N uptake calculations
   REAL(wp), SAVE :: &
+      lambda_f_demand,      & !< lambda in nutrient uptake response function to labile nutrient concentration
+      k_f_demand,           & !< k in nutrient uptake response funktion to labile nutrient concentration
       ! maximum cost of N fixation at low / high temperatures (mol C / mol N) 
       cost_n_fixation_max  , &
       ! mimumum cost of N fixation at 25°C (mol C / mol N)
@@ -185,8 +184,8 @@ CONTAINS
       k_labile_temp           = 2.0_wp 
       lambda_labile_theta     = 10.0_wp
       k_labile_theta          = 2.0_wp 
-      lambda_phiphen          = 1.8_wp 
-      k_phiphen               = 4.0_wp 
+      lambda_phiphen          = 1.3_wp 
+      k_phiphen               = 8.0_wp 
       lambda_phimaint         = 4.0_wp 
       k_phimaint              = 1.2_wp 
       lambda_phistore         = 2._wp
@@ -194,11 +193,10 @@ CONTAINS
       lambda_sinklim_ps       = 0.05_wp
       k_sinklim_ps            = 2.0_wp 
       beta_sinklim_ps_min     = 0.25_wp 
-      lambda_n_demand         = 75.0_wp
-      lambda_p_demand         = 75.0_wp
-      k_f_demand              = 2.0_wp
-      labile_cn_min_uptake    = 16.0_wp
-      labile_np_min_uptake    = 10.0_wp
+      fstore_leaf_max         = 0.02_wp
+      fstore_fine_root_max    = 0.2_wp
+      fstore_sap_wood_max     = 0.15_wp
+
 
   ! Resorption parameters
       resorp_fract_leaf     = 0.5_wp  
@@ -209,6 +207,8 @@ CONTAINS
       wood2leaf_np          = 1.0_wp 
 
   ! N uptake parameters
+      lambda_f_demand     = 75.0_wp
+      k_f_demand          = 2.0_wp
       cost_n_fixation_max = 17.5_wp   / (molar_mass_C/molar_mass_N) 
       cost_n_fixation_min = 8.0_wp    / (molar_mass_C/molar_mass_N) 
       k1_temp_bnf         = 1.25_wp

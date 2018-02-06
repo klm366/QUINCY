@@ -79,12 +79,14 @@ P^{target}_{labile} &= req^{growth}_{PN} \times N^{target}_{labile}
 \end{align} 
 \end{subequations}
 
-The target reserve carbon pool size corresponds to the C required to build one year's worth of leaves and fine roots, and the N and P target pools are defined accordingly, respecting the current stoichiometries of leaves and fine roots (Sect. \ref{sec:Stoichem}).
+The target reserve carbon pool size corresponds to the C required to build one year's worth of leaves and fine roots, within the limits of the maximum storage capacity ($f_{store,max}$) of the C storing plant organs (leaves, fine roots and sap wood), i.e. 
 
 \begin{equation}
-C^{target}_{reserve} = C^{target}_{leaf} \times ( \tau_{leaf} + \tau_{fine\_root} / k_{ltor} )  \times (1+f_{resp,growth}) 
+C^{target}_{reserve} = min(C^{target}_{leaf} \times ( min(1,\frac{1}{\tau_{leaf}}) + \frac{1}{\tau_{fine\_root} * k_{ltor}} )  \times (1+f_{resp,growth}), \sum_{i=l,f,s} f_{store,max,i} * C_{i})
 \end{equation}
 
+The N and P target pools are defined accordingly, respecting the current stoichiometries of leaves and fine roots (Sect. \ref{sec:Stoichem}).
+ 
 The net exchange of between the labile and reserve pool is calculated as 
 
 \begin{subequations}
