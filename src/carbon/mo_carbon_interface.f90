@@ -50,7 +50,8 @@ MODULE mo_carbon_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                         &
-               & rescale_carbon_upon_reference_area_change
+               & rescale_carbon_upon_reference_area_change, calculate_current_c_state_sum, &
+               & check_carbon_conservation_for_operation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -121,7 +122,7 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
-    USE mo_carbon_constants,  ONLY: molarMassCO2_kg
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -136,6 +137,7 @@ CONTAINS
     INTEGER                      :: i, itile
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai !TODO-JN: this is how it is done in mo_sse_interface
+    REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
     CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
 
     ! Declare process configuration and memory Pointers
@@ -162,6 +164,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  topSoilTemp           ! was not cbalance_type
     dsl4jsb_Real2D_onChunk ::  alpha                 ! was not cbalance_type. Relative soil moisture (used for
                                                      ! heterotrophic respiration)
+
+    dsl4jsb_Real2D_onChunk :: cconservation_calcCpools
+
+
     dsl4jsb_Real2D_onChunk ::  litter_flux           ! Carbon flux from the veget. to the litter pools
                                                      ! [mol(C)/m^2(canopy) s]
     dsl4jsb_Real2D_onChunk ::  Cpool_green           ! C-pool for leaves, fine roots, vegetative organs and
@@ -382,6 +388,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha)                      ! in
     !
     ! This is on canopy area:
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cconservation_calcCpools )  ! out
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  litter_flux )               ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! inout
@@ -591,6 +600,8 @@ CONTAINS
           MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
        END IF
 
+       CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+
        ! Now update the C pools
        CALL calc_Cpools(      LAI_yDayMean,                                     & ! in
                               LAI_yyDayMean,                                    & ! in
@@ -674,6 +685,13 @@ CONTAINS
    WoodLit_coef5           =  dsl4jsb_Lctlib_param(WoodLit_coef(5)),            & ! in, optional, necessary with yasso
    WoodLitterSize          =  dsl4jsb_Lctlib_param(WoodLitterSize)              & ! in, optional, necessary with yasso
                               )
+
+    ! Cflux_herbivory_2_atm and soil_respiration are negative (fluxes away from land)
+    ! therefore + here instead of -
+    current_fluxes = (NPP_act_yDayMean + Cflux_herbivory_2_atm + soil_respiration) * sec_per_day
+    CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+      & current_fluxes(:), cconservation_calcCpools(:))
+
 
 
        ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
@@ -869,7 +887,7 @@ CONTAINS
   !>
   !! @brief scales all carbon state variables upon reference area change
   !!
-  !! @todo should probably get the information which state variables to scale from somewhere else!? 
+  !! @todo discuss how to make more general, e.g. get the info on which state variables to scale from somewhere else?
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -983,8 +1001,130 @@ CONTAINS
     YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2 * (oldRefArea / newRefArea)
     YCpool_humus_2        = YCpool_humus_2        * (oldRefArea / newRefArea)
 
-
   END SUBROUTINE rescale_carbon_upon_reference_area_change
+
+
+  ! ================================================================================================================================
+  !>
+  !! @brief calculates the current sum of all carbon state variables
+  !!
+  !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  SUBROUTINE calculate_current_c_state_sum(tile, options, current_c_state_sum)
+
+    USE mo_exception,           ONLY: message, finish
+    USE mo_util,                ONLY: real2string
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)         :: options
+    REAL(wp),                   INTENT(inout)      :: current_c_state_sum(:)
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    ! Local variables
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rescale_carbon_upon_reference_area_change'
+    INTEGER                     :: ics, ice, iblk
+
+    dsl4jsb_Real2D_onChunk ::  Cpool_green
+    dsl4jsb_Real2D_onChunk ::  Cpool_reserve 
+    dsl4jsb_Real2D_onChunk ::  Cpool_woods 
+    dsl4jsb_Real2D_onChunk ::  Cpool_crop_harvest
+
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag1
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_ag1
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_ag1
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_ag1 
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_bg1
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_bg1 
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg1 
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk ::  YCpool_humus_1 
+
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_ag2
+    dsl4jsb_Real2D_onChunk ::  YCpool_acid_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_water_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
+    dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
+
+    dsl4jsb_Get_memory(CARBON_)
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )               ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods )               ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest)         ! in
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1)         ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1)             ! in
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2)          ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2)     ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2)          ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! in
+
+    current_c_state_sum = Cpool_green + Cpool_woods + Cpool_reserve + Cpool_crop_harvest + &
+        & YCpool_acid_ag1 + YCpool_water_ag1 + YCpool_ethanol_ag1 + YCpool_nonsoluble_ag1 + &
+        & YCpool_acid_ag2 + YCpool_water_ag2 + YCpool_ethanol_ag2 + YCpool_nonsoluble_ag2 + &
+        & YCpool_acid_bg1 + YCpool_water_bg1 + YCpool_ethanol_bg1 + YCpool_nonsoluble_bg1 + &
+        & YCpool_acid_bg2 + YCpool_water_bg2 + YCpool_ethanol_bg2 + YCpool_nonsoluble_bg2 + &
+        & YCpool_humus_1  + YCpool_humus_2
+
+  END SUBROUTINE calculate_current_c_state_sum
+
+  ! ================================================================================================================================
+  !>
+  !! @brief calculates the current sum of all carbon state variables
+  !!
+  !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  SUBROUTINE check_carbon_conservation_for_operation(tile, options, old_c_state_sum, cflux, Cconserve)
+
+    USE mo_exception,           ONLY: message, finish
+    USE mo_util,                ONLY: real2string
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)         :: options
+    REAL(wp),                   INTENT(in)         :: old_c_state_sum(:)
+    REAL(wp),                   INTENT(in)         :: cflux(:)
+    REAL(wp),                   INTENT(inout)      :: Cconserve(:)
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    ! Local variables
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rescale_carbon_upon_reference_area_change'
+    INTEGER                     :: ics, ice, iblk
+
+    CALL calculate_current_c_state_sum(tile, options, Cconserve)
+    Cconserve = Cconserve - old_c_state_sum - cflux
+
+  END SUBROUTINE check_carbon_conservation_for_operation
 
 #endif
 END MODULE mo_carbon_interface

@@ -50,6 +50,7 @@ MODULE mo_carbon_memory_class
 
 
     TYPE(t_jsb_var_real2d) ::     &
+      cconservation_calcCpools,   & 
       litter_flux,                & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                     !    [mol(C)/m^2(canopy) s]
       Cpool_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
@@ -1152,6 +1153,15 @@ CONTAINS
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                   &
 !         & prefix, suffix,                                                                                                      &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+
+      CALL jsb_add_var( mem, 'ccons_calcCpools', mem%cconservation_calcCpools,              &
+        & hgrid, surface,                                                           &
+        & t_cf('cconservatio_calcCpools', 'mol(C) m-2(canopy)', &
+          & 'Test for c conservation on allocation and respiration.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE., initval_r=0.0_wp ) 
+
 
 
     END IF
