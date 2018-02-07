@@ -1363,7 +1363,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: pi
     USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
-    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
+    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max, min_lai
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
@@ -1454,9 +1454,9 @@ CONTAINS
 
         ! full leaf area implied by current sapwood area
         IF (height > eps8) THEN
-          target_lai = veg_pool_sap_wood_carbon * lctlib%k_latosa / lctlib%wood_density / height
+          target_lai = MAX(veg_pool_sap_wood_carbon * lctlib%k_latosa / lctlib%wood_density / height, min_lai)
         ELSE
-          target_lai = 0.0_wp
+          target_lai = min_lai
         END IF
 
         IF (flag_optimal_allocation) THEN
