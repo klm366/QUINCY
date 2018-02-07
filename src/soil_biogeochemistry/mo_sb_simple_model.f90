@@ -73,7 +73,6 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
     INTEGER                               :: isoil                !< loop over options%nsoil_sb
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
-                                             apparent_mic_cue     , &
                                              apparent_mic_cn      , &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
                                              rtm_decomposition_act, &
@@ -622,8 +621,7 @@ CONTAINS
                                 biochem_mineralisation_po4(:,:), &
                                 sb_loss, &
                                 microbial_uptake_nh4_sl(:,:), &
-                                microbial_uptake_po4_sl(:,:), &
-                                apparent_mic_cue(:,:))
+                                microbial_uptake_po4_sl(:,:))
 
     IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')THEN
        CALL calc_partitioning_nitrification_denitrification_rate(options, &
@@ -671,7 +669,6 @@ CONTAINS
     !> 3.2 formation of SOM and associated respiration, net mineralisation fluxes
     !!          
     CALL calc_SOM_formation(options, &
-                            apparent_mic_cue(:,:), &
                             apparent_mic_cn(:,:), &
                             microbial_uptake_nh4_sl(:,:), &
                             microbial_uptake_nh4_n15_sl, &        
@@ -1757,10 +1754,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      biochem_mineralisation_po4, &
                                      sb_loss, &
                                      microbial_uptake_nh4_sl, &
-                                     microbial_uptake_po4_sl, &
-                                     apparent_mic_cue )
+                                     microbial_uptake_po4_sl)
 
-    USE mo_sb_constants,            ONLY: microbial_cue_max, microbial_cue_min, microbial_cn, microbial_np, &
+    USE mo_sb_constants,            ONLY: frac_litter2fast_som, microbial_cn, microbial_np, &
                                           microbial_nue, microbial_pue
     dsl4slm_Use_memory_a_sb
 
@@ -1792,27 +1788,25 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        biochem_mineralisation_po4    !< biomineralisation rate [mol / m3 / timestep]
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                       !< decomposition of SOM and litter pools [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: microbial_uptake_nh4_sl, &    !< microbial immobilisation of NH4 [mol / m3 / timestep]
-                                                                       microbial_uptake_po4_sl, &    !< microbial immobilisation of PO4 [mol / m3 / timestep]
-                                                                       apparent_mic_cue              !< apparent microbial carbon-use-efficiency
+                                                                       microbial_uptake_po4_sl       !< microbial immobilisation of PO4 [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: hlp1, hlp2, &
-                                                                       growth_c, growth_n
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: hlp1, hlp2, transfer_c
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_actual_flux_rates'
 
 
     !> 1.0 formation of fast SOM from litter 
     !!
 
-    !> 1.1 calculate potential growth rate of fast SOM pool, and associated potential microbial 
+    !> 1.1 calculate potential transfer from litter decay to fast SOM pool, and associated potential microbial 
     !!     immobilisation rate as difference between maximal growth rate and N in litter
-    growth_c(:,:) = microbial_cue_max * & 
-                    (sb_loss%soluable_litter%carbon(:,:) + & 
-                     sb_loss%polymeric_litter%carbon(:,:)) 
+    transfer_c(:,:) = frac_litter2fast_som * & 
+                      (sb_loss%soluable_litter%carbon(:,:) + & 
+                       sb_loss%polymeric_litter%carbon(:,:)) 
     
-    microbial_uptake_nh4_sl(:,:) = growth_c(:,:) / apparent_mic_cn(:,:) - & 
-                             microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
-                                              sb_loss%polymeric_litter%nitrogen(:,:))
+    microbial_uptake_nh4_sl(:,:) = transfer_c(:,:) / apparent_mic_cn(:,:) - & 
+                                   microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
+                                                    sb_loss%polymeric_litter%nitrogen(:,:))
     !! limit uptake rate at low nitrogen assuming a Michaelis-Menten Kinetic 
     hlp1(:,:) = 1.25_wp * nh4_solute(:,:) / ( km2_uptake_nh4_act(:,:) + nh4_solute(:,:) )
     microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) * MIN(hlp1(:,:),1.0_wp)
@@ -1870,26 +1864,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 2.0 determine actual growth rate of fast SOM pool
     !!
    
-    !> 2.1 calculate C growth based on N availability
-    !!
-    growth_n(:,:) = apparent_mic_cn(:,:) * ( microbial_uptake_nh4_sl(:,:) + & 
-                                             microbial_nue * (sb_loss%soluable_litter%nitrogen(:,:) + & 
-                                             sb_loss%polymeric_litter%nitrogen(:,:))) 
-
-    !> 2.2 Adjust carbon-use efficiency to match N availability by unchanged litter decomposition
-    !!
-    WHERE(growth_c(:,:) <= growth_n(:,:)) ! enough N is available -> constant CUE
-       apparent_mic_cue(:,:) = microbial_cue_max
-    ELSEWHERE(growth_c(:,:) > eps8) ! not enough N is available -> changed CUE (within min/max CUE)
-       apparent_mic_cue(:,:) = MAX(microbial_cue_min, & 
-                                   growth_n(:,:) / ( growth_c(:,:) / microbial_cue_max ))
-    ELSEWHERE ! growth C is too small -> CUE does not matter
-       apparent_mic_cue(:,:) = microbial_cue_min 
-    ENDWHERE
-
-    !> 2.3 Calculate actual litter loss rate, calculated such that litter decomposition
+    !> 2.1 Calculate actual litter loss rate, calculated such that litter decomposition
     !! matches the actual immobilisation flux and CN uptake from litter given actual CUE
-    hlp1(:,:) = apparent_mic_cue(:,:) / apparent_mic_cn(:,:) * &
+    hlp1(:,:) = frac_litter2fast_som / apparent_mic_cn(:,:) * &
                       (sb_loss%soluable_litter%carbon(:,:) + & 
                        sb_loss%polymeric_litter%carbon(:,:)) - & 
                 microbial_nue * & 
@@ -1918,19 +1895,17 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDWHERE 
 
     !> 3.0 calculate potential microbial P uptake from soluable pool (mol /m3 / timestep) 
-    microbial_uptake_po4_sl(:,:) =  apparent_mic_cue(:,:) / apparent_mic_cn(:,:) / microbial_np * & 
-                                (sb_loss%soluable_litter%carbon(:,:) + &
-                                  sb_loss%polymeric_litter%carbon(:,:)) - &
-                              microbial_pue * & 
-                                (sb_loss%soluable_litter%phosphorus(:,:) + & 
-                                 sb_loss%polymeric_litter%phosphorus(:,:)) 
+    microbial_uptake_po4_sl(:,:) = frac_litter2fast_som / apparent_mic_cn(:,:) / microbial_np * & 
+                                    (sb_loss%soluable_litter%carbon(:,:) + &
+                                     sb_loss%polymeric_litter%carbon(:,:)) - &
+                                   microbial_pue * & 
+                                    (sb_loss%soluable_litter%phosphorus(:,:) + & 
+                                     sb_loss%polymeric_litter%phosphorus(:,:)) 
 
     !> 3.1 constrain P uptake by microbes and plants to the available sum of P from P_soluable, 
     !!     biomineralisation and transport (mol /m3 / timestep)   
     WHERE(microbial_uptake_po4_sl(:,:)>0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
-       hlp1(:,:) = microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:)
-!       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biochem_mineralisation_po4(:,:) + weathering_po4(:,:) + &
-!                   p_deposition_act(:,:) + po4_assoc_fast(:,:) + transport_po4_assoc_fast(:,:) - slow_sorption_po4(:,:)
+      hlp1(:,:) = microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:)
       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) 
       WHERE(hlp2(:,:) < hlp1(:,:))
           WHERE(hlp1(:,:) > eps8)
@@ -1945,8 +1920,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        ENDWHERE
     ELSEWHERE ! if microbes release P, constrain plant uptake to available P, note the negative sign of microbial_uptake_po4_sl(:,:)
        hlp1(:,:) = plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) 
-!       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) + biochem_mineralisation_po4(:,:) + weathering_po4(:,:) + &
-!                   p_deposition_act(:,:) + po4_assoc_fast(:,:) + transport_po4_assoc_fast(:,:) - slow_sorption_po4(:,:) - microbial_uptake_po4_sl(:,:)
        hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) - microbial_uptake_po4_sl(:,:)
        WHERE(hlp2(:,:) < hlp1(:,:))
           WHERE(hlp1(:,:) > eps8)
@@ -2222,7 +2195,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_SOM_formation(options, &                       ! in 
-                                apparent_mic_cue, &
                                 apparent_mic_cn, &
                                 microbial_uptake_nh4_sl, &
                                 microbial_uptake_nh4_n15_sl, &
@@ -2237,7 +2209,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                 sb_formation  )
  
     USE mo_shared_isotope,      ONLY: calc_fractionation
-    USE mo_sb_constants,        ONLY: residue_cue, microbial_cue_min, microbial_np, microbial_cn, microbial_nue, microbial_pue, & 
+    USE mo_sb_constants,        ONLY: frac_litter2fast_som, frac_fast2slow_som, frac_slow2fast_som, microbial_np, microbial_cn, microbial_nue, microbial_pue, & 
                                       eta_ammonification
     dsl4slm_Use_memory_a_sb
 
@@ -2245,8 +2217,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: apparent_mic_cue, &           !< apparent carbon-use efficiency of microbial uptake
-                                                                       apparent_mic_cn, &            !< apparent carbon-nitrogen ratio of microbial uptake [mol/mol]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: apparent_mic_cn, &            !< apparent carbon-nitrogen ratio of microbial uptake [mol/mol] 
                                                                        microbial_uptake_nh4_sl, &          !< microbial NH4 uptake [mol / m3 / timestep]
                                                                        microbial_uptake_nh4_n15_sl, &      !< microbial 15NH4 uptake [mol / m3 / timestep]
                                                                        microbial_uptake_po4_sl             !< microbial PO4 uptake [mol / m3 / timestep]
@@ -2267,7 +2238,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 1.0 formation of fast SOM from litter 
     !! 
     sb_formation%microbial%carbon(:,:) = sb_formation%microbial%carbon(:,:) + & 
-                                                        apparent_mic_cue(:,:) * & 
+                                                        frac_litter2fast_som * & 
                                                         (sb_loss%soluable_litter%carbon(:,:) + &  
                                                          sb_loss%polymeric_litter%carbon(:,:)) 
     sb_formation%microbial%nitrogen(:,:) = sb_formation%microbial%nitrogen(:,:) + & 
@@ -2281,11 +2252,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                              sb_loss%polymeric_litter%phosphorus(:,:)) + & 
                                                             microbial_uptake_po4_sl(:,:) 
     sb_formation%microbial%carbon13(:,:) = sb_formation%microbial%carbon13(:,:) + & 
-                                                        apparent_mic_cue(:,:) * & 
+                                                        frac_litter2fast_som * & 
                                                         (sb_loss%soluable_litter%carbon13(:,:) + &  
                                                          sb_loss%polymeric_litter%carbon13(:,:)) 
     sb_formation%microbial%carbon14(:,:) = sb_formation%microbial%carbon14(:,:) + & 
-                                                        apparent_mic_cue(:,:) * & 
+                                                        frac_litter2fast_som * & 
                                                         (sb_loss%soluable_litter%carbon14(:,:) + &  
                                                          sb_loss%polymeric_litter%carbon14(:,:))
     sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + & 
@@ -2294,13 +2265,13 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                            sb_loss%polymeric_litter%nitrogen15(:,:)) + &
                                                            microbial_uptake_nh4_n15_sl(:,:) 
 
-    het_respiration(:,:)     = het_respiration(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
+    het_respiration(:,:)     = het_respiration(:,:) + (1._wp - frac_litter2fast_som) * & 
                                                       (sb_loss%soluable_litter%carbon(:,:) + &  
                                                        sb_loss%polymeric_litter%carbon(:,:))
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - frac_litter2fast_som) * & 
                                                           (sb_loss%soluable_litter%carbon13(:,:) + &  
                                                            sb_loss%polymeric_litter%carbon13(:,:)) 
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - apparent_mic_cue(:,:)) * & 
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - frac_litter2fast_som) * & 
                                                           (sb_loss%soluable_litter%carbon14(:,:) + &  
                                                            sb_loss%polymeric_litter%carbon14(:,:))
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) - microbial_uptake_nh4_sl(:,:) + &  
@@ -2319,57 +2290,56 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 2.0 formation of slow SOM (=residue pool) from fast SOM decay
     !! 
-    sb_formation%residue%carbon(:,:) = sb_formation%residue%carbon(:,:) + & 
-                                                      residue_cue * sb_loss%microbial%carbon(:,:)
-    sb_formation%residue%nitrogen(:,:) = sb_formation%residue%nitrogen(:,:) + & 
-                                                        residue_cue / microbial_cn * sb_loss%microbial%carbon(:,:)
+    sb_formation%residue%carbon(:,:)     = sb_formation%residue%carbon(:,:) + & 
+                                              frac_fast2slow_som * sb_loss%microbial%carbon(:,:)
+    sb_formation%residue%nitrogen(:,:)   = sb_formation%residue%nitrogen(:,:) + & 
+                                              frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)
     sb_formation%residue%phosphorus(:,:) = sb_formation%residue%phosphorus(:,:) + & 
-                                                          residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
-    sb_formation%residue%carbon13(:,:) = sb_formation%residue%carbon13(:,:) + & 
-                                                        residue_cue * sb_loss%microbial%carbon13(:,:)
-    sb_formation%residue%carbon14(:,:) = sb_formation%residue%carbon14(:,:) + & 
-                                                        residue_cue * sb_loss%microbial%carbon14(:,:)
-    hlp1(:,:) = (sb_loss%microbial%nitrogen(:,:) - residue_cue / microbial_cn * sb_loss%microbial%carbon(:,:)) * & 
+                                              frac_fast2slow_som / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
+    sb_formation%residue%carbon13(:,:)   = sb_formation%residue%carbon13(:,:) + & 
+                                              frac_fast2slow_som * sb_loss%microbial%carbon13(:,:)
+    sb_formation%residue%carbon14(:,:)   = sb_formation%residue%carbon14(:,:) + & 
+                                              frac_fast2slow_som * sb_loss%microbial%carbon14(:,:)
+    hlp1(:,:) = (sb_loss%microbial%nitrogen(:,:) - frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)) * & 
                 calc_fractionation(sb_loss%microbial%nitrogen(:,:), &
                                    sb_loss%microbial%nitrogen15(:,:),eta_ammonification)
     sb_formation%residue%nitrogen15(:,:) = sb_formation%residue%nitrogen15(:,:) + &
-                                                             sb_loss%microbial%nitrogen15(:,:) - hlp1(:,:) 
+                                             sb_loss%microbial%nitrogen15(:,:) - hlp1(:,:) 
 
-    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - residue_cue) * sb_loss%microbial%carbon(:,:)
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon13(:,:)
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - residue_cue) * sb_loss%microbial%carbon14(:,:)
+    het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon(:,:)
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon13(:,:)
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon14(:,:)
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%microbial%nitrogen(:,:) - &
-                                                                residue_cue / microbial_cn * sb_loss%microbial%carbon(:,:)
+                                                                frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%microbial%phosphorus(:,:) - &
-                                                                residue_cue / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
-
+                                                                frac_fast2slow_som / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:) 
 
     !> 3.0 formation of fast SOM (=microbial pool) from slow SOM decay 
     !! 
-    sb_formation%microbial%carbon(:,:) = sb_formation%microbial%carbon(:,:) + & 
-                                                        microbial_cue_min * sb_loss%residue%carbon(:,:)
-    sb_formation%microbial%nitrogen(:,:) = sb_formation%microbial%nitrogen(:,:) + & 
-                                                          microbial_cue_min / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
+    sb_formation%microbial%carbon(:,:)     = sb_formation%microbial%carbon(:,:) + & 
+                                                frac_slow2fast_som * sb_loss%residue%carbon(:,:)
+    sb_formation%microbial%nitrogen(:,:)   = sb_formation%microbial%nitrogen(:,:) + & 
+                                                frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
     sb_formation%microbial%phosphorus(:,:) = sb_formation%microbial%phosphorus(:,:) + & 
-                                                            microbial_cue_min / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
+                                                frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
     sb_formation%microbial%carbon13(:,:) = sb_formation%microbial%carbon13(:,:) + & 
-                                                          microbial_cue_min * sb_loss%residue%carbon13(:,:)
+                                                frac_slow2fast_som * sb_loss%residue%carbon13(:,:)
     sb_formation%microbial%carbon14(:,:) = sb_formation%microbial%carbon14(:,:) + & 
-                                                          microbial_cue_min * sb_loss%residue%carbon14(:,:)
-    hlp1(:,:) = (sb_loss%residue%nitrogen(:,:) - microbial_cue_min / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)) * & 
+                                                frac_slow2fast_som * sb_loss%residue%carbon14(:,:)
+    hlp1(:,:) = (sb_loss%residue%nitrogen(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)) * & 
                 calc_fractionation(sb_loss%residue%nitrogen(:,:), &
                                    sb_loss%residue%nitrogen15(:,:),eta_ammonification)
-    sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + & 
-                                                            sb_loss%residue%nitrogen15(:,:) - hlp1(:,:) 
+    sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + &
+                                                sb_loss%residue%nitrogen15(:,:) - hlp1(:,:) 
 
-    het_respiration(:,:)      = het_respiration(:,:)     + (1._wp - microbial_cue_min) * sb_loss%residue%carbon(:,:)
-    het_respiration_c13(:,:)  = het_respiration_c13(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon13(:,:)
-    het_respiration_c14(:,:)  = het_respiration_c14(:,:) + (1._wp - microbial_cue_min) * sb_loss%residue%carbon14(:,:)
+    het_respiration(:,:)      = het_respiration(:,:)     + (1._wp - frac_slow2fast_som) * sb_loss%residue%carbon(:,:)
+    het_respiration_c13(:,:)  = het_respiration_c13(:,:) + (1._wp - frac_slow2fast_som) * sb_loss%residue%carbon13(:,:)
+    het_respiration_c14(:,:)  = het_respiration_c14(:,:) + (1._wp - frac_slow2fast_som) * sb_loss%residue%carbon14(:,:)
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%residue%nitrogen(:,:) - &
-                                                                microbial_cue_min / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
+                                                                frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
-                                                                microbial_cue_min / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
+                                                                frac_fast2slow_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:)
 
   END SUBROUTINE calc_SOM_formation  
@@ -2394,7 +2364,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                     net_mineralisation_nh4_n15, &
                                                     sb_formation  )
   
-    USE mo_sb_constants,        ONLY: microbial_cue_min, microbial_nue, microbial_pue, & 
+    USE mo_sb_constants,        ONLY: frac_woody2dec_litter, microbial_nue, microbial_pue, & 
                                       fc_soluable_max, k_fc_soluable, k_fn_soluable, k_fp_soluable, lc_woody_litter
     dsl4slm_Use_memory_a_sb
 
@@ -2425,7 +2395,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_woody_litter(:,:) = 0.0_wp
     WHERE(sb_loss%woody_litter%nitrogen(:,:) > eps8) 
        fc_soluable_woody_litter(:,:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_woody_litter * &
-           microbial_cue_min / microbial_nue * & 
            sb_loss%woody_litter%carbon(:,:) / sb_loss%woody_litter%nitrogen(:,:))
        WHERE(fc_soluable_woody_litter(:,:)>eps8)
           fn_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) / &
@@ -2438,43 +2407,43 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 2.0 formation of metabolic and structural litter 
     !!     taking account of the processing losses of C, N and P
     sb_formation%soluable_litter%carbon(:,:) = sb_formation%soluable_litter%carbon(:,:) + & 
-       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon(:,:) 
+       fc_soluable_woody_litter(:,:) * frac_woody2dec_litter * sb_loss%woody_litter%carbon(:,:) 
     sb_formation%soluable_litter%nitrogen(:,:) = sb_formation%soluable_litter%nitrogen(:,:) + & 
        fn_soluable_woody_litter(:,:) * microbial_nue * sb_loss%woody_litter%nitrogen(:,:) 
     sb_formation%soluable_litter%phosphorus(:,:) = sb_formation%soluable_litter%phosphorus(:,:) + & 
        fp_soluable_woody_litter(:,:) * microbial_pue * sb_loss%woody_litter%phosphorus(:,:) 
     sb_formation%soluable_litter%carbon13(:,:) = sb_formation%soluable_litter%carbon13(:,:) + & 
-       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon13(:,:) 
+       fc_soluable_woody_litter(:,:) * frac_woody2dec_litter * sb_loss%woody_litter%carbon13(:,:) 
     sb_formation%soluable_litter%carbon14(:,:) = sb_formation%soluable_litter%carbon14(:,:) + & 
-       fc_soluable_woody_litter(:,:) * microbial_cue_min * sb_loss%woody_litter%carbon14(:,:) 
+       fc_soluable_woody_litter(:,:) * frac_woody2dec_litter * sb_loss%woody_litter%carbon14(:,:) 
     sb_formation%soluable_litter%nitrogen15(:,:) = sb_formation%soluable_litter%nitrogen15(:,:) + & 
        fn_soluable_woody_litter(:,:) * microbial_nue * sb_loss%woody_litter%nitrogen15(:,:) 
 
     sb_formation%polymeric_litter%carbon(:,:) = sb_formation%polymeric_litter%carbon(:,:) + & 
-       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon(:,:) 
+       (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter * sb_loss%woody_litter%carbon(:,:) 
     sb_formation%polymeric_litter%nitrogen(:,:) = sb_formation%polymeric_litter%nitrogen(:,:) + & 
        (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue * sb_loss%woody_litter%nitrogen(:,:) 
     sb_formation%polymeric_litter%phosphorus(:,:) = sb_formation%polymeric_litter%phosphorus(:,:) + & 
        (1.0_wp - fp_soluable_woody_litter(:,:)) * microbial_pue * sb_loss%woody_litter%phosphorus(:,:) 
     sb_formation%polymeric_litter%carbon13(:,:) = sb_formation%polymeric_litter%carbon13(:,:) + & 
-       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon13(:,:) 
+       (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter * sb_loss%woody_litter%carbon13(:,:) 
     sb_formation%polymeric_litter%carbon14(:,:) = sb_formation%polymeric_litter%carbon14(:,:) + & 
-       (1.0_wp - fc_soluable_woody_litter(:,:)) * microbial_cue_min * sb_loss%woody_litter%carbon14(:,:) 
+       (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter * sb_loss%woody_litter%carbon14(:,:) 
     sb_formation%polymeric_litter%nitrogen15(:,:) = sb_formation%polymeric_litter%nitrogen15(:,:) + & 
        (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue * sb_loss%woody_litter%nitrogen15(:,:) 
 
     !> 3.0 record losses to heterotrophic respiration and mineralisation
     !!
     het_respiration(:,:)            = het_respiration(:,:) + & 
-                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon(:,:)
+                                      (1.0_wp - frac_woody2dec_litter) * sb_loss%woody_litter%carbon(:,:)
     net_mineralisation_nh4(:,:)     = net_mineralisation_nh4(:,:) + &
                                       (1.0_wp - microbial_nue) * sb_loss%woody_litter%nitrogen(:,:)
     net_mineralisation_po4(:,:)     = net_mineralisation_po4(:,:) + &
                                       (1.0_wp - microbial_pue) * sb_loss%woody_litter%phosphorus(:,:)
     het_respiration_c13(:,:)        = het_respiration_c13(:,:) + & 
-                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon13(:,:)
+                                      (1.0_wp - frac_woody2dec_litter) * sb_loss%woody_litter%carbon13(:,:)
     het_respiration_c14(:,:)        = het_respiration_c14(:,:) + & 
-                                      (1.0_wp - microbial_cue_min) * sb_loss%woody_litter%carbon14(:,:)
+                                      (1.0_wp - frac_woody2dec_litter) * sb_loss%woody_litter%carbon14(:,:)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + &
                                       (1.0_wp - microbial_nue) * sb_loss%woody_litter%nitrogen15(:,:)
  

@@ -20,7 +20,7 @@ The dynamics of the soil organic pools ($X$) are described in general as
 \end{align}
 \end{subequations}
 
-where $F_{L_{vp}}$ is the litter fall of the various plant tissue types, $f_{vp \rightarrow i}$ are the coefficients determining the partitioning of this litter fall to the litter pools (see \ref{sec:sb:litter_partitioning}), $\tau_i$ are temperature and moisture adjusted, nitrogen-limited turnover times of the respective pools (X; i = met, str, wl, f, s; \ref{sec:sb:turnover}), the effective uptake-use efficiencies ($\eta_{i \rightarrow j }$) are the mass released during transformation from pool $i$ to $j$ (see Section \ref{sec:sb:formation}), $\Phi$ is a net mineralisation term for nitrogen and phosphorus, required to match C:N:P stoichiometry of the fast and slow SOM pool, and $F_{biomin,PO_4}$ is the biomineralisation flux (see Section \ref{sec:sb:formation}). In the \texttt{simple\_1d} mode, the transfer of soil organic matter through bioturbation is considered with a prescribed diffusion constant $D_b$.
+where $F_{L_{vp}}$ is the litter fall of the various plant tissue types, $f_{vp \rightarrow i}$ are the coefficients determining the partitioning of this litter fall to the litter pools (see \ref{sec:sb:litter_partitioning}), $\tau_i$ are temperature and moisture adjusted, nitrogen-limited turnover times of the respective pools (X; i = met, str, wl, f, s; \ref{sec:sb:turnover}), $\eta_{i \rightarrow j }$ are the mass transfer from pool $i$ to $j$ (see Section \ref{sec:sb:formation}), $\Phi$ is a net mineralisation term for nitrogen and phosphorus, required to match C:N:P stoichiometry of the fast and slow SOM pool, and $F_{biomin,PO_4}$ is the biomineralisation flux (see Section \ref{sec:sb:formation}). In the \texttt{simple\_1d} mode, the transfer of soil organic matter through bioturbation is considered with a prescribed diffusion constant $D_b$.
 
 The dynamics of the inorganic pools ($NH_4$, $NO_3$, and $PO_4$) are described as 
 
@@ -89,7 +89,7 @@ where $v_{max,X}$ is the temperature-sensitive plant/mycorrhiza-specific maximum
 
 \subsection{Woody litter decomposition}\label{sec:sb:woody_litter}
 
-Woody litter decomposition is assumed to be a two-stage process, in which the first step implies physical destabilisation and a first level of processing, which releases a fraction of carbon, assumed to be one minus the minimum microbial carbon-use efficiency, to heterotrophic respiration and fraction of nutrients leached, assumed to be one minus the microbial nutrient use efficiencies, respectively. The remainder is assumed to enter the  metabolic and structural litter, subject to the rules layed out in Section \ref{sec:sb:litter_partitioning} 
+Woody litter decomposition is assumed to be a two-stage process. The first step implies physical destabilisation and a first level of processing, which releases a constant fraction of carbon (1 - $\eta_{wl \rightarrow met,str}$) to heterotrophic respiration and fraction of nutrients leached, assumed to be one minus the microbial nutrient use efficiencies, respectively. The remainder is assumed to enter the metabolic and structural litter, subject to the rules laid out in Section \ref{sec:sb:litter_partitioning} 
 
 \subsection{SOM formation}\label{sec:sb:formation}
 
@@ -105,13 +105,7 @@ where $\tau^{*}_i$ are the temperature and moisture constrained turnover times (
 \Phi_{l \rightarrow f, NH_4} = \frac{\Phi^{*}_{l \rightarrow f, NH_4} \times NH_4}{max(NH_4, U^{*}_{NH_4,plant} + U^{*}_{NH_4,myc} + U^{*}_{nit} + \Phi^{*}_{l \rightarrow f, NH_4})}   
 \end{equation}
 
-The co-occurring uptake rates of plants, mycorrhiza and nitrifiers are adjusted to their actual values in a similar fashion. In the case that $\Phi_{l \rightarrow f, NH_4}$ is insufficient to match the stoichiometrically required N demand, the carbon-use efficiency of fast SOM formation is assumed to decline within the range given by [$\eta_{min,C}$,$\eta_{max,C}$]
-
-\begin{equation}\label{eq:sb:simple_mic_cue}
-\eta_{l \rightarrow f,C} = max(\eta_{min,C},\frac{\chi_{SOM}^{C:N} \times (\eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}}) + \Phi_{NH_4,l \rightarrow f})}{\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}})
-\end{equation}
-
-In the case that the combination of $\eta_{l \rightarrow f, C}$ and $\Phi_{l \rightarrow f, NH_4}$ is insufficient to ensure that the newly formed fast SOM has a C:N ratio of $\chi_{SOM}^{C:N}$, the turnover times of the woody and non-woody litter pool is increased to match the N available for immobilisation
+The co-occurring uptake rates of plants, mycorrhiza and nitrifiers are adjusted to their actual values in a similar fashion. In the case that $\Phi_{l \rightarrow f, NH_4}$ is insufficient to ensure that the newly formed fast SOM has a C:N ratio of $\chi_{SOM}^{C:N}$, the turnover times of the metabolic and structural litter pool is increased to match the N available for immobilisation
 
 \begin{equation}
  \tau_{met|str} = \tau^{*}_{met|str} \frac{\frac{\eta_{l \rightarrow f,C}}{\chi_{SOM}^{C:N}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})}{\Phi_{l \rightarrow f,NH_4}}
@@ -255,13 +249,15 @@ $LC_{fruit}$ & lignin fraction of fine root & \texttt{lc\_fruit} & mol-1 &  \ref
 $LC_{seed\_bed}$ & lignin fraction of fine root & \texttt{lc\_fruit} & mol-1 &  \ref{eq:sb:simple_litterpartitioning_c} &  0.22 & set to fine-roots\\
 $\tau^{base}_{met}$ & turnover time of metabolic litter & \texttt{tau\_metabolic\_litter} & years & \ref{eq:simple_som_turnover}  &  0.066 & \cite{Parton:1993ud}  \\ 
 $\tau^{base}_{str}$ & turnover time of structural litter & \texttt{tau\_structural\_litter} & years & \ref{eq:simple_som_turnover}  &  0.246 & \cite{Parton:1993ud} \\ 
-$\tau^{base}_{wl}$ & turnover time of woody litter & \texttt{tau\_woody\_litter} & years & \ref{eq:simple_som_turnover}  &  10 &  \\ 
-$\tau^{base}_{fast}$ & turnover time of fast SOM pool & \texttt{tau\_fast} & years & \ref{eq:simple_som_turnover}  &  5 &  \\ 
-$\tau^{base}_{som}$ & turnover time of slow SOM pool & \texttt{tau\_slow} & years & \ref{eq:simple_som_turnover}  & 50 &  \\ 
+$\tau^{base}_{wl}$ & turnover time of woody litter & \texttt{tau\_woody\_litter} & years & \ref{eq:simple_som_turnover}  &  5 &  \\ 
+$\tau^{base}_{fast}$ & turnover time of fast SOM pool & \texttt{tau\_fast} & years & \ref{eq:simple_som_turnover}  &  3 &  \\ 
+$\tau^{base}_{som}$ & turnover time of slow SOM pool & \texttt{tau\_slow} & years & \ref{eq:simple_som_turnover}  & 150 &  \\ 
 $E_{a,depolymerisation}$ & activation energy for decay & \texttt{ea\_depolymerisation} & \chem{J mol^{-1}} & \ref{eq:simple_som_turnover}  & 53000 & \cite{Ahrens:2015ie} \\
 $T^{\tau}_{ref}$ & reference temperature for turnover times & \texttt{t\_ref\_tresponse} & K & \ref{eq:simple_som_turnover}  & 293.15 & \cite{Ahrens:2015ie} \\
-$\eta_{C,min}$ & minimum carbon-use efficiency of microbial growth & \texttt{microbial\_cue\_min} & & \ref{eq:sb:simple_mic_cue} & 0.3 & \cite{Manzoni:2008hw}\\
-$\eta_{C,max}$ & maximum carbon-use efficiency of microbial growth & \texttt{microbial\_cue\_max} & & \ref{eq:sb:simple_pot_n_immobilisation} &  0.6 & \cite{Manzoni:2008hw}\\
+$\eta_{C,wl \rightarrow met,str}$ & C transfer from woody to metabolic or structural litter & \texttt{frac\_woody2dec\_litter} & & & 0.3 &  \cite{Parton:1993ud}\\
+$\eta_{C,litter \rightarrow fast,str}$ & C transfer from metabolic or structural litter to fast SOM & \texttt{frac\_litter2fast\_som} & & & 0.45 & \cite{Parton:1993ud}\\
+$\eta_{C,wl \rightarrow met,str}$ & C transfer from fast to slow SOM & \texttt{frac\_fast2slow\_som} & & & 0.15 & \cite{Parton:1993ud}\\
+$\eta_{C,wl \rightarrow met,str}$ & C transfer from slow to fast SOM  & \texttt{frac\_slow2fast\_som} & & & 0.3 & \cite{Parton:1993ud}\\
 $\eta_{N}$ & nitrogen-use efficiency of microbial growth & \texttt{microbial\_nue} & & \ref{eq:sb:simple_pot_n_immobilisation} &  0.8 & \cite{Manzoni:2008hw}\\
 $\eta_{P}$ & phosphorus-use efficiency of microbial growth & \texttt{microbial\_pue} & & \ref{eq:sb:simple_pot_p_immobilisation} &  0.8 & \cite{Manzoni:2008hw}\\
 $\chi_{SOM}^{C:N}$ & C:N ratio of SOM pools & \texttt{microbial\_cn} & mol / mol & \ref{eq:sb:simple_pot_n_immobilisation} & 11.6 & \\

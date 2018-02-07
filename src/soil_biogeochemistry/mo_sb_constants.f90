@@ -69,7 +69,10 @@ MODULE mo_sb_constants
       microbial_cn_max, &        !< maximum microbial C:N [mol/mol]
       microbial_cn_min, &        !< minimum microbial C:N [mol/mol]
       f_mic_cn, &                !< slope of microbial C:N to soil NH4 [kg/mol] 
-      residue_cue                !< carbon-use efficiency of residue formation
+      frac_woody2dec_litter, &   !< fraction of woody litter transformed into soluable or polymeric litter 
+      frac_litter2fast_som, &    !< fraction of litter transformed into fast SOM
+      frac_fast2slow_som, &      !< fraction of fast SOM transformed into slow SOM
+      frac_slow2fast_som         !< fraction of slow SOM transformed into fast SOM
 
   ! additional microbial parameters for JSM implementation
   REAL(wp), SAVE :: & 
@@ -213,7 +216,7 @@ CONTAINS
     tau_soluable_litter   = 30._wp * one_day ! 30 days 
     tau_metabolic_litter  = 0.066_wp * one_year * one_day
     tau_structural_litter = 0.245_wp * one_year * one_day
-    tau_woody_litter      = 10._wp * one_year * one_day ! 10 years 
+    tau_woody_litter      = 7.5_wp * one_year * one_day 
     tau_fast              = 3._wp * one_year * one_day
     tau_slow              = 150._wp * one_year * one_day
     tau_biomineralisation = 5._wp * one_year * one_day
@@ -260,7 +263,10 @@ CONTAINS
     microbial_cn_max    = 13._wp  * molar_mass_N / molar_mass_C  ! Manzoni et al. 2008, slightly tighter than than (was 13)
     microbial_cn_min    = 5._wp * molar_mass_N / molar_mass_C    ! Manzoni et al. 2008
     f_mic_cn            = 51000.0_wp                             ! calibrated to correspond to CENTURY (minimum reached at 2gN/m2)
-    residue_cue         = 0.1_wp                                 ! made-up
+    frac_woody2dec_litter = 0.3_wp
+    frac_litter2fast_som = 0.45_wp
+    frac_fast2slow_som  = 0.15_wp
+    frac_slow2fast_som  = 0.3_wp
 
    
     ! additional microbial parameters for JSM implementation

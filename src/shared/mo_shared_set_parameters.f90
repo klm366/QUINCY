@@ -49,7 +49,6 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
     REAL(wp)           :: microbial_cue
-    REAL(wp)           :: residue_cue
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
     PROCEDURE :: set_param => set_parameter_values_with_list_values
@@ -102,7 +101,6 @@ CONTAINS
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
     REAL(wp)           :: microbial_cue
-    REAL(wp)           :: residue_cue
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
@@ -133,8 +131,7 @@ CONTAINS
         floss_nmin                , &
         tau_fast                  , &
         tau_slow                  , &
-        microbial_cue             , &
-        residue_cue
+        microbial_cue             
 
     ! variables for reading model-options from namelist
     ! 
@@ -168,7 +165,6 @@ CONTAINS
     tau_fast                    = missval
     tau_slow                    = missval
     microbial_cue               = missval
-    residue_cue                 = missval
 
     ! read the namelist
     ! 
@@ -214,7 +210,6 @@ CONTAINS
     this%tau_fast                    = tau_fast
     this%tau_slow                    = tau_slow
     this%microbial_cue               = microbial_cue
-    this%residue_cue                 = residue_cue
 
   END SUBROUTINE Read_parameter_list
 
@@ -281,7 +276,6 @@ CONTAINS
     IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
     IF (ABS(this%tau_slow             - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
     IF (ABS(this%microbial_cue        - missval) > eps8)  microbial_cue         = this%microbial_cue
-    IF (ABS(this%residue_cue          - missval) > eps8)  residue_cue           = this%residue_cue
 
   END SUBROUTINE set_parameter_values_with_list_values
 
