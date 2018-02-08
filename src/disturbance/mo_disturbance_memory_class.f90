@@ -30,6 +30,8 @@ MODULE mo_disturb_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
 
    TYPE(t_jsb_var_real2d) ::   &
+      cconservation_fire,      &
+      cconservation_wind,      &
       burned_frac,             & ! burned fraction of tile
       damaged_frac,            & ! windbreak fraction of tile
       q_rel_air_climbuf,       & ! Relative humiditiy of lowest air layer smoothed in time.
@@ -127,6 +129,22 @@ CONTAINS
       CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,              &
         & hgrid, surface,                                                           &
         & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE., initval_r=0.0_wp ) 
+
+      CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,              &
+        & hgrid, surface,                                                           &
+        & t_cf('cconservation_wind', 'mol(C) m-2(canopy)', &
+          & 'Test for c conservation on relocation for wind damaged area.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE., initval_r=0.0_wp ) 
+
+      CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,              &
+        & hgrid, surface,                                                           &
+        & t_cf('cconservation_fire', 'mol(C) m-2(canopy)', &
+          & 'Test for c conservation on relocation for burned area.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) 
