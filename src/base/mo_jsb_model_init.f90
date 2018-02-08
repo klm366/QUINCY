@@ -197,7 +197,7 @@ CONTAINS
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
-    
+
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
@@ -250,7 +250,6 @@ CONTAINS
       dsl4jsb_Get_config(RAD_)
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(DISTURB_)
-      dsl4jsb_Get_config(FAGE_)
       dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
@@ -261,14 +260,14 @@ CONTAINS
       dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
     END IF
 
-    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
-      dsl4jsb_Config(FUEL_)%active = .TRUE.
-      CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
-    END IF
-    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
-      dsl4jsb_Config(CARBON_)%active = .TRUE.
-      CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
-    END IF
+!    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
+!      dsl4jsb_Config(FUEL_)%active = .TRUE.
+!      CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
+!    END IF
+!    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
+!      dsl4jsb_Config(CARBON_)%active = .TRUE.
+!      CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
+!    END IF
 
 
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
@@ -283,6 +282,11 @@ CONTAINS
     ELSE
       ! Explicit model configuration through namelist
       ! TBD
+    END IF
+
+    !Aging happens once at the beginning of each year at the start of a timestep. 
+    IF (model%processes(FAGE_)%p%config%active) THEN
+       CALL model%Queue_task(FAGE_, "ageing")
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
@@ -331,12 +335,17 @@ CONTAINS
       CALL model%Queue_task(FUEL_, "fuel")
     END IF
     IF (model%processes(DISTURB_)%p%config%active) THEN
-       CALL model%Queue_task(DISTURB_, "natural_disturbances")
+      CALL model%Queue_task(DISTURB_, "natural_disturbances")
+
+      !TODO-JN: implement new task on FAGE
+      ! in case that forest age is switched on and we are working with cohorts,
+      ! disturbances need to be handled on the cohort parent!
+!      IF (model%processes(FAGE_)%p%config%active) THEN
+!         CALL model%Queue_task(FAGE_, "nat_disturb_on_cohorts")
+!      END IF
+
     END IF
-    !TODO-JN: should this happen after or before PHENO? 
-    IF (model%processes(FAGE_)%p%config%active) THEN
-       CALL model%Queue_task(FAGE_, "ageing")
-    END IF
+
     CALL model%Queue_task(TURB_,   "humidity_scaling")
     CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
                                                            ! but in JSBACH3 it was here at the end...
@@ -368,9 +377,10 @@ CONTAINS
         CYCLE
       END IF
 
+!TODO-JN-COHORTS: check this!
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
-      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
+      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.FALSE., &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! TBD: Loop over processes instead of explicit
