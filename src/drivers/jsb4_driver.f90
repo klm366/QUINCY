@@ -21,7 +21,10 @@ PROGRAM jsb4_driver
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
 
-  dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
+  USE mo_carbon_interface,   ONLY: check_carbon_conservation_for_operation, calculate_current_c_state_sum
+  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
+
+  dsl4jsb_Use_processes SEB_, TURB_, HYDRO_, CARBON_
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -31,7 +34,7 @@ PROGRAM jsb4_driver
   ! Currently from adapter
   USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
-  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, Get_omp_thread
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
@@ -71,7 +74,7 @@ PROGRAM jsb4_driver
   REAL(wp), EXTERNAL:: util_walltime
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
-  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
+  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics, no_omp_thread
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -144,7 +147,10 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_nir_dir(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
-  REAL(wp), ALLOCATABLE :: CO2_flux(:)
+
+  REAL(wp), ALLOCATABLE :: CO2_flux(:,:)
+
+  REAL(wp), ALLOCATABLE :: old_c_state_sum(:,:), cconservation(:,:)
 
     NAMELIST /jsb_parallel_nml/     &
       nproca, npedim,             &
@@ -202,6 +208,8 @@ PROGRAM jsb4_driver
 
   CALL jsbach_label_run(jsbach_runs_standalone())
 
+  no_omp_thread = Get_omp_thread()
+
   ! Allocate arrays -> current assumption is for standalone nlon=nproma=npromz,
   !     therefore set (and allocated fields) here -- else need to strongly adapt
   !       -> i.e. set and allocate in the iblk loop for just one and change way of reading?!
@@ -258,7 +266,14 @@ PROGRAM jsb4_driver
   ALLOCATE(alb_nir_dir(nproma))
   ALLOCATE(alb_vis_dif(nproma))
   ALLOCATE(alb_nir_dif(nproma))
-  ALLOCATE(CO2_flux(nproma))
+
+  ALLOCATE(CO2_flux(nproma, nblks))
+
+  ! Only required for c conservation test
+  ALLOCATE(old_c_state_sum(nproma, nblks))
+  old_c_state_sum = 0._wp
+  CO2_flux = 0._wp
+  ALLOCATE(cconservation(nproma, nblks))
 
   IF (.NOT. read_interface_vars) THEN
     CALL init_forcing(model_id)
@@ -289,12 +304,12 @@ PROGRAM jsb4_driver
 !    evap_pot_sum_proc = 0._wp
   ENDIF
 
-  IF(jsbach_is_restarted()) THEN
+  model => get_model(model_id)
+  tile => model%Get_top_tile()
+  ics = 1
+  ice = nproma
 
-    model => get_model(model_id)
-    tile => model%Get_top_tile()
-    ics = 1
-    ice = nproma
+  IF(jsbach_is_restarted()) THEN
 
     CALL IO_read_streams
 
@@ -354,6 +369,28 @@ PROGRAM jsb4_driver
     ENDIF
 
     DO iblk = 1, nblks
+      CALL model%Set_options(iblk=iblk)
+
+      IF(is_newday()) THEN
+        IF (model%processes(CARBON_)%p%config%active) THEN
+          CALL check_carbon_conservation_for_operation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
+            & - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
+          !TODO-JN: where to put this cconservation? 
+IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+  print *, '***********************'
+  print *, iblk
+  print *, - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
+  print *, cconservation(:,iblk)
+ENDIF
+          CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
+IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+  print *, '***********************'
+  print *, iblk
+  print *, old_c_state_sum(:,iblk)
+ENDIF
+        ENDIF
+      ENDIF
+      
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN
@@ -378,7 +415,7 @@ PROGRAM jsb4_driver
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot=evapopot(:))
+        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:,iblk), evapopot=evapopot(:))
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
@@ -388,6 +425,7 @@ PROGRAM jsb4_driver
 !        evap_act_sum_proc(:,iblk) = evap_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
 !        evap_pot_sum_proc(:,iblk) = evap_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF
+
     ENDDO
 
 !    IF ((.NOT. read_interface_vars) .AND. is_newday()) THEN
@@ -444,6 +482,9 @@ PROGRAM jsb4_driver
   DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
   DEALLOCATE(q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
   DEALLOCATE(CO2_flux)
+
+  DEALLOCATE(old_c_state_sum)
+  DEALLOCATE(cconservation)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)

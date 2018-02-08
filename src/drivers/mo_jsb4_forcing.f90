@@ -1938,10 +1938,10 @@ CONTAINS
            & (1._wp- ((0.9_wp -fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
       ENDIF
     ELSE ! zenith angle larger than 89 degrees - changed Aug. 2017 following T. Raddatz, Jan. 2015
-      rad_UV = 0._dp
-      rad_PAR = rad_sw * 0.5_dp
-      rad_NIR = rad_sw * 0.5_dp
-      frac_PAR_diffuse = 1._dp ! (could also be another value in this case)
+      rad_UV = 0._wp
+      rad_PAR = rad_sw * 0.5_wp
+      rad_NIR = rad_sw * 0.5_wp
+      frac_PAR_diffuse = 1._wp ! (could also be another value in this case)
       rad_sw_pot  = rad_sw
     ENDIF
 
