@@ -327,7 +327,7 @@ CONTAINS
 !TODO-JN: nochmal Reiner ansprechen, hier gibt es ja jetzt einen Haufen von Variablen, die 
 !         nur für pft1-4 interessant wären und für die anderen nicht -> doch als eigenen prozess???
 ! hmmm, KN fragen, welche davon überhaupt als nicht lokale gebraucht werden... die meisten können 
-! vermutlich lokal bzw lpost = false sein! 
+! vermutlich lokal bzw loutput = .FALSE. sein! 
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
             & hgrid, surface,                                                    &
