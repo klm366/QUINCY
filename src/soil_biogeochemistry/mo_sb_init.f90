@@ -219,9 +219,6 @@ CONTAINS
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
-             nh4_solute(:,1) = 0.1_wp
-             no3_solute(:,1) = 0.1_wp 
-             po4_solute(:,1) = 0.01_wp  
              DO isoil=2,options%nsoil_sb
                 sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
@@ -232,10 +229,14 @@ CONTAINS
                 sb_pool%residue%carbon(:,isoil)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * & 
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil)
 
-                nh4_solute(:,isoil) = 0.1_wp
-                no3_solute(:,isoil) = 0.1_wp 
-                po4_solute(:,isoil) = 0.01_wp 
              ENDDO
+! note: this differs on purpose from the calculation in mo_sb_update_pools for the prescribed option
+!       this is because here I'm trying to enure that the models are initialised with the same amount of nutrient
+!       whereas in the prescribed option the target is unlimiting concentrations across the profile. The latter leads
+!       to more nutrient in the soil column in 1d compared to 0d
+             nh4_solute(:,:) = nh4_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
+             no3_solute(:,:) = no3_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
+             po4_solute(:,:) = po4_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
 
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)

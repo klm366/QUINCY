@@ -191,7 +191,7 @@ MODULE mo_sb_constants
       km_dip_biochem_po4, &      !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
       lmr_soluble_po4_min        !< Minimum PO4 concentration for Langmuir isotherm so that partitioning is overtaken by po4_soluble/po4_assoc_fast
 
-   ! only temporarily
+   ! only temporarily, mol / m2
    REAL(wp), SAVE :: & 
       nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
@@ -365,7 +365,7 @@ CONTAINS
     ! simple leaching
     fleach_nh4 = 0.1_wp
     fleach_po4 = 0.001_wp
-    soil_n_threshold_bnf = 0.04 ! mol N == 0.56 g N /m3
+    soil_n_threshold_bnf = 0.0357_wp 
 
     ! All values from Robinson 2001, TREE
     eta_mic_uptake_nh4     = 17._wp

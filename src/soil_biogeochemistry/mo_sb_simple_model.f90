@@ -731,6 +731,8 @@ CONTAINS
                                      lctlib, &
                                      TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), & 
                                      soil_depth_sl(:,:), &
+                                     rtm_decomposition_act(:,:), &
+                                     rmm_decomposition_act(:,:), &
                                      nh4_solute(:,:), &
                                      no3_solute(:,:), &
                                      sb_pool%microbial%carbon(:,:), &
@@ -3102,6 +3104,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                          lctlib, &                                      ! in
                                          veg_bnf_scheme, &
                                          soil_depth_sl, &
+                                         rtm_fixation_act, &
+                                         rmm_fixation_act, &
                                          nh4_solute, &
                                          no3_solute, &
                                          sb_pool_microbial_carbon, &
@@ -3120,28 +3124,50 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                      !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                                 INTENT(in)    :: veg_bnf_scheme              !< veg n fixation scheme  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &            !< soil depth per layer [m] 
+                                                                       rtm_fixation_act, &         !< temperature rate modifier  
+                                                                       rmm_fixation_act, &         !< moisture rate modifier  
                                                                        nh4_solute, &               !< NH4 concentration [mol m-3]
                                                                        no3_solute, &               !< NO3 concentration [mol m-3]
                                                                        sb_pool_microbial_carbon, & !< microbial carbon pool [mol m-3]
-                                                                       root_fraction_act_sl        !< fraction of roots per root layer [m-3] 
+                                                                       root_fraction_act_sl        !< fraction of roots per root layer [m-3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: asymb_n_fixation, &         !< asymbiontic rate of N fixation [umol m-3 s-1]
                                                                        asymb_n_fixation_n15        !< asymbiontic rate of 15N fixation [umol m-3 s-1]
     ! ---------------------------
     ! 0.2 Local
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1_2d,hlp2_2d
+    REAL(wp), DIMENSION(options%nc) :: hlp1,hlp2
+    INTEGER :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_asymbiontic_n_fixation'
 
- 
-    !> 1.0 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
+    !> 1.0 determine total soil mineral N (mol / m2)
+    !!
+    hlp1(:) = 0.0_wp
+    DO isoil = 1,options%nsoil_sb
+       WHERE(root_fraction_act_sl(:,isoil) > eps8)
+          hlp1(:) = hlp1(:) + (nh4_solute(:,isoil) + no3_solute(:,isoil)) * soil_depth_sl(:,isoil)
+       ENDWHERE
+    ENDDO 
+    hlp1_2d(:,:) = SPREAD(hlp1,2,options%nsoil_sb)
+
+    !> 1.1 calculate mean N fixation rate (mol / m3 / s)
+    !!     to all soil layers
+    !!
+    hlp2(:) = lctlib%bnf_base / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+    hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb)
+
+    !> 1.2 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
     !!
     SELECT CASE(TRIM(veg_bnf_scheme))
-      CASE("fixed", "standard")
-        WHERE((nh4_solute(:,:) + no3_solute) * soil_depth_sl(:,:) < soil_n_threshold_bnf .AND. & 
-               sb_pool_microbial_carbon(:,:) > eps4 .AND. soil_depth_sl(:,:)>eps8)
-                 asymb_n_fixation(:,:) = root_fraction_act_sl(:,:) * lctlib%bnf_base / soil_depth_sl(:,:) 
-        ENDWHERE
+       CASE("fixed", "standard")
+          WHERE(hlp1_2d(:,:) < soil_n_threshold_bnf .AND. & 
+                sb_pool_microbial_carbon(:,:) > eps4 .AND. & 
+                soil_depth_sl(:,:)>eps8)
+             asymb_n_fixation(:,:) = rtm_fixation_act(:,:) * rmm_fixation_act(:,:) * &
+                                     root_fraction_act_sl(:,:) * hlp2_2d(:,:) 
+          ENDWHERE
     END SELECT
 
-    !> 1.1 calculate 15N flux associated with asymbiontic N fixation, which is identical to the 
+    !> 1.3 calculate 15N flux associated with asymbiontic N fixation, which is identical to the 
     !!     atmospheric dN15 minus the discrimination of the nitrogenase (Robinson, 2001, TREE)
     !! 
     asymb_n_fixation_n15(:,:) = asymb_n_fixation(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
