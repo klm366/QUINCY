@@ -190,7 +190,7 @@ CONTAINS
       k_phimaint              = 1.2_wp 
       lambda_phistore         = 2._wp
       k_phistore              = 3._wp 
-      lambda_sinklim_ps       = 0.05_wp
+      lambda_sinklim_ps       = 0.2_wp
       k_sinklim_ps            = 2.0_wp 
       beta_sinklim_ps_min     = 0.25_wp 
       fstore_leaf_max         = 0.02_wp
