@@ -12,7 +12,7 @@ MODULE mo_fage_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message
+  USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -53,15 +53,14 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
-    REAL(wp), POINTER :: &
-      & ptr_3D(:,  :)
-
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: forest_age
 
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':fage_init_bc'
+
+    INTEGER :: i, max_age, age_interval, ncohorts
 
     IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
 
@@ -70,7 +69,38 @@ CONTAINS
     dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
 
-    !TODO-JN any bcs??
+    max_age = dsl4jsb_Config(FAGE_)%max_age
+    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+
+    ! set/initialise cohort bounds 
+    ! - important: start with one ---> DO NOT CHANGE!  
+    ! -- first cohort needs to always only contain the first year!
+    dsl4jsb_var3D_onDomain(FAGE_, cohort_max_age) = 1._wp 
+    IF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-shorterYoung' ) THEN
+
+      ! Equal intervals distributed unequally such that younger cohorts have shorter steps
+      ! (1, 1+n, 1+n+2*n, 1+n+2*n+3*n, ...)
+      age_interval = 0
+      DO i=1,ncohorts-1
+        age_interval = age_interval + i
+      END DO
+      age_interval = int(max_age / age_interval)
+      DO i=1,ncohorts-1
+        dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
+          & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + (i * age_interval)
+      END DO
+
+    ELSE
+      CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" implemented as forest ageing scheme')
+    ENDIF
+
+    !Assertion: 
+    IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1,:) .NE. 1._wp)) THEN
+      CALL finish(TRIM(routine), 'Assertion: lowst cohort always needs to have max_age of 1!')
+    ENDIF
+
+
+    !TODO-JN other bcs?? Also from files?
 !    dsl4jsb_var3D_onDomain(FM_, rotation_cycle) = REAL(dsl4jsb_Config(FM_)%global_rotation_cycle, wp)
 !    IF (dsl4jsb_Config(FM_)%scheme == 'rotation_local' ) THEN 
 !      IF (debug_on()) CALL message(TRIM(routine), 'Setting boundary conditions of fm memory (rotation_cycle) for tile '// &
@@ -98,7 +128,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER :: ptr_2D(:,:)
+!    REAL(wp), POINTER :: ptr_2D(:,:)
+!    REAL(wp), POINTER :: ptr_3D(:,  :)
 
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: forest_age
@@ -121,6 +152,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(FAGE_, fract_per_age)
 
     !TODO-JN-COHORTS: for now all fracts to youngest age, later initialise from file
+    !TODO-JN-COHORTS: needs to comply with the fractions in the cohorts!  
+    !   --- cross check with call in mo...usecase: "fract_varname='allFirst'"! 
+    ! ++ what happens on restart?
+    ! ++ what when absolute area introduced?
     dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._wp
     dsl4jsb_var_ptr(FAGE_, fract_per_age) (:,1,:) = 1._wp
 

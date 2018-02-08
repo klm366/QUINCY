@@ -99,8 +99,11 @@ CONTAINS
   ! 
   SUBROUTINE update_fage(tile, options)
 
-    USE mo_fage_process, ONLY: ageing
-    USE mo_jsb_time,   ONLY: is_newyear
+    USE mo_fage_process,         ONLY: update_frac_per_age_tracking
+    USE mo_jsb_time,             ONLY: is_newyear
+    USE mo_carbon_interface,     ONLY: &
+                                       & update_delta_carbon_of_source_and_sink_tile_upon_area_shift,            &
+                                       & update_carbon_states_with_delta_carbon
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -110,9 +113,12 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: mean_age
-    dsl4jsb_Real3D_onChunk :: fract_per_age
+    dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
 
-    INTEGER  :: iblk, ics, ice, nc
+    CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
+    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
+
+    INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fage'
 
@@ -134,9 +140,76 @@ CONTAINS
     dsl4jsb_Get_memory(FAGE_)
 
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
+    
+    dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
 
-    CALL ageing(nc, dsl4jsb_Config(FAGE_)%max_age, is_newyear(), fract_per_age(:,:), mean_age(:))
+    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+
+    IF(is_newyear()) THEN  ! year has changed - i.e. age - i.e. shift fractions!
+      ! Note that this update is done globally at the same time step, 
+      !  i.e. for different longitudes the updating happens at different local times.
+
+      ! step one: care for shifts among cohort boundaries
+      currentChild => tile%Get_first_child_tile()
+
+      ! only iterate until -1 -- oldest cohort only accumulates in update_fage
+      DO i=1,ncohorts-1
+        !TODO-JN-COHORTS maybe work with a getter?
+        nextChild => currentChild%Get_next_sibling_tile()
+
+        ! a) identify delta fraction for shifts from one to the next cohort
+        !TODO-JN needs to be adapted when working with absolute areas
+
+        !TODO-JN-COHORTS: cohort_max_age would only be required with this dimension
+        !                 if there would be dynamic changes individual per gird cell, 
+        !                 if only static (as currently) it could be implemented easier (maybe in the config of fage?!)
+        DO j=1,nc
+          fract_this_max_age(j) = fract_per_age(j,cohort_max_age(j,i))
+        ENDDO
+
+        ! reduce current tiles delta fraction  
+        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - fract_this_max_age(:)
+
+        ! and add them to the next childs delta 
+        nextChild%delta_fract(ics:ice, iblk) = nextChild%delta_fract(ics:ice, iblk) + fract_this_max_age(:)
+
+        ! b) accordingly move carbon from one cohort to the next cohorts delta
+        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+
+        CALL update_delta_carbon_of_source_and_sink_tile_upon_area_shift( &
+          & currentChild, nextChild, options, fract_this_max_age(:), source_fract(:))
+
+        ! c) TODO-JN-COHORTS what else to shift? 
+
+        ! move further in the child list
+        currentChild => nextChild
+      ENDDO
+
+      ! step two: apply changes 
+      currentChild => tile%Get_first_child_tile()
+      DO i=1,ncohorts
+
+        ! a) TODO-JN-COHORTS what else to update? 
+
+        ! b) update C states with deltas (+ reset C deltas to 0)
+        CALL update_carbon_states_with_delta_carbon(currentChild, options)
+
+        ! c) update area fractions 
+        ! TODO-JN: maybe make it a function in mo_jsb_tile_class: update_fraction?
+        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+        CALL currentChild%Set_fraction(ics, ice, iblk, &
+          fract=source_fract(:)+currentChild%delta_fract(ics:ice, iblk))
+        ! + reset deltas to 0
+        currentChild%delta_fract(ics:ice, iblk) = 0._wp
+        ! move further in the child list
+        currentChild => currentChild%Get_next_sibling_tile()
+      ENDDO
+
+      ! update the area per age tracking vector
+      CALL update_frac_per_age_tracking(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
+
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -40,7 +40,7 @@ MODULE mo_fage_memory_class
       & mean_age
 
   TYPE(t_jsb_var_real3d) :: &
-      & fract_per_age
+      & fract_per_age, cohort_max_age
 
   ! parameters
   ! TODO-JN currently none
@@ -74,8 +74,8 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, forest_age          ! Vertical grids
+    TYPE(t_jsb_grid),  POINTER :: hgrid                            ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface, forest_age, cohort_grid ! Vertical grids
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fage_memory'
@@ -91,6 +91,7 @@ CONTAINS
     hgrid       => Get_grid(mem%grid_id)
     surface     => Get_vgrid('surface')
     forest_age   => Get_vgrid('forest_age')
+    cohort_grid   => Get_vgrid('cohort_grid')
 
     dsl4jsb_Get_config(FAGE_)
 
@@ -109,6 +110,13 @@ CONTAINS
       CALL jsb_add_var( mem, 'fract_per_age', mem%fract_per_age,               &
         & hgrid, forest_age,                                                   &
         & t_cf('fract_per_age', 'y', ''),                                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'cohort_max_age', mem%cohort_max_age,             &
+        & hgrid, cohort_grid,                                                  &
+        & t_cf('cohort_max_age', 'y', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
