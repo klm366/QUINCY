@@ -278,6 +278,9 @@ CONTAINS
 
     INTEGER, PARAMETER :: npft = 11
     INTEGER, PARAMETER :: ncohorts = 5 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
+                                       ! -> cannot get it via model%processes(FAGE_)%p%config%
+                                       !    thus, if on model%config% !
+                                       ! + test ncohorts >0 & <=99 ! (cohort_name len=10 -- pft_shortname + '_fc' + j)
 
     CHARACTER(len=5) :: pft_shortname
     CHARACTER(len=10) :: cohort_name
@@ -302,9 +305,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_cohorts'
 
     grid => Get_grid(model%grid_id)
-
-    !TODO-JN-COHORTS test ncohorts such that j>0 & j<=99 ! (cohort_name len=10 -- pft_shortname + '_fc' + j)
-    ! ++ also assert, that fage is aktive:           IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -363,6 +363,18 @@ CONTAINS
                 & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
 
             ELSE
+              ! FAGE is the process that organises the cohorts. 
+              ! There is no sense in running cohorts without FAGE and vice versa! 
+              IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
+                CALL finish(TRIM(routine), "There is no sense in running cohorts without FAGE and vice versa!")
+              END IF
+              IF (.NOT. model%processes(CARBON_)%p%config%active) THEN
+                CALL finish(TRIM(routine), "Current cohorts implementation assumes CARBON process to be active!")
+              END IF
+              IF (.NOT. model%processes(PHENO_)%p%config%active) THEN
+                CALL finish(TRIM(routine), "Current cohorts implementation assumes PHENO process to be active!")
+              END IF
+
               WRITE(pft_shortname, "(A3,I2.2)") "pft", i
               pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
                 & processes       = (/FAGE_/), &
@@ -373,7 +385,7 @@ CONTAINS
                 WRITE(cohort_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
                 cohort_tile => t_jsb_tile(cohort_name, TRIM(cohort_name // ' tile'), &
                  & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=pft_tile, &
-                 & fract_varname='allFirst')
+                 & fract_varname='allFirst') !-> TODO-JN-COHORTS: cross check with SUBROUTINE fage_init_ic(tile)
               ENDDO
             ENDIF
           END DO
