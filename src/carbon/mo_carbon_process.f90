@@ -19,7 +19,8 @@ MODULE mo_carbon_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso
+  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, &
+    & update_delta_carbon, update_state_reset_delta
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -1536,6 +1537,59 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE yasso
+
+
+  ! --- update_delta_carbon() ---------------------------------------------------------------------------------------------------
+  !
+  ! updates delta carbon on area shift for a single pool 
+  !
+  elemental subroutine update_delta_carbon( &
+    & org_Cpool,                  & ! in
+    & delta_Cpool_source,         & ! inout
+    & delta_Cpool_sink,           & ! inout
+    & delta_fract,                & ! in
+    & prev_fract)                   ! in
+
+    real(wp),intent(in)    ::  org_Cpool, delta_fract, prev_fract
+    real(wp),intent(inout) ::  delta_Cpool_source, delta_Cpool_sink
+
+    !TODO-JN: probably needs to be adapted with absolute areas, then also the prev_fract 
+    !         will be required + the test for zero 
+!    IF (delta_fract .GT. 0) THEN
+        delta_Cpool_source = delta_Cpool_source - (org_Cpool * delta_fract)
+        delta_Cpool_sink = delta_Cpool_sink + (org_Cpool * delta_fract)
+!    ENDIF
+
+  end subroutine update_delta_carbon
+
+
+  ! --- update_state_reset_delta() ---------------------------------------------------------------------------------------------------
+  !
+  ! add delta carbon to carbon state and reset to zero 
+  !
+  elemental subroutine update_state_reset_delta( &
+    & org_Cpool,                  & ! inout
+    & delta_Cpool,                & ! inout
+    & delta_fract,                & ! in
+    & prev_fract)                   ! in
+
+    real(wp),intent(in)    ::  delta_fract, prev_fract
+    real(wp),intent(inout) ::  org_Cpool, delta_Cpool
+
+    !TODO-JN: probably needs to be adapted with absolute areas
+
+    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
+    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
+    ! IF prev_fract + delta_fract .EQ. 0._wp org_Cpool is not touched
+    ! i.e. the densities are not altered -- thus empty tiles can have non zero densities
+    ! -- if smallest possible fraction    
+    IF( prev_fract + delta_fract .GT. 0._wp) THEN
+      ! i.e. area gained
+      org_Cpool = ((org_Cpool * prev_fract) + delta_Cpool) / (prev_fract + delta_fract)
+    ENDIF
+    delta_Cpool = 0._wp
+
+  end subroutine update_state_reset_delta
 
 
 #endif

@@ -17,6 +17,7 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE
+  USE mo_jsb_process_class,      ONLY: FAGE_
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   IMPLICIT NONE
@@ -24,7 +25,7 @@ MODULE mo_carbon_memory_class
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 110
+  INTEGER, PARAMETER :: max_no_of_vars = 150
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
@@ -208,6 +209,32 @@ MODULE mo_carbon_memory_class
                                        ! ..  negative for absorption by biosphere)
       CO2_flx2atm_npp_test_ta          ! CO2 flux due to NPP, only needed for conservation test. 
 
+    ! Changes in state variables resulting due to area changes of the currently operating process 
+    ! TODO-JN-COHORTS needs to be adapted for absolute fractions: currently in [mol(C)/m^2(parent)]
+    TYPE(t_jsb_var_real2d) ::              &
+      delta_Cpool_green_rp,                & 
+      delta_Cpool_woods_rp,                & 
+      delta_Cpool_reserve_rp,              & 
+      delta_Cpool_crop_harvest_rp,         & 
+      delta_YCpool_acid_ag1_rp,            & 
+      delta_YCpool_water_ag1_rp,           & 
+      delta_YCpool_ethanol_ag1_rp,         & 
+      delta_YCpool_nonsoluble_ag1_rp,      & 
+      delta_YCpool_acid_bg1_rp,            & 
+      delta_YCpool_water_bg1_rp,           & 
+      delta_YCpool_ethanol_bg1_rp,         & 
+      delta_YCpool_nonsoluble_bg1_rp,      & 
+      delta_YCpool_humus_1_rp,             & 
+     !SIZE CLASS 2
+      delta_YCpool_acid_ag2_rp,            & 
+      delta_YCpool_water_ag2_rp,           & 
+      delta_YCpool_ethanol_ag2_rp,         & 
+      delta_YCpool_nonsoluble_ag2_rp,      & 
+      delta_YCpool_acid_bg2_rp,            & 
+      delta_YCpool_water_bg2_rp,           & 
+      delta_YCpool_ethanol_bg2_rp,         & 
+      delta_YCpool_nonsoluble_bg2_rp,      & 
+      delta_YCpool_humus_2_rp
 
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
@@ -1154,15 +1181,111 @@ CONTAINS
 !         & prefix, suffix,                                                                                                      &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ccons_calcCpools', mem%cconservation_calcCpools,              &
+      CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
         & hgrid, surface,                                                           &
-        & t_cf('cconservatio_calcCpools', 'mol(C) m-2(canopy)', &
+        & t_cf('cconservation_calcCpools', 'mol(C) m-2(canopy)', &
           & 'Test for c conservation on allocation and respiration.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) 
 
 
+      IF (model%processes(FAGE_)%p%config%active) THEN
+
+!TODO-JN-COHORTS: does not need to go to the output (loutput = .FALSE.) -- only now for testing
+!TODO-JN-COHORTS: change unit when absolute areas are implemented
+        CALL jsb_add_var( mem, 'delta_cpool_green_rp', mem%delta_Cpool_green_rp, hgrid, surface, &
+          & t_cf('delta_Cpool_green_rp', 'mol(C) m-2(parent))', 'Change in Cpool_green.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_cpool_woods_rp', mem%delta_Cpool_woods_rp, hgrid, surface, &
+          & t_cf('delta_Cpool_woods_rp', 'mol(C) m-2(parent))', 'Change in Cpool_woods.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_cpool_reserve_rp', mem%delta_Cpool_reserve_rp, hgrid, surface, &
+          & t_cf('delta_Cpool_reserve_rp', 'mol(C) m-2(parent))', 'Change in Cpool_reserve.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_cpool_crop_harvest_rp', mem%delta_Cpool_crop_harvest_rp, hgrid, surface, &
+          & t_cf('delta_Cpool_crop_harvest_rp', 'mol(C) m-2(parent))', 'Change in Cpool_crop_harvest.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_ycpool_acid_ag1_rp', mem%delta_YCpool_acid_ag1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_acid_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_ag1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_water_ag1_rp', mem%delta_YCpool_water_ag1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_water_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_ag1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_ag1_rp', mem%delta_YCpool_ethanol_ag1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_ethanol_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_ag1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_nonsoluble_ag1_rp', mem%delta_YCpool_nonsoluble_ag1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_nonsoluble_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_ag1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_acid_ag2_rp', mem%delta_YCpool_acid_ag2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_acid_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_ag2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_water_ag2_rp', mem%delta_YCpool_water_ag2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_water_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_ag2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_ag2_rp', mem%delta_YCpool_ethanol_ag2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_ethanol_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_ag2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_nonsoluble_ag2_rp', mem%delta_YCpool_nonsoluble_ag2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_nonsoluble_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_ag2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_humus_1_rp', mem%delta_YCpool_humus_1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_humus_1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_humus_1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_ycpool_acid_bg1_rp', mem%delta_YCpool_acid_bg1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_acid_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_bg1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_water_bg1_rp', mem%delta_YCpool_water_bg1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_water_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_bg1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_bg1_rp', mem%delta_YCpool_ethanol_bg1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_ethanol_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_bg1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_YCpool_nonsoluble_bg1_rp', mem%delta_YCpool_nonsoluble_bg1_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_nonsoluble_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_bg1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_acid_bg2_rp', mem%delta_YCpool_acid_bg2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_acid_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_water_bg2_rp', mem%delta_YCpool_water_bg2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_water_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_bg2_rp', mem%delta_YCpool_ethanol_bg2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_ethanol_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_nonsoluble_bg2_rp', mem%delta_YCpool_nonsoluble_bg2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_nonsoluble_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_ycpool_humus_2_rp', mem%delta_YCpool_humus_2_rp, hgrid, surface, &
+          & t_cf('delta_YCpool_humus_2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_humus_2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+      END IF ! (model%processes(FAGE_)%p%config%active) THEN
 
     END IF
 
