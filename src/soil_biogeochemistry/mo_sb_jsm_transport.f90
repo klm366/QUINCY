@@ -295,7 +295,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_particle_fluxrate(options,soil_depth_sl,bulk_dens_corr_sl,sb_formation,sb_loss) RESULT (particle_fluxrate)
 
-    USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM 
+    USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
     USE mo_shared_constants,      ONLY: molar_mass_C
     dsl4slm_Use_memory_a_sb
 
@@ -322,39 +322,40 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !> 1.0 calculate net change of organic matter cummulative down the profile 
-    !! note the omission of woody litter in the first layer, which is assumed not to be part of the profile 
-    !! 
-    particle_fluxrate(:,1) = soil_depth_sl(:,1) * & 
-          (sb_formation%soluable_litter%carbon(:,1)  - sb_loss%soluable_litter%carbon(:,1) + & 
-           sb_formation%polymeric_litter%carbon(:,1) - sb_loss%polymeric_litter%carbon(:,1) + & 
-           sb_formation%dom%carbon(:,1)              - sb_loss%dom%carbon(:,1) + & 
-           sb_formation%dom_assoc%carbon(:,1)        - sb_loss%dom_assoc%carbon(:,1) + & 
-           sb_formation%fungi%carbon(:,1)            - sb_loss%fungi%carbon(:,1) + & 
-           sb_formation%mycorrhiza%carbon(:,1)       - sb_loss%mycorrhiza%carbon(:,1) + & 
-           sb_formation%microbial%carbon(:,1)        - sb_loss%microbial%carbon(:,1) + & 
-           sb_formation%residue%carbon(:,1)          - sb_loss%residue%carbon(:,1) + & 
-           sb_formation%residue_assoc%carbon(:,1)    - sb_loss%residue_assoc%carbon(:,1))
-          
+    !> 1.0 calculate net change of organic matter cummulative down the profile (kg/m2/dtime)
+    !! note the omission of woody litter in the first layer, which is assumed not to be part of the profile
+    !!
+    particle_fluxrate(:,1) = soil_depth_sl(:,1) * &
+           (sb_formation%soluable_litter%carbon(:,1)  - sb_loss%soluable_litter%carbon(:,1) + &
+           sb_formation%polymeric_litter%carbon(:,1) - sb_loss%polymeric_litter%carbon(:,1) + &
+           sb_formation%dom%carbon(:,1)              - sb_loss%dom%carbon(:,1) + &
+           sb_formation%dom_assoc%carbon(:,1)        - sb_loss%dom_assoc%carbon(:,1) + &
+           sb_formation%fungi%carbon(:,1)            - sb_loss%fungi%carbon(:,1) + &
+           sb_formation%mycorrhiza%carbon(:,1)       - sb_loss%mycorrhiza%carbon(:,1) + &
+           sb_formation%microbial%carbon(:,1)        - sb_loss%microbial%carbon(:,1) + &
+           sb_formation%residue%carbon(:,1)          - sb_loss%residue%carbon(:,1) + &
+           sb_formation%residue_assoc%carbon(:,1)    - sb_loss%residue_assoc%carbon(:,1)) / &
+           (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
+
     DO isoil = 2,options%nsoil_sb
-       particle_fluxrate(:,isoil) = particle_fluxrate(:,isoil-1) + soil_depth_sl(:,isoil) * & 
-          (sb_formation%soluable_litter%carbon(:,isoil)  - sb_loss%soluable_litter%carbon(:,isoil) + & 
-           sb_formation%polymeric_litter%carbon(:,isoil) - sb_loss%polymeric_litter%carbon(:,isoil) + & 
-           sb_formation%woody_litter%carbon(:,isoil)     - sb_loss%woody_litter%carbon(:,isoil) + & 
-           sb_formation%dom%carbon(:,isoil)              - sb_loss%dom%carbon(:,isoil) + & 
-           sb_formation%dom_assoc%carbon(:,isoil)        - sb_loss%dom_assoc%carbon(:,isoil) + & 
-           sb_formation%fungi%carbon(:,isoil)            - sb_loss%fungi%carbon(:,isoil) + & 
-           sb_formation%mycorrhiza%carbon(:,isoil)       - sb_loss%mycorrhiza%carbon(:,isoil) + & 
-           sb_formation%microbial%carbon(:,isoil)        - sb_loss%microbial%carbon(:,isoil) + & 
-           sb_formation%residue%carbon(:,isoil)          - sb_loss%residue%carbon(:,isoil) + & 
-           sb_formation%residue_assoc%carbon(:,isoil)    - sb_loss%residue_assoc%carbon(:,isoil))
-   ENDDO  
-  
-   !> 2.0 convert change in pools in density change and thus transport term 
-   !! bulk-density is converted to mol C
+       particle_fluxrate(:,isoil) = particle_fluxrate(:,isoil-1) + soil_depth_sl(:,isoil) * &
+          (sb_formation%soluable_litter%carbon(:,isoil)  - sb_loss%soluable_litter%carbon(:,isoil) + &
+           sb_formation%polymeric_litter%carbon(:,isoil) - sb_loss%polymeric_litter%carbon(:,isoil) + &
+           sb_formation%woody_litter%carbon(:,isoil)     - sb_loss%woody_litter%carbon(:,isoil) + &
+           sb_formation%dom%carbon(:,isoil)              - sb_loss%dom%carbon(:,isoil) + &
+           sb_formation%dom_assoc%carbon(:,isoil)        - sb_loss%dom_assoc%carbon(:,isoil) + &
+           sb_formation%fungi%carbon(:,isoil)            - sb_loss%fungi%carbon(:,isoil) + &
+           sb_formation%mycorrhiza%carbon(:,isoil)       - sb_loss%mycorrhiza%carbon(:,isoil) + &
+           sb_formation%microbial%carbon(:,isoil)        - sb_loss%microbial%carbon(:,isoil) + &
+           sb_formation%residue%carbon(:,isoil)          - sb_loss%residue%carbon(:,isoil) + &
+           sb_formation%residue_assoc%carbon(:,isoil)    - sb_loss%residue_assoc%carbon(:,isoil)) / &
+           (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
+   ENDDO
+
+   !> 2.0 convert change in pools in density change and thus transport term (m per dtime)
+   !!
    WHERE(bulk_dens_corr_sl(:,:) > eps8)
-      particle_fluxrate(:,:) = particle_fluxrate(:,:) / & 
-            (bulk_dens_corr_sl(:,:) * carbon_per_dryweight_SOM / molar_mass_C * 1000._wp) 
+      particle_fluxrate(:,:) = particle_fluxrate(:,:) / rho_bulk_org
    ENDWHERE
 
   END FUNCTION calc_particle_fluxrate
@@ -625,9 +626,9 @@ CONTAINS
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
     DO isoil = 1,options%nsoil_sb-1
        WHERE(particle_fluxrate(:,isoil)>0.0_wp)
-          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil) * soil_depth_sl(:,isoil)
+          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil)
        ELSEWHERE
-          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil+1) * soil_depth_sl(:,isoil+1)
+          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil+1)
        ENDWHERE
        transport(:,isoil)   = transport(:,isoil)   - hlp1(:) / soil_depth_sl(:,isoil)
        transport(:,isoil+1) = transport(:,isoil+1) + hlp1(:) / soil_depth_sl(:,isoil+1)
