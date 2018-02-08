@@ -387,6 +387,16 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_ptr(tmp_fract)
 
+!@todo: later this only needs to go in the output when debugging
+    CALL jsb_add_var(TRIM(varlist_name), 'delta_fract', tmp_fract,                                 &
+      & hgrid, surface,                                                                                         &
+      & t_cf('delta_tile_fraction', '',                                                                          &
+      &      'Change for current operation on fraction of '//TRIM(parent_tile_name)//' in this tile '//TRIM(this%name)), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & initval_r=0.0_wp, isteptype=isteptype)
+    CALL this%Set_delta_fract_ptr(tmp_fract)
+
     CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
@@ -429,12 +439,15 @@ CONTAINS
       CALL this%Set_fraction(fract=tmp_fract(:,:))
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
-    ELSEIF (this%fract_varname == 'allFirst') THEN !TODO-JN-COHORTS
+    ELSEIF (this%fract_varname == 'allFirst') THEN !TODO-JN-COHORTS 
+      ! test if 1.e-10_wp is required, would be unfortune! ++ if should be a constant! 
       IF(ASSOCIATED(this%parent)) THEN
         IF (this%Is_first_child()) THEN
-          tmp_fract(:,:) = 1._wp !- 0.005_wp * (REAL(this%parent%Get_no_of_children(), wp) - 1._wp)
+          tmp_fract(:,:) = 1._wp
+!          tmp_fract(:,:) = 1._wp - 1.e-10_wp * (REAL(this%parent%Get_no_of_children(), wp) - 1._wp)
         ELSE
-          tmp_fract(:,:) = 0._wp !0.005_wp
+          tmp_fract(:,:) = 0_wp
+!          tmp_fract(:,:) = 1.e-10_wp
         END IF
       ELSE
         tmp_fract(:,:) = 1._wp

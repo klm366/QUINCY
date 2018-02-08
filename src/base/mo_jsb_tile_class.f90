@@ -63,6 +63,7 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
     REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
+    REAL(wp),                   POINTER    :: delta_fract(:,:)     !< Current operation delta fract of this tile (rel. to parent) 
     REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to parent)
     REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
@@ -98,6 +99,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Get_fraction_2d
     GENERIC                                :: Get_fraction => Get_fraction_1d, Get_fraction_2d
     PROCEDURE                              :: Set_fract_ptr
+    PROCEDURE                              :: Set_delta_fract_ptr
     PROCEDURE                              :: Set_fract_old_ptr
     PROCEDURE                              :: Set_fract_max_ptr
     PROCEDURE                              :: Set_fract_max_old_ptr
@@ -552,6 +554,15 @@ CONTAINS
     this%fract => ptr
 
   END SUBROUTINE Set_fract_ptr
+
+  SUBROUTINE Set_delta_fract_ptr(this, ptr)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+    REAL(wp), POINTER                         :: ptr(:,:)
+
+    this%delta_fract => ptr
+
+  END SUBROUTINE Set_delta_fract_ptr
 
   SUBROUTINE Set_fract_old_ptr(this, ptr)
 
