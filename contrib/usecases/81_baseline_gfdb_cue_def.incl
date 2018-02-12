@@ -75,4 +75,4 @@ flag_read_dC14="T"              # either use forcing dC14 or the prescribed defa
 n_deposition_scheme="dynamic"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="dynamic"      # options: none constant dynamic (p_srf_down)
 
-queue="io"                  # available queues: all BTM io mpi_large  (for information on the queues run at pc026/28: bqueues -l)
+queue="io_perform"              # io_perform selects only the new INTEL3 nodes: lshosts
