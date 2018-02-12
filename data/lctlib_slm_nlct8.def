@@ -241,7 +241,7 @@ k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
         
 #k2_fruit_alloc: maximum fraction of biomass growth going to fruits         
 # Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
-k2_fruit_alloc 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2
         
 #allom_k1: paramter in height diameter relationship        
 allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0

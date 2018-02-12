@@ -455,14 +455,6 @@ CONTAINS
           DO i=1,nlct
             lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
           END DO
-        !! k2_fruit_alloc
-          DO i=1,nlct
-            IF(lctlib(i)%growthform /= igrass) THEN
-              lctlib(i)%k2_fruit_alloc = 0.1_wp 
-            ELSE
-              lctlib(i)%k2_fruit_alloc = 0.2_wp 
-            END IF
-          END DO
         !! k_root
           DO i=1,nlct
             lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_wp
