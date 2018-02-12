@@ -129,7 +129,7 @@ CONTAINS
                               )
 
         IF (ANY( air_qsat(:) > 0.99_wp*HUGE(1._wp) )) THEN
-           CALL finish(TRIM(routine), 'air_qsat nearly 1.')
+           CALL finish(TRIM(routine), 'lookup table overflow.')
         END IF
 
     relative_humidity_air(:) = 100._wp * air_moisture(:)                                       &
