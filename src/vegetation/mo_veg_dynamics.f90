@@ -11,7 +11,7 @@ MODULE mo_veg_dynamics
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                 ONLY: wp, eps4
+  USE mo_kind,                 ONLY: wp, eps4, eps8
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message
 
@@ -38,10 +38,12 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process configurations (t_PROC_config)
+    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
 
     ! Use of process memories
@@ -66,6 +68,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
@@ -73,7 +76,7 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
     ! RAD_
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! PHENO_
     dsl4jsb_Logical2D_onChunk   :: growing_season
     ! SOIL_
@@ -98,6 +101,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
+    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
@@ -105,7 +109,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)  ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)       ! in
     ! ---------------------------
@@ -144,18 +148,29 @@ CONTAINS
                             veg_litterfall                              , & ! inout
                             mortality_rate(:)                           )   ! out
 
+    !> 1.1 Calculate stand harvest_rate and veg\%litterfall
+    !! 
+    IF(base_config%l_do_stand_replacing_harvest)THEN 
+       CALL calc_veg_harvest(options                                     , & ! in
+                             veg_pool                                    , &
+                             veg_litterfall                              , & ! inout
+                             mortality_rate(:)                           )   ! out
+    ENDIF
+
+
     !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
     !! 
-    IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics) THEN 
+    IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics.AND..NOT.base_config%l_do_stand_replacing_harvest) THEN 
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
       CALL calc_veg_establishment(options                         , & ! in
                                   lctlib                          , & 
+                                  dsl4jsb_Config(ASSIMI_)%ncanopy , &
                                   w_soil_root_theta(:)            , &
                                   growing_season(:)               , &
                                   t_air_week_mavg(:)              , &
-                                  rfr_ratio_boc_tvegdyn_mavg      , &     
+                                  rfr_ratio_boc_tvegdyn_mavg(:)   , &
                                   veg_pool%seed_bed               , &
                                   veg_establishment               )   ! out
 
@@ -216,6 +231,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc)              :: boc_cbalance
+    REAL(wp), DIMENSION(options%nc)              :: fscal 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
 
 
@@ -248,7 +264,15 @@ CONTAINS
     !> 3.0 calculate litter fall from mortality
     !!
     !! for all tissues but seed_bed
-    veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * mortality_rate(:)
+    WHERE(veg_pool%leaf%carbon(:) > eps8)
+       fscal(:) = (veg_pool%leaf%carbon(:) - veg_litterfall%leaf%carbon(:)) / veg_pool%leaf%carbon(:)
+    ELSEWHERE
+       fscal(:) = 0.0_wp 
+    ENDWHERE
+    WHERE(mortality_rate(:)<fscal(:))
+       fscal(:) = mortality_rate
+    ENDWHERE 
+    veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * fscal(:)
     veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * mortality_rate(:)
     veg_litterfall%coarse_root  = veg_litterfall%coarse_root  + veg_pool%coarse_root  * mortality_rate(:)
     veg_litterfall%sap_wood     = veg_litterfall%sap_wood     + veg_pool%sap_wood     * mortality_rate(:)
@@ -259,6 +283,53 @@ CONTAINS
 
   END SUBROUTINE calc_veg_mortality
 
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task of update_veg_dynamics
+  ! 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate vegetation harvest 
+  !!
+  !! veg\%litterfall
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_veg_harvest(options                   , &
+                              veg_pool                  , &
+                              veg_litterfall            , &
+                              mortality_rate)
+
+    USE mo_base_constants
+    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_veg_constants,         ONLY: wood_extraction_rate
+    dsl4slm_Use_memory_a_veg
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    TYPE(t_jsb_task_options),     INTENT(in)    :: options                  !< model options
+    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_pool                 !< vegetation pool
+    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_litterfall           !< vegetation litterfall
+    REAL(wp), DIMENSION(:),       INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
+    ! ---------------------------
+    ! 0.2 Local
+    REAL(wp), DIMENSION(options%nc)             :: rest_mortality_rate 
+    REAL(wp)                                    :: export_rate
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_harvest'
+
+    !> 1.0 calculate rest mortality to achieve stand-replacing harvest
+    !!
+    rest_mortality_rate(:) = 1._wp - mortality_rate(:)
+
+    veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * rest_mortality_rate(:)
+    veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * rest_mortality_rate(:)
+    veg_litterfall%coarse_root  = veg_litterfall%coarse_root  + veg_pool%coarse_root  * rest_mortality_rate(:)
+    veg_litterfall%sap_wood     = veg_litterfall%sap_wood     + veg_pool%sap_wood     * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%heart_wood   = veg_litterfall%heart_wood   + veg_pool%heart_wood   * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%labile       = veg_litterfall%labile       + veg_pool%labile       * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%reserve      = veg_litterfall%reserve      + veg_pool%reserve      * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%fruit        = veg_litterfall%fruit        + veg_pool%fruit        * rest_mortality_rate(:)
+
+    mortality_rate(:) = 1.0_wp
+
+  END SUBROUTINE calc_veg_harvest
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
@@ -268,13 +339,14 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_establishment(options                   , &
-                                    lctlib                    , &
-                                    w_soil_root_theta         , &
-                                    growing_season            , &
-                                    t_air_week_mavg           , &
-                                    rfr_ratio_boc_tvegdyn_mavg, &
-                                    veg_pool_seed_bed         , &
+  SUBROUTINE calc_veg_establishment(options             , &
+                                    lctlib              , &
+                                    ncanopy             , &
+                                    w_soil_root_theta   , &
+                                    growing_season      , &
+                                    t_air_week_mavg     , &
+                                    rfr_ratio_boc_tvegdyn_mavg , &
+                                    veg_pool_seed_bed   , &
                                     veg_establishment )
 
 
@@ -288,20 +360,24 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),        INTENT(in)    :: options            !< model options
-    TYPE(t_lctlib_element),          INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
-    LOGICAL , DIMENSION(options%nc), INTENT(in)    :: growing_season     !< growing season 
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg !< red-farred ratio at the bottom of the canopy  
-    TYPE(t_veg_element_a),           INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
-    TYPE(t_veg_element_a),           INTENT(inout) :: veg_establishment  !< vegetation establishment
+    TYPE(t_jsb_task_options),       INTENT(in)    :: options            !< model options
+    TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
+    INTEGER,                        INTENT(in)    :: ncanopy            !< number of canopy layer
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
+    LOGICAL , DIMENSION(:),         INTENT(in)    :: growing_season     !< growing season 
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg !< red-farred ratio at the bottom of the canopy 
+    TYPE(t_veg_element_a),          INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
+    TYPE(t_veg_element_a),          INTENT(inout) :: veg_establishment  !< vegetation establishment
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc)               :: establishment_rate , &
+                                                     tc                 , &
+                                                     rfr_ratio          , &
                                                      flim_light         , &
                                                      flim_moist         , &
                                                      flim_temp
+    INTEGER                                       :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
 
 

@@ -75,15 +75,19 @@ mo_veg_dynamics.o: \
   mo_exception.o \
   mo_jsb_control.o \
   mo_base_memory.o \
+  mo_base_config_class.o \
+  mo_assimi_config_class.o \
   mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_shared_constants.o \
+  mo_rad_memory_class.o \
   mo_veg_memory_class.o \
   mo_veg_config_class.o \
   mo_veg_constants.o \
+  mo_soil_memory_class.o \
   mo_pheno_memory_class.o
 
 mo_veg_util.o: \

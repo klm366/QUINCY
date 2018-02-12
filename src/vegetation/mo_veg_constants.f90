@@ -117,7 +117,8 @@ MODULE mo_veg_constants
       lambda_est_temp      ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
       k_est_temp           ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
       lambda_est_moist     ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
-      k_est_moist                  !< parameter in the Weibull function controlling moisture-limited establishment 
+      k_est_moist          ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
+      wood_extraction_rate         !< fraction of wood removed from site after harvesting
 
   ! other
   REAL(wp), SAVE :: & 
@@ -239,6 +240,7 @@ CONTAINS
       k_est_temp         = 4.0_wp  
       lambda_est_moist   = 10._wp  
       k_est_moist        = 2.0_wp  
+      wood_extraction_rate = 0.8_wp
 
   ! other
       carbon_per_dryweight_leaf   = 0.48_wp  

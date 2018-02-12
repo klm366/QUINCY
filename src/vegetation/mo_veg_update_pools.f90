@@ -384,6 +384,25 @@ CONTAINS
 
        dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
 
+       ! in case of complete harvest, set all pools to zero (to account for wood extraction, which would
+       ! otherwise leave some wood, and reset the key plant diagnostics
+       IF(base_config%l_do_stand_replacing_harvest) THEN 
+          veg_pool%leaf        = veg_pool%leaf * 0.0_wp
+          veg_pool%fine_root   = veg_pool%fine_root * 0.0_wp
+          veg_pool%coarse_root = veg_pool%coarse_root * 0.0_wp
+          veg_pool%sap_wood    = veg_pool%sap_wood * 0.0_wp
+          veg_pool%heart_wood  = veg_pool%heart_wood * 0.0_wp
+          veg_pool%fruit       = veg_pool%fruit * 0.0_wp
+          veg_pool%labile      = veg_pool%labile * 0.0_wp
+          veg_pool%reserve     = veg_pool%reserve * 0.0_wp
+          height(:)            = 0.0_wp
+          diameter(:)          = 0.0_wp
+          dens_ind(:)          = 0.0_wp
+          lai(:)               = 0.0_wp
+          mean_leaf_age(:)     = 0.0_wp
+          dphi(:)              = w_soil_root_pot(:) - lctlib%phi_leaf_min 
+       ENDIF
+
     END SELECT
 
     !> 3.0 Given current vegetation pools, update canopy layers 
