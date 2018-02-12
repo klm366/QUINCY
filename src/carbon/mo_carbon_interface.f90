@@ -342,13 +342,13 @@ CONTAINS
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Set model and process config and memory
     model => Get_model(tile%owner_model_id)
