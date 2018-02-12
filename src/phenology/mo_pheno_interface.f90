@@ -191,7 +191,8 @@ CONTAINS
   SUBROUTINE update_phenology_logrop(tile, options)
 
     ! Declarations
-    USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change
+    USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, update_per_tile_vars, &
+                                       calculate_current_c_state_sum, check_carbon_conservation_for_operation
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
                                        track_max_green_pool, derive_maxlai_according_to_allometric_relationships
@@ -216,7 +217,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)        :: w_soil_filling,  &
                                               t_air_in_Celcius, &
                                               LaiMax_corrected, &
-                                              veg_frac_correction_old
+                                              veg_frac_correction_old, &
+                                              old_c_state_sum, dummy_flux
 
     TYPE(t_jsb_grid),  POINTER             :: grid
 
@@ -275,6 +277,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: leafC
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
     dsl4jsb_Real2D_onChunk :: veg_frac_correction
+
+    dsl4jsb_Real2D_onChunk :: cconservation_allom
 
     dsl4jsb_Real2D_onChunk :: prev_veg_c_at_max_green
     dsl4jsb_Real2D_onChunk :: annual_veg_c_inc
@@ -339,6 +343,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC)                   ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)     ! inout
+
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    cconservation_allom)     ! inout
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    prev_veg_c_at_max_green)     ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    annual_veg_c_inc)            ! inout
@@ -450,9 +456,16 @@ CONTAINS
           & maxLAI_allom(:)                           & ! <- InOut
           & )
 
-        ! redistribute 
-        CALL rescale_carbon_upon_reference_area_change(tile, options, veg_frac_correction_old, veg_frac_correction)
 
+        ! redistribute 
+        CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+
+        CALL rescale_carbon_upon_reference_area_change(tile, options, veg_frac_correction_old, veg_frac_correction)
+        CALL update_per_tile_vars(tile, options)
+
+        dummy_flux = 0._wp
+        CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+          & dummy_flux(:), cconservation_allom(:))
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day

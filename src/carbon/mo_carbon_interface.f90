@@ -50,7 +50,7 @@ MODULE mo_carbon_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                                                       &
-               & update_per_tile_c_states,                                                 &
+               & update_per_tile_vars,                                                 &
                & update_delta_carbon_of_source_and_sink_tile_upon_area_shift,              &
                & update_carbon_states_with_delta_carbon,                                   &
                & rescale_carbon_upon_reference_area_change, calculate_current_c_state_sum, &
@@ -229,65 +229,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2         ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)^2/m(canopy)]
     !
-    ! TA
-    dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
-    dsl4jsb_Real2D_onChunk ::  Cpool_green_ta        ! C-pool for leaves, fine roots, vegetative organs and other green
-                                                     ! .. (living) parts of vegetation [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_reserve_ta      ! C-pool for carbohydrate reserve (sugars, starches) that allows plants
-                                                     ! .. to survive bad times[mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_woods_ta        ! C-pool for stems, thick roots and other (dead) structural material of
-                                                     ! .. living plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_crop_harvest_ta ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]     
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_green_ag_ta ! C-pool for above ground non-woody litter especially from leaves
-                                                     !     [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_green_bg_ta ! C-pool for below ground non-woody litter especially from fine roots
-                                                     !     [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_wood_ag_ta  ! C-pool for litter originating from above ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_wood_bg_ta  ! C-pool for litter originating from below ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_slow_ta         ! C-pool for below ground organic material (coming from the litter
-                                                     !     pools) [mol(C)/m^2(canopy)]
-    !SIZE CLASS 1
-    dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag1_ta     ! Yasso above ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_water_ag1_ta    ! Yasso above ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_ag1_ta  ! Yasso above ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_ag1_ta  ! Yasso above ground litter-pool for non-soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_acid_bg1_ta     ! Yasso below ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_water_bg1_ta    ! Yasso below ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg1_ta  ! Yasso below ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg1_ta  ! Yasso below ground litter-pool for non-soluble litter
-                                                      ! [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_humus_1_ta      ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)^2/m(canopy)]
-    !SIZE CLASS 2
-    dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag2_ta     ! Yasso above ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_water_ag2_ta    ! Yasso above ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_ag2_ta  ! Yasso above ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_ag2_ta  ! Yasso above ground litter-pool for non-soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_acid_bg2_ta     ! Yasso below ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_water_bg2_ta    ! Yasso below ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2_ta  ! Yasso below ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2_ta  ! Yasso below ground litter-pool for non-soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  YCpool_humus_2_ta      ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)^2/m(canopy)]
-    !
-    !
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
     !dsl4jsb_Real2D_onChunk ::  NPP_pot_Rate_acc      ! averaged NPP rate over one day [mol(C)/m^2(canopy) s]
@@ -331,16 +272,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_soilresp_ta  ! .. biosphere (due to NPP, soil respiration and
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_herbivory_ta ! .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)] 
 
-
-    ! This is on tile area:
-    dsl4jsb_Real2D_onChunk ::  soil_respiration_ta      ! out
-    dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta      ! out
-    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta      ! out
-    dsl4jsb_Real2D_onChunk ::  NPP_flux_correction_ta   ! out
-    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean_ta          ! out
-    dsl4jsb_Real2D_onChunk ::  litter_flux_ta           ! out
-    dsl4jsb_Real2D_onChunk ::  root_exudates_ta         ! out
-    dsl4jsb_Real2D_onChunk ::  Cflux_herbivory_ta       ! out
 
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
@@ -425,37 +356,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! inout 
     !
-    ! This is on tile area:
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green_ta )           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve_ta )         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods_ta )           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest_ta)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_green_ag_ta ) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_green_bg_ta ) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_wood_ag_ta  ) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_wood_bg_ta  ) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_slow_ta            ) ! inout
-    !SIZE CLASS 1
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1_ta)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1_ta)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1_ta)     ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta)  ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1_ta)        ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1_ta)       ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1_ta)     ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta)  ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1_ta)         ! inout 
-    !SIZE CLASS 2
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2_ta)       ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2_ta)      ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2_ta)    ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2_ta)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2_ta)      ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2_ta)    ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta) ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2_ta)        ! inout
     !
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
@@ -483,19 +383,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory )           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_LG  )       ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_2_atm )     ! inout
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_npp_ta )         ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_soilresp_ta )    ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_herbivory_ta )   ! out
-
-    ! This is on tile area:
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_ta )          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean_ta )          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean_ta )          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction_ta)        ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean_ta )              ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  litter_flux_ta )               ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates_ta )             ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_ta )           ! out
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
     !dsl4jsb_Get_var2D_onChunk(CARBON_,  frac_litter_wood_new )
@@ -712,32 +603,7 @@ CONTAINS
 
        ! C pools
 
-       CALL update_per_tile_c_states(tile, options)
-
-       C_sum_natural_ta =   Cpool_green_ta           + Cpool_woods_ta            &
-                          + Cpool_reserve_ta         + Cpool_crop_harvest_ta     &
-                          + YCpool_acid_ag1_ta       + YCpool_acid_ag2_ta        &
-                          + YCpool_water_ag1_ta      + YCpool_water_ag2_ta       &
-                          + YCpool_ethanol_ag1_ta    + YCpool_ethanol_ag2_ta     &
-                          + YCpool_nonsoluble_ag1_ta + YCpool_nonsoluble_ag2_ta  &
-                          + YCpool_acid_bg1_ta       + YCpool_acid_bg2_ta        &
-                          + YCpool_water_bg1_ta      + YCpool_water_bg2_ta       &
-                          + YCpool_ethanol_bg1_ta    + YCpool_ethanol_bg2_ta     &
-                          + YCpool_nonsoluble_bg1_ta + YCpool_nonsoluble_bg2_ta  &
-                          + YCpool_humus_1_ta        + YCpool_humus_2_ta
-
-       ! C fluxes
-       soil_respiration_ta         = soil_respiration      * veg_frac_correction * fract_fpc_max
-       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_frac_correction * fract_fpc_max
-       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction * fract_fpc_max
-       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction * fract_fpc_max
-       NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction * fract_fpc_max
-       GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction * fract_fpc_max
-       litter_flux_ta              = litter_flux           * veg_frac_correction * fract_fpc_max
-       root_exudates_ta            = root_exudates         * veg_frac_correction * fract_fpc_max
-       Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction * fract_fpc_max
-       ! Cflux_herbivory_LG_ta      = Cflux_herbivory_LG    * veg_frac_correction * fract_fpc_max
-       ! Cflux_herbivory_2_atm_ta   = Cflux_herbivory_2_atm * veg_frac_correction * fract_fpc_max
+       CALL update_per_tile_vars(tile, options)
 
       ! Cflux_herbivory_2_atm and soil_respiration are negative (fluxes away from land)
       ! therefore + here instead of -
@@ -983,8 +849,6 @@ CONTAINS
     YCpool_ethanol_bg2    = YCpool_ethanol_bg2    * (oldRefArea / newRefArea)
     YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2 * (oldRefArea / newRefArea)
     YCpool_humus_2        = YCpool_humus_2        * (oldRefArea / newRefArea)
-
-    CALL update_per_tile_c_states(tile, options)
 
   END SUBROUTINE rescale_carbon_upon_reference_area_change
 
@@ -1249,10 +1113,11 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_per_tile_c_states(tile, options)
+  SUBROUTINE update_per_tile_vars(tile, options)
 
     USE mo_exception,           ONLY: finish
 !    USE mo_carbon_process,      ONLY: calc_per_tile_c_states
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -1262,7 +1127,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':update_per_tile_c_states'
+    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':update_per_tile_vars'
     INTEGER                         :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green
@@ -1290,6 +1155,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
 
+    dsl4jsb_Real2D_onChunk ::  soil_respiration
+    dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean
+    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean
+    dsl4jsb_Real2D_onChunk ::  NPP_flux_correction
+    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
+    dsl4jsb_Real2D_onChunk ::  litter_flux
+    dsl4jsb_Real2D_onChunk ::  root_exudates
+    dsl4jsb_Real2D_onChunk ::  Cflux_herbivory
+    dsl4jsb_Real2D_onChunk ::  Cflux_herbivory_2_atm
+
     dsl4jsb_Real2D_onChunk ::  Cpool_green_ta
     dsl4jsb_Real2D_onChunk ::  Cpool_reserve_ta 
     dsl4jsb_Real2D_onChunk ::  Cpool_woods_ta 
@@ -1314,6 +1189,21 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2_ta
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2_ta
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2_ta
+
+    dsl4jsb_Real2D_onChunk ::  soil_respiration_ta      ! out
+    dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta      ! out
+    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta      ! out
+    dsl4jsb_Real2D_onChunk ::  NPP_flux_correction_ta   ! out
+    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean_ta          ! out
+    dsl4jsb_Real2D_onChunk ::  litter_flux_ta           ! out
+    dsl4jsb_Real2D_onChunk ::  root_exudates_ta         ! out
+    dsl4jsb_Real2D_onChunk ::  Cflux_herbivory_ta       ! out
+
+    dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_npp_ta
+    dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_soilresp_ta
+    dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_herbivory_ta
+
+    dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
 
     dsl4jsb_Real2D_onChunk ::  veg_frac_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
@@ -1350,6 +1240,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! inout 
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration)          ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean)          ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean)          ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean)              ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  litter_flux)               ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates)             ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory)           ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_2_atm)     ! out
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_npp_ta)        ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_soilresp_ta)   ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_herbivory_ta)  ! out
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green_ta )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve_ta )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods_ta )               ! inout
@@ -1374,6 +1278,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2_ta)        ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2_ta)            ! inout 
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_ta )          ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean_ta )          ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean_ta )          ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction_ta)        ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean_ta )              ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  litter_flux_ta )               ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates_ta )             ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_ta )           ! out
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )               ! in
@@ -1402,7 +1317,45 @@ CONTAINS
     YCpool_nonsoluble_bg2_ta = YCpool_nonsoluble_bg2 * veg_frac_correction * fract_fpc_max
     YCpool_humus_2_ta        = YCpool_humus_2        * veg_frac_correction * fract_fpc_max
 
-  END SUBROUTINE update_per_tile_c_states
+    C_sum_natural_ta =   Cpool_green_ta           + Cpool_woods_ta            &
+                      + Cpool_reserve_ta         + Cpool_crop_harvest_ta     &
+                      + YCpool_acid_ag1_ta       + YCpool_acid_ag2_ta        &
+                      + YCpool_water_ag1_ta      + YCpool_water_ag2_ta       &
+                      + YCpool_ethanol_ag1_ta    + YCpool_ethanol_ag2_ta     &
+                      + YCpool_nonsoluble_ag1_ta + YCpool_nonsoluble_ag2_ta  &
+                      + YCpool_acid_bg1_ta       + YCpool_acid_bg2_ta        &
+                      + YCpool_water_bg1_ta      + YCpool_water_bg2_ta       &
+                      + YCpool_ethanol_bg1_ta    + YCpool_ethanol_bg2_ta     &
+                      + YCpool_nonsoluble_bg1_ta + YCpool_nonsoluble_bg2_ta  &
+                      + YCpool_humus_1_ta        + YCpool_humus_2_ta
+
+    ! C fluxes
+    soil_respiration_ta         = soil_respiration      * veg_frac_correction * fract_fpc_max
+    NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction * fract_fpc_max
+    NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction * fract_fpc_max
+    NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction * fract_fpc_max
+    GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction * fract_fpc_max
+    litter_flux_ta              = litter_flux           * veg_frac_correction * fract_fpc_max
+    root_exudates_ta            = root_exudates         * veg_frac_correction * fract_fpc_max
+    Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction * fract_fpc_max
+
+!   CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
+!              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+!                   * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
+!                       - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
+    CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
+              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+                   * (NPP_act_yDayMean)) 
+
+    CO2_flx2atm_soilresp_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
+              (- veg_frac_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
+                   * soil_respiration      )                    ! .. soil respiration
+
+    CO2_flx2atm_herbivory_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
+              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+                   * Cflux_herbivory_2_atm )                    ! .. herbivory
+
+  END SUBROUTINE update_per_tile_vars
 
 
   ! ================================================================================================================================
@@ -1573,7 +1526,7 @@ CONTAINS
     CALL update_state_reset_delta(YCpool_nonsoluble_bg2(:), delta_YCpool_nonsoluble_bg2_rp(:), delta_fract(:), prev_fract(:))
     CALL update_state_reset_delta(YCpool_humus_2(:), delta_YCpool_humus_2_rp(:), delta_fract(:), prev_fract(:))
 
-    CALL update_per_tile_c_states(tile, options)
+    CALL update_per_tile_vars(tile, options)
 
   END SUBROUTINE update_carbon_states_with_delta_carbon
 

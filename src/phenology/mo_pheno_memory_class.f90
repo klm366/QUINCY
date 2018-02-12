@@ -89,6 +89,7 @@ MODULE mo_pheno_memory_class
       & biomass_per_individual,     & ! Biomass per individual according to allometric relationships [kg/tree]
       & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
       & leafC,                      & ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
+      & cconservation_allom,        & ! Tester for c conservation upon rescaling due to changed max lai 
       & maxLAI_allom,               & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]: 
                                       ! Current max LAI according to allometric relationships --> only changes ones a year!
 
@@ -402,6 +403,15 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
+          CALL jsb_add_var( mem, 'cconservation_allom', mem%cconservation_allom,              &
+            & hgrid, surface,                                                           &
+            & t_cf('cconservation_allom', 'mol(C) m-2(canopy)', &
+              & 'Test for c conservation on rescaling of c states for allom.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+            & prefix, suffix,                                                           &
+            & lrestart=.FALSE., initval_r=0.0_wp ) 
+
         END IF
 
       END IF

@@ -379,6 +379,7 @@ PROGRAM jsb4_driver
 IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, '***********************'
   print *, iblk
+  print *, old_c_state_sum(:,iblk)
   print *, - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
   print *, cconservation(:,iblk)
 ENDIF
