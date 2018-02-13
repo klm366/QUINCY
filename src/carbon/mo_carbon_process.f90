@@ -842,7 +842,7 @@ CONTAINS
     & YCpool_nonsoluble_bg2,        & ! inout
     & YCpool_humus_1,               & ! inout
     & YCpool_humus_2,               & ! inout
-    & carbon_2_atmos,               & ! out
+    & carbon_2_atmos                & ! out
     & )
 
     USE mo_carbon_constants,  ONLY : frac_green_aboveGround, frac_wood_aboveGround
