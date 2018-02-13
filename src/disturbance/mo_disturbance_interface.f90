@@ -445,8 +445,8 @@ CONTAINS
               & Cpool_green(:),                & ! inout
               & Cpool_woods(:),                & ! inout
               & Cpool_reserve(:),              & ! inout
-              & carbon_2_GreenLitterPools(:),  & ! inout
-              & carbon_2_WoodLitterPools(:),   & ! inout
+              & carbon_2_GreenLitterPools(:),  & ! out
+              & carbon_2_WoodLitterPools(:),   & ! out
               & YCpool_acid_ag1(:),            & ! inout
               & YCpool_water_ag1(:),           & ! inout
               & YCpool_ethanol_ag1(:),         & ! inout
@@ -502,7 +502,7 @@ CONTAINS
               & YCpool_nonsoluble_bg2(:),      & ! inout
               & YCpool_humus_1(:),             & ! inout
               & YCpool_humus_2(:),             & ! inout
-              & carbon_2_atmos_ta              & ! out
+              & carbon_2_atmos(:)              & ! out
               & )
           CASE (2) !! Arora & Boer algorithm
             CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
