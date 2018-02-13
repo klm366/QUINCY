@@ -8,36 +8,36 @@ lon <- as.numeric(Args[1])
 lat <- as.numeric(Args[2])
 year <- as.numeric(Args[3])
 
-library(ncdf)
+library(ncdf4)
 
 #function to creat cdf compliant files
 create_cdf<-function(year,lon,lat,timeout,timeindex,fdata,miss_val,nvar,
                       fname,flongname,funit,fprec,fname_cdf) {
 
   #create dimensions
-  dimLon<-dim.def.ncdf("longitude","degrees_east",lon,unlim=FALSE,create_dimvar=TRUE)
-  dimLat<-dim.def.ncdf("latitude","degrees_north",lat,unlim=FALSE,create_dimvar=TRUE)
-  dimTime<-dim.def.ncdf("time",paste("seconds since ",year[timeindex][1],"-01-01 00:00:00",sep=""),
+  dimLon<-ncdim_def("longitude","degrees_east",lon,unlim=FALSE,create_dimvar=TRUE)
+  dimLat<-ncdim_def("latitude","degrees_north",lat,unlim=FALSE,create_dimvar=TRUE)
+  dimTime<-ncdim_def("time",paste("seconds since ",year[timeindex][1],"-01-01 00:00:00",sep=""),
                       timeout,unlim=TRUE,create_dimvar=TRUE)
 
   #create variables
   forvarid<-list()
   for (v in 1:nvar) {
-    forvarid[[v]]<-var.def.ncdf(fname[v],funit[v],list(dimLon,dimLat,dimTime),
+    forvarid[[v]]<-ncvar_def(fname[v],funit[v],list(dimLon,dimLat,dimTime),
                                 missval=miss_val,longname=flongname[v],prec=fprec[v])
   }
 
   #create and write file
-  ncid<-create.ncdf(fname_cdf,forvarid)
+  ncid<-nc_create(fname_cdf,forvarid)
   for (v in 1:nvar) {
-     put.var.ncdf(ncid,forvarid[[v]],fdata[v,timeindex])
-     att.put.ncdf(ncid,forvarid[[v]],"associate","time latitude longitude",prec="text")
-     att.put.ncdf(ncid,forvarid[[v]],"axis","TYX",prec="text")
+     ncvar_put(ncid,forvarid[[v]],fdata[v,timeindex])
+     ncatt_put(ncid,forvarid[[v]],"associate","time latitude longitude",prec="text")
+     ncatt_put(ncid,forvarid[[v]],"axis","TYX",prec="text")
   }
-  att.put.ncdf(ncid,0,"description","SLM derived FLUXNET simulation",prec='text')
-  att.put.ncdf(ncid,0,"conventions","CDF",prec='text')
-  att.put.ncdf(ncid,0,"date",date(),prec='text')
-  close.ncdf(ncid)
+  ncatt_put(ncid,0,"description","SLM derived FLUXNET simulation",prec='text')
+  ncatt_put(ncid,0,"conventions","CDF",prec='text')
+  ncatt_put(ncid,0,"date",date(),prec='text')
+  nc_close(ncid)
 
 }
 
@@ -46,7 +46,7 @@ fluxCfile<-read.table('vegfluxC_timestep.txt',header=T)
 fluxH2Ofile<-read.table('vegfluxH2O_timestep.txt',header=T)
 fluxEfile<-read.table('vegfluxEnergy_timestep.txt',header=T)
 
-miss_val<--9.33e30
+miss_val <- -9.33e30
 ntime<-length(fluxCfile[,1])
 dt=round((fluxCfile[3,1]-fluxCfile[2,1])*86400)
 
@@ -126,5 +126,3 @@ for (v in 1:nvar) {
 }
 
 create_cdf(year,lon,lat,timeaxis,,outvar,miss_val,nvar,outname,outlongname,outunit,outprec,fname)
-
-

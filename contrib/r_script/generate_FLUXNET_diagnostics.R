@@ -290,7 +290,7 @@ MODEL_FLUXNET_COMPUTE_GROUPING <- function(Value, TIME, period, method){
 
 
 #################################################################################################################
-# (4) Definition of a "model evalauation" function                                                              #
+# (4) Definition of a "model evaluation" function                                                               #
 #################################################################################################################
 
 MODEL_FLUXNET_EVALUATION <- function(method, MODEL_V, FLUXNET_V){
@@ -341,7 +341,7 @@ MODEL_FLUXNET_EVALUATION <- function(method, MODEL_V, FLUXNET_V){
 
 
 #################################################################################################################
-# (5) Here comes the main code -----------------------------------------------------------------------------------
+# (5) Here comes the main code ----------------------------------------------------------------------------------
 #################################################################################################################
 
 startyear <- as.numeric(Args[1])
@@ -350,7 +350,7 @@ endyear <- as.numeric(Args[2])
 work_dir <- try(system("pwd",intern=TRUE))
 
 setwd(work_dir)
-library(ncdf)
+library(ncdf4)
 library(lattice)
 
 # define required compared variables, can be added later.
@@ -397,11 +397,11 @@ variable_units_conversion <- array(c(1,1,
                                      , dim=c(2,nvar))
 
 # open input files
-datafile <- open.ncdf(paste("obs.nc", sep=""))
-modelfile <- open.ncdf(paste("slm4fluxnet.nc", sep=""))   # modelfile <- open.ncdf(paste("jsbach.halfhourly.nc", sep=""))
+datafile <- nc_open("obs.nc")
+modelfile <- nc_open("slm4fluxnet.nc")   # modelfile <- nc_open(paste("jsbach.halfhourly.nc", sep=""))
 
-TIME <- get.var.ncdf( modelfile, "time")
-TIME_F <- get.var.ncdf( datafile, "time" )
+TIME <- ncvar_get( modelfile, "time")
+TIME_F <- ncvar_get( datafile, "time" )
 TIME=seq(0,length(TIME)-1,1)/48
 
 # diagnostic output is saved in the file: exp_*/site_folder/std_out/out.*.txt
@@ -413,27 +413,27 @@ pdf('FLUXNET_diagnostics.pdf')
 #if(length(TIME) == length(TIME_F)) {
   for (V in 1:nvar){   
      print(variable_names[3,V])
-     MODEL_V <- get.var.ncdf( modelfile, variable_names[1,V] )
+     MODEL_V <- ncvar_get( modelfile, variable_names[1,V] )
      MODEL_V <- MODEL_V*(variable_units_conversion[1,V])       
      MODEL_V[MODEL_V<=-9999.]=NA
      if(variable_names[1,V]=='FAPAR') {
-       FLUXNET_V <- get.var.ncdf( datafile, 'fapar_seawifs' )[1:length(TIME)]
+       FLUXNET_V <- ncvar_get( datafile, 'fapar_seawifs' )[1:length(TIME)]
        FLUXNET_V[FLUXNET_V==-9999.]=NA 
-       FLUXNET_V_FLAG <- get.var.ncdf( datafile, 'fapar_seawifs_flag' )[1:length(TIME)]
+       FLUXNET_V_FLAG <- ncvar_get( datafile, 'fapar_seawifs_flag' )[1:length(TIME)]
        FLUXNET_V_FILTERED=FLUXNET_V
        FLUXNET_V_FILTERED[FLUXNET_V_FLAG>0.5]=NA
-       FLUXNET_V2 <- get.var.ncdf( datafile, 'fapar_modis' )[1:length(TIME)]
+       FLUXNET_V2 <- ncvar_get( datafile, 'fapar_modis' )[1:length(TIME)]
        FLUXNET_V2[FLUXNET_V2==-9999.]=NA 
-       FLUXNET_V2_FLAG <- get.var.ncdf( datafile, 'fapar_modis_flag' )[1:length(TIME)]
+       FLUXNET_V2_FLAG <- ncvar_get( datafile, 'fapar_modis_flag' )[1:length(TIME)]
        FLUXNET_V2_FILTERED=FLUXNET_V2
        FLUXNET_V2_FILTERED[FLUXNET_V2_FLAG>0.5]=NA
      } else {
-       FLUXNET_V <- get.var.ncdf( datafile, variable_names[2,V] )[1:length(TIME)]
+       FLUXNET_V <- ncvar_get( datafile, variable_names[2,V] )[1:length(TIME)]
        FLUXNET_V[FLUXNET_V==-9999.]=NA
        FLUXNET_V <- FLUXNET_V*(variable_units_conversion[2,V]) 
        FLUXNET_V_FILTERED=FLUXNET_V
        if(!variable_names[2,V]=='Rn'&!variable_names[2,V]=='Gc'&!variable_names[2,V]=='Ga'&!variable_names[2,V]=='WUE') {
-          FLUXNET_V_FLAG <- get.var.ncdf( datafile, paste(variable_names[2,V],'_flag',sep='') )[1:length(TIME)]
+          FLUXNET_V_FLAG <- ncvar_get( datafile, paste(variable_names[2,V],'_flag',sep='') )[1:length(TIME)]
           FLUXNET_V_FILTERED[FLUXNET_V_FLAG>1]=NA
        }
        
@@ -571,11 +571,11 @@ pdf('FLUXNET_diagnostics.pdf')
     }
   }
 
-  #MODEL_V <- get.var.ncdf( modelfile, 'vegC')
+  #MODEL_V <- ncvar_get( modelfile, 'vegC')
   #annual_values[1,nvar+1]=mean(MODEL_V,na.rm=TRUE)
-  #MODEL_V <- get.var.ncdf( modelfile, 'litterC')
+  #MODEL_V <- ncvar_get( modelfile, 'litterC')
   #annual_values[1,nvar+2]=mean(MODEL_V,na.rm=TRUE)
-  #MODEL_V <- get.var.ncdf( modelfile, 'soilC')
+  #MODEL_V <- ncvar_get( modelfile, 'soilC')
   #annual_values[1,nvar+3]=mean(MODEL_V,na.rm=TRUE)
 
 #} else {
