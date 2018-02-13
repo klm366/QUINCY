@@ -204,6 +204,12 @@ CONTAINS
       ! unit conversion: [kg m-2 s-1] -> [m3/s]
       discharge(:) = tile_fract(:) * (runoff(:) + drainage(:)) * area(:) / rhoh2o
 
+    CASE ('zero')
+      !
+      ! even more dummy: set discharge to zero
+      !
+      discharge(:) = 0._wp
+
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)
@@ -462,6 +468,10 @@ CONTAINS
         discharge_ocean(:,:) = 0._wp
       END WHERE
       discharge(:,:) = 0._wp
+
+    CASE ('zero')
+
+      discharge_ocean(:,:) = 0._wp
 
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
