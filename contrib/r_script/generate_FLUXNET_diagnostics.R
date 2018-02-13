@@ -1,14 +1,18 @@
 #!/usr/bin/env Rscript
-# Date: 08/07/2011
+# 
 # This script generates some simple diagnostics and plot for MODEL fluxnet simulations
-# written by Lihui Luo and Soenke Zaehle
-# contains:
-# MODEL_FLUXNET_GRAPHIC - function for ordinary fluxnet plots
-# MODEL_FLUXNET_GRAPHIC_FAPAR - function for satellite comparison plots
-# MODEL_FLUXNET_GRAPHIC_ERR - function for error bars 
-# MODEL_FLUXNET_COMPUTE_GROUPING - function to aggregate to daily, monthly, annual and diurnal cycle
-# MODEL_FLUXNET_EVALUATION - function to compute Root Mean Square Error, R sqaure, NSE, PBIAS, RSR
-# MODEL_FLUXNET_GRAPHIC_FORCING - function to compare forcing data with observation 
+# originally written by Lihui Luo and Soenke Zaehle
+
+# contains functions:
+# 
+# MODEL_FLUXNET_GRAPHIC          - ordinary fluxnet plots
+# MODEL_FLUXNET_GRAPHIC_FAPAR    - satellite comparison plots
+# MODEL_FLUXNET_GRAPHIC_FORCING  - compare forcing data with observation 
+# MODEL_FLUXNET_GRAPHIC_ERR      - error bars 
+# MODEL_FLUXNET_STATS_GRAPHIC    currently not used and commented out
+#
+# MODEL_FLUXNET_COMPUTE_GROUPING - aggregate to daily, monthly, annual and diurnal cycle
+# MODEL_FLUXNET_EVALUATION       - compute Root Mean Square Error, R sqaure, NSE, PBIAS, RSR
 # 
 
 
@@ -16,14 +20,10 @@
 # (1) Init                                                                                                      #
 #################################################################################################################
 
-# Cleaning
-rm(list = ls())     # clear objects  
-graphics.off()      # close graphics windows   
-
 # Set parameters
 Args <- commandArgs(trailingOnly=TRUE);
 if(length(Args) != 2) {
-  message("generate_FLUXNET_diagnostics.R requires startyear endyear as input. Terminating");quit()
+ message("requires startyear endyear as input (e.g. generate_FLUXNET_diagnostics.R 2000 2006). Terminating");quit()
 }
 
 
@@ -32,8 +32,9 @@ if(length(Args) != 2) {
 #################################################################################################################
 
 # Graphic Function (1) FLUXNET STUFF-----------------------------------------------------------------
-MODEL_FLUXNET_GRAPHIC <- function(MODEL_V, FLUXNET_V, TIME, mean, gtype, labs, variable_info, 
-   RMSE, NRMSE, RR, NSE, PBIAS, RSR){
+MODEL_FLUXNET_GRAPHIC <- function(MODEL_V, FLUXNET_V, TIME, 
+                                  mean, gtype, labs, variable_info, 
+                                  RMSE, NRMSE, RR, NSE, PBIAS, RSR){
 
 opar<-par( cex=0.6, pin=c(6.0, 2.0))
 
@@ -217,26 +218,26 @@ close.screen(all = TRUE)
 }
 
 # Graphic Function (5) Variables Statistics----------------------------------------------------------------------
-MODEL_FLUXNET_STATS_GRAPHIC <- function(stat_v, stat_name){
-  def.par <- par(no.readonly = TRUE)
-  nf <- layout(matrix(c(1,2,3,4,5,6),3,2,byrow=TRUE), heights=c(1,1,1), widths=c(3,1))
-  
-  for (V in 1:3){
-	
-    ymin <- min(as.numeric(as.vector(eval_stats[stat_v[V],,])), na.rm=TRUE)
-    ymax <- max(as.numeric(as.vector(eval_stats[stat_v[V],,])), na.rm=TRUE)
-    plot(1:nvar, eval_stats[stat_v[V],,1], ylim=c(ymin, ymax), xlab="", ylab=stat_name[V], main="Variables Statistics", type="o", col="red", xaxt = "n", yaxt="n")
-    axis(1, at=1:nvar, lab=variable_names[4,1:nvar])
-    axis(2)
-    box()
-    lines(1:nvar, eval_stats[stat_v[V],,2], type="o", col="blue")
-    lines(1:nvar, eval_stats[stat_v[V],,3], type="o", col="green")
-    lines(1:nvar, eval_stats[stat_v[V],,4], type="o", col="orange")
-    legend("topright", legend = stats_time, col=c("red", "blue", "green", "orange"), pch=21, bty="n")
-    boxplot(as.numeric(as.vector(eval_stats[stat_v[V],,])))	
-  }
-  par(def.par)
-}
+# MODEL_FLUXNET_STATS_GRAPHIC <- function(stat_v, stat_name){
+#   def.par <- par(no.readonly = TRUE)
+#   nf <- layout(matrix(c(1,2,3,4,5,6),3,2,byrow=TRUE), heights=c(1,1,1), widths=c(3,1))
+#   
+#   for (V in 1:3){
+# 	
+#     ymin <- min(as.numeric(as.vector(eval_stats[stat_v[V],,])), na.rm=TRUE)
+#     ymax <- max(as.numeric(as.vector(eval_stats[stat_v[V],,])), na.rm=TRUE)
+#     plot(1:nvar, eval_stats[stat_v[V],,1], ylim=c(ymin, ymax), xlab="", ylab=stat_name[V], main="Variables Statistics", type="o", col="red", xaxt = "n", yaxt="n")
+#     axis(1, at=1:nvar, lab=variable_names[4,1:nvar])
+#     axis(2)
+#     box()
+#     lines(1:nvar, eval_stats[stat_v[V],,2], type="o", col="blue")
+#     lines(1:nvar, eval_stats[stat_v[V],,3], type="o", col="green")
+#     lines(1:nvar, eval_stats[stat_v[V],,4], type="o", col="orange")
+#     legend("topright", legend = stat_name, col=c("red", "blue", "green", "orange"), pch=21, bty="n")
+#     boxplot(as.numeric(as.vector(eval_stats[stat_v[V],,])))	
+#   }
+#   par(def.par)
+# }
 
 
 #################################################################################################################
@@ -346,19 +347,19 @@ MODEL_FLUXNET_EVALUATION <- function(method, MODEL_V, FLUXNET_V){
 
 startyear <- as.numeric(Args[1])
 starttime <- paste(Args[1],"-01-01",sep='')
-endyear <- as.numeric(Args[2])
-work_dir <- try(system("pwd",intern=TRUE))
+endyear   <- as.numeric(Args[2])
+work_dir  <- try(system("pwd",intern=TRUE))
 
 setwd(work_dir)
 library(ncdf4)
 library(lattice)
 
 # define required compared variables, can be added later.
-nvar=11
-aggregation_level = c( "perhour", "daily", "monthly", "annual" )
-stats_time <- c("halfhourly", "daily", "monthly")
-annual_values=array(NA,c(3,nvar+3))
-eval_stats=array(NA, dim=c(14,nvar,4))
+nvar <- 11
+aggregation_level <- c("perhour", "daily", "monthly", "annual")   # possible options: perhour, perhour_15, daily, halfmonth, monthly, annual
+stats_time        <- c("halfhourly", "daily", "monthly")
+annual_values     <- array(NA,c(3,nvar+3))
+eval_stats        <- array(NA, dim=c(14,nvar,4))
 variable_names <- array(c("PPFD", "PPFD", "PPFD", "PPFD",
                           "Rn", "Rn", "Net Radiation", "Rn",
                           "Qh", "H", "Sensible Heat Flux", "Qh" , 
@@ -397,53 +398,60 @@ variable_units_conversion <- array(c(1,1,
                                      , dim=c(2,nvar))
 
 # open input files
-datafile <- nc_open("obs.nc")
-modelfile <- nc_open("slm4fluxnet.nc")   # modelfile <- nc_open(paste("jsbach.halfhourly.nc", sep=""))
+datafile  <- nc_open("obs.nc")
+modelfile <- nc_open("slm4fluxnet.nc")
 
-TIME <- ncvar_get( modelfile, "time")
+TIME   <- ncvar_get( modelfile, "time")
 TIME_F <- ncvar_get( datafile, "time" )
-TIME=seq(0,length(TIME)-1,1)/48
+TIME   <- seq(0,length(TIME)-1,1)/48
 
 # diagnostic output is saved in the file: exp_*/site_folder/std_out/out.*.txt
+print("                                                                 ")
 print("-----------------------------------------------------------------")
 print(" Diagnostic output of the script: generate_FLUXNET_diagnostics.R ")
 print("                                                                 ")
+
 # create .pdf output file
 pdf('FLUXNET_diagnostics.pdf')
-#if(length(TIME) == length(TIME_F)) {
-  for (V in 1:nvar){   
+## loop over variables to create figures from
+for (V in 1:nvar){
      print(variable_names[3,V])
      MODEL_V <- ncvar_get( modelfile, variable_names[1,V] )
      MODEL_V <- MODEL_V*(variable_units_conversion[1,V])       
-     MODEL_V[MODEL_V<=-9999.]=NA
+     MODEL_V[MODEL_V <= -9999.] <- NA
+
+     # fapar
      if(variable_names[1,V]=='FAPAR') {
        FLUXNET_V <- ncvar_get( datafile, 'fapar_seawifs' )[1:length(TIME)]
-       FLUXNET_V[FLUXNET_V==-9999.]=NA 
+       FLUXNET_V[FLUXNET_V <= -9999.] <- NA
+       
        FLUXNET_V_FLAG <- ncvar_get( datafile, 'fapar_seawifs_flag' )[1:length(TIME)]
-       FLUXNET_V_FILTERED=FLUXNET_V
-       FLUXNET_V_FILTERED[FLUXNET_V_FLAG>0.5]=NA
+       FLUXNET_V_FILTERED <- FLUXNET_V
+       FLUXNET_V_FILTERED[FLUXNET_V_FLAG > 0.5] <- NA
+       
        FLUXNET_V2 <- ncvar_get( datafile, 'fapar_modis' )[1:length(TIME)]
-       FLUXNET_V2[FLUXNET_V2==-9999.]=NA 
+       FLUXNET_V2[FLUXNET_V2 <= -9999.] <- NA
+       
        FLUXNET_V2_FLAG <- ncvar_get( datafile, 'fapar_modis_flag' )[1:length(TIME)]
-       FLUXNET_V2_FILTERED=FLUXNET_V2
-       FLUXNET_V2_FILTERED[FLUXNET_V2_FLAG>0.5]=NA
+       FLUXNET_V2_FILTERED <- FLUXNET_V2
+       FLUXNET_V2_FILTERED[FLUXNET_V2_FLAG > 0.5] <- NA
+
+     # not fapar
      } else {
        FLUXNET_V <- ncvar_get( datafile, variable_names[2,V] )[1:length(TIME)]
-       FLUXNET_V[FLUXNET_V==-9999.]=NA
+       FLUXNET_V[FLUXNET_V <= -9999.] <- NA
        FLUXNET_V <- FLUXNET_V*(variable_units_conversion[2,V]) 
-       FLUXNET_V_FILTERED=FLUXNET_V
+       FLUXNET_V_FILTERED <- FLUXNET_V
        if(!variable_names[2,V]=='Rn'&!variable_names[2,V]=='Gc'&!variable_names[2,V]=='Ga'&!variable_names[2,V]=='WUE') {
           FLUXNET_V_FLAG <- ncvar_get( datafile, paste(variable_names[2,V],'_flag',sep='') )[1:length(TIME)]
-          FLUXNET_V_FILTERED[FLUXNET_V_FLAG>1]=NA
+          FLUXNET_V_FILTERED[FLUXNET_V_FLAG > 1] <- NA
        }
        
        if( any(!is.na(FLUXNET_V_FILTERED)) & any(!is.na(MODEL_V)) ) {
 
-         dummy=MODEL_V
-         dummy[is.na(FLUXNET_V_FILTERED)]==NA
-        #  eval_stats[1,V,1]=sprintf("%.2f",coef(line(FLUXNET_V_FILTERED[!is.na(FLUXNET_V_FILTERED)], MODEL_V[!is.na(FLUXNET_V_FILTERED)]), use.na=false)[1])
-        #  eval_stats[2,V,1]=sprintf("%.2f",coef(line(FLUXNET_V_FILTERED[!is.na(FLUXNET_V_FILTERED)], MODEL_V[!is.na(FLUXNET_V_FILTERED)]), use.na=false)[2])
-        #  eval_stats[3,V,1]=sprintf("%.2f", cor(MODEL_V, FLUXNET_V_FILTERED,use="na.or.complete"))
+         dummy <- MODEL_V
+         dummy[is.na(FLUXNET_V_FILTERED)] <- NA
+
          eval_stats[1,V,1]=coef(line(FLUXNET_V_FILTERED[!is.na(FLUXNET_V_FILTERED)], MODEL_V[!is.na(FLUXNET_V_FILTERED)]), use.na=false)[1]
          eval_stats[2,V,1]=coef(line(FLUXNET_V_FILTERED[!is.na(FLUXNET_V_FILTERED)], MODEL_V[!is.na(FLUXNET_V_FILTERED)]), use.na=false)[2]
          eval_stats[3,V,1]=cor(MODEL_V, FLUXNET_V_FILTERED,use="na.or.complete")
@@ -452,8 +460,6 @@ pdf('FLUXNET_diagnostics.pdf')
          eval_stats[6,V,1]=MODEL_FLUXNET_EVALUATION("rmse", MODEL_V, FLUXNET_V_FILTERED)
          eval_stats[7,V,1]=MODEL_FLUXNET_EVALUATION("nrmse", MODEL_V, FLUXNET_V_FILTERED)
          eval_stats[8,V,1]=MODEL_FLUXNET_EVALUATION("pbias", MODEL_V, FLUXNET_V_FILTERED)
-        #  eval_stats[9,V,1]=sprintf("%.2f",sd(dummy,na.rm=TRUE))
-        #  eval_stats[10,V,1]=sprintf("%.2f",sd(FLUXNET_V_FILTERED,na.rm=TRUE))
          eval_stats[9,V,1]=sd(dummy,na.rm=TRUE)
          eval_stats[10,V,1]=sd(FLUXNET_V_FILTERED,na.rm=TRUE)
          eval_stats[11,V,1]=MODEL_FLUXNET_EVALUATION("rsr", MODEL_V, FLUXNET_V_FILTERED)
@@ -463,38 +469,37 @@ pdf('FLUXNET_diagnostics.pdf')
        } 
      }
 
-     si=1
+     # loop over "perhour", "daily", "monthly", "annual"
+     si <- 1  # addressing the 3rd dimension of eval_stats[] starting with 2, as the '1' was already used above
      for (time in aggregation_level ){ 
-
        if ( time != "annual" ) {
          
+         # run this for all but "annual"
          variable_info <- c(variable_names[3,V],variable_units[3,V],startyear,endyear)
-         MODEL_AGG <- MODEL_FLUXNET_COMPUTE_GROUPING(MODEL_V,TIME, time,'mean')
-         FLUXNET_AGG <- MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V,TIME, time,'mean')
+         MODEL_AGG     <- MODEL_FLUXNET_COMPUTE_GROUPING(MODEL_V,TIME, time,'mean')
+         FLUXNET_AGG   <- MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V,TIME, time,'mean')
 
-         RMSE <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG$x)
-         NRMSE <- MODEL_FLUXNET_EVALUATION("nrmse", MODEL_AGG$x, FLUXNET_AGG$x)
-         RR <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG$x)
-         MODEL_SD <- (MODEL_FLUXNET_COMPUTE_GROUPING(MODEL_V,TIME, time,'sd'))$x
-         FLUXNET_SD <- (MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V,TIME, time,'sd'))$x
+         RMSE          <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG$x)
+         NRMSE         <- MODEL_FLUXNET_EVALUATION("nrmse", MODEL_AGG$x, FLUXNET_AGG$x)
+         RR            <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG$x)
+         MODEL_SD      <- (MODEL_FLUXNET_COMPUTE_GROUPING(MODEL_V,TIME, time,'sd'))$x
+         FLUXNET_SD    <- (MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V,TIME, time,'sd'))$x
          
-         NSE <- MODEL_FLUXNET_EVALUATION("nse", MODEL_AGG$x, FLUXNET_AGG$x)
-         PBIAS <- MODEL_FLUXNET_EVALUATION("pbias", MODEL_AGG$x, FLUXNET_AGG$x)
-         RSR <- MODEL_FLUXNET_EVALUATION("rsr", MODEL_AGG$x, FLUXNET_AGG$x)
-         COR_TEST <- MODEL_FLUXNET_EVALUATION("cor_test", MODEL_AGG$x, FLUXNET_AGG$x)
+         NSE           <- MODEL_FLUXNET_EVALUATION("nse", MODEL_AGG$x, FLUXNET_AGG$x)
+         PBIAS         <- MODEL_FLUXNET_EVALUATION("pbias", MODEL_AGG$x, FLUXNET_AGG$x)
+         RSR           <- MODEL_FLUXNET_EVALUATION("rsr", MODEL_AGG$x, FLUXNET_AGG$x)
+         COR_TEST      <- MODEL_FLUXNET_EVALUATION("cor_test", MODEL_AGG$x, FLUXNET_AGG$x)
 
-         if (time == "daily" || time == "halfmonth" || time == "monthly") {
+         ## run for: daily, halfmonth, monthly
+         if (time == "daily" || time == "halfmonth" || time == "monthly"){
 
           if ( !all(is.na(FLUXNET_AGG$x)) ) {
           if ( !all(is.na(MODEL_AGG$x)) ) {
    
-             si=si+1
-             dummy=MODEL_AGG$x
-             dummy[is.na(FLUXNET_AGG$x)]==NA
+             si <- si+1
+             dummy <- MODEL_AGG$x
+             dummy[is.na(FLUXNET_AGG$x)] <- NA
 
-            #  eval_stats[1,V,si]=sprintf("%.2f",coef(line(FLUXNET_AGG$x, MODEL_AGG$x),use.na=false)[1])
-            #  eval_stats[2,V,si]=sprintf("%.2f",coef(line(FLUXNET_AGG$x, MODEL_AGG$x),use.na=false)[2])
-            #  eval_stats[3,V,si]=sprintf("%.2f", cor(MODEL_AGG$x, FLUXNET_AGG$x,use="na.or.complete"))
              eval_stats[1,V,si]=coef(line(FLUXNET_AGG$x, MODEL_AGG$x),use.na=false)[1]
              eval_stats[2,V,si]=coef(line(FLUXNET_AGG$x, MODEL_AGG$x),use.na=false)[2]
              eval_stats[3,V,si]=cor(MODEL_AGG$x, FLUXNET_AGG$x,use="na.or.complete")
@@ -503,95 +508,90 @@ pdf('FLUXNET_diagnostics.pdf')
              eval_stats[6,V,si]=MODEL_FLUXNET_EVALUATION("rmse",MODEL_AGG$x, FLUXNET_AGG$x )
   	         eval_stats[7,V,si]=MODEL_FLUXNET_EVALUATION("nrmse",MODEL_AGG$x, FLUXNET_AGG$x) 
              eval_stats[8,V,si]=MODEL_FLUXNET_EVALUATION("pbias", MODEL_AGG$x, FLUXNET_AGG$x)
-            #  eval_stats[9,V,si]=sprintf("%.2f",sd(dummy,na.rm=TRUE))
-            #  eval_stats[10,V,si]=sprintf("%.2f",sd(FLUXNET_AGG$x,na.rm=TRUE))
              eval_stats[9,V,si]=sd(dummy,na.rm=TRUE)
              eval_stats[10,V,si]=sd(FLUXNET_AGG$x,na.rm=TRUE)
              eval_stats[11,V,si]=MODEL_FLUXNET_EVALUATION("rsr", MODEL_AGG$x, FLUXNET_AGG$x)
              eval_stats[12,V,si]=MODEL_FLUXNET_EVALUATION("mef", MODEL_AGG$x, FLUXNET_AGG$x)
              eval_stats[13,V,si]=MODEL_FLUXNET_EVALUATION("nae", MODEL_AGG$x, FLUXNET_AGG$x)
              eval_stats[14,V,si]=MODEL_FLUXNET_EVALUATION("vr", MODEL_AGG$x, FLUXNET_AGG$x) 
-          }
-          }
-        }
-
-	if (time=="perhour") {
+          }} # test NA 
+         }
+         
+         ## additionally run for: daily, halfmonth, monthly, perhour, perhour_15
+         if (time=="perhour") {
                typestr <- c("Per Hour Monthly")
-               gtype <- c("b")
-	       labs <- month.abb[as.numeric(gsub("0","",substr(MODEL_AGG$Group.1, 1, 2)))]
-        }
-        else if (time=="perhour_15") {
+               gtype   <- c("b")
+	             labs    <- month.abb[as.numeric(gsub("0","",substr(MODEL_AGG$Group.1, 1, 2)))]
+         }
+         else if (time=="perhour_15") {
                typestr <- c("Per Hour 15 days")
-               gtype <- c("p")
-	       labs <- month.abb[as.numeric(gsub("0","",substr(MODEL_AGG$Group.1, 1, 2)))]
-        }
-        else if (time=="daily"){
+               gtype   <- c("p")
+	             labs    <- month.abb[as.numeric(gsub("0","",substr(MODEL_AGG$Group.1, 1, 2)))]
+         }
+         else if (time=="daily"){
                typestr <- c("Daily Mean")
-               gtype <- c("p")
-	       labs <- substr(MODEL_AGG$Group.1, 1, 4) 
-        }
-	    else if (time=="halfmonth"){
+               gtype   <- c("p")
+	             labs    <- substr(MODEL_AGG$Group.1, 1, 4) 
+         }
+	       else if (time=="halfmonth"){
                typestr <- c("Half Month")
-               gtype <- c("b")
-	             labs <- substr(MODEL_AGG$Group.1, 1, 4)
-        }
-        else if (time=="monthly"){           
+               gtype   <- c("b")
+	             labs    <- substr(MODEL_AGG$Group.1, 1, 4)
+         }
+         else if (time=="monthly"){           
                typestr <- c("Monthly Mean")
-               gtype <- c("b")
-               labs <- substr(MODEL_AGG$Group.1, 1, 4)
-        }
+               gtype   <- c("b")
+               labs    <- substr(MODEL_AGG$Group.1, 1, 4)
+         }
 
-        if(variable_names[1,V]=="fapar") {
-           if (time != "perhour" ) {
+
+         ## run calc & graphics function MODEL_FLUXNET_GRAPHIC_FAPAR
+         if(variable_names[1,V]=="fapar"){
+           if (time != "perhour" ){
              FLUXNET_AGG2 <- MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V2,TIME, time,'mean')
 
              RMSE_seawifs <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG$x)
-             RMSE_modis <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG2$x)
+             RMSE_modis   <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG2$x)
+             RR_seawifs   <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG$x)
+             RR_modis     <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG2$x)
 
-             RR_seawifs <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG$x)
-             RR_modis <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG2$x)
-
-             MODEL_FLUXNET_GRAPHIC_FAPAR(MODEL_AGG$x, FLUXNET_AGG$x, FLUXNET_AGG2$x, FLUXNET_AGG3$x, 
-	               MODEL_AGG$Group.1, typestr, gtype,variable_info, RMSE_seawifs, RMSE_modis, 
-                 RR_seawifs, RR_modis, NSE, PBIAS, RSR)
-             
+             MODEL_FLUXNET_GRAPHIC_FAPAR(MODEL_AGG$x, FLUXNET_AGG$x, FLUXNET_AGG2$x, FLUXNET_AGG3$x, MODEL_AGG$Group.1, 
+                                         typestr, gtype, variable_info, 
+                                         RMSE_seawifs, RMSE_modis, RR_seawifs, RR_modis, NSE, PBIAS, RSR)
            }
-        } else {
+         ## run graphics function MODEL_FLUXNET_GRAPHIC if not variable fapar
+         } else{
              MODEL_FLUXNET_GRAPHIC(MODEL_AGG$x, FLUXNET_AGG$x, MODEL_AGG$Group.1, 
-               typestr, gtype, labs, variable_info, RMSE, NRMSE, RR, NSE, PBIAS, RSR)
-             #MODEL_FLUXNET_GRAPHIC_ERR(MODEL_AGG$x,FLUXNET_AGG$x,MODEL_AGG$Group.1, MODEL_SD, FLUXNET_SD, 
-             #  variable_info, typestr)
+                                   typestr, gtype, labs, variable_info, 
+                                   RMSE, NRMSE, RR, NSE, PBIAS, RSR)
+         }
 
-        }
+       # end of if ( time != "annual" )
+       # else here leads to time == "annual"
+       } else {   
+         annual_values[1,V]=mean(MODEL_V,na.rm=TRUE)
+         annual_values[2,V]=mean(FLUXNET_V,na.rm=TRUE)
+       } # end if/else (time != "annual")
+     }   # end loop over aggregation_level ("perhour", "daily", "monthly", "annual")
 
-      } else {
-          annual_values[1,V]=mean(MODEL_V,na.rm=TRUE)
-          annual_values[2,V]=mean(FLUXNET_V,na.rm=TRUE)
-      }
-    }
-  }
+} ## end loop over variables to create figures from: for (V in 1:nvar)
 
-  #MODEL_V <- ncvar_get( modelfile, 'vegC')
-  #annual_values[1,nvar+1]=mean(MODEL_V,na.rm=TRUE)
-  #MODEL_V <- ncvar_get( modelfile, 'litterC')
-  #annual_values[1,nvar+2]=mean(MODEL_V,na.rm=TRUE)
-  #MODEL_V <- ncvar_get( modelfile, 'soilC')
-  #annual_values[1,nvar+3]=mean(MODEL_V,na.rm=TRUE)
 
-#} else {
-#  print('length of output and evaluation file do not match, verify simulation settings')
-#}
+## write tables
+rownames                    <- c(variable_names[4,],"vegC","litterC","soilC")
+annual_values[3,1:nvar]     <- variable_units[3,1:nvar]
+annual_values[3,nvar+(1:3)] <- "gC/m2"
 
-rownames=c(variable_names[4,],'vegC','litterC','soilC')
-annual_values[3,1:nvar]=variable_units[3,1:nvar]
-annual_values[3,nvar+(1:3)]='gC/m2'
-write.table(t(annual_values),file="summary.annual.txt",col.names=c('MODEL','Observed','Units'),
-  row.names=rownames) 
+write.table(t(annual_values),file="summary.annual.txt",
+            col.names=c('MODEL','Observed','Units'),
+            row.names=rownames) 
 
-for (si in 1:length(stats_time) )
- write.table(t(eval_stats[,,si]),file=paste("statistics.", stats_time[si], ".txt", sep=''),
-   col.names=c("Intercept","Slope", "R", "R^2", "NSE", "RMSE", "NRMSE", "PBIAS", "SD_MOD", "SD_FLX", "RSR", "MEF", "NAE", "VR" ), 
-   row.names=variable_names[4,])
+for (s in 1:length(stats_time)){
+  write.table(t(eval_stats[,,s]), file=paste0("statistics.",stats_time[s],".txt"),
+              col.names=c("Intercept","Slope", "R", "R^2", "NSE", "RMSE", "NRMSE", "PBIAS", "SD_MOD", "SD_FLX", "RSR", "MEF", "NAE", "VR" ), 
+              row.names=variable_names[4,])
+}
 
-#MODEL_FLUXNET_STATS_GRAPHIC(c(5,8,11),c("NSE","PBIAS","RSR"))
+# MODEL_FLUXNET_STATS_GRAPHIC(c(5,8,11),c("NSE","PBIAS","RSR"))
+
 garbage <- dev.off()
