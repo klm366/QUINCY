@@ -825,20 +825,20 @@ CONTAINS
     & carbon_2_WoodLitterPools,     & ! inout, because relocate_carbon_fire is
                                       ! called AFTER relocate_carbon_damage!
     & YCpool_acid_ag1,              & ! inout 
-    & YCpool_acid_ag2,              & ! inout
     & YCpool_water_ag1,             & ! inout
-    & YCpool_water_ag2,             & ! inout
     & YCpool_ethanol_ag1,           & ! inout
-    & YCpool_ethanol_ag2,           & ! inout
     & YCpool_nonsoluble_ag1,        & ! inout
+    & YCpool_acid_ag2,              & ! inout
+    & YCpool_water_ag2,             & ! inout
+    & YCpool_ethanol_ag2,           & ! inout
     & YCpool_nonsoluble_ag2,        & ! inout
     & YCpool_acid_bg1,              & ! inout
-    & YCpool_acid_bg2,              & ! inout
     & YCpool_water_bg1,             & ! inout
-    & YCpool_water_bg2,             & ! inout
     & YCpool_ethanol_bg1,           & ! inout
-    & YCpool_ethanol_bg2,           & ! inout
     & YCpool_nonsoluble_bg1,        & ! inout
+    & YCpool_acid_bg2,              & ! inout
+    & YCpool_water_bg2,             & ! inout
+    & YCpool_ethanol_bg2,           & ! inout
     & YCpool_nonsoluble_bg2,        & ! inout
     & YCpool_humus_1,               & ! inout
     & YCpool_humus_2,               & ! inout
@@ -963,26 +963,35 @@ CONTAINS
   ! It is assumed that for the damaged area the carbon from the living plant pools (Cpool_green_st, Cpool_reserve_st and 
   ! Cpool_woods_st) is partly relocated into the litter pools.
   !
-  subroutine relocate_carbon_damage(                 &
-    & damaged_frac,                                  & ! in
-    & LeafLit_coef,                                  & ! in
-    & WoodLit_coef,                                  & ! in
-    & Cpool_green,                                   & ! inout, optional
-    & Cpool_woods,                                   & ! inout, optional
-    & Cpool_reserve,                                 & ! inout, optional
-    & carbon_2_GreenLitterPools,                     & ! out, because relocate_carbon_damage is 
-                                                       ! called before relocate_carbon_fire!
-    & carbon_2_WoodLitterPools,                      & ! out, because relocate_carbon_damage is
-                                                       ! called before relocate_carbon_fire!
-    & YCpool_acid_ag1,       YCpool_acid_ag2,        & ! inout
-    & YCpool_water_ag1,      YCpool_water_ag2,       & ! inout
-    & YCpool_ethanol_ag1,    YCpool_ethanol_ag2,     & ! inout
-    & YCpool_nonsoluble_ag1, YCpool_nonsoluble_ag2,  & ! inout
-    & YCpool_acid_bg1,       YCpool_acid_bg2,        & ! inout
-    & YCpool_water_bg1,      YCpool_water_bg2,       & ! inout
-    & YCpool_ethanol_bg1,    YCpool_ethanol_bg2,     & ! inout
-    & YCpool_nonsoluble_bg1, YCpool_nonsoluble_bg2,  & ! inout
-    & YCpool_humus_1,        YCpool_humus_2          & ! inout
+  subroutine relocate_carbon_damage( &
+    & damaged_frac,                  & ! in
+    & LeafLit_coef,                  & ! in
+    & WoodLit_coef,                  & ! in
+    & Cpool_green,                   & ! inout, optional
+    & Cpool_woods,                   & ! inout, optional
+    & Cpool_reserve,                 & ! inout, optional
+    & carbon_2_GreenLitterPools,     & ! out, because relocate_carbon_damage is 
+                                       ! called before relocate_carbon_fire!
+    & carbon_2_WoodLitterPools,      & ! out, because relocate_carbon_damage is
+                                       ! called before relocate_carbon_fire!
+    & YCpool_acid_ag1,               & ! inout 
+    & YCpool_water_ag1,              & ! inout
+    & YCpool_ethanol_ag1,            & ! inout
+    & YCpool_nonsoluble_ag1,         & ! inout
+    & YCpool_acid_ag2,               & ! inout
+    & YCpool_water_ag2,              & ! inout
+    & YCpool_ethanol_ag2,            & ! inout
+    & YCpool_nonsoluble_ag2,         & ! inout
+    & YCpool_acid_bg1,               & ! inout
+    & YCpool_water_bg1,              & ! inout
+    & YCpool_ethanol_bg1,            & ! inout
+    & YCpool_nonsoluble_bg1,         & ! inout
+    & YCpool_acid_bg2,               & ! inout
+    & YCpool_water_bg2,              & ! inout
+    & YCpool_ethanol_bg2,            & ! inout
+    & YCpool_nonsoluble_bg2,         & ! inout
+    & YCpool_humus_1,                & ! inout
+    & YCpool_humus_2                 & ! inout
     & )
 
     USE mo_carbon_constants,  ONLY : frac_green_aboveGround, frac_wood_aboveGround
