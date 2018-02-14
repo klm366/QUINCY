@@ -84,6 +84,7 @@ usecase=""
 # 22 land_300yr_cruncep_spp_def
 # 80 baseline_fluxnet_def
 # 81 baseline_gfdb_cue_def
+# 82 baseline_fluxnet_npre_def
 
 
 ##>> namelist.slm options <<############################################################################
