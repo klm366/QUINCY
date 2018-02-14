@@ -81,10 +81,13 @@ fi
 
 ## run two R Scripts for comparing simulated CRUNCEP data with global forest data base data at daily basis
 if [ $compareSimCRUNCEPvsGFDB == T ]; then
+  echo " starting sim_cruncep_vs_gfdb-process_daily.R"
   Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-process_daily.R $simFold  # creates two .csv files
   sync
+  echo " starting sim_cruncep_vs_gfdb-create_figs.R"
   Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-create_figs.R $simFold    # creates a .pdf with multiple figures
   sync
+  echo " finished cruncep vs gfdb data processing and figure creation"
 fi
 
 ## remove some folders not needed anymore ##
