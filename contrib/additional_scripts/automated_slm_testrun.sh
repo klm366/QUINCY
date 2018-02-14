@@ -46,9 +46,9 @@ if [ $revRepoTrunk -gt $localWCopy ]
   jobNameD2="exp_""$jobNameD2"
 
   ##########################
-  # compile in standard mode
+  # compile in performance mode
   cd "$workingCopyFolder"build/
-  rm -f Make.inc.local && ln -s Make.inc.local.ifort_BGC Make.inc.local && make clean && sync && make -j 4
+  rm -f Make.inc.local && ln -s Make.inc.local.ifort_perform_BGC Make.inc.local && make clean && sync && make -j 4
   sleep 2
 
   cd ../contrib/site_level/
@@ -58,14 +58,14 @@ if [ $revRepoTrunk -gt $localWCopy ]
   ./prep_run_slm.sh -u 03 -e "$jobNameS"
   jobNameS="exp_""$jobNameS"
   # run 300 years fluxnet simulations in standard mode with simple_1d: usecase 05
-  jobNameS2="auto_r""$revRepoTrunk""_300yfluxdef_std_s0d"
+  jobNameS2="auto_r""$revRepoTrunk""_300yfluxdef_std_s1d"
   ./prep_run_slm.sh -u 05 -e "$jobNameS2"
   jobNameS2="exp_""$jobNameS2"
 
 
   ####################################
   # get the job ID of the cleanup jobs
-  sleep 20
+  sleep 30
   jobIDCleanD=$(bjobs -J "$jobNameD""Cleanup" | tail -n 1 | awk '{print $1}')
   jobIDCleanD2=$(bjobs -J "$jobNameD2""Cleanup" | tail -n 1 | awk '{print $1}')
   jobIDCleanS=$(bjobs -J "$jobNameS""Cleanup" | tail -n 1 | awk '{print $1}')
@@ -88,9 +88,13 @@ if [ $revRepoTrunk -gt $localWCopy ]
       sleep 3m
       status=$(bjobs "$jobIDCleanD" | tail -n 1 | awk '{print $3}')
       ((countExit++))
+      # change queue to io if 5 hours have passed
+      if [ $countExit -eq 100 ]; then bswitch io "$jobIDCleanD"; fi
       # exit this script if more than 10 hours have passed
       if [ $countExit -gt 200 ]
        then
+        echo "The status of jobIDCleanD is ""$status"" and countExit is ""$countExit"
+        date "+%d.%m.%Y %X"
         echo "EXIT !"
         exit 1
       fi
@@ -100,7 +104,7 @@ if [ $revRepoTrunk -gt $localWCopy ]
   echo "do some stats and analysis on the debug-run simulation results"
   echo " "
   # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameD" "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD"
+  mv "$bgiJEScratchFolder"slm/"$jobNameD" "$bgiJEScratchFolder""$autoTestRunFolder"
   sync && sleep 2
   # extract potential error messages into one file
   cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD"_err.txt
@@ -110,6 +114,7 @@ if [ $revRepoTrunk -gt $localWCopy ]
   #  but first check whether the 'bjobs' command does finish with exit 0
   #   (note: in case the job (simulations) already finished a while ago, the bjobs command would not show any status information
   #    about this job anymore (like RUN | PEND) but return with an error message that there is no info about this job)
+  sleep 10
   bjobs "$jobIDCleanD2" > /dev/null
   returnB=$(echo $?)
   if [ "$returnB" -eq 0 ] # if bjobs does return error-free
@@ -125,9 +130,13 @@ if [ $revRepoTrunk -gt $localWCopy ]
       sleep 3m
       status=$(bjobs "$jobIDCleanD2" | tail -n 1 | awk '{print $3}')
       ((countExit++))
+      # change queue to io if additional 2 1/2 hours have passed
+      if [ $countExit -eq 50 ]; then bswitch io "$jobIDCleanD2"; fi
       # exit this script if additional 5 hours have passed
       if [ $countExit -gt 100 ]
        then
+        echo "The status of jobIDCleanD2 is ""$status"" and countExit is ""$countExit"
+        date "+%d.%m.%Y %X"
         echo "EXIT !"
         exit 1
       fi
@@ -137,13 +146,14 @@ if [ $revRepoTrunk -gt $localWCopy ]
   echo "do some stats and analysis on the debug-run simulation results"
   echo " "
   # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameD2" "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD2"
+  mv "$bgiJEScratchFolder"slm/"$jobNameD2" "$bgiJEScratchFolder""$autoTestRunFolder"
   sync && sleep 2
   # extract potential error messages into one file
   cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD2"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD2"_err.txt
 
   ## standard - usecase 03 #######################################################
   # stay in the while loop until the cleanup-job of the standard-run has finished
+  sleep 10
   bjobs "$jobIDCleanS" > /dev/null
   returnB=$(echo $?)
   if [ "$returnB" -eq 0 ] # if bjobs does return error-free
@@ -159,9 +169,13 @@ if [ $revRepoTrunk -gt $localWCopy ]
       sleep 3m
       status=$(bjobs "$jobIDCleanS" | tail -n 1 | awk '{print $3}')
       ((countExit++))
+      # change queue to io if additional 2 1/2 hours have passed
+      if [ $countExit -eq 50 ]; then bswitch io "$jobIDCleanS"; fi
       # exit this script if additional 5 hours have passed
       if [ $countExit -gt 100 ]
        then
+        echo "The status of jobIDCleanS is ""$status"" and countExit is ""$countExit"
+        date "+%d.%m.%Y %X"
         echo "EXIT !"
         exit 1
       fi
@@ -171,13 +185,14 @@ if [ $revRepoTrunk -gt $localWCopy ]
   echo "do some stats and analysis on the standard-run simulation results"
   echo " "
   # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameS" "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS"
+  mv "$bgiJEScratchFolder"slm/"$jobNameS" "$bgiJEScratchFolder""$autoTestRunFolder"
   sync && sleep 2
   # extract potential error messages into one file
   cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS"_err.txt
 
   ## standard - usecase 05 #######################################################
   # stay in the while loop until the cleanup-job of the standard-run has finished
+  sleep 10
   bjobs "$jobIDCleanS2" > /dev/null
   returnB=$(echo $?)
   if [ "$returnB" -eq 0 ] # if bjobs does return error-free
@@ -193,9 +208,13 @@ if [ $revRepoTrunk -gt $localWCopy ]
       sleep 3m
       status=$(bjobs "$jobIDCleanS2" | tail -n 1 | awk '{print $3}')
       ((countExit++))
+      # change queue to io if additional 2 1/2 hours have passed
+      if [ $countExit -eq 50 ]; then bswitch io "$jobIDCleanS2"; fi
       # exit this script if additional 5 hours have passed
       if [ $countExit -gt 100 ]
        then
+        echo "The status of jobIDCleanS2 is ""$status"" and countExit is ""$countExit"
+        date "+%d.%m.%Y %X"
         echo "EXIT !"
         exit 1
       fi
@@ -205,7 +224,7 @@ if [ $revRepoTrunk -gt $localWCopy ]
   echo "do some stats and analysis on the standard-run simulation results"
   echo " "
   # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameS2" "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS2"
+  mv "$bgiJEScratchFolder"slm/"$jobNameS2" "$bgiJEScratchFolder""$autoTestRunFolder"
   sync && sleep 2
   # extract potential error messages into one file
   cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS2"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS2"_err.txt
