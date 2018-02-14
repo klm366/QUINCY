@@ -352,7 +352,7 @@ CONTAINS
             CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
           END IF
           IF (model%processes(DISTURB_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(DISTURB_, ON_TILE_, AGGREGATE_)
+            CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
             
           DO i=1,npft

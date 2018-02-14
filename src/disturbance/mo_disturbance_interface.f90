@@ -124,7 +124,8 @@ CONTAINS
 
     USE mo_disturb_process,       ONLY: burned_frac_jsbach, broken_woody_frac_jsbach, get_relative_humidity_air
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
-    USE mo_carbon_interface,      ONLY: calculate_current_c_state_sum, check_carbon_conservation_for_operation
+    USE mo_carbon_interface,      ONLY: update_per_tile_vars, &
+      & calculate_current_c_state_sum, check_carbon_conservation_for_operation
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
@@ -437,12 +438,12 @@ CONTAINS
 
       END IF
 
-      IF ( tile%parent_tile%Is_process_active(FAGE_) ) THEN
+!      IF ( tile%parent_tile%Is_process_active(FAGE_) ) THEN
         ! In this case the carbon cannot be relocated immediately
         ! because disturbances create new cohorts
-        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
-          & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of damaged and burned carbon.')
-      ELSE
+!        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
+!          & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of damaged and burned carbon.')
+!      ELSE
 
         !Else relocate carbon as previously implemented
         IF ( tile%Is_process_active(CARBON_) ) THEN
@@ -488,6 +489,8 @@ CONTAINS
                 & YCpool_humus_2(:)              & ! inout
                 & )
 
+              CALL update_per_tile_vars(tile, options)
+
               ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
               dummy_flux = 0._wp
               CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
@@ -502,43 +505,45 @@ CONTAINS
             CASE (0) !! No fire algorithm
             CASE (1) !! jsbach algorithm
 
-              ! CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+              CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
 
-              ! CALL relocate_carbon_fire( &
-              !   & burned_frac(:),                & ! in, only for windbreak
-              !   & dsl4jsb_Config(CARBON_)%fire_frac_wood_2_atmos , & ! in
-              !   & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
-              !   & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-              !   & Cpool_green(:),                & ! inout
-              !   & Cpool_woods(:),                & ! inout
-              !   & Cpool_reserve(:),              & ! inout
-              !   & carbon_2_GreenLitterPools(:),  & ! inout
-              !   & carbon_2_WoodLitterPools(:),   & ! inout
-              !   & YCpool_acid_ag1(:),            & ! inout
-              !   & YCpool_water_ag1(:),           & ! inout
-              !   & YCpool_ethanol_ag1(:),         & ! inout
-              !   & YCpool_nonsoluble_ag1(:),      & ! inout
-              !   & YCpool_acid_ag2(:),            & ! inout
-              !   & YCpool_water_ag2(:),           & ! inout
-              !   & YCpool_ethanol_ag2(:),         & ! inout
-              !   & YCpool_nonsoluble_ag2(:),      & ! inout
-              !   & YCpool_acid_bg1(:),            & ! inout
-              !   & YCpool_water_bg1(:),           & ! inout
-              !   & YCpool_ethanol_bg1(:),         & ! inout
-              !   & YCpool_nonsoluble_bg1(:),      & ! inout
-              !   & YCpool_acid_bg2(:),            & ! inout
-              !   & YCpool_water_bg2(:),           & ! inout
-              !   & YCpool_ethanol_bg2(:),         & ! inout
-              !   & YCpool_nonsoluble_bg2(:),      & ! inout
-              !   & YCpool_humus_1(:),             & ! inout
-              !   & YCpool_humus_2(:),             & ! inout
-              !   & carbon_2_atmos              & ! out
-              !   & )
+              CALL relocate_carbon_fire( &
+                & burned_frac(:),                & ! in, only for windbreak
+                & dsl4jsb_Config(CARBON_)%fire_frac_wood_2_atmos , & ! in
+                & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
+                & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
+                & Cpool_green(:),                & ! inout
+                & Cpool_woods(:),                & ! inout
+                & Cpool_reserve(:),              & ! inout
+                & carbon_2_GreenLitterPools(:),  & ! inout
+                & carbon_2_WoodLitterPools(:),   & ! inout
+                & YCpool_acid_ag1(:),            & ! inout
+                & YCpool_water_ag1(:),           & ! inout
+                & YCpool_ethanol_ag1(:),         & ! inout
+                & YCpool_nonsoluble_ag1(:),      & ! inout
+                & YCpool_acid_ag2(:),            & ! inout
+                & YCpool_water_ag2(:),           & ! inout
+                & YCpool_ethanol_ag2(:),         & ! inout
+                & YCpool_nonsoluble_ag2(:),      & ! inout
+                & YCpool_acid_bg1(:),            & ! inout
+                & YCpool_water_bg1(:),           & ! inout
+                & YCpool_ethanol_bg1(:),         & ! inout
+                & YCpool_nonsoluble_bg1(:),      & ! inout
+                & YCpool_acid_bg2(:),            & ! inout
+                & YCpool_water_bg2(:),           & ! inout
+                & YCpool_ethanol_bg2(:),         & ! inout
+                & YCpool_nonsoluble_bg2(:),      & ! inout
+                & YCpool_humus_1(:),             & ! inout
+                & YCpool_humus_2(:),             & ! inout
+                & carbon_2_atmos_ta              & ! out
+                & )
+
+              CALL update_per_tile_vars(tile, options)
 
 !TODO-JN: get the carbon_2_atmos flux right -- ta? not ta????
-              ! ! negate carbon_2_atmos -- its a flux away from the land and therefore previously negative
-              ! CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
-              !   & -carbon_2_atmos(:), cconservation_fire(:))
+              ! negate carbon_2_atmos -- its a flux away from the land and therefore previously negative
+              CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+                & -carbon_2_atmos(:), cconservation_fire(:))
 
             CASE (2) !! Arora & Boer algorithm
               CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
@@ -557,24 +562,7 @@ CONTAINS
           !  CO2_emission(:) = disturbance%disturb_2_atmos(kidx0:kidx1)   * molarMassCO2_kg/86400._wp
           !ENDIF
 
-          carbon_2_GreenLitterPools_ta = carbon_2_GreenLitterPools * veg_frac_correction * fract_fpc_max
-          carbon_2_WoodLitterPools_ta  = carbon_2_WoodLitterPools  * veg_frac_correction * fract_fpc_max
-          carbon_2_atmos_ta            = carbon_2_atmos            * veg_frac_correction * fract_fpc_max
-          Cpool_green_ta               = Cpool_green               * veg_frac_correction * fract_fpc_max
-          Cpool_woods_ta               = Cpool_woods               * veg_frac_correction * fract_fpc_max
-          Cpool_reserve_ta             = Cpool_reserve             * veg_frac_correction * fract_fpc_max
-          YCpool_acid_ag1_ta           = YCpool_acid_ag1           * veg_frac_correction * fract_fpc_max
-          YCpool_water_ag1_ta          = YCpool_water_ag1          * veg_frac_correction * fract_fpc_max
-          YCpool_ethanol_ag1_ta        = YCpool_ethanol_ag1        * veg_frac_correction * fract_fpc_max
-          YCpool_nonsoluble_ag1_ta     = YCpool_nonsoluble_ag1     * veg_frac_correction * fract_fpc_max
-          YCpool_acid_ag2_ta           = YCpool_acid_ag2           * veg_frac_correction * fract_fpc_max
-          YCpool_water_ag2_ta          = YCpool_water_ag2          * veg_frac_correction * fract_fpc_max
-          YCpool_ethanol_ag2_ta        = YCpool_ethanol_ag2        * veg_frac_correction * fract_fpc_max
-          YCpool_nonsoluble_ag2_ta     = YCpool_nonsoluble_ag2     * veg_frac_correction * fract_fpc_max
-          YCpool_humus_1_ta            = YCpool_humus_1            * veg_frac_correction * fract_fpc_max
-          YCpool_humus_2_ta            = YCpool_humus_2            * veg_frac_correction * fract_fpc_max
-
-        ENDIF
+!        ENDIF
       ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) ) 
     ENDIF ! is_newday
 

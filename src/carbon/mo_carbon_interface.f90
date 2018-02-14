@@ -1155,6 +1155,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
 
+    dsl4jsb_Real2D_onChunk ::  carbon_2_GreenLitterPools
+    dsl4jsb_Real2D_onChunk ::  carbon_2_WoodLitterPools
+    dsl4jsb_Real2D_onChunk ::  carbon_2_atmos
     dsl4jsb_Real2D_onChunk ::  soil_respiration
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean
     dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean
@@ -1190,6 +1193,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2_ta
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2_ta
 
+    dsl4jsb_Real2D_onChunk ::  carbon_2_GreenLitterPools_ta  ! out
+    dsl4jsb_Real2D_onChunk ::  carbon_2_WoodLitterPools_ta   ! out
+    dsl4jsb_Real2D_onChunk ::  carbon_2_atmos_ta             ! out
     dsl4jsb_Real2D_onChunk ::  soil_respiration_ta      ! out
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta      ! out
     dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta      ! out
@@ -1215,70 +1221,76 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )               ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods )               ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )               ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods )               ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest)         ! in
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1)            ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1)         ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1)      ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1)            ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1)           ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1)         ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1)      ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1)             ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1)         ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1)      ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1)            ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1)           ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1)         ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1)      ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1)             ! in 
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2)           ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2)          ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2)        ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2)          ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2)        ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2)           ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2)          ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2)        ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2)     ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2)          ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2)        ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! in 
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean)              ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  litter_flux)               ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates)             ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory)           ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_2_atm)     ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_GreenLitterPools ) ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_WoodLitterPools )  ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_atmos )            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration)          ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean)          ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean)          ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)       ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean)              ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  litter_flux)               ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates)             ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_2_atm)     ! in
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_npp_ta)        ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_soilresp_ta)   ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_herbivory_ta)  ! out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green_ta )               ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve_ta )             ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods_ta )               ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest_ta)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green_ta )               ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve_ta )             ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods_ta )               ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest_ta)         ! out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1_ta)            ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1_ta)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1_ta)         ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta)      ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1_ta)            ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1_ta)           ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1_ta)         ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta)      ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1_ta)             ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1_ta)            ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1_ta)           ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag1_ta)         ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta)      ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg1_ta)            ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg1_ta)           ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg1_ta)         ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta)      ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_1_ta)             ! out 
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2_ta)           ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2_ta)          ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2_ta)        ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2_ta)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2_ta)          ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2_ta)        ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta)     ! inout 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2_ta)            ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag2_ta)           ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag2_ta)          ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_ag2_ta)        ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta)     ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_bg2_ta)           ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_bg2_ta)          ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_ethanol_bg2_ta)        ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta)     ! out 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2_ta)            ! out 
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_GreenLitterPools_ta ) ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_WoodLitterPools_ta )  ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_atmos_ta )            ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_ta )          ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean_ta )          ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean_ta )          ! out
@@ -1330,14 +1342,17 @@ CONTAINS
                       + YCpool_humus_1_ta        + YCpool_humus_2_ta
 
     ! C fluxes
-    soil_respiration_ta         = soil_respiration      * veg_frac_correction * fract_fpc_max
-    NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction * fract_fpc_max
-    NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction * fract_fpc_max
-    NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction * fract_fpc_max
-    GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction * fract_fpc_max
-    litter_flux_ta              = litter_flux           * veg_frac_correction * fract_fpc_max
-    root_exudates_ta            = root_exudates         * veg_frac_correction * fract_fpc_max
-    Cflux_herbivory_ta          = Cflux_herbivory       * veg_frac_correction * fract_fpc_max
+    carbon_2_GreenLitterPools_ta = carbon_2_GreenLitterPools * veg_frac_correction * fract_fpc_max
+    carbon_2_WoodLitterPools_ta  = carbon_2_WoodLitterPools  * veg_frac_correction * fract_fpc_max
+    carbon_2_atmos_ta            = carbon_2_atmos            * veg_frac_correction * fract_fpc_max
+    soil_respiration_ta          = soil_respiration          * veg_frac_correction * fract_fpc_max
+    NPP_pot_yDayMean_ta          = NPP_pot_yDayMean          * veg_frac_correction * fract_fpc_max
+    NPP_act_yDayMean_ta          = NPP_act_yDayMean          * veg_frac_correction * fract_fpc_max
+    NPP_flux_correction_ta       = NPP_flux_correction       * veg_frac_correction * fract_fpc_max
+    GPP_yDayMean_ta              = GPP_yDayMean              * veg_frac_correction * fract_fpc_max
+    litter_flux_ta               = litter_flux               * veg_frac_correction * fract_fpc_max
+    root_exudates_ta             = root_exudates             * veg_frac_correction * fract_fpc_max
+    Cflux_herbivory_ta           = Cflux_herbivory           * veg_frac_correction * fract_fpc_max
 
 !   CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
 !              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive

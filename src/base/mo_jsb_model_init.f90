@@ -292,7 +292,7 @@ CONTAINS
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
     CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
-                                                          ! before C_NPP_pot_allocation
+                                                          ! before C_NPP_pot_allocation TODO-JN
                       ! before it was between humidity_scaling and foliage_projected_cover
                       ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
