@@ -393,11 +393,21 @@ CONTAINS
           veg_pool%sap_wood    = veg_pool%sap_wood * 0.0_wp
           veg_pool%heart_wood  = veg_pool%heart_wood * 0.0_wp
           veg_pool%fruit       = veg_pool%fruit * 0.0_wp
-          veg_pool%labile      = veg_pool%labile * 0.0_wp
+          veg_pool%labile%carbon(:)     = 0.1_wp 
+          veg_pool%labile%nitrogen(:)   = veg_pool%labile%carbon(:) * & 
+                                          veg_pool%seed_bed%nitrogen(:)/veg_pool%seed_bed%carbon(:)
+          veg_pool%labile%phosphorus(:) = veg_pool%labile%carbon(:) * & 
+                                          veg_pool%seed_bed%phosphorus(:)/veg_pool%seed_bed%carbon(:)
+          veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon(:) * & 
+                                          veg_pool%seed_bed%carbon13(:)/veg_pool%seed_bed%carbon(:)
+          veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon(:) * & 
+                                          veg_pool%seed_bed%carbon14(:)/veg_pool%seed_bed%carbon(:)
+          veg_pool%labile%nitrogen15(:) = veg_pool%labile%carbon(:) * & 
+                                          veg_pool%seed_bed%nitrogen15(:)/veg_pool%seed_bed%carbon(:)
           veg_pool%reserve     = veg_pool%reserve * 0.0_wp
           height(:)            = 0.0_wp
           diameter(:)          = 0.0_wp
-          dens_ind(:)          = 0.0_wp
+          dens_ind(:)          = 0.1_wp
           lai(:)               = 0.0_wp
           mean_leaf_age(:)     = 0.0_wp
           dphi(:)              = w_soil_root_pot(:) - lctlib%phi_leaf_min 
