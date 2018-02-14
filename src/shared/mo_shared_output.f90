@@ -448,6 +448,7 @@ CONTAINS
             ! soil_diagnostics_lay
             p1str=''
             p2str=''
+            p3str=''
             DO isoil = 1,nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -456,8 +457,9 @@ CONTAINS
               ENDIF
               WRITE(p1str,'(a)') TRIM(p1str)//' Qmax_L'//TRIM(layerstr)
               WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' CUEmic_L'//TRIM(layerstr)
             ENDDO
-            WRITE(lun,'(3a)') 'Time ',TRIM(p1str),TRIM(p2str)
+            WRITE(lun,'(4a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str)
             lun=lun+1                 
         END SELECT
     END SELECT
@@ -588,6 +590,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: qmax_org
     dsl4jsb_Real3D_onChunk      :: qmax_po4
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
+    dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg 
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -665,6 +668,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_org)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_total_biomass
@@ -1109,7 +1113,7 @@ CONTAINS
                             sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
           ! soil_diagnostics_lay
-          write(lun,'(41F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:)
+          write(lun,'(61F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_output .OR. l_soil_output

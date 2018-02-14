@@ -34,6 +34,7 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: mavg_period_talloc
     REAL(wp)           :: mavg_period_tvegdyn
     REAL(wp)           :: mavg_period_tacclim
+    REAL(wp)           :: mavg_period_tmic
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -49,6 +50,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
     REAL(wp)           :: microbial_cue
+    REAL(wp)           :: microbial_cue_min
+    REAL(wp)           :: microbial_cue_max
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
     PROCEDURE :: set_param => set_parameter_values_with_list_values
@@ -86,6 +89,7 @@ CONTAINS
     REAL(wp)           :: mavg_period_talloc
     REAL(wp)           :: mavg_period_tvegdyn
     REAL(wp)           :: mavg_period_tacclim
+    REAL(wp)           :: mavg_period_tmic
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -101,6 +105,8 @@ CONTAINS
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
     REAL(wp)           :: microbial_cue
+    REAL(wp)           :: microbial_cue_min
+    REAL(wp)           :: microbial_cue_max
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
@@ -114,7 +120,8 @@ CONTAINS
         mavg_period_tcnl          , &
         mavg_period_talloc        , &
         mavg_period_tvegdyn       , &
-        mavg_period_tacclim
+        mavg_period_tacclim       , &
+        mavg_period_tmic
 
     NAMELIST /vegetation_ctl/     &  
         delta_n_fraction          , &
@@ -131,7 +138,9 @@ CONTAINS
         floss_nmin                , &
         tau_fast                  , &
         tau_slow                  , &
-        microbial_cue             
+        microbial_cue             , & 
+        microbial_cue_min         , &      
+        microbial_cue_max             
 
     ! variables for reading model-options from namelist
     ! 
@@ -150,6 +159,7 @@ CONTAINS
     mavg_period_talloc          = missval
     mavg_period_tvegdyn         = missval
     mavg_period_tacclim         = missval
+    mavg_period_tmic            = missval
     ! VEGETATION_CTL
     delta_n_fraction            = missval
     delta_n_leaf                = missval
@@ -165,6 +175,8 @@ CONTAINS
     tau_fast                    = missval
     tau_slow                    = missval
     microbial_cue               = missval
+    microbial_cue_min           = missval
+    microbial_cue_max           = missval
 
     ! read the namelist
     ! 
@@ -195,6 +207,7 @@ CONTAINS
     this%mavg_period_talloc          = mavg_period_talloc
     this%mavg_period_tvegdyn         = mavg_period_tvegdyn
     this%mavg_period_tacclim         = mavg_period_tacclim
+    this%mavg_period_tmic            = mavg_period_tmic
     ! VEGETATION_CTL
     this%delta_n_fraction            = delta_n_fraction
     this%delta_n_leaf                = delta_n_leaf
@@ -210,6 +223,8 @@ CONTAINS
     this%tau_fast                    = tau_fast
     this%tau_slow                    = tau_slow
     this%microbial_cue               = microbial_cue
+    this%microbial_cue_min           = microbial_cue_min
+    this%microbial_cue_max           = microbial_cue_max
 
   END SUBROUTINE Read_parameter_list
 
@@ -253,6 +268,7 @@ CONTAINS
     IF (ABS(this%mavg_period_talloc   - missval) > eps8)  mavg_period_talloc    = this%mavg_period_talloc
     IF (ABS(this%mavg_period_tvegdyn  - missval) > eps8)  mavg_period_tvegdyn   = this%mavg_period_tvegdyn
     IF (ABS(this%mavg_period_tacclim  - missval) > eps8)  mavg_period_tacclim   = this%mavg_period_tacclim
+    IF (ABS(this%mavg_period_tmic     - missval) > eps8)  mavg_period_tmic      = this%mavg_period_tmic
     ! VEGETATION_CTL
     IF (ABS(this%delta_n_fraction     - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
     IF (ABS(this%delta_n_leaf         - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf
@@ -276,6 +292,8 @@ CONTAINS
     IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
     IF (ABS(this%tau_slow             - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
     IF (ABS(this%microbial_cue        - missval) > eps8)  microbial_cue         = this%microbial_cue
+    IF (ABS(this%microbial_cue_min    - missval) > eps8)  microbial_cue_min     = this%microbial_cue_min
+    IF (ABS(this%microbial_cue_max    - missval) > eps8)  microbial_cue_max     = this%microbial_cue_max
 
   END SUBROUTINE set_parameter_values_with_list_values
 

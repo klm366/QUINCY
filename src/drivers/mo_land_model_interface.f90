@@ -402,6 +402,9 @@ CONTAINS
       ENDSELECT
       CALL update_sb_pools            (tile, model%options)
 
+      !! accumulation over time - daytime & moving average
+      !!
+      CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
       !! output pool: write output in certain intervals, see mo_shared_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days

@@ -443,6 +443,7 @@ CONTAINS
     USE mo_veg_memory_class,        ONLY: veg_pool
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_rad_memory_class,      ONLY: t_sb_memory
 
 
     IMPLICIT NONE
@@ -467,6 +468,7 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
     dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
@@ -582,6 +584,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg      ! SB_
+    dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -604,6 +608,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
     ! ---------------------------
@@ -725,6 +730,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
     ! Get process memory pool structures
 #define Get_veg_pool
 #include "slm_pools_a_incl.f90"
@@ -930,6 +938,10 @@ CONTAINS
     t_air_month_mavg(:)      = calc_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
     t_jmax_opt_mavg(:)       = calc_mavg(t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
 
+    !> 1.11
+    !!
+    microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:),microbial_cue_eff(:,:), & 
+                                                 mavg_period_tmic)
 
 ! Pass back values to process memory
 #define Passback_veg_pool

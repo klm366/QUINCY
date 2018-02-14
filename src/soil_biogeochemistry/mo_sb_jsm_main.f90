@@ -121,6 +121,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: microbial_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: microbial_cue_eff
+    dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk :: weathering_po4
     dsl4jsb_Real3D_onChunk :: occlusion_po4
     dsl4jsb_Real3D_onChunk :: slow_sorption_po4
@@ -210,6 +212,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)           ! out
@@ -371,14 +375,14 @@ CONTAINS
     !> 3.1 microbial growth
     !! 
     CALL calc_microbial_growth(options,sb_pool%dom,sb_pool%microbial, & 
-                               rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:), &
+                               rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:),microbial_cue_eff_tmic_mavg(:,:), &
                                microbial_uptake_nh4_sl(:,:),microbial_uptake_nh4_n15_sl(:,:), & 
                                microbial_uptake_no3_sl(:,:),microbial_uptake_no3_n15_sl(:,:), microbial_uptake_po4_sl(:,:), &
                                sb_loss%dom,sb_formation%microbial, &
                                het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:), &
                                net_mineralisation_nh4(:,:),net_mineralisation_nh4_n15(:,:), & 
                                net_mineralisation_no3(:,:),net_mineralisation_no3_n15(:,:), & 
-                               net_mineralisation_po4(:,:))
+                               net_mineralisation_po4(:,:),microbial_cue_eff(:,:))
 
     !> 3.2 microbial death
     !! determine mortality rate, constrained by to avoiding a complete death of the community

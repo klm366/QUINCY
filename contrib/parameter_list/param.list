@@ -19,6 +19,7 @@
   mavg_period_talloc=NAN
   mavg_period_tvegdyn=NAN
   mavg_period_tacclim=NAN
+  mavg_period_tmic=NAN
 /
 &SOIL_CTL
   ! tba
@@ -28,6 +29,8 @@
   tau_fast=NAN
   tau_slow=NAN
   microbial_cue=NAN
+  microbial_cue_min=NAN
+  microbial_cue_max=NAN
 /
 &VEGETATION_CTL
   delta_n_fraction=NAN

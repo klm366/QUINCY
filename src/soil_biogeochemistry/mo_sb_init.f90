@@ -100,6 +100,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ph_sl
     dsl4jsb_Real3D_onChunk :: lithology_class_sl
     dsl4jsb_Real3D_onChunk :: po4_primary
+    dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -140,6 +141,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       ph_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       lithology_class_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff_tmic_mavg)
     ! Get process memory pool structures
 #define Get_sb_pool
 #include "slm_pools_a_incl.f90"
@@ -335,6 +337,8 @@ CONTAINS
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
  
     END SELECT
+
+    microbial_cue_eff_tmic_mavg(:,:) = microbial_cue_max
 
 ! Pass back values to process memory
 #define Passback_sb_pool

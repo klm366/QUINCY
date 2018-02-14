@@ -318,7 +318,10 @@ MODULE mo_sb_memory_class
                                     bulk_dens_corr_sl, &          !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &        !< bulk soil density of carbon [kg m-3] 
                                     particle_fluxrate, &          !< burial rate due to organic matter fall and decay [s-1?] 
-                                    anaerobic_volume_fraction_sl  !< anaerobic volume fraction [--]
+                                    anaerobic_volume_fraction_sl, &  !< anaerobic volume fraction [--]
+                                    microbial_cue_eff, &          !< instantaneous microbial CUE given NP constraints
+                                    microbial_cue_eff_tmic_mavg    !< time-averaged microbial CUE given NP constraints 
+ 
 
     ! 3D soil properties
     TYPE(t_jsb_var_real3d)          :: &
@@ -1935,6 +1938,22 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_cue_eff', mem%microbial_cue_eff, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
