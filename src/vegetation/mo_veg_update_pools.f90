@@ -42,9 +42,11 @@ CONTAINS
     USE mo_base_config_class,   ONLY: base_config
     USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_constants,    ONLY: lambda_C14, rhoh2o, grav
+    USE mo_shared_isotope,      ONLY: calc_mixing_ratio_N15N14
+    USE mo_rad_constants,       ONLY: rfr_ratio_toc 
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
     USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
-    USE mo_veg_constants,       ONLY: itree
+    USE mo_veg_constants,       ONLY: itree,eta_nfixation
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -96,6 +98,7 @@ CONTAINS
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! VEG_
@@ -183,6 +186,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                 ! in
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
@@ -286,6 +290,7 @@ CONTAINS
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
+       n_fixation_n15(:) = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
        veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
                                           ( uptake_nh4(:) + uptake_no3(:) + n_fixation(:)) * dtime / 1000000.0_wp
        veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
@@ -411,6 +416,7 @@ CONTAINS
           lai(:)               = 0.0_wp
           mean_leaf_age(:)     = 0.0_wp
           dphi(:)              = w_soil_root_pot(:) - lctlib%phi_leaf_min 
+          rfr_ratio_boc_tvegdyn_mavg(:) = rfr_ratio_toc 
        ENDIF
 
     END SELECT

@@ -117,6 +117,7 @@ mo_veg_update_pools.o: \
   mo_veg_canopy.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \
+  mo_rad_constants.o \
   mo_assimi_memory_class.o \
   mo_soil_memory_class.o \
   mo_veg_constants.o \

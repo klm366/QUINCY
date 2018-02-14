@@ -27,12 +27,12 @@ specialFluxnetOutput="T"
 soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic
-flag_sb_prescribe_nh4="T"       # set nh4solute to a constant value
-flag_sb_prescribe_no3="T"       # set no3solute to a constant value
+flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
+flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 
 # BNF & Mycorrhiza
-bnf_scheme="standard"           # none fixed standard optimal resistance
+bnf_scheme="unlimited"          # none fixed standard optimal resistance
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
 flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
 flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool

@@ -211,7 +211,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: f_p_demand
     dsl4jsb_Real2D_onChunk      :: n_fixation
-    dsl4jsb_Real2D_onChunk      :: n_fixation_n15
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
     dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
@@ -376,7 +375,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                         ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                     ! out 
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)           ! in
@@ -476,7 +474,6 @@ CONTAINS
                                           uptake_no3_n15(:), &
                                           uptake_po4(:), &
                                           n_fixation(:), &
-                                          n_fixation_n15(:), &
                                           unit_uptake_n_act(:), &
                                           unit_uptake_p_act(:), &
                                           cost_n_uptake_root(:), &
@@ -711,6 +708,7 @@ CONTAINS
     !! 
     !! 
     CALL calc_partitioning(options                          , & ! in
+                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                            t_air(:)                         , &
                            t_air_tacclim_mavg(:)            , &
                            kstar_labile(:)                  , &
@@ -728,6 +726,7 @@ CONTAINS
                            n_processing_respiration_c14(:)  , &
                            veg_growth                       , &
                            veg_exudation                    , &
+                           n_fixation(:)                    , &
                            maint_respiration_pot(:)         , & ! out
                            maint_respiration(:)             , & ! out
                            growth_respiration(:)  )             ! out
@@ -910,7 +909,6 @@ CONTAINS
                                               uptake_no3_n15, &
                                               uptake_po4, &
                                               n_fixation, & 
-                                              n_fixation_n15, &
                                               unit_uptake_n_act, &
                                               unit_uptake_p_act, &
                                               cost_n_uptake_root, &
@@ -969,7 +967,6 @@ CONTAINS
     REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_no3_n15           !< total plant NO3-N15 uptake (mu mol N / m2 / s)
     REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_po4               !< total plant PO4 uptake (mu mol N / m2 / s)
     REAL(wp), DIMENSION(:),       INTENT(out)   :: n_fixation               !< symbiontic N fixation (mu mol N / m2 / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: n_fixation_n15           !< symbiontic N fixation (mu mol N15 / m2 / s)
     REAL(wp), DIMENSION(:),       INTENT(out)   :: unit_uptake_n_act        !< N uptake per unit root mass (mu mol N / mol C / s)
     REAL(wp), DIMENSION(:),       INTENT(out)   :: unit_uptake_p_act        !< P uptake per unit root mass (mu mol P / mol C / s)
     REAL(wp), DIMENSION(:),       INTENT(out)   :: cost_n_uptake_root       !< C costs for N uptake by roots (mol C / mol N)
@@ -1222,11 +1219,6 @@ CONTAINS
        uptake_no3_n15(:) = uptake_no3_n15(:) + plant_uptake_no3_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
     ENDDO
  
-    !> 5.4 calculate 15N flux associated with symbiontic N fixation, which is identical to the 
-    !!     atmospheric dN15 minus the discrimination of the nitrogenase (Robinson, 2001, TREE)
-    !! 
-    n_fixation_n15(:) = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
-
   END SUBROUTINE calc_actual_nutrient_uptake_rate
 
   !-----------------------------------------------------------------------------------------------------
@@ -2264,6 +2256,7 @@ CONTAINS
   !! output: growth of tissue types, maintenance respiration and growth respiration 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning( options                       , &
+                                veg_bnf_scheme                , &
                                 t_air                         , &  
                                 t_air_tacclim_mavg            , &
                                 kstar_labile                  , &
@@ -2281,6 +2274,7 @@ CONTAINS
                                 n_processing_respiration_c14  , &
                                 veg_growth                    , &
                                 veg_exudation                 , &
+                                n_fixation                    , &
                                 maint_respiration_pot         , &
                                 maint_respiration             , &
                                 growth_respiration  )  
@@ -2293,6 +2287,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),     INTENT(in)    :: options                          !< model options
+    CHARACTER(len=*),             INTENT(in)    :: veg_bnf_scheme                   !< from veg config 
     REAL(wp), DIMENSION(:),       INTENT(in)    :: t_air                        , & !< air temperature
                                                    t_air_tacclim_mavg           , & !< .. 
                                                    kstar_labile                 , & !< potential labile pool turnover (1/day) 
@@ -2310,6 +2305,7 @@ CONTAINS
                                                    n_processing_respiration_c14     !< respiration associated with N processing
     TYPE(t_veg_pool_a),           INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
     TYPE(t_veg_element_a),        INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
+    REAL(wp), DIMENSION(:),       INTENT(inout) :: n_fixation                       !< symbiontic N fixation (mu mol N / m2 / s)
     REAL(wp), DIMENSION(:),       INTENT(out)   :: maint_respiration_pot        , & !< potential maintenance respiration
                                                    maint_respiration            , & !< maintenance respiration
                                                    growth_respiration               !< growth respiration
@@ -2366,12 +2362,18 @@ CONTAINS
       END WHERE
     END WHERE
     ! adjust C growth rate to N growth rate if N is limiting 
-    WHERE(growth_req_n(:) > eps8)
-      WHERE(veg_growth%labile%carbon(:) > veg_growth%labile%nitrogen(:) / MAX(growth_req_n(:),eps8)) ! MAX() is necessary for cases with growth_req_n(:) < eps8
-        veg_growth%labile%carbon(:) = veg_growth%labile%nitrogen(:) / growth_req_n(:)
-      END WHERE
-    END WHERE
- 
+    IF(veg_bnf_scheme=='unlimited')THEN
+       ! N fixation in umol / m2 / s
+       n_fixation(:) = MAX(veg_growth%labile%carbon(:) * growth_req_n(:) - veg_growth%labile%nitrogen(:),0.0_wp) / & 
+                           dtime * 1000000.0_wp
+       veg_growth%labile%nitrogen(:) =  veg_growth%labile%carbon(:) * growth_req_n(:)
+    ELSE
+       WHERE(growth_req_n(:) > eps8)
+         WHERE(veg_growth%labile%carbon(:) > veg_growth%labile%nitrogen(:) / MAX(growth_req_n(:),eps8)) ! MAX() is necessary for cases with growth_req_n(:) < eps8
+           veg_growth%labile%carbon(:) = veg_growth%labile%nitrogen(:) / growth_req_n(:)
+         END WHERE
+       END WHERE  
+    ENDIF 
     ! Diagnose growth respiration (µmol C / m2 / s)
     growth_respiration(:) = fresp_growth * veg_growth%labile%carbon(:) * 1.e6_wp / dtime
 

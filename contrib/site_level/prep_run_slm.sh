@@ -98,7 +98,7 @@ flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 
 # BNF & Mycorrhiza
-bnf_scheme="standard"           # none fixed standard optimal resistance
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
 flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
 flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
@@ -291,6 +291,10 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:u:h" opt; do
       echo "   bnf_scheme=resistance"
       bnf_scheme="resistance"
       ;;
+    "unl")
+      echo "   bnf_scheme=unlimited"
+      bnf_scheme="unlimited"
+      ;;
     esac
     ;;
   "z")
@@ -374,6 +378,7 @@ while getopts ":e:f:c:m:s:r:y:o:b:z:n:u:h" opt; do
     echo "       std : standard (includes costs)"
     echo "       opt : optimal"
     echo "       res : resistance"
+    echo "       unl : unlimited"
     echo " -z set mycorrhiza on/off (flag_mycorrhiza)"
     echo "    Arguments to -z:"
     echo "       T: TRUE  - mycorrhiza are simulated"
@@ -472,7 +477,7 @@ validateForcingDataSet="fluxnet cruncep face"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
-validateBNFScheme="none fixed standard optimal resistance"
+validateBNFScheme="none fixed standard optimal resistance unlimited"
 validateMycScheme="no am ecm"
 validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
@@ -847,8 +852,8 @@ if [ $forcingMode == "transient" ]
    if [ $transient_spinup_years -lt 10 ]
     then
      echo " You set the spinup length to ""$transient_spinup_years"", which quite low and not very useful."
-     echo " Assuming a simple typo, the spinup length is set to 100 years (the default would be 500 years though)."
-     transient_spinup_years=100
+     echo " Assuming a simple typo, the spinup length is set to 10 years (the default would be 500 years though)."
+     transient_spinup_years=10
    fi
    if [ $forcingDataSet == "fluxnet" ]
     then

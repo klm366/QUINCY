@@ -597,6 +597,7 @@ CONTAINS
     !!     nitrification, denitrification and biomineralisation rates
     !!
     CALL calc_actual_flux_rates(options, &
+                                TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                                 nh4_solute(:,:), &
                                 no3_solute(:,:), &
                                 po4_solute(:,:), &
@@ -618,6 +619,7 @@ CONTAINS
                                 mycorrhiza_uptake_po4_sl(:,:), &
                                 nitrification_no3(:,:), &
                                 denitrification_n2(:,:), &
+                                asymb_n_fixation(:,:), &
                                 biochem_mineralisation_po4(:,:), &
                                 sb_loss, &
                                 microbial_uptake_nh4_sl(:,:), &
@@ -1732,6 +1734,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_actual_flux_rates( options, &
+                                     veg_bnf_scheme, & 
                                      nh4_solute, &
                                      no3_solute, &
                                      po4_solute, &
@@ -1753,6 +1756,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      mycorrhiza_uptake_po4_sl, &
                                      nitrification_no3, &
                                      denitrification_n2, &
+                                     asymb_n_fixation, &
                                      biochem_mineralisation_po4, &
                                      sb_loss, &
                                      microbial_uptake_nh4_sl, &
@@ -1766,6 +1770,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
+    CHARACTER(len=*),                                 INTENT(in)    :: veg_bnf_scheme                !< veg n fixation scheme  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute, &                 !< NH4 in solution [mol / m3] 
                                                                        no3_solute, &                 !< NO3 in solution [mol / m3]
                                                                        po4_solute, &                 !< PO4 in solution [mol / m3]
@@ -1787,6 +1792,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [mol / m3 / timestep]
                                                                        nitrification_no3, &          !< nitrification rate [mol / m3 / timestep]
                                                                        denitrification_n2, &         !< denitrification rate [mol / m3 / timestep]
+                                                                       asymb_n_fixation, &           !< asymbiotic N fixation (unlimited BNF only) [mol / m3 / timestep]
                                                                        biochem_mineralisation_po4    !< biomineralisation rate [mol / m3 / timestep]
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                       !< decomposition of SOM and litter pools [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: microbial_uptake_nh4_sl, &    !< microbial immobilisation of NH4 [mol / m3 / timestep]
@@ -1815,38 +1821,44 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.2  Limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
     !!
-    WHERE(microbial_uptake_nh4_sl(:,:)>=0.0_wp)
-       hlp1(:,:) = microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
-       hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
-       WHERE(hlp2(:,:) < hlp1(:,:)) 
-           WHERE(hlp1(:,:) > eps8)
-              microbial_uptake_nh4_sl(:,:)   = hlp2(:,:) * microbial_uptake_nh4_sl(:,:) / hlp1(:,:) 
-              plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
-              nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
-              mycorrhiza_uptake_nh4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_sl(:,:) / hlp1(:,:)
-           ELSEWHERE
-              microbial_uptake_nh4_sl(:,:) = 0.0_wp
-              plant_uptake_nh4_sl(:,:) = 0.0_wp 
-              nitrification_no3(:,:) = 0.0_wp 
-              mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
-           ENDWHERE 
-        ENDWHERE
-    ELSEWHERE
-       hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
-       hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - microbial_uptake_nh4_sl(:,:)
-       WHERE(hlp2(:,:) < hlp1(:,:)) 
-           WHERE(hlp1(:,:) > eps8)
-              plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
-              nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
-              mycorrhiza_uptake_nh4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_sl(:,:) / hlp1(:,:)
-           ELSEWHERE
-              plant_uptake_nh4_sl(:,:) = 0.0_wp 
-              nitrification_no3(:,:) = 0.0_wp 
-              mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
-           ENDWHERE 
-        ENDWHERE
-    ENDWHERE 
-   
+    IF(veg_bnf_scheme=='unlimited')THEN
+       asymb_n_fixation(:,:) = MAX(microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + & 
+                                   mycorrhiza_uptake_nh4_sl(:,:) - (nh4_solute(:,:) + transport_nh4_solute(:,:)),0.0_wp)
+       microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) + asymb_n_fixation(:,:) 
+    ELSE
+       WHERE(microbial_uptake_nh4_sl(:,:)>=0.0_wp)
+          hlp1(:,:) = microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
+          hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
+          WHERE(hlp2(:,:) < hlp1(:,:)) 
+              WHERE(hlp1(:,:) > eps8)
+                 microbial_uptake_nh4_sl(:,:)   = hlp2(:,:) * microbial_uptake_nh4_sl(:,:) / hlp1(:,:) 
+                 plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
+                 nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
+                 mycorrhiza_uptake_nh4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_sl(:,:) / hlp1(:,:)
+              ELSEWHERE
+                 microbial_uptake_nh4_sl(:,:) = 0.0_wp
+                 plant_uptake_nh4_sl(:,:) = 0.0_wp 
+                 nitrification_no3(:,:) = 0.0_wp 
+                 mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
+              ENDWHERE 
+           ENDWHERE
+       ELSEWHERE
+          hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
+          hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - microbial_uptake_nh4_sl(:,:)
+          WHERE(hlp2(:,:) < hlp1(:,:)) 
+              WHERE(hlp1(:,:) > eps8)
+                 plant_uptake_nh4_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_sl(:,:) / hlp1(:,:)
+                 nitrification_no3(:,:)   = hlp2(:,:) * nitrification_no3(:,:) / hlp1(:,:)
+                 mycorrhiza_uptake_nh4_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_sl(:,:) / hlp1(:,:)
+              ELSEWHERE
+                 plant_uptake_nh4_sl(:,:) = 0.0_wp 
+                 nitrification_no3(:,:) = 0.0_wp 
+                 mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
+              ENDWHERE 
+           ENDWHERE
+       ENDWHERE 
+    ENDIF
+ 
     !> 1.3  limit plant uptake and denitrification to available NO3 minus transport losses 
     !!
     hlp1(:,:) = plant_uptake_no3_sl(:,:) + denitrification_n2(:,:) + mycorrhiza_uptake_no3_sl(:,:)
@@ -3165,6 +3177,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
              asymb_n_fixation(:,:) = rtm_fixation_act(:,:) * rmm_fixation_act(:,:) * &
                                      root_fraction_act_sl(:,:) * hlp2_2d(:,:) 
           ENDWHERE
+       CASE("unlimited")
+          asymb_n_fixation(:,:) = asymb_n_fixation(:,:) / dtime * 1000000._wp
     END SELECT
 
     !> 1.3 calculate 15N flux associated with asymbiontic N fixation, which is identical to the 

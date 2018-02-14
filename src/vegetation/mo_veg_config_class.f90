@@ -105,7 +105,7 @@ CONTAINS
 
     ! check input for BNF scheme
     SELECT CASE (TRIM(bnf_scheme))
-     CASE ("none","fixed","standard","resistance","optimal")
+     CASE ("none","fixed","standard","resistance","optimal","unlimited")
      CASE DEFAULT
        WRITE(message_text,'(2a)') 'invalid bnf_scheme',bnf_scheme
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 

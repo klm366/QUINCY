@@ -27,7 +27,7 @@ n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down &
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # BNF & Mycorrhiza
-bnf_scheme="standard"           # none fixed standard optimal resistance
+bnf_scheme="unlimited"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
 flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
 flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
@@ -182,6 +182,10 @@ while getopts ":p:m:s:y:o:b:z:h" opt; do
       echo "   bnf_scheme=resistance"
       bnf_scheme="resistance"
       ;;
+    "unl")
+      echo "   bnf_scheme=unlimited"
+      bnf_scheme="unlimited"
+     ;;
     esac
     ;;
   "z")
@@ -240,6 +244,7 @@ while getopts ":p:m:s:y:o:b:z:h" opt; do
     echo "       std : standard (includes costs)"
     echo "       opt : optimal"
     echo "       res : resistance"
+    echo "       unl : unlimited"
     echo " -z set mycorrhiza on/off (flag_mycorrhiza)"
     echo "    Arguments to -z:"
     echo "       T: TRUE  - mycorrhiza are simulated"
@@ -274,7 +279,7 @@ return 0
 }
 # lists to validate against
 validateSlmModel="land plant soil canopy test_canopy"
-validateBNFScheme="none fixed standard optimal resistance"
+validateBNFScheme="none fixed standard optimal resistance unlimited"
 validateMycScheme="no am ecm"
 validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
@@ -491,7 +496,7 @@ if [[ $(uname -s) == "Darwin" ]]; then                                      # ma
 else 
   sed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm
 fi
-sync
+#sync
 return 0                                                                              # get return value with: return_value=$?
 }
  # examples:
@@ -719,12 +724,12 @@ compiler=$(sed -n 2p ./../../../build/Make.inc.local | awk '{print $3}')
 echo "Simulation finished"
 echo " "
 echo "Running postprocessing ... "
-sync
+#sync
 
 ## run R script for postprocessing ##
 Rscript --vanilla ./postprocessing_"$slmModel".R
 
-sync
+#sync
 echo " "
 echo " ... done !"
 
