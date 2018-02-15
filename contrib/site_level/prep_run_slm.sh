@@ -82,6 +82,7 @@ usecase=""
 # 20 land_300yr_fluxnet_all_def
 # 21 land_300yr_cruncep_cue_def
 # 22 land_300yr_cruncep_spp_def
+# 30 land_500yr_FACE_def
 # 80 baseline_fluxnet_def
 # 81 baseline_gfdb_cue_def
 # 82 baseline_fluxnet_npre_def
@@ -828,6 +829,11 @@ if [ $forcingMode == "transient" ]
    echo " You set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
    echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
 
+   if [ $transient_spinup_years -lt 1 ]
+    then
+     echo " Ohh, you set the spinup time to a value less than 1 year, which is not recommended. Re-setting it to 1 now."
+     transient_spinup_years=1
+   fi
    if [ $transient_spinup_start_year != "1901" ]
     then
      echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not possible. Sorry."
@@ -849,11 +855,9 @@ if [ $forcingMode == "transient" ]
      transient_spinup_end_year=$((transient_spinup_start_year + 29))
      echo " The new (automagically corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
    fi
-   if [ $transient_spinup_years -lt 10 ]
+   if [ $transient_spinup_years -lt 50 ]
     then
-     echo " You set the spinup length to ""$transient_spinup_years"", which quite low and not very useful."
-     echo " Assuming a simple typo, the spinup length is set to 10 years (the default would be 500 years though)."
-     transient_spinup_years=10
+     echo " Warning: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
    fi
    if [ $forcingDataSet == "fluxnet" ]
     then
