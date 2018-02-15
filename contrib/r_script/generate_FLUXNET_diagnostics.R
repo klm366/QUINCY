@@ -6,15 +6,16 @@
 # contains functions:
 # 
 # MODEL_FLUXNET_GRAPHIC          - ordinary fluxnet plots
-# MODEL_FLUXNET_GRAPHIC_FAPAR    - satellite comparison plots
-# MODEL_FLUXNET_GRAPHIC_FORCING  - compare forcing data with observation 
-# MODEL_FLUXNET_GRAPHIC_ERR      - error bars 
-# MODEL_FLUXNET_STATS_GRAPHIC    currently not used and commented out
 #
 # MODEL_FLUXNET_COMPUTE_GROUPING - aggregate to daily, monthly, annual and diurnal cycle
 # MODEL_FLUXNET_EVALUATION       - compute Root Mean Square Error, R sqaure, NSE, PBIAS, RSR
-# 
 
+# functions currently not used and commented out:
+# 
+# MODEL_FLUXNET_GRAPHIC_FAPAR    - satellite comparison plots
+# MODEL_FLUXNET_GRAPHIC_FORCING  - compare forcing data with observation 
+# MODEL_FLUXNET_GRAPHIC_ERR      - error bars 
+# MODEL_FLUXNET_STATS_GRAPHIC    
 
 #################################################################################################################
 # (1) Init                                                                                                      #
@@ -41,43 +42,44 @@ opar<-par( cex=0.6, pin=c(6.0, 2.0))
 split.screen(c(2,1))
 split.screen(c(1,2),screen=2)
 screen(1)
-  plot(TIME, MODEL_V*NA, type='n',  col="red", 
+  plot(TIME, MODEL_V*NA, type='n',
     ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)), 
     xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-    main=paste(typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""),
+    main=paste0(typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")"),
     las=1, axes=F)
   axis(1, at=1:length(TIME), lab=labs,las=1)
   axis(2,las=1)
   box() 
   if (!all(is.na( FLUXNET_V ))) {
-    lines(TIME, FLUXNET_V, type=gtype, col="black")
+    lines(TIME, FLUXNET_V, type=gtype, col="black",pch=21,cex=0.8)
   } else {
     print("  All FLUXNET_V is NaN. Skip plotting.")
   }
   if (!all(is.na( MODEL_V ))) {
-    lines(TIME, MODEL_V, type=gtype, col="red" ,pch=19)
+    lines(TIME, MODEL_V, type=gtype, col="red" ,pch=21,cex=0.8)
   } else {
     print("  All MODEL_V is NaN. Skip plotting.")
   }
-  legend("topleft", legend = c("MODEL","FLUXNET"),  col=c("red","black"), pch=c(19,21), bty="n", ncol=2)
+  legend("topleft", legend = c("model","fluxnet"),  col=c("red","black"), pch=c(21,21), bty="n", ncol=1)
   legend("topright", legend = c(paste("NSE = ", NSE), paste("PBIAS = ", PBIAS, "%", sep=""), paste("RSR = ", RSR)), bty="n")
 
 screen(3)
   if(!all(is.na(FLUXNET_V))) {
   if(!all(is.na(MODEL_V))) {
-     plot(FLUXNET_V,MODEL_V, xlab='Fluxnet',ylab='MODEL',las=1,
-          ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)),
-          xlim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)),
-          main= paste(variable_info[1], "(" ,  variable_info[2], ")", sep= "" ))
+    plot(FLUXNET_V,MODEL_V, xlab='fluxnet',ylab='model',las=1,
+         col="red",pch=21,cex=0.8,
+         ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)),
+         xlim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)),
+         main=paste0(variable_info[1]," (",variable_info[2],")"))
     line_FJ <- line(FLUXNET_V,MODEL_V) 
     if (is.finite(coef(line_FJ)[1]) & is.finite(coef(line_FJ)[2])) {
       a=NA;b=NA
       if(!any(is.na(coef(line_FJ)))) {
         a=sprintf("%.2f",coef(line_FJ,use.na=false)[1])
         b=sprintf("%.2f",coef(line_FJ,use.na=false)[2])
-        abline(line_FJ, col="red")
+        abline(line_FJ, col="black",lwd=0.9)
       }
-      abline(0,1)
+      abline(0,1,col="gray50",lty=2)
       legend("bottomright", legend = c(paste("Int = ", a), paste("slope = ", b), paste("RMSE = ", RMSE), 
         paste("NRMSE = ", NRMSE), as.expression(bquote(R^2 == .(RR)))), bty="n") 
     } else {
@@ -86,136 +88,132 @@ screen(3)
   }
 }
 screen(4)
-  #JF_T <- c(rep("MODEL",length(TIME)),rep("FLUXNET",length(TIME)))
-  #JF_V <- c(MODEL_V, FLUXNET_V)
-  #bwplot(JF_T ~ JF_V, panel=panel.bpplot, nout=.05, scat1d.opts=list(frac=.01))
-  #bpplot(MODEL_V, FLUXNET_V, name=c("MODEL", "FLUXNET"))
   if(!all(is.na(FLUXNET_V))) {
   if(!all(is.na(MODEL_V))) {
-    boxplot(MODEL_V, FLUXNET_V, names=c("MODEL", "FLUXNET"),las=1,
-      ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-      main = paste("Boxplot of ", variable_info[1]))
-  }
-  }
+    boxplot(MODEL_V, FLUXNET_V, names=c("model", "fluxnet"),las=1,
+            ylab=variable_info[1], 
+            main=paste0(variable_info[1]," (", variable_info[2], ")"))
+  }}
 close.screen(1:4)
 }
 
 # Graphic Function (2) SATELLITE STUFF-----------------------------------------------------------------
-MODEL_FLUXNET_GRAPHIC_FAPAR <- function(MODEL_V, FLUXNET_V, FLUXNET_V2, FLUXNET_V3, TIME, typestr, gtype, variable_info, 
-  RMSE_seawifs, RMSE_modis, RR_seawifs, RR_modis, NSE, PBIAS, RSR){
+# MODEL_FLUXNET_GRAPHIC_FAPAR <- function(MODEL_V, FLUXNET_V, FLUXNET_V2, FLUXNET_V3, TIME, typestr, gtype, variable_info, 
+#   RMSE_seawifs, RMSE_modis, RR_seawifs, RR_modis, NSE, PBIAS, RSR){
+# 
+# opar<-par( cex=0.6, pin=c(6.0, 2.0))
+# 
+# split.screen(c(2,1))
+# split.screen(c(1,2),screen=2)
+# screen(1)
+#   plot(TIME, MODEL_V, type=gtype,  col="red", pch=19,
+#     ylim=c(min(MODEL_V, c(FLUXNET_V,FLUXNET_V2,FLUXNET_V3),na.rm=TRUE), 
+#            max(MODEL_V, c(FLUXNET_V,FLUXNET_V2,FLUXNET_V3),na.rm=TRUE)), 
+#     xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
+#     main=paste(typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""),
+#     las=1)
+#   lines(TIME, FLUXNET_V, type=gtype, col="black" )
+#   lines(TIME, FLUXNET_V2, type=gtype, col="blue" )
+#   lines(TIME, MODEL_V, type=gtype, col="red" ,pch=19)
+#   legend("bottomright", legend = c("MODEL","SeaWifs","Modis","Cyclopes"),  
+#     col=c("red","black","blue","grey"), pch=c(19,21,21,21), bty="n", ncol=4)
+#   legend("topright", legend = c(paste("NSE = ", NSE), paste("PBIAS = ", PBIAS, "%", sep=""), paste("RSR = ", RSR)), bty="n")
+# 
+# screen(3)
+#   plot(FLUXNET_V,MODEL_V, xlab='SeaWifs',ylab='MODEL',las=1,xlim=c(0,1),ylim=c(0,1),
+#       main= paste(variable_info[1], "(" ,  variable_info[2], ")", sep= "" ))
+#   legend("topleft", legend = c(paste("RMSE (SeaWifs) = ", RMSE_seawifs), paste("RMSE (Modis) = ", RMSE_modis),
+#     as.expression(bquote(R^2 (SeaWifs) == .(RR_seawifs))), as.expression(bquote(R^2 (Modis) == .(RR_modis)))), bty="n")
+#   points(FLUXNET_V2, MODEL_V,col='blue',pch=1)
+# 
+# screen(4)
+#   boxplot(MODEL_V, FLUXNET_V, names=c("MODEL", "FLUXNET"), col = "light grey", las=1,
+#     ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
+#     main = paste("Boxplot of ", variable_info[1]))
+# 
+# close.screen(1:4)
+# }
 
-opar<-par( cex=0.6, pin=c(6.0, 2.0))
-
-split.screen(c(2,1))
-split.screen(c(1,2),screen=2)
-screen(1)
-  plot(TIME, MODEL_V, type=gtype,  col="red", pch=19,
-    ylim=c(min(MODEL_V, c(FLUXNET_V,FLUXNET_V2,FLUXNET_V3),na.rm=TRUE), 
-           max(MODEL_V, c(FLUXNET_V,FLUXNET_V2,FLUXNET_V3),na.rm=TRUE)), 
-    xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-    main=paste(typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""),
-    las=1)
-  lines(TIME, FLUXNET_V, type=gtype, col="black" )
-  lines(TIME, FLUXNET_V2, type=gtype, col="blue" )
-  lines(TIME, MODEL_V, type=gtype, col="red" ,pch=19)
-  legend("bottomright", legend = c("MODEL","SeaWifs","Modis","Cyclopes"),  
-    col=c("red","black","blue","grey"), pch=c(19,21,21,21), bty="n", ncol=4)
-  legend("topright", legend = c(paste("NSE = ", NSE), paste("PBIAS = ", PBIAS, "%", sep=""), paste("RSR = ", RSR)), bty="n")
-
-screen(3)
-  plot(FLUXNET_V,MODEL_V, xlab='SeaWifs',ylab='MODEL',las=1,xlim=c(0,1),ylim=c(0,1),
-      main= paste(variable_info[1], "(" ,  variable_info[2], ")", sep= "" ))
-  legend("topleft", legend = c(paste("RMSE (SeaWifs) = ", RMSE_seawifs), paste("RMSE (Modis) = ", RMSE_modis),
-    as.expression(bquote(R^2 (SeaWifs) == .(RR_seawifs))), as.expression(bquote(R^2 (Modis) == .(RR_modis)))), bty="n")
-  points(FLUXNET_V2, MODEL_V,col='blue',pch=1)
-
-screen(4)
-  boxplot(MODEL_V, FLUXNET_V, names=c("MODEL", "FLUXNET"), col = "light grey", las=1,
-    ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-    main = paste("Boxplot of ", variable_info[1]))
-
-close.screen(1:4)
-}
 
 # Graphic Function (3) compare Forcing data with simulation and evaluation------------------------
-MODEL_FLUXNET_GRAPHIC_FORCING <- function(MODEL_V, FLUXNET_V, FORCING_V, Parameter_info, TIME, typestr, gtype, variable_info){
-
-  opar<-par( cex=0.6, pin=c(6.0, 2.0))
-  plot(TIME, MODEL_V, type="n",  col="green", 
-    ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)), 
-    xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-    main=paste(typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""),
-    las=1)
-  lines(TIME, MODEL_V, lwd=2, xlab='Time', ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)), col="green")
-  lines(TIME, FLUXNET_V, type=gtype, col="blue")
- 
-  par(new=T)
-  plot(TIME, FORCING_V, col='black', lwd=2, ann=F, axes=F)
-  mtext(Parameter_info, side=4, line=3, col='black')
-  axis(4, col.axis='black', col='black')
-  legend("topleft", legend = c("MODEL","FLUXNET","FORCING"),  col=c("green","blue","black"), pch=19, bty="n", ncol=2)
- 
-}
+# MODEL_FLUXNET_GRAPHIC_FORCING <- function(MODEL_V, FLUXNET_V, FORCING_V, Parameter_info, TIME, typestr, gtype, variable_info){
+# 
+#   opar<-par( cex=0.6, pin=c(6.0, 2.0))
+#   plot(TIME, MODEL_V, type="n",  col="green", 
+#     ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)), 
+#     xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
+#     main=paste(typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""),
+#     las=1)
+#   lines(TIME, MODEL_V, lwd=2, xlab='Time', ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), ylim=c(min(MODEL_V, FLUXNET_V,na.rm=TRUE), max(MODEL_V, FLUXNET_V,na.rm=TRUE)), col="green")
+#   lines(TIME, FLUXNET_V, type=gtype, col="blue")
+#  
+#   par(new=T)
+#   plot(TIME, FORCING_V, col='black', lwd=2, ann=F, axes=F)
+#   mtext(Parameter_info, side=4, line=3, col='black')
+#   axis(4, col.axis='black', col='black')
+#   legend("topleft", legend = c("MODEL","FLUXNET","FORCING"),  col=c("green","blue","black"), pch=19, bty="n", ncol=2)
+# }
 
 
 # Graphic Function (4) Error Bars----------------------------------------------------------------------
-MODEL_FLUXNET_GRAPHIC_ERR <- function(MODEL_V, FLUXNET_V, TIME, MODEL_SD, FLUXNET_SD, variable_info, typestr){
+# MODEL_FLUXNET_GRAPHIC_ERR <- function(MODEL_V, FLUXNET_V, TIME, MODEL_SD, FLUXNET_SD, variable_info, typestr){
+# 
+# opar<-par( cex=0.6, pin=c(6.0, 2.0))
+# 
+# split.screen(c(2,1))
+# 
+# screen(1)
+#   plotCI(1:length(TIME), MODEL_V, MODEL_SD, pch=21, col="red",sfrac=0.001,gap=0,
+#     ylim=c(min(MODEL_V-MODEL_SD, FLUXNET_V-FLUXNET_SD, na.rm=TRUE),
+#            max(MODEL_V+MODEL_SD, FLUXNET_V+FLUXNET_SD, na.rm=TRUE)),
+#     xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""),
+#     main=paste("Standard Deviation of ", typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""))
+# 
+# 
+#   plotCI(1:length(TIME),FLUXNET_V, FLUXNET_SD, pch=21,col="black",sfrac=0.001,gap=0, add=TRUE,
+#     ylim=c(min(MODEL_V-MODEL_SD, FLUXNET_V-FLUXNET_SD, na.rm=TRUE),
+#            max(MODEL_V+MODEL_SD, FLUXNET_V+FLUXNET_SD, na.rm=TRUE)),
+#     xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""),
+#     main=paste("Standard Deviation of ", typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""))
+#     #lines(1:length(TIME), FLUXNET_V, type="l", col="light grey")
+#     legend("topleft", legend = c("MODEL","FLUXNET"),
+#     col=c("red","black"), pch=c(21,21), bty="n", ncol=2)
+# 
+# screen(2)
+#   if (typestr=="Per Hour Monthly"){
+#      TIME <- substr(TIME, 4, 5)
+#      at <- 1:24
+#      labs <- 1:24
+#   }
+#   if (typestr=="Half Month"){
+#      TIME <- substr(TIME, 6, 10)
+#      at <- 1:24
+#      labs <-NA
+#      for (V in 1:12) labs<-c(labs,rep(month.abb[V],2))
+#      labs <- labs[2:25] 
+#   }
+#   if (typestr=="Monthly Mean"){
+#      TIME <- substr(TIME, 6, 7)
+#      at <- 1:12
+#      labs <- month.abb
+#   }
+#   if (typestr=="Per Hour Monthly" || typestr=="Half Month" || typestr=="Monthly Mean"){
+#     MODEL_V <- data.frame(TIME,MODEL_V)
+#     FLUXNET_V <- data.frame(TIME,FLUXNET_V)
+#     boxplot(MODEL_V ~ TIME, MODEL_V, col = "tomato", boxwex = 0.25, at = at - 0.2, 
+#       ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
+#       main = paste(typestr, variable_info[1]),axes=F)
+#     axis(1, at=at, lab=labs)
+#     axis(2)
+#     box()   
+#     boxplot(FLUXNET_V ~ TIME, FLUXNET_V, add= TRUE, col = "orange", boxwex = 0.25, at = at + 0.2, axes=F,
+#       ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
+#       main = paste(typestr, variable_info[1])) 
+#     smartlegend(x="left",y="top", inset = 0, c("MODEL", "FLUXNET"), fill = c("tomato", "orange"), bty="n")
+#   }
+# close.screen(all = TRUE)
+# }
 
-opar<-par( cex=0.6, pin=c(6.0, 2.0))
-
-split.screen(c(2,1))
-
-screen(1)
-  plotCI(1:length(TIME), MODEL_V, MODEL_SD, pch=21, col="red",sfrac=0.001,gap=0,
-    ylim=c(min(MODEL_V-MODEL_SD, FLUXNET_V-FLUXNET_SD, na.rm=TRUE),
-           max(MODEL_V+MODEL_SD, FLUXNET_V+FLUXNET_SD, na.rm=TRUE)),
-    xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""),
-    main=paste("Standard Deviation of ", typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""))
-
-
-  plotCI(1:length(TIME),FLUXNET_V, FLUXNET_SD, pch=21,col="black",sfrac=0.001,gap=0, add=TRUE,
-    ylim=c(min(MODEL_V-MODEL_SD, FLUXNET_V-FLUXNET_SD, na.rm=TRUE),
-           max(MODEL_V+MODEL_SD, FLUXNET_V+FLUXNET_SD, na.rm=TRUE)),
-    xlab="Time", ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""),
-    main=paste("Standard Deviation of ", typestr, " ", variable_info[1], " (", variable_info[3],"-",variable_info[4], ")", sep=""))
-    #lines(1:length(TIME), FLUXNET_V, type="l", col="light grey")
-    legend("topleft", legend = c("MODEL","FLUXNET"),
-    col=c("red","black"), pch=c(21,21), bty="n", ncol=2)
-
-screen(2)
-  if (typestr=="Per Hour Monthly"){
-     TIME <- substr(TIME, 4, 5)
-     at <- 1:24
-     labs <- 1:24
-  }
-  if (typestr=="Half Month"){
-     TIME <- substr(TIME, 6, 10)
-     at <- 1:24
-     labs <-NA
-     for (V in 1:12) labs<-c(labs,rep(month.abb[V],2))
-     labs <- labs[2:25] 
-  }
-  if (typestr=="Monthly Mean"){
-     TIME <- substr(TIME, 6, 7)
-     at <- 1:12
-     labs <- month.abb
-  }
-  if (typestr=="Per Hour Monthly" || typestr=="Half Month" || typestr=="Monthly Mean"){
-    MODEL_V <- data.frame(TIME,MODEL_V)
-    FLUXNET_V <- data.frame(TIME,FLUXNET_V)
-    boxplot(MODEL_V ~ TIME, MODEL_V, col = "tomato", boxwex = 0.25, at = at - 0.2, 
-      ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-      main = paste(typestr, variable_info[1]),axes=F)
-    axis(1, at=at, lab=labs)
-    axis(2)
-    box()   
-    boxplot(FLUXNET_V ~ TIME, FLUXNET_V, add= TRUE, col = "orange", boxwex = 0.25, at = at + 0.2, axes=F,
-      ylab=paste(variable_info[1],"(", variable_info[2], ")", sep=""), 
-      main = paste(typestr, variable_info[1])) 
-    smartlegend(x="left",y="top", inset = 0, c("MODEL", "FLUXNET"), fill = c("tomato", "orange"), bty="n")
-  }
-close.screen(all = TRUE)
-}
 
 # Graphic Function (5) Variables Statistics----------------------------------------------------------------------
 # MODEL_FLUXNET_STATS_GRAPHIC <- function(stat_v, stat_name){
@@ -398,8 +396,8 @@ variable_units_conversion <- array(c(1,1,
                                      , dim=c(2,nvar))
 
 # open input files
-datafile  <- nc_open("obs.nc")
-modelfile <- nc_open("slm4fluxnet.nc")
+datafile  <- nc_open("obs.nc")            ## measured fluxnet data
+modelfile <- nc_open("slm4fluxnet.nc")    ## simulation results
 
 TIME   <- ncvar_get( modelfile, "time")
 TIME_F <- ncvar_get( datafile, "time" )
@@ -545,26 +543,32 @@ for (V in 1:nvar){
          }
 
 
-         ## run calc & graphics function MODEL_FLUXNET_GRAPHIC_FAPAR
-         if(variable_names[1,V]=="fapar"){
-           if (time != "perhour" ){
-             FLUXNET_AGG2 <- MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V2,TIME, time,'mean')
+         ## create figures for each of the variable and time using the same function
+         ## previously the below outcommented code was used to run diff graphics functions depending on fapar/other variable
+         MODEL_FLUXNET_GRAPHIC(MODEL_AGG$x, FLUXNET_AGG$x, MODEL_AGG$Group.1, 
+                               typestr, gtype, labs, variable_info, 
+                               RMSE, NRMSE, RR, NSE, PBIAS, RSR)
 
-             RMSE_seawifs <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG$x)
-             RMSE_modis   <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG2$x)
-             RR_seawifs   <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG$x)
-             RR_modis     <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG2$x)
-
-             MODEL_FLUXNET_GRAPHIC_FAPAR(MODEL_AGG$x, FLUXNET_AGG$x, FLUXNET_AGG2$x, FLUXNET_AGG3$x, MODEL_AGG$Group.1, 
-                                         typestr, gtype, variable_info, 
-                                         RMSE_seawifs, RMSE_modis, RR_seawifs, RR_modis, NSE, PBIAS, RSR)
-           }
-         ## run graphics function MODEL_FLUXNET_GRAPHIC if not variable fapar
-         } else{
-             MODEL_FLUXNET_GRAPHIC(MODEL_AGG$x, FLUXNET_AGG$x, MODEL_AGG$Group.1, 
-                                   typestr, gtype, labs, variable_info, 
-                                   RMSE, NRMSE, RR, NSE, PBIAS, RSR)
-         }
+          #  ## run calc & graphics function MODEL_FLUXNET_GRAPHIC_FAPAR -> comparison against MODIS data
+          #  if(variable_names[1,V]=="FAPAR"){
+          #    if (time != "perhour" ){
+          #      FLUXNET_AGG2 <- MODEL_FLUXNET_COMPUTE_GROUPING(FLUXNET_V2,TIME, time,'mean')
+          # 
+          #      RMSE_seawifs <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG$x)
+          #      RMSE_modis   <- MODEL_FLUXNET_EVALUATION("rmse", MODEL_AGG$x, FLUXNET_AGG2$x)
+          #      RR_seawifs   <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG$x)
+          #      RR_modis     <- MODEL_FLUXNET_EVALUATION("RR", MODEL_AGG$x, FLUXNET_AGG2$x)
+          # 
+          #      MODEL_FLUXNET_GRAPHIC_FAPAR(MODEL_AGG$x, FLUXNET_AGG$x, FLUXNET_AGG2$x, FLUXNET_AGG3$x, MODEL_AGG$Group.1, 
+          #                                  typestr, gtype, variable_info, 
+          #                                  RMSE_seawifs, RMSE_modis, RR_seawifs, RR_modis, NSE, PBIAS, RSR)
+          #    }
+          #  ## run graphics function MODEL_FLUXNET_GRAPHIC if not variable fapar
+          #  } else{
+          #      MODEL_FLUXNET_GRAPHIC(MODEL_AGG$x, FLUXNET_AGG$x, MODEL_AGG$Group.1, 
+          #                            typestr, gtype, labs, variable_info, 
+          #                            RMSE, NRMSE, RR, NSE, PBIAS, RSR)
+          #  }
 
        # end of if ( time != "annual" )
        # else here leads to time == "annual"
@@ -577,7 +581,7 @@ for (V in 1:nvar){
 } ## end loop over variables to create figures from: for (V in 1:nvar)
 
 
-## write tables
+## write tables with 'anual values' and 'eval_stats'
 rownames                    <- c(variable_names[4,],"vegC","litterC","soilC")
 annual_values[3,1:nvar]     <- variable_units[3,1:nvar]
 annual_values[3,nvar+(1:3)] <- "gC/m2"
