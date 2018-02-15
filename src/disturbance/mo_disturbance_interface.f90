@@ -500,7 +500,7 @@ CONTAINS
               CALL finish('disturbed_frac','Unknown windbreak algorithm')
           END SELECT
 
-          carbon_2_atmos_ta = 0._wp
+          carbon_2_atmos = 0._wp
           SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
             CASE (0) !! No fire algorithm
             CASE (1) !! jsbach algorithm
@@ -535,7 +535,7 @@ CONTAINS
                 & YCpool_nonsoluble_bg2(:),      & ! inout
                 & YCpool_humus_1(:),             & ! inout
                 & YCpool_humus_2(:),             & ! inout
-                & carbon_2_atmos_ta              & ! out
+                & carbon_2_atmos                 & ! out
                 & )
 
               CALL update_per_tile_vars(tile, options)
@@ -562,121 +562,8 @@ CONTAINS
           !  CO2_emission(:) = disturbance%disturb_2_atmos(kidx0:kidx1)   * molarMassCO2_kg/86400._wp
           !ENDIF
 
-!        ENDIF
-      ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) ) 
-=======
-      IF ( tile%Is_process_active(CARBON_) ) THEN
-
-        ! Calculate carbon relocation connected with damages and fires
-        ! R: hier sollen nur die Variablen übergeben werden, die von dieser Prozedur hier im Folgenden benötigt werden.
-        !    Andere Variablen werden erst später bereit gestellt, denn in diesem Fall rufen wir ein weiteres
-        !    Interface beim CARBON Prozess auf (SUBROUTINE relocate_disturbed_carbon).
-        !    Erst dort sollen dann alle Variablen an die eigentlichen Prozess-Prozeduren übergeben werden.
-
-        SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
-          CASE (0) !! No windbreak algorithm
-          CASE (1) !! jsbach algorithm
-            CALL relocate_carbon_damage(       &
-              & damaged_frac(:),               & ! in
-              & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
-              & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-              & Cpool_green(:),                & ! inout
-              & Cpool_woods(:),                & ! inout
-              & Cpool_reserve(:),              & ! inout
-              & carbon_2_GreenLitterPools(:),  & ! out
-              & carbon_2_WoodLitterPools(:),   & ! out
-              & YCpool_acid_ag1(:),            & ! inout
-              & YCpool_water_ag1(:),           & ! inout
-              & YCpool_ethanol_ag1(:),         & ! inout
-              & YCpool_nonsoluble_ag1(:),      & ! inout
-              & YCpool_acid_ag2(:),            & ! inout
-              & YCpool_water_ag2(:),           & ! inout
-              & YCpool_ethanol_ag2(:),         & ! inout
-              & YCpool_nonsoluble_ag2(:),      & ! inout
-              & YCpool_acid_bg1(:),            & ! inout
-              & YCpool_water_bg1(:),           & ! inout
-              & YCpool_ethanol_bg1(:),         & ! inout
-              & YCpool_nonsoluble_bg1(:),      & ! inout
-              & YCpool_acid_bg2(:),            & ! inout
-              & YCpool_water_bg2(:),           & ! inout
-              & YCpool_ethanol_bg2(:),         & ! inout
-              & YCpool_nonsoluble_bg2(:),      & ! inout
-              & YCpool_humus_1(:),             & ! inout
-              & YCpool_humus_2(:)              & ! inout
-              & )
-          CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown windbreak algorithm')
-        END SELECT
-
-        carbon_2_atmos_ta = 0._wp
-        SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
-          CASE (0) !! No fire algorithm
-          CASE (1) !! jsbach algorithm
-            CALL relocate_carbon_fire( &
-              & burned_frac(:),                & ! in, only for windbreak
-              & dsl4jsb_Config(CARBON_)%fire_frac_wood_2_atmos , & ! in
-              & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
-              & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-              & Cpool_green(:),                & ! inout
-              & Cpool_woods(:),                & ! inout
-              & Cpool_reserve(:),              & ! inout
-              & carbon_2_GreenLitterPools(:),  & ! inout
-              & carbon_2_WoodLitterPools(:),   & ! inout
-              & YCpool_acid_ag1(:),            & ! inout
-              & YCpool_water_ag1(:),           & ! inout
-              & YCpool_ethanol_ag1(:),         & ! inout
-              & YCpool_nonsoluble_ag1(:),      & ! inout
-              & YCpool_acid_ag2(:),            & ! inout
-              & YCpool_water_ag2(:),           & ! inout
-              & YCpool_ethanol_ag2(:),         & ! inout
-              & YCpool_nonsoluble_ag2(:),      & ! inout
-              & YCpool_acid_bg1(:),            & ! inout
-              & YCpool_water_bg1(:),           & ! inout
-              & YCpool_ethanol_bg1(:),         & ! inout
-              & YCpool_nonsoluble_bg1(:),      & ! inout
-              & YCpool_acid_bg2(:),            & ! inout
-              & YCpool_water_bg2(:),           & ! inout
-              & YCpool_ethanol_bg2(:),         & ! inout
-              & YCpool_nonsoluble_bg2(:),      & ! inout
-              & YCpool_humus_1(:),             & ! inout
-              & YCpool_humus_2(:),             & ! inout
-              & carbon_2_atmos(:)              & ! out
-              & )
-          CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
-          CASE (3)
-            CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
-          CASE (4) !! Read burned_frac
-          CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown fire algorithm')
-        END SELECT
-
-        ! R: This corresponds to JS3, but I did not understand it...
-        !    disturbance%disturb_2_atmos corresponds to dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_atmos )
-        !    However, I guess it is better not to take this from JS3.
-        !IF ( tile%Is_process_active(CARBON_) ) THEN
-        !  ! Calculate CO2 and other fluxes to the atmosphere (updated once a day)
-        !  CO2_emission(:) = disturbance%disturb_2_atmos(kidx0:kidx1)   * molarMassCO2_kg/86400._wp
-        !ENDIF
-
-        carbon_2_GreenLitterPools_ta = carbon_2_GreenLitterPools * veg_frac_correction * fract_fpc_max
-        carbon_2_WoodLitterPools_ta  = carbon_2_WoodLitterPools  * veg_frac_correction * fract_fpc_max
-        carbon_2_atmos_ta            = carbon_2_atmos            * veg_frac_correction * fract_fpc_max
-        Cpool_green_ta               = Cpool_green               * veg_frac_correction * fract_fpc_max
-        Cpool_woods_ta               = Cpool_woods               * veg_frac_correction * fract_fpc_max
-        Cpool_reserve_ta             = Cpool_reserve             * veg_frac_correction * fract_fpc_max
-        YCpool_acid_ag1_ta           = YCpool_acid_ag1           * veg_frac_correction * fract_fpc_max
-        YCpool_water_ag1_ta          = YCpool_water_ag1          * veg_frac_correction * fract_fpc_max
-        YCpool_ethanol_ag1_ta        = YCpool_ethanol_ag1        * veg_frac_correction * fract_fpc_max
-        YCpool_nonsoluble_ag1_ta     = YCpool_nonsoluble_ag1     * veg_frac_correction * fract_fpc_max
-        YCpool_acid_ag2_ta           = YCpool_acid_ag2           * veg_frac_correction * fract_fpc_max
-        YCpool_water_ag2_ta          = YCpool_water_ag2          * veg_frac_correction * fract_fpc_max
-        YCpool_ethanol_ag2_ta        = YCpool_ethanol_ag2        * veg_frac_correction * fract_fpc_max
-        YCpool_nonsoluble_ag2_ta     = YCpool_nonsoluble_ag2     * veg_frac_correction * fract_fpc_max
-        YCpool_humus_1_ta            = YCpool_humus_1            * veg_frac_correction * fract_fpc_max
-        YCpool_humus_2_ta            = YCpool_humus_2            * veg_frac_correction * fract_fpc_max
-
-      ENDIF
+        ENDIF
+!      ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) ) 
     ENDIF ! is_newday
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

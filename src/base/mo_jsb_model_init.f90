@@ -241,6 +241,7 @@ CONTAINS
     dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(FUEL_)
     dsl4jsb_Get_config(DISTURB_)
+    dsl4jsb_Get_config(FAGE_)
 
     ! Crosscheck process configs
     IF (model%config%l_compat401) THEN
@@ -262,15 +263,14 @@ CONTAINS
       dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
     END IF
 
-!    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
-!      dsl4jsb_Config(FUEL_)%active = .TRUE.
-!      CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
-!    END IF
-!    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
-!      dsl4jsb_Config(CARBON_)%active = .TRUE.
-!      CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
-!    END IF
-
+    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
+      dsl4jsb_Config(FUEL_)%active = .TRUE.
+      CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
+    END IF
+    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
+      dsl4jsb_Config(CARBON_)%active = .TRUE.
+      CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
+    END IF
 
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
