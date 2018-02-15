@@ -637,7 +637,7 @@ CONTAINS
                                               target_cn_fine_root(:)           , &
                                               target_np_leaf(:)                , &
                                               target_np_fine_root(:)           , & 
-                                              leaf2root_mass_ratio(:)          , &
+                                              leaf2root_troot_mavg(:)          , &
                                               target_lai(:)                    , &
                                               target_labile_pool_carbon(:)     , & ! out
                                               target_labile_pool_nitrogen(:)   , & 
