@@ -234,6 +234,14 @@ CONTAINS
 
     CALL model%Configure_processes()
 
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(RAD_)
+    dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_config(FUEL_)
+    dsl4jsb_Get_config(DISTURB_)
+
     ! Crosscheck process configs
     IF (model%config%l_compat401) THEN
       CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
@@ -244,12 +252,6 @@ CONTAINS
       CALL message('    ', '... not using dynamical snow density and thickness')
       CALL message('    ', '... not using frozen ground')
       CALL message('    ', '... not using organic soil fractions')
-      dsl4jsb_Get_config(PHENO_)
-      dsl4jsb_Get_config(SSE_)
-      dsl4jsb_Get_config(HYDRO_)
-      dsl4jsb_Get_config(RAD_)
-      dsl4jsb_Get_config(CARBON_)
-      dsl4jsb_Get_config(DISTURB_)
       dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
       dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.

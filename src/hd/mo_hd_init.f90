@@ -180,6 +180,8 @@ CONTAINS
 
       CALL input_file%Close()
 
+    CASE ('zero')
+
     END SELECT
 
   END SUBROUTINE hd_init_bc

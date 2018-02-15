@@ -822,7 +822,6 @@ CONTAINS
     & Cpool_green,                  & ! inout
     & Cpool_woods,                  & ! inout
     & Cpool_reserve,                & ! inout
-    & carbon_2_atmos,               & ! out
     & carbon_2_GreenLitterPools,    & ! inout, because relocate_carbon_fire is
                                       ! called AFTER relocate_carbon_damage!
     & carbon_2_WoodLitterPools,     & ! inout, because relocate_carbon_fire is
@@ -844,7 +843,8 @@ CONTAINS
     & YCpool_nonsoluble_bg1,        & ! inout
     & YCpool_nonsoluble_bg2,        & ! inout
     & YCpool_humus_1,               & ! inout
-    & YCpool_humus_2                & ! inout
+    & YCpool_humus_2,               & ! inout
+    & carbon_2_atmos                & ! out
     & )
 
     USE mo_carbon_constants,  ONLY : frac_green_aboveGround, frac_wood_aboveGround
@@ -859,7 +859,6 @@ CONTAINS
     real(wp),intent(inout) :: Cpool_green(:)              ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_woods(:)              ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_reserve(:)            ! Value of reserve carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(out)   :: carbon_2_atmos(:)           ! Carbon immedieatly released by fire per tile [mol(C)m-2(canopy)]
     real(wp),intent(inout) :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind and fire damage
                                                                 ! .. to the green litter pools [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage and fire
@@ -889,6 +888,8 @@ CONTAINS
     real(wp),intent(inout) :: YCpool_ethanol_bg2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: YCpool_nonsoluble_bg2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: YCpool_humus_2(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+
+    real(wp),intent(out)   :: carbon_2_atmos(:)           ! Carbon immedieatly released by fire per tile [mol(C)m-2(canopy)]
 
     ! Local variables
     REAL(wp) :: factor(SIZE(burned_frac)) ! Helper
