@@ -161,7 +161,7 @@ CONTAINS
         & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy) s)', 'NPP_pot_rate_ca'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & output_level=BASIC, &
+        & loutput = .TRUE.,output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'canopy_cond_over_time', mem%canopy_cond_over_time,               &

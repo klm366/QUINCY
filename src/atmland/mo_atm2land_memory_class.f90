@@ -105,7 +105,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=283.15_wp )  ! R: I just invented a value to start with...
+      & loutput = .TRUE., initval_r=283.15_wp )  ! R: I just invented a value to start with...
 
     CALL jsb_add_var( mem, 'q_air', mem%q_air,                                            &
       & hgrid, surface,                                                                   &

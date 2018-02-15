@@ -84,7 +84,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=1.0_wp )
+      & loutput = .TRUE.,initval_r=1.0_wp )
 
     CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                       &
       & hgrid, surface,                                                           &
@@ -93,7 +93,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=1.0_wp )
+      & loutput = .TRUE.,initval_r=1.0_wp )
 
     ! Additional variables for all lcts except lakes
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &

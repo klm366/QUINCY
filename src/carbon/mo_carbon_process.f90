@@ -55,11 +55,6 @@ CONTAINS
                                     Cpool_woods,               & ! inout
                                     Cpool_reserve,             & ! inout
                                     Cpool_crop_harvest,        & ! inout
-                                    Cpool_litter_green_ag,     & ! inout
-                                    Cpool_litter_green_bg,     & ! inout
-                                    Cpool_litter_wood_ag,      & ! inout
-                                    Cpool_litter_wood_bg,      & ! inout
-                                    Cpool_slow,                & ! inout
                                     !
                                     soilResp_rate,             & ! out
                                     NPP_flux_correction,       & ! out
@@ -144,12 +139,6 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_crop_harvest     ! Crop harvest carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_litter_green_ag  ! Above ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_litter_green_bg  ! Below ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_litter_wood_ag   ! Above ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_litter_wood_bg   ! Below ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: Cpool_slow             ! Slow soil carbon pool: on input last value; updated on output 
-                                                     ! [mol(C)/m^2(canopy)]
     !
     real(wp),intent(out)   :: soilResp_rate          ! Soil (=heterotrophic) respiration rate  [mol(C)/m^2 s] Note: this is a loss,
                                                      !    therefore negative!
@@ -231,6 +220,13 @@ CONTAINS
     real(wp) :: excess_carbon
     real(wp) :: leaf_shedding
     real(wp) :: alpha_mod
+
+    real(wp) :: Cpool_litter_green_ag  ! Above ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
+    real(wp) :: Cpool_litter_green_bg  ! Below ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
+    real(wp) :: Cpool_litter_wood_ag   ! Above ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
+    real(wp) :: Cpool_litter_wood_bg   ! Below ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
+    real(wp) :: Cpool_slow             ! Slow soil carbon pool: on input last value; updated on output 
+                                                     ! [mol(C)/m^2(canopy)]
 
     real(wp) :: Cpool_green_pot, Cpool_woods_pot         !! values of potential carbon pools i.e. before accounting for N-limitation
     real(wp) :: Cpool_slow_pot, Cpool_reserve_pot
@@ -826,21 +822,21 @@ CONTAINS
                                       ! called AFTER relocate_carbon_damage!
     & carbon_2_WoodLitterPools,     & ! inout, because relocate_carbon_fire is
                                       ! called AFTER relocate_carbon_damage!
-    & YCpool_acid_ag1,              & ! inout 
-    & YCpool_acid_ag2,              & ! inout
+    & YCpool_acid_ag1,              & ! inout
     & YCpool_water_ag1,             & ! inout
-    & YCpool_water_ag2,             & ! inout
     & YCpool_ethanol_ag1,           & ! inout
-    & YCpool_ethanol_ag2,           & ! inout
     & YCpool_nonsoluble_ag1,        & ! inout
+    & YCpool_acid_ag2,              & ! inout
+    & YCpool_water_ag2,             & ! inout
+    & YCpool_ethanol_ag2,           & ! inout
     & YCpool_nonsoluble_ag2,        & ! inout
     & YCpool_acid_bg1,              & ! inout
-    & YCpool_acid_bg2,              & ! inout
     & YCpool_water_bg1,             & ! inout
-    & YCpool_water_bg2,             & ! inout
     & YCpool_ethanol_bg1,           & ! inout
-    & YCpool_ethanol_bg2,           & ! inout
     & YCpool_nonsoluble_bg1,        & ! inout
+    & YCpool_acid_bg2,              & ! inout
+    & YCpool_water_bg2,             & ! inout
+    & YCpool_ethanol_bg2,           & ! inout
     & YCpool_nonsoluble_bg2,        & ! inout
     & YCpool_humus_1,               & ! inout
     & YCpool_humus_2,               & ! inout
@@ -976,14 +972,22 @@ CONTAINS
                                                        ! called before relocate_carbon_fire!
     & carbon_2_WoodLitterPools,                      & ! out, because relocate_carbon_damage is
                                                        ! called before relocate_carbon_fire!
-    & YCpool_acid_ag1,       YCpool_acid_ag2,        & ! inout
-    & YCpool_water_ag1,      YCpool_water_ag2,       & ! inout
-    & YCpool_ethanol_ag1,    YCpool_ethanol_ag2,     & ! inout
-    & YCpool_nonsoluble_ag1, YCpool_nonsoluble_ag2,  & ! inout
-    & YCpool_acid_bg1,       YCpool_acid_bg2,        & ! inout
-    & YCpool_water_bg1,      YCpool_water_bg2,       & ! inout
-    & YCpool_ethanol_bg1,    YCpool_ethanol_bg2,     & ! inout
-    & YCpool_nonsoluble_bg1, YCpool_nonsoluble_bg2,  & ! inout
+    & YCpool_acid_ag1,                               & ! inout
+    & YCpool_water_ag1,                              & ! inout
+    & YCpool_ethanol_ag1,                            & ! inout
+    & YCpool_nonsoluble_ag1,                         & ! inout
+    & YCpool_acid_ag2,                               & ! inout
+    & YCpool_water_ag2,                              & ! inout
+    & YCpool_ethanol_ag2,                            & ! inout
+    & YCpool_nonsoluble_ag2,                         & ! inout
+    & YCpool_acid_bg1,                               & ! inout
+    & YCpool_water_bg1,                              & ! inout
+    & YCpool_ethanol_bg1,                            & ! inout
+    & YCpool_nonsoluble_bg1,                         & ! inout
+    & YCpool_acid_bg2,                               & ! inout
+    & YCpool_water_bg2,                              & ! inout
+    & YCpool_ethanol_bg2,                            & ! inout
+    & YCpool_nonsoluble_bg2,                         & ! inout
     & YCpool_humus_1,        YCpool_humus_2          & ! inout
     & )
 

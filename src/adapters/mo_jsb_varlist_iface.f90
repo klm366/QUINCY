@@ -88,8 +88,9 @@ CONTAINS
                     post_suf=post_suf, rest_suf=rest_suf, init_suf=init_suf, &
                     lpost=loutput, lpout=loutput, lrerun=lrestart            &
                    )
-
-    CALL default_stream_setting(this_list, table=table_loc, lpost=loutput, lrerun=lrestart)
+    !TODO-JN: hardcoded FALSE for now due to problems with too many outputvariables with cohorts
+    ! - i.e. required vars need to be set to true! (+ see namelist selector in jsb3 sitelevel)
+    CALL default_stream_setting(this_list, table=table_loc, lpost=.FALSE., lrerun=lrestart)
 #endif
 
   END SUBROUTINE new_var_list
@@ -167,13 +168,15 @@ CONTAINS
         ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
+        lpost=loutput, lrerun=lrestart, contnorest=lrestart_cont, &
         lmiss=lmiss, missval=missval_r, p4=p4, verbose=verbose &
-        )
+        ) 
     ELSE
       CALL add_stream_element(this_list, TRIM(name), ptr, &
         ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
+        lpost=loutput, lrerun=lrestart, contnorest=lrestart_cont, &
         lmiss=lmiss, missval=missval_r, verbose=verbose &
         )
     END IF

@@ -180,16 +180,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  Cpool_woods           ! C-pool for stems, thick roots and other (dead) structural
                                                      !  material of living plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  Cpool_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_green_ag ! C-pool for above ground non-woody litter especially from leaves
-                                                     !     [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_green_bg ! C-pool for below ground non-woody litter especially from
-                                                     !     fine roots [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_wood_ag  ! C-pool for litter originating from above ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_litter_wood_bg  ! C-pool for litter originating from below ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  Cpool_slow            ! C-pool for below ground organic material (coming from the litter
-                                                     !     pools) [mol(C)/m^2(canopy)]
+
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  YCpool_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -330,11 +321,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_woods )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_crop_harvest)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_green_ag )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_green_bg )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_wood_ag  )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_litter_wood_bg  )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_slow            )     ! inout
     !SIZE CLASS 1
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_acid_ag1)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_water_ag1)           ! inout
@@ -526,11 +512,6 @@ CONTAINS
                               Cpool_woods,                                      & ! inout
                               Cpool_reserve,                                    & ! inout
                               Cpool_crop_harvest,                               & ! inout
-                              Cpool_litter_green_ag,                            & ! inout
-                              Cpool_litter_green_bg,                            & ! inout
-                              Cpool_litter_wood_ag,                             & ! inout
-                              Cpool_litter_wood_bg,                             & ! inout
-                              Cpool_slow,                                       & ! inout
                               !
                               soil_respiration,                                 & ! out
                               NPP_flux_correction,                              & ! out
@@ -683,11 +664,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_woods_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_reserve_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_crop_harvest_ta,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_litter_green_ag_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_litter_green_bg_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_litter_wood_ag_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_litter_wood_bg_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, Cpool_slow_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, YCpool_acid_ag1_ta,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, YCpool_water_ag1_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, YCpool_ethanol_ag1_ta,    weighted_by_fract)
@@ -964,6 +940,8 @@ CONTAINS
 
     !Assertion prev_fract + delta_fract .GE. 0._wp  TODO-JN: EPSILON(1._wp)?
     IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
+      print *, prev_fract(:)
+      print *, delta_fract(:)
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
     ENDIF

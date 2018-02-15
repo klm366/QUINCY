@@ -166,7 +166,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC, &
-      & initval_r=280.0_wp )
+      & loutput = .TRUE.,initval_r=280.0_wp )
 
     CALL jsb_add_var( mem, 't_soil_acoef', mem%t_soil_acoef,                     &
       & hgrid, soil_e,                                                                     &

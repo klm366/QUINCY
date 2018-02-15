@@ -384,7 +384,7 @@ CONTAINS
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & loutput=.TRUE., initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_ptr(tmp_fract)
 
 !@todo: later this only needs to go in the output when debugging
@@ -394,7 +394,7 @@ CONTAINS
       &      'Change for current operation on fraction of '//TRIM(parent_tile_name)//' in this tile '//TRIM(this%name)), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & loutput=.TRUE., initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_delta_fract_ptr(tmp_fract)
 
     CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tmp_fract,                         &
@@ -412,7 +412,7 @@ CONTAINS
       &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & loutput=.TRUE., initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
 
     CALL jsb_add_var(TRIM(varlist_name), 'fract_max_old', tmp_fract,                         &

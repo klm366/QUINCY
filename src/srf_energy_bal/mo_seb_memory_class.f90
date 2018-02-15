@@ -142,7 +142,7 @@ CONTAINS
         & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & output_level=BASIC, &
+        & loutput = .TRUE.,output_level=BASIC, &
         & initval_r=280.0_wp )
 
       CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &

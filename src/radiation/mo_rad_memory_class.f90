@@ -213,7 +213,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
-        & output_level=BASIC, &
+        & loutput = .TRUE.,output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir', mem%alb_nir,                                &
@@ -222,7 +222,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
-        & output_level=BASIC, &
+        & loutput = .TRUE.,output_level=BASIC, &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_snow', mem%alb_vis_snow,      &
@@ -372,7 +372,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                           &
         & output_level=BASIC, &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'par_down_mol_nacc', mem%par_down_mol_nacc, &
         & hgrid, surface,                                                                        &

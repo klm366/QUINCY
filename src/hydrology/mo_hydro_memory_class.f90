@@ -234,7 +234,7 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & loutput = .TRUE.,initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Potential evapotranspiration/sublimation
     CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                     &
@@ -243,7 +243,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & loutput = .TRUE.,initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evap_snow', mem%evap_snow,                                   &
       & hgrid, surface,                                                                  &

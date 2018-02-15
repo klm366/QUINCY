@@ -181,7 +181,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=BASIC, &
-        & initval_r=0.0_wp )
+        & loutput = .TRUE.,initval_r=0.0_wp )
 
       ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
       ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
@@ -216,7 +216,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.TRUE.,                                                  &
-        & initval_r=0.0_wp )
+        & loutput = .TRUE.,initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
@@ -410,7 +410,7 @@ CONTAINS
               & 'Test for c conservation on rescaling of c states for allom.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
-            & lrestart=.FALSE., initval_r=0.0_wp ) 
+            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
         END IF
 
