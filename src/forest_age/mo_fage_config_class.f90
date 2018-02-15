@@ -43,7 +43,7 @@ CONTAINS
 
     CLASS(t_fage_config), INTENT(inout) :: config
 
-    INTEGER, PARAMETER :: ncohorts = 5 !TODO-JN-COHORTS should be a namelist parameter - get from model%config%
+    INTEGER, PARAMETER :: ncohorts = 5 !16 !TODO-JN-COHORTS should be a namelist parameter - get from model%config%
                                        ! since it is also required in the usecases (see there...)
 
     LOGICAL                     :: active
@@ -74,7 +74,7 @@ CONTAINS
     active            = .TRUE.
     bc_filename       = 'bc_land_fage.nc'  !JN: TODO do I need it at all?
     ic_filename       = 'ic_land_fage.nc'  !JN: TODO
-    max_age           = 250
+    max_age           = 150
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -87,7 +87,7 @@ CONTAINS
     config%max_age             = max_age
 
     config%ncohorts            = ncohorts
-    config%cohort_scheme       = TRIM("static-shorterYoung")
+    config%cohort_scheme       = TRIM("static-equal")
 
     ALLOCATE(fage_grid_levels(max_age))
 

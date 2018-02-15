@@ -76,8 +76,15 @@ CONTAINS
     ! - important: start with one ---> DO NOT CHANGE!  
     ! -- first cohort needs to always only contain the first year!
     dsl4jsb_var3D_onDomain(FAGE_, cohort_max_age) = 1._wp 
-    IF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-shorterYoung' ) THEN
 
+    IF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-equal' ) THEN
+      ! Equal intervals distributed equally 
+      age_interval = int((max_age-1) / (ncohorts-1))
+      DO i=1,ncohorts-1
+        dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
+          & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + age_interval
+      END DO
+    ELSEIF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-shorterYoung' ) THEN
       ! Equal intervals distributed unequally such that younger cohorts have shorter steps
       ! (1, 1+n, 1+n+2*n, 1+n+2*n+3*n, ...)
       age_interval = 0
@@ -98,7 +105,9 @@ CONTAINS
     IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1,:) .NE. 1._wp)) THEN
       CALL finish(TRIM(routine), 'Assertion: lowst cohort always needs to have max_age of 1!')
     ENDIF
-
+    IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,:,:) .GT. max_age)) THEN
+      CALL finish(TRIM(routine), 'Assertion: no cohort should have a max age larger than the total max_age!')
+    ENDIF
 
     !TODO-JN other bcs?? Also from files?
 !    dsl4jsb_var3D_onDomain(FM_, rotation_cycle) = REAL(dsl4jsb_Config(FM_)%global_rotation_cycle, wp)
