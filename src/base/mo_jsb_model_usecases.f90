@@ -16,7 +16,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, &
     & CARBON_, DISTURB_, FUEL_, FAGE_
-  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_, SKIP_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -356,13 +356,13 @@ CONTAINS
           END IF
             
           DO i=1,npft
-            ! TODO-JN: decide on ForestFlag vs is_Woody! (model%lctlib(pft_ids(i))%WOODY_PFT)
-            IF (.NOT. model%lctlib(pft_ids(i))%ForestFlag) THEN 
-              WRITE(pft_shortname, "(A3,I2.2)") "pft", i
-              pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
-                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
 
-            ELSE
+            WRITE(pft_shortname, "(A3,I2.2)") "pft", i
+            pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
+              & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+
+            ! TODO-JN: decide on ForestFlag vs is_Woody! (model%lctlib(pft_ids(i))%WOODY_PFT)
+            IF (model%lctlib(pft_ids(i))%ForestFlag) THEN 
               ! FAGE is the process that organises the cohorts. 
               ! There is no sense in running cohorts without FAGE and vice versa! 
               IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
@@ -375,11 +375,10 @@ CONTAINS
                 CALL finish(TRIM(routine), "Current cohorts implementation assumes PHENO process to be active!")
               END IF
 
-              WRITE(pft_shortname, "(A3,I2.2)") "pft", i
-              pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
-                & processes       = (/FAGE_/), &
-                & process_actions = (/ON_TILE_/), &
-                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+              CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
+
+              !TODO-JN: unfortunately this does not work as I thought it would (gves seg fault)
+!              CALL veg_tile%Set_process_action(FAGE_, ON_TILE_, SKIP_)
 
               DO j=1,ncohorts
                 WRITE(cohort_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
