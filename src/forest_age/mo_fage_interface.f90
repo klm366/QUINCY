@@ -246,6 +246,10 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
 
+    !NOTE: despite changes, no aggregation of cpools/fractions because:
+    ! FAGE changes Cpools once a year, but only redistributes on child tiles, i.e. no changes this/above
+    ! FAGE changes fractionsonce a year, but only redistributes on child tiles, i.e. no changes on this/above
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_fage

@@ -121,8 +121,8 @@ MODULE mo_carbon_memory_class
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
-      litter_flux_ta,                & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
-                                       !    [mol(C)/m^2(tile area) s]
+!      litter_flux_ta,                & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
+!                                       !    [mol(C)/m^2(tile area) s]
       Cpool_green_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
                                        ! .. of vegetation [mol(C)/m^2(tile area)]
       Cpool_woods_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
@@ -152,8 +152,8 @@ MODULE mo_carbon_memory_class
       YCpool_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
       C_sum_natural_ta,              & ! R: added
       !
-      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
-      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
+!      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
+!      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
       soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)]. 
                                        ! Without N limitation!
       NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance 
@@ -163,8 +163,8 @@ MODULE mo_carbon_memory_class
                                     ! negative (positive correction).
       excess_NPP_ta,                 & ! That part of NPP that because of structural limits could not be allocated in
                                     ! carbon pools [mol(CO2)/m^2(tile area) s]
-      LAI_yyDayMean_ta,              & ! previous previous day mean
-      LAI_yDayMean_ta,               & ! previous day mean
+!      LAI_yyDayMean_ta,              & ! previous previous day mean
+!      LAI_yDayMean_ta,               & ! previous day mean
       NPP_pot_yDayMean_ta,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(tile area) s)]
       NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
                                        ! Actual NPP (after N-limitation and) excess carbon drop.
@@ -704,13 +704,13 @@ CONTAINS
 
 
       ! Carbon variables on tile area
-      CALL jsb_add_var( mem, 'litter_flux_ta', mem%litter_flux_ta,                                       &
-        & hgrid, surface,                                                                                &
-        & t_cf('litter_flux_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'),      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-        & prefix, suffix,                                                                                &
-        & output_level=BASIC,                                                                            &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      ! CALL jsb_add_var( mem, 'litter_flux_ta', mem%litter_flux_ta,                                       &
+      !   & hgrid, surface,                                                                                &
+      !   & t_cf('litter_flux_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'),      &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
+      !   & prefix, suffix,                                                                                &
+      !   & output_level=BASIC,                                                                            &
+      !   & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_green_ta', mem%Cpool_green_ta,                              &
         & hgrid, surface,                                                                   &
@@ -898,19 +898,19 @@ CONTAINS
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'npp_pot_sum_ta', mem%NPP_pot_sum_ta,                        &
-        & hgrid, surface,                                                                 &
-        & t_cf('NPP_pot_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate NPP over a day.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-        & prefix, suffix,                                                                 &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      ! CALL jsb_add_var( mem, 'npp_pot_sum_ta', mem%NPP_pot_sum_ta,                        &
+      !   & hgrid, surface,                                                                 &
+      !   & t_cf('NPP_pot_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate NPP over a day.'), &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+      !   & prefix, suffix,                                                                 &
+      !   & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'gpp_sum_ta', mem%GPP_sum_ta,                            &
-        & hgrid, surface,                                                             &
-        & t_cf('GPP_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate GPP over a day.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
-        & prefix, suffix,                                                             &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      ! CALL jsb_add_var( mem, 'gpp_sum_ta', mem%GPP_sum_ta,                            &
+      !   & hgrid, surface,                                                             &
+      !   & t_cf('GPP_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate GPP over a day.'), &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
+      !   & prefix, suffix,                                                             &
+      !   & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'soil_respiration_ta', mem%soil_respiration_ta,  &
         & hgrid, surface,                                                     &
@@ -937,20 +937,20 @@ CONTAINS
         & output_level=BASIC,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'lai_yydaymean_ta', mem%LAI_yyDayMean_ta,              &
-        & hgrid, surface,                                                     &
-        & t_cf('LAI_yyDayMean_ta', '-', 'Previous previous day mean.'),          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-        & prefix, suffix,                                                     &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+     !  CALL jsb_add_var( mem, 'lai_yydaymean_ta', mem%LAI_yyDayMean_ta,              &
+     !    & hgrid, surface,                                                     &
+     !    & t_cf('LAI_yyDayMean_ta', '-', 'Previous previous day mean.'),          &
+     !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+     !    & prefix, suffix,                                                     &
+     !    & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-     CALL jsb_add_var( mem, 'lai_ydaymean_ta', mem%LAI_yDayMean_ta,                 &
-        & hgrid, surface,                                                     &
-        & t_cf('LAI_yDayMean_ta', '-', 'Previous day mean.'),                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-        & prefix, suffix,                                                     &
-        & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+     ! CALL jsb_add_var( mem, 'lai_ydaymean_ta', mem%LAI_yDayMean_ta,                 &
+     !    & hgrid, surface,                                                     &
+     !    & t_cf('LAI_yDayMean_ta', '-', 'Previous day mean.'),                    &
+     !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+     !    & prefix, suffix,                                                     &
+     !    & output_level=BASIC,                                                                                &
+     !    & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'npp_pot_ydaymean_ta', mem%NPP_pot_yDayMean_ta,                              &
         & hgrid, surface,                                                                           &

@@ -191,7 +191,7 @@ CONTAINS
   SUBROUTINE update_phenology_logrop(tile, options)
 
     ! Declarations
-    USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, update_per_tile_vars, &
+    USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, &
                                        calculate_current_c_state_sum, check_carbon_conservation_for_operation
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
@@ -456,12 +456,10 @@ CONTAINS
           & maxLAI_allom(:)                           & ! <- InOut
           & )
 
-
         ! redistribute 
         CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
 
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_frac_correction_old, veg_frac_correction)
-        CALL update_per_tile_vars(tile, options)
 
         dummy_flux = 0._wp
         CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
@@ -687,6 +685,8 @@ CONTAINS
   !!
   SUBROUTINE aggregate_phenology(tile, options)
 
+    USE mo_jsb_time,             ONLY: is_newyear
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -724,7 +724,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      IF (is_newyear()) THEN
         dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(PHENO_, biennial_avg_veg_c_inc,    weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(PHENO_, decennial_avg_veg_c_inc,    weighted_by_fract)
+        !NOTE: despite changes, no aggregation of cpools necessary:
+        ! PHENO changes Cpools once a year, but only densities, not per tile (ta) values
+      ENDIF
     ENDIF
 
     !X Implementation: Start your process scheme here...

@@ -20,7 +20,7 @@ MODULE mo_carbon_process
   PRIVATE
 
   PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, &
-    & update_delta_carbon, update_state_reset_delta
+    & update_delta_carbon, update_state_reset_delta, get_per_tile
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -1596,6 +1596,24 @@ CONTAINS
 
   end subroutine update_state_reset_delta
 
+
+  ! --- get_per_tile() ---------------------------------------------------------------------------------------------------
+  !
+  ! calculate per tile density from density per canopy m2 
+  !
+  elemental subroutine get_per_tile( &
+    & Cpool_per_tile,                & ! in
+    & Cpool_per_canopy,              & ! in
+    & veg_frac_correction,           & ! in
+    & fract_fpc_max)                   ! in
+
+    real(wp),intent(in) ::  fract_fpc_max, veg_frac_correction
+    real(wp),intent(in) ::  Cpool_per_canopy
+    real(wp),intent(out)::  Cpool_per_tile
+
+    Cpool_per_tile = Cpool_per_canopy * veg_frac_correction * fract_fpc_max
+
+  end subroutine get_per_tile
 
 #endif
 END MODULE mo_carbon_process
