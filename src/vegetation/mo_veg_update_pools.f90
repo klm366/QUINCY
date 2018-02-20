@@ -425,7 +425,7 @@ CONTAINS
     !!
     !!
     CALL calc_canopy_layers( &
-                             nc                                             , & ! in
+                             options                                        , & ! in
                              lctlib                                         , &
                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &

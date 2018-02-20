@@ -129,10 +129,10 @@ CONTAINS
     ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
       jmax2n        = 17.6_wp/4.0_wp
       vcmax2n       = 1.8_wp       
-      k0_fn_pepc   = 0.045_wp 
+      k0_fn_pepc    = 0.045_wp 
       pepc2n        = 98777.97_wp 
       chl2n         = 1000._wp/39.8_wp 
-      k1_fn_struc  = 71.4_wp * molar_mass_N / 1000000._wp 
+      k1_fn_struc   = 71.4_wp * molar_mass_N / 1000000._wp 
       jmax2vcmax_C3 = 1.92_wp / 4._wp
       jmax2vcmax_C4 = 1.4_wp  
       ! moved to mo_veg_constants tau_canopy_acclimation = 10._wp  ,     & !< time scale of acclimation of canopy processes (N, P, T) (days)
@@ -173,11 +173,11 @@ CONTAINS
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
       ka            = 0.005_wp 
       kn            = 0.11_wp
-      k0_fn_chl_C3 = 6.0_wp
-      k0_fn_chl_C4 = 15.0_wp
-      k1_fn_chl_C3 = 3.6_wp
-      k1_fn_chl_C4 = 4.4_wp
-      kfn_chl      = 0.7_wp
+      k0_fn_chl_C3  = 6.0_wp
+      k0_fn_chl_C4  = 15.0_wp
+      k1_fn_chl_C3  = 3.6_wp
+      k1_fn_chl_C4  = 4.4_wp
+      kfn_chl       = 0.7_wp
 
   END SUBROUTINE init_assimi_constants
 

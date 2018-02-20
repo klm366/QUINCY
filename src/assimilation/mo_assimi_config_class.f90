@@ -66,14 +66,14 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    LOGICAL         :: flag_optimal_Nfraction     , &
-                       flag_t_resp_acclimation    , &
-                       flag_t_jmax_acclimation
-    CHARACTER(15)   :: canopy_layer_scheme
-    INTEGER         :: ncanopy    , &
-                       icanopy
-    REAL(wp)        :: dAPAR
-    REAL(wp)        :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
+    LOGICAL                     :: flag_optimal_Nfraction     , &
+                                   flag_t_resp_acclimation    , &
+                                   flag_t_jmax_acclimation
+    CHARACTER(15)               :: canopy_layer_scheme
+    INTEGER                     :: ncanopy    , &
+                                   icanopy
+    REAL(wp)                    :: dAPAR
+    REAL(wp)                    :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
     NAMELIST /assimilation_ctl/    &

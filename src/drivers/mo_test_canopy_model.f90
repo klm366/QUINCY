@@ -263,7 +263,7 @@ CONTAINS
       veg__mem%pool%leaf%phosphorus%ptr(:,iblk)   = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) / lctlib%np_leaf
     ENDIF
     CALL calc_canopy_layers(&
-                            nc                                             , & ! in
+                            options                                        , & ! in
                             lctlib                                         , &
                             dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
@@ -455,7 +455,7 @@ CONTAINS
      lai(:) = lai(:) + 0.5_wp
      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=ref_nleaf/molar_mass_N*lai(:)
      CALL calc_canopy_layers(&
-                              nc                                             , & ! in
+                              options                                        , & ! in
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
@@ -496,7 +496,7 @@ CONTAINS
 
      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=0.125_wp*(i)/molar_mass_N*lai(:)
      CALL calc_canopy_layers(&
-                              nc                                             , & ! in
+                              options                                        , & ! in
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
@@ -541,7 +541,7 @@ CONTAINS
      ! set pointer to the new PFT
      lctlib  => model%lctlib(tile%lcts%lib_id)
      CALL calc_canopy_layers(&
-                              nc                                             , & ! in
+                              options                                        , & ! in
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &

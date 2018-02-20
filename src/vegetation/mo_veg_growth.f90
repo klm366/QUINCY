@@ -492,7 +492,7 @@ CONTAINS
     !! 
     IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) THEN
       CALL calc_dir_optimal_cn_leaf( &
-                                        nc                                             , & ! in
+                                        options                                        , & ! in
                                         lctlib                                         , &
                                         dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
