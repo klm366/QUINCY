@@ -132,7 +132,7 @@ CONTAINS
                                       q_bcoef(:)            , &
                                       pch(:)                , &
                                       cos_zenith_angle(:)   , &
-                                !      CO2_air(:)            , &   ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
+                                !      CO2_air(:)             , &  ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
     ! Info: in JSBACH4 CO2_air_mol(:) is calculated as: dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
                                       co2_mixing_ratio(:)     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       co2_mixing_ratio_C13(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
@@ -140,8 +140,8 @@ CONTAINS
                                       ga(:)                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                                       nhx_deposition(:)     , &    ! added with r506
                                       noy_deposition(:)     , &    ! added with r506
-                                      nhx_n15_deposition(:)     , &    ! added with r702
-                                      noy_n15_deposition(:)     , &    ! added with r702
+                                      nhx_n15_deposition(:) , &    ! added with r702
+                                      noy_n15_deposition(:) , &    ! added with r702
                                       p_deposition(:)       , &    ! added with r... ticket #261
                                       ! For lakes:
                                       drag_wtr(:)           , &
@@ -192,35 +192,35 @@ CONTAINS
 
 
     ! 1.0 pass variables values to memory
-    IF (PRESENT(t_air))             dsl4jsb_var2D_onChunk(A2L_,t_air)             = t_air             (:)
-    IF (PRESENT(q_air))             dsl4jsb_var2D_onChunk(A2L_,q_air)             = q_air             (:)
-    IF (PRESENT(rain))              dsl4jsb_var2D_onChunk(A2L_,rain)              = rain              (:)
-    IF (PRESENT(snow))              dsl4jsb_var2D_onChunk(A2L_,snow)              = snow              (:)
-    IF (PRESENT(wind_air))          dsl4jsb_var2D_onChunk(A2L_,wind_air)          = wind_air          (:)
-    IF (PRESENT(wind_10m))          dsl4jsb_var2D_onChunk(A2L_,wind_10m)          = wind_10m          (:)
-    IF (PRESENT(lw_srf_down))       dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)       = lw_srf_down       (:)
-    IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
-    IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
-    IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
+    IF (PRESENT(t_air))                 dsl4jsb_var2D_onChunk(A2L_,t_air)                 = t_air                 (:)
+    IF (PRESENT(q_air))                 dsl4jsb_var2D_onChunk(A2L_,q_air)                 = q_air                 (:)
+    IF (PRESENT(rain))                  dsl4jsb_var2D_onChunk(A2L_,rain)                  = rain                  (:)
+    IF (PRESENT(snow))                  dsl4jsb_var2D_onChunk(A2L_,snow)                  = snow                  (:)
+    IF (PRESENT(wind_air))              dsl4jsb_var2D_onChunk(A2L_,wind_air)              = wind_air              (:)
+    IF (PRESENT(wind_10m))              dsl4jsb_var2D_onChunk(A2L_,wind_10m)              = wind_10m              (:)
+    IF (PRESENT(lw_srf_down))           dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)           = lw_srf_down           (:)
+    IF (PRESENT(swvis_srf_down))        dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)        = swvis_srf_down        (:)
+    IF (PRESENT(swnir_srf_down))        dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)        = swnir_srf_down        (:)
+    IF (PRESENT(swpar_srf_down))        dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)        = swpar_srf_down        (:)
 ! jsbach4    IF (PRESENT(frac_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,frac_par_diffuse)  = frac_par_diffuse  (:)
-    IF (PRESENT(swpar_fdiffuse))    dsl4jsb_var2D_onChunk(A2L_,swpar_fdiffuse)    = swpar_fdiffuse    (:)
-    IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
-    IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
-    IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
-    IF (PRESENT(t_bcoef))           dsl4jsb_var2D_onChunk(A2L_,t_bcoef)           = t_bcoef           (:)
-    IF (PRESENT(q_acoef))           dsl4jsb_var2D_onChunk(A2L_,q_acoef)           = q_acoef           (:)
-    IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(A2L_,q_bcoef)           = q_bcoef           (:)
-    IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(A2L_,pch)               = pch               (:)
-    IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)  = cos_zenith_angle  (:)
-    IF (PRESENT(co2_mixing_ratio))     dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio)     = co2_mixing_ratio     (:)
-    IF (PRESENT(co2_mixing_ratio_C13)) dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C13) = co2_mixing_ratio_C13 (:)
-    IF (PRESENT(co2_mixing_ratio_C14)) dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C14) = co2_mixing_ratio_C14 (:)
-    IF (PRESENT(ga))                dsl4jsb_var2D_onChunk(A2L_,ga)                 = ga               (:)
-    IF (PRESENT(nhx_deposition))    dsl4jsb_var2D_onChunk(A2L_,nhx_deposition)    = nhx_deposition    (:)
-    IF (PRESENT(noy_deposition))    dsl4jsb_var2D_onChunk(A2L_,noy_deposition)    = noy_deposition    (:)
+    IF (PRESENT(swpar_fdiffuse))        dsl4jsb_var2D_onChunk(A2L_,swpar_fdiffuse)        = swpar_fdiffuse        (:)
+    IF (PRESENT(press_srf))             dsl4jsb_var2D_onChunk(A2L_,press_srf)             = press_srf             (:)
+    IF (PRESENT(drag_srf))              dsl4jsb_var2D_onChunk(A2L_,drag_srf)              = drag_srf              (:)
+    IF (PRESENT(t_acoef))               dsl4jsb_var2D_onChunk(A2L_,t_acoef)               = t_acoef               (:)
+    IF (PRESENT(t_bcoef))               dsl4jsb_var2D_onChunk(A2L_,t_bcoef)               = t_bcoef               (:)
+    IF (PRESENT(q_acoef))               dsl4jsb_var2D_onChunk(A2L_,q_acoef)               = q_acoef               (:)
+    IF (PRESENT(q_bcoef))               dsl4jsb_var2D_onChunk(A2L_,q_bcoef)               = q_bcoef               (:)
+    IF (PRESENT(pch))                   dsl4jsb_var2D_onChunk(A2L_,pch)                   = pch                   (:)
+    IF (PRESENT(cos_zenith_angle))      dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)      = cos_zenith_angle      (:)
+    IF (PRESENT(co2_mixing_ratio))      dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio)      = co2_mixing_ratio      (:)
+    IF (PRESENT(co2_mixing_ratio_C13))  dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C13)  = co2_mixing_ratio_C13  (:)
+    IF (PRESENT(co2_mixing_ratio_C14))  dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C14)  = co2_mixing_ratio_C14  (:)
+    IF (PRESENT(ga))                    dsl4jsb_var2D_onChunk(A2L_,ga)                    = ga                    (:)
+    IF (PRESENT(nhx_deposition))        dsl4jsb_var2D_onChunk(A2L_,nhx_deposition)        = nhx_deposition        (:)
+    IF (PRESENT(noy_deposition))        dsl4jsb_var2D_onChunk(A2L_,noy_deposition)        = noy_deposition        (:)
     IF (PRESENT(nhx_n15_deposition))    dsl4jsb_var2D_onChunk(A2L_,nhx_n15_deposition)    = nhx_n15_deposition    (:)
     IF (PRESENT(noy_n15_deposition))    dsl4jsb_var2D_onChunk(A2L_,noy_n15_deposition)    = noy_n15_deposition    (:)
-    IF (PRESENT(p_deposition))      dsl4jsb_var2D_onChunk(A2L_,p_deposition)      = p_deposition      (:)
+    IF (PRESENT(p_deposition))          dsl4jsb_var2D_onChunk(A2L_,p_deposition)          = p_deposition          (:)
 
     ! For lakes:
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN

@@ -98,11 +98,14 @@ CONTAINS
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
                                         calc_mixing_ratio_N15N14
     USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
-    USE mo_atmland_constants
+    USE mo_atmland_constants,     ONLY: def_co2_deltaC13, def_co2_deltaC14, def_n_deposition, def_p_deposition, &
+                                        declination, frac_vis_swtot_srf, frac_par_swvis_srf
 
     ! Use of process memories
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
 
     ! ---------------------------
     ! 0.1 InOut
@@ -158,7 +161,7 @@ CONTAINS
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
-                     nhx_deposition_r, noy_deposition_r, &   ! variables reading nhx_srf_down & noy_srf_down from the climate forcing file (maybe rename there to)
+                     nhx_deposition_r,   noy_deposition_r, &   ! variables reading nhx_srf_down & noy_srf_down from the climate forcing file (maybe rename there)
                      nhx_dn15_deposition_r, noy_dn15_deposition_r, & 
                      p_deposition_r 
     ! READ() input variables for: soil
@@ -229,7 +232,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
-
+    ! Get process memory pool structures
+    dsl4slm_get_vegpool_var(pool,fine_root,carbon)
+#define Get_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_litterfall
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -292,7 +299,7 @@ CONTAINS
 
     !> 1.0 orbital parameters
     !!
-    !! 'declination' is calculated as output paramater, but not needed here
+    !! "declination" is a parameter from mo_atmland_constants and is calculated here as output paramater, though, not used here in this module
     CALL update_orbital_parameters(time, declination, sw_toa_down(:))  ! mo_atmland_util
 
 
@@ -311,7 +318,7 @@ CONTAINS
                      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
                      co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
-                     nhx_deposition_r, noy_deposition_r, p_deposition_r 
+                     nhx_deposition_r,   noy_deposition_r, p_deposition_r 
 
     ! day of the year: current time step
     doy_new = day 
@@ -357,23 +364,23 @@ CONTAINS
 
     !> 5.0 update forcing variables based on 'read data'
     !!
-    t_air(:)           =         t_air_r
-    q_air(:)           =         q_air_r
-    rain(:)            =         rain_r
-    snow(:)            =         snow_r
-    wind_air(:)        =         wind_air_r
-    wind_10m(:)        =         wind_air_r
-    press_srf(:)       =         press_srf_r
+    t_air(:)                = t_air_r
+    q_air(:)                = q_air_r
+    rain(:)                 = rain_r
+    snow(:)                 = snow_r
+    wind_air(:)             = wind_air_r
+    wind_10m(:)             = wind_air_r
+    press_srf(:)            = press_srf_r
 
-    lw_srf_down(:)     =         lw_srf_down_r
-    swvis_srf_down(:)  =         swvis_srf_down_r
+    lw_srf_down(:)          = lw_srf_down_r
+    swvis_srf_down(:)       = swvis_srf_down_r
     cos_zenith_angle(:)     = calc_solar_angle(grid%lat,grid%lon,time)                      
     swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
     swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
     swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r
     swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down_r, sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
 
-    co2_mixing_ratio(:)      =   co2_mixing_ratio_r
+    co2_mixing_ratio(:)     = co2_mixing_ratio_r
     IF (forcing_options%flag_read_dC13) THEN
       hlp1(:)               = calc_mixing_ratio_C13C12(co2_dc13_r)
     ELSE
@@ -389,25 +396,25 @@ CONTAINS
 
     SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
       CASE ("none")
-        nhx_deposition(:)    =   0.0_wp
-        noy_deposition(:)    =   0.0_wp
+        nhx_deposition(:)   = 0.0_wp
+        noy_deposition(:)   = 0.0_wp
       CASE ("constant")
-        nhx_deposition(:)    =   def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-        noy_deposition(:)    =   def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        nhx_deposition(:)   = def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        noy_deposition(:)   = def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
       CASE ("dynamic")
-        nhx_deposition(:)    =   nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-        noy_deposition(:)    =   noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        nhx_deposition(:)   = nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        noy_deposition(:)   = noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
     ENDSELECT
-    nhx_n15_deposition(:)    =   nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-    noy_n15_deposition(:)    =   noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+    nhx_n15_deposition(:)   = nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+    noy_n15_deposition(:)   = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
 
     SELECT CASE (TRIM(forcing_options%p_deposition_scheme))
       CASE ("none")
-        p_deposition(:)      =   0.0_wp
+        p_deposition(:)     = 0.0_wp
       CASE ("constant")
-        p_deposition(:)      =   def_p_deposition / molar_mass_P * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        p_deposition(:)     = def_p_deposition / molar_mass_P * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
       CASE ("dynamic")
-        p_deposition(:)      =   p_deposition_r / molar_mass_P * 1000.0_wp / one_day      ! mg/m2/day -> mumol/m2/sec
+        p_deposition(:)     = p_deposition_r / molar_mass_P * 1000.0_wp / one_day      ! mg/m2/day -> mumol/m2/sec
     ENDSELECT
     ! For lakes:    
     ! currently no values read from file or calculated, just zet to zero
@@ -516,122 +523,103 @@ CONTAINS
 
     !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
     !!
-    veg__mem%litterfall%leaf%carbon%ptr(ics:ice,iblk)     = leaf_carbon_r / 1000._wp
-    veg__mem%litterfall%leaf%nitrogen%ptr(ics:ice,iblk)   = leaf_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%leaf%phosphorus%ptr(ics:ice,iblk) = leaf_phosphorus_r / 1000000._wp   
-    veg__mem%litterfall%leaf%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%leaf%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(leaf_dC13_r))  
-    veg__mem%litterfall%leaf%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%leaf%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(leaf_dC13_r,leaf_DC14_r) 
-    veg__mem%litterfall%leaf%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%leaf%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(leaf_dN15_r))
+    veg_litterfall%leaf%carbon(:)     = leaf_carbon_r / 1000._wp
+    veg_litterfall%leaf%nitrogen(:)   = leaf_nitrogen_r / 1000000._wp
+    veg_litterfall%leaf%phosphorus(:) = leaf_phosphorus_r / 1000000._wp   
+    veg_litterfall%leaf%carbon13(:)   = veg_litterfall%leaf%carbon(:) / ( 1._wp + 1._wp / & 
+                                          calc_mixing_ratio_C13C12(leaf_dC13_r))  
+    veg_litterfall%leaf%carbon14(:)   = veg_litterfall%leaf%carbon(:) * & 
+                                          calc_mixing_ratio_C14C(leaf_dC13_r,leaf_DC14_r) 
+    veg_litterfall%leaf%nitrogen15(:) = veg_litterfall%leaf%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                          calc_mixing_ratio_N15N14(leaf_dN15_r))
 
-    veg__mem%litterfall%fine_root%carbon%ptr(ics:ice,iblk)     = fine_root_carbon_r / 1000._wp
-    veg__mem%litterfall%fine_root%nitrogen%ptr(ics:ice,iblk)   = fine_root_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%fine_root%phosphorus%ptr(ics:ice,iblk) = fine_root_phosphorus_r / 1000000._wp
-    veg__mem%litterfall%fine_root%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%fine_root%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(fine_root_dC13_r)) 
-    veg__mem%litterfall%fine_root%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%fine_root%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(fine_root_dC13_r,fine_root_DC14_r) 
-    veg__mem%litterfall%fine_root%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%fine_root%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(fine_root_dN15_r)) 
+    veg_litterfall%fine_root%carbon(:)     = fine_root_carbon_r / 1000._wp
+    veg_litterfall%fine_root%nitrogen(:)   = fine_root_nitrogen_r / 1000000._wp
+    veg_litterfall%fine_root%phosphorus(:) = fine_root_phosphorus_r / 1000000._wp
+    veg_litterfall%fine_root%carbon13(:)   = veg_litterfall%fine_root%carbon(:) / ( 1._wp + 1._wp / & 
+                                               calc_mixing_ratio_C13C12(fine_root_dC13_r)) 
+    veg_litterfall%fine_root%carbon14(:)   = veg_litterfall%fine_root%carbon(:) * & 
+                                               calc_mixing_ratio_C14C(fine_root_dC13_r,fine_root_DC14_r) 
+    veg_litterfall%fine_root%nitrogen15(:) = veg_litterfall%fine_root%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                               calc_mixing_ratio_N15N14(fine_root_dN15_r)) 
 
-    veg__mem%litterfall%coarse_root%carbon%ptr(ics:ice,iblk)     = coarse_root_carbon_r / 1000._wp
-    veg__mem%litterfall%coarse_root%nitrogen%ptr(ics:ice,iblk)   = coarse_root_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%coarse_root%phosphorus%ptr(ics:ice,iblk) = coarse_root_phosphorus_r / 1000000._wp
-    veg__mem%litterfall%coarse_root%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%coarse_root%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(coarse_root_dC13_r)) 
-    veg__mem%litterfall%coarse_root%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%coarse_root%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(coarse_root_dC13_r,coarse_root_DC14_r) 
-    veg__mem%litterfall%coarse_root%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%coarse_root%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(coarse_root_dN15_r))
+    veg_litterfall%coarse_root%carbon(:)     = coarse_root_carbon_r / 1000._wp
+    veg_litterfall%coarse_root%nitrogen(:)   = coarse_root_nitrogen_r / 1000000._wp
+    veg_litterfall%coarse_root%phosphorus(:) = coarse_root_phosphorus_r / 1000000._wp
+    veg_litterfall%coarse_root%carbon13(:)   = veg_litterfall%coarse_root%carbon(:) / ( 1._wp + 1._wp / & 
+                                                 calc_mixing_ratio_C13C12(coarse_root_dC13_r)) 
+    veg_litterfall%coarse_root%carbon14(:)   = veg_litterfall%coarse_root%carbon(:) * & 
+                                                 calc_mixing_ratio_C14C(coarse_root_dC13_r,coarse_root_DC14_r) 
+    veg_litterfall%coarse_root%nitrogen15(:) = veg_litterfall%coarse_root%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                                 calc_mixing_ratio_N15N14(coarse_root_dN15_r))
 
-    veg__mem%litterfall%sap_wood%carbon%ptr(ics:ice,iblk)     = sap_wood_carbon_r / 1000._wp
-    veg__mem%litterfall%sap_wood%nitrogen%ptr(ics:ice,iblk)   = sap_wood_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%sap_wood%phosphorus%ptr(ics:ice,iblk) = sap_wood_phosphorus_r / 1000000._wp
-    veg__mem%litterfall%sap_wood%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%sap_wood%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(sap_wood_dC13_r))
-    veg__mem%litterfall%sap_wood%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%sap_wood%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(sap_wood_dC13_r,sap_wood_DC14_r) 
-    veg__mem%litterfall%sap_wood%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%sap_wood%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(sap_wood_dN15_r))
+    veg_litterfall%sap_wood%carbon(:)        = sap_wood_carbon_r / 1000._wp
+    veg_litterfall%sap_wood%nitrogen(:)      = sap_wood_nitrogen_r / 1000000._wp
+    veg_litterfall%sap_wood%phosphorus(:)    = sap_wood_phosphorus_r / 1000000._wp
+    veg_litterfall%sap_wood%carbon13(:)      = veg_litterfall%sap_wood%carbon(:) / ( 1._wp + 1._wp / & 
+                                                 calc_mixing_ratio_C13C12(sap_wood_dC13_r))
+    veg_litterfall%sap_wood%carbon14(:)      = veg_litterfall%sap_wood%carbon(:) * & 
+                                                 calc_mixing_ratio_C14C(sap_wood_dC13_r,sap_wood_DC14_r) 
+    veg_litterfall%sap_wood%nitrogen15(:)    = veg_litterfall%sap_wood%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                                 calc_mixing_ratio_N15N14(sap_wood_dN15_r))
 
-    veg__mem%litterfall%heart_wood%carbon%ptr(ics:ice,iblk)     = heart_wood_carbon_r / 1000._wp
-    veg__mem%litterfall%heart_wood%nitrogen%ptr(ics:ice,iblk)   = heart_wood_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%heart_wood%phosphorus%ptr(ics:ice,iblk) = heart_wood_phosphorus_r / 1000000._wp 
-    veg__mem%litterfall%heart_wood%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%heart_wood%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(heart_wood_dC13_r)) 
-    veg__mem%litterfall%heart_wood%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%heart_wood%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(heart_wood_dC13_r,heart_wood_DC14_r) 
-    veg__mem%litterfall%heart_wood%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%heart_wood%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(heart_wood_dN15_r))
+    veg_litterfall%heart_wood%carbon(:)      = heart_wood_carbon_r / 1000._wp
+    veg_litterfall%heart_wood%nitrogen(:)    = heart_wood_nitrogen_r / 1000000._wp
+    veg_litterfall%heart_wood%phosphorus(:)  = heart_wood_phosphorus_r / 1000000._wp 
+    veg_litterfall%heart_wood%carbon13(:)    = veg_litterfall%heart_wood%carbon(:) / ( 1._wp + 1._wp / & 
+                                                 calc_mixing_ratio_C13C12(heart_wood_dC13_r)) 
+    veg_litterfall%heart_wood%carbon14(:)    = veg_litterfall%heart_wood%carbon(:) * & 
+                                                 calc_mixing_ratio_C14C(heart_wood_dC13_r,heart_wood_DC14_r) 
+    veg_litterfall%heart_wood%nitrogen15(:)  = veg_litterfall%heart_wood%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                                 calc_mixing_ratio_N15N14(heart_wood_dN15_r))
 
-    veg__mem%litterfall%labile%carbon%ptr(ics:ice,iblk)     = labile_carbon_r / 1000._wp
-    veg__mem%litterfall%labile%nitrogen%ptr(ics:ice,iblk)   = labile_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%labile%phosphorus%ptr(ics:ice,iblk) = labile_phosphorus_r / 1000000._wp 
-    veg__mem%litterfall%labile%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%labile%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(labile_dC13_r))
-    veg__mem%litterfall%labile%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%labile%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(labile_dC13_r,labile_DC14_r) 
-    veg__mem%litterfall%labile%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%labile%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(labile_dN15_r))
+    veg_litterfall%labile%carbon(:)       = labile_carbon_r / 1000._wp
+    veg_litterfall%labile%nitrogen(:)     = labile_nitrogen_r / 1000000._wp
+    veg_litterfall%labile%phosphorus(:)   = labile_phosphorus_r / 1000000._wp 
+    veg_litterfall%labile%carbon13(:)     = veg_litterfall%labile%carbon(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_C13C12(labile_dC13_r))
+    veg_litterfall%labile%carbon14(:)     = veg_litterfall%labile%carbon(:) * & 
+                                              calc_mixing_ratio_C14C(labile_dC13_r,labile_DC14_r) 
+    veg_litterfall%labile%nitrogen15(:)   = veg_litterfall%labile%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_N15N14(labile_dN15_r))
 
-    veg__mem%litterfall%reserve%carbon%ptr(ics:ice,iblk)     = reserve_carbon_r / 1000._wp
-    veg__mem%litterfall%reserve%nitrogen%ptr(ics:ice,iblk)   = reserve_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%reserve%phosphorus%ptr(ics:ice,iblk) = reserve_phosphorus_r / 1000000._wp
-    veg__mem%litterfall%reserve%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%reserve%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(reserve_dC13_r)) 
-    veg__mem%litterfall%reserve%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%reserve%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(reserve_dC13_r,reserve_DC14_r) 
-    veg__mem%litterfall%reserve%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%reserve%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(reserve_dN15_r))
+    veg_litterfall%reserve%carbon(:)      = reserve_carbon_r / 1000._wp
+    veg_litterfall%reserve%nitrogen(:)    = reserve_nitrogen_r / 1000000._wp
+    veg_litterfall%reserve%phosphorus(:)  = reserve_phosphorus_r / 1000000._wp
+    veg_litterfall%reserve%carbon13(:)    = veg_litterfall%reserve%carbon(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_C13C12(reserve_dC13_r)) 
+    veg_litterfall%reserve%carbon14(:)    = veg_litterfall%reserve%carbon(:) * & 
+                                              calc_mixing_ratio_C14C(reserve_dC13_r,reserve_DC14_r) 
+    veg_litterfall%reserve%nitrogen15(:)  = veg_litterfall%reserve%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_N15N14(reserve_dN15_r))
 
-    veg__mem%litterfall%fruit%carbon%ptr(ics:ice,iblk)     = fruit_carbon_r / 1000._wp
-    veg__mem%litterfall%fruit%nitrogen%ptr(ics:ice,iblk)   = fruit_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%fruit%phosphorus%ptr(ics:ice,iblk) = fruit_phosphorus_r / 1000000._wp
-    veg__mem%litterfall%fruit%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%fruit%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(fruit_dC13_r))
-    veg__mem%litterfall%fruit%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%fruit%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(fruit_dC13_r,fruit_DC14_r) 
-    veg__mem%litterfall%fruit%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%fruit%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(fruit_dN15_r))
+    veg_litterfall%fruit%carbon(:)        = fruit_carbon_r / 1000._wp
+    veg_litterfall%fruit%nitrogen(:)      = fruit_nitrogen_r / 1000000._wp
+    veg_litterfall%fruit%phosphorus(:)    = fruit_phosphorus_r / 1000000._wp
+    veg_litterfall%fruit%carbon13(:)      = veg_litterfall%fruit%carbon(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_C13C12(fruit_dC13_r))
+    veg_litterfall%fruit%carbon14(:)      = veg_litterfall%fruit%carbon(:) * & 
+                                              calc_mixing_ratio_C14C(fruit_dC13_r,fruit_DC14_r) 
+    veg_litterfall%fruit%nitrogen15(:)    = veg_litterfall%fruit%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_N15N14(fruit_dN15_r))
 
-    veg__mem%litterfall%seed_bed%carbon%ptr(ics:ice,iblk)     = seed_bed_carbon_r / 1000._wp
-    veg__mem%litterfall%seed_bed%nitrogen%ptr(ics:ice,iblk)   = seed_bed_nitrogen_r / 1000000._wp
-    veg__mem%litterfall%seed_bed%phosphorus%ptr(ics:ice,iblk) = seed_bed_phosphorus_r / 1000000._wp
-    veg__mem%litterfall%seed_bed%carbon13%ptr(ics:ice,iblk)   = veg__mem%litterfall%seed_bed%carbon%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_C13C12(seed_bed_dC13_r)) 
-    veg__mem%litterfall%seed_bed%carbon14%ptr(ics:ice,iblk)   = veg__mem%litterfall%seed_bed%carbon%ptr(ics:ice,iblk) * & 
-                                                                      calc_mixing_ratio_C14C(seed_bed_dC13_r,seed_bed_DC14_r) 
-    veg__mem%litterfall%seed_bed%nitrogen15%ptr(ics:ice,iblk) = veg__mem%litterfall%seed_bed%nitrogen%ptr(ics:ice,iblk) / & 
-                                                                      ( 1._wp + 1._wp / & 
-                                                                      calc_mixing_ratio_N15N14(seed_bed_dN15_r))
+    veg_litterfall%seed_bed%carbon(:)     = seed_bed_carbon_r / 1000._wp
+    veg_litterfall%seed_bed%nitrogen(:)   = seed_bed_nitrogen_r / 1000000._wp
+    veg_litterfall%seed_bed%phosphorus(:) = seed_bed_phosphorus_r / 1000000._wp
+    veg_litterfall%seed_bed%carbon13(:)   = veg_litterfall%seed_bed%carbon(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_C13C12(seed_bed_dC13_r)) 
+    veg_litterfall%seed_bed%carbon14(:)   = veg_litterfall%seed_bed%carbon(:) * & 
+                                              calc_mixing_ratio_C14C(seed_bed_dC13_r,seed_bed_DC14_r) 
+    veg_litterfall%seed_bed%nitrogen15(:) = veg_litterfall%seed_bed%nitrogen(:) / ( 1._wp + 1._wp / & 
+                                              calc_mixing_ratio_N15N14(seed_bed_dN15_r))
 
     DO isoil = 1,nsoil_sb
-
-       t_soil_sl(:,isoil)                              = t_soil_sl_r(isoil)
-       w_soil_sl(:,isoil)                              = w_soil_sl_r(isoil)
-       percolation_sl(:,isoil)                         = percolation_sl_r(isoil)
-       root_fraction_sl(:,isoil)                       = root_fraction_sl_r(isoil)
+      t_soil_sl(:,isoil)                  = t_soil_sl_r(isoil)
+      w_soil_sl(:,isoil)                  = w_soil_sl_r(isoil)
+      percolation_sl(:,isoil)             = percolation_sl_r(isoil)
+      root_fraction_sl(:,isoil)           = root_fraction_sl_r(isoil)
     ENDDO
-    veg__mem%pool%fine_root%carbon%ptr(ics:ice,iblk)   = veg_pool_fine_root_carbon_r
+    veg_pool%fine_root%carbon(:)          = veg_pool_fine_root_carbon_r
 
     nhx_deposition(:)     = nhx_deposition_r
     noy_deposition(:)     = noy_deposition_r
@@ -641,6 +629,11 @@ CONTAINS
 
     END SELECT  ! land plant canopy vs soil
 
+! Pass back values to process memory
+dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
+#define Passback_veg_litterfall
+#include "slm_pools_a_incl.f90"
+#undef Passback_veg_litterfall
 
   END SUBROUTINE update_forcing
 
@@ -658,10 +651,14 @@ CONTAINS
     USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    ! 
+    ! ---------------------------
     ! 0.2 Local
-    LOGICAL :: file_exists
-    INTEGER :: lun 
-    CHARACTER(100) :: fname
+    LOGICAL         :: file_exists
+    INTEGER         :: lun 
+    CHARACTER(100)  :: fname
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_forcing_input_file'
 
 
@@ -669,7 +666,7 @@ CONTAINS
       CASE('land','plant','canopy')
         !> 1.1 open file for READ
         !! 
-        lun=9
+        lun   = 9
         fname = 'climate.dat'
         ! check if file exists
         INQUIRE(FILE=fname, EXIST=file_exists)
@@ -686,7 +683,7 @@ CONTAINS
       CASE('soil')
         !> 2.1 open file for READ
         !! 
-        lun=9
+        lun   = 9
         fname = 'soil_forcing_litterfall.dat'
         ! check if file exists
         INQUIRE(FILE=fname, EXIST=file_exists)
@@ -702,7 +699,7 @@ CONTAINS
 
         !> 3.1 open file for READ
         !! 
-        lun=10
+        lun   = 10
         fname = 'soil_forcing_soilphysics.dat'
         ! check if file exists
         INQUIRE(FILE=fname, EXIST=file_exists)
@@ -733,6 +730,10 @@ CONTAINS
     USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    ! 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':close_forcing_input_file'
 
@@ -758,8 +759,10 @@ CONTAINS
     USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     INTEGER,INTENT(in)  :: lun 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(200)      :: header_dummy1 = "header"
     CHARACTER(500)      :: header_dummy2 = "header_long"

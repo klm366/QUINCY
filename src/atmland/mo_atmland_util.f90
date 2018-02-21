@@ -26,8 +26,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_solar_angle(latitude,longitude,time) RESULT(cos_zenith_angle)
 
-    USE mo_base_constants, ONLY: deg2rad,degcircle,hourday,pi 
-    USE mo_atmland_constants, ONLY: declination,angle_at_GMT,reference_longitude_GMT
+    USE mo_base_constants,        ONLY: deg2rad,degcircle,hourday,pi 
+    USE mo_atmland_constants,     ONLY: declination,angle_at_GMT,reference_longitude_GMT
 
     IMPLICIT NONE
     ! ---------------------------
@@ -65,10 +65,10 @@ CONTAINS
     !> 2.0 actual solar angle accounting for current solar declination 
     !! 
     !! 
-    cos_delta = COS(declination)
-    sin_delta = SIN(declination)
-    cos_zenith_angle=SIN(latitude*deg2rad)*sin_delta & 
-                     + COS(latitude*deg2rad)*cos_delta*COS(hour_angle)
+    cos_delta         = COS(declination)
+    sin_delta         = SIN(declination)
+    cos_zenith_angle  = SIN(latitude*deg2rad)*sin_delta + & 
+                        COS(latitude*deg2rad)*cos_delta*COS(hour_angle)
 
   END FUNCTION calc_solar_angle
 
@@ -79,8 +79,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_sw_fdiffuse(sw_srf_down, sw_toa_down, cos_zenith_angle) RESULT(sw_fdiffuse)
 
-    USE mo_atmland_constants, ONLY : k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
-                                     min_sw_fdiffuse, min_cos_zenith_angle
+    USE mo_atmland_constants,       ONLY: k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
+                                          min_sw_fdiffuse, min_cos_zenith_angle
+    
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -107,7 +108,7 @@ CONTAINS
          sw_fdiffuse = min_sw_fdiffuse
       ELSE
          sw_fdiffuse = MIN(1.0_wp, k1_fdiff + transmission * & 
-            (k2_fdiff + transmission * ( k3_fdiff + k4_fdiff * transmission )))
+                       (k2_fdiff + transmission * ( k3_fdiff + k4_fdiff * transmission )))
       ENDIF
 
     ELSE ! assume that only diffuse light is available
@@ -150,9 +151,9 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    a = 611.0_wp    
-    b = 17.502_wp  
-    c = 240.97_wp    
+    a    = 611.0_wp    
+    b    = 17.502_wp  
+    c    = 240.97_wp    
     tmin = 150._wp   ! for temperatures lower 50 K esat gets unreasonable numbers from the below calculations (very large / very small)
 
     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
@@ -175,8 +176,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_orbital_parameters(time,declination,sw_toa_down) 
 
-    USE mo_base_constants,        ONLY : deg2rad 
-    USE mo_atmland_constants,     ONLY : obliquity, perihel, eccentricity, solar_constant
+    USE mo_base_constants,        ONLY: deg2rad 
+    USE mo_atmland_constants,     ONLY: obliquity, perihel, eccentricity, solar_constant
 
     IMPLICIT NONE
     ! ---------------------------
@@ -203,45 +204,45 @@ CONTAINS
     !> 1.0 calculate orbital parameters
     !! 
     ! sinus of obliquity
-    so = SIN(obliquity*deg2rad)
+    so    = SIN(obliquity*deg2rad)
     !
     ! perihel in radians
-    xl = perihel + 180.0_wp
-    xllp = xl * deg2rad
+    xl    = perihel + 180.0_wp
+    xllp  = xl * deg2rad
     !
     ! helpers of eccentricity
-    xee = eccentricity * eccentricity
-    xse = SQRT(1.0_wp - xee)
+    xee   = eccentricity * eccentricity
+    xse   = SQRT(1.0_wp - xee)
     !
     ! xlam : true long. sun for mean long. = 0
-    xlam = (eccentricity/2.0_wp + eccentricity * xee/8.0_wp) * (1.0_wp + xse) * SIN(xllp) & 
-            - xee/4.0_wp * (0.5_wp + xse) * SIN(2.0_wp*xllp) & 
-            + eccentricity * xee/8.0_wp*(1.0_wp/3.0_wp + xse) * SIN(3.0_wp*xllp)
+    xlam  = (eccentricity/2.0_wp + eccentricity * xee/8.0_wp) * (1.0_wp + xse) * SIN(xllp) - & 
+             xee/4.0_wp * (0.5_wp + xse) * SIN(2.0_wp*xllp) + & 
+             eccentricity * xee/8.0_wp*(1.0_wp/3.0_wp + xse) * SIN(3.0_wp*xllp)
     xlam  = 2.0_wp*xlam/deg2rad
     ! dlamm : mean long. sun for ma-ja
     dlamm = xlam+time-79.0_wp
 
     ranm  = (dlamm-xl) * deg2rad
-    xee = xee*eccentricity
+    xee   = xee*eccentricity
     ! ranv : true anomaly (radians)
-    ranv = ranm+(2.0_wp*eccentricity-xee/4.0_wp)*SIN(ranm) & 
-           + 5.0_wp/4.0_wp*eccentricity*eccentricity * SIN(2.0_wp*ranm) & 
-           + 13.0_wp/12.0_wp*xee*SIN(3.0_wp*ranm)
+    ranv  = ranm+(2.0_wp*eccentricity-xee/4.0_wp)*SIN(ranm) + & 
+            5.0_wp/4.0_wp*eccentricity*eccentricity * SIN(2.0_wp*ranm) + & 
+            13.0_wp/12.0_wp*xee*SIN(3.0_wp*ranm)
     ! rlam : true longitude (radians)
-    rlam =  ranv + xllp
+    rlam  = ranv + xllp
 
     !> 2.0 calculate current solar declination 
     !! 
-    sd = so*SIN(rlam)
-    cd = SQRT(1.0_wp-sd*sd)
+    sd    = so*SIN(rlam)
+    cd    = SQRT(1.0_wp-sd*sd)
     ! delta : Solar Declination (radians; angle sun at equator)
     declination = ATAN(sd/cd)
 
     !> 3.0 calculate potential radiation normal to the atmsphere
     !! 
     ! eccentricity effect: normalised Sun-Earth distance
-    dist = 1.0_wp / (( 1.0_wp - eccentricity * eccentricity ) / & 
-           ( 1.0_wp + eccentricity * cos(ranv)))
+    dist  = 1.0_wp / (( 1.0_wp - eccentricity * eccentricity ) / & 
+            (1.0_wp + eccentricity * cos(ranv)))
     ! potential insolation normal to the atmosphere (W m-2)
     sw_toa_down(:) = dist * dist * solar_constant
 

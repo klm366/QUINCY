@@ -13,10 +13,8 @@ MODULE mo_a2l_memory_class
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
-
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-
   USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later
 
 ! jsbach4
@@ -32,7 +30,7 @@ MODULE mo_a2l_memory_class
   PRIVATE
   PUBLIC :: t_a2l_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 50
+  INTEGER, PARAMETER :: max_no_of_vars = 60
 
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
@@ -115,13 +113,16 @@ CONTAINS
     USE mo_shared_isotope,    ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_a2l_memory),   INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),           INTENT(in)    :: prefix
-    CHARACTER(len=*),           INTENT(in)    :: suffix
-    INTEGER,                    INTENT(in)    :: lct_ids
-!    INTEGER,                    INTENT(in)    :: lct_ids(:)  ! jsbach4
-    INTEGER,                   INTENT(in)    :: model_id
+    CHARACTER(len=*),      INTENT(in)            :: prefix
+    CHARACTER(len=*),      INTENT(in)            :: suffix
+    INTEGER,               INTENT(in)            :: lct_ids
+!    INTEGER,               INTENT(in)            :: lct_ids(:)  ! jsbach4
+    INTEGER,               INTENT(in)            :: model_id
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: C13C12_mixing_ratio, &
                 C14C_mixing_ratio
@@ -140,13 +141,11 @@ CONTAINS
                 co2_mixing_ratio_init, &
                 co2_mixing_ratio_c13_init, &
                 co2_mixing_ratio_c14_init
-
-
 ! jsbach4
     TYPE(t_jsb_model),       POINTER :: model 
     TYPE(t_jsb_grid),        POINTER :: hgrid 
     TYPE(t_jsb_vgrid),       POINTER :: surface  
-    INTEGER :: table
+    INTEGER                          :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
 
