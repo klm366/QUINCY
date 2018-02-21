@@ -27,7 +27,7 @@ n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down &
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # BNF & Mycorrhiza
-bnf_scheme="unlimited"           # none fixed standard optimal resistance unlimited
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
 flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
 flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
