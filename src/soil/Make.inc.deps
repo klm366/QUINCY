@@ -65,7 +65,9 @@ mo_soil_update_physics.o: \
   mo_rad_memory_class.o \
   mo_soil_memory_class.o \
   mo_soil_constants.o \
-  mo_assimi_memory_class.o
+  mo_soil_config_class.o \
+  mo_assimi_memory_class.o \
+  mo_soil_update_turbulence.o
 
 mo_soil_update_turbulence.o: \
   mo_kind.o \
