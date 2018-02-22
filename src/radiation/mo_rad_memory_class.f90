@@ -12,19 +12,16 @@ MODULE mo_rad_memory_class
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
-
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-
   USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later   *slmtemp
-
 
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_rad_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40   ! default JSBACH4
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for rad memory
@@ -39,7 +36,7 @@ MODULE mo_rad_memory_class
       & lw_srf_net,            & !< net longwave radiation at surface
       & rad_srf_net              !< net radiation at surface
 
-    TYPE(t_jsb_var_real2d)  :: &        ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
+    TYPE(t_jsb_var_real2d)  :: & 
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range
       & alb_vis_snow,          & !< Albedo of snow in the VIS range
@@ -110,20 +107,23 @@ CONTAINS
     USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1.InOut
-    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem     !> radiation memory
-    CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
-    INTEGER,             INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
+    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem             !> radiation memory
+    CHARACTER(len=*),    INTENT(in)            :: prefix          !> ?
+    CHARACTER(len=*),    INTENT(in)            :: suffix          !> ?
+    INTEGER,             INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,             INTENT(in)            :: model_id        !> model ID model\%id
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
 !    TYPE(t_jsb_vgrid), POINTER :: canopy_layer                 ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    INTEGER :: table
+    INTEGER                    :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_memory'
 

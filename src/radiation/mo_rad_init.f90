@@ -74,14 +74,13 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
 !    dsl4jsb_Get_config(RAD_)
     ! Get process memories
     dsl4jsb_Get_memory(RAD_)
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------    
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
@@ -93,6 +92,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
     rfr_ratio_boc(:)                  = rfr_ratio_toc
     rfr_ratio_boc_tvegdyn_mavg(:)     = rfr_ratio_boc(:) 
 

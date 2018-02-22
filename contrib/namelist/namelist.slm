@@ -22,6 +22,10 @@
 &PHENOLOGY_CTL
   lai=6.0
 /
+&RADIATION_CTL
+  ! nothing here yet
+  ! 
+/
 &GRID_CTL
   latitude=50.0
   longitude=0.0
