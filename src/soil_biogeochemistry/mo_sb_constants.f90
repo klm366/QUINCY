@@ -127,10 +127,12 @@ MODULE mo_sb_constants
       km_mic_uptake_nh4, &       !< half-saturation concentration (mol N / m3)
       vmax_mic_uptake_no3, &     !< maximum NO3 uptake capacity of microbes (mol N / mol biomass C / s)
       km_mic_uptake_no3, &       !< half-saturation concentration (mol N / m3)
+      f_mic_carrier_n, &         !< ratio between microbial N transport and biomass, []
       vmax_plant_uptake_nh4, &   !< maximum NH4 uptake capacity of fine roots (mol N / mol biomass C / s)
       km_plant_uptake_nh4, &     ! < half-saturation concentration (mol N / m3)
       vmax_plant_uptake_no3, &   !< maximum NO3 uptake capacity of fine roots (mol N / mol biomass C / s)
       km_plant_uptake_no3, &     !< half-saturation concentration (mol N / m3)
+      f_plant_carrier_n, &       !< ratio between plant N transport and fine root biomass, []
       vmax_mic_uptake_po4, &     !< maximum PO4 uptake capacity of microbes (mol PO4 / mol biomass C / s)
       km_mic_uptake_po4, &       !< half-saturation concentration for decomposing microbe PO4 immobilization [mol PO4 m-3]
       vmax_plant_uptake_po4, &   !< maximum PO4 uptake capacity of fine roots (mol PO4 / mol biomass C / s)
@@ -313,20 +315,22 @@ CONTAINS
     km2_up_po4 = 1.0_wp
 
     ! additional jsm parameters 
-    vmax_mic_uptake_nh4   = 48.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein 
+    vmax_mic_uptake_nh4   = 10._wp * 48.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily times 10
     km_mic_uptake_nh4     = 1.2_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein    
-    vmax_mic_uptake_no3   = 39.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein 
+    vmax_mic_uptake_no3   = 10._wp * 39.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily times 10
     km_mic_uptake_no3     = 1.8_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein   
+    f_mic_carrier_n       = 0.05_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     vmax_plant_uptake_nh4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_nh4   = 0.18_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein 
     vmax_plant_uptake_no3 = 8.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_no3   = 0.41_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein
+    f_plant_carrier_n     = 0.004_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     vmax_mic_uptake_po4   = 48.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s
     km_mic_uptake_po4     = 0.02_wp / molar_mass_P ! mol / m3
     vmax_plant_uptake_po4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s
     km_plant_uptake_po4   = 0.067_wp / molar_mass_P ! mol / m3
     vmax_denitirfication  = 0.01_wp
-    k_mic_uptake_po4      = 400._wp / 10000._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein
+    k_mic_uptake_po4      = 10.0_wp * 400._wp / 10000._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein  !temporarily times 10
     k_plant_uptake_po4    = 12._wp / 100._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein/ 100._wp
     f_mic_carrier_po4     = 0.0015_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4   = 0.1_wp / 80._wp ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016

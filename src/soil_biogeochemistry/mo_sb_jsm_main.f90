@@ -276,7 +276,10 @@ CONTAINS
 
 !    fine_root_carbon(:,:) = root_fraction_sl(:,:) * 600._wp 
     DO isoil = 1,nsoil_sb
-       fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+       WHERE(soil_depth_sl(:,isoil) > eps8)
+          fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * & 
+                                      veg_pool%fine_root%carbon(:)
+       ENDWHERE
     ENDDO
 
     !> X.0 Inorganic N assimilation
@@ -305,7 +308,8 @@ CONTAINS
 
     !! Calculate the P flux rates
     !!
-    CALL calc_flux_po4(sb_pool%microbial%carbon(:,:), sb_pool%dom%carbon(:,:),sb_pool%dom%phosphorus(:,:),&
+    CALL calc_flux_po4(dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &
+                            sb_pool%microbial%carbon(:,:), sb_pool%dom%carbon(:,:),sb_pool%dom%phosphorus(:,:),&
                             rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
                             rtm_sorption(:,:), rmm_sorption(:,:), rtm_desorption(:,:), rmm_desorption(:,:), &
                             sb_pool%polymeric_litter%phosphorus(:,:), sb_pool%dom_assoc%phosphorus(:,:), &
