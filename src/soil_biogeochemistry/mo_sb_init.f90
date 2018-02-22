@@ -175,6 +175,8 @@ CONTAINS
 
     !> 2.0 differentiate soil model init
     !! 
+    hlp6 = 0.6_wp   ! fraction of production not roots 
+
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
 
        ! Initial values for Soenke's four pool soil biogeochemical model
@@ -185,7 +187,6 @@ CONTAINS
           hlp3 = 1000._wp ! g C m-2 woody litter
           hlp4 = 1500._wp ! g C m-2 fast SOM
           hlp5 = 10000._wp ! g C m-2 slow SOM
-          hlp6 = 0.6_wp   ! fraction of production not roots 
 
           IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
              sb_pool%soluable_litter%carbon(:,1) = hlp1 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
@@ -300,38 +301,81 @@ CONTAINS
           no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
 
        CASE('jsm')
- 
-         ! set microbial biomass to minimum possible density
-         sb_pool%microbial%carbon(:,:)     = min_mic_biomass
-         sb_pool%microbial%nitrogen(:,:)   = sb_pool%microbial%carbon(:,:) / microbial_cn 
-         sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np
-         sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c13 
-         sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c14 
-         sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-     
-         ! some initial values for testing
-         nh4_solute(:,:) = 1.0_wp 
-         nh4_n15_solute(:,:) = nh4_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-         no3_solute(:,:) = 1.0_wp 
-         no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-         po4_solute(:,:) = 0.01_wp 
 
-         ! inital Qmax based on current soil carbon content
-         bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
-         bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-         qmax_org(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
-                                              qmax_org_om,qmax_org_mineral)
-         qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
-                                                  qmax_po4_mineral,qmax_po4_mineral)
- 
-         ! initialise diffusion by bioturbation
-         k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 
+          hlp1 = 100._wp  ! g C m-2 metabolic litter
+          hlp2 = 1000._wp ! g C m-2 structural litter
+          hlp3 = 500._wp  ! g C m-2 woody litter
+          hlp4 = 10.0_wp  ! g C m-2 microbial biomass
+          hlp5 = 1000._wp ! g C m-2 microbial necromass
 
-         ! initialise mineral soil P pools
-         po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
-         po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
-         po4_occluded(:,:)   = 150.0_wp / molar_mass_P
-         po4_primary(:,:)    = 100.0_wp / molar_mass_P 
+          sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+                                                                    ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
+          sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+                                                                    ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
+          IF(lctlib%growthform==itree) &
+             sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+          DO isoil=2,options%nsoil_sb
+             sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                                                                       (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
+             sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                                                                       (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
+          ENDDO
+
+          DO isoil=1,options%nsoil_sb
+             sb_pool%microbial%carbon(:,isoil) = MAX(hlp4/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil), &
+                                                     min_mic_biomass)
+             sb_pool%residue%carbon(:,isoil) = hlp5/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
+             sb_pool%residue_assoc%carbon(:,isoil) = qmax_org_mineral/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
+          ENDDO
+          sb_pool%soluable_litter%nitrogen(:,:)   = sb_pool%soluable_litter%carbon(:,:) / microbial_cn 
+          sb_pool%soluable_litter%phosphorus(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / microbial_np
+          sb_pool%soluable_litter%carbon13(:,:)   = sb_pool%soluable_litter%carbon(:,:) * frac_c13 
+          sb_pool%soluable_litter%carbon14(:,:)   = sb_pool%soluable_litter%carbon(:,:) * frac_c14 
+          sb_pool%soluable_litter%nitrogen15(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          sb_pool%polymeric_litter%nitrogen(:,:)   = sb_pool%polymeric_litter%carbon(:,:) / 50._wp 
+          sb_pool%polymeric_litter%phosphorus(:,:) = sb_pool%polymeric_litter%nitrogen(:,:) / microbial_np
+          sb_pool%polymeric_litter%carbon13(:,:)   = sb_pool%polymeric_litter%carbon(:,:) * frac_c13 
+          sb_pool%polymeric_litter%carbon14(:,:)   = sb_pool%polymeric_litter%carbon(:,:) * frac_c14 
+          sb_pool%polymeric_litter%nitrogen15(:,:) = sb_pool%polymeric_litter%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          sb_pool%woody_litter%nitrogen(:,:)   = sb_pool%woody_litter%carbon(:,:) / 200._wp 
+          sb_pool%woody_litter%phosphorus(:,:) = sb_pool%woody_litter%nitrogen(:,:) / microbial_np
+          sb_pool%woody_litter%carbon13(:,:)   = sb_pool%woody_litter%carbon(:,:) * frac_c13 
+          sb_pool%woody_litter%carbon14(:,:)   = sb_pool%woody_litter%carbon(:,:) * frac_c14 
+          sb_pool%woody_litter%nitrogen15(:,:) = sb_pool%woody_litter%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          sb_pool%microbial%nitrogen(:,:)   = sb_pool%microbial%carbon(:,:) / microbial_cn 
+          sb_pool%microbial%phosphorus(:,:) = sb_pool%microbial%nitrogen(:,:) / microbial_np
+          sb_pool%microbial%carbon13(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c13 
+          sb_pool%microbial%carbon14(:,:)   = sb_pool%microbial%carbon(:,:) * frac_c14 
+          sb_pool%microbial%nitrogen15(:,:) = sb_pool%microbial%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          sb_pool%residue%nitrogen(:,:)   = sb_pool%residue%carbon(:,:) / microbial_cn 
+          sb_pool%residue%phosphorus(:,:) = sb_pool%residue%nitrogen(:,:) / microbial_np
+          sb_pool%residue%carbon13(:,:)   = sb_pool%residue%carbon(:,:) * frac_c13 
+          sb_pool%residue%carbon14(:,:)   = sb_pool%residue%carbon(:,:) * frac_c14 
+          sb_pool%residue%nitrogen15(:,:) = sb_pool%residue%nitrogen(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      
+          ! some initial values for testing
+          nh4_solute(:,:) = 1.0_wp 
+          nh4_n15_solute(:,:) = nh4_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+          no3_solute(:,:) = 1.0_wp 
+          no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+          po4_solute(:,:) = 0.01_wp 
+ 
+          ! inital Qmax based on current soil carbon content
+          bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+          bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
+          qmax_org(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                               qmax_org_om,qmax_org_mineral)
+          qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                                   qmax_po4_mineral,qmax_po4_mineral)
+  
+          ! initialise diffusion by bioturbation
+          k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 
+ 
+          ! initialise mineral soil P pools
+          po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
+          po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
+          po4_occluded(:,:)   = 150.0_wp / molar_mass_P
+          po4_primary(:,:)    = 100.0_wp / molar_mass_P 
 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
