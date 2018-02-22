@@ -573,6 +573,7 @@ CONTAINS
     !> 2.7 Calculate the potential PO4 flux rate: biomineralisation, weathering, slow sorption, occlusion 
     !!
     CALL calc_potential_p_flux_rate(options, &                  
+                                    dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &
                                     rtm_decomposition_act(:,:), &
                                     rmm_decomposition_act(:,:), &
                                     km_dip_biochem_po4_act(:,:), &
@@ -1657,6 +1658,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_potential_p_flux_rate(options, &                      ! in 
+                                                   flag_sb_prescribe_po4, &
                                                    rtm_decomposition_act, &
                                                    rmm_decomposition_act, &
                                                    km_dip_biochem_po4_act, &
@@ -1680,6 +1682,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)  :: options                    !< dimensions
+    LOGICAL,                                          INTENT(in)  :: flag_sb_prescribe_po4      !< whether or not solute PO4 is prescribed  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: rtm_decomposition_act, &   !< temperature response of decomposition
                                                                      rmm_decomposition_act, &   !< moisture response of decomposition
                                                                      km_dip_biochem_po4_act, &  !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
@@ -1713,10 +1716,13 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 2.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
     !!
-    hlp1 = km_dip_biochem_po4_act / (km_dip_biochem_po4_act + po4_solute)
-    biochem_mineralisation_po4(:,:) = rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_biomineralisation * & 
-                                 dtime * sb_pool_residue_phosphorus(:,:) * hlp1
-
+    IF(.NOT.flag_sb_prescribe_po4)THEN
+       hlp1 = km_dip_biochem_po4_act / (km_dip_biochem_po4_act + po4_solute)
+       biochem_mineralisation_po4(:,:) = rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_biomineralisation * & 
+                                         sb_pool_residue_phosphorus(:,:) * hlp1 * dtime
+    ELSE
+       biochem_mineralisation_po4(:,:) = 0.0_wp
+    ENDIF 
 
   END SUBROUTINE calc_potential_p_flux_rate
   
