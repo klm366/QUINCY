@@ -588,6 +588,10 @@ CONTAINS
     !!
     bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
+    !DO isoil = 1,nsoil_sb
+    !   hlp1(:,isoil) = 0.9_wp * exp(-0.9_wp * SUM(soil_depth_sl(:,1:isoil),DIM=2)) + 0.1_wp
+    !ENDDO
+    !qmax_org = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_org_om,qmax_org_mineral*hlp1)
     qmax_org = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_org_om,qmax_org_mineral)
     qmax_po4 = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_mineral,qmax_po4_mineral)
 
@@ -596,7 +600,7 @@ CONTAINS
       IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
         hlp1(:,:) = 0.0_wp
         hlp1(:,1) = nh4_solute_prescribe / soil_depth_sl(:,1) - nh4_solute(:,1)
-      ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
+      ELSE 
         hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
       END IF
       nh4_solute(:,:)     = nh4_solute(:,:) + hlp1(:,:) 
@@ -607,7 +611,7 @@ CONTAINS
       IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
         hlp1(:,:) = 0.0_wp
         hlp1(:,1) = no3_solute_prescribe / soil_depth_sl(:,1) - no3_solute(:,1)
-      ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
+      ELSE
         hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
       END IF
       no3_solute(:,:)     = no3_solute(:,:) + hlp1(:,:) 
@@ -618,8 +622,8 @@ CONTAINS
       IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
         po4_solute(:,:) = 0.0_wp
         po4_solute(:,1) = po4_solute_prescribe / soil_depth_sl(:,1)
-      ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
-        po4_solute(:,:) = po4_solute_prescribe
+      ELSE
+        po4_solute(:,:) = po4_solute_prescribe 
       END IF
     ENDIF
 
