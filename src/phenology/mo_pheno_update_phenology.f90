@@ -135,8 +135,9 @@ CONTAINS
 
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !! 
-    CALL calc_phenology(lctlib                             , &  ! in
-                        t_air(:)                           , &
+    CALL calc_phenology(options                            , &
+                        lctlib                             , &
+                        t_air(:)                           , &  ! in
                         beta_soil_gs_tphen_mavg(:)         , &
                         t_air_tphen_mavg(:)                , &
                         t_air_week_mavg(:)                 , &
@@ -159,28 +160,31 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_phenology(lctlib                        , &
-                                    t_air                           , &
-                                    beta_soil_gs_tphen_mavg         , &
-                                    t_air_tphen_mavg                , &
-                                    t_air_week_mavg                 , &
-                                    t_air_month_mavg                , &
-                                    mean_leaf_age                   , &
-                                    gpp_tlabile_mavg                , &
-                                    maint_respiration_tlabile_mavg  , &
-                                    growing_season                  , &
-                                    nd_dormance                     , &
-                                    gdd )
+  ELEMENTAL SUBROUTINE calc_phenology(options                         , &
+                                      lctlib                          , &
+                                      t_air                           , &
+                                      beta_soil_gs_tphen_mavg         , &
+                                      t_air_tphen_mavg                , &
+                                      t_air_week_mavg                 , &
+                                      t_air_month_mavg                , &
+                                      mean_leaf_age                   , &
+                                      gpp_tlabile_mavg                , &
+                                      maint_respiration_tlabile_mavg  , &
+                                      growing_season                  , &
+                                      nd_dormance                     , &
+                                      gdd )
 
+    USE mo_base_memory,             ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),       INTENT(in)    :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_task_options),     INTENT(in)    :: options                             !< model options
+    TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                              !< land-cover-type library - parameter across pft's
     REAL(wp),                     INTENT(in)    :: t_air                           , & !< air temp
                                                    beta_soil_gs_tphen_mavg         , & !< soil ..
                                                    t_air_tphen_mavg                , & !< moving average air temperature over ...
@@ -192,9 +196,17 @@ CONTAINS
     LOGICAL,                      INTENT(inout) :: growing_season                      !< growing season Yes/No
     REAL(wp),                     INTENT(inout) :: nd_dormance                     , & !< ..
                                                    gdd                                 !< ..
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: hlp1                                      ! helper variable for tmp values
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phenology'
+
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 check growing season has started or ended
     !! 
@@ -206,11 +218,11 @@ CONTAINS
                   growing_season = .TRUE.
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
-            hlp1 = lctlib%gdd_req_max * exp ( - lctlib%k_gdd_dormance * nd_dormance ) 
+            hlp1 = lctlib%gdd_req_max * exp( - lctlib%k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1) & 
                   growing_season = .TRUE.
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            hlp1 = lctlib%gdd_req_max * exp ( - lctlib%k_gdd_dormance * nd_dormance ) 
+            hlp1 = lctlib%gdd_req_max * exp( - lctlib%k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1 .AND. &
                beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) & 
                   growing_season = .TRUE.
@@ -233,7 +245,7 @@ CONTAINS
             IF((t_air_tphen_mavg < lctlib%t_air_senescence .OR. & 
                 beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .OR. &
                 gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. &
-               mean_leaf_age > lctlib%min_leaf_age) &
+                mean_leaf_age > lctlib%min_leaf_age) &
                   growing_season = .FALSE.
        END SELECT
     ENDIF   

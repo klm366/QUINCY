@@ -12,11 +12,9 @@ MODULE mo_pheno_memory_class
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
-
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
                                        t_jsb_var_logical2d                                       ! *slmjsb4
-
   USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
 
@@ -70,22 +68,24 @@ CONTAINS
     USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
 
-    ! 0.1.InOut
-    CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem   !> pheno memory
-    CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
-    INTEGER,             INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem             !> pheno memory
+    CHARACTER(len=*),      INTENT(in)            :: prefix          !> ?
+    CHARACTER(len=*),      INTENT(in)            :: suffix          !> ?
+    INTEGER,               INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,               INTENT(in)            :: model_id        !> model ID model\%id
+    ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-!    TYPE(t_jsb_vgrid), POINTER :: canopy_layer                 ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    INTEGER :: table
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_memory'
+    TYPE(t_jsb_model), POINTER   :: model
+    TYPE(t_jsb_grid),  POINTER   :: hgrid                        ! Horizontal grid
+!    TYPE(t_jsb_vgrid), POINTER   :: canopy_layer                 ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER   :: surface                      ! Vertical grid
+    INTEGER                      :: table
+    CHARACTER(len=*),  PARAMETER :: routine = TRIM(modname)//':Init_pheno_memory'
 
     model => Get_model(model_id)
 

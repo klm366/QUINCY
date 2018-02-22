@@ -35,6 +35,10 @@ CONTAINS
   SUBROUTINE init_pheno_constants
 
     IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    ! 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_pheno_constants'
 

@@ -10,11 +10,9 @@
 MODULE mo_pheno_config_class
 !#ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message, finish
-  USE mo_exception,         ONLY: message_text
+  USE mo_exception,         ONLY: message, finish, message_text
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
-  USE mo_kind,              ONLY: eps4
+  USE mo_kind,              ONLY: wp, eps4
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -47,14 +45,15 @@ CONTAINS
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_pheno_config), INTENT(inout) :: config    !< config type for pheno
-
+    ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    LOGICAL :: active
+    LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    REAL(wp)        :: lai
+    REAL(wp)                    :: lai
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
 
     NAMELIST /phenology_ctl/       & 
