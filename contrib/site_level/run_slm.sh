@@ -251,7 +251,7 @@ fi
 
 ## sync all data with the filesystem ##
 sync
-sleep 0.5s
+sleep 5s
 
 #############################################################################################
 ## move the job folder to the local scratch/ at the HPC node and work from there           ##
@@ -271,7 +271,9 @@ if [ "$scratchSpace" -gt "15000000" ]
 
   ## copy all files (but not the folder) here
   cp -r   "$jobFold"* ./ 
+  ## make sure all folders and files are copied to local scratch
   sync
+  sleep 10s
   ## remove all copied files from network/scratch
   rm -rf  "$jobFold"*
 fi
