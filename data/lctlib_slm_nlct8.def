@@ -64,8 +64,8 @@ ps_pathway 1 1 1 1 1 1 1 2
 # JSBACH4: Phenology type (none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grass (SLM = perennial?): 4; crop: 5)         
 phenology_type 1 1 2 3 1 3 4 4
         
-#sla: specific leaf area of a plant (m2 / mol C)        
-# From Kattge et al. 2011, Table 5, including conversion from mm/mgDW to m2/mol        
+#lma: leaf mass per area (mm / mgDW)
+# From Kattge et al. 2011, Table 5, converted internally from LMA (mm/mgDW) to SLA (m2/mol)
 sla 9.46 8.99 15.4 15.4 5.0 10.09 20.12 19.23
         
 #sigma_vis: single leaf scattering albedo in the visible range        
@@ -83,13 +83,12 @@ omega_clumping 0.9 0.9 0.9 0.9 0.5 0.7 1.0 1.0
 # based on Campell and Norman 1998, eq. 15.35        
 crown_shape_factor 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34
         
-#cn_leaf: default leaf C:N (molC/molN) if not calculated dynamically        
-# From Kattge et al. 2011, Table 5, including conversion from mg/g to mol/mol        
+#n_leaf: default leaf nitrogen concentration (mgN/gDW)
+# From Kattge et al. 2011, Table 5, converted internally from nitrogen concentration (mg/gDW) to CN mol C / mol N
 cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14
         
-#np_leaf: default leaf N:P (molN/molP) if not calculated dynamically         
-# From Kattge et al. 2011, Table 5, including conversion from mg/g to mol/mol        
-# SLM: carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(1:npft)%cn_leaf / &        
+#p_leaf: default leaf phosphorus concentration (mgP/gDW)  
+# From Kattge et al. 2011, Table 5, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P
 np_leaf 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36
         
 #k0_fn_struc: fraction of leaf N not used for photosynthesis (Friend 1997)        
@@ -127,19 +126,17 @@ lambda_soil_ps 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
 weibull_k_soil_ps 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
         
 #lambda_soil_gs: Weibull parameters describing the response of stomatal conductance to fractional water availability        
-# Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
-lambda_soil_gs 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+lambda_soil_gs 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
         
 #weibull_k_soil_gs: Weibull parameters describing the response of stomatal conductance to fractional water availability        
-# Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
-weibull_k_soil_gs 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+weibull_k_soil_gs 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
         
 #                             
 # turnover times        
 #           
         
-#tau_leaf: average turnover time of a leaf (years)        
-# From Kattge et al. 2011, Table 5, including conversion from month lifetime to annual turnover        
+#tau_leaf: average turnover time of a leaf (months)
+# From Kattge et al. 2011, Table 5, converted internally from month to years
 tau_leaf 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85
         
 #tau_fine_root: average turnover time of a fine root (years), Ahrens et al. 2014, NP        
@@ -161,7 +158,7 @@ tau_fruit 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
 tau_seed_litter 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
         
 #tau_seed_est: turnover time of the seed bed to establishment (years)        
-tau_seed_est 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0
+tau_seed_est 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0
         
 #tau_mycorrhiza: turnover time of mycorrhizal fungi (years)        
 tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
@@ -178,21 +175,22 @@ vmax_uptake_n 0.14 0.14 0.14 0.14 0.14 0.14 0.14 0.14
 # tuned from OCN's 1.5 gN/gC/1800s        
 vmax_uptake_p 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428
         
-#bnf_base: placeholder constant BNf rate, required to keep soil NH4 at constant levels mumol N s-1        
-bnf_base 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
+#bnf_base: base nitrogen fixation rate (g N / m2 / year)
+# converted internally to mumol N m-2 s-1        
+bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0
         
 #        
 # Vegetation dynamics parameters        
 #        
         
 #lambda_est_light: parameter in the Weibull function controlling light-limited establishment         
-lambda_est_light 1.1 1.1 1.1 1.1 1.1 1.1 1.1 1.1
+lambda_est_light 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 
         
 #k_est_light: parameter in the Weibull function controlling light-limited establishment         
-k_est_light 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0
+k_est_light 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0
         
 #seed_size: seed size (mol C)        
-seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5
+seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1
         
 #        
 # Phenology parameters        
@@ -204,7 +202,8 @@ beta_soil_flush 0.0 0.0 0.0 0.98 0.0 0.0 0.9 0.9
 #beta_soil_senescence: soil moisture limitation factor on stomatal conductance inducing leaf senescence        
 beta_soil_senescence 0.0 0.0 0.0 0.5 0.0 0.0 0.01 0.01
         
-#gdd_t_air_threshold: GDD temperature threshold (temperature threshold for the accumulation of growing degree days)        
+#gdd_t_air_threshold: temperature threshold for the accumulation of growing degree days (°C)
+# converted internally to K 
 gdd_t_air_threshold 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
         
 #gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling        
@@ -213,7 +212,8 @@ gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 10.0 10.0
 #k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1)        
 k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.1 0.1
         
-#t_air_senescence: weekly air temperature threshold inducing senescence of leaves         
+#t_air_senescence: weekly air temperature threshold inducing senescence of leaves (°C)
+# converted internally to K 
 t_air_senescence 0.0 0.0 0.0 8.5 0.0 5.0 0.0 0.0
         
 #min_leaf_age: minimum leaf age before senescence is permitted (days)        
@@ -224,23 +224,23 @@ min_leaf_age 10 10 10 50 10 10 10 10
 #        
         
 #frac_sapwood_branch: fraction of sapwood that is in branches         
-frac_sapwood_branch 0.1 0.1 0.1 0.1 0.1 0.1 1.0 1.0
+frac_sapwood_branch 0.05 0.05 0.05 0.05 0.05 0.05 1.0 1.0
         
-#wood_density: wood density (mol C / m3)        
+#wood_density: wood density (g C / cm3)        
+# converted internally from g/cm3 to mol C m-3
 wood_density 0.3 0.3 0.3 0.3 0.3 0.3 0.22 0.22
         
 #k_latosa: leaf area to sapwood area ratio        
 k_latosa 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0
         
 #k_crtos: coarse root to sapwood mass ratio         
-k_crtos 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
+k_crtos 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2
         
 #k_rtos: trade-off parametr for hydraulic investment into sapwood or fine roots         
 # Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
 k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
         
 #k2_fruit_alloc: maximum fraction of biomass growth going to fruits         
-# Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
 k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2
         
 #allom_k1: paramter in height diameter relationship        
@@ -252,11 +252,12 @@ allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5
 #phi_leaf_min: minimum leaf water potential (MPa)        
 phi_leaf_min -1.0 -1.0 -1.0 -1.0 -1.0 -1.0 -0.75 -0.75
         
-#k_root: fine root hydraulic conductance (m3 mol-1 s-1 MPa-1)        
+#k_root: fine root hydraulic conductance (10^10 m3 mol-1 s-1 MPa-1)        
+# converted internally to m3 mol-1 s-1 MPa-1
 k_root 2.3 2.3 2.3 4.3 2.3 2.3 2.3 2.3
         
-#k_sapwood: apwood hydraulic conductance (m2 s-1 MPa-1)        
-# @todo: check tropics and grasses         
+#k_sapwood: sapwood hydraulic conductance (10^3 m2 s-1 MPa-1)        
+# converted internally to m2 s-1 Mpa-1
 k_sapwood 3.0 3.0 3.0 3.0 1.3 1.3 0.0 0.0
         
 #c0_allom: hydraulic trade-off parameter for fine root growth        

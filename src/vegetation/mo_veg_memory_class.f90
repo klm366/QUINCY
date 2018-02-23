@@ -249,7 +249,8 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_n      , & !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
                                     recycling_heart_wood_n15    , & !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
                                     recycling_heart_wood_p      , & !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    transpiration                 !< transpiration in kg m-2 s-1
+                                    transpiration               , &  !< transpiration in kg m-2 s-1
+                                    net_growth                      !< npp minus turnover (µmol CO2 m-2 s-1)
 
     ! everything else...
     TYPE(t_jsb_var_real2d)          :: &   
@@ -364,7 +365,9 @@ MODULE mo_veg_memory_class
                                     fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration (~µmol C/mol N / s ) 
     ! 1.8 memory over timescale of vegetation dynamics 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    an_boc_tvegdyn_mavg                 !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+                                    net_growth_tvegdyn_mavg        , &  !< net growth (npp minus turnover) µmol C / m2 / s
+                                    lai_tvegdyn_mavg                    !< lai at vegdynamics timescale
     ! 1.9 memory of variables for respiration accclimation 
     TYPE(t_jsb_var_real2d)          :: &   
                                     t_air_tacclim_mavg                  !< average temperature for respiration acclimation
@@ -1522,6 +1525,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL jsb_add_var(mem, 'net_growth', mem%net_growth, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL jsb_add_var(mem, 'fmaint_rate', mem%fmaint_rate, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -2171,6 +2182,22 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

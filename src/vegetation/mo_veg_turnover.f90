@@ -81,6 +81,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
+    dsl4jsb_Real2D_onChunk      :: net_growth 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -118,6 +119,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall
@@ -166,6 +168,7 @@ CONTAINS
                         recycling_heart_wood_p(:)             , &
                         veg_pool                              , &
                         veg_growth                            , &
+                        net_growth                            , &
                         veg_litterfall                        )
 
 ! Pass back values to process memory
@@ -323,6 +326,7 @@ CONTAINS
                             recycling_heart_wood_p    , &  
                             veg_pool                  , &
                             veg_growth                , &
+                            net_growth                , &
                             veg_litterfall            )
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -336,20 +340,21 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),     INTENT(in)    :: options                      !< model options
-    TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
-    LOGICAL , DIMENSION(:),       INTENT(in)    :: growing_season               !< whether the plant is in the growing season
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: lai                      , & !< the plant's LAI
-                                                   target_lai                   !< the plant's annual maximum LAI
-    REAL(wp), DIMENSION(:),       INTENT(inout) :: recycling_leaf_n         , & !< foliar N returning to labile pool 
-                                                   recycling_leaf_n15       , & !< foliar N15 returning to labile pool 
-                                                   recycling_leaf_p         , & !< foliar P returning to labile pool 
-                                                   recycling_heart_wood_n   , & !< woody N returning to labile pool 
-                                                   recycling_heart_wood_n15 , & !< woody N15 returning to labile pool
-                                                   recycling_heart_wood_p       !< woody P returning to labile pool
-    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_pool                     !< current state of vegetation pools 
-    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_growth               , & !< current growth rate of vegetation pools
-                                                   veg_litterfall               !< current litter fall from vegetation pools
+    TYPE(t_jsb_task_options),        INTENT(in)    :: options                      !< model options
+    TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    LOGICAL , DIMENSION(options%nc), INTENT(in)    :: growing_season               !< whether the plant is in the growing season
+    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: lai                      , & !< the plant's LAI
+                                                      target_lai                   !< the plant's annual maximum LAI
+    REAL(wp), DIMENSION(options%nc), INTENT(inout) :: recycling_leaf_n         , & !< foliar N returning to labile pool 
+                                                      recycling_leaf_n15       , & !< foliar N15 returning to labile pool 
+                                                      recycling_leaf_p         , & !< foliar P returning to labile pool 
+                                                      recycling_heart_wood_n   , & !< woody N returning to labile pool 
+                                                      recycling_heart_wood_n15 , & !< woody N15 returning to labile pool
+                                                      recycling_heart_wood_p       !< woody P returning to labile pool
+    TYPE(t_veg_pool_a),              INTENT(in)    :: veg_pool                     !< current state of vegetation pools 
+    TYPE(t_veg_pool_a),              INTENT(inout) :: veg_growth                   !< current growth rate of vegetation pools
+    REAL(wp), DIMENSION(options%nc), INTENT(out)   :: net_growth                   !< current net growth (µmol C / m2 / s) 
+    TYPE(t_veg_pool_a),              INTENT(inout) :: veg_litterfall               !< current litter fall from vegetation pools
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc)   :: fturn_leaf                   , & !< fraction of leaves turning over 
@@ -390,6 +395,7 @@ CONTAINS
        END WHERE
     END SELECT
     veg_litterfall%leaf = veg_litterfall%leaf + veg_pool%leaf * fturn_leaf(:)
+    net_growth(:)       = net_growth(:) - veg_pool%leaf%carbon(:) * fturn_leaf(:)
 
     !> 1.1 Nutrient recycling from foliage turnover
     !! 
@@ -412,11 +418,13 @@ CONTAINS
     !! 
     fturn(:)                  = 1.0_wp /lctlib%tau_fine_root /one_day /one_year *dtime
     veg_litterfall%fine_root  = veg_litterfall%fine_root + veg_pool%fine_root * fturn(:)
+    net_growth(:)             = net_growth(:) - veg_pool%fine_root%carbon(:) * fturn(:)
 
     !> 3.0 coarse root turnover to litter 
     !! 
     fturn(:)                    = 1.0_wp /lctlib%tau_coarse_root /one_day /one_year *dtime
     veg_litterfall%coarse_root  = veg_litterfall%coarse_root + veg_pool%coarse_root * fturn(:)
+    net_growth(:)               = net_growth(:) - veg_pool%coarse_root%carbon(:) * fturn(:)
 
     !> 4.0 sapwood turnover 
     !! 
@@ -430,10 +438,12 @@ CONTAINS
         fturn(:) = fturn_leaf(:)
     ENDSELECT 
     veg_litterfall%sap_wood = veg_litterfall%sap_wood + lctlib%frac_sapwood_branch * veg_pool%sap_wood * fturn(:)
+    net_growth(:)           = net_growth(:) - lctlib%frac_sapwood_branch * veg_pool%sap_wood%carbon(:) * fturn(:)
 
     !> 4.2 heart wood formation, including nutrient recycling
     !! 
     IF(lctlib%growthform == itree)THEN
+        fturn(:)              = (1._wp - lctlib%frac_sapwood_branch) /lctlib%tau_sap_wood /one_day /one_year *dtime
         fturn(:)              = 1.0_wp /lctlib%tau_sap_wood /one_day /one_year *dtime
         veg_growth%heart_wood = veg_growth%heart_wood + veg_pool%sap_wood * fturn(:)
         veg_growth%sap_wood   = veg_growth%sap_wood   - veg_pool%sap_wood * fturn(:) 
@@ -454,6 +464,7 @@ CONTAINS
     fturn(:)            = 1.0_wp /lctlib%tau_fruit /one_day /one_year *dtime
     veg_growth%seed_bed = veg_growth%seed_bed + veg_pool%fruit * fturn(:)
     veg_growth%fruit    = veg_growth%fruit    - veg_pool%fruit * fturn(:) 
+    net_growth(:)       = net_growth(:)       - veg_pool%fruit%carbon(:) * fturn(:)
 
     !> 6.0 seed-bed turnover to litter 
     !! 

@@ -113,6 +113,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
+    dsl4jsb_Real2D_onChunk      :: net_growth
     dsl4jsb_Real2D_onChunk      :: npp_c13
     dsl4jsb_Real2D_onChunk      :: growth_respiration_c13
     dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
@@ -201,6 +202,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)                        ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)         ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)          ! in
@@ -276,12 +278,13 @@ CONTAINS
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
        !! 
        !! 
-       npp(:)      = gross_assimilation(:)     - & 
-           growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
-       npp_c13(:)  = gross_assimilation_C13(:) - &
-           growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
-       npp_c14(:)  = gross_assimilation_C14(:) - & 
-           growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
+       npp(:)        = gross_assimilation(:)     - & 
+                       growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
+       npp_c13(:)    = gross_assimilation_C13(:) - &
+                       growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
+       npp_c14(:)    = gross_assimilation_C14(:) - & 
+                       growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
+       net_growth(:) = net_growth(:) + npp(:)
 
        veg_growth%labile%carbon(:)   = veg_growth%labile%carbon(:)   + npp(:)     * dtime / 1000000.0_wp
        veg_growth%labile%carbon13(:) = veg_growth%labile%carbon13(:) + npp_c13(:) * dtime / 1000000.0_wp

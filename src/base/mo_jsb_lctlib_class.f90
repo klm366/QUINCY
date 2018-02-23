@@ -421,27 +421,13 @@ CONTAINS
           DO i=1,nlct
             lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
           END DO
-        !! lambda_soil_gs
-          DO i=1,nlct
-            lctlib(i)%lambda_soil_gs = lctlib(i)%lambda_soil_ps
-          END DO
-        ! weibull_k_soil_gs
-          DO i=1,nlct
-            lctlib(i)%weibull_k_soil_gs = lctlib(i)%weibull_k_soil_ps
-          END DO
         !! tau_leaf
           DO i=1,nlct
             lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
           END DO
-        !! tau_mycorrhiza
-          DO i=1,nlct
-            lctlib(i)%tau_mycorrhiza = lctlib(i)%tau_mycorrhiza
-          END DO
         !! bnf_base
           DO i=1,nlct
-            IF (lctlib(i)%bnf_base > 0.0_wp) THEN
-              lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
-            END IF
+           lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
           END DO
         !! gdd_t_air_threshold
           DO i=1,nlct
@@ -466,7 +452,7 @@ CONTAINS
          !! k_rtos
          DO i=1,nlct
             IF(lctlib(i)%growthform /= igrass) THEN
-               lctlib(i)%k_rtos = 1.2_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+               lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
                !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
                !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
             ELSE

@@ -74,6 +74,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: npp
     dsl4jsb_Real2D_onChunk      :: npp_c13
     dsl4jsb_Real2D_onChunk      :: npp_c14
+    dsl4jsb_Real2D_onChunk      :: net_growth 
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3
@@ -127,6 +128,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
@@ -178,6 +180,7 @@ CONTAINS
     npp(:) = zero                            !< net primary production (µmol CO2 m-2 s-1)
     npp_c13(:) = zero                        !< net primary production (µmol 13CO2 m-2 s-1)
     npp_c14(:) = zero                        !< net primary production (µmol 14CO2 m-2 s-1)
+    net_growth(:) = zero                     !< net growth (µmol CO2 m-2 s-1)
     uptake_nh4(:) = zero                     !< NH4 uptake (µmol N m-2 s-1) 
     uptake_nh4_n15(:) = zero                 !< 15NH4 uptake (µmol N m-2 s-1)
     uptake_no3(:) = zero                     !< NO3 uptake (µmol N m-2 s-1)

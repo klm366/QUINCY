@@ -507,6 +507,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: f_p_demand
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: npp
+    dsl4jsb_Real2D_onChunk      :: net_growth 
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: growth_req_n
     dsl4jsb_Real2D_onChunk      :: growth_req_p
@@ -514,6 +515,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
     dsl4jsb_Real2D_onChunk      :: dphi
+    dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_no3
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act
@@ -531,6 +533,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
+    dsl4jsb_Real2D_onChunk      :: net_growth_tvegdyn_mavg
+    dsl4jsb_Real2D_onChunk      :: lai_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_uptake_p_pot_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot_troot_mavg
@@ -652,6 +656,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)
@@ -659,6 +664,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)
@@ -676,6 +682,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot_troot_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)
@@ -922,10 +930,13 @@ CONTAINS
                                                do_calc=growing_season(:), avg_period_unit='year')
 
     !> 1.8 averages at the vegetation dynamics time-scale
-    an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
-                                          do_calc=(veg_pool%leaf%carbon(:) > eps8))
+    an_boc_tvegdyn_mavg(:)     = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_monthly, &
+                                           do_calc=(veg_pool%leaf%carbon(:) > eps8))
+    net_growth_tvegdyn_mavg(:) = calc_mavg(net_growth_tvegdyn_mavg(:), net_growth(:), mavg_period_tvegdyn) 
+    lai_tvegdyn_mavg(:)        = calc_mavg(lai_tvegdyn_mavg(:), lai(:), mavg_period_tvegdyn, &
+                                           do_calc=(lai(:) > 0.1_wp))
     rfr_ratio_boc_tvegdyn_mavg(:) = calc_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), mavg_period_tvegdyn, &
-                                          do_calc=(veg_pool%leaf%carbon(:) > eps8))
+                                              do_calc=(veg_pool%leaf%carbon(:) > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     !! t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !! this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration

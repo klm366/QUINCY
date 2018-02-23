@@ -118,7 +118,11 @@ MODULE mo_veg_constants
       k_est_temp           ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
       lambda_est_moist     ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
       k_est_moist          ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
-      wood_extraction_rate         !< fraction of wood removed from site after harvesting
+      wood_extraction_rate ,     & !< fraction of wood removed from site after harvesting
+      min_greff            ,     & !<
+      k1_mort_greff        ,     & !<
+      k2_mort_greff        ,     & !<
+      k3_mort_greff                 !<
 
   ! other
   REAL(wp), SAVE :: & 
@@ -232,8 +236,8 @@ CONTAINS
       max_leaf_shedding_rate      = 0.05_wp
 
   ! vegetation dynamics
-      background_mort_rate_tree   = 0.01_wp 
-      background_mort_rate_grass  = 0.01_wp 
+      background_mort_rate_tree   = 0.005_wp 
+      background_mort_rate_grass  = 0.05_wp 
       lambda_mort_light  = 0.15_wp 
       k_mort_light       = 4.0_wp  
       lambda_est_temp    = 0.075_wp  
@@ -241,6 +245,10 @@ CONTAINS
       lambda_est_moist   = 10._wp  
       k_est_moist        = 2.0_wp  
       wood_extraction_rate = 0.8_wp
+      k1_mort_greff      = 0.01_wp 
+      k2_mort_greff      = 0.3_wp * molar_mass_C ! from LPJ in yr / mol
+      k3_mort_greff      = 40.0_wp * molar_mass_C ! from LPJ in yr / mol
+      min_greff          = 1.0_wp    ! mol C / LAI / year
 
   ! other
       carbon_per_dryweight_leaf   = 0.48_wp  
