@@ -1,4 +1,4 @@
-# default SLM usecase: 02_autotestrun_100yr_debug_s0d
+# default SLM usecase: 02_autotestrun_100yr_debug_s0d_def
 # 
 # used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
 # for automated test runs of SLM
@@ -26,4 +26,3 @@ output_end_last_day_year=100
 
 useSiteSpecificAWC="T"
 queue="io_perform"
-

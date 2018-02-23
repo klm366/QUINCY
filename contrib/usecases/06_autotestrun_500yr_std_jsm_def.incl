@@ -1,10 +1,10 @@
-# default SLM usecase: 04_autotestrun_100yr_debug_s1d
+# default SLM usecase: 06_autotestrun_500yr_std_jsm_def
 # 
 # used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
 # for automated test runs of SLM
 # 
 
-slmModel="land"
+slmModel="soil"
 forcingDataSet="fluxnet"
 forcingMode="static"
 customSiteList="F"
@@ -14,16 +14,15 @@ specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
-sb_model_scheme="simple_1d"
+sb_model_scheme="jsm"
 soil_depth=9.5
 nsoil_layer=9
 
-simulation_length_number=100
+simulation_length_number=500
 output_interval_pool="weekly"
 output_interval_flux="weekly"
 output_start_first_day_year=1
-output_end_last_day_year=100
+output_end_last_day_year=500
 
 useSiteSpecificAWC="T"
 queue="io_perform"
-

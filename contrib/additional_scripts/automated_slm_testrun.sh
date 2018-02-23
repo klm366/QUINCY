@@ -13,7 +13,78 @@ workingCopyFolder="$bgiJEScratchFolder""$autoTestRunFolder"trunk/
 
 
 ###################################################################################################
+## after all the cleanup-jobs have ended the postprocessing job may execute this code            ##
 ###################################################################################################
+
+if [ "$1" == "postprocessing" ]
+  then
+
+    svnRev="$2"
+    jobNameD="$3"
+    jobNameD2="$4"
+    jobNameS="$5"
+    jobNameS2="$6"
+
+    echo " starting postprocessing of auto SLM testruns for Revision: ""$svnRev"
+    echo " jobs are:"
+    echo "  ""$jobNameD"
+    echo "  ""$jobNameD2"
+    echo "  ""$jobNameS"
+    echo "  ""$jobNameS2"
+
+    saveFolder="$bgiJEScratchFolder""$autoTestRunFolder""$svnRev""/"
+    mkdir -p "$saveFolder"
+
+    ## do some stats and analysis on the debug-run simulation results ##
+    date
+    echo "analysis of: "
+    # move simulation results
+    mv "$bgiJEScratchFolder"slm/"$jobNameD" "$saveFolder"
+    sync && sleep 2
+    # extract potential error messages into one file
+    cat "$saveFolder""$jobNameD"/*/error/err* > "$saveFolder""$jobNameD"_err.txt
+    echo " "
+
+    ## do some stats and analysis on the debug-run simulation results ##
+    date
+    echo "analysis of: "
+    # move simulation results
+    mv "$bgiJEScratchFolder"slm/"$jobNameD2" "$saveFolder"
+    sync && sleep 2
+    # extract potential error messages into one file
+    cat "$saveFolder""$jobNameD2"/*/error/err* > "$saveFolder""$jobNameD2"_err.txt
+    echo " "
+
+    ## do some stats and analysis on the standard-run simulation results ##
+    date
+    echo "do some stats and analysis on the standard-run simulation results"
+    # move simulation results
+    mv "$bgiJEScratchFolder"slm/"$jobNameS" "$saveFolder"
+    sync && sleep 2
+    # extract potential error messages into one file
+    cat "$saveFolder""$jobNameS"/*/error/err* > "$saveFolder""$jobNameS"_err.txt
+    echo " "
+
+    ## do some stats and analysis on the standard-run simulation results ##
+    date
+    echo "do some stats and analysis on the standard-run simulation results"
+    # move simulation results
+    mv "$bgiJEScratchFolder"slm/"$jobNameS2" "$saveFolder"
+    sync && sleep 2
+    # extract potential error messages into one file
+    cat "$saveFolder""$jobNameS2"/*/error/err* > "$saveFolder""$jobNameS2"_err.txt    
+    echo " "
+
+
+  # ok postprocessing done exiting this script
+  exit 0
+fi
+
+
+###################################################################################################
+## start the simulations & cleanup jobs & postprocessing job                                     ##
+###################################################################################################
+
 
 # cd into local working copy
 cd "$workingCopyFolder"
@@ -40,6 +111,7 @@ if [ $revRepoTrunk -gt $localWCopy ]
   jobNameD="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s0d"
   ./prep_run_slm.sh -u 02 -e "$jobNameD"
   jobNameD="exp_""$jobNameD"
+  sleep 30s 
   # run 100 years fluxnet simulations in debug mode with simple_1d: usecase 04
   jobNameD2="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s1d"
   ./prep_run_slm.sh -u 04 -e "$jobNameD2"
@@ -53,185 +125,52 @@ if [ $revRepoTrunk -gt $localWCopy ]
 
   cd ../contrib/site_level/
   
-  # run 300 years fluxnet simulations in standard mode with simple_0d: usecase 03
-  jobNameS="auto_r""$revRepoTrunk""_300yfluxdef_std_s0d"
+  # run 500 years fluxnet simulations in standard mode with simple_0d: usecase 03
+  jobNameS="auto_r""$revRepoTrunk""_500yfluxdef_std_s0d"
   ./prep_run_slm.sh -u 03 -e "$jobNameS"
   jobNameS="exp_""$jobNameS"
-  # run 300 years fluxnet simulations in standard mode with simple_1d: usecase 05
-  jobNameS2="auto_r""$revRepoTrunk""_300yfluxdef_std_s1d"
+  sleep 30s 
+  # run 500 years fluxnet simulations in standard mode with simple_1d: usecase 05
+  jobNameS2="auto_r""$revRepoTrunk""_500yfluxdef_std_s1d"
   ./prep_run_slm.sh -u 05 -e "$jobNameS2"
   jobNameS2="exp_""$jobNameS2"
 
 
-  ####################################
-  # get the job ID of the cleanup jobs
-  sleep 30
-  jobIDCleanD=$(bjobs -J "$jobNameD""Cleanup" | tail -n 1 | awk '{print $1}')
-  jobIDCleanD2=$(bjobs -J "$jobNameD2""Cleanup" | tail -n 1 | awk '{print $1}')
-  jobIDCleanS=$(bjobs -J "$jobNameS""Cleanup" | tail -n 1 | awk '{print $1}')
-  jobIDCleanS2=$(bjobs -J "$jobNameS2""Cleanup" | tail -n 1 | awk '{print $1}')
-
-  # return to working copy folder
-  cd "$workingCopyFolder"
-
+  # ####################################
+  # # get the job ID of the cleanup jobs
+  # sleep 30
+  # jobIDCleanD=$(bjobs -J "$jobNameD""Cleanup" | tail -n 1 | awk '{print $1}')
+  # jobIDCleanD2=$(bjobs -J "$jobNameD2""Cleanup" | tail -n 1 | awk '{print $1}')
+  # jobIDCleanS=$(bjobs -J "$jobNameS""Cleanup" | tail -n 1 | awk '{print $1}')
+  # jobIDCleanS2=$(bjobs -J "$jobNameS2""Cleanup" | tail -n 1 | awk '{print $1}')
+  # 
+  # # return to working copy folder
+  # cd "$workingCopyFolder"
 
   ####################
   # jobs are running #
   ####################
 
-  ## debug - usecase 02 #######################################################
-  # stay in the while loop until the cleanup-job of the debug-run has finished
-  status="RUN"
-  countExit=1
-  while [ $status == "RUN" ] || [ $status == "PEND" ]
-    do
-      sleep 3m
-      status=$(bjobs "$jobIDCleanD" | tail -n 1 | awk '{print $3}')
-      ((countExit++))
-      # change queue to io if 5 hours have passed
-      if [ $countExit -eq 100 ]; then bswitch io "$jobIDCleanD"; fi
-      # exit this script if more than 10 hours have passed
-      if [ $countExit -gt 200 ]
-       then
-        echo "The status of jobIDCleanD is ""$status"" and countExit is ""$countExit"
-        date "+%d.%m.%Y %X"
-        echo "EXIT !"
-        exit 1
-      fi
-  done
-  ## do some stats and analysis on the debug-run simulation results ##
-  date
-  echo "do some stats and analysis on the debug-run simulation results"
-  echo " "
-  # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameD" "$bgiJEScratchFolder""$autoTestRunFolder"
-  sync && sleep 2
-  # extract potential error messages into one file
-  cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD"_err.txt
 
-  ## debug - usecase 04 #######################################################
-  # stay in the while loop until the cleanup-job of the debug-run has finished
-  #  but first check whether the 'bjobs' command does finish with exit 0
-  #   (note: in case the job (simulations) already finished a while ago, the bjobs command would not show any status information
-  #    about this job anymore (like RUN | PEND) but return with an error message that there is no info about this job)
-  sleep 10
-  bjobs "$jobIDCleanD2" > /dev/null
-  returnB=$(echo $?)
-  if [ "$returnB" -eq 0 ] # if bjobs does return error-free
-   then
-    status="RUN"
-    countExit=1           # if bjobs returns an error code (i.e. job long finished), set 'status' to any but "RUN" or "PEND" to not enter the while loop
-   else
-    status="JOB_ALREADY_FINISHED"
-  fi
-  # if job is still running/peding enter the while loop, waiting for it to finish
-  while [ $status == "RUN" ] || [ $status == "PEND" ]
-    do
-      sleep 3m
-      status=$(bjobs "$jobIDCleanD2" | tail -n 1 | awk '{print $3}')
-      ((countExit++))
-      # change queue to io if additional 2 1/2 hours have passed
-      if [ $countExit -eq 50 ]; then bswitch io "$jobIDCleanD2"; fi
-      # exit this script if additional 5 hours have passed
-      if [ $countExit -gt 100 ]
-       then
-        echo "The status of jobIDCleanD2 is ""$status"" and countExit is ""$countExit"
-        date "+%d.%m.%Y %X"
-        echo "EXIT !"
-        exit 1
-      fi
-  done
-  ## do some stats and analysis on the debug-run simulation results ##
-  date
-  echo "do some stats and analysis on the debug-run simulation results"
+  ##########################
+  # start the postprocessing job that calls this script and executes the above postprocessing code only
+  sleep 20
   echo " "
-  # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameD2" "$bgiJEScratchFolder""$autoTestRunFolder"
-  sync && sleep 2
-  # extract potential error messages into one file
-  cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD2"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameD2"_err.txt
+  echo " preparing and sending to the queue the postprocessing job"
+      
+  jobD="$jobNameD""Cleanup"
+  jobD2="$jobNameD2""Cleanup"
+  jobS="$jobNameS""Cleanup"
+  jobS2="$jobNameS2""Cleanup"
+  jobsToWait=$(echo "ended(""$jobD"") && ended(""$jobD2"") && ended(""$jobS"") && ended(""$jobS2"")")
+  bsub -w "$jobsToWait" -q "io" -J "autotestrun_post" "$workingCopyFolder""contrib/additional_scripts/automated_slm_testrun.sh" postprocessing "$revRepoTrunk" "$jobNameD" "$jobNameD2" "$jobNameS" "$jobNameS2" 
 
-  ## standard - usecase 03 #######################################################
-  # stay in the while loop until the cleanup-job of the standard-run has finished
-  sleep 10
-  bjobs "$jobIDCleanS" > /dev/null
-  returnB=$(echo $?)
-  if [ "$returnB" -eq 0 ] # if bjobs does return error-free
-   then
-    status="RUN"
-    countExit=1           # if bjobs returns an error code (i.e. job long finished), set 'status' to any but "RUN" or "PEND" to not enter the while loop
-   else
-    status="JOB_ALREADY_FINISHED"
-  fi
-  # if job is still running/peding enter the while loop, waiting for it to finish
-  while [ $status == "RUN" ] || [ $status == "PEND" ]
-    do
-      sleep 3m
-      status=$(bjobs "$jobIDCleanS" | tail -n 1 | awk '{print $3}')
-      ((countExit++))
-      # change queue to io if additional 2 1/2 hours have passed
-      if [ $countExit -eq 50 ]; then bswitch io "$jobIDCleanS"; fi
-      # exit this script if additional 5 hours have passed
-      if [ $countExit -gt 100 ]
-       then
-        echo "The status of jobIDCleanS is ""$status"" and countExit is ""$countExit"
-        date "+%d.%m.%Y %X"
-        echo "EXIT !"
-        exit 1
-      fi
-  done
-  ## do some stats and analysis on the standard-run simulation results ##
-  date
-  echo "do some stats and analysis on the standard-run simulation results"
   echo " "
-  # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameS" "$bgiJEScratchFolder""$autoTestRunFolder"
-  sync && sleep 2
-  # extract potential error messages into one file
-  cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS"_err.txt
-
-  ## standard - usecase 05 #######################################################
-  # stay in the while loop until the cleanup-job of the standard-run has finished
-  sleep 10
-  bjobs "$jobIDCleanS2" > /dev/null
-  returnB=$(echo $?)
-  if [ "$returnB" -eq 0 ] # if bjobs does return error-free
-   then
-    status="RUN"
-    countExit=1           # if bjobs returns an error code (i.e. job long finished), set 'status' to any but "RUN" or "PEND" to not enter the while loop
-   else
-    status="JOB_ALREADY_FINISHED"
-  fi
-  # if job is still running/peding enter the while loop, waiting for it to finish
-  while [ $status == "RUN" ] || [ $status == "PEND" ]
-    do
-      sleep 3m
-      status=$(bjobs "$jobIDCleanS2" | tail -n 1 | awk '{print $3}')
-      ((countExit++))
-      # change queue to io if additional 2 1/2 hours have passed
-      if [ $countExit -eq 50 ]; then bswitch io "$jobIDCleanS2"; fi
-      # exit this script if additional 5 hours have passed
-      if [ $countExit -gt 100 ]
-       then
-        echo "The status of jobIDCleanS2 is ""$status"" and countExit is ""$countExit"
-        date "+%d.%m.%Y %X"
-        echo "EXIT !"
-        exit 1
-      fi
-  done
-  ## do some stats and analysis on the standard-run simulation results ##
-  date
-  echo "do some stats and analysis on the standard-run simulation results"
-  echo " "
-  # move simulation results
-  mv "$bgiJEScratchFolder"slm/"$jobNameS2" "$bgiJEScratchFolder""$autoTestRunFolder"
-  sync && sleep 2
-  # extract potential error messages into one file
-  cat "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS2"/*/error/err* > "$bgiJEScratchFolder""$autoTestRunFolder""$jobNameS2"_err.txt
-
+  echo "Done!"
 
   #############################################################################
-  else
+  #############################################################################
+else  # if [ $revRepoTrunk -gt $localWCopy ]
     cd "$bgiJEScratchFolder""$autoTestRunFolder"
     # check if a log file already exists, if not create one (sed relies on a lof file beeing present)
     if [ ! -e ./cronjob-slm-autotestrun.log ]
@@ -247,4 +186,3 @@ fi
 
 
 # fin #
-

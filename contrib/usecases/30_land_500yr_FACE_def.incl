@@ -2,7 +2,7 @@
 # 
 # face site simulations
 #  sites:   all face sites
-#  runtime: 1 yr spinup plus 115 yr afterwards starting 1901
+#  runtime: 500 yr spinup plus 115 yr afterwards starting 1901
 #  output:  115 yr of daily output from 1901-2015
 #
 

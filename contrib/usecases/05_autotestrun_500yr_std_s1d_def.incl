@@ -1,4 +1,4 @@
-# default SLM usecase: 05_autotestrun_300yr_std_s1d
+# default SLM usecase: 05_autotestrun_500yr_std_s1d_def
 # 
 # used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
 # for automated test runs of SLM
@@ -18,11 +18,11 @@ sb_model_scheme="simple_1d"
 soil_depth=9.5
 nsoil_layer=9
 
-simulation_length_number=300
+simulation_length_number=500
 output_interval_pool="weekly"
 output_interval_flux="weekly"
 output_start_first_day_year=1
-output_end_last_day_year=300
+output_end_last_day_year=500
 
 useSiteSpecificAWC="T"
 queue="io_perform"
