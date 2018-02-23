@@ -7,7 +7,7 @@
 ## > you can run this script from any folder, i.e. you have not to cd into contrib/site_level/ 
 ##   (this is because this script knows about its location, due to the command: 'cd "$( dirname "$0" )"')
 ## 
-### hallo
+
 ########################################################################################################
 ####### simulation specific options you might want to change ###########################################
 ########################################################################################################

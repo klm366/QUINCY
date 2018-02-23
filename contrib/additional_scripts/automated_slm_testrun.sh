@@ -24,6 +24,7 @@ if [ "$1" == "postprocessing" ]
     jobNameD2="$4"
     jobNameS="$5"
     jobNameS2="$6"
+    jobNameS3="$7"
 
     echo " starting postprocessing of auto SLM testruns for Revision: ""$svnRev"
     echo " jobs are:"
@@ -31,13 +32,14 @@ if [ "$1" == "postprocessing" ]
     echo "  ""$jobNameD2"
     echo "  ""$jobNameS"
     echo "  ""$jobNameS2"
+    echo "  ""$jobNameS3"
 
     saveFolder="$bgiJEScratchFolder""$autoTestRunFolder""$svnRev""/"
     mkdir -p "$saveFolder"
 
     ## do some stats and analysis on the debug-run simulation results ##
     date
-    echo "analysis of: "
+    echo "analysis of: ""$jobNameD"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameD" "$saveFolder"
     sync && sleep 2
@@ -47,7 +49,7 @@ if [ "$1" == "postprocessing" ]
 
     ## do some stats and analysis on the debug-run simulation results ##
     date
-    echo "analysis of: "
+    echo "analysis of: ""$jobNameD2"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameD2" "$saveFolder"
     sync && sleep 2
@@ -57,7 +59,7 @@ if [ "$1" == "postprocessing" ]
 
     ## do some stats and analysis on the standard-run simulation results ##
     date
-    echo "do some stats and analysis on the standard-run simulation results"
+    echo "analysis of: ""$jobNameS"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameS" "$saveFolder"
     sync && sleep 2
@@ -67,7 +69,7 @@ if [ "$1" == "postprocessing" ]
 
     ## do some stats and analysis on the standard-run simulation results ##
     date
-    echo "do some stats and analysis on the standard-run simulation results"
+    echo "analysis of: ""$jobNameS2"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameS2" "$saveFolder"
     sync && sleep 2
@@ -75,6 +77,16 @@ if [ "$1" == "postprocessing" ]
     cat "$saveFolder""$jobNameS2"/*/error/err* > "$saveFolder""$jobNameS2"_err.txt    
     echo " "
 
+    ## do some stats and analysis on the standard-run simulation results ##
+    date
+    echo "analysis of: ""$jobNameS3"
+    # move simulation results
+    mv "$bgiJEScratchFolder"slm/"$jobNameS3" "$saveFolder"
+    sync && sleep 2
+    # extract potential error messages into one file
+    cat "$saveFolder""$jobNameS3"/*/error/err* > "$saveFolder""$jobNameS3"_err.txt    
+    echo " "
+    
 
   # ok postprocessing done exiting this script
   exit 0
@@ -93,8 +105,8 @@ cd "$workingCopyFolder"
 revRepoTrunk=$(svn info https://projects.bgc-jena.mpg.de/QUINCY/svn/project-A/trunk/src | grep "Rev:" | awk '{print $4}')
 localWCopy=$(svn info ./src | grep "Rev:" | awk '{print $4}')
 
-# run test runs only if a newer revision of the trunk/src/ folder is available
-if [ $revRepoTrunk -gt $localWCopy ]
+# run test runs only if a newer revision of the trunk/src/ folder is available | or if "ignoreRev" is passed as argument to the script (for manual testing purpose)
+if [ $revRepoTrunk -gt $localWCopy ] || [ "$1" == "ignoreRev" ]
   then
 	# update local working copy
 	svn update && sleep 2
@@ -134,18 +146,12 @@ if [ $revRepoTrunk -gt $localWCopy ]
   jobNameS2="auto_r""$revRepoTrunk""_500yfluxdef_std_s1d"
   ./prep_run_slm.sh -u 05 -e "$jobNameS2"
   jobNameS2="exp_""$jobNameS2"
+  sleep 30s 
+  # run 500 years fluxnet simulations in standard mode with SLM Soil jsm: usecase 06
+  jobNameS3="auto_r""$revRepoTrunk""_500yfluxdef_std_soiljsm"
+  ./prep_run_slm.sh -u 06 -e "$jobNameS3"
+  jobNameS3="exp_""$jobNameS3"
 
-
-  # ####################################
-  # # get the job ID of the cleanup jobs
-  # sleep 30
-  # jobIDCleanD=$(bjobs -J "$jobNameD""Cleanup" | tail -n 1 | awk '{print $1}')
-  # jobIDCleanD2=$(bjobs -J "$jobNameD2""Cleanup" | tail -n 1 | awk '{print $1}')
-  # jobIDCleanS=$(bjobs -J "$jobNameS""Cleanup" | tail -n 1 | awk '{print $1}')
-  # jobIDCleanS2=$(bjobs -J "$jobNameS2""Cleanup" | tail -n 1 | awk '{print $1}')
-  # 
-  # # return to working copy folder
-  # cd "$workingCopyFolder"
 
   ####################
   # jobs are running #
@@ -162,8 +168,9 @@ if [ $revRepoTrunk -gt $localWCopy ]
   jobD2="$jobNameD2""Cleanup"
   jobS="$jobNameS""Cleanup"
   jobS2="$jobNameS2""Cleanup"
-  jobsToWait=$(echo "ended(""$jobD"") && ended(""$jobD2"") && ended(""$jobS"") && ended(""$jobS2"")")
-  bsub -w "$jobsToWait" -q "io" -J "autotestrun_post" "$workingCopyFolder""contrib/additional_scripts/automated_slm_testrun.sh" postprocessing "$revRepoTrunk" "$jobNameD" "$jobNameD2" "$jobNameS" "$jobNameS2" 
+  jobS3="$jobNameS3""Cleanup"
+  jobsToWait=$(echo "ended(""$jobD"") && ended(""$jobD2"") && ended(""$jobS"") && ended(""$jobS2"") && ended(""$jobS3"")")
+  bsub -w "$jobsToWait" -q "io" -J "autotestrun_post" "$workingCopyFolder""contrib/additional_scripts/automated_slm_testrun.sh" postprocessing "$revRepoTrunk" "$jobNameD" "$jobNameD2" "$jobNameS" "$jobNameS2" "$jobNameS3" 
 
   echo " "
   echo "Done!"
