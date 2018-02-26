@@ -245,10 +245,11 @@ CONTAINS
     USE mo_sb_constants
     USE mo_veg_constants
 
-
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_parameters_from_file), INTENT(inout) :: this
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_values_with_list_values'
 
@@ -269,6 +270,7 @@ CONTAINS
     IF (ABS(this%mavg_period_tvegdyn  - missval) > eps8)  mavg_period_tvegdyn   = this%mavg_period_tvegdyn
     IF (ABS(this%mavg_period_tacclim  - missval) > eps8)  mavg_period_tacclim   = this%mavg_period_tacclim
     IF (ABS(this%mavg_period_tmic     - missval) > eps8)  mavg_period_tmic      = this%mavg_period_tmic
+    
     ! VEGETATION_CTL
     IF (ABS(this%delta_n_fraction     - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
     IF (ABS(this%delta_n_leaf         - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf

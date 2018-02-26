@@ -60,19 +60,21 @@ MODULE mo_shared_constants
   !! 
   !! moving average period lengths (you can add new parameters here)
   !! the period may be defined in days per default (but different units are possible, see calc_mavg() below)
+                                                                 ! generic memory time-scales:
     REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp        !< 7 days; constant across the model
     REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp       !< 30 days; constant across the model
     REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp      !< 365 days
-    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp        !< memory time-scale of labile pool 
-    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp        !< memory time-scale of phenological processes 
-    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp        !< memory time-scale of nutrient uptake processes (demand, BNF) 
-    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp       !< memory time-scale of leaf N fractions
-    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp       !< memory time-scale for leaf stoichiometry 
-    REAL(wp),SAVE :: mavg_period_talloc            = 20.0_wp       !< memory time-scale for biomass allocation
-    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp 
-    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp     !< memory time-scale of vegetation dynamics processes 
-    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp       !< memory time-scale for respiration acclimation
-    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp       !< memory time-scale for microbial community acclimation
+                                                                 ! specific memory time-scales of/for:
+    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp        !< labile pool 
+    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp        !< phenological processes 
+    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp        !< nutrient uptake processes (demand, BNF) 
+    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp       !< leaf N fractions
+    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp       !< leaf stoichiometry 
+    REAL(wp),SAVE :: mavg_period_talloc            = 20.0_wp       !< biomass allocation
+    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp      !< vegetation growth (?)
+    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp      !< vegetation dynamics processes 
+    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp       !< respiration acclimation
+    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp       !< microbial community acclimation
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
@@ -89,8 +91,13 @@ CONTAINS
   SUBROUTINE init_shared_constants
 
     IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    ! 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_shared_constants'
+
 
     ! physical constants
     r_gas        = 8.3144_wp    
@@ -109,7 +116,7 @@ CONTAINS
     cvdifts      = 1.0_wp
     ckap         = 0.41_wp
     LatentHeatVaporization = 2.5008e6_wp
-    LatentHeatSublimation = 2.8345e6_wp
+    LatentHeatSublimation  = 2.8345e6_wp
     ! molar masses
     molar_mass_C   = 12.0112_wp 
     molar_mass_C12 = 12.0_wp    

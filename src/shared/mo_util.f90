@@ -34,12 +34,12 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut    
-    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=*), INTENT(in)    :: string
     CHARACTER(len=LEN_TRIM(string)) :: stringlower
     ! ---------------------------
     ! 0.2 Local
+    INTEGER            :: i
     INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
-    INTEGER :: i
 
 
     DO i = 1, LEN_TRIM(string)
@@ -49,6 +49,7 @@ CONTAINS
         stringlower(i:i) = string(i:i)
       ENDIF
     ENDDO
+
   END FUNCTION tolower
 
 
@@ -60,11 +61,17 @@ CONTAINS
   !!  
   !-----------------------------------------------------------------------------------------------------
   FUNCTION int2string(n, opt_fmt)
-    CHARACTER(len=10) :: int2string ! result
-    INTEGER, INTENT(in) :: n
+    
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut    
+    INTEGER, INTENT(in)                    :: n
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
-    !
+    CHARACTER(len=10)                      :: int2string  ! result
+    ! ---------------------------
+    ! 0.2 Local
     CHARACTER(len=10) :: fmt
+
 
     IF (PRESENT(opt_fmt)) THEN
       fmt = opt_fmt
@@ -73,9 +80,8 @@ CONTAINS
     END IF
     WRITE(int2string,fmt) n
     int2string = ADJUSTL(int2string)
-    !
-  END FUNCTION int2string
 
+  END FUNCTION int2string
 
 
 END MODULE mo_util

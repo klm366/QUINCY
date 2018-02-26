@@ -11,13 +11,13 @@
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,                 ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
   !PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
   PUBLIC :: q_effective, surface_dry_static_energy, heat_transfer_coef, &
-    thermal_radiation, lwnet_from_lwdown
+            thermal_radiation, lwnet_from_lwdown
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
@@ -52,6 +52,12 @@ CONTAINS
 !
 !  END FUNCTION qsat
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION q_effective
+  !! 
+  !! out: q_effective
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION q_effective(qsat, qair, fsat, fair)
 
     REAL(wp), INTENT(in) :: &
@@ -63,6 +69,12 @@ CONTAINS
 
   END FUNCTION q_effective
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION surface_dry_static_energy
+  !! 
+  !! out: surface_dry_static_energy
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
 
 !    USE mo_jsb_physical_constants, ONLY: &
@@ -78,6 +90,12 @@ CONTAINS
 
   END FUNCTION surface_dry_static_energy
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION thermal_radiation
+  !! 
+  !! out: thermal_radiation
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
 
 !    USE mo_jsb_physical_constants, ONLY: &
@@ -91,6 +109,12 @@ CONTAINS
 
   END FUNCTION thermal_radiation
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION lwnet_from_lwdown
+  !! 
+  !! out: lwnet_from_lwdown
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
 
 !    USE mo_physical_constants, ONLY: &
@@ -101,10 +125,16 @@ CONTAINS
     REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(wp), INTENT(in) :: t_srf    ! surface temperature
 
-    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
   END FUNCTION lwnet_from_lwdown
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION heat_transfer_coef
+  !! 
+  !! out: heat_transfer_coef
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
 !    USE mo_jsb_physical_constants, ONLY: &
