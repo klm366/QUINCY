@@ -33,6 +33,7 @@ if [ "$1" == "postprocessing" ]
     echo "  ""$jobNameS"
     echo "  ""$jobNameS2"
     echo "  ""$jobNameS3"
+    echo " "
 
     saveFolder="$bgiJEScratchFolder""$autoTestRunFolder""$svnRev""/"
     mkdir -p "$saveFolder"
@@ -45,6 +46,8 @@ if [ "$1" == "postprocessing" ]
     sync && sleep 2
     # extract potential error messages into one file
     cat "$saveFolder""$jobNameD"/*/error/err* > "$saveFolder""$jobNameD"_err.txt
+    sync
+    ls -lah "$saveFolder""$jobNameD"_err.txt
     echo " "
 
     ## do some stats and analysis on the debug-run simulation results ##
@@ -55,6 +58,8 @@ if [ "$1" == "postprocessing" ]
     sync && sleep 2
     # extract potential error messages into one file
     cat "$saveFolder""$jobNameD2"/*/error/err* > "$saveFolder""$jobNameD2"_err.txt
+    sync
+    ls -lah "$saveFolder""$jobNameD2"_err.txt
     echo " "
 
     ## do some stats and analysis on the standard-run simulation results ##
@@ -65,6 +70,8 @@ if [ "$1" == "postprocessing" ]
     sync && sleep 2
     # extract potential error messages into one file
     cat "$saveFolder""$jobNameS"/*/error/err* > "$saveFolder""$jobNameS"_err.txt
+    sync
+    ls -lah "$saveFolder""$jobNameS"_err.txt
     echo " "
 
     ## do some stats and analysis on the standard-run simulation results ##
@@ -75,6 +82,8 @@ if [ "$1" == "postprocessing" ]
     sync && sleep 2
     # extract potential error messages into one file
     cat "$saveFolder""$jobNameS2"/*/error/err* > "$saveFolder""$jobNameS2"_err.txt    
+    sync
+    ls -lah "$saveFolder""$jobNameS2"_err.txt
     echo " "
 
     ## do some stats and analysis on the standard-run simulation results ##
@@ -84,7 +93,9 @@ if [ "$1" == "postprocessing" ]
     mv "$bgiJEScratchFolder"slm/"$jobNameS3" "$saveFolder"
     sync && sleep 2
     # extract potential error messages into one file
-    cat "$saveFolder""$jobNameS3"/*/error/err* > "$saveFolder""$jobNameS3"_err.txt    
+    cat "$saveFolder""$jobNameS3"/*/error/err* > "$saveFolder""$jobNameS3"_err.txt
+    sync
+    ls -lah "$saveFolder""$jobNameS3"_err.txt
     echo " "
     
 
@@ -102,11 +113,13 @@ fi
 cd "$workingCopyFolder"
 
 # revision number of repository trunk/src/ and local working copy
-revRepoTrunk=$(svn info https://projects.bgc-jena.mpg.de/QUINCY/svn/project-A/trunk/src | grep "Rev:" | awk '{print $4}')
-localWCopy=$(svn info ./src | grep "Rev:" | awk '{print $4}')
+revRepoTrunk=$(svn info https://projects.bgc-jena.mpg.de/QUINCY/svn/project-A/trunk | grep "Rev:" | awk '{print $4}')
+localWCopy=$(svn info ./ | grep "Rev:" | awk '{print $4}')
+revRepoTrunkSrc=$(svn info https://projects.bgc-jena.mpg.de/QUINCY/svn/project-A/trunk/src | grep "Rev:" | awk '{print $4}')
+localWCopySrc=$(svn info ./src | grep "Rev:" | awk '{print $4}')
 
 # run test runs only if a newer revision of the trunk/src/ folder is available | or if "ignoreRev" is passed as argument to the script (for manual testing purpose)
-if [ $revRepoTrunk -gt $localWCopy ] || [ "$1" == "ignoreRev" ]
+if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
   then
 	# update local working copy
 	svn update && sleep 2
@@ -186,7 +199,7 @@ else  # if [ $revRepoTrunk -gt $localWCopy ]
       sync
     fi
     dateNow=$(date "+%d.%m.%Y %X")
-    new=$(echo "$dateNow"" | repo: ""$revRepoTrunk"" | local: ""$localWCopy")
+    new=$(echo "$dateNow"" | repo ./src : ""$revRepoTrunkSrc"" | local ./src : ""$localWCopySrc")
     sed -i 1i"$new" ./cronjob-slm-autotestrun.log    # inserts $new in line number 1
     sed -i '101,110d' ./cronjob-slm-autotestrun.log  # deletes all lines 101-110 (100 lines remain); no error if there are no lines 102-110
 fi
