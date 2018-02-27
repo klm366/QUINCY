@@ -71,10 +71,6 @@ MODULE mo_pheno_memory_class
 !TODO-JN -> TODO-KN after testing several of these can get local variables instead of output vars!? 
                                       !! JN: variables required when l_forestRegrowth = true, i.e. when the 
                                       !      maxLAI is derived from biomass via allometric relationships
-      & current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)] 
-                                      ! since last maxLAI calculation
-      & veg_carbon_at_max_green,    & ! Total vegetation carbon [mol(C) m-2(canopy)] 
-                                      ! at the time of the green pool maximum (current_max_green)
       & prev_veg_c_at_max_green,    & ! Last periods total vegetation carbon [mol(C) m-2(canopy)] 
                                       ! at the time of the green pool maximum --> only changes ones a year!
       & annual_veg_c_inc,           & ! annual increment in total vegetation carbon [mol(C) m-2(canopy)] 
@@ -336,18 +332,6 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
-          CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &
-            & hgrid, surface,                                                    &
-            & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'max_green_veg_c', mem%veg_carbon_at_max_green, &
-            & hgrid, surface,                                                    &
-            & t_cf('veg_carbon_at_max_green', 'mol(C) m-2(canopy)', 'Total vegetation carbon at green pool maximum'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'individuals', mem%number_of_individuals, &
             & hgrid, surface,                                                    &
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &

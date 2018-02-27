@@ -20,6 +20,12 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_process_class,      ONLY: FAGE_
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
+  ! Use of prcesses in this module
+  dsl4jsb_Use_processes FAGE_, PHENO_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(PHENO_)
+
   IMPLICIT NONE
   PRIVATE
 
@@ -114,10 +120,15 @@ MODULE mo_carbon_memory_class
       !
       carbon_2_GreenLitterPools,  & ! R: should be later renamed to C_2_GreenLitterPools
       carbon_2_WoodLitterPools,   & ! R: should be later renamed to C_2_WoodLitterPools
-      carbon_2_atmos                ! R: should be later renamed to C_2_atmos
+      carbon_2_atmos,             &  ! R: should be later renamed to C_2_atmos
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       !frac_litter_wood_new,       & ! new fraction in above ground wood litter pool 
+!JN: variables required when l_forestRegrowth = true, i.e. when the maxLAI is derived from biomass via allometric relationships
+      current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)] 
+                                    ! since last maxLAI calculation
+      veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)] 
+                                    ! at the time of the green pool maximum (current_max_green)
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
@@ -214,7 +225,10 @@ MODULE mo_carbon_memory_class
       delta_YCpool_water_bg2_rp,           & 
       delta_YCpool_ethanol_bg2_rp,         & 
       delta_YCpool_nonsoluble_bg2_rp,      & 
-      delta_YCpool_humus_2_rp
+      delta_YCpool_humus_2_rp,             &
+      delta_current_max_green_rp,          & 
+      delta_veg_carbon_at_max_green_rp
+
 
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
@@ -238,6 +252,8 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(PHENO_)
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
@@ -252,6 +268,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
     !canopy_layer => Get_vgrid('canopy_layer')
+
+    dsl4jsb_Get_config(PHENO_)
 
     IF (.NOT. ASSOCIATED(mem%pseudo_temp%ptr)) THEN
 
@@ -1085,8 +1103,35 @@ CONTAINS
         & prefix, suffix,                                                           &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
+      IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &
+            & hgrid, surface,                                                    &
+            & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'max_green_veg_c', mem%veg_carbon_at_max_green, &
+            & hgrid, surface,                                                    &
+            & t_cf('veg_carbon_at_max_green', 'mol(C) m-2(canopy)', 'Total vegetation carbon at green pool maximum'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      ENDIF
 
       IF (model%processes(FAGE_)%p%config%active) THEN
+
+        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          CALL jsb_add_var( mem, 'delta_current_max_green_rp', mem%delta_current_max_green_rp, hgrid, surface, &
+            & t_cf('delta_current_max_green_rp', 'mol(C) m-2(parent))', 'Change in current max green.'),         &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+            & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+          CALL jsb_add_var( mem, 'delta_veg_carbon_at_max_green_rp', mem%delta_veg_carbon_at_max_green_rp, hgrid, surface, &
+            & t_cf('delta_veg_carbon_at_max_green_rp', 'mol(C) m-2(parent))', 'Change in veg at current max green.'),      &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+            & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        ENDIF
+
 
 !TODO-JN-COHORTS: does not need to go to the output (loutput = .FALSE.) -- only now for testing
 !TODO-JN-COHORTS: change unit when absolute areas are implemented

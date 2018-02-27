@@ -271,6 +271,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: current_max_green
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green
+
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
     dsl4jsb_Real2D_onChunk :: leafC_per_individual
@@ -335,8 +336,9 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_reserve)           ! in
       dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_woods)             ! in
 
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    current_max_green)       ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_carbon_at_max_green) ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,    current_max_green)       ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,    veg_carbon_at_max_green) ! inout
+
       dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)      ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC_per_individual)    ! inout

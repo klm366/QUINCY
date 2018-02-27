@@ -889,6 +889,9 @@ CONTAINS
     REAL(wp),                   INTENT(in)            :: delta_fract(:),  &
                                                          prev_fract(:)
 
+    TYPE(t_jsb_model), POINTER                :: model
+    dsl4jsb_Def_config(PHENO_)
+
     !TODO-JN: discuss with Reiner about the dsl4jsb -- i.e. what if operating on two different tiles like here 
     ! dsl4jsb_Def_memory(CARBON_)
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
@@ -924,6 +927,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
 
+    dsl4jsb_Real2D_onChunk ::  current_max_green
+    dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
+
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp_source
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp_source
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_reserve_rp_source
@@ -948,6 +954,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_ethanol_bg2_rp_source
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_nonsoluble_bg2_rp_source
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_humus_2_rp_source
+
+    dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_source
+    dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_source
 
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp_sink
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp_sink
@@ -974,6 +983,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_nonsoluble_bg2_rp_sink
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_humus_2_rp_sink
 
+    dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sink
+    dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sink
+
     !Assertion prev_fract + delta_fract .GE. 0._wp  TODO-JN: EPSILON(1._wp)?
     IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
       print *, prev_fract(:)
@@ -983,6 +995,10 @@ CONTAINS
     ENDIF
     ! TODO-JN: do they still need smallest possible fraction 1e-10? 
     ! (Then the following should not happen and other Assertions and MAX statements will be required!)
+
+    model => Get_model(source_tile%owner_model_id)
+
+    dsl4jsb_Get_config(PHENO_)
 
 !    dsl4jsb_Get_memory(CARBON_)
     SELECT TYPE (mm => source_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__source => mm ; END SELECT
@@ -1017,6 +1033,17 @@ CONTAINS
     YCpool_ethanol_bg2 => carbon__mem__source%YCpool_ethanol_bg2%ptr(ics:ice,iblk)  ! inout
     YCpool_nonsoluble_bg2 => carbon__mem__source%YCpool_nonsoluble_bg2%ptr(ics:ice,iblk)  ! inout
     YCpool_humus_2 => carbon__mem__source%YCpool_humus_2%ptr(ics:ice,iblk)  ! inout
+
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      current_max_green => carbon__mem__source%current_max_green%ptr(ics:ice,iblk)  ! inout
+      veg_carbon_at_max_green => carbon__mem__source%veg_carbon_at_max_green%ptr(ics:ice,iblk)  ! inout
+
+      delta_current_max_green_rp_source => carbon__mem__source%delta_current_max_green_rp%ptr(ics:ice,iblk)  ! inout
+      delta_veg_carbon_at_max_green_rp_source => carbon__mem__source%delta_veg_carbon_at_max_green_rp%ptr(ics:ice,iblk)  ! inout
+
+      delta_current_max_green_rp_sink => carbon__mem__sink%delta_current_max_green_rp%ptr(ics:ice,iblk)  ! inout
+      delta_veg_carbon_at_max_green_rp_sink => carbon__mem__sink%delta_veg_carbon_at_max_green_rp%ptr(ics:ice,iblk)  ! inout
+    ENDIF
 
     delta_Cpool_green_rp_source => carbon__mem__source%delta_Cpool_green_rp%ptr(ics:ice,iblk)  ! inout
     delta_Cpool_woods_rp_source => carbon__mem__source%delta_Cpool_woods_rp%ptr(ics:ice,iblk)  ! inout
@@ -1114,6 +1141,13 @@ CONTAINS
       & delta_YCpool_nonsoluble_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
     CALL update_delta_carbon(YCpool_humus_2(:), delta_YCpool_humus_2_rp_source(:), &
       & delta_YCpool_humus_2_rp_sink(:), delta_fract(:), prev_fract(:))
+
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      CALL update_delta_carbon(current_max_green(:), delta_current_max_green_rp_source(:), &
+        & delta_current_max_green_rp_sink(:), delta_fract(:), prev_fract(:))
+      CALL update_delta_carbon(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp_source(:), &
+        & delta_veg_carbon_at_max_green_rp_sink(:), delta_fract(:), prev_fract(:))
+    ENDIF
 
   END SUBROUTINE update_delta_carbon_of_source_and_sink_tile_upon_area_shift
 
