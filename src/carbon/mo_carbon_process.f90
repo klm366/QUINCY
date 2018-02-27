@@ -818,10 +818,8 @@ CONTAINS
     & Cpool_green,                  & ! inout
     & Cpool_woods,                  & ! inout
     & Cpool_reserve,                & ! inout
-    & carbon_2_GreenLitterPools,    & ! inout, because relocate_carbon_fire is
-                                      ! called AFTER relocate_carbon_damage!
-    & carbon_2_WoodLitterPools,     & ! inout, because relocate_carbon_fire is
-                                      ! called AFTER relocate_carbon_damage!
+    & carbon_2_GreenLitterPools,    & ! inout
+    & carbon_2_WoodLitterPools,     & ! inout
     & YCpool_acid_ag1,              & ! inout
     & YCpool_water_ag1,             & ! inout
     & YCpool_ethanol_ag1,           & ! inout
@@ -968,10 +966,8 @@ CONTAINS
     & Cpool_green,                                   & ! inout, optional
     & Cpool_woods,                                   & ! inout, optional
     & Cpool_reserve,                                 & ! inout, optional
-    & carbon_2_GreenLitterPools,                     & ! out, because relocate_carbon_damage is 
-                                                       ! called before relocate_carbon_fire!
-    & carbon_2_WoodLitterPools,                      & ! out, because relocate_carbon_damage is
-                                                       ! called before relocate_carbon_fire!
+    & carbon_2_GreenLitterPools,                     & ! inout
+    & carbon_2_WoodLitterPools,                      & ! inout
     & YCpool_acid_ag1,                               & ! inout
     & YCpool_water_ag1,                              & ! inout
     & YCpool_ethanol_ag1,                            & ! inout
@@ -1001,9 +997,9 @@ CONTAINS
     real(wp),intent(inout) :: Cpool_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(out)   :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind damage 
+    real(wp),intent(inout)   :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind damage 
                                                                 ! (and later also by fire)
-    real(wp),intent(out)   :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage 
+    real(wp),intent(inout)   :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage 
                                                                 ! (and later also by fire)
                                                                 ! .. to the green litter pools [mol(C)/m^2(canopy)]
 
@@ -1041,8 +1037,10 @@ CONTAINS
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
 
-    carbon_2_WoodLitterPools(:)  = Cpool_woods(:) * damaged_frac(:)
-    carbon_2_GreenLitterPools(:) = (Cpool_green(:) + Cpool_reserve(:)) * damaged_frac(:)
+    carbon_2_WoodLitterPools(:)  = carbon_2_WoodLitterPools(:) + &
+      & Cpool_woods(:) * damaged_frac(:)
+    carbon_2_GreenLitterPools(:) = carbon_2_GreenLitterPools(:) + &
+      & (Cpool_green(:) + Cpool_reserve(:)) * damaged_frac(:)
 
     ! Add aboveground damaged green and reserve
     factor(:) = (Cpool_green(:) + Cpool_reserve(:)) * frac_green_aboveGround * damaged_frac(:)

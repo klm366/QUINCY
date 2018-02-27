@@ -448,6 +448,8 @@ CONTAINS
         !Else relocate carbon as previously implemented
         IF ( tile%Is_process_active(CARBON_) ) THEN
 
+          carbon_2_GreenLitterPools(:) = 0._wp
+          carbon_2_WoodLitterPools(:) = 0._wp
           ! Calculate carbon relocation connected with damages and fires
           ! R: hier sollen nur die Variablen übergeben werden, die von dieser Prozedur hier im Folgenden benötigt werden.
           !    Andere Variablen werden erst später bereit gestellt, denn in diesem Fall rufen wir ein weiteres
