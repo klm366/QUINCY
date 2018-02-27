@@ -66,6 +66,7 @@ MODULE mo_carbon_memory_class
                                     ! .. plants [mol(C)/m^2(canopy)]
       Cpool_reserve,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
                                     ! .. bad times[mol(C)/m^2(canopy)]
+!@todo why is the Cpool_crop_harvest realised as a density and not as a per tile variable in the first case?
       Cpool_crop_harvest,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]     
      !SIZE CLASS 1
       YCpool_acid_ag1,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]

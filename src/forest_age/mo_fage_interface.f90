@@ -25,13 +25,14 @@ MODULE mo_fage_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes FAGE_
+  dsl4jsb_Use_processes FAGE_, CARBON_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(FAGE_)
 
   ! Use of process memories (t_<process>_memory)
-  dsl4jsb_Use_memory(FAGE_)  
+  dsl4jsb_Use_memory(FAGE_)
+  dsl4jsb_Use_memory(CARBON_)
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -352,6 +353,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     dsl4jsb_Def_memory(FAGE_)
+    dsl4jsb_Def_memory(CARBON_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -369,10 +371,34 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(FAGE_)
+    dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve_ta,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_crop_harvest_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag1_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag1_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag1_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag2_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag2_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg1_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg1_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg1_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg2_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg2_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
 
     !NOTE: despite changes, no aggregation of cpools/fractions because:
     ! FAGE changes Cpools once a year, but only redistributes on child tiles, i.e. no changes this/above

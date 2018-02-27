@@ -1391,6 +1391,7 @@ CONTAINS
   !! @brief Adds delta carbon to carbon state variables and sets delta to zero
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to work on from somewhere else?
+  !! TODO.JN-COHORTS: discuss how Cpool_crop_harvest should be dealt with here - in my opinion it should anyway not be a density!
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
