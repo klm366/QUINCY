@@ -256,7 +256,8 @@ CONTAINS
        !!     below a minimum threshold mortality rises to 100%
        !!
        WHERE(greff(:) > min_greff)
-          mortality_rate(:) = k1_mort_greff / (k2_mort_greff * greff(:) + 1.0_wp)
+          mortality_rate(:) = MAX(background_mort_rate_tree, & 
+                                  k1_mort_greff / (k2_mort_greff * greff(:) + 1.0_wp))
        ELSEWHERE
           mortality_rate(:) = 1.0_wp / (k3_mort_greff * greff(:) + 1.0_wp)
        ENDWHERE
