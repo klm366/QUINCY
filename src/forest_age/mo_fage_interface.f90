@@ -25,7 +25,7 @@ MODULE mo_fage_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes FAGE_, CARBON_
+  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(FAGE_)
@@ -33,6 +33,7 @@ MODULE mo_fage_interface
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(FAGE_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(DISTURB_)
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -204,7 +205,6 @@ CONTAINS
     dsl4jsb_Get_memory(FAGE_)
 
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
-    
     dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
 
@@ -213,6 +213,7 @@ CONTAINS
     IF(is_newyear()) THEN  ! year has changed - i.e. age - i.e. shift fractions!
       ! Note that this update is done globally at the same time step, 
       !  i.e. for different longitudes the updating happens at different local times.
+      dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
 
       ! step one: care for shifts among cohort boundaries
       currentChild => tile%Get_first_child_tile()
@@ -249,13 +250,19 @@ CONTAINS
         ! move further in the child list
         currentChild => nextChild
       ENDDO
+
+      ! update the area per age tracking vector
+      CALL update_frac_per_age_tracking(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
+
+    ELSE
+      dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_calculate_ageing
 
-  ! TODO-JN-COHORTS: does not really make sense to aggregate mean_age?! 
+
   SUBROUTINE aggregate_calculate_ageing(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -263,6 +270,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
+    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -280,11 +288,15 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    !No aggregations required in the calculation of ageing
+    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    ENDIF
+    !No other aggregations required in the calculation of ageing
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -309,12 +321,15 @@ CONTAINS
 
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
+    dsl4jsb_Def_memory(DISTURB_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: mean_age
-    dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
+    dsl4jsb_Real2D_onChunk :: burned_frac
+    dsl4jsb_Real2D_onChunk :: damaged_frac
 
-    CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
+    dsl4jsb_Real3D_onChunk :: fract_per_age
+
+    CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild, nextChild
     REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
 
     INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
@@ -337,16 +352,20 @@ CONTAINS
     !
     dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
-
-    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
+    dsl4jsb_Get_memory(DISTURB_)
     
-    dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
+
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_frac)
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_frac)
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
 
-    ! ERSTMAL disturbances nach bauen? 
-    ! also einfach nur zwischen den cpools so wie in disturbance umverteilen, aber keine area changes?? 
+    dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
+
+    ! step one: determine changes for damaged fract
+    firstChild => tile%Get_first_child_tile()
+    currentChild => tile%Get_first_child_tile()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -398,19 +417,12 @@ CONTAINS
   ! 
   SUBROUTINE update_apply_cohort_changes(tile, options)
 
-    USE mo_fage_process,         ONLY: update_frac_per_age_tracking
-    USE mo_jsb_time,             ONLY: is_newyear
     USE mo_carbon_interface,     ONLY: update_carbon_states_with_delta_carbon
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(FAGE_)
-    dsl4jsb_Def_memory(FAGE_)
-
-    ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: mean_age
-    dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
 
     CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
     REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
@@ -420,6 +432,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_cohort_changes'
 
     ! ---------------------------
+    !TODO-JN-COHORTS: do i still need these? 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
@@ -434,17 +447,10 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_config(FAGE_)
-    dsl4jsb_Get_memory(FAGE_)
-
-    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
     
-    dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
-    dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
-
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
 
-!TODO-JN-COHORTS: introduce boolean indecating if there has been any changes -- also to be used for the aggregate call!
-!    IF(is_newyear()) THEN 
+    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
 
       ! step two: apply changes 
       currentChild => tile%Get_first_child_tile()
@@ -466,10 +472,7 @@ CONTAINS
         currentChild => currentChild%Get_next_sibling_tile()
       ENDDO
 
-      ! update the area per age tracking vector
-      CALL update_frac_per_age_tracking(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
-
-!    END IF
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -483,6 +486,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
+    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
     dsl4jsb_Def_memory(CARBON_)
 
@@ -501,39 +505,39 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve_ta,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_crop_harvest_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag1_ta,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag1_ta,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag1_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag2_ta,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag2_ta,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag2_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg1_ta,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg1_ta,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg1_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg2_ta,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg2_ta,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg2_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1_ta,            weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
+    ENDIF
 
-    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve_ta,             weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_crop_harvest_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag1_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag1_ta,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag1_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag2_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag2_ta,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag2_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg1_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg1_ta,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg1_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg2_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg2_ta,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg2_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1_ta,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
-
-    !NOTE: despite changes, no aggregation of cpools/fractions because:
-    ! FAGE changes Cpools once a year, but only redistributes on child tiles, i.e. no changes this/above
-    ! FAGE changes fractionsonce a year, but only redistributes on child tiles, i.e. no changes on this/above
+    !NOTE: despite changes, no aggregation of fractions because:
+    !      fractions are only redistributed on child tiles, i.e. no changes on this/above
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
