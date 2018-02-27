@@ -50,7 +50,6 @@ CONTAINS
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_config(SOIL_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -105,7 +104,6 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
@@ -247,7 +245,6 @@ CONTAINS
     ! Get process config
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_config(VEG_)
-    dsl4jsb_Get_config(SOIL_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
@@ -515,7 +512,6 @@ CONTAINS
                                                                denitrification_n2(:,:))
 
        CALL calc_inorganic_transport_rate(options, &
-                                          TRIM(dsl4jsb_Config(SOIL_)%soil_moisture_scheme), &
                                           TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                           soil_depth_sl(:,:), &
                                           drainage_fraction(:), &
@@ -1356,7 +1352,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_inorganic_transport_rate(options, &
-                                           soil_moisture_scheme, &
                                            sb_model_scheme, &
                                            soil_depth_sl, &
                                            drainage_fraction, &
@@ -1403,7 +1398,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)  :: options
-    CHARACTER(len=*),                                 INTENT(in)  :: soil_moisture_scheme               !< type of soil model scheme: bucket / layer
     CHARACTER(len=*),                                 INTENT(in)  :: sb_model_scheme                    !< type of sb model scheme: simple0d / simple1d 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: soil_depth_sl                      !< soil layer depth [m]
     REAL(wp), DIMENSION(options%nc),                  INTENT(in)  :: drainage_fraction                  !< fraction of water lost for 0d model [s-1]
@@ -1466,20 +1460,18 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        leaching_po4_solute(:)     = -transport_po4_solute(:,1) * soil_depth_sl(:,1)
 
     ELSE 
-       IF(soil_moisture_scheme=='layer')THEN
-         ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
-         ! reduction of layer concentration in mol m-3 timestep-1, leaching rate in mol m-2 timestep-1
-         CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                          fleach_nh4 * nh4_solute(:,:),transport_nh4_solute(:,:),leaching_nh4_solute(:))
-         CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                          fleach_nh4 * nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:),leaching_nh4_n15_solute(:))
-         CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                          no3_solute(:,:),transport_no3_solute(:,:),leaching_no3_solute(:))
-         CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                          no3_n15_solute(:,:),transport_no3_n15_solute(:,:),leaching_no3_n15_solute(:))
-         CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                          po4_solute(:,:),transport_po4_solute(:,:),leaching_po4_solute(:))
-       ENDIF
+       ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
+       ! reduction of layer concentration in mol m-3 timestep-1, leaching rate in mol m-2 timestep-1
+       CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                        fleach_nh4 * nh4_solute(:,:),transport_nh4_solute(:,:),leaching_nh4_solute(:))
+       CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                        fleach_nh4 * nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:),leaching_nh4_n15_solute(:))
+       CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                        no3_solute(:,:),transport_no3_solute(:,:),leaching_no3_solute(:))
+       CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                        no3_n15_solute(:,:),transport_no3_n15_solute(:,:),leaching_no3_n15_solute(:))
+       CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                        po4_solute(:,:),transport_po4_solute(:,:),leaching_po4_solute(:))
     ENDIF
   
     !> 2.0 gaseous loss of NOy, N2O, and N2, for now following Xu-Ri and Prentice 2008, 

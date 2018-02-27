@@ -23,8 +23,7 @@ MODULE mo_soil_constants
     InterceptionEfficiency, &   !< Efficiency of interception of precipitation as rain
     w_skin_max, &               !< maximum water storage per unit LAI (m)
     drain_frac, &               !< preferential flow fraction of infiltrating water per meter soil 
-    fdrain_runoff, &            !< preferential flow fraction of runoff
-    max_infiltration_rate       !< maximum infiltration rate for bucket model 
+    fdrain_runoff               !< preferential flow fraction of runoff
 
  ! constants in pedo-transfer functions according to Saxton & Rawls 2006
  REAL(wp) :: & 
@@ -82,7 +81,6 @@ CONTAINS
     w_skin_max              = 0.0002_wp     ! JSBACH4 
     drain_frac              = 0.01_wp       ! tuned
     fdrain_runoff           = 0.95_wp       ! set from ORCHIDEE
-    max_infiltration_rate   = 0.0025        ! mm / s (from 10 mm/hour according to FAO loam)
 
     ! Saxton & Rawls, 2006, includes conversion from fractional to mass% texture
     wpot_pwp        = 1500._wp

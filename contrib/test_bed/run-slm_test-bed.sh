@@ -17,7 +17,6 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
@@ -284,7 +283,6 @@ validateMycScheme="no am ecm"
 validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
-validateSoilMoistureScheme="prescribed bucket layer"
 validateSBModelScheme="simple_0d simple_1d jsm"
 validateSBNLossScheme="none fixed dynamic"
 validateFlags="F T"
@@ -307,7 +305,6 @@ validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_
 validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
 validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
-validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
 validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
@@ -511,7 +508,6 @@ changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
-changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_adsorp_scheme "$sb_adsorp_scheme"

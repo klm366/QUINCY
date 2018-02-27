@@ -59,7 +59,6 @@ specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
-soil_moisture_scheme="layer"
 sb_model_scheme="simple_0d"
 sb_nloss_scheme="dynamic"
 n_deposition_scheme="dynamic"

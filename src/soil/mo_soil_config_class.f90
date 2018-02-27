@@ -41,7 +41,6 @@ MODULE mo_soil_config_class
     REAL(wp)              :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
     REAL(wp)              :: bulk_density    
-    CHARACTER(15)         :: soil_moisture_scheme !< soil moisture "prescribed|bucke|layer"
   CONTAINS
     PROCEDURE :: Init => Init_soil_config
   END TYPE t_soil_config
@@ -83,7 +82,6 @@ CONTAINS
                                    soil_silt       , &
                                    soil_clay
     REAL(wp)                    :: bulk_density
-    CHARACTER(15)               :: soil_moisture_scheme
     INTEGER                     :: isoil   ! looping
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     ! local variables for soil layer calculations
@@ -106,8 +104,7 @@ CONTAINS
                           soil_sand               , &
                           soil_silt               , &
                           soil_clay               , &
-                          bulk_density            , &
-                          soil_moisture_scheme
+                          bulk_density            
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
@@ -135,7 +132,6 @@ CONTAINS
     soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
     bulk_density                  = 1500.0_wp
-    soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
 
     ! read the namelist
     ! &SOIL_CTL
@@ -175,18 +171,6 @@ CONTAINS
     IF (soil_depth .LE. 0.0_wp) CALL finish('Init_soil_config','Initialization with non positive soil depth')
     IF (soil_depth .GT. SUM(dz_energy)) CALL finish('Init_soil_config','Initialization of soil depth larger than soil profile not possible')
 
-    ! check input for soil_moisture_scheme 
-    SELECT CASE (TRIM(soil_moisture_scheme))
-     CASE ("prescribed","bucket","layer")
-     !CASE ("prescribed","bucket")
-     !CASE ("layer") 
-     !  WRITE(message_text,'(2a)') soil_moisture_scheme,'is not implemented yet, sorry....'
-     !  CALL finish("mo_soil_config_class:init_soil_config",message_text)
-     CASE DEFAULT
-       WRITE(message_text,'(2a)') 'invalid soil_moisture_scheme',soil_moisture_scheme
-       CALL finish("mo_soil_config_class:init_soil_config",message_text)
-    ENDSELECT
-
     ! pass values as read from file
     config%active                    = active
     config%ic_filename               = ic_filename
@@ -195,7 +179,6 @@ CONTAINS
     config%nsoil_water               = nsoil_water
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
-    config%soil_moisture_scheme      = soil_moisture_scheme
 
     config%soil_depth_energy(1)      = dz_energy(1)
     DO isoil=2,nsoil_energy

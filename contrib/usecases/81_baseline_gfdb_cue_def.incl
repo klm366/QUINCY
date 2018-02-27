@@ -24,7 +24,6 @@ spinupLengthGFDB=500
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-soil_moisture_scheme="layer"    # prescribed bucket layer
 sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value

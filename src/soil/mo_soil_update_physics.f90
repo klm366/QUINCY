@@ -224,16 +224,9 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
     
-    SELECT CASE(TRIM(dsl4jsb_Config(SOIL_)%soil_moisture_scheme))
-      CASE("bucket")  ! Case of bucket water scheme
-        rel_hum(:) = w_soil_root_theta(:)
-      CASE("layer")   ! Case of layer water scheme
-        rel_hum(:) = MIN(1.0_wp,1._wp*(w_soil_sl(:,1)    - w_soil_pwp_sl(:,1)) / &
-                                      (w_soil_fc_sl(:,1) - w_soil_pwp_sl(:,1)))
-    ENDSELECT
+    rel_hum(:) = MIN(1.0_wp, (w_soil_sl(:,1) - w_soil_pwp_sl(:,1)) / (w_soil_fc_sl(:,1) - w_soil_pwp_sl(:,1)))
 
     CALL calc_surface_energy_balance(options, lctlib, &
-                                     dsl4jsb_Config(SOIL_)%soil_moisture_scheme, & 
                                      sw_srf_net(:),lw_srf_down(:), & 
                                      t_air(:),t_acoef(:),t_bcoef(:), & 
                                      q_air(:),q_acoef(:),q_bcoef(:), & 
@@ -247,7 +240,6 @@ CONTAINS
                                      net_radiation(:),t_soil_sl(:,:))
 
     CALL calc_soil_hydrology(options, lctlib, &
-                             dsl4jsb_Config(SOIL_)%soil_moisture_scheme, &
                              dsl4jsb_Config(SOIL_)%soil_depth_water(:), & 
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
@@ -270,7 +262,6 @@ CONTAINS
   !! Calculates surface energy fluxes and deep soil temperatures 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_surface_energy_balance(options, lctlib, &
-                                         soil_moisture_scheme, & 
                                          sw_srf_net,lw_srf_down, & 
                                          t_air,t_acoef,t_bcoef, & 
                                          q_air,q_acoef,q_bcoef, & 
@@ -298,7 +289,6 @@ CONTAINS
     ! 0.1 InOut 
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                !< model options
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                 !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*),                                 INTENT(in)    :: soil_moisture_scheme   !< bucket / layer
     REAL(wp), DIMENSION(options%nc),                  INTENT(in)    :: sw_srf_net, &          !< net shortwave radiation [W/m2] 
                                                                        lw_srf_down, &         !< longwave downward radiation [W/m2]
                                                                        t_air, &               !< air temperature [K]
@@ -529,7 +519,6 @@ CONTAINS
   !! Calculates runoff, drainage and an updated state of soil water variables (theta, potential, etc.)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_soil_hydrology(options, lctlib, &
-                                 soil_moisture_scheme, & 
                                  soil_depth_water, & 
                                  rain,snow,interception,evaporation,transpiration, & 
                                  w_soil_root_fc,w_soil_root_pwp,lai,root_depth, & 
@@ -544,8 +533,7 @@ CONTAINS
     USE mo_base_constants,              ONLY: dtime
     USE mo_shared_constants,            ONLY: grav
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
-    USE mo_soil_constants,              ONLY: drain_frac, fdrain_runoff, max_infiltration_rate, & 
-                                              InterceptionEfficiency, w_skin_max, wpot_min
+    USE mo_soil_constants,              ONLY: drain_frac, fdrain_runoff, InterceptionEfficiency, w_skin_max, wpot_min
 
 
     IMPLICIT NONE
@@ -553,7 +541,6 @@ CONTAINS
     ! 0.1 InOut 
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                 !< model options
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                  !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*),                                 INTENT(in)    :: soil_moisture_scheme    !< bucket or layer
     REAL(wp), DIMENSION(options%nsoil_sb),            INTENT(in)    :: soil_depth_water        !< depth of a layer
     REAL(wp), DIMENSION(options%nc),                  INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
                                                                        snow, &                 !< snowfall [kg / m2 / s ]
@@ -624,193 +611,152 @@ CONTAINS
     water_to_soil(:) = MAX(rain(:) + snow(:) - water_to_skin(:) / dtime * 1000.0_wp, 0._wp)
     w_skin(:)        = w_skin(:) + water_to_skin(:) - interception(:) * dtime/1000.0_wp
 
+
     !> 2.0 update soil moisture
     !!
-    SELECT CASE(soil_moisture_scheme)
-       !> 2.1 bucket soil water scheme
-       !!
-       CASE("bucket")
+    fevaporation(:,:) = 0.0_wp
+    fevaporation(:,1) = 1.0_wp
 
-          !> 2.1.1 update soil moisture
-          !! dS/dt = rain - transpiration - evaporation
-          infiltration(:) = MIN(water_to_soil(:),max_infiltration_rate)
-  
-          w_soil_root(:)  = w_soil_root(:) + &
-                            (infiltration(:) - transpiration(:) - evaporation(:)) / 1000._wp * dtime
-   
-          !> 2.1.2 calculate runoff and drainage if any [mm/s]
-          !!
-          WHERE(w_soil_root(:) > w_soil_root_fc(:))
-            runoff(:) = ( w_soil_root(:) - w_soil_root_fc(:) ) * 1000._wp/ dtime
-          ELSEWHERE
-            runoff(:) = 0.0_wp
-          END WHERE
-          w_soil_root(:) = w_soil_root(:) - runoff(:) / 1000.0_wp * dtime
-          w_soil_root(:) = MAX(w_soil_root(:),0.0_wp)
-          ! add surplus water to runoff
-          runoff(:)      = runoff(:) + water_to_soil(:) - infiltration(:) 
-          ! partition runoff into drainage and runoff
-          drainage(:)    = fdrain_runoff * runoff(:) 
-          runoff(:)      = (1.0_wp - fdrain_runoff) * runoff(:)
-   
-          !> 2.1.3 update soil moisture by layer 
-          !! using mean theta of the rooting zone 
-          !! note that for ease of computation this is not 100% mass conserving and not meant to be!
-          !!
-          DO isoil = 1,options%nsoil_sb
-            w_soil_sl(:,isoil) = w_soil_root_theta(:) * (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) + &
-                                 w_soil_pwp_sl(:,isoil)
-          ENDDO
-    
-       !> 2.2 multi-layer soil moisture scheme 
-       !!
-       CASE("layer")
+    !> 2.1 determine fraction of transpiration per layer
+    !!
+    ftranspiration(:,:) = 0.0_wp
+    DO isoil = 1,options%nsoil_sb
+       WHERE(w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil) > eps8)
+          hlp1(:) = (w_soil_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) / & 
+                    (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
+          hlp1(:) = calc_soil_moisture_stress(hlp1(:), lctlib%lambda_soil_gs, lctlib%weibull_k_soil_gs)
+          ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
+       END WHERE
+    ENDDO
+    DO ichunk = 1,options%nc
+      ! here SUM covers all soil layers per point of the chunk
+      IF( SUM(ftranspiration(ichunk,:)) > eps8 ) THEN 
+         ftranspiration(ichunk,:) = ftranspiration(ichunk,:) / SUM(ftranspiration(ichunk,:))
+      ELSE 
+         ftranspiration(ichunk,:) = 0.0_wp
+      ENDIF
+    END DO
 
-          fevaporation(:,:) = 0.0_wp
-          fevaporation(:,1) = 1.0_wp
+    !> 2.2 determine water balance of the top layer 
+    !! 
+    !! infiltration rate (limited to attaining field capacity), surface runoff and deep drainage
+    !! a fraction of runoff generation is leaked below the first layer
+    !! a fraction of infiltration is leaked below the first layer (preferential flow) 
+    ! first guess
+    infiltration(:) = MAX( MIN( (w_soil_fc_sl(:,1) - w_soil_sl(:,1))*1000._wp/dtime, water_to_soil(:)), 0.0_wp)
+    runoff(:)       = MAX(water_to_soil(:) - infiltration(:), 0.0_wp)
 
-          !> 2.2.1 determine fraction of transpiration per layer
-          !!
-          ftranspiration(:,:) = 0.0_wp
-          DO isoil = 1,options%nsoil_sb
-             WHERE(w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil) > eps8)
-                hlp1(:) = (w_soil_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) / & 
-                          (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
-                hlp1(:) = calc_soil_moisture_stress(hlp1(:), lctlib%lambda_soil_gs, lctlib%weibull_k_soil_gs)
-                ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
-             END WHERE
-          ENDDO
-          DO ichunk = 1,options%nc
-            ! here SUM covers all soil layers per point of the chunk
-            IF( SUM(ftranspiration(ichunk,:)) > eps8 ) THEN 
-               ftranspiration(ichunk,:) = ftranspiration(ichunk,:) / SUM(ftranspiration(ichunk,:))
-            ELSE 
-               ftranspiration(ichunk,:) = 0.0_wp
-            ENDIF
-          END DO
+    ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
+    drainage_sl(:,1) = drain_frac / soil_depth_sl(:,1) * infiltration(:) + fdrain_runoff * runoff(:)
+    runoff(:)        = ( 1.0_wp - fdrain_runoff ) * runoff(:)  
+    infiltration(:)  = ( 1.0_wp - drain_frac / soil_depth_sl(:,1) ) * infiltration(:)
 
-          !> 2.2.2 determine water balance of the top layer 
-          !! 
-          !! infiltration rate (limited to attaining field capacity), surface runoff and deep drainage
-          !! a fraction of runoff generation is leaked below the first layer
-          !! a fraction of infiltration is leaked below the first layer (preferential flow) 
-          ! first guess
-          infiltration(:) = MAX( MIN( (w_soil_fc_sl(:,1) - w_soil_sl(:,1))*1000._wp/dtime, water_to_soil(:)), 0.0_wp)
-          runoff(:)       = MAX(water_to_soil(:) - infiltration(:), 0.0_wp)
+    w_soil_sl(:,1)   = w_soil_sl(:,1) + &
+                       (infiltration(:) - evaporation(:) * fevaporation(:,1) - transpiration(:) * ftranspiration(:,1)) / &
+                       1000._wp * dtime
+    WHERE(w_soil_sl(:,1) > w_soil_fc_sl(:,1))
+         runoff(:)      = runoff(:) + (w_soil_sl(:,1) - w_soil_fc_sl(:,1))*1000._wp / dtime
+         w_soil_sl(:,1) = w_soil_fc_sl(:,1) 
+    END WHERE 
 
-          ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
-          drainage_sl(:,1) = drain_frac / soil_depth_sl(:,1) * infiltration(:) + fdrain_runoff * runoff(:)
-          runoff(:)        = ( 1.0_wp - fdrain_runoff ) * runoff(:)  
-          infiltration(:)  = ( 1.0_wp - drain_frac / soil_depth_sl(:,1) ) * infiltration(:)
+    !> 2.3 update deeper soil layers given infiltration, transpiration and evaporation
+    !!
+    DO isoil = 2,options%nsoil_sb
 
-          w_soil_sl(:,1)   = w_soil_sl(:,1) + &
-                             (infiltration(:) - evaporation(:) * fevaporation(:,1) - transpiration(:) * ftranspiration(:,1)) / &
+      ! drainage from this layer due to preferential flow of infiltering water flux
+      drainage_sl(:,isoil) = drain_frac / soil_depth_sl(:,isoil) * drainage_sl(:,isoil-1)
+
+      ! water balance of soil layer
+      w_soil_sl(:,isoil)   = w_soil_sl(:,isoil) + & 
+                             (( 1.0_wp - drain_frac / soil_depth_sl(:,isoil) ) * drainage_sl(:,isoil-1) - &
+                              evaporation(:) * fevaporation(:,isoil) - &
+                              transpiration(:) * ftranspiration(:,isoil)) / &
                              1000._wp * dtime
-          WHERE(w_soil_sl(:,1) > w_soil_fc_sl(:,1))
-               runoff(:)      = runoff(:) + (w_soil_sl(:,1) - w_soil_fc_sl(:,1))*1000._wp / dtime
-               w_soil_sl(:,1) = w_soil_fc_sl(:,1) 
-          END WHERE 
 
-          !> 2.2.3 update deeper soil layers given infiltration, transpiration and evaporation
-          !!
-          DO isoil = 2,options%nsoil_sb
+      ! drain surplus water to lower layer to keep water storage below field capacity
+      WHERE(w_soil_sl(:,isoil) > w_soil_fc_sl(:,isoil))
+        drainage_sl(:,isoil) = drainage_sl(:,isoil) + (w_soil_sl(:,isoil) - w_soil_fc_sl(:,isoil))*1000._wp / dtime
+        w_soil_sl(:,isoil)   = w_soil_fc_sl(:,isoil) 
+      END WHERE 
 
-            ! drainage from this layer due to preferential flow of infiltering water flux
-            drainage_sl(:,isoil) = drain_frac / soil_depth_sl(:,isoil) * drainage_sl(:,isoil-1)
+    ENDDO
 
-            ! water balance of soil layer
-            w_soil_sl(:,isoil)   = w_soil_sl(:,isoil) + & 
-                                   (( 1.0_wp - drain_frac / soil_depth_sl(:,isoil) ) * drainage_sl(:,isoil-1) - &
-                                    evaporation(:) * fevaporation(:,isoil) - &
-                                    transpiration(:) * ftranspiration(:,isoil)) / &
-                                   1000._wp * dtime
+    !> 2.4 update deeper soil layer by diffusion
+    !!
+    !! lowest value of w_soil_sl given minimum number allowed as outcome of theta**C
+    hlp1_2d(:,:) = exp(log(eps8)/saxtonC(:,:)) * w_soil_sat_sl(:,:)
+    WHERE(w_soil_sat_sl(:,:) > eps8 .AND. w_soil_sl(:,:) > hlp1_2d(:,:))
+       k_diff(:,:) = kdiff_sat_sl(:,:) * (w_soil_sl(:,:) / w_soil_sat_sl(:,:))**saxtonC(:,:)
+    ELSEWHERE
+       k_diff(:,:) = 0.0_wp
+    END WHERE          
 
-            ! drain surplus water to lower layer to keep water storage below field capacity
-            WHERE(w_soil_sl(:,isoil) > w_soil_fc_sl(:,isoil))
-              drainage_sl(:,isoil) = drainage_sl(:,isoil) + (w_soil_sl(:,isoil) - w_soil_fc_sl(:,isoil))*1000._wp / dtime
-              w_soil_sl(:,isoil)   = w_soil_fc_sl(:,isoil) 
-            END WHERE 
+    !! update soil water potential for diffusion calculation
+    WHERE(soil_depth_sl(:,:) > eps8)
+       ! Campbell applies only water content below field capacity
+       hlp1_2d(:,:) = MIN(w_soil_fc_sl(:,:),w_soil_sl(:,:)) / soil_depth_sl(:,:)
+       ! for numerical reasons, constrain to minimum water potential 
+       hlp1_2d(:,:) = MAX(exp(log(wpot_min/saxtonA(:,:)) /saxtonB(:,:)), hlp1_2d(:,:))
+    ELSEWHERE
+       hlp1_2d(:,:) = exp(log(wpot_min/saxtonA(:,:)) /saxtonB(:,:))
+    ENDWHERE
+    w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
 
-          ENDDO
+    DO isoil = 2,options%nsoil_sb
+       ! weighted mean of diffusivity (m/s)
+       hlp1(:) = (k_diff(:,isoil-1) * soil_depth_sl(:,isoil-1) + k_diff(:,isoil) * soil_depth_sl(:,isoil)) / &
+                 (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil))
+       ! flux resulting from the pressure gradient between the centres of the soil layer
+       ! note that matrix potential is converted to pressure head MPa -> J/N = m
+       hlp1(:) = hlp1(:) * dtime * & 
+                 (w_soil_pot_sl(:,isoil-1) - w_soil_pot_sl(:,isoil)) * &
+                 1000.0_wp / grav / & 
+                 (0.5_wp * (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil)))
 
-          !> 2.2.4 update deeper soil layer by diffusion
-          !!
-          !! lowest value of w_soil_sl given minimum number allowed as outcome of theta**C
-          hlp1_2d(:,:) = exp(log(eps8)/saxtonC(:,:)) * w_soil_sat_sl(:,:)
-          WHERE(w_soil_sat_sl(:,:) > eps8 .AND. w_soil_sl(:,:) > hlp1_2d(:,:))
-             k_diff(:,:) = kdiff_sat_sl(:,:) * (w_soil_sl(:,:) / w_soil_sat_sl(:,:))**saxtonC(:,:)
+       ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
+       hlp3(:) = soil_depth_sl(:,isoil-1)/soil_depth_sl(:,isoil)             
+       hlp2(:) = (w_soil_sl(:,isoil-1) - w_soil_sl(:,isoil) * hlp3(:)) / (1._wp + hlp3(:))
+       WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
+       WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
+
+       ! update soil layers with diffusion
+       w_soil_sl(:,isoil-1)   = w_soil_sl(:,isoil-1) - hlp1(:)
+       w_soil_sl(:,isoil)     = w_soil_sl(:,isoil) + hlp1(:) 
+       drainage_sl(:,isoil-1) = drainage_sl(:,isoil-1) + hlp1(:) * 1000._wp / dtime 
+    
+    ENDDO
+
+    !> 2.5 calculate rooting zone water content and theta for compatability 
+    !!       with bucket scheme and vegetation water stress.
+    !!       If a soil layer is only partially filled with roots, the plant-accessible 
+    !!       water is limited to the AWC of the root zone. All of the layer's water 
+    !!       (fc-w) deficit is substracted from the root accessible AWC (fc-pwp)*root_depth
+    !!
+    w_soil_root(:) = w_soil_sl(:,1) 
+    DO isoil = 2,options%nsoil_sb
+       WHERE(root_depth(:) > soil_depth_water(isoil-1))
+          WHERE(root_depth(:) >= soil_depth_water(isoil))
+            w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) 
           ELSEWHERE
-             k_diff(:,:) = 0.0_wp
-          END WHERE          
+            ! fraction of the layer that has roots
+            hlp1(:) = (root_depth(:) - soil_depth_water(isoil-1)) / &
+                      (soil_depth_water(isoil) - soil_depth_water(isoil-1))
 
-          !! update soil water potential for diffusion calculation
-          WHERE(soil_depth_sl(:,:) > eps8)
-             ! Campbell applies only water content below field capacity
-             hlp1_2d(:,:) = MIN(w_soil_fc_sl(:,:),w_soil_sl(:,:)) / soil_depth_sl(:,:)
-             ! for numerical reasons, constrain to minimum water potential 
-             hlp1_2d(:,:) = MAX(exp(log(wpot_min/saxtonA(:,:)) /saxtonB(:,:)), hlp1_2d(:,:))
-          ELSEWHERE
-             hlp1_2d(:,:) = exp(log(wpot_min/saxtonA(:,:)) /saxtonB(:,:))
+            w_soil_root(:) = w_soil_root(:) + w_soil_fc_sl(:,isoil) * hlp1(:) - &
+                             MIN((w_soil_fc_sl(:,isoil) - w_soil_sl(:,isoil)), w_soil_pwp_sl(:,isoil) * hlp1(:))
           ENDWHERE
-          w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
+       ENDWHERE
+    ENDDO
 
-          DO isoil = 2,options%nsoil_sb
-             ! weighted mean of diffusivity (m/s)
-             hlp1(:) = (k_diff(:,isoil-1) * soil_depth_sl(:,isoil-1) + k_diff(:,isoil) * soil_depth_sl(:,isoil)) / &
-                       (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil))
-             ! flux resulting from the pressure gradient between the centres of the soil layer
-             ! note that matrix potential is converted to pressure head MPa -> J/N = m
-             hlp1(:) = hlp1(:) * dtime * & 
-                       (w_soil_pot_sl(:,isoil-1) - w_soil_pot_sl(:,isoil)) * &
-                       1000.0_wp / grav / & 
-                       (0.5_wp * (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil)))
-
-             ! limit diffusion rate to the rate that produces equal fractional soil moisture in the two layers
-             hlp3(:) = soil_depth_sl(:,isoil-1)/soil_depth_sl(:,isoil)             
-             hlp2(:) = (w_soil_sl(:,isoil-1) - w_soil_sl(:,isoil) * hlp3(:)) / (1._wp + hlp3(:))
-             WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
-             WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
-
-             ! update soil layers with diffusion
-             w_soil_sl(:,isoil-1)   = w_soil_sl(:,isoil-1) - hlp1(:)
-             w_soil_sl(:,isoil)     = w_soil_sl(:,isoil) + hlp1(:) 
-             drainage_sl(:,isoil-1) = drainage_sl(:,isoil-1) + hlp1(:) * 1000._wp / dtime 
-          
-          ENDDO
-
-          !> 2.2.5 calculate rooting zone water content and theta for compatability 
-          !!       with bucket scheme and vegetation water stress.
-          !!       If a soil layer is only partially filled with roots, the plant-accessible 
-          !!       water is limited to the AWC of the root zone. All of the layer's water 
-          !!       (fc-w) deficit is substracted from the root accessible AWC (fc-pwp)*root_depth
-          !!
-          w_soil_root(:) = w_soil_sl(:,1) 
-          DO isoil = 2,options%nsoil_sb
-             WHERE(root_depth(:) > soil_depth_water(isoil-1))
-                WHERE(root_depth(:) >= soil_depth_water(isoil))
-                  w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) 
-                ELSEWHERE
-                  ! fraction of the layer that has roots
-                  hlp1(:) = (root_depth(:) - soil_depth_water(isoil-1)) / &
-                            (soil_depth_water(isoil) - soil_depth_water(isoil-1))
-
-                  w_soil_root(:) = w_soil_root(:) + w_soil_fc_sl(:,isoil) * hlp1(:) - &
-                                   MIN((w_soil_fc_sl(:,isoil) - w_soil_sl(:,isoil)), w_soil_pwp_sl(:,isoil) * hlp1(:))
-                ENDWHERE
-             ENDWHERE
-          ENDDO
-
-          !> 2.2.6. diagnose deep drainage
-          !!
-          drainage(:) = drainage_sl(:,options%nsoil_sb) 
-          WHERE(w_soil_sl_old(:,:) > eps8)
-            percolation_sl(:,:) = MIN( MAX((drainage_sl(:,:)/1000_wp*dtime) / w_soil_sl_old(:,:), -1.0_wp), 1.0_wp) * &
-                                  1000._wp/dtime
-          ELSEWHERE
-            percolation_sl(:,:) = 0.0_wp
-          ENDWHERE
-
-    ENDSELECT  ! SELECT CASE(soil_moisture_scheme)
+    !> 2.6. diagnose deep drainage
+    !!
+    drainage(:) = drainage_sl(:,options%nsoil_sb) 
+    WHERE(w_soil_sl_old(:,:) > eps8)
+      percolation_sl(:,:) = MIN( MAX((drainage_sl(:,:)/1000_wp*dtime) / w_soil_sl_old(:,:), -1.0_wp), 1.0_wp) * &
+                            1000._wp/dtime
+    ELSEWHERE
+      percolation_sl(:,:) = 0.0_wp
+    ENDWHERE
 
 
     !> 3.0 final diagnostics

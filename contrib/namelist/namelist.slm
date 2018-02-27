@@ -32,9 +32,9 @@
 /
 &SOIL_CTL
   ! flags for the soil process
-  soil_moisture_scheme="bucket"
+  !   no flags yet
   ! soil process options
-  ! number of soil layers [default is 5] [energy==water]
+  !  number of soil layers [default is 5] [energy==water]
   nsoil_energy=5
   nsoil_water=5
   soil_depth=5.7
