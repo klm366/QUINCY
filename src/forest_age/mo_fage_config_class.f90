@@ -10,7 +10,7 @@
 MODULE mo_fage_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message_text, message
+  USE mo_exception,         ONLY: message_text, message, finish
   USE mo_util,              ONLY: int2string
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
@@ -94,8 +94,10 @@ CONTAINS
 
     ALLOCATE(fage_grid_levels(max_age))
 
-!Assertion: 
-!TODO-JN-COHORTS check max_age >= ncohorts < 1000
+    !Assertion: 
+    IF ( max_age .LT. ncohorts) CALL finish(TRIM(routine), 'Assertion: number of cohorts needs to be less or equal to max age!')
+
+!TODO-JN-COHORTS ncohorts < X 
 
     CALL close_nml(nml_handler)
 
