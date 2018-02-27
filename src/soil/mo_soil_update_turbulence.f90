@@ -38,12 +38,11 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_atmland_constants,     ONLY: min_wind,max_wind 
+    USE mo_base_constants,        ONLY: dtime
+    USE mo_atmland_constants,     ONLY: min_wind, max_wind 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,      ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
-    USE mo_phy_schemes
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SOIL_)
@@ -188,7 +187,7 @@ CONTAINS
     ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
     zg(:)       = zlev(:) * grav 
     zgh(:)      = zg(:)                          ! HeightHumidity and HeightTemperature have to be equal
-    zdu2(:)     = wind_air(:)**2
+    zdu2(:)     = wind_air(:)**2._wp
 
     ! virtual potential air temperature (see mo_surface_boundary.f90)
     ! according to Saucier, WJ Principles of Meteoroligical Analyses
@@ -206,7 +205,7 @@ CONTAINS
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
     zril(:)       = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )
 
-    CALL calc_drag_coefficient(options,model%options%steplen, & 
+    CALL calc_drag_coefficient(options, & 
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:),zril(:), & 
                                drag_srf(:),pch(:),ga(:))            
@@ -229,7 +228,7 @@ CONTAINS
   !!
   !! Calculates time-filtered drag coefficient 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_filtered_drag_coefficient(options,steplen, & 
+  SUBROUTINE calc_filtered_drag_coefficient(options, & 
                                             t_air,q_air,wind_air,press_srf,t_srf,t_srf_new,&                         
                                             height,zril_old,drag_srf,pch,ga)
 
@@ -241,7 +240,6 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),        INTENT(in)    :: options          !< model options
-    REAL(wp),                        INTENT(in)    :: steplen                !< model options
     REAL(wp), DIMENSION(options%nc), INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
@@ -258,22 +256,29 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, & 
                                              z0m,z0h,csat,cair,zchnl,zlev,zril_initial,zril_update
     REAL(wp)                              :: zepz0o, zcons8, zcons9, zcons11, zcons12, zkappa, vtmpc1
-    REAL(wp) :: HeightWind,HeightHumidity,coef_tm1,coef_t,coef_tp1
+    REAL(wp)                              :: HeightWind, HeightHumidity, &
+                                             coef_tm1, coef_t, coef_tp1
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_filtered_drag_coefficient'
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
     !-------------------------------------------------------------------------------------------------
     ! Some constants from echam/mo_surface_land.f90
     !-------------------------------------------------------------------------------------------------
-    zkappa    = r_gas_dryair / cpd
-    vtmpc1    = r_gas_vapour / r_gas_dryair - 1.0_wp  
-    csat(:)   = 0.5_wp
-    cair(:)   = 0.5_wp
+
+    zkappa      = r_gas_dryair / cpd
+    vtmpc1      = r_gas_vapour / r_gas_dryair - 1.0_wp  
+    csat(:)     = 0.5_wp
+    cair(:)     = 0.5_wp
  
-    coef_tm1  = 0.5_wp
-    coef_t    = 0.25_wp
-    coef_tp1  = 0.25_wp
+    coef_tm1    = 0.5_wp
+    coef_t      = 0.25_wp
+    coef_tp1    = 0.25_wp
 
     HeightWind  = 10.0_wp
     zlev(:)     = HeightWind + 3._wp/10._wp * height(:)
@@ -285,7 +290,7 @@ CONTAINS
     ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
     zg(:)   = zlev(:) * grav 
     zgh(:)  = zg(:)                          ! HeightHumidity and HeightTemperature have to be equal
-    zdu2(:) = wind_air(:)**2
+    zdu2(:) = wind_air(:)**2._wp
 
     ! virtual potential air temperature (see mo_surface_boundary.f90)
     ! virtual potential air temperature (see mo_surface_boundary.f90)
@@ -306,7 +311,7 @@ CONTAINS
 
     ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-    zril_initial(:) = MAX(-5._wp,MIN(5._wp,zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )))
+    zril_initial(:) = MAX(-5._wp,MIN(5._wp,zg(:) * ( ztvd(:) - ztvs(:) )     / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )))
     zril_update(:)  = MAX(-5._wp,MIN(5._wp,zg(:) * ( ztvd(:) - ztvs_new(:) ) / ( zdu2(:) * (ztvd(:)+ztvs_new(:))/2._wp )))
 
     ! Richrdson number needs to be filtered for offline simulations in order to maintain stability
@@ -316,7 +321,7 @@ CONTAINS
 
     zril_old(:) = zril(:)   
 
-    CALL calc_drag_coefficient(options,steplen, & 
+    CALL calc_drag_coefficient(options, & 
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:),zril(:), & 
                                drag_srf(:),pch(:),ga(:))            
@@ -332,7 +337,8 @@ CONTAINS
   !!
   !! Calculates drag coefficient and aerodynamic conductance 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_drag_coefficient(options,steplen,t_air,q_air,wind_air,press_srf, & 
+  SUBROUTINE calc_drag_coefficient(options, &
+                                   t_air,q_air,wind_air,press_srf, & 
                                    zg,zgh,z0m,z0h,zril, & 
                                    drag_srf,pch,ga)            
 
@@ -344,7 +350,6 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut 
     TYPE(t_jsb_task_options),        INTENT(in)    :: options                !< model options
-    REAL(wp),                        INTENT(in)    :: steplen                !< model options
     REAL(wp), DIMENSION(options%nc), INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
@@ -365,18 +370,23 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_drag_coefficient'
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
    
     zcons8        = 2._wp * 5.0_wp 
     zcons9        = 3._wp * 5.0_wp 
     zcons11       = 3._wp * 5.0_wp * 5.0_wp
-    zcons12       = cvdifts * steplen * grav / r_gas_dryair 
+    zcons12       = cvdifts * options%steplen * grav / r_gas_dryair 
     vtmpc1        = r_gas_vapour / r_gas_dryair - 1.0_wp  
-    zdu2(:)       = wind_air(:)**2
+    zdu2(:)       = wind_air(:)**2._wp
 
     ! Neutral drag coefficient for momentum and heat
-    zcdnl(:) = (ckap / LOG(1._wp + zg(:) / (grav *z0m(:) )))**2
-    zchnl(:) = ckap**2 / (LOG(1._wp + zg(:) / (grav * z0m(:) )) &
-                        * LOG( ( grav * z0m(:) + zgh(:) ) / (grav * z0h(:) )) )
+    zcdnl(:) = (ckap / LOG(1._wp + zg(:) / (grav *z0m(:) )))**2._wp
+    zchnl(:) = ckap**2._wp / (LOG(1._wp + zg(:) / (grav * z0m(:) )) * &
+                              LOG( ( grav * z0m(:) + zgh(:) ) / (grav * z0h(:) )) )
 
     ! account for stable/unstable case: helper variables
     zscfl(:)  = SQRT (  1._wp + 5._wp * ABS(zril(:)))
@@ -389,7 +399,7 @@ CONTAINS
     zcfnchl(:)  = zcons(:) * SQRT(zdu2(:)) * zchnl(:)
 
     ! Stable / Unstable case
-    WHERE ( zril(:) .GT. 0._wp )
+    WHERE ( zril(:) > 0._wp )
        zcfml(:) = zcfncl(:)  / (1._wp + zcons8 * zril(:) / zscfl(:))
        zcfhl(:) = zcfnchl(:) / (1._wp + zcons9 * zril(:) * zscfl(:))
     ELSEWHERE
@@ -401,7 +411,7 @@ CONTAINS
     drag_srf(:) = zcfhl(:)
     pch(:)      = zcfhl(:) / zcfnchl(:) * zchnl(:)
     ! aerodynamic conductance (m/s)
-    ga(:)       = heat_transfer_coef(drag_srf(:), steplen) * & 
+    ga(:)       = heat_transfer_coef(drag_srf(:), options%steplen) * & 
                   wind_air(:)
 
   END SUBROUTINE calc_drag_coefficient

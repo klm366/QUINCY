@@ -87,8 +87,7 @@ mo_soil_update_turbulence.o: \
   mo_phy_schemes.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \
+  mo_soil_config_class.o \
   mo_soil_memory_class.o \
   mo_soil_constants.o \
   mo_assimi_memory_class.o
-
-

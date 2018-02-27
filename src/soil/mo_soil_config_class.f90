@@ -13,15 +13,12 @@ MODULE mo_soil_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
-  USE mo_kind,              ONLY: eps8
+  USE mo_kind,              ONLY: wp, eps8
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
-  
   PRIVATE
-  PUBLIC :: t_soil_config
-  PUBLIC :: max_soil_layers
+  PUBLIC :: t_soil_config, max_soil_layers
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil process, derived from t_jsb_config
@@ -64,50 +61,52 @@ CONTAINS
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_soil_config), INTENT(inout) :: config    !< config type for soil
-
+    ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    LOGICAL  :: active
-    INTEGER  :: nsoil_energy    , &
-                nsoil_water
-    REAL(wp) :: dz_energy(max_soil_layers)
-    REAL(wp) :: dz_water(max_soil_layers)
-    REAL(wp) :: soil_depth_profile(max_soil_layers)
-    REAL(wp) :: wsr_capacity    , &
-                wsn_capacity    , &
-                soil_depth   
-    REAL(wp) :: soil_awc_prescribe    , &
-                soil_theta_prescribe
-    REAL(wp) :: soil_sand       , &
-                soil_silt       , &
-                soil_clay
-    REAL(wp) :: bulk_density
-    CHARACTER(15) :: soil_moisture_scheme
-    INTEGER  :: i   ! looping
+    LOGICAL                     :: active
+    INTEGER                     :: nsoil_energy    , &
+                                   nsoil_water
+    REAL(wp)                    :: dz_energy(max_soil_layers), &      ! vector of soil layers 
+                                   dz_water(max_soil_layers),  &
+                                   soil_depth_profile(max_soil_layers)
+    REAL(wp)                    :: wsr_capacity    , &
+                                   wsn_capacity    , &
+                                   soil_depth   
+    REAL(wp)                    :: soil_awc_prescribe, &
+                                   soil_theta_prescribe
+    REAL(wp)                    :: soil_sand       , &
+                                   soil_silt       , &
+                                   soil_clay
+    REAL(wp)                    :: bulk_density
+    CHARACTER(15)               :: soil_moisture_scheme
+    INTEGER                     :: isoil   ! looping
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-
-    REAL(wp) :: k_soil_profile  = 0.25_wp
-    REAL(wp) :: min_layer_depth = 0.065_wp
+    ! local variables for soil layer calculations
+    REAL(wp)                    :: k_soil_profile  = 0.25_wp
+    REAL(wp)                    :: min_layer_depth = 0.065_wp
 
     NAMELIST /soil_ctl/       & 
-                          active          , &
-                          ic_filename     , &
-                          bc_filename     , &
-                          nsoil_energy    , &
-                          nsoil_water     , &
-                          dz_energy       , &
-                          dz_water        , &
-                          wsr_capacity    , &
-                          wsn_capacity    , &
-                          soil_depth      , &
-                          soil_awc_prescribe        , &
-                          soil_theta_prescribe      , &
-                          soil_sand       , &
-                          soil_silt       , &
-                          soil_clay       , &
-                          bulk_density    , &
+                          active                  , &
+                          ic_filename             , &
+                          bc_filename             , &
+                          nsoil_energy            , &
+                          nsoil_water             , &
+                          dz_energy               , &
+                          dz_water                , &
+                          wsr_capacity            , &
+                          wsn_capacity            , &
+                          soil_depth              , &
+                          soil_awc_prescribe      , &
+                          soil_theta_prescribe    , &
+                          soil_sand               , &
+                          soil_silt               , &
+                          soil_clay               , &
+                          bulk_density            , &
                           soil_moisture_scheme
 
     ! variables for reading model-options from namelist
@@ -155,20 +154,20 @@ CONTAINS
 
     ! check initialisation of number of soil layers
     IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) & 
-        CALL finish('Init_soil_config','Number of soil layers needs to be between 5 and 20.')
+        CALL finish('Init_soil_config','Number of soil layers needs to be a number from the range 5 to 20.')
     IF (nsoil_water .NE. nsoil_energy) & 
         CALL finish('Init_soil_config','Initialization with different numbers of soil layers for energy and water not supported.')
 
     ! If not using 5 layers, estimate depth profile to mimick standard JSB4 profile
     IF(nsoil_water > 5) THEN
-       DO i=1,nsoil_water
-         soil_depth_profile(i) = min_layer_depth * & 
-                                 exp(k_soil_profile * i * REAL(max_soil_layers)/REAL(nsoil_water)) - & 
-                                 min_layer_depth
+       DO isoil=1,nsoil_water
+         soil_depth_profile(isoil) = min_layer_depth * & 
+                                     exp(k_soil_profile * isoil * REAL(max_soil_layers)/REAL(nsoil_water)) - & 
+                                     min_layer_depth
        ENDDO 
        dz_energy(1) = min_layer_depth
-       DO i=2,nsoil_water
-         dz_energy(i) = MAX(min_layer_depth,soil_depth_profile(i) - soil_depth_profile(i-1))
+       DO isoil=2,nsoil_water
+         dz_energy(isoil) = MAX(min_layer_depth,soil_depth_profile(isoil) - soil_depth_profile(isoil-1))
        ENDDO
        dz_water(:) = dz_energy(:)
     ENDIF
@@ -199,12 +198,12 @@ CONTAINS
     config%soil_moisture_scheme      = soil_moisture_scheme
 
     config%soil_depth_energy(1)      = dz_energy(1)
-    DO i=2,nsoil_energy
-      config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)
+    DO isoil=2,nsoil_energy
+      config%soil_depth_energy(isoil)= config%soil_depth_energy(isoil-1) + dz_energy(isoil)
     END DO
     config%soil_depth_water(1)       = dz_water(1)
-    DO i=2,nsoil_water
-      config%soil_depth_water(i) = config%soil_depth_water(i-1) + dz_water(i)
+    DO isoil=2,nsoil_water
+      config%soil_depth_water(isoil) = config%soil_depth_water(isoil-1) + dz_water(isoil)
     END DO
 
     config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
@@ -215,7 +214,7 @@ CONTAINS
 
     config%soil_sand                 = soil_sand
     config%soil_silt                 = soil_silt
-    !config%soil_clay                 = soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
+    !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
     config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
     IF(config%soil_clay < eps8) THEN
        WRITE(message_text,'(2a)') 'invalid proportion of soil_clay (value < eps8)',routine

@@ -11,11 +11,11 @@ MODULE mo_soil_interface
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp
-  USE mo_exception,             ONLY: message, finish
+  USE mo_kind,                    ONLY: wp
+  USE mo_exception,               ONLY: message, finish
 
-  USE mo_soil_update_turbulence,ONLY: update_soil_turbulence
-  USE mo_soil_update_physics,   ONLY: update_soil_physics
+  USE mo_soil_update_turbulence,  ONLY: update_soil_turbulence
+  USE mo_soil_update_physics,     ONLY: update_soil_physics
 
   IMPLICIT NONE
   PRIVATE
