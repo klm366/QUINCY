@@ -288,7 +288,8 @@ CONTAINS
 
     !Aging happens once at the beginning of each year at the start of a timestep. 
     IF (model%processes(FAGE_)%p%config%active) THEN
-       CALL model%Queue_task(FAGE_, "ageing")
+       CALL model%Queue_task(FAGE_, "calculate_ageing")
+       CALL model%Queue_task(FAGE_, "apply_cohort_changes")
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
