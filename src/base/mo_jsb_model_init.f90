@@ -344,12 +344,12 @@ CONTAINS
     IF (model%processes(DISTURB_)%p%config%active) THEN
       CALL model%Queue_task(DISTURB_, "natural_disturbances")
 
-      !TODO-JN: implement new task on FAGE
       ! in case that forest age is switched on and we are working with cohorts,
       ! disturbances need to be handled on the cohort parent!
-!      IF (model%processes(FAGE_)%p%config%active) THEN
-!         CALL model%Queue_task(FAGE_, "nat_disturb_on_cohorts")
-!      END IF
+      IF (model%processes(FAGE_)%p%config%active) THEN
+         CALL model%Queue_task(FAGE_, "nat_disturb_cohort_changes")
+         CALL model%Queue_task(FAGE_, "apply_cohort_changes")
+      END IF
 
     END IF
 

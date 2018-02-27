@@ -53,6 +53,16 @@ MODULE mo_fage_interface
     PROCEDURE Create_task_calculate_ageing 
   END INTERFACE   tsk_calculate_ageing
 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_nat_disturb_cohort_changes
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_nat_disturb_cohort_changes    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_nat_disturb_cohort_changes !< Aggregates computed task variables
+  END TYPE   tsk_nat_disturb_cohort_changes
+
+  INTERFACE   tsk_nat_disturb_cohort_changes
+    PROCEDURE Create_task_nat_disturb_cohort_changes 
+  END INTERFACE   tsk_nat_disturb_cohort_changes
+
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_apply_cohort_changes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_apply_cohort_changes    !< Advances task computation for one timestep
@@ -62,6 +72,7 @@ MODULE mo_fage_interface
   INTERFACE   tsk_apply_cohort_changes
     PROCEDURE Create_task_apply_cohort_changes 
   END INTERFACE   tsk_apply_cohort_changes
+
 
 CONTAINS
   ! ================================================================================================================================
@@ -84,6 +95,27 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_calculate_ageing
+
+  ! ================================================================================================================================
+  !! Constructors for tasks
+  
+  !> Constructor for nat_disturb_cohort_changes task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "nat_disturb_cohort_changes"
+  !!
+  FUNCTION Create_task_nat_disturb_cohort_changes(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_nat_disturb_cohort_changes::return_ptr)
+
+    return_ptr%name = 'nat_disturb_cohort_changes'
+    return_ptr%process_id = FAGE_
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_nat_disturb_cohort_changes
 
   ! ================================================================================================================================
   !! Constructors for tasks
@@ -118,14 +150,15 @@ CONTAINS
     INTEGER,                 INTENT(in) :: model_id
 
     CALL this%Register_task(tsk_calculate_ageing(model_id))
+    CALL this%Register_task(tsk_nat_disturb_cohort_changes(model_id))
+
     CALL this%Register_task(tsk_apply_cohort_changes(model_id))
 
   END SUBROUTINE Register_fage_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the fage state
-  !! Task "calculate_ageing" calculates the regquired changes upon ageing  - TODO-JN and more comming
+  !! @brief Task "calculate_ageing" calculates the regquired changes upon ageing  - TODO-JN and more comming
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -234,7 +267,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_calculate_ageing'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -260,8 +293,105 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the fage state
-  !! Task "update_apply_cohort_changes" applies area and c changes to cohorts - TODO-JN and more comming
+  !! @brief Task "nat_disturb_cohort_changes" calculates the required changes upon natural disturbances
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  SUBROUTINE update_nat_disturb_cohort_changes(tile, options)
+
+    USE mo_fage_process,         ONLY: update_frac_per_age_tracking
+    USE mo_jsb_time,             ONLY: is_newyear
+    USE mo_carbon_interface,     ONLY: update_delta_carbon_of_source_and_sink_tile_upon_area_shift
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_memory(FAGE_)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: mean_age
+    dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
+
+    CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
+    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
+
+    INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
+    TYPE(t_jsb_model), POINTER :: model
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_nat_disturb_cohort_changes'
+
+    ! ---------------------------
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+
+    IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_memory(FAGE_)
+
+    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
+    
+    dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
+    dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
+
+    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+
+    ! ERSTMAL disturbances nach bauen? 
+    ! also einfach nur zwischen den cpools so wie in disturbance umverteilen, aber keine area changes?? 
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_nat_disturb_cohort_changes
+
+ 
+  SUBROUTINE aggregate_nat_disturb_cohort_changes(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_memory(FAGE_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_nat_disturb_cohort_changes'
+
+    INTEGER  :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(FAGE_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    !No aggregations required in the calculation of cohort changes due to natural disturbances
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_nat_disturb_cohort_changes
+
+
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Task "update_apply_cohort_changes" applies area and c changes to cohorts - TODO-JN and more comming
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -313,6 +443,7 @@ CONTAINS
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
 
+!TODO-JN-COHORTS: introduce boolean indecating if there has been any changes -- also to be used for the aggregate call!
 !    IF(is_newyear()) THEN 
 
       ! step two: apply changes 
@@ -357,7 +488,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_apply_cohort_changes'
 
     INTEGER  :: iblk, ics, ice, nc
 
