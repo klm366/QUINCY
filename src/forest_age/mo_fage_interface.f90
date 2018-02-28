@@ -251,7 +251,7 @@ CONTAINS
         currentChild => nextChild
       ENDDO
 
-      ! update the area per age tracking vector
+      ! update the area per age tracking vector - for ageing this can be done for all children at once
       CALL update_frac_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
     ELSE
@@ -365,7 +365,7 @@ CONTAINS
     IF(is_newday()) THEN
       dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
 
-      ! step one: determine changes for damaged fract
+      ! step one: determine changes due to disturbances
       firstChild => tile%Get_first_child_tile()
       currentChild => tile%Get_first_child_tile()
 
@@ -381,26 +381,38 @@ CONTAINS
 
 !print *, i, burned_frac(:)
 
+        !TODO-JN-COHORTS - think about absolute vs relative fracts
+
+        !*** care for wind damage
         damagedArea(:) = damaged_frac(:) * source_fract(:)
 
-        !TODO-JN-COHORTS - think about absolute vs relative fracts
+        ! a) changes in area
         ! reduce current tiles delta fraction  
         currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - damagedArea(:)
-
         ! and add it to the first childs delta
         firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + damagedArea(:)
 
+        ! b) carbon consequences 
+
+        ! c) TODO-JN-COHORTS what else to shift? 
+
+
+        !*** care for fire damage
         !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged? 
         burnedArea(:) = burned_frac(:) * (source_fract(:) - damagedArea(:))
 
+        ! a) changes in area
         ! reduce current tiles delta fraction  
         currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - burnedArea(:)
-
         ! and add it to the first childs delta
         firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
 
-        IF (i .GT. 1) THEN ! area moved within the first cohort stays between 0 and 1 years
-          ! update the area per age tracking vector
+        ! b) carbon consequences 
+
+        ! c) TODO-JN-COHORTS what else to shift? 
+
+        ! update the area per age tracking vector regarding this child and the first child
+        IF (i .GT. 1) THEN ! area moved within the first cohort requires no update (it stays between year 0 and 1)
           disturbedArea(:) = damagedArea(:) + burnedArea(:)
           IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
             CALL update_frac_per_age_equally_upon_disturbance(nc, ncohorts, max_age, &
