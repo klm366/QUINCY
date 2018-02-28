@@ -377,17 +377,17 @@ PROGRAM jsb4_driver
             & - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
           !TODO-JN: where to put this cconservation? 
 IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
-  print *, '***********************'
-  print *, iblk
-  print *, old_c_state_sum(:,iblk)
-  print *, - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
-  print *, cconservation(:,iblk)
+  print *, '----------------'
+  print *, 'iblk: ', iblk
+  print *, 'current sum: ', old_c_state_sum(:,iblk)
+  print *, 'flux: ', - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
+  print *, 'error: ', cconservation(:,iblk)
 ENDIF
           CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
 IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, '***********************'
-  print *, iblk
-  print *, old_c_state_sum(:,iblk)
+  print *, 'iblk:', iblk
+  print *, 'old sum:', old_c_state_sum(:,iblk)
 ENDIF
         ENDIF
       ENDIF
