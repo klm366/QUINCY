@@ -438,12 +438,16 @@ CONTAINS
 
       END IF
 
-!      IF ( tile%parent_tile%Is_process_active(FAGE_) ) THEN
+      IF ( tile%parent_tile%Is_process_active(FAGE_) ) THEN
         ! In this case the carbon cannot be relocated immediately
-        ! because disturbances create new cohorts
-!        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
-!          & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of damaged and burned carbon.')
-!      ELSE
+        ! because disturbances now create new cohorts
+
+        !@todo: maybe for a more general concept it could be considered to always do it like this
+        !       i.e. only calculate the damage here and then apply it later maybe even in a carbon task?
+
+        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
+          & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of damaged and burned carbon.')
+      ELSE
 
         !Else relocate carbon as previously implemented
         IF ( tile%Is_process_active(CARBON_) ) THEN
@@ -567,7 +571,6 @@ CONTAINS
                 & carbon_2_GreenLitterPools = carbon_2_GreenLitterPools(:), &
                 & carbon_2_WoodLitterPools = carbon_2_WoodLitterPools(:), carbon_2_atmos = carbon_2_atmos(:))
 
-!TODO-JN: get the carbon_2_atmos flux right -- ta? not ta????
               ! negate carbon_2_atmos -- its a flux away from the land and therefore previously negative
               CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
                 & -carbon_2_atmos(:), cconservation_fire(:))
@@ -590,7 +593,7 @@ CONTAINS
           !ENDIF
 
         ENDIF
-!      ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) ) 
+      ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) ) 
     ENDIF ! is_newday
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

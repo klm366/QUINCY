@@ -166,7 +166,7 @@ CONTAINS
   ! 
   SUBROUTINE update_calculate_ageing(tile, options)
 
-    USE mo_fage_process,         ONLY: update_frac_per_age_tracking
+    USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_carbon_interface,     ONLY: update_delta_carbon_of_source_and_sink_tile_upon_area_shift
 
@@ -252,7 +252,7 @@ CONTAINS
       ENDDO
 
       ! update the area per age tracking vector
-      CALL update_frac_per_age_tracking(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
+      CALL update_frac_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
     ELSE
       dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
@@ -312,8 +312,8 @@ CONTAINS
   ! 
   SUBROUTINE update_nat_disturb_cohort_changes(tile, options)
 
-    USE mo_fage_process,         ONLY: update_frac_per_age_tracking
-    USE mo_jsb_time,             ONLY: is_newyear
+    USE mo_jsb_time,             ONLY: is_newday
+    USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
     USE mo_carbon_interface,     ONLY: update_delta_carbon_of_source_and_sink_tile_upon_area_shift
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -327,12 +327,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: burned_frac
     dsl4jsb_Real2D_onChunk :: damaged_frac
 
+    dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age
+    dsl4jsb_Real3D_onChunk :: cohort_max_age
 
     CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild, nextChild
-    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
+    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, disturbedArea
 
-    INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
+    INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_nat_disturb_cohort_changes'
 
@@ -352,20 +354,79 @@ CONTAINS
     !
     dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
-    dsl4jsb_Get_memory(DISTURB_)
     
+    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
-
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_frac)
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_frac)
+    dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+    max_age = dsl4jsb_Config(FAGE_)%max_age
 
-    dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
+    IF(is_newday()) THEN
+      dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
 
-    ! step one: determine changes for damaged fract
-    firstChild => tile%Get_first_child_tile()
-    currentChild => tile%Get_first_child_tile()
+      ! step one: determine changes for damaged fract
+      firstChild => tile%Get_first_child_tile()
+      currentChild => tile%Get_first_child_tile()
+
+      DO i=1,ncohorts
+
+        ! -> damaged_frac and burned_frac were determined by the disturbance process and are a fraction of the tile
+        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+
+        !get current child tiles disturbed areas!
+        SELECT TYPE (mm => currentChild%mem(disturb_)%p); TYPE IS (t_disturb_memory); disturb__mem => mm ; END SELECT
+        burned_frac => disturb__mem%burned_frac%ptr(ics:ice,iblk)
+        damaged_frac => disturb__mem%damaged_frac%ptr(ics:ice,iblk)
+
+!print *, i, burned_frac(:)
+
+        damagedArea(:) = damaged_frac(:) * source_fract(:)
+
+        !TODO-JN-COHORTS - think about absolute vs relative fracts
+        ! reduce current tiles delta fraction  
+        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - damagedArea(:)
+
+        ! and add it to the first childs delta
+        firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + damagedArea(:)
+
+        !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged? 
+        burnedArea(:) = burned_frac(:) * (source_fract(:) - damagedArea(:))
+
+        ! reduce current tiles delta fraction  
+        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - burnedArea(:)
+
+        ! and add it to the first childs delta
+        firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
+
+        IF (i .GT. 1) THEN ! area moved within the first cohort stays between 0 and 1 years
+          ! update the area per age tracking vector
+          disturbedArea(:) = damagedArea(:) + burnedArea(:)
+          IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
+            CALL update_frac_per_age_equally_upon_disturbance(nc, ncohorts, max_age, &
+              & i, disturbedArea(:), cohort_max_age(:,:), fract_per_age(:,:), mean_age(:))
+          ELSE
+            CALL finish(TRIM(routine), 'Currently only "static" implemented as forest ageing scheme')
+          ENDIF
+        ENDIF
+
+        ! Move further in the hierarchy  
+        currentChild => currentChild%Get_next_sibling_tile()
+      ENDDO
+
+
+! TODO: remove later, only for now to not have any changes for now
+!firstChild => tile%Get_first_child_tile()
+!currentChild => tile%Get_first_child_tile()
+!DO i=1,ncohorts
+!currentChild%delta_fract(ics:ice, iblk) = 0._wp
+!firstChild%delta_fract(ics:ice, iblk) = 0._wp
+!currentChild => currentChild%Get_next_sibling_tile()
+!ENDDO
+
+    ELSE
+      dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -432,7 +493,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_cohort_changes'
 
     ! ---------------------------
-    !TODO-JN-COHORTS: do i still need these? 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
@@ -451,7 +511,6 @@ CONTAINS
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
 
     IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
-
       ! step two: apply changes 
       currentChild => tile%Get_first_child_tile()
       DO i=1,ncohorts

@@ -98,7 +98,7 @@ CONTAINS
       END DO
 
     ELSE
-      CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" implemented as forest ageing scheme')
+      CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" and "static-equal" implemented as forest ageing schemes')
     ENDIF
 
     !Assertion: 

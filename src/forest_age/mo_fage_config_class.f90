@@ -27,6 +27,7 @@ MODULE mo_fage_config_class
     INTEGER                   :: ncohorts           ! number of cohorts
     LOGICAL                   :: l_has_area_changes ! Boolean used to control the apply_cohort_changes task
     CHARACTER(len=20)         :: cohort_scheme
+    CHARACTER(len=20)         :: disturbance_distribution_scheme
   CONTAINS
     PROCEDURE             :: Init => Init_fage_config
   END type t_fage_config
@@ -60,6 +61,7 @@ CONTAINS
 !TODO-JN: namelist char selecting different cohort schemes "cohort_scheme"
 !  (e.g. static-equal, static-shorterYoung, dynamic-biomass, dynamic-MaxLai, ...)
 ! for now to faster see an effect: static-shorterYoung
+!TODO-JN: namelist char for disturbance_distribution_scheme?
 
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -89,6 +91,8 @@ CONTAINS
 
     config%ncohorts            = ncohorts
     config%cohort_scheme       = TRIM("static-equal")
+
+    config%disturbance_distribution_scheme = TRIM("equal")
 
     config%l_has_area_changes  = .FALSE.
 
