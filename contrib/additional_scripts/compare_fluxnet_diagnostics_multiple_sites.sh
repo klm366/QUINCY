@@ -53,7 +53,7 @@ for site in $(ls -d "$baselineExpFolder"/*/)
     siteName=$(basename $site)  # just: DE-Hai or IT-Lav or US-Blo ...
 
     # if it is a valid site folder
-    if [ $siteName != "x_binary" ]
+    if [ $siteName != "x_binary" ] && [ $siteName != "x_fluxnet_comparison" ]
       then
         
         # if this site is also available in the $newSimulationExpFolder
