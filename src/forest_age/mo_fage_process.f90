@@ -88,16 +88,18 @@ MODULE mo_fage_process
     !  LOCAL
     INTEGER :: j, k, thisMinAge, thisMaxAge
     REAL(wp) :: thisAreaSum
+!    REAL(wp) :: thisDisturbedArea(nage)
 
     !-----------------------------------------------------------------------
     ! CONTENT
+!    thisDisturbedArea(:) = 0._wp
 
     ! damaged area is assigned to zero age and taken evenly from all ages in this cohort
     ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
     DO j=1,nidx
 
       thisMinAge = int(cohort_max_age(j,iThisCohort-1)+1)
-      thisMaxAge = int(cohort_max_age(j,iThisCohort))
+      thisMaxAge = MIN(int(cohort_max_age(j,iThisCohort)),nage)
 
       thisAreaSum = SUM(fract_per_age(j,thisMinAge:thisMaxAge))
 
@@ -110,6 +112,11 @@ MODULE mo_fage_process
         ENDIF
 
         fract_per_age(j,1) = fract_per_age(j,1) + disturbed_area(j)
+
+        ! DO k=thisMinAge,thisMaxAge-1
+        !   thisDisturbedArea(k) = disturbed_area(j) * (fract_per_age(j,k)/thisAreaSum)
+        ! ENDDO
+        ! thisDisturbedArea(thisMaxAge) = disturbed_area(j) - sum(thisDisturbedArea(:))
 
         DO k=thisMinAge,thisMaxAge
           fract_per_age(j,k) = fract_per_age(j,k) - (disturbed_area(j) * (fract_per_age(j,k)/thisAreaSum))

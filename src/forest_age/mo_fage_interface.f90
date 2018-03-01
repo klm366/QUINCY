@@ -64,16 +64,6 @@ MODULE mo_fage_interface
     PROCEDURE Create_task_nat_disturb_cohort_changes 
   END INTERFACE   tsk_nat_disturb_cohort_changes
 
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_apply_cohort_changes
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_apply_cohort_changes    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_apply_cohort_changes !< Aggregates computed task variables
-  END TYPE   tsk_apply_cohort_changes
-
-  INTERFACE   tsk_apply_cohort_changes
-    PROCEDURE Create_task_apply_cohort_changes 
-  END INTERFACE   tsk_apply_cohort_changes
-
 
 CONTAINS
   ! ================================================================================================================================
@@ -118,27 +108,6 @@ CONTAINS
 
   END FUNCTION Create_task_nat_disturb_cohort_changes
 
-  ! ================================================================================================================================
-  !! Constructors for tasks
-  
-  !> Constructor for apply_cohort_changes task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "apply_cohort_changes"
-  !!
-  FUNCTION Create_task_apply_cohort_changes(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_apply_cohort_changes::return_ptr)
-
-    return_ptr%name = 'apply_cohort_changes'
-    return_ptr%process_id = FAGE_
-    return_ptr%owner_model_id = model_id
-
-  END FUNCTION Create_task_apply_cohort_changes
-
   ! =======================================================================================================
   !> Register tasks for fage process
   !!
@@ -152,8 +121,6 @@ CONTAINS
 
     CALL this%Register_task(tsk_calculate_ageing(model_id))
     CALL this%Register_task(tsk_nat_disturb_cohort_changes(model_id))
-
-    CALL this%Register_task(tsk_apply_cohort_changes(model_id))
 
   END SUBROUTINE Register_fage_tasks
 
@@ -183,6 +150,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
     REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
 
+    REAL(wp) :: fractSum
     INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_calculate_ageing'
@@ -215,6 +183,9 @@ CONTAINS
       !  i.e. for different longitudes the updating happens at different local times.
       dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
 
+      ! Area changes upon ageing can have carbon consequences for all children
+      dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .FALSE.
+
       ! step one: care for shifts among cohort boundaries
       currentChild => tile%Get_first_child_tile()
 
@@ -222,6 +193,7 @@ CONTAINS
       DO i=1,ncohorts-1
         !TODO-JN-COHORTS maybe work with a getter?
         nextChild => currentChild%Get_next_sibling_tile()
+        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
 
         ! a) identify delta fraction for shifts from one to the next cohort
         !TODO-JN needs to be adapted when working with absolute areas
@@ -233,6 +205,38 @@ CONTAINS
           fract_this_max_age(j) = fract_per_age(j,cohort_max_age(j,i))
         ENDDO
 
+        !TODO-JN-COHORTS maybe generally only work with >= 1.e.10?
+        IF(ANY(source_fract(:) - fract_this_max_age(:) .LT. 0._wp)) THEN
+          IF (ANY(source_fract(:) - fract_this_max_age(:) + 1.e-10_wp .LT. 0_wp )) THEN
+            print *, source_fract(:)
+            print *, fract_this_max_age(:)
+            CALL finish(TRIM(routine), &
+              & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
+          ENDIF 
+          !TODO-JN-COHORTS two different calculations i.e. numerical errors? -- synchronise fract_per_age
+          DO j=1,nc
+
+            IF (fract_this_max_age(j) .GT. source_fract(j)) THEN
+              print *, '***************************', i, j
+              print *, source_fract(j)
+              print *, fract_this_max_age(j)
+              !TODO-JN: quick fix, do better!
+              fract_this_max_age(j) = source_fract(j)
+              fract_per_age(j,cohort_max_age(j,i)) = source_fract(j)
+            ENDIF
+
+            IF(i .NE. 1) THEN
+              fractSum = SUM(fract_per_age(j,cohort_max_age(j,i-1)+1:cohort_max_age(j,i)))
+              IF (fractSum - fract_this_max_age(j) .LT. 0_wp ) THEN
+                print *, fractSum
+                print *, fract_this_max_age(j)
+                CALL finish(TRIM(routine), &
+                  & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
+              ENDIF
+            ENDIF
+          ENDDO
+        ENDIF
+
         ! reduce current tiles delta fraction  
         currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - fract_this_max_age(:)
 
@@ -240,8 +244,6 @@ CONTAINS
         nextChild%delta_fract(ics:ice, iblk) = nextChild%delta_fract(ics:ice, iblk) + fract_this_max_age(:)
 
         ! b) accordingly move carbon from one cohort to the next cohorts delta
-        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-
         CALL update_delta_carbon_of_source_and_sink_tile_upon_area_shift( &
           & currentChild, nextChild, options, fract_this_max_age(:), source_fract(:))
 
@@ -314,7 +316,7 @@ CONTAINS
 
     USE mo_jsb_time,             ONLY: is_newday
     USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_of_source_and_sink_tile_upon_area_shift
+    USE mo_carbon_interface,     ONLY: update_delta_carbon_upon_disturbance
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -335,6 +337,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, disturbedArea
 
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
+    LOGICAL  :: l_sourceisfirstChild
     TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_nat_disturb_cohort_changes'
 
@@ -365,9 +368,15 @@ CONTAINS
     IF(is_newday()) THEN
       dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
 
+      ! Area changes upon disturbances only have carbon consequences for the first child
+      !  (All other children only have area changes)
+      dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .TRUE.
+
       ! step one: determine changes due to disturbances
       firstChild => tile%Get_first_child_tile()
       currentChild => tile%Get_first_child_tile()
+
+      l_sourceisfirstChild = .TRUE.
 
       DO i=1,ncohorts
 
@@ -383,19 +392,36 @@ CONTAINS
 
         !TODO-JN-COHORTS - think about absolute vs relative fracts
 
+! TODO: wind damage ganz zu ende machen (use statements etc), feuer damage durch auskommentieren ausstellen
+! und aus probieren!
+
+!TODO: dann auch feuer -- ah, vielleicht zeitlich erst feuer, weil so in dist? obwohl is arbitrary, oder?!
+! ++ auch da über ta, ra und densities denken  
+! ++ generalisieren?
+
         !*** care for wind damage
         damagedArea(:) = damaged_frac(:) * source_fract(:)
 
-        ! a) changes in area
-        ! reduce current tiles delta fraction  
-        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - damagedArea(:)
-        ! and add it to the first childs delta
-        firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + damagedArea(:)
+        ! wind damage only depends on the forcing and there is a good chance that no area is damaged
+        IF(ANY(damagedArea(:) .GT. 0._wp)) THEN
 
-        ! b) carbon consequences 
+!print *, 'damaged area, i, source_fract', i, damagedArea(:), source_fract(:)
 
-        ! c) TODO-JN-COHORTS what else to shift? 
+          ! a) changes in area
+          ! reduce current tiles delta fraction  
+          currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - damagedArea(:)
+          ! and add it to the first childs delta
+          firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + damagedArea(:)
 
+!print *, currentChild%delta_fract(ics:ice, iblk)
+!print *, firstChild%delta_fract(ics:ice, iblk)
+
+          ! b) carbon consequences 
+          CALL update_delta_carbon_upon_disturbance( &
+            currentChild, firstChild, l_sourceisfirstChild, options, damagedArea(:), source_fract(:) )
+
+          ! c) TODO-JN-COHORTS what else to shift? 
+        ENDIF
 
         !*** care for fire damage
         !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged? 
@@ -408,6 +434,7 @@ CONTAINS
         firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
 
         ! b) carbon consequences 
+
 
         ! c) TODO-JN-COHORTS what else to shift? 
 
@@ -424,6 +451,7 @@ CONTAINS
 
         ! Move further in the hierarchy  
         currentChild => currentChild%Get_next_sibling_tile()
+        l_sourceisfirstChild = .FALSE.
       ENDDO
 
 
@@ -452,6 +480,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
+    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -469,151 +498,18 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(FAGE_)
     dsl4jsb_Get_memory(FAGE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    !No aggregations required in the calculation of cohort changes due to natural disturbances
+    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_nat_disturb_cohort_changes
-
-
-
-  ! ================================================================================================================================
-  !>
-  !! @brief Task "update_apply_cohort_changes" applies area and c changes to cohorts - TODO-JN and more comming
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  ! 
-  SUBROUTINE update_apply_cohort_changes(tile, options)
-
-    USE mo_carbon_interface,     ONLY: update_carbon_states_with_delta_carbon
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    dsl4jsb_Def_config(FAGE_)
-
-    CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
-    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
-
-    INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
-    TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_cohort_changes'
-
-    ! ---------------------------
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-
-    IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-
-    ! Get reference to variables for current block
-    !
-    dsl4jsb_Get_config(FAGE_)
-    
-    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
-
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
-      ! step two: apply changes 
-      currentChild => tile%Get_first_child_tile()
-      DO i=1,ncohorts
-
-        ! a) TODO-JN-COHORTS what else to update? 
-
-        ! b) update C states with deltas (+ reset C deltas to 0)
-        CALL update_carbon_states_with_delta_carbon(currentChild, options)
-
-        ! c) update area fractions 
-        ! TODO-JN: maybe make it a function in mo_jsb_tile_class: update_fraction?
-        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-        CALL currentChild%Set_fraction(ics, ice, iblk, &
-          fract=source_fract(:)+currentChild%delta_fract(ics:ice, iblk))
-        ! + reset deltas to 0
-        currentChild%delta_fract(ics:ice, iblk) = 0._wp
-        ! move further in the child list
-        currentChild => currentChild%Get_next_sibling_tile()
-      ENDDO
-
-    END IF
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE update_apply_cohort_changes
-
-  ! TODO-JN-COHORTS: does not really make sense to aggregate mean_age?! 
-  SUBROUTINE aggregate_apply_cohort_changes(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model), POINTER :: model
-
-    dsl4jsb_Def_config(FAGE_)
-    dsl4jsb_Def_memory(FAGE_)
-    dsl4jsb_Def_memory(CARBON_)
-
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_apply_cohort_changes'
-
-    INTEGER  :: iblk, ics, ice, nc
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_config(FAGE_)
-    dsl4jsb_Get_memory(FAGE_)
-    dsl4jsb_Get_memory(CARBON_)
-
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
-      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve_ta,             weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_crop_harvest_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag1_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag1_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag1_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag2_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag2_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag2_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg1_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg1_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg1_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg1_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_bg2_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_bg2_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_bg2_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1_ta,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
-    ENDIF
-
-    !NOTE: despite changes, no aggregation of fractions because:
-    !      fractions are only redistributed on child tiles, i.e. no changes on this/above
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_apply_cohort_changes
-
 
 
 #endif

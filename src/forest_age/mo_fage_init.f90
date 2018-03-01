@@ -79,6 +79,8 @@ CONTAINS
 
     IF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-equal' ) THEN
       ! Equal intervals distributed equally 
+      !TODO-JN-COHORTS
+!      age_interval = int(max_age / ncohorts)
       age_interval = int((max_age-1) / (ncohorts-1))
       DO i=1,ncohorts-1
         dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
@@ -101,14 +103,18 @@ CONTAINS
       CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" and "static-equal" implemented as forest ageing schemes')
     ENDIF
 
+    !Last cohort is not restricted in age
+    dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,ncohorts,:) = HUGE(1._wp)
+
     !Assertion: 
     IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1,:) .NE. 1._wp)) THEN
       CALL finish(TRIM(routine), 'Assertion: lowst cohort always needs to have max_age of 1!')
     ENDIF
-    IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,:,:) .GT. max_age)) THEN
-      CALL finish(TRIM(routine), 'Assertion: no cohort should have a max age larger than the total max_age!')
+    IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1:ncohorts-1,:) .GT. max_age)) THEN
+      CALL finish(TRIM(routine), 'Assertion: no cohort but the last should have a max age larger than the total max_age!')
     ENDIF
-
+print *, '#######################################'
+print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
     !TODO-JN other bcs?? Also from files?
 !    dsl4jsb_var3D_onDomain(FM_, rotation_cycle) = REAL(dsl4jsb_Config(FM_)%global_rotation_cycle, wp)
 !    IF (dsl4jsb_Config(FM_)%scheme == 'rotation_local' ) THEN 

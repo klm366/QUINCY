@@ -289,7 +289,7 @@ CONTAINS
     !Aging happens once at the beginning of each year at the start of a timestep. 
     IF (model%processes(FAGE_)%p%config%active) THEN
        CALL model%Queue_task(FAGE_, "calculate_ageing")
-       CALL model%Queue_task(FAGE_, "apply_cohort_changes")
+       CALL model%Queue_task(CARBON_, "apply_cohort_changes")
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
@@ -335,9 +335,7 @@ CONTAINS
       CALL model%Queue_task(ASSIMI_, "assimilation") ! -> calc_assimilation_waterlimited
                                                      ! should be called after the soil hydrology is calculated
     END IF
-    IF (model%processes(CARBON_)%p%config%active) THEN
-       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
-    END IF
+
     IF (model%processes(FUEL_)%p%config%active) THEN
       CALL model%Queue_task(FUEL_, "fuel")
     END IF
@@ -348,9 +346,15 @@ CONTAINS
       ! disturbances need to be handled on the cohort parent!
       IF (model%processes(FAGE_)%p%config%active) THEN
          CALL model%Queue_task(FAGE_, "nat_disturb_cohort_changes")
-         CALL model%Queue_task(FAGE_, "apply_cohort_changes")
+         CALL model%Queue_task(CARBON_, "apply_cohort_changes")
       END IF
+    END IF
 
+    ! JN: changed order npp and disturbances because disturbances might change area 
+    !     and by swapping dist and carbon less variables have to be aggregated upon area shift
+!TODO  switched of for testing disturbances on cohorts, switch back on at some point!
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
     END IF
 
     CALL model%Queue_task(TURB_,   "humidity_scaling")
