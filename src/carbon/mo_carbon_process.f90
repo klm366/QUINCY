@@ -997,9 +997,9 @@ CONTAINS
     real(wp),intent(inout) :: Cpool_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: Cpool_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(inout)   :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind damage 
+    real(wp),intent(inout) :: carbon_2_GreenLitterPools(:) ! Amount of carbon relocated by wind damage 
                                                                 ! (and later also by fire)
-    real(wp),intent(inout)   :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage 
+    real(wp),intent(inout) :: carbon_2_WoodLitterPools(:)  ! Amount of carbon relocated by wind damage 
                                                                 ! (and later also by fire)
                                                                 ! .. to the green litter pools [mol(C)/m^2(canopy)]
 
@@ -1584,13 +1584,16 @@ CONTAINS
     ! TODO-JN: do they still need smallest possible fraction 1e-10? 
     ! (Then the following should not happen and other Assertions and MAX statements will be required!)
     ! IF prev_fract + delta_fract .EQ. 0._wp org_Cpool is not touched
-    ! i.e. the densities are not altered -- thus empty tiles can have non zero densities
-    ! -- if smallest possible fraction    
+
     IF( prev_fract + delta_fract .GT. 0._wp) THEN
-      ! i.e. area gained
       org_Cpool = ((org_Cpool * prev_fract) + delta_Cpool) / (prev_fract + delta_fract)
+    ELSE
+      org_Cpool = 0._wp
     ENDIF
     delta_Cpool = 0._wp
+
+    ! TODO, or should the densities not be altered and empty tiles can have non zero densities???
+    ! -- what if with 1e-10 as smallest possible fraction?
 
   end subroutine update_state_reset_delta
 

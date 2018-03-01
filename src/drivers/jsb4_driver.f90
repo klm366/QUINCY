@@ -336,7 +336,9 @@ PROGRAM jsb4_driver
   main_loop:DO 
 
     CALL time_set   !(echam!)
-!    CALL write_date(current_date,'Calculate for: ')
+    IF(is_newday()) THEN
+      CALL write_date(current_date,'Calculate for: ')
+    ENDIF
 
     IF (l_trigfiles) THEN
       CALL close_output_streams
@@ -372,10 +374,13 @@ PROGRAM jsb4_driver
       CALL model%Set_options(iblk=iblk)
 
       IF(is_newday()) THEN
+
         IF (model%processes(CARBON_)%p%config%active) THEN
           CALL check_carbon_conservation_for_operation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
             & - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
-          !TODO-JN: where to put this cconservation? 
+
+          !TODO-JN: where to put this cconservation test? 
+!IF (iblk .EQ. 1) THEN
 IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, '----------------'
   print *, 'iblk: ', iblk
@@ -384,10 +389,12 @@ IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, 'error: ', cconservation(:,iblk)
 ENDIF
           CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
+!IF (iblk .EQ. 1) THEN
 IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, '***********************'
   print *, 'iblk:', iblk
   print *, 'old sum:', old_c_state_sum(:,iblk)
+STOP
 ENDIF
         ENDIF
       ENDIF

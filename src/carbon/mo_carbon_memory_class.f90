@@ -770,7 +770,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_ag1_ta', mem%YCpool_water_ag1_ta,                                         &
         & hgrid, surface,                                                                                       &
