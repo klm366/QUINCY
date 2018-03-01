@@ -378,6 +378,8 @@ CONTAINS
     END IF
 
     IF (is_newday()) THEN ! only once per day
+      carbon_2_GreenLitterPools(:) = 0._wp
+      carbon_2_WoodLitterPools(:) = 0._wp
 
       burned_frac(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) & 
@@ -397,15 +399,15 @@ CONTAINS
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
             ENDIF
 
-            CALL burned_frac_jsbach( &
-              & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
-              & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
-              & fire_minimum,                & ! in
-              & fire_tau,                    & ! in
-              & q_rel_air_climbuf(:),        & ! in
-              & fuel(:),                     & ! in
-              & burned_frac(:)               & ! out
-              & )
+            ! CALL burned_frac_jsbach( &
+            !   & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
+            !   & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
+            !   & fire_minimum,                & ! in
+            !   & fire_tau,                    & ! in
+            !   & q_rel_air_climbuf(:),        & ! in
+            !   & fuel(:),                     & ! in
+            !   & burned_frac(:)               & ! out
+            !   & )
 
           CASE (2) !! Arora & Boer algorithm
             CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
@@ -451,9 +453,6 @@ CONTAINS
 
         !Else relocate carbon as previously implemented
         IF ( tile%Is_process_active(CARBON_) ) THEN
-
-          carbon_2_GreenLitterPools(:) = 0._wp
-          carbon_2_WoodLitterPools(:) = 0._wp
           ! Calculate carbon relocation connected with damages and fires
           ! R: hier sollen nur die Variablen übergeben werden, die von dieser Prozedur hier im Folgenden benötigt werden.
           !    Andere Variablen werden erst später bereit gestellt, denn in diesem Fall rufen wir ein weiteres
