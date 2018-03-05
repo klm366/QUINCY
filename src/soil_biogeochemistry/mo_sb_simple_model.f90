@@ -49,7 +49,6 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
-    dsl4jsb_Use_config(VEG_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -103,7 +102,6 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
@@ -244,7 +242,6 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
@@ -594,7 +591,7 @@ CONTAINS
     !!     nitrification, denitrification and biomineralisation rates
     !!
     CALL calc_actual_flux_rates(options, &
-                                TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
+                                TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), &
                                 nh4_solute(:,:), &
                                 no3_solute(:,:), &
                                 po4_solute(:,:), &
@@ -728,7 +725,7 @@ CONTAINS
     !! 
     CALL calc_asymbiontic_n_fixation(options, &
                                      lctlib, &
-                                     TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), & 
+                                     TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), & 
                                      soil_depth_sl(:,:), &
                                      rtm_decomposition_act(:,:), &
                                      rmm_decomposition_act(:,:), &
@@ -1732,7 +1729,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_actual_flux_rates( options, &
-                                     veg_bnf_scheme, & 
+                                     sb_bnf_scheme, & 
                                      nh4_solute, &
                                      no3_solute, &
                                      po4_solute, &
@@ -1768,7 +1765,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
-    CHARACTER(len=*),                                 INTENT(in)    :: veg_bnf_scheme                !< veg n fixation scheme  
+    CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme                 !< sb n fixation scheme  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: nh4_solute, &                 !< NH4 in solution [mol / m3] 
                                                                        no3_solute, &                 !< NO3 in solution [mol / m3]
                                                                        po4_solute, &                 !< PO4 in solution [mol / m3]
@@ -1819,7 +1816,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.2  Limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
     !!
-    IF(veg_bnf_scheme=='unlimited')THEN
+    IF(sb_bnf_scheme=='unlimited')THEN
        asymb_n_fixation(:,:) = MAX(microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + & 
                                    mycorrhiza_uptake_nh4_sl(:,:) - (nh4_solute(:,:) + transport_nh4_solute(:,:)),0.0_wp)
        microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) + asymb_n_fixation(:,:) 
@@ -3112,7 +3109,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_asymbiontic_n_fixation(options, &
                                          lctlib, &                                      ! in
-                                         veg_bnf_scheme, &
+                                         sb_bnf_scheme, &
                                          soil_depth_sl, &
                                          rtm_fixation_act, &
                                          rmm_fixation_act, &
@@ -3132,7 +3129,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                      !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*),                                 INTENT(in)    :: veg_bnf_scheme              !< veg n fixation scheme  
+    CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme               !< sb n fixation scheme  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &            !< soil depth per layer [m] 
                                                                        rtm_fixation_act, &         !< temperature rate modifier  
                                                                        rmm_fixation_act, &         !< moisture rate modifier  
@@ -3167,7 +3164,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.2 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
     !!
-    SELECT CASE(TRIM(veg_bnf_scheme))
+    SELECT CASE(TRIM(sb_bnf_scheme))
        CASE("fixed", "standard")
           WHERE(hlp1_2d(:,:) < soil_n_threshold_bnf .AND. & 
                 sb_pool_microbial_carbon(:,:) > eps4 .AND. & 

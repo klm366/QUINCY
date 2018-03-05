@@ -51,6 +51,7 @@
   ! options
   sb_model_scheme="simple_0d"
   sb_nloss_scheme="fixed"
+  sb_bnf_scheme="standard"
   ! flags
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.

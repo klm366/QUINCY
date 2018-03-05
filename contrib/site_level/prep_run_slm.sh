@@ -1193,6 +1193,7 @@ changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue sb_model_scheme "$sb_model_scheme" 
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
+changeNamelistValue sb_bnf_scheme "$bnf_scheme" 
 if [ $flag_mycorrhiza == T ]
   then
     changeNamelistValue flag_mycorrhiza ".TRUE."

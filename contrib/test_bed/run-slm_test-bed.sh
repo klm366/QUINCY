@@ -45,8 +45,8 @@ flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T"      # does also set "start_bareground"
 
 # soil model options
-soil_depth=5.7                  # meter
-nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
+soil_depth=9.5                  # meter
+nsoil_layer=15                   # number of soil layers (default: 5 | min: 5 | max: 20)
 
 # ECA and P cycle
 flag_sb_eca_upt_po4="T"         # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
@@ -510,6 +510,7 @@ changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
+changeNamelistValue sb_bnf_scheme "$bnf_scheme" 
 changeNamelistValue sb_adsorp_scheme "$sb_adsorp_scheme"
 if [ $flag_sb_eca_upt_po4 == T ]
   then

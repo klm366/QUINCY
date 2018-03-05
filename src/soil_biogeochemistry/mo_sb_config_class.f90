@@ -29,6 +29,7 @@ MODULE mo_sb_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
+    CHARACTER(15)         :: sb_bnf_scheme
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -71,6 +72,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
+    CHARACTER(15)         :: sb_bnf_scheme
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -92,6 +94,7 @@ CONTAINS
       ic_filename, bc_filename,    &
                       sb_model_scheme      ,  &
                       sb_nloss_scheme      ,  &
+                      sb_bnf_scheme        ,  &
                       flag_sb_prescribe_nh4,  &
                       flag_sb_prescribe_no3,  &
                       flag_sb_prescribe_po4,  &
@@ -121,6 +124,7 @@ CONTAINS
     bc_filename     = 'bc_land_srf.nc'
     sb_model_scheme             = "simple_0d"       ! simple_0d simple_1d jsm
     sb_nloss_scheme             = "fixed"           ! none fixed dynamic 
+    sb_bnf_scheme               = "standard"        ! none standard unlimited 
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
@@ -170,6 +174,7 @@ CONTAINS
     ! pass values as read from file
     config%sb_model_scheme                 = sb_model_scheme
     config%sb_nloss_scheme                 = sb_nloss_scheme
+    config%sb_bnf_scheme                   = sb_bnf_scheme
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4

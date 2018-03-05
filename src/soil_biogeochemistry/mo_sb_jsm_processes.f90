@@ -899,7 +899,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
   !!
   !! Output: DOM consumption, microbial growth, hetertrophic respiration and net mineralisation
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_microbial_growth(options,pool_dom,pool_microbial, & 
+  SUBROUTINE calc_microbial_growth(options,sb_bnf_scheme,pool_dom,pool_microbial, & 
                                    rtm_mic_uptake,rmm_mic_uptake,rtm_hsc,rmm_hsc,microbial_cue_eff_mavg, &
                                    microbial_uptake_nh4_sl,microbial_uptake_nh4_n15_sl, &
                                    microbial_uptake_no3_sl,microbial_uptake_no3_n15_sl,microbial_uptake_po4_sl, &
@@ -907,7 +907,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
                                    het_respiration,het_respiration_c13,het_respiration_c14, &
                                    net_mineralisation_nh4,net_mineralisation_nh4_n15, &
                                    net_mineralisation_no3,net_mineralisation_no3_n15,net_mineralisation_po4, & 
-                                   microbial_cue_eff)
+                                   microbial_cue_eff,asymb_n_fixation)
 
     USE mo_shared_isotope, ONLY: calc_fractionation
     USE mo_sb_constants,   ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_nue,microbial_pue, & 
@@ -918,6 +918,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options             !< model options
+    CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme                !< veg n fixation scheme  
     TYPE(t_sb_element_a),                             INTENT(in)    :: pool_dom            !< DOM [mol/m3]
     TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial      !< microbial biomass [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_mic_uptake      !< temperature rate modifier [-]
@@ -941,6 +942,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [µmol 15N/m3/s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: net_mineralisation_po4     !< net mineralisation rate [µmol P/m3/s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: microbial_cue_eff          !< current effective CUE given NP constraints 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: asymb_n_fixation           !< current effective CUE given NP constraints 
     ! ---------------------------
     ! 0.2 Local 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1             , &
@@ -1011,34 +1013,41 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     !! growth_n and growth_p are unchanged, only growth_c needs to be adjusted to current 
     !! CUE
     growth_c(:,:) = microbial_cue_eff_mavg(:,:) * uptake_c(:,:) 
-    WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
-       ! carbon uptake is limiting, full uptake rate is realised
-       f_uptake(:,:) = f_uptake(:,:) 
-    ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:).AND.pool_dom%carbon(:,:)>eps8)
-       ! nitrogen uptake is limiting
-       ! calculate uptake rate that satisfies N constraint and CUE
-       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), & 
-                                      ((microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn) / & 
-                                      (microbial_cue_eff_mavg(:,:) * pool_dom%carbon(:,:) - & 
-                                       microbial_nue * pool_dom%nitrogen(:,:) * microbial_cn)))
-    ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:).AND.pool_dom%carbon(:,:)>eps8)
-       ! phosphorus uptake is limiting
-       ! calculate uptake rate that satisfies P constraint and CUE
-       f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
-                                      (microbial_uptake_po4_sl(:,:) * microbial_np * microbial_cn) / & 
-                                      (microbial_cue_eff_mavg(:,:) * pool_dom%carbon(:,:) - & 
-                                       microbial_pue * pool_dom%phosphorus(:,:) * microbial_np * microbial_cn)))
-    ELSEWHERE
-       f_uptake(:,:) = 0.0_wp
-    ENDWHERE
-
-    growth_c(:,:) = microbial_cue_eff_mavg(:,:) * f_uptake(:,:) * pool_dom%carbon(:,:) 
-    uptake_n(:,:) = f_uptake(:,:) * pool_dom%nitrogen(:,:) 
-    uptake_p(:,:) = f_uptake(:,:) * pool_dom%phosphorus(:,:)
-    growth_n(:,:) = (microbial_nue * uptake_n(:,:) + &
-                     microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn
-    growth_p(:,:) = (microbial_pue * uptake_p(:,:) + &
-                      microbial_uptake_po4_sl(:,:)) * microbial_np * microbial_cn
+    IF(sb_bnf_scheme=='unlimited')THEN
+       asymb_n_fixation(:,:) = MAX(0.0_wp, growth_c(:,:) / microbial_cn - &
+                              microbial_nue * f_uptake(:,:) * pool_dom%nitrogen(:,:) + microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:))
+       microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) + asymb_n_fixation(:,:)
+    ELSE
+       WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
+          ! carbon uptake is limiting, full uptake rate is realised
+          f_uptake(:,:) = f_uptake(:,:) 
+       ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:).AND.pool_dom%carbon(:,:)>eps8)
+          ! nitrogen uptake is limiting
+          ! calculate uptake rate that satisfies N constraint and CUE
+          f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), & 
+                                         ((microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn) / & 
+                                         (microbial_cue_eff_mavg(:,:) * pool_dom%carbon(:,:) - & 
+                                          microbial_nue * pool_dom%nitrogen(:,:) * microbial_cn)))
+       ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:).AND.pool_dom%carbon(:,:)>eps8)
+          ! phosphorus uptake is limiting
+          ! calculate uptake rate that satisfies P constraint and CUE
+          f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
+                                         (microbial_uptake_po4_sl(:,:) * microbial_np * microbial_cn) / & 
+                                         (microbial_cue_eff_mavg(:,:) * pool_dom%carbon(:,:) - & 
+                                          microbial_pue * pool_dom%phosphorus(:,:) * microbial_np * microbial_cn)))
+       ELSEWHERE
+          f_uptake(:,:) = 0.0_wp
+       ENDWHERE
+   
+       growth_c(:,:) = microbial_cue_eff_mavg(:,:) * f_uptake(:,:) * pool_dom%carbon(:,:) 
+       uptake_n(:,:) = f_uptake(:,:) * pool_dom%nitrogen(:,:) 
+       uptake_p(:,:) = f_uptake(:,:) * pool_dom%phosphorus(:,:)
+       growth_n(:,:) = (microbial_nue * uptake_n(:,:) + &
+                        microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn
+       growth_p(:,:) = (microbial_pue * uptake_p(:,:) + &
+                         microbial_uptake_po4_sl(:,:)) * microbial_np * microbial_cn
+   
+    ENDIF
   
     !> 2.1 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
     !!     and calculate gross mineralisation rate (and its isotopic signature)
