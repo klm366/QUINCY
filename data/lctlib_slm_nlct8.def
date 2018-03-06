@@ -60,12 +60,12 @@ growthform 1 1 1 1 1 1 2 2
 # JSBACH4: C4flag (C3: 0; C4: 1)        
 ps_pathway 1 1 1 1 1 1 1 2
         
-#phenology_type: (ievergreen: 1; iraingreen: 2; isummergreen: 3; iperennial: 4)        
+#phenology_type: (ievergreen: 1; isummergreen: 2; iraingreen: 3; iperennial: 4)        
 # JSBACH4: Phenology type (none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grass (SLM = perennial?): 4; crop: 5)         
-phenology_type 1 1 2 3 1 3 4 4
+phenology_type 1 1 3 2 1 2 4 4
         
-#lma: leaf mass per area (mm / mgDW)
-# From Kattge et al. 2011, Table 5, converted internally from LMA (mm/mgDW) to SLA (m2/mol)
+#sla: specific leaf area (mm / mgDW)
+# From Kattge et al. 2011, Table 5, converted internally from (mm/mgDW) to (m2/mol C)
 sla 9.46 8.99 15.4 15.4 5.0 10.09 20.12 19.23
         
 #sigma_vis: single leaf scattering albedo in the visible range        
