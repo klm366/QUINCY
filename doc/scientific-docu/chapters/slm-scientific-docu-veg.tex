@@ -8,7 +8,7 @@ Tree vegetation types are furthermore characterised by their height (m), diamete
 
 \subsection{Labile Pool Dynamics}
 
-Growth in SLM is driven by source processes (GPP, nutrient uptake), and the potential of the plant to create sinks (new biomass tissue, respiration, exudation). The growth of a plant is dependent on the partitioning of its labile resource to new tissue growth, storage production, as well as -- in the case of carbon and its isotopes -- respiration for maintenance and resource uptake (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}): 
+Growth in SLM is driven by source processes (GPP, nutrient uptake), and the potential of the plant to create sinks (new biomass tissue, respiration, exudation). The growth of a plant is dependent on the partitioning of its labile resource to new tissue growth, storage, as well as -- in the case of carbon and its isotopes -- respiration for maintenance and resource uptake (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}): 
 
 \begin{subequations}
 \begin{align}
@@ -57,11 +57,11 @@ where $f^{i}_{alloc}$ are the allocation fractions (Sect. \ref{sec:Allocation}),
 G_P &= req^{growth}_{NP} \times G_N = req^{growth}_{PN} \times req^{growth}_{NC} \times G_C \label{eq:growth_rate_x} \\
 &G_C \le G^{*}_C \\
 &G_N \le \frac{1}{\tau_{labile}} \times N_{labile} \times dt \\
-&G_P \le \frac{1}{\tau_{labile}}_{labile} \times P_{labile} \times dt,
+&G_P \le \frac{1}{\tau_{labile}} \times P_{labile} \times dt,
 \end{align} 
 \end{subequations}
 
-and only the minimum of the three rates in eq. \ref{eq:growth_rate_x} can actually be realised. The other two growth rates are adjusted, implying a relative accumulation of these elements in the labile pool. The use of $k^{0}_{labile}$ implies a stronger mobilisation capacity for nutrients than for carbon growth. The assumption behind this is that the temperature and moisture control of the meristem is already accounted for by $G_C$, and that plant is able to mobilise the required  nutrients from the labile pool to support this growth.
+and only the minimum of the three rates in eq. \ref{eq:growth_rate_x} can actually be realised. The other two growth rates are adjusted, implying a relative accumulation of these elements in the labile pool. The use of $\frac{1}{\tau_{labile}}$ for the growth rate of nutrients compared to carbon implies a stronger mobilisation capacity for nutrients than for carbon growth. The assumption behind this is that the temperature and moisture control of the meristem is already accounted for by $G_C$, and that plant is able to mobilise the required nutrients from the labile pool to support this growth.
 
 \subsection{Non-structural pool dynamics}\label{sec:Reserve}
 
@@ -85,7 +85,7 @@ The target reserve carbon pool size corresponds to the C required to build one y
 C^{target}_{reserve} = min(C^{target}_{leaf} \times ( min(1,\frac{1}{\tau_{leaf}}) + \frac{1}{\tau_{fine\_root} * k_{ltor}} )  \times (1+f_{resp,growth}), \sum_{i=l,f,s} f_{store,max,i} * C_{i})
 \end{equation}
 
-The N and P target pools are defined accordingly, respecting the current stoichiometries of leaves and fine roots (Sect. \ref{sec:Stoichem}).
+where $k_{ltor}$ is the leaf to fine root ratio (see eq. \ref{kltor})  The N and P target pools are defined accordingly, respecting the current stoichiometries of leaves and fine roots (Sect. \ref{sec:Stoichem}).
  
 The net exchange of between the labile and reserve pool is calculated as 
 
@@ -114,13 +114,11 @@ Should the labile carbon pools exceed its target size strongly due to a lack of 
 \beta_{sinklim}^{ps} = e^{-(\lambda_{sinklim}^{ps} \times \frac{C_{labile}}{C^{target}_{labile}})^{k_{sinklim}^{ps}}}
 \end{equation}
 
-
-
 \subsection{Allocation (\texttt{mo\_veg\_growth:calc\_allocation\_fractions})}\label{sec:Allocation}
 
 The biomass partitioned to growth is first split into reproductive (fruit pool) and structural (leaves, fine and coarse roots and sap wood) growth. The latter is then further subdivided following a functional balance relationship between the structural pools \cite{Zaehle:2010cz}. 
 
-The fraction of carbon growth allocated to fruits depends on the ability of the plant to build reserves (i.e. $\Delta S_C + k3^{fruit}_{alloc} > 0$, implying that fruit growth is suppressed during phases of rapid leaf growth (beginning of the growing season), as well as periods of C starvation (e.g. severe drought). 
+The fraction of carbon growth allocated to fruits depends on the ability of the plant to build reserves (i.e. $\Delta S_C + k3^{fruit}_{alloc} > 0$), implying that fruit growth is suppressed during phases of rapid leaf growth (beginning of the growing season), as well as periods of C starvation (e.g. severe drought). 
 
 \begin{equation}
 f^{fruit}_{alloc,C} = k1^{fruit}_{alloc} + (k2^{fruit}_{alloc} - k1^{fruit}_{alloc}) \times exp^{-(\lambda^{fruit}_{alloc}\times (\Delta S_C+k3^{fruit}_{alloc}))^{k4^{fruit}_{alloc}}} \label{eq:veg:falloc_fruit}
@@ -130,7 +128,7 @@ The allocation of the remaining growth ($(1-f^{fruit}_{alloc,C}) \times G_C$) to
 
 Fine root and leaves are assumed to be in homeostatic balance requiring 
 
-\begin{equation}
+\begin{equation}\label{kltor}
 C_{leaf} =  k_{ltor} \times C_{fine\_root}
 \end{equation}
 
@@ -171,51 +169,6 @@ Note: For comparison purposes, it would be desirable to mimick OCN-style flexibi
 
 \section{Nutrient Uptake}\label{sec:ResUptake}
 
-
-
-
-\section{Phenology (\texttt{mo\_veg\_phenology})}\label{veg:sec:phen}
-
-The phenology of vegetation, describing the time-development of biomass, is primarily determined by the ability of the plant to grow new tissues, which depends on the size and turnover of the meristems (Eq. \ref{eq:growth_rate}), as well as the fractional allocation of growth to plant organs (see Sect. \ref{sec:Allocation}). Outside of the growing season, which is determined by meteorological and pedographic triggers marking its beginning and ending, plant growth is assumed to be zero. The variables determining these phenological triggers are averaged over a period of a couple of days (\texttt{mavg\_period\_tphen}), loosely referred to as `weekly' in the following, to smooth out the effect of day-to-day climate variability. While the beginning and ending mark the start and end of tissue production, only the turnover of the leaves is directly affected by phenological triggers. The turnover of all other tissues is assumed to be constant (see Sect. \ref{veg:sec:turnover}).
-
-As described in the following, the model differentiates evergreen, cold deciduous, rain deciduous tree and shrub phenological strategies, as well as herbaceous perennial phenological strategies.
-
-
-\begin{itemize}
-
-\item \texttt{evergreen} 
-\begin{description}
-\item[] no triggers apply
-\end{description}
-
-\item \texttt{rain deciduous}
-\begin{description}
-\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT-specific threshold ($\beta_{soil}^{flush}$) 
-\item[end] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) lower than a PFT-specific threshold ($\beta_{soil}^{sen}$)
-\end{description}
-
-\item \texttt{cold deciduous}
-\begin{description}
-\item[start] $GDD_{act} > GDD_{req}^{max} \times exp^{- k_{dormance}*NDD}$, where $GDD_{act}$ is the current growing degree days (as calculated by Eq. \ref{eq:gdd}), $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to the PFT-specific maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the chilling requirements of the buds.
-
-\item[end] decreasing weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$).
-\end{description}
-
-\item \texttt{perennial}
-\begin{description}
-\item[start] $GDD_{act} > GDD_{req}^{max} \times exp^{- k_{dormance}*NDD}$, where $GDD_{act}$ is the current growing degree days (as calculated by Eq. \ref{eq:gdd}), $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to the PFT-specific maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the chilling requirements of the buds, as well as weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT specific threshold ($\beta_{soil}^{flush\_grass}$).
-\item[end] weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$), maximum soil water stress (minimum weekly soil moisture stress factor) or negative carbon balance ($GPP - R_m$).
-\end{description}
-
-\end{itemize}
-
-Growing degree days ($GDD_{act}$) are accumulated relative to a PFT-specific temperature threshold ($t_{air}^{GDD}$) 
-\begin{equation}\label{eq:gdd}
-\frac{GDD_{act}}{dt} = GDD_{act} + MAX(t_{air} - t_{tair}^{GDD},0.0)
-\end{equation}
-
-Senescence is generally only introduced once the leaf age has become larger than a PFT-specific threshold ($leaf\_age_{min}$). 
-
 \section{Turnover (\texttt{mo\_veg\_turnover})}\label{veg:sec:turnover}
 
 Turnover is considered at two levels: i) the breakdown of enzymes (nitrogen) and associated RNA (phosphorous) from tissue, and their ensuing replacement from the labile pool (recycling); and ii) the senescence of entire tissues and their conversion to litter, including the resorption of nutrients from foliage. 
@@ -228,7 +181,7 @@ The breakdown of leaf and fine-root nutrients occurs at the time-scale of $\tau_
 
 where $X$ is either nitrogen or phosphorus, and $Y$ carbon or nitrogen, respectively. The flux from the labile pool is limited by the turnover rate and size of the labile pool to ascertain that the latter cannot be exhausted.  
 
-The turnover time of most tissue types (fine and coarse roots, sap wood, and fruits) is assumed constant for each PFT ($\tau_{fine\_root}$, $\tau_{coarse\_root}$, $\tau_{sap\_wood}$, and $\tau_{fruit}$, respectively). While roots and fruits turn directly into litter, only a small fraction of sap wood is turned to litter, assuming it is lost as branches ($\tau_{branches}$), whereas the predominant fraction of sap-wood turns into non-respiring hardwood at the timescale of $\tau_{sap\_wood}$. In evergreen trees, foliar turnover to litter is assumed to be constant ($\tau_{leaves}$). The turnover of leaves in deciduous species (and grasses) is determined by the phenology. During the growing season, only minor turnover happens ($\tau_{leaves}$), but once the growing season has ended, foliar turnover is set to a high constant value ($max\_{leaf}\_{shedding}\_{rate}$), until the LAI reaches a minimum value ($LAI_{min}$), beyond which all leaves are shed. 
+The turnover time of most tissue types (fine and coarse roots, sap wood, and fruits) is assumed constant for each PFT ($\tau_{fine\_root}$, $\tau_{coarse\_root}$, $\tau_{sap\_wood}$, and $\tau_{fruit}$, respectively). While roots and fruits turn directly into litter, only a small fraction of sap wood is turned to litter, assuming it is lost as branches ($\tau_{branches}$), whereas the predominant fraction of sap-wood turns into non-respiring heartwood at the timescale of $\tau_{sap\_wood}$. In evergreen trees, foliar turnover to litter is assumed to be constant ($\tau_{leaves}$). The turnover of leaves in deciduous species (and grasses) is determined by the phenology. During the growing season, only minor turnover happens ($\tau_{leaves}$), but once the growing season has ended, foliar turnover is set to a high constant value ($max\_{leaf}\_{shedding}\_{rate}$), until the LAI reaches a minimum value ($LAI_{min}$), beyond which all leaves are shed. 
 
 Only nutrients of tissues prepared for senescence are assumed to retranslocate nutrients. Therefore, only foliage turnover and heartwood formation in the canopy are assumed to be resorbed at a constant rate of $k_{resorb}^{X}$, which are returned to the labile pool.
 

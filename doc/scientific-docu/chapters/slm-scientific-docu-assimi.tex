@@ -1,12 +1,12 @@
 \chapter{Assimilation}\label{ch:assimi}
 
-Photosynthesis is calculated according to the photosynthesis scheme by \cite{Kull:1998cr}, extended for C4 photosynthesis by \cite{Friend:2009tf}, and with the temperature sensitivities as described in \cite{Friend:2010je}. Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and light-quality class (sunlit and shaded; as defined in Sect. \ref{sec:rad:vegetation}). A notable difference to the implementation of \cite{Friend:2010je} is the use of a standard Ball-Berry formulation to simulate the response of stomates to drought \cite{Ball:1987uv, Knauer:2015dh}. 
+Assimilation deals with the \chem{CO_2} assimilation by the vegetation canopy. Photosynthesis is calculated according to the photosynthesis scheme by \cite{Kull:1998cr}, extended for C4 photosynthesis by \cite{Friend:2009tf}, and with the temperature response curves as described in \cite{Friend:2010je}. Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and light-quality class (sunlit and shaded; as defined in Sect. \ref{sec:rad:vegetation}). A notable difference to the implementation of \cite{Friend:2010je} is the use of a standard Ball-Berry formulation to simulate the response of stomates to drought \cite{Ball:1987uv, Knauer:2015dh}. 
 
-Temperature acclimation of photosynthesis is taken account as in \cite{Friend:2010je} by letting the optimum temperature of electron transport adjust to the day-time temperature of the last few days (\texttt{flag\_t\_jmax\_acclimation}). Soil moisture deficit is likewise affecting photosynthetic activity under extremely low levels of soil moisture (Rogers:forthcoming). N cycle interactions with photosynthesis occur on the level of acclimating foliar N (\texttt{flag\_optimal\_leafN}) and the fractional allocation of N to photosynthetic processes in each canopy layer (\texttt{flag\_optimal\_n\_fractions}), as described in Sect. \ref{sec:veg:canopy}. Isotopic fractionation of photosynthesis with respect to \chem{^{13}C} and \chem{^{14}C} is calculated according to \cite{Farquhar:1982ks,Drake:2014dl}. 
+Temperature acclimation of photosynthesis is taken account as in \cite{Friend:2010je} by letting the optimum temperature of electron transport adjust to the day-time temperature of the last few days (\texttt{flag\_t\_jmax\_acclimation}). Soil moisture deficit is likewise affecting photosynthetic activity under extremely low levels of soil moisture (Rogers:forthcoming). N cycle interactions with photosynthesis occur on the level of acclimating foliar N (\texttt{flag\_optimal\_leafN}) and the fractional allocation of N to photosynthetic processes in each canopy layer (\texttt{flag\_optimal\_n\_fractions}), as described in Sect. \ref{sec:veg:canopy}. Isotopic fractionation of photosynthesis with respect to \chem{^{13}C} and \chem{^{14}C} is calculated according to \cite{Farquhar:1982ks,Drake:2014dl}. If not explicitly explained, model parameters are listed in Tab. \ref{tab:assimi:param}.
 
 \section{Leaf-level net photosynthesis}\label{sec:assimi:leaf_ps}
 
-As defined in Sect. \ref{sec:veg:foliar_N_fractions}, each canopy layer contains a certain amount of foliar N ($N_{leaf,cl}$), split into N allocated to Rubisco ($fn_{rub,cl}$), electron transport ($fn_{et,cl}$), chlorophyll ($fn_{chl,cl}$), and PEP-carboxylase ($fn_{pepc,cl}$) in the case of C4-plants. In the following, the subscript $cl$ is omitted for clarity. 
+As defined in Sect. \ref{sec:veg:foliar_N_fractions}, each canopy layer (subscript $cl$) contains a certain amount of foliar N ($N_{leaf,cl}$), split into N allocated to Rubisco ($fn_{rub,cl}$), electron transport ($fn_{et,cl}$), chlorophyll ($fn_{chl,cl}$), and PEP-carboxylase ($fn_{pepc,cl}$) in the case of C4-plants. In the following, the subscript $cl$ is omitted for clarity. 
 
 Unless stated otherwise, temperature sensitivities follow the form
 
@@ -14,7 +14,7 @@ Unless stated otherwise, temperature sensitivities follow the form
 f_x(T) = e^{c-\Delta H/(R\times T)} = e^{E_0^x - E_1^x/(R\times T)},
 \end{equation}
 
-where $T$ is temperature (\unit{K}), $R$ is the universal gas constant (\unit{J mol^{-1} K^{-1}}), and the process-wise $E0_x$ and $E1_x$ are given in Table \ref{tab:assimi:param}, taken from \cite{Bernacchi:2001wv}.
+where $T$ is the canopy temperature (\unit{K}), $R$ is the universal gas constant (\unit{J mol^{-1} K^{-1}}), and the process-wise $E0_x$ and $E1_x$ are given in Table \ref{tab:assimi:param}, taken from \cite{Bernacchi:2001wv}.
 
 \subsection{Light-saturated photosynthesis; C3-plants}
 
@@ -48,7 +48,7 @@ g_{jmax}(T) =& e^{-\left({\frac{T-\bar{T}_{jmax}^{opt}}{T_{\Omega}}}\right)^2},\
 
 where $k0_{jmax}^{topt}$, $k1_{jmax}^{topt}$, and $T_{\Omega}$ are PFT-specific parameters (see lctlib), $T$ is the canopy temperature, and $\bar{T}_{jmax}^{opt}$ in Eq. \ref{eq:t_jmax_opt} is the mean of the daytime $T_{jmax}^{opt}$ over the past few days.
 
-The Rubisco limited rate of photosynthesis ($A_v$) is given by 
+The Rubisco limited rate of photosynthesis ($A_c$) is given by 
 
 \begin{subequations}\label{eq:vcmax}
 \begin{align}
@@ -92,7 +92,7 @@ The N-specific light-saturated rate of C4 photosynthesis can be calculated as
 m_{sat} = min(n_1 \times m_1, n_2 \times m_2, n_3 \times m_3)
 \end{equation}
 
-\subsection{Light-harvesting limited rate of photosynthesis}
+\subsection{Light-harvesting limited rate of photosynthesis; both C3 and C4 photosynthesis}
 
 The light-harvesting limited rate of carboxylation can be written as 
 
@@ -146,7 +146,7 @@ where $\lambda^{soil}_{gs}$ and $k^{soil}_{gs}$ are PFT-specific parameters (see
 
 \section{Photosynthetic discrimination}
 
-Discrimination is modelled according to the general equation derived by \cite{ Drake:2014dl}
+Isotopic discrimination is modelled according to the general equation derived by \cite{ Drake:2014dl}
 
 \begin{equation}\label{eq:ps_discrimination}
 D_x = a_x + ( c_x + \phi_{C4} \times b_x - a_x )  \frac{c_i}{c_a}

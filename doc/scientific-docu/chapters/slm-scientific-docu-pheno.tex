@@ -1,0 +1,45 @@
+\chapter{Phenology}\label{ch:phen}
+
+The phenology routine calculates the phenological triggers that mark the beginning and ending of the growing season. All parameters in this routine are PFT specific parameters summarised in Ch. \ref{ch:lctlib}.
+
+The phenology of vegetation, describing the time-development of biomass, is primarily determined by the ability of the plant to grow new tissues, which depends on the size and turnover of the meristems (Eq. \ref{eq:growth_rate}), as well as the fractional allocation of growth to plant organs (see Sect. \ref{sec:Allocation}). Outside of the growing season, which is determined by meteorological and pedographic triggers marking its beginning and ending, plant growth is assumed to be zero. The variables determining these phenological triggers are averaged over a period of a couple of days (\texttt{mavg\_period\_tphen}), loosely referred to as `weekly' in the following, to smooth out the effect of day-to-day climate variability. While the beginning and ending mark the start and end of tissue production, only the turnover of the leaves is directly affected by phenological triggers. The turnover of all other tissues is assumed to be constant (see Sect. \ref{veg:sec:turnover}).
+
+As described in the following, the model differentiates evergreen, cold deciduous, rain deciduous tree and shrub phenological strategies, as well as herbaceous perennial phenological strategies.
+
+\begin{itemize}
+
+\item \texttt{evergreen} 
+\begin{description}
+\item[] no triggers apply
+\end{description}
+
+\item \texttt{cold deciduous}
+\begin{description}
+\item[start] $GDD_{act} > GDD_{req}^{max} \times exp^{- k_{dormance}*NDD}$, where $GDD_{act}$ is the current growing degree days (as calculated by Eq. \ref{eq:gdd}), $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to the PFT-specific maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the chilling requirements of the buds.
+\item[end] decreasing weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$).
+\end{description}
+
+\item \texttt{rain deciduous}
+\begin{description}
+\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT-specific threshold ($\beta_{soil}^{flush}$) 
+\item[end] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) lower than a PFT-specific threshold ($\beta_{soil}^{sen}$)
+\end{description}
+
+\item \texttt{perennial}
+\begin{description}
+\item[start] $GDD_{act} > GDD_{req}^{max} \times exp^{- k_{dormance}*NDD}$, where $GDD_{act}$ is the current growing degree days (as calculated by Eq. \ref{eq:gdd}), $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to the PFT-specific maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the chilling requirements of the buds, as well as weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT specific threshold ($\beta_{soil}^{flush\_grass}$).
+\item[end] weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$), maximum soil water stress (minimum weekly soil moisture stress factor) or negative carbon balance ($GPP - R_m$).
+\end{description}
+
+\end{itemize}
+
+Growing degree days ($GDD_{act}$) are accumulated relative to a PFT-specific temperature threshold ($t_{air}^{GDD}$) 
+\begin{equation}\label{eq:gdd}
+\frac{GDD_{act}}{dt} = GDD_{act} + MAX(t_{air} - t_{tair}^{GDD},0.0)
+\end{equation}
+
+Senescence is generally only introduced once the leaf age has become larger than a PFT-specific threshold ($leaf\_age_{min}$). 
+
+\pagebreak
+
+\newpage
