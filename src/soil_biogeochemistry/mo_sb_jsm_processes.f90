@@ -370,10 +370,11 @@ CONTAINS
 
     !> 1.1 limit to possible solution
     !!
-    hlp1 = (microbial_uptake + plant_uptake) 
-    IF(hlp1 > (solute * 1000000._wp/dtime) .AND. hlp1 > eps8)THEN
-       microbial_uptake   = microbial_uptake   / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
-       plant_uptake = plant_uptake / hlp1 * MAX(solute-eps8,0.0_wp) * 1000000.0_wp
+    hlp1 = microbial_uptake + plant_uptake
+    hlp2 = MAX(solute-eps8,0.0_wp) * 1000000._wp / dtime
+    IF(hlp1 > hlp2 .AND. hlp1 > eps8)THEN
+       microbial_uptake = microbial_uptake / hlp1 * hlp2
+       plant_uptake     = plant_uptake     / hlp1 * hlp2 
     ENDIF
 
   END SUBROUTINE calc_inorganic_uptake
@@ -1015,7 +1016,8 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     growth_c(:,:) = microbial_cue_eff_mavg(:,:) * uptake_c(:,:) 
     IF(sb_bnf_scheme=='unlimited')THEN
        asymb_n_fixation(:,:) = MAX(0.0_wp, growth_c(:,:) / microbial_cn - &
-                              microbial_nue * f_uptake(:,:) * pool_dom%nitrogen(:,:) + microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:))
+                                           microbial_nue * f_uptake(:,:) * pool_dom%nitrogen(:,:) - &
+                                           microbial_uptake_nh4_sl(:,:) - microbial_uptake_no3_sl(:,:))
        microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) + asymb_n_fixation(:,:)
     ELSE
        WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
