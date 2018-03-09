@@ -94,12 +94,14 @@ MODULE mo_fage_process
     ! CONTENT
 !    thisDisturbedArea(:) = 0._wp
 
+    IF(iThisCohort .EQ. 1) RETURN !area is only distributed to the first child - not from
+
     ! damaged area is assigned to zero age and taken evenly from all ages in this cohort
     ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
     DO j=1,nidx
 
       thisMinAge = int(cohort_max_age(j,iThisCohort-1)+1)
-      thisMaxAge = MIN(int(cohort_max_age(j,iThisCohort)),nage)
+      thisMaxAge = int(cohort_max_age(j,iThisCohort))
 
       thisAreaSum = SUM(fract_per_age(j,thisMinAge:thisMaxAge))
 

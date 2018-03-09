@@ -103,16 +103,17 @@ CONTAINS
       CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" and "static-equal" implemented as forest ageing schemes')
     ENDIF
 
-    !Last cohort is not restricted in age
-    dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,ncohorts,:) = HUGE(1._wp)
+    !Last cohort collects is not really restricted to a max age, but set to max_age for comilance with the fract_per_age field
+    dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,ncohorts,:) = max_age
 
     !Assertion: 
     IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1,:) .NE. 1._wp)) THEN
       CALL finish(TRIM(routine), 'Assertion: lowst cohort always needs to have max_age of 1!')
     ENDIF
-    IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1:ncohorts-1,:) .GT. max_age)) THEN
-      CALL finish(TRIM(routine), 'Assertion: no cohort but the last should have a max age larger than the total max_age!')
+    IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,:,:) .GT. max_age)) THEN
+      CALL finish(TRIM(routine), 'Assertion: no cohort should have a max age larger than the total max_age!')
     ENDIF
+    
 print *, '#######################################'
 print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
     !TODO-JN other bcs?? Also from files?
