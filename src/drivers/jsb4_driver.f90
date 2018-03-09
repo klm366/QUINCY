@@ -16,7 +16,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_init,     ONLY: init_model
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
-  USE mo_jsb_time,           ONLY: is_newday
+  USE mo_jsb_time,           ONLY: is_newday, is_newyear
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -381,7 +381,7 @@ PROGRAM jsb4_driver
 
           !TODO-JN: where to put this cconservation test? 
 !IF (iblk .EQ. 1) THEN
-IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+IF (ANY(cconservation(:,iblk) .GT. 1.e-13_wp)) THEN
   print *, '----------------'
   print *, 'iblk: ', iblk
   print *, 'current sum: ', old_c_state_sum(:,iblk)
@@ -390,10 +390,25 @@ IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
 ENDIF
           CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
 !IF (iblk .EQ. 1) THEN
-IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+IF (ANY(cconservation(:,iblk) .GT. 1.e-13_wp)) THEN
   print *, '***********************'
   print *, 'iblk:', iblk
   print *, 'old sum:', old_c_state_sum(:,iblk)
+!STOP
+ENDIF
+IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+
+  time_loop:DO 
+    CALL time_set   !(echam!)
+    IF(is_newday()) THEN
+      CALL write_date(current_date,'Calculate for: ')
+    ENDIF
+    CALL out_streams
+
+    CALL time_reset
+    IF(is_newyear()) STOP
+  ENDDO time_loop
+
 STOP
 ENDIF
         ENDIF
