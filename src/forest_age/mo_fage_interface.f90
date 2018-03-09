@@ -25,15 +25,17 @@ MODULE mo_fage_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_
+  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_, PHENO_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(FAGE_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(FAGE_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(DISTURB_)
+  dsl4jsb_Use_memory(PHENO_)
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -135,20 +137,30 @@ CONTAINS
 
     USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing
     USE mo_jsb_time,             ONLY: is_newyear
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_of_source_and_sink_tile_upon_area_shift
+    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(FAGE_)
+
+    TYPE(t_pheno_memory),  POINTER :: pheno__mem__source
+    TYPE(t_pheno_memory),  POINTER :: pheno__mem__sink
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
 
+    !TODO-JN shortly also think about disturbance and management again
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction_sink
+    dsl4jsb_Real2D_onChunk :: maxLAI_allom_sink
+    dsl4jsb_Real2D_onChunk :: maxLAI_allom_source
+
     CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
-    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
+    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, &
+                                            & source_fract, sink_fract, altered_sink_fract
 
     REAL(wp) :: fractSum
     INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
@@ -170,6 +182,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(FAGE_)
 
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
@@ -186,14 +199,30 @@ CONTAINS
       ! Area changes upon ageing can have carbon consequences for all children
       dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .FALSE.
 
+      !TODO-JN: where to synchronise fract_this_max_age(:) and fract? + Assert that 1?! here?
+
       ! step one: care for shifts among cohort boundaries
       currentChild => tile%Get_first_child_tile()
+
+      ! !TODO-JN: really?
+      ! ! Assertion: for fract of first child needs to equal fract_per_age(:,1)
+      CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+      IF (ANY(source_fract(:) .NE. fract_per_age(j,1))) THEN
+        ! If its just numerical issues since its different calculations: fix it 
+        IF (ANY((source_fract(:) - fract_per_age(:,1)) .GT. 1.e-14_wp)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: first childs fract needs to equal entry in fract_per_age!')
+        ELSE
+          fract_per_age(:,1) = source_fract(:)
+        ENDIF
+      ENDIF
 
       ! only iterate until -1 -- oldest cohort only accumulates in update_calculate_ageing
       DO i=1,ncohorts-1
         !TODO-JN-COHORTS maybe work with a getter?
         nextChild => currentChild%Get_next_sibling_tile()
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+        CALL nextChild%Get_fraction(ics, ice, iblk, fract=sink_fract(:))
 
         ! a) identify delta fraction for shifts from one to the next cohort
         !TODO-JN needs to be adapted when working with absolute areas
@@ -207,7 +236,8 @@ CONTAINS
 
         !TODO-JN-COHORTS maybe generally only work with >= 1.e.10?
         IF(ANY(source_fract(:) - fract_this_max_age(:) .LT. 0._wp)) THEN
-          IF (ANY(source_fract(:) - fract_this_max_age(:) + 1.e-10_wp .LT. 0_wp )) THEN
+          IF (ANY(source_fract(:) - fract_this_max_age(:) + 1.e-14_wp .LT. 0_wp )) THEN
+            print *, i
             print *, source_fract(:)
             print *, fract_this_max_age(:)
             CALL finish(TRIM(routine), &
@@ -228,6 +258,7 @@ CONTAINS
             IF(i .NE. 1) THEN
               fractSum = SUM(fract_per_age(j,cohort_max_age(j,i-1)+1:cohort_max_age(j,i)))
               IF (fractSum - fract_this_max_age(j) .LT. 0_wp ) THEN
+                print *, i
                 print *, fractSum
                 print *, fract_this_max_age(j)
                 CALL finish(TRIM(routine), &
@@ -237,6 +268,31 @@ CONTAINS
           ENDDO
         ENDIF
 
+
+!TODO-JN: jetzt glaube ich gerade, dass ich das nicht machen soll
+! ich rechne doch inzwischen die veg_fract_correction raus beim verschieben und nehme dann die der 'neuen' cohorte
+! ich erzeuge oder verliere also keine Biomasse, da ich die total biomasse dann konsistent mit dem veg_fract_correction
+! faktor der neuen cohorte verrechne
+
+        ! IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+        !   ! TODO-JN: qickfix of veg_fract_correction -- TODO: find a better solution
+        !   altered_sink_fract = sink_fract(:) + currentChild%delta_fract(ics:ice, iblk) + fract_this_max_age(:)
+        !   SELECT TYPE (mm => currentChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
+        !   SELECT TYPE (mm => nextChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__sink => mm ; END SELECT
+        !   maxLAI_allom_source => pheno__mem__source%maxLAI_allom%ptr(ics:ice,iblk)  ! inout
+        !   maxLAI_allom_sink => pheno__mem__sink%maxLAI_allom%ptr(ics:ice,iblk)  ! in
+        !   veg_frac_correction_sink => pheno__mem__sink%veg_frac_correction%ptr(ics:ice,iblk)  ! inout
+
+        !   DO j=1,nc
+        !       IF(fract_this_max_age(j) .GT. 0._wp) THEN
+        !         maxLAI_allom_sink(j) = maxLAI_allom_sink(j) * (sink_fract(j) / altered_sink_fract(j)) &
+        !           & + maxLAI_allom_source(j) * (fract_this_max_age(j) / altered_sink_fract(j))
+        !         veg_frac_correction_sink(j) = 1.0_wp - exp(-maxLAI_allom_sink(j) / dsl4jsb_Lctlib_param(clumpinessFactor))
+        !     ENDIF
+        !   ENDDO
+        ! ENDIF
+
+
         ! reduce current tiles delta fraction  
         currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - fract_this_max_age(:)
 
@@ -244,7 +300,7 @@ CONTAINS
         nextChild%delta_fract(ics:ice, iblk) = nextChild%delta_fract(ics:ice, iblk) + fract_this_max_age(:)
 
         ! b) accordingly move carbon from one cohort to the next cohorts delta
-        CALL update_delta_carbon_of_source_and_sink_tile_upon_area_shift( &
+        CALL update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
           & currentChild, nextChild, options, fract_this_max_age(:), source_fract(:))
 
         ! c) TODO-JN-COHORTS what else to shift? 
@@ -316,7 +372,7 @@ CONTAINS
 
     USE mo_jsb_time,             ONLY: is_newday
     USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_upon_disturbance
+    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_upon_disturbance
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -399,7 +455,13 @@ CONTAINS
 ! ++ auch da über ta, ra und densities denken  
 ! ++ generalisieren?
 
-        !*** care for wind damage
+!TODO switch back
+!damaged_frac(:) = 0._wp
+!IF(i .EQ. 2) THEN
+!  damaged_frac(:) = 0.05_wp
+!ENDIF
+
+        !*** care for wind damage - TODO: work with max area to prevent numerical issues!?
         damagedArea(:) = damaged_frac(:) * source_fract(:)
 
         ! wind damage only depends on the forcing and there is a good chance that no area is damaged
@@ -417,7 +479,7 @@ CONTAINS
 !print *, firstChild%delta_fract(ics:ice, iblk)
 
           ! b) carbon consequences 
-          CALL update_delta_carbon_upon_disturbance( &
+          CALL update_delta_carbon_rp_upon_disturbance( &
             currentChild, firstChild, l_sourceisfirstChild, options, damagedArea(:), source_fract(:) )
 
           ! c) TODO-JN-COHORTS what else to shift? 
@@ -441,15 +503,18 @@ CONTAINS
         ! update the area per age tracking vector regarding this child and the first child
         IF (i .GT. 1) THEN ! area moved within the first cohort requires no update (it stays between year 0 and 1)
           disturbedArea(:) = damagedArea(:) + burnedArea(:)
-          IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
-            CALL update_frac_per_age_equally_upon_disturbance(nc, ncohorts, max_age, &
-              & i, disturbedArea(:), cohort_max_age(:,:), fract_per_age(:,:), mean_age(:))
-          ELSE
-            CALL finish(TRIM(routine), 'Currently only "static" implemented as forest ageing scheme')
+          IF(ANY(disturbedArea(:) .GT. 0._wp)) THEN
+!IF (iblk == 1) print *, 'disturbed area', disturbedArea(:)
+            IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
+              CALL update_frac_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
+                & i, disturbedArea(:), cohort_max_age(:,:), fract_per_age(:,:), mean_age(:))
+            ELSE
+              CALL finish(TRIM(routine), 'Currently only "static" implemented as forest ageing scheme')
+            ENDIF
           ENDIF
         ENDIF
 
-        ! Move further in the hierarchy  
+        ! Move further in the hierarchy 
         currentChild => currentChild%Get_next_sibling_tile()
         l_sourceisfirstChild = .FALSE.
       ENDDO

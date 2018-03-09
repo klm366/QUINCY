@@ -20,7 +20,7 @@ MODULE mo_carbon_process
   PRIVATE
 
   PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, &
-    & update_delta_carbon, update_state_reset_delta, get_per_tile
+    & update_delta_carbon_rp, update_state_reset_delta, get_per_tile
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -1542,28 +1542,28 @@ CONTAINS
   END SUBROUTINE yasso
 
 
-  ! --- update_delta_carbon() ---------------------------------------------------------------------------------------------------
+  ! --- update_delta_carbon_rp() ---------------------------------------------------------------------------------------------------
   !
   ! updates delta carbon on area shift for a single pool 
   !
-  elemental subroutine update_delta_carbon( &
+  elemental subroutine update_delta_carbon_rp( &
     & org_Cpool,                  & ! in
     & delta_Cpool_source,         & ! inout
     & delta_Cpool_sink,           & ! inout
     & delta_fract,                & ! in
-    & prev_fract)                   ! in
+    & veg_frac_correction)                   ! in
 
-    real(wp),intent(in)    ::  org_Cpool, delta_fract, prev_fract
+    real(wp),intent(in)    ::  org_Cpool, delta_fract, veg_frac_correction
     real(wp),intent(inout) ::  delta_Cpool_source, delta_Cpool_sink
 
     !TODO-JN: probably needs to be adapted with absolute areas, then also the prev_fract 
     !         will be required + the test for zero 
 !    IF (delta_fract .GT. 0) THEN
-        delta_Cpool_source = delta_Cpool_source - (org_Cpool * delta_fract)
-        delta_Cpool_sink = delta_Cpool_sink + (org_Cpool * delta_fract)
+        delta_Cpool_source = delta_Cpool_source - (org_Cpool * delta_fract * veg_frac_correction)
+        delta_Cpool_sink = delta_Cpool_sink + (org_Cpool * delta_fract * veg_frac_correction)
 !    ENDIF
 
-  end subroutine update_delta_carbon
+  end subroutine update_delta_carbon_rp
 
 
   ! --- update_state_reset_delta() ---------------------------------------------------------------------------------------------------
@@ -1574,10 +1574,18 @@ CONTAINS
     & org_Cpool,                  & ! inout
     & delta_Cpool,                & ! inout
     & delta_fract,                & ! in
+    & veg_frac_correction,        & ! in
     & prev_fract)                   ! in
 
-    real(wp),intent(in)    ::  delta_fract, prev_fract
+    real(wp),intent(in)    ::  delta_fract, prev_fract, veg_frac_correction
     real(wp),intent(inout) ::  org_Cpool, delta_Cpool
+
+    ! TODO-JN-COHORTS: as in JSBACH3 calculations are done no matter if there is any area or not
+    !                  with cohorts we require the densities to be zero if there is no area!
+    !                  -- potential conflict  
+    IF ( prev_fract .EQ. 0._wp) THEN
+        org_Cpool = 0._wp
+    ENDIF
 
     !TODO-JN: probably needs to be adapted with absolute areas
 
@@ -1586,7 +1594,8 @@ CONTAINS
     ! IF prev_fract + delta_fract .EQ. 0._wp org_Cpool is not touched
 
     IF( prev_fract + delta_fract .GT. 0._wp) THEN
-      org_Cpool = ((org_Cpool * prev_fract) + delta_Cpool) / (prev_fract + delta_fract)
+      org_Cpool = ((org_Cpool * prev_fract * veg_frac_correction) + delta_Cpool) &
+        & / ((prev_fract + delta_fract) * veg_frac_correction)
     ELSE
       org_Cpool = 0._wp
     ENDIF

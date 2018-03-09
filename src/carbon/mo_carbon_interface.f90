@@ -53,8 +53,8 @@ MODULE mo_carbon_interface
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                                                       &
                & update_per_tile_vars,                                                     &
-               & update_delta_carbon_of_source_and_sink_tile_upon_area_shift,              &
-               & update_delta_carbon_upon_disturbance,                                     &
+               & update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift,              &
+               & update_delta_carbon_rp_upon_disturbance,                                     &
                & update_carbon_states_with_delta_carbon,                                   &
                & rescale_carbon_upon_reference_area_change, calculate_current_c_state_sum, &
                & check_carbon_conservation_for_operation
@@ -410,7 +410,7 @@ CONTAINS
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
     !dsl4jsb_Get_var2D_onChunk(CARBON_,  frac_litter_wood_new )
     !
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )      ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
@@ -786,7 +786,6 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, source_fract
 
     dsl4jsb_Real3D_onChunk :: fract_per_age
-    dsl4jsb_Real3D_onChunk :: cohort_max_age
 
     INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
@@ -817,7 +816,6 @@ CONTAINS
     SELECT TYPE (mm => tile%parent_tile%mem(fage_)%p); TYPE IS (t_fage_memory); fage__mem__parent => mm ; END SELECT
 
     fract_per_age => fage__mem__parent%fract_per_age%ptr(ics:ice,:,iblk)
-    cohort_max_age => fage__mem__parent%cohort_max_age%ptr(ics:ice,:,iblk)
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
 
@@ -1074,14 +1072,15 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  ! NOTE: although the density would not change when moving C away the calculation is done symetrically 
-  !       because it makes the transfer from delta to states easier afterwards
+  ! NOTE: although the density would not change when moving C away the calculation is done symmetrically  
+  !       because it makes the transfer from delta to states easier afterwards, particularly since 
+  !       area losses and gains happen simultaneously
 
-  SUBROUTINE update_delta_carbon_of_source_and_sink_tile_upon_area_shift( &
+  SUBROUTINE update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
       source_tile, sink_tile, options, delta_fract, prev_fract )
 
     USE mo_exception,           ONLY: finish
-    USE mo_carbon_process,      ONLY: update_delta_carbon
+    USE mo_carbon_process,      ONLY: update_delta_carbon_rp
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: source_tile, sink_tile
@@ -1096,9 +1095,11 @@ CONTAINS
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
     TYPE(t_carbon_memory), POINTER :: carbon__mem__sink
 
+    TYPE(t_pheno_memory),  POINTER :: pheno__mem__source
+
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
-      & TRIM(modname)//':update_delta_carbon_of_source_and_sink_tile_upon_area_shift'
+      & TRIM(modname)//':update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift'
     INTEGER                     :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green
@@ -1125,6 +1126,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
+
+    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
 
     dsl4jsb_Real2D_onChunk ::  current_max_green
     dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
@@ -1203,6 +1206,8 @@ CONTAINS
     SELECT TYPE (mm => source_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__source => mm ; END SELECT
     SELECT TYPE (mm => sink_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__sink => mm ; END SELECT
 
+    SELECT TYPE (mm => sink_tile%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
+
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -1232,6 +1237,8 @@ CONTAINS
     YCpool_ethanol_bg2 => carbon__mem__source%YCpool_ethanol_bg2%ptr(ics:ice,iblk)  ! inout
     YCpool_nonsoluble_bg2 => carbon__mem__source%YCpool_nonsoluble_bg2%ptr(ics:ice,iblk)  ! inout
     YCpool_humus_2 => carbon__mem__source%YCpool_humus_2%ptr(ics:ice,iblk)  ! inout
+
+    veg_frac_correction => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! in
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       current_max_green => carbon__mem__source%current_max_green%ptr(ics:ice,iblk)  ! inout
@@ -1294,61 +1301,61 @@ CONTAINS
     delta_YCpool_nonsoluble_bg2_rp_sink => carbon__mem__sink%delta_YCpool_nonsoluble_bg2_rp%ptr(ics:ice,iblk)  ! inout
     delta_YCpool_humus_2_rp_sink => carbon__mem__sink%delta_YCpool_humus_2_rp%ptr(ics:ice,iblk)  ! inout
 
-    CALL update_delta_carbon(Cpool_green(:), delta_Cpool_green_rp_source(:), &
-      & delta_Cpool_green_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(Cpool_woods(:), delta_Cpool_woods_rp_source(:), &
-      & delta_Cpool_woods_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(Cpool_reserve(:), delta_Cpool_reserve_rp_source(:), &
-      & delta_Cpool_reserve_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(Cpool_crop_harvest(:), delta_Cpool_crop_harvest_rp_source(:), &
-      delta_Cpool_crop_harvest_rp_sink(:), delta_fract(:), prev_fract(:))
+    CALL update_delta_carbon_rp(Cpool_green(:), delta_Cpool_green_rp_source(:), &
+      & delta_Cpool_green_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(Cpool_woods(:), delta_Cpool_woods_rp_source(:), &
+      & delta_Cpool_woods_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(Cpool_reserve(:), delta_Cpool_reserve_rp_source(:), &
+      & delta_Cpool_reserve_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(Cpool_crop_harvest(:), delta_Cpool_crop_harvest_rp_source(:), &
+      delta_Cpool_crop_harvest_rp_sink(:), delta_fract(:), veg_frac_correction(:))
 
-    CALL update_delta_carbon(YCpool_acid_ag1(:), delta_YCpool_acid_ag1_rp_source(:), &
-      & delta_YCpool_acid_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_water_ag1(:), delta_YCpool_water_ag1_rp_source(:), &
-      & delta_YCpool_water_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_ethanol_ag1(:), delta_YCpool_ethanol_ag1_rp_source(:), &
-      & delta_YCpool_ethanol_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_nonsoluble_ag1(:), delta_YCpool_nonsoluble_ag1_rp_source(:), &
-      & delta_YCpool_nonsoluble_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_acid_bg1(:), delta_YCpool_acid_bg1_rp_source(:), &
-      & delta_YCpool_acid_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_water_bg1(:), delta_YCpool_water_bg1_rp_source(:), &
-      & delta_YCpool_water_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_ethanol_bg1(:), delta_YCpool_ethanol_bg1_rp_source(:), &
-      & delta_YCpool_ethanol_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_nonsoluble_bg1(:), delta_YCpool_nonsoluble_bg1_rp_source(:), &
-      & delta_YCpool_nonsoluble_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_humus_1(:), delta_YCpool_humus_1_rp_source(:), &
-      & delta_YCpool_humus_1_rp_sink(:), delta_fract(:), prev_fract(:))
+    CALL update_delta_carbon_rp(YCpool_acid_ag1(:), delta_YCpool_acid_ag1_rp_source(:), &
+      & delta_YCpool_acid_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_water_ag1(:), delta_YCpool_water_ag1_rp_source(:), &
+      & delta_YCpool_water_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_ethanol_ag1(:), delta_YCpool_ethanol_ag1_rp_source(:), &
+      & delta_YCpool_ethanol_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_nonsoluble_ag1(:), delta_YCpool_nonsoluble_ag1_rp_source(:), &
+      & delta_YCpool_nonsoluble_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_acid_bg1(:), delta_YCpool_acid_bg1_rp_source(:), &
+      & delta_YCpool_acid_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_water_bg1(:), delta_YCpool_water_bg1_rp_source(:), &
+      & delta_YCpool_water_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_ethanol_bg1(:), delta_YCpool_ethanol_bg1_rp_source(:), &
+      & delta_YCpool_ethanol_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_nonsoluble_bg1(:), delta_YCpool_nonsoluble_bg1_rp_source(:), &
+      & delta_YCpool_nonsoluble_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_humus_1(:), delta_YCpool_humus_1_rp_source(:), &
+      & delta_YCpool_humus_1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
 
-    CALL update_delta_carbon(YCpool_acid_ag2(:), delta_YCpool_acid_ag2_rp_source(:), &
-      & delta_YCpool_acid_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_water_ag2(:), delta_YCpool_water_ag2_rp_source(:), &
-      & delta_YCpool_water_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_ethanol_ag2(:), delta_YCpool_ethanol_ag2_rp_source(:), &
-      & delta_YCpool_ethanol_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_nonsoluble_ag2(:), delta_YCpool_nonsoluble_ag2_rp_source(:), &
-      & delta_YCpool_nonsoluble_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_acid_bg2(:), delta_YCpool_acid_bg2_rp_source(:), &
-      & delta_YCpool_acid_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_water_bg2(:), delta_YCpool_water_bg2_rp_source(:), &
-      & delta_YCpool_water_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_ethanol_bg2(:), delta_YCpool_ethanol_bg2_rp_source(:), &
-      & delta_YCpool_ethanol_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_nonsoluble_bg2(:), delta_YCpool_nonsoluble_bg2_rp_source(:), &
-      & delta_YCpool_nonsoluble_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(YCpool_humus_2(:), delta_YCpool_humus_2_rp_source(:), &
-      & delta_YCpool_humus_2_rp_sink(:), delta_fract(:), prev_fract(:))
+    CALL update_delta_carbon_rp(YCpool_acid_ag2(:), delta_YCpool_acid_ag2_rp_source(:), &
+      & delta_YCpool_acid_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_water_ag2(:), delta_YCpool_water_ag2_rp_source(:), &
+      & delta_YCpool_water_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_ethanol_ag2(:), delta_YCpool_ethanol_ag2_rp_source(:), &
+      & delta_YCpool_ethanol_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_nonsoluble_ag2(:), delta_YCpool_nonsoluble_ag2_rp_source(:), &
+      & delta_YCpool_nonsoluble_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_acid_bg2(:), delta_YCpool_acid_bg2_rp_source(:), &
+      & delta_YCpool_acid_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_water_bg2(:), delta_YCpool_water_bg2_rp_source(:), &
+      & delta_YCpool_water_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_ethanol_bg2(:), delta_YCpool_ethanol_bg2_rp_source(:), &
+      & delta_YCpool_ethanol_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_nonsoluble_bg2(:), delta_YCpool_nonsoluble_bg2_rp_source(:), &
+      & delta_YCpool_nonsoluble_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(YCpool_humus_2(:), delta_YCpool_humus_2_rp_source(:), &
+      & delta_YCpool_humus_2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-      CALL update_delta_carbon(current_max_green(:), delta_current_max_green_rp_source(:), &
-        & delta_current_max_green_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp_source(:), &
-        & delta_veg_carbon_at_max_green_rp_sink(:), delta_fract(:), prev_fract(:))
+      CALL update_delta_carbon_rp(current_max_green(:), delta_current_max_green_rp_source(:), &
+        & delta_current_max_green_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp_source(:), &
+        & delta_veg_carbon_at_max_green_rp_sink(:), delta_fract(:), veg_frac_correction(:))
     ENDIF
 
-  END SUBROUTINE update_delta_carbon_of_source_and_sink_tile_upon_area_shift
+  END SUBROUTINE update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift
 
 
   ! ================================================================================================================================
@@ -1363,11 +1370,11 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_delta_carbon_upon_disturbance( &
+  SUBROUTINE update_delta_carbon_rp_upon_disturbance( &
       source_tile, sink_tile, l_sourceisfirstChild, options, delta_fract, prev_fract )
 
     USE mo_exception,           ONLY: finish
-    USE mo_carbon_process,      ONLY: update_delta_carbon, relocate_carbon_fire, relocate_carbon_damage
+    USE mo_carbon_process,      ONLY: update_delta_carbon_rp, relocate_carbon_fire, relocate_carbon_damage
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: source_tile, sink_tile
@@ -1383,9 +1390,11 @@ CONTAINS
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
     TYPE(t_carbon_memory), POINTER :: carbon__mem__sink
 
+    TYPE(t_pheno_memory),  POINTER :: pheno__mem__source
+
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
-      & TRIM(modname)//':update_delta_carbon_upon_disturbance'
+      & TRIM(modname)//':update_delta_carbon_rp_upon_disturbance'
     INTEGER                     :: ics, ice, iblk
     REAL(wp), DIMENSION(options%nc) :: helper, d_green_new, d_reserve_new, d_wood_new
 
@@ -1414,8 +1423,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
 
-    dsl4jsb_Real2D_onChunk :: carbon_2_GreenLitterPools
-    dsl4jsb_Real2D_onChunk :: carbon_2_WoodLitterPools
+    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
+
+    dsl4jsb_Real2D_onChunk ::  carbon_2_GreenLitterPools
+    dsl4jsb_Real2D_onChunk ::  carbon_2_WoodLitterPools
 
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp_sink
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp_sink
@@ -1463,6 +1474,8 @@ CONTAINS
     SELECT TYPE (mm => source_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__source => mm ; END SELECT
     SELECT TYPE (mm => sink_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__sink => mm ; END SELECT
 
+    SELECT TYPE (mm => source_tile%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
+
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -1492,6 +1505,8 @@ CONTAINS
     YCpool_ethanol_bg2 => carbon__mem__source%YCpool_ethanol_bg2%ptr(ics:ice,iblk)  ! in
     YCpool_nonsoluble_bg2 => carbon__mem__source%YCpool_nonsoluble_bg2%ptr(ics:ice,iblk)  ! in
     YCpool_humus_2 => carbon__mem__source%YCpool_humus_2%ptr(ics:ice,iblk)  ! in
+
+    veg_frac_correction => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! in
 
     carbon_2_GreenLitterPools => carbon__mem__source%carbon_2_GreenLitterPools%ptr(ics:ice,iblk)  ! in
     carbon_2_WoodLitterPools => carbon__mem__source%carbon_2_WoodLitterPools%ptr(ics:ice,iblk)  ! in
@@ -1526,9 +1541,9 @@ CONTAINS
     d_wood_new(:) = 0._wp
 
     !Get the cpool content that will be added to the sink
-    CALL update_delta_carbon(Cpool_green(:), helper(:), d_green_new(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(Cpool_woods(:), helper(:), d_wood_new(:), delta_fract(:), prev_fract(:))
-    CALL update_delta_carbon(Cpool_reserve(:), helper(:), d_reserve_new(:), delta_fract(:), prev_fract(:))
+    CALL update_delta_carbon_rp(Cpool_green(:), helper(:), d_green_new(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(Cpool_woods(:), helper(:), d_wood_new(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(Cpool_reserve(:), helper(:), d_reserve_new(:), delta_fract(:), veg_frac_correction(:))
 
     IF (.NOT. l_sourceisfirstChild) THEN
       ! Only required if the source is not the first child
@@ -1536,46 +1551,46 @@ CONTAINS
       !    first cohort and so do the soil/litter pools
 
 !NOTE: if we would not start from the first child this would not be ok and would also require *_new variables
-      CALL update_delta_carbon(Cpool_crop_harvest(:), helper(:), &
-        delta_Cpool_crop_harvest_rp_sink(:), delta_fract(:), prev_fract(:))
+      CALL update_delta_carbon_rp(Cpool_crop_harvest(:), helper(:), &
+        delta_Cpool_crop_harvest_rp_sink(:), delta_fract(:), veg_frac_correction(:))
 
-      CALL update_delta_carbon(YCpool_acid_ag1(:), helper(:), &
-        & delta_YCpool_acid_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_water_ag1(:), helper(:), &
-        & delta_YCpool_water_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_ethanol_ag1(:), helper(:), &
-        & delta_YCpool_ethanol_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_nonsoluble_ag1(:), helper(:), &
-        & delta_YCpool_nonsoluble_ag1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_acid_bg1(:), helper(:), &
-        & delta_YCpool_acid_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_water_bg1(:), helper(:), &
-        & delta_YCpool_water_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_ethanol_bg1(:), helper(:), &
-        & delta_YCpool_ethanol_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_nonsoluble_bg1(:), helper(:), &
-        & delta_YCpool_nonsoluble_bg1_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_humus_1(:), helper(:), &
-        & delta_YCpool_humus_1_rp_sink(:), delta_fract(:), prev_fract(:))
+      CALL update_delta_carbon_rp(YCpool_acid_ag1(:), helper(:), &
+        & delta_YCpool_acid_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_water_ag1(:), helper(:), &
+        & delta_YCpool_water_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_ethanol_ag1(:), helper(:), &
+        & delta_YCpool_ethanol_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_nonsoluble_ag1(:), helper(:), &
+        & delta_YCpool_nonsoluble_ag1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_acid_bg1(:), helper(:), &
+        & delta_YCpool_acid_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_water_bg1(:), helper(:), &
+        & delta_YCpool_water_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_ethanol_bg1(:), helper(:), &
+        & delta_YCpool_ethanol_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_nonsoluble_bg1(:), helper(:), &
+        & delta_YCpool_nonsoluble_bg1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_humus_1(:), helper(:), &
+        & delta_YCpool_humus_1_rp_sink(:), delta_fract(:), veg_frac_correction(:))
 
-      CALL update_delta_carbon(YCpool_acid_ag2(:), helper(:), &
-        & delta_YCpool_acid_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_water_ag2(:), helper(:), &
-        & delta_YCpool_water_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_ethanol_ag2(:), helper(:), &
-        & delta_YCpool_ethanol_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_nonsoluble_ag2(:), helper(:), &
-        & delta_YCpool_nonsoluble_ag2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_acid_bg2(:), helper(:), &
-        & delta_YCpool_acid_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_water_bg2(:), helper(:), &
-        & delta_YCpool_water_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_ethanol_bg2(:), helper(:), &
-        & delta_YCpool_ethanol_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_nonsoluble_bg2(:), helper(:), &
-        & delta_YCpool_nonsoluble_bg2_rp_sink(:), delta_fract(:), prev_fract(:))
-      CALL update_delta_carbon(YCpool_humus_2(:), helper(:), &
-        & delta_YCpool_humus_2_rp_sink(:), delta_fract(:), prev_fract(:))
+      CALL update_delta_carbon_rp(YCpool_acid_ag2(:), helper(:), &
+        & delta_YCpool_acid_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_water_ag2(:), helper(:), &
+        & delta_YCpool_water_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_ethanol_ag2(:), helper(:), &
+        & delta_YCpool_ethanol_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_nonsoluble_ag2(:), helper(:), &
+        & delta_YCpool_nonsoluble_ag2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_acid_bg2(:), helper(:), &
+        & delta_YCpool_acid_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_water_bg2(:), helper(:), &
+        & delta_YCpool_water_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_ethanol_bg2(:), helper(:), &
+        & delta_YCpool_ethanol_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_nonsoluble_bg2(:), helper(:), &
+        & delta_YCpool_nonsoluble_bg2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(YCpool_humus_2(:), helper(:), &
+        & delta_YCpool_humus_2_rp_sink(:), delta_fract(:), veg_frac_correction(:))
     ENDIF
 
     ! If source and sink is the same child - i.e. the first child, 
@@ -1630,7 +1645,11 @@ CONTAINS
     !JN-TODO-COHORTS: ich glaube ich muss carbon_2_GreenLitterPools und carbon_2_WoodLitterPools
     ! irgendwie wieder zurück rechnen, weil die hier jetzt rp (relative to parent tile) berechnet sind
 
+
+    !TODO: ich glaube nicht, dass ich das hier brauche - sink ist first cohort und die wird eh null gesetzt!
+    !      remove!?
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      !TODO-JN: think
       delta_current_max_green_rp_sink => carbon__mem__sink%delta_current_max_green_rp%ptr(ics:ice,iblk)  ! inout
       delta_veg_carbon_at_max_green_rp_sink => carbon__mem__sink%delta_veg_carbon_at_max_green_rp%ptr(ics:ice,iblk)  ! inout
 
@@ -1639,7 +1658,7 @@ CONTAINS
     ENDIF
 
 
-  END SUBROUTINE update_delta_carbon_upon_disturbance
+  END SUBROUTINE update_delta_carbon_rp_upon_disturbance
 
 
 
@@ -1897,7 +1916,11 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
     LOGICAL, INTENT(in) :: tmpL
 
+    TYPE(t_jsb_model), POINTER                :: model
+
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_config(PHENO_)
 
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':update_carbon_states_with_delta_carbon'
@@ -1929,6 +1952,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
 
+    dsl4jsb_Real2D_onChunk ::  current_max_green
+    dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
+
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_reserve_rp 
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp 
@@ -1954,7 +1980,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_nonsoluble_bg2_rp
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_humus_2_rp
 
+    dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp
+    dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp
+
+    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
+
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_config(PHENO_)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2010,6 +2045,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_nonsoluble_bg2_rp)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_humus_2_rp)            ! inout 
 
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  current_max_green)                ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  veg_carbon_at_max_green)          ! inout 
+
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_current_max_green_rp)       ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_veg_carbon_at_max_green_rp) ! inout 
+    ENDIF
+
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction)      ! in
+
     delta_fract(:)=tile%delta_fract(ics:ice, iblk)
     CALL tile%Get_fraction(ics, ice, iblk, fract=prev_fract(:))
 
@@ -2026,30 +2071,59 @@ IF(tmpL)THEN
     ! (Then the following should not happen and other Assertions and MAX statements will be required!)
 
     !TODO-JN: maybe add assertions on positive Cpools?
-    CALL update_state_reset_delta(Cpool_green(:), delta_Cpool_green_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(Cpool_reserve(:), delta_Cpool_reserve_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(Cpool_woods(:), delta_Cpool_woods_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(Cpool_crop_harvest(:), delta_Cpool_crop_harvest_rp(:), delta_fract(:), prev_fract(:))
+    CALL update_state_reset_delta(Cpool_green(:), delta_Cpool_green_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(Cpool_reserve(:), delta_Cpool_reserve_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(Cpool_woods(:), delta_Cpool_woods_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(Cpool_crop_harvest(:), delta_Cpool_crop_harvest_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
 
-    CALL update_state_reset_delta(YCpool_acid_ag1(:), delta_YCpool_acid_ag1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_water_ag1(:), delta_YCpool_water_ag1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_ethanol_ag1(:), delta_YCpool_ethanol_ag1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_nonsoluble_ag1(:), delta_YCpool_nonsoluble_ag1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_acid_bg1(:), delta_YCpool_acid_bg1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_water_bg1(:), delta_YCpool_water_bg1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_ethanol_bg1(:), delta_YCpool_ethanol_bg1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_nonsoluble_bg1(:), delta_YCpool_nonsoluble_bg1_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_humus_1(:), delta_YCpool_humus_1_rp(:), delta_fract(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_acid_ag1(:), delta_YCpool_acid_ag1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_water_ag1(:), delta_YCpool_water_ag1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_ethanol_ag1(:), delta_YCpool_ethanol_ag1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_nonsoluble_ag1(:), delta_YCpool_nonsoluble_ag1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_acid_bg1(:), delta_YCpool_acid_bg1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_water_bg1(:), delta_YCpool_water_bg1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_ethanol_bg1(:), delta_YCpool_ethanol_bg1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_nonsoluble_bg1(:), delta_YCpool_nonsoluble_bg1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_humus_1(:), delta_YCpool_humus_1_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
 
-    CALL update_state_reset_delta(YCpool_acid_ag2(:), delta_YCpool_acid_ag2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_water_ag2(:), delta_YCpool_water_ag2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_ethanol_ag2(:), delta_YCpool_ethanol_ag2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_nonsoluble_ag2(:), delta_YCpool_nonsoluble_ag2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_acid_bg2(:), delta_YCpool_acid_bg2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_water_bg2(:), delta_YCpool_water_bg2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_ethanol_bg2(:), delta_YCpool_ethanol_bg2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_nonsoluble_bg2(:), delta_YCpool_nonsoluble_bg2_rp(:), delta_fract(:), prev_fract(:))
-    CALL update_state_reset_delta(YCpool_humus_2(:), delta_YCpool_humus_2_rp(:), delta_fract(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_acid_ag2(:), delta_YCpool_acid_ag2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_water_ag2(:), delta_YCpool_water_ag2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_ethanol_ag2(:), delta_YCpool_ethanol_ag2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_nonsoluble_ag2(:), delta_YCpool_nonsoluble_ag2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_acid_bg2(:), delta_YCpool_acid_bg2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_water_bg2(:), delta_YCpool_water_bg2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_ethanol_bg2(:), delta_YCpool_ethanol_bg2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_nonsoluble_bg2(:), delta_YCpool_nonsoluble_bg2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(YCpool_humus_2(:), delta_YCpool_humus_2_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      CALL update_state_reset_delta(current_max_green(:), delta_current_max_green_rp(:), delta_fract(:), &
+        & veg_frac_correction(:), prev_fract(:))
+      CALL update_state_reset_delta(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp(:), delta_fract(:), &
+        & veg_frac_correction(:), prev_fract(:))
+    ENDIF
 
     CALL update_per_tile_vars(tile, options, &
       & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
