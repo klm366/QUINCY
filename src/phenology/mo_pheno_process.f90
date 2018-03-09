@@ -952,11 +952,11 @@ MODULE mo_pheno_process
     !For numerical reasons funct_allometry%FOM_alloc_vegetation_carbon_at_max_green_pool cannot be zero. 
     !We also want to set max_LAI to the minimum value after harvest, 
     !    ie. when cbalance%Cpool_woods(kidx0:kidx1,itile)=zero.
-    IF ((veg_carbon_at_max_green .GT. PhenoParam%FR%min_zero) .AND. (Cpool_woods .GT. PhenoParam%FR%min_zero)) THEN 
+    IF ((veg_carbon_at_max_green .GT. PhenoParam%FR%min_c) .AND. (Cpool_woods .GT. PhenoParam%FR%min_c)) THEN 
 
       !calculate number of individuals, assuming that forest is at self-thinning
       number_of_individuals = exp(MIN((log(veg_carbon_at_max_green * kgPerHa) - lctlib_alpha_nr_ind) &
-          & / lctlib_beta_nr_ind, PhenoParam%FR%log_maxind))
+          & / lctlib_beta_nr_ind, PhenoParam%FR%min_ind))
 
       !calculate biomass per individual
       biomass_per_individual = MAX((veg_carbon_at_max_green * kgPerHa) / number_of_individuals, PhenoParam%FR%min_zero)
