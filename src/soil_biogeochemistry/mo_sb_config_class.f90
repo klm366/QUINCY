@@ -27,20 +27,32 @@ MODULE mo_sb_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
+    !> options
+    !    
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: sb_bnf_scheme
+    CHARACTER(15)         :: sb_adsorp_scheme
+    !> flags
+    !
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
+    ! mycorrhiza
     LOGICAL               :: flag_mycorrhiza
     LOGICAL               :: flag_myco_inorganic
     LOGICAL               :: flag_myco_organic
     LOGICAL               :: flag_myco_priming
+    ! JSM
+    LOGICAL               :: flag_sb_jsm_transport
+    LOGICAL               :: flag_sb_jsm_litter_input
+    LOGICAL               :: flag_sb_jsm_OM_sorption
+    ! ECA
     LOGICAL               :: flag_sb_ECA_upt_po4
     LOGICAL               :: flag_sb_CLE_po4
     LOGICAL               :: flag_sb_LK_po4
-    CHARACTER(15)         :: sb_adsorp_scheme
+    !> parameter values
+    !
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
     REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
@@ -73,6 +85,7 @@ CONTAINS
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: sb_bnf_scheme
+    CHARACTER(15)         :: sb_adsorp_scheme
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -80,10 +93,12 @@ CONTAINS
     LOGICAL               :: flag_myco_inorganic
     LOGICAL               :: flag_myco_organic
     LOGICAL               :: flag_myco_priming
+    LOGICAL               :: flag_sb_jsm_transport
+    LOGICAL               :: flag_sb_jsm_litter_input
+    LOGICAL               :: flag_sb_jsm_OM_sorption
     LOGICAL               :: flag_sb_ECA_upt_po4
     LOGICAL               :: flag_sb_CLE_po4
     LOGICAL               :: flag_sb_LK_po4
-    CHARACTER(15)         :: sb_adsorp_scheme
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
     REAL(wp)              :: soil_ph
@@ -92,23 +107,26 @@ CONTAINS
     NAMELIST /soil_biogeochemistry_ctl/       & 
       active,                      &
       ic_filename, bc_filename,    &
-                      sb_model_scheme      ,  &
-                      sb_nloss_scheme      ,  &
-                      sb_bnf_scheme        ,  &
-                      flag_sb_prescribe_nh4,  &
-                      flag_sb_prescribe_no3,  &
-                      flag_sb_prescribe_po4,  &
-                      flag_mycorrhiza      ,  &
-                      flag_myco_inorganic  ,  &
-                      flag_myco_organic    ,  &
-                      flag_myco_priming    ,  & 
-                      flag_sb_ECA_upt_po4  ,  &
-                      flag_sb_CLE_po4      ,  &
-                      flag_sb_LK_po4       ,  &    
-                      sb_adsorp_scheme     ,  &
-                      usda_taxonomy_class  ,  &
-                      nwrb_taxonomy_class  ,  &
-                      soil_ph              ,  &
+                      sb_model_scheme           , &
+                      sb_nloss_scheme           , &
+                      sb_bnf_scheme             , &
+                      sb_adsorp_scheme          , &
+                      flag_sb_prescribe_nh4     , &
+                      flag_sb_prescribe_no3     , &
+                      flag_sb_prescribe_po4     , &
+                      flag_mycorrhiza           , &
+                      flag_myco_inorganic       , &
+                      flag_myco_organic         , &
+                      flag_myco_priming         , & 
+                      flag_sb_jsm_transport     , &
+                      flag_sb_jsm_litter_input  , &
+                      flag_sb_jsm_OM_sorption   , &
+                      flag_sb_ECA_upt_po4       , &
+                      flag_sb_CLE_po4           , &
+                      flag_sb_LK_po4            , &    
+                      usda_taxonomy_class       , &
+                      nwrb_taxonomy_class       , &
+                      soil_ph                   , &
                       lithology_class
 
     ! variables for reading model-options from namelist
@@ -125,6 +143,7 @@ CONTAINS
     sb_model_scheme             = "simple_0d"       ! simple_0d simple_1d jsm
     sb_nloss_scheme             = "fixed"           ! none fixed dynamic 
     sb_bnf_scheme               = "standard"        ! none standard unlimited 
+    sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
@@ -132,10 +151,12 @@ CONTAINS
     flag_myco_inorganic         = .FALSE.
     flag_myco_organic           = .FALSE.
     flag_myco_priming           = .FALSE.
+    flag_sb_jsm_transport       = .FALSE.
+    flag_sb_jsm_litter_input    = .FALSE.
+    flag_sb_jsm_OM_sorption     = .FALSE.
     flag_sb_ECA_upt_po4         = .TRUE.
     flag_sb_CLE_po4             = .TRUE.
     flag_sb_LK_po4              = .TRUE.
-    sb_adsorp_scheme            = "eca_full"         ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
     soil_ph                     = 6.5_wp
@@ -175,6 +196,7 @@ CONTAINS
     config%sb_model_scheme                 = sb_model_scheme
     config%sb_nloss_scheme                 = sb_nloss_scheme
     config%sb_bnf_scheme                   = sb_bnf_scheme
+    config%sb_adsorp_scheme                = sb_adsorp_scheme
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
@@ -182,10 +204,12 @@ CONTAINS
     config%flag_myco_inorganic             = flag_myco_inorganic
     config%flag_myco_organic               = flag_myco_organic
     config%flag_myco_priming               = flag_myco_priming
+    config%flag_sb_jsm_transport           = flag_sb_jsm_transport
+    config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
+    config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption
     config%flag_sb_ECA_upt_po4             = flag_sb_ECA_upt_po4
     config%flag_sb_CLE_po4                 = flag_sb_CLE_po4
     config%flag_sb_LK_po4                  = flag_sb_LK_po4
-    config%sb_adsorp_scheme                = sb_adsorp_scheme
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
     config%soil_ph                         = soil_ph    

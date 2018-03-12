@@ -122,6 +122,11 @@ flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set t
 soil_depth=5.7                  # meters
 nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
 
+# JSM
+flag_sb_jsm_transport="F"       # ..
+flag_sb_jsm_litter_input="F"    # ..
+flag_sb_jsm_OM_sorption="F"     # ..
+
 # simulation length & output
 simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
@@ -595,6 +600,9 @@ validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_pres
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
+validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
+validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
+validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
 validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
@@ -1302,6 +1310,24 @@ if [ $flag_read_dC14 == T ]
     changeNamelistValue flag_read_dC14 ".TRUE."
   else
     changeNamelistValue flag_read_dC14 ".FALSE."
+fi
+if [ $flag_sb_jsm_transport == T ]
+  then
+    changeNamelistValue flag_sb_jsm_transport ".TRUE."
+  else
+    changeNamelistValue flag_sb_jsm_transport ".FALSE."
+fi
+if [ $flag_sb_jsm_litter_input == T ]
+  then
+    changeNamelistValue flag_sb_jsm_litter_input ".TRUE."
+  else
+    changeNamelistValue flag_sb_jsm_litter_input ".FALSE."
+fi
+if [ $flag_sb_jsm_OM_sorption == T ]
+  then
+    changeNamelistValue flag_sb_jsm_OM_sorption ".TRUE."
+  else
+    changeNamelistValue flag_sb_jsm_OM_sorption ".FALSE."
 fi
 if [ $flag_oneYearForcing == T ]
   then

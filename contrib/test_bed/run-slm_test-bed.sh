@@ -45,10 +45,15 @@ flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T"      # does also set "start_bareground"
 
 # soil model options
-soil_depth=9.5                  # meter
-nsoil_layer=15                   # number of soil layers (default: 5 | min: 5 | max: 20)
+soil_depth=5.7                  # meter
+nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
 
-# ECA and P cycle
+# JSM
+flag_sb_jsm_transport="F"       # ..
+flag_sb_jsm_litter_input="F"    # ..
+flag_sb_jsm_OM_sorption="F"     # ..
+
+# ECA and P cycle  (currently not available in the prep_run_slm.sh; defaults are: T/T/T/eca_full)
 flag_sb_eca_upt_po4="T"         # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
 flag_sb_cle_po4="T"             # TRUE: Langmuir equilibrium is constantly maintained between solute P and labile P | FALSE: Langmuir equilibrium is not maintained
 flag_sb_lk_po4="T"              # TRUE: Langmuir kinetics is used for adsorption flux | FALSE: adsorption rate is determined by CLE
@@ -313,6 +318,9 @@ validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_pres
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
+validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
+validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
+validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
 validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
@@ -607,6 +615,24 @@ if [ $flag_optimal_Nfraction == T ]
     changeNamelistValue flag_optimal_Nfraction ".TRUE."
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
+fi
+if [ $flag_sb_jsm_transport == T ]
+  then
+    changeNamelistValue flag_sb_jsm_transport ".TRUE."
+  else
+    changeNamelistValue flag_sb_jsm_transport ".FALSE."
+fi
+if [ $flag_sb_jsm_litter_input == T ]
+  then
+    changeNamelistValue flag_sb_jsm_litter_input ".TRUE."
+  else
+    changeNamelistValue flag_sb_jsm_litter_input ".FALSE."
+fi
+if [ $flag_sb_jsm_OM_sorption == T ]
+  then
+    changeNamelistValue flag_sb_jsm_OM_sorption ".TRUE."
+  else
+    changeNamelistValue flag_sb_jsm_OM_sorption ".FALSE."
 fi
 if [ $flag_oneYearForcing == T ]
   then
