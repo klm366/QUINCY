@@ -64,7 +64,7 @@ MODULE mo_soil_memory_class
                                     drainage_sl,      & !< drainage of soil layers                                                  [kg / m2 / s]
                                     w_soil_sl,        & !< Water content in soil layers                                             [m]
                                     w_soil_sat_sl,    & !< Water content of soil layers at saturation 
-                                                        !! (derived from volumetric capacity at saturation)                                 [m]
+                                                        !! (derived from volumetric capacity at saturation)                         [m]
                                     w_soil_fc_sl,     & !< Water content of soil layers at field capacity
                                                         !! (derived from volumetric field capacity)                                 [m]
                                     w_soil_pwp_sl,    & !< Water content of soil layers at permanent wilting point
@@ -73,6 +73,10 @@ MODULE mo_soil_memory_class
                                     saxtonB,          & !< coefficient in moisture-tension relationship
                                     saxtonC,          & !< exponent of moisture-conductivity relationship
                                     kdiff_sat_sl        !< saturated hydraulic conductivity                                         [m / s]
+
+    ! transpiration
+    TYPE(t_jsb_var_real2d)          :: &
+                                    transpiration       !< transpiration in kg m-2 s-1
 
     !Soil Water addons for SLM in HYDRO
     TYPE(t_jsb_var_real2d)          :: &
@@ -370,6 +374,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'kdiff_sat_sl', mem%kdiff_sat_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'transpiration', mem%transpiration, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

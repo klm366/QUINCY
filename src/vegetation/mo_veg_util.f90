@@ -91,7 +91,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
-    dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
     ! Get local variables from options argument
@@ -145,7 +144,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
 
@@ -197,7 +195,7 @@ CONTAINS
     recycling_heart_wood_n(:) = zero         !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
     recycling_heart_wood_n15(:) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
     recycling_heart_wood_p(:) = zero         !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    transpiration(:) = zero                  !< transpiration in kg m-2 s-1
+
     ! other variables
     delta_dens_ind(:) = zero                 !< ??
     unit_transpiration(:) = zero             !< ??

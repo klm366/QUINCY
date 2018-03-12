@@ -249,7 +249,6 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_n      , & !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
                                     recycling_heart_wood_n15    , & !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
                                     recycling_heart_wood_p      , & !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    transpiration               , &  !< transpiration in kg m-2 s-1
                                     net_growth                      !< npp minus turnover (µmol CO2 m-2 s-1)
 
     ! everything else...
@@ -1510,14 +1509,6 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'recycling_heart_wood_p', mem%recycling_heart_wood_p, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'transpiration', mem%transpiration, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

@@ -30,6 +30,7 @@ mo_shared_update_time_averages.o: \
   mo_assimi_memory_class.o \
   mo_assimi_config_class.o \
   mo_rad_memory_class.o \
+  mo_soil_memory_class.o \
   mo_sb_memory_class.o 
 
 mo_shared_set_parameters.o: \

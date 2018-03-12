@@ -115,6 +115,7 @@ CONTAINS
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_veg_util,                      ONLY: reset_veg_fluxes
     USE mo_sb_util,                       ONLY: reset_sb_fluxes
+    USE mo_soil_util,                     ONLY: reset_soil_fluxes
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model
 
     ! Process interfaces:
@@ -302,6 +303,7 @@ CONTAINS
       !!
       CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
+      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
 
       !! run Tasks
       !!
@@ -351,6 +353,7 @@ CONTAINS
       !! init/reset fluxes (with/to zero)
       !!
       CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
+      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
 
       !! run Tasks
       !!
@@ -392,6 +395,7 @@ CONTAINS
       !! init/reset fluxes (with/to zero)
       !!
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
+      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
 
       CALL update_sb_rate_modifier    (tile, model%options)
       SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
@@ -423,6 +427,7 @@ CONTAINS
       !! init/reset fluxes (with/to zero)
       !!
       CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
+      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
 
       !! run Tasks
       !!

@@ -26,6 +26,7 @@ mo_land_model_interface.o: \
   mo_shared_update_time_averages.o \
   mo_shared_output.o \
   mo_sb_util.o \
+  mo_soil_util.o \
   mo_sb_config_class.o \
   mo_veg_util.o \
   mo_rad_interface.o \

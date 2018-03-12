@@ -111,7 +111,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
     ! VEG_
     dsl4jsb_Real2D_onChunk                :: height 
-    dsl4jsb_Real2D_onChunk                :: transpiration
     dsl4jsb_Real2D_onChunk                :: lai 
     ! Get local variables from options argument
     iblk    = options%iblk

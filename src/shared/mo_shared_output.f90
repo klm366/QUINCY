@@ -1708,6 +1708,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: drainage
     dsl4jsb_Real2D_onChunk      :: runoff 
     dsl4jsb_Real2D_onChunk      :: evaporation 
+    dsl4jsb_Real2D_onChunk      :: transpiration
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
@@ -1735,7 +1736,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
-    dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: interception 
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk      :: total_flux_carbon
@@ -1838,6 +1838,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, transpiration)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
     ! ---------------------------
@@ -1863,7 +1864,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon)    
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_nitrogen)  
