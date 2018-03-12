@@ -31,6 +31,7 @@
   microbial_cue=NAN
   microbial_cue_min=NAN
   microbial_cue_max=NAN
+  qmax_org_mineral=NAN
 /
 &VEGETATION_CTL
   delta_n_fraction=NAN

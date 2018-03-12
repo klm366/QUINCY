@@ -52,6 +52,7 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: qmax_org_mineral
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
     PROCEDURE :: set_param => set_parameter_values_with_list_values
@@ -107,6 +108,7 @@ CONTAINS
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: qmax_org_mineral
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
@@ -140,7 +142,8 @@ CONTAINS
         tau_slow                  , &
         microbial_cue             , & 
         microbial_cue_min         , &      
-        microbial_cue_max             
+        microbial_cue_max         , &    
+        qmax_org_mineral             
 
     ! variables for reading model-options from namelist
     ! 
@@ -177,6 +180,7 @@ CONTAINS
     microbial_cue               = missval
     microbial_cue_min           = missval
     microbial_cue_max           = missval
+    qmax_org_mineral            = missval
 
     ! read the namelist
     ! 
@@ -225,6 +229,7 @@ CONTAINS
     this%microbial_cue               = microbial_cue
     this%microbial_cue_min           = microbial_cue_min
     this%microbial_cue_max           = microbial_cue_max
+    this%qmax_org_mineral            = qmax_org_mineral
 
   END SUBROUTINE Read_parameter_list
 
@@ -296,6 +301,7 @@ CONTAINS
     IF (ABS(this%microbial_cue        - missval) > eps8)  microbial_cue         = this%microbial_cue
     IF (ABS(this%microbial_cue_min    - missval) > eps8)  microbial_cue_min     = this%microbial_cue_min
     IF (ABS(this%microbial_cue_max    - missval) > eps8)  microbial_cue_max     = this%microbial_cue_max
+    IF (ABS(this%qmax_org_mineral     - missval) > eps8)  qmax_org_mineral      = this%qmax_org_mineral
 
   END SUBROUTINE set_parameter_values_with_list_values
 
