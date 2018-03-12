@@ -344,15 +344,17 @@ CONTAINS
     !!
     !> 2.1 decay of soluable litter
     !!
-    CALL calc_litter_turnover(options, tau_soluable_litter, &
+    CALL calc_litter_turnover(options, tau_soluable_litter, 0.0_wp, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
-                              sb_pool%soluable_litter,sb_loss%soluable_litter,sb_formation%dom)
+                              sb_pool%soluable_litter,sb_loss%soluable_litter,sb_formation%dom, &
+                              het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
 
     !> 2.2 decay of woody litter
     !!
-    CALL calc_litter_turnover(options, tau_woody_litter, &
+    CALL calc_litter_turnover(options, tau_woody_litter, fc_woody2polymeric, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
-                              sb_pool%woody_litter,sb_loss%woody_litter,sb_formation%polymeric_litter)
+                              sb_pool%woody_litter,sb_loss%woody_litter,sb_formation%polymeric_litter, &
+                              het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
 
     !> 2.3 co-metabolisation of polymeric litter 
     !! 

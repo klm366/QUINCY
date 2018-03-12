@@ -72,7 +72,8 @@ MODULE mo_sb_constants
       frac_woody2dec_litter, &   !< fraction of woody litter transformed into soluable or polymeric litter 
       frac_litter2fast_som, &    !< fraction of litter transformed into fast SOM
       frac_fast2slow_som, &      !< fraction of fast SOM transformed into slow SOM
-      frac_slow2fast_som         !< fraction of slow SOM transformed into fast SOM
+      frac_slow2fast_som, &      !< fraction of slow SOM transformed into fast SOM
+      fc_woody2polymeric         !< fraction of woody litter transformed into polymeric litter (JSM version) 
 
   ! additional microbial parameters for JSM implementation
   REAL(wp), SAVE :: & 
@@ -269,7 +270,7 @@ CONTAINS
     frac_litter2fast_som = 0.45_wp
     frac_fast2slow_som  = 0.15_wp
     frac_slow2fast_som  = 0.3_wp
-
+    fc_woody2polymeric = 0.3_wp
    
     ! additional microbial parameters for JSM implementation
     k_mort_microbial    = 7.48_wp * 1E-8

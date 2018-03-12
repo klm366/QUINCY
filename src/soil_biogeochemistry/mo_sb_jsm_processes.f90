@@ -256,11 +256,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_litter_turnover(options               , &
                                   tau_litter_pool       , &
+                                  fc_litter2sink        , &
                                   rtm_depolymerisation  , &
                                   rmm_depolymerisation  , & 
                                   pool_litter           , &
                                   loss_litter           , &
-                                  formation_sink        )
+                                  formation_sink        , & 
+                                  het_respiration       , & 
+                                  het_respiration_c13   , & 
+                                  het_respiration_c14)
 
     dsl4slm_Use_memory_a_sb
 
@@ -269,11 +273,15 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options               !< model options
     REAL(wp),                                         INTENT(in)    :: tau_litter_pool       !< turnover time of the litter pool [1/s]
+    REAL(wp),                                         INTENT(in)    :: fc_litter2sink        !< fraction of litter C entering sink pool (rest is respired) 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier [-]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier [-]
     TYPE(t_sb_element_a),                             INTENT(in)    :: pool_litter           !< litter pool to decompose [mol/m3]
     TYPE(t_sb_element_a),                             INTENT(inout) :: loss_litter           !< reduction in litter pool [mol/m3/timestep]
     TYPE(t_sb_element_a),                             INTENT(inout) :: formation_sink        !< formation of SOM pool [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration       !< heterotrophic respiration [µmol C/m3/s] 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration_c13   !< heterotrophic respiration [µmol 13C/m3/s] 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration_c14   !< heterotrophic respiration [pmol 14C/m3/s] 
     ! ---------------------------
     ! 0.2 Local 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1 , &
@@ -298,7 +306,8 @@ CONTAINS
     !! 
     hlp1(:,:)                       = decay_rate(:,:) * pool_litter%carbon(:,:)
     loss_litter%carbon(:,:)         = loss_litter%carbon(:,:) + hlp1(:,:)
-    formation_sink%carbon(:,:)      = formation_sink%carbon(:,:) + hlp1(:,:) 
+    formation_sink%carbon(:,:)      = formation_sink%carbon(:,:) + fc_litter2sink * hlp1(:,:) 
+    het_respiration(:,:)            = het_respiration(:,:) + (1._wp - fc_litter2sink) * hlp1(:,:) * 1000000._wp / dtime 
 
     hlp1(:,:)                       = decay_rate(:,:) * pool_litter%nitrogen(:,:)
     loss_litter%nitrogen(:,:)       = loss_litter%nitrogen(:,:) + hlp1(:,:)
@@ -310,11 +319,13 @@ CONTAINS
 
     hlp1(:,:)                       = decay_rate(:,:) * pool_litter%carbon13(:,:)
     loss_litter%carbon13(:,:)       = loss_litter%carbon13(:,:) + hlp1(:,:)
-    formation_sink%carbon13(:,:)    = formation_sink%carbon13(:,:) + hlp1(:,:) 
+    formation_sink%carbon13(:,:)    = formation_sink%carbon13(:,:) + fc_litter2sink * hlp1(:,:) 
+    het_respiration_c13(:,:)        = het_respiration_c13(:,:) + (1._wp - fc_litter2sink) * hlp1(:,:) * 1000000._wp / dtime 
 
     hlp1(:,:)                       = decay_rate(:,:) * pool_litter%carbon14(:,:)
     loss_litter%carbon14(:,:)       = loss_litter%carbon14(:,:) + hlp1(:,:)
-    formation_sink%carbon14(:,:)    = formation_sink%carbon14(:,:) + hlp1(:,:) 
+    formation_sink%carbon14(:,:)    = formation_sink%carbon14(:,:) + fc_litter2sink * hlp1(:,:) 
+    het_respiration_c14(:,:)        = het_respiration_c14(:,:) + (1._wp - fc_litter2sink) * hlp1(:,:) * 1000000._wp / dtime 
 
     hlp1(:,:)                       = decay_rate(:,:) * pool_litter%nitrogen15(:,:)
     loss_litter%nitrogen15(:,:)     = loss_litter%nitrogen15(:,:) + hlp1(:,:)
