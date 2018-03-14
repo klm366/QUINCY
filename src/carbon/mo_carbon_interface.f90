@@ -844,9 +844,9 @@ CONTAINS
 
       ! c) update area fractions 
       ! TODO-JN: maybe make it a function in mo_jsb_tile_class: update_fraction?
+      ! Or make it an own task in a more suited process?
       CALL tile%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-      CALL tile%Set_fraction(ics, ice, iblk, &
-        fract=source_fract(:)+tile%delta_fract(ics:ice, iblk))
+      CALL tile%Set_fraction(ics, ice, iblk, fract=source_fract(:) + tile%delta_fract(ics:ice, iblk))
       ! + reset deltas to 0
       tile%delta_fract(ics:ice, iblk) = 0._wp
 
@@ -1206,7 +1206,7 @@ CONTAINS
     SELECT TYPE (mm => source_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__source => mm ; END SELECT
     SELECT TYPE (mm => sink_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem__sink => mm ; END SELECT
 
-    SELECT TYPE (mm => sink_tile%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
+    SELECT TYPE (mm => source_tile%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2062,8 +2062,8 @@ IF(tmpL)THEN
 
     !Assertion prev_fract + delta_fract .GE. 0._wp
     IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
-      print *, prev_fract(:)
-      print *, delta_fract(:)
+      print *, 'fract', prev_fract(:)
+      print *, 'delta', delta_fract(:)
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
     ENDIF
