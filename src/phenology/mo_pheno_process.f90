@@ -956,7 +956,7 @@ MODULE mo_pheno_process
 
       !calculate number of individuals, assuming that forest is at self-thinning
       number_of_individuals = exp(MIN((log(veg_carbon_at_max_green * kgPerHa) - lctlib_alpha_nr_ind) &
-          & / lctlib_beta_nr_ind, PhenoParam%FR%min_ind))
+          & / lctlib_beta_nr_ind, PhenoParam%FR%log_maxind))
 
       !calculate biomass per individual
       biomass_per_individual = MAX((veg_carbon_at_max_green * kgPerHa) / number_of_individuals, PhenoParam%FR%min_zero)

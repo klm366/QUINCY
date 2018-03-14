@@ -149,7 +149,6 @@ MODULE mo_pheno_constants
                            kgCperMol = 0.012011,      & ! TODO-JN: this constant might be available somewhere else, too?!
                            m2toha = 10000.,           & ! TODO-JN: this is also a more general constant -> move to somewhere else?
                            kgCtokg = 2.,              & ! TODO-JN: same
-                           min_ind = 1.,              & ! JN: minimum number of individuals for the maxLAI caluclation 
                            min_c   = 1.,              & ! JN: minimum C in wood and veg biomass for the maxLAI calculation
                            min_zero = 1.e-8,          & ! TODO-JN: describe
                            log_maxind = 9.5,          & ! TODO-JN: describe
