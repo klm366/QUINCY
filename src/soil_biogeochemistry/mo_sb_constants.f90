@@ -191,8 +191,7 @@ MODULE mo_sb_constants
       k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [s-1]
       vmax_biochem_po4, &        !< Maximum PO4 biochemical mineralization rate [s-1], MM kinetics (potentially also for ECA)
       km_mic_biochem_po4, &      !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
-      km_dip_biochem_po4, &      !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
-      lmr_soluble_po4_min        !< Minimum PO4 concentration for Langmuir isotherm so that partitioning is overtaken by po4_soluble/po4_assoc_fast
+      km_dip_biochem_po4         !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
 
    ! only temporarily, mol / m2
    REAL(wp), SAVE :: & 
@@ -345,7 +344,6 @@ CONTAINS
     vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day ![s-1], estimated from Bunemann et al. 2016, LUS site
     km_mic_biochem_po4    = 0.1_wp / molar_mass_C ![mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
     km_dip_biochem_po4    = 0.001_wp  !estimated
-    lmr_soluble_po4_min   = 0.00001_wp  !estimated from plot
 
     ! Nitrification, Denitrification parameters
     lambda_anvf            = 1.3_wp         ! fitted from Zaehle et al. 2011, NatGeo 
