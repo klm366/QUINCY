@@ -106,6 +106,7 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_prev_sibling_tile
     PROCEDURE(Init_interface),      DEFERRED :: Init
     PROCEDURE(Init_vars_interface), DEFERRED :: Init_vars
     PROCEDURE(Print_interface),     DEFERRED :: Print
@@ -1022,6 +1023,37 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  FUNCTION Get_prev_sibling_tile(this) RESULT(return_ptr)
+
+    CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+
+    CLASS(t_State), POINTER :: prev
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_prev_sibling_tile'
+
+    prev => this%prev_sibling
+    IF (.NOT. ASSOCIATED(prev)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
+
+    SELECT TYPE (prev)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => prev
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+    NULLIFY(prev)
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Could not find prev sibling tile')
+
+  END FUNCTION Get_prev_sibling_tile
 
 #endif
 END MODULE mo_jsb_tile_class
