@@ -83,6 +83,7 @@ CONTAINS
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: nh4_solute
     dsl4jsb_Real3D_onChunk :: no3_solute
@@ -124,6 +125,7 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)
@@ -198,7 +200,7 @@ CONTAINS
 
              nh4_solute(:,1) = nh4_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1)
              no3_solute(:,1) = no3_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1)
-             po4_solute(:,1) = po4_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1) 
+
 
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
@@ -207,10 +209,12 @@ CONTAINS
                                                   qmax_po4_mineral,qmax_po4_mineral)
 
              ! initialise mineral soil P pools
-             po4_assoc_fast(:,1) = po4_solute(:,1) * qmax_po4(:,1) / (po4_solute(:,1) + km_adsorpt_po4 * bulk_dens_corr_sl(:,1))
-             po4_assoc_slow(:,1) = 70.0_wp / molar_mass_P / dsl4jsb_Config(SOIL_)%dz_water(1) 
-             po4_occluded(:,1)   = 150.0_wp / molar_mass_P / dsl4jsb_Config(SOIL_)%dz_water(1)
-             po4_primary(:,1)    = 100.0_wp / molar_mass_P / dsl4jsb_Config(SOIL_)%dz_water(1)
+             CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
+                                    dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
+                                    dsl4jsb_Config(SB_)%soil_p_occluded, dsl4jsb_Config(SB_)%soil_p_primary, &
+                                    dsl4jsb_Config(SB_)%soil_p_depth, & 
+                                    po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
+                                    po4_occluded(:,:), po4_primary(:,:))
           ELSE 
              sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
@@ -239,7 +243,7 @@ CONTAINS
 !       to more nutrient in the soil column in 1d compared to 0d
              nh4_solute(:,:) = nh4_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
              no3_solute(:,:) = no3_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
-             po4_solute(:,:) = po4_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
+
 
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
@@ -248,10 +252,12 @@ CONTAINS
                                                   qmax_po4_mineral,qmax_po4_mineral)
 
              ! initialise mineral soil P pools
-             po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
-             po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
-             po4_occluded(:,:)   = 150.0_wp / molar_mass_P
-             po4_primary(:,:)    = 100.0_wp / molar_mass_P
+             CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
+                                    dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
+                                    dsl4jsb_Config(SB_)%soil_p_occluded, dsl4jsb_Config(SB_)%soil_p_primary, &
+                                    dsl4jsb_Config(SB_)%soil_p_depth, & 
+                                    po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
+                                    po4_occluded(:,:), po4_primary(:,:))
           ENDIF
  
           ! metabolic litter all other elements
@@ -357,8 +363,7 @@ CONTAINS
           nh4_solute(:,:) = 1.0_wp 
           nh4_n15_solute(:,:) = nh4_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
           no3_solute(:,:) = 1.0_wp 
-          no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-          po4_solute(:,:) = 0.01_wp 
+          no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))  
  
           ! inital Qmax based on current soil carbon content
           bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
@@ -372,10 +377,12 @@ CONTAINS
           k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 
  
           ! initialise mineral soil P pools
-          po4_assoc_fast(:,:) = po4_solute(:,:) * qmax_po4(:,:) / (po4_solute(:,:) + km_adsorpt_po4 * bulk_dens_corr_sl(:,:))
-          po4_assoc_slow(:,:) = 70.0_wp / molar_mass_P
-          po4_occluded(:,:)   = 150.0_wp / molar_mass_P
-          po4_primary(:,:)    = 100.0_wp / molar_mass_P 
+          CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
+                                  dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
+                                  dsl4jsb_Config(SB_)%soil_p_occluded, dsl4jsb_Config(SB_)%soil_p_primary, &
+                                  dsl4jsb_Config(SB_)%soil_p_depth, & 
+                                  po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
+                                  po4_occluded(:,:), po4_primary(:,:))
 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
@@ -391,4 +398,117 @@ CONTAINS
 
   END SUBROUTINE sb_init
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Intialize soil pi pools for all layers from the soil P maps (Yang et al. 2013)
+  !! assuming that the soil pi pool sizes are correlated with soil weight
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_soil_pi_pools(options, sb_model_scheme, soil_depth_sl, bulk_dens_sl, &
+                               soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, soil_p_depth, &
+                               po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary)
+
+    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_shared_constants,      ONLY: molar_mass_P
+    USE mo_sb_constants
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    TYPE(t_jsb_task_options)                        , INTENT(in)     :: options            !< model options
+    CHARACTER(len=*)                                , INTENT(in)     :: sb_model_scheme    !< soil model scheme 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: soil_depth_sl, &   !< soil depth per soil layer, [m]
+                                                                        bulk_dens_sl       !< corrected soil bulk density per soil layer, [kg m-3]
+    REAL(wp)                                        , INTENT(in)     :: soil_p_depth, &    !< soil depth of the soil P maps
+                                                                        soil_p_labile, &   !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
+                                                                        soil_p_slow, &     !< total slow P pool (secondary P) of the soil P maps, [g m-2]
+                                                                        soil_p_occluded, & !< total occluded P pool of the soil P maps, [g m-2]
+                                                                        soil_p_primary     !< total primary P pool of the soil P maps, [g m-2]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: po4_solute, &      !< soluble Pi pool per soil layer, [mol m-3]
+                                                                        po4_assoc_fast, &  !< fast minerally associated PO4 pool per soil layer, [mol m-3]
+                                                                        po4_assoc_slow, &  !< slow minerally associated PO4 pool per soil layer, [mol m-3]
+                                                                        po4_occluded, &    !< occluded PO4 pool per soil layer, [mol m-3]
+                                                                        po4_primary        !< primary PO4 pool per soil layer, [mol m-3]
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER                                          :: i, nsoil_sb
+    LOGICAL,  DIMENSION(options%nc)                  :: aflag
+    REAL(wp), DIMENSION(options%nc)                  :: soil_p_weight, soil_weight_0d        !< total soil weight up to the soil_p_depth/soil_depth_0d, [kg]
+    REAL(wp), DIMENSION(options%nc)                  :: hlp1, hlp2, soil_depth_0d
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: soil_weight_sl, &    !< soil weight per soil layer
+                                                        hlp3
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_pi_pools'
+    ! ---------------------------
+    ! Get local variables from options argument
+    nsoil_sb         = options%nsoil_sb
+    soil_depth_0d(:) = 1._wp !soil depth in simple_0d
+
+    ! initialise output
+    po4_solute(:,:)     = 0._wp
+    po4_assoc_fast(:,:) = 0._wp
+    po4_assoc_slow(:,:) = 0._wp 
+    po4_occluded(:,:)   = 0._wp
+    po4_primary(:,:)    = 0._wp
+
+    !> 1.0 calculate the total soil weight up to the soil_p_depth,
+    !! and the soil weight per soil layer
+    hlp1(:) = 0._wp; hlp2(:) = 0._wp; aflag(:) = .TRUE.
+    DO i=1,nsoil_sb
+      soil_weight_sl(:,i) = soil_depth_sl(:,i) * bulk_dens_sl(:,i)
+      WHERE (aflag) 
+        hlp1(:) = hlp1(:) + soil_depth_sl(:,i)
+        hlp2(:) = hlp2(:) + soil_weight_sl(:,i)
+        WHERE (hlp1(:) > soil_p_depth)
+          soil_p_weight(:) = hlp2(:) - soil_weight_sl(:,i) * (hlp1(:) - soil_p_depth) / soil_depth_sl(:,i)
+          aflag(:) = .FALSE.
+        ENDWHERE
+      ENDWHERE
+    END DO
+
+    
+    !> 2.0 simple_0d should represent the first meter, 
+    !! simple_1d and jsm use the soil profile depth
+    IF (sb_model_scheme=='simple_0d') THEN
+      hlp1(:) = 0._wp; hlp2(:) = 0._wp; aflag(:) = .TRUE.
+      DO i=1,nsoil_sb
+        WHERE (aflag) 
+          hlp1(:) = hlp1(:) + soil_depth_sl(:,i)
+          hlp2(:) = hlp2(:) + soil_weight_sl(:,i)
+          WHERE (hlp1(:) > soil_depth_0d(:))
+            soil_weight_0d(:) = hlp2(:) - soil_weight_sl(:,i) * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i)
+            aflag(:) = .FALSE.
+          ENDWHERE
+        ENDWHERE
+      END DO
+      po4_assoc_slow(:,1) = soil_p_slow * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      po4_occluded(:,1)   = soil_p_occluded * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      po4_primary(:,1)    = soil_p_primary * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      hlp3(:,1)           = soil_p_labile * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      hlp1(:)             = soil_weight_0d(:) * qmax_po4_mineral !Smax in Eqn, [mol / m3]
+      hlp2(:)             = soil_weight_0d(:) * km_adsorpt_po4 !K in Eqn, [mol / m3]
+      po4_assoc_fast(:,1) = (hlp3(:,1) + hlp1(:) + hlp2(:) - sqrt((hlp3(:,1) + hlp1(:) + hlp2(:))**2 - 4*hlp3(:,1)*hlp1(:))) / 2._wp
+      po4_solute(:,1)     = hlp3(:,1) - po4_assoc_fast(:,1)
+    ELSE
+      !> 2.1 calculate the initial slow P, occluded P, primary P pool, and labile_P
+      !! based on the assumption that soil P pool are linearly corrected with soil weight
+      DO i=1,nsoil_sb
+        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * soil_p_slow     / soil_p_weight(:) / molar_mass_P
+        po4_occluded(:,i)   = bulk_dens_sl(:,i) * soil_p_occluded / soil_p_weight(:) / molar_mass_P
+        po4_primary(:,i)    = bulk_dens_sl(:,i) * soil_p_primary  / soil_p_weight(:) / molar_mass_P
+        hlp3(:,i)           = bulk_dens_sl(:,i) * soil_p_labile   / soil_p_weight(:) / molar_mass_P !p_labile_sl in the follwing Eqn, [mol / m3]
+      END DO
+
+      !> 2.2 calculate the initial solute P and fast P,
+      !! based on the assumption that labile P is the sum of both,
+      !! and they follow the Langmuir equilibrium
+      !! po4_assoc_fast = (p_labile_sl + Smax + K - sqrt((p_labile_sl + Smax + K)**2 - 4*p_labile_sl*Smax)) / 2
+    
+      DO i=1,nsoil_sb
+        hlp1(:) = bulk_dens_sl(:,i) * qmax_po4_mineral !Smax in Eqn, [mol / m3]
+        hlp2(:) = bulk_dens_sl(:,i) * km_adsorpt_po4 !K in Eqn, [mol / m3]
+        po4_assoc_fast(:,i) = (hlp3(:,i) + hlp1(:) + hlp2(:) - sqrt((hlp3(:,i) + hlp1(:) + hlp2(:))**2 - 4*hlp3(:,i)*hlp1(:))) / 2._wp
+        po4_solute(:,i)     = hlp3(:,i) - po4_assoc_fast(:,i)
+      END DO
+    END IF
+
+  END SUBROUTINE init_soil_pi_pools
 END MODULE mo_sb_init

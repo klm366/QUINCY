@@ -51,11 +51,14 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_ECA_upt_po4
     LOGICAL               :: flag_sb_CLE_po4
     LOGICAL               :: flag_sb_LK_po4
-    !> parameter values
-    !
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
     REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
+    REAL(wp)              :: soil_p_depth
+    REAL(wp)              :: soil_p_labile
+    REAL(wp)              :: soil_p_slow
+    REAL(wp)              :: soil_p_occluded
+    REAL(wp)              :: soil_p_primary
     INTEGER               :: lithology_class
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -102,6 +105,7 @@ CONTAINS
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
     REAL(wp)              :: soil_ph
+    REAL(wp)              :: soil_p_depth, soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary
     INTEGER               :: lithology_class
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
@@ -127,6 +131,11 @@ CONTAINS
                       usda_taxonomy_class       , &
                       nwrb_taxonomy_class       , &
                       soil_ph                   , &
+                      soil_p_depth         ,  &
+                      soil_p_labile        ,  &
+                      soil_p_slow          ,  &
+                      soil_p_occluded      ,  &
+                      soil_p_primary       ,  &
                       lithology_class
 
     ! variables for reading model-options from namelist
@@ -160,6 +169,11 @@ CONTAINS
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
     soil_ph                     = 6.5_wp
+    soil_p_depth                = 0.5_wp
+    soil_p_labile               = 50._wp
+    soil_p_slow                 = 70._wp
+    soil_p_occluded             = 150._wp
+    soil_p_primary              = 100._wp
     lithology_class             = 1
 
     ! read the namelist
@@ -212,7 +226,12 @@ CONTAINS
     config%flag_sb_LK_po4                  = flag_sb_LK_po4
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
-    config%soil_ph                         = soil_ph    
+    config%soil_ph                         = soil_ph 
+    config%soil_p_depth                    = soil_p_depth
+    config%soil_p_labile                   = soil_p_labile 
+    config%soil_p_slow                     = soil_p_slow 
+    config%soil_p_occluded                 = soil_p_occluded 
+    config%soil_p_primary                  = soil_p_primary    
     config%lithology_class                 = lithology_class
 
   END SUBROUTINE Init_sb_config
