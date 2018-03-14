@@ -135,7 +135,7 @@ CONTAINS
   ! 
   SUBROUTINE update_calculate_ageing(tile, options)
 
-    USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing
+    USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing, correct_and_synchronise_fracts
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift
 
@@ -159,11 +159,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: maxLAI_allom_source
 
     CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
-    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, &
+    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, fract_sum, remainder, &
                                             & source_fract, sink_fract, altered_sink_fract
 
     REAL(wp) :: fractSum
-    INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
+    INTEGER  :: i,j, ncohorts, max_age, iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_calculate_ageing'
 
@@ -190,6 +190,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+    max_age = dsl4jsb_Config(FAGE_)%max_age
 
     IF(is_newyear()) THEN  ! year has changed - i.e. age - i.e. shift fractions!
       ! Note that this update is done globally at the same time step, 
@@ -199,23 +200,70 @@ CONTAINS
       ! Area changes upon ageing can have carbon consequences for all children
       dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .FALSE.
 
-      !TODO-JN: where to synchronise fract_this_max_age(:) and fract? + Assert that 1?! here?
+      !- TODO-JN-COHORTS
+      !----- Assert that fract = 1
+      ! currentChild => tile%Get_first_child_tile()
+      ! fract_sum(:) = 0._wp
+      ! DO i=1,ncohorts
+      !   CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+      !   fract_sum(:) = fract_sum(:) + source_fract(:)
+      !   IF (i .LT. ncohorts) currentChild => currentChild%Get_next_sibling_tile()
+      ! ENDDO
+      ! IF(.NOT. currentChild%Is_last_child()) THEN
+      !   CALL finish(TRIM(routine), &
+      !     & 'Violation of assertion: last child not reached after iterating forward for number of cohorts!')
+      ! ENDIF
 
-      ! step one: care for shifts among cohort boundaries
+      ! remainder(:) = fract_sum(:) - 1._wp
+
+      ! ! if required correct and synchronise
+      ! DO i=ncohorts,1,-1
+      !   CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+
+      !   CALL correct_and_synchronise_fracts(nc, max_age, ncohorts, &
+      !     & i, cohort_max_age(:,:), fract_per_age(:,:), remainder(:), source_fract(:))
+
+      !   CALL currentChild%Set_fraction(ics, ice, iblk, fract=source_fract(:))
+
+      !   IF (i .GT. 1) currentChild => currentChild%Get_prev_sibling_tile()
+      ! ENDDO
+      ! IF(.NOT. currentChild%Is_first_child()) THEN
+      !   CALL finish(TRIM(routine), &
+      !     & 'Violation of assertion: first child not reached after iterating backwards for number of cohorts!')
+      ! ENDIF
+
+      currentChild => tile%Get_first_child_tile()
+      DO i=1,ncohorts
+        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+
+        CALL correct_and_synchronise_fracts(nc, max_age, ncohorts, &
+          & i, cohort_max_age(:,:), fract_per_age(:,:), source_fract(:))
+
+        CALL currentChild%Set_fraction(ics, ice, iblk, fract=source_fract(:))
+
+        IF (i .LT. ncohorts) currentChild => currentChild%Get_next_sibling_tile()
+      ENDDO
+
+
+
+
+
+      !----- care for shifts among cohort boundaries
       currentChild => tile%Get_first_child_tile()
 
-      ! !TODO-JN: really?
-      ! ! Assertion: for fract of first child needs to equal fract_per_age(:,1)
-      CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-      IF (ANY(source_fract(:) .NE. fract_per_age(j,1))) THEN
-        ! If its just numerical issues since its different calculations: fix it 
-        IF (ANY((source_fract(:) - fract_per_age(:,1)) .GT. 1.e-14_wp)) THEN
-          CALL finish(TRIM(routine), &
-            & 'Violation of assertion: first childs fract needs to equal entry in fract_per_age!')
-        ELSE
-          fract_per_age(:,1) = source_fract(:)
-        ENDIF
-      ENDIF
+      !Now already care for above
+      ! ! !TODO-JN: really?
+      ! ! ! Assertion: for fract of first child needs to equal fract_per_age(:,1)
+      ! CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+      ! IF (ANY(source_fract(:) .NE. fract_per_age(j,1))) THEN
+      !   ! If its just numerical issues since its different calculations: fix it 
+      !   IF (ANY((source_fract(:) - fract_per_age(:,1)) .GT. 1.e-14_wp)) THEN
+      !     CALL finish(TRIM(routine), &
+      !       & 'Violation of assertion: first childs fract needs to equal entry in fract_per_age!')
+      !   ELSE
+      !     fract_per_age(:,1) = source_fract(:)
+      !   ENDIF
+      ! ENDIF
 
       ! only iterate until -1 -- oldest cohort only accumulates in update_calculate_ageing
       DO i=1,ncohorts-1
@@ -234,6 +282,7 @@ CONTAINS
           fract_this_max_age(j) = fract_per_age(j,cohort_max_age(j,i))
         ENDDO
 
+!TODO-JN: still required???
         !TODO-JN-COHORTS maybe generally only work with >= 1.e.10?
         IF(ANY(source_fract(:) - fract_this_max_age(:) .LT. 0._wp)) THEN
           IF (ANY(source_fract(:) - fract_this_max_age(:) + 1.e-14_wp .LT. 0_wp )) THEN
@@ -390,7 +439,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: cohort_max_age
 
     CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild, nextChild
-    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, disturbedArea
+    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, disturbedArea, helper1, helper2
 
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
@@ -455,14 +504,11 @@ CONTAINS
 ! ++ auch da über ta, ra und densities denken  
 ! ++ generalisieren?
 
-!TODO switch back
-!damaged_frac(:) = 0._wp
-!IF(i .EQ. 2) THEN
-!  damaged_frac(:) = 0.05_wp
-!ENDIF
-
-        !*** care for wind damage - TODO: work with max area to prevent numerical issues!?
-        damagedArea(:) = damaged_frac(:) * source_fract(:)
+        !*** care for wind damage -     TODO: work with max area to prevent numerical issues!?
+        helper2(:) = 0._wp
+        helper1(:) = damaged_frac(:) * source_fract(:)
+        damagedArea(:) = MERGE(helper1, helper2, helper1>=1.e-10_wp) !TODO make it a constant
+!        damagedArea(:) = damaged_frac(:) * source_fract(:)
 
         ! wind damage only depends on the forcing and there is a good chance that no area is damaged
         IF(ANY(damagedArea(:) .GT. 0._wp)) THEN
