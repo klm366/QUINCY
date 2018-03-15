@@ -12,7 +12,7 @@ MODULE mo_fage_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish
+  USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -77,10 +77,10 @@ CONTAINS
     ! -- first cohort needs to always only contain the first year!
     dsl4jsb_var3D_onDomain(FAGE_, cohort_max_age) = 1._wp 
 
+    !TODO-JN if there is no dynamic merging of cohorts, the cohort_max_age vector could be
+    !        much more simple and set in the confic_class, etc
     IF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-equal' ) THEN
-      ! Equal intervals distributed equally 
-      !TODO-JN-COHORTS
-!      age_interval = int(max_age / ncohorts)
+      ! Equal intervals distributed equally over all but the first cohort
       age_interval = int((max_age-1) / (ncohorts-1))
       DO i=1,ncohorts-1
         dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
@@ -98,12 +98,11 @@ CONTAINS
         dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
           & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + (i * age_interval)
       END DO
-
     ELSE
       CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" and "static-equal" implemented as forest ageing schemes')
     ENDIF
 
-    !Last cohort collects is not really restricted to a max age, but set to max_age for comilance with the fract_per_age field
+    !Last cohort is not really restricted to a max age, but set to max_age for compliance with the fract_per_age field
     dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,ncohorts,:) = max_age
 
     !Assertion: 
@@ -113,9 +112,7 @@ CONTAINS
     IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,:,:) .GT. max_age)) THEN
       CALL finish(TRIM(routine), 'Assertion: no cohort should have a max age larger than the total max_age!')
     ENDIF
-    
-print *, '#######################################'
-print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
+
     !TODO-JN other bcs?? Also from files?
 !    dsl4jsb_var3D_onDomain(FM_, rotation_cycle) = REAL(dsl4jsb_Config(FM_)%global_rotation_cycle, wp)
 !    IF (dsl4jsb_Config(FM_)%scheme == 'rotation_local' ) THEN 
@@ -179,7 +176,7 @@ print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
 !    ptr_2D(:,:) = tile%fract(:,:)
 
 !----------------------------------------------------------------------------------------
-!TODO-JN seuftz, folgendes wäre nur im absolute Flächen Fall nötig gewesen, aber den haben wir ja noch gar nicht!
+!TODO-JN folgendes wäre nur im absolute Flächen Fall nötig gewesen, aber den haben wir ja noch gar nicht!
 !    ALLOCATE(ptr_2D(grid%nproma, grid%nblks))
 !    CALL tile%Get_fraction(fract=ptr_2D(:,:))
 !    dsl4jsb_var_ptr(FAGE_, fract_per_age) (:,1,:) = ptr_2D(:,:) !TODO-JN check: arrays seem to not be 0 based?!

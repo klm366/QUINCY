@@ -27,7 +27,7 @@ MODULE mo_disturb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, CARBON_, SEB_, FAGE_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, HYDRO_, RAD_, A2L_, CARBON_, SEB_, FAGE_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(ASSIMI_)
@@ -39,7 +39,6 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
@@ -144,7 +143,6 @@ CONTAINS
 
     ! Declare process memories
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
@@ -206,38 +204,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: YCpool_humus_1
     dsl4jsb_Real2D_onChunk :: YCpool_humus_2
     dsl4jsb_Real2D_onChunk :: carbon_2_atmos
-    !
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max
+
     dsl4jsb_Real2D_onChunk :: cover_frac_pot
-    !
-    dsl4jsb_Real2D_onChunk :: Cpool_green_ta
-    dsl4jsb_Real2D_onChunk :: Cpool_woods_ta
-    dsl4jsb_Real2D_onChunk :: Cpool_reserve_ta
-    dsl4jsb_Real2D_onChunk :: carbon_2_GreenLitterPools_ta
-    dsl4jsb_Real2D_onChunk :: carbon_2_WoodLitterPools_ta
-    !
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag2_ta
-    ! below ground
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_water_bg1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_water_bg2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg2_ta
-    !
-    dsl4jsb_Real2D_onChunk :: YCpool_humus_1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_humus_2_ta
-    dsl4jsb_Real2D_onChunk :: carbon_2_atmos_ta
 
     ! Locally allocated vectors
     !
@@ -271,7 +239,6 @@ CONTAINS
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
@@ -322,37 +289,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_1)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_2)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_atmos)           ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,     veg_frac_correction )     ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max )           ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_frac_pot)           ! in
-    !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_green_ta)              ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_woods_ta)              ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_reserve_ta)            ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_GreenLitterPools_ta)! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_WoodLitterPools_ta) ! out
-    !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag1_ta)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag1_ta)         ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag1_ta)       ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag1_ta)    ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag2_ta)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag2_ta)         ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag2_ta)       ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag2_ta)    ! out
-    ! below ground
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg1_ta)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg1_ta)         ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg1_ta)       ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg1_ta)    ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg2_ta)          ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg2_ta)         ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg2_ta)       ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg2_ta)    ! out
-    !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_1_ta)           ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_2_ta)           ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_atmos_ta)           ! out
 
     ! ---------------------------
     ! Go
@@ -399,6 +336,7 @@ CONTAINS
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
             ENDIF
 
+!TODO-JN-COHORTS: comment back in
             ! CALL burned_frac_jsbach( &
             !   & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
             !   & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
@@ -445,7 +383,7 @@ CONTAINS
         ! because disturbances now create new cohorts
 
         !@todo: maybe for a more general concept it could be considered to always do it like this
-        !       i.e. only calculate the damage here and then apply it later maybe even in a carbon task?
+        !       i.e. only calculate the damage here and then apply it later maybe in a carbon task?
 
         IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
           & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of damaged and burned carbon.')

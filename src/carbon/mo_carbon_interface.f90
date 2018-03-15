@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-05)
-!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing MaxLai
+!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; Cohorts + moving carbon between them
 !!
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
@@ -17,7 +17,7 @@ MODULE mo_carbon_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, message_text, finish
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -653,7 +653,7 @@ CONTAINS
 !              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
 !                   * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
 !                       - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
-!---> why not using NPP_act_yDayMean?
+!---> why not using NPP_act_yDayMean? - ask TR
    CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
               (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * (NPP_act_yDayMean)) 
@@ -708,7 +708,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    !TODO Those commented out are currently not used by other processes, 
+    !@todo Those commented out are currently not used by other processes, 
     !     some of them are even not used at all 
     !     + they are not part of the update_per_tile_vars
     !       i.e. anyways not updated! 
@@ -768,7 +768,8 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Task "update_apply_cohort_changes" applies area and c changes to cohorts - TODO-JN and more comming
+  !! @brief Task "update_apply_cohort_changes" applies area and c changes to cohorts (using previously filled delta variables) 
+  !! - TODO-JN area change should probably be a task of another process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -787,7 +788,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: fract_per_age
 
-    INTEGER  :: i,j, ncohorts, iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_cohort_changes'
 
@@ -799,47 +800,26 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-!TODO: other test required?
+!TODO-JN: other test required?
 ! -> maybe leaf and forest? or parent FAGE_ active?!
     IF (.NOT. ASSOCIATED(tile%parent_tile)) RETURN
     IF (.NOT. tile%parent_tile%Is_process_active(FAGE_)) RETURN
     IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) RETURN
-!    IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-
     ! Get reference to variables for current block
-    !
     dsl4jsb_Get_config(FAGE_)
-    dsl4jsb_Get_memory(FAGE_)
-    SELECT TYPE (mm => tile%parent_tile%mem(fage_)%p); TYPE IS (t_fage_memory); fage__mem__parent => mm ; END SELECT
-
-    fract_per_age => fage__mem__parent%fract_per_age%ptr(ics:ice,:,iblk)
-
-    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+!    dsl4jsb_Get_memory(FAGE_)
 
     IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
 
-    !TODO-now get fract_per_age from parent and assert/synchronise!
-    ! --> ne, muss man beim füllen machen, hier kann man nicht synchronisieren
-! IF (iblk .EQ. 1) THEN
-! print *, "###################################################################"
-! print *, fract_per_age
-! CALL tile%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-! print *, source_fract(:)
-! print *, tile%delta_fract(ics:ice, iblk)
-! ENDIF
-
-      ! apply changes 
+      ! apply changes if required
       IF((tile%Is_first_child()) .OR. (.NOT. dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child)) THEN
         ! a) TODO-JN-COHORTS what else to update? 
 
         ! b) update C states with deltas (+ reset C deltas to 0)
-        CALL update_carbon_states_with_delta_carbon(tile, options, .TRUE.)
-      ELSE
-        ! ASSERT that they are empty?!
-        CALL update_carbon_states_with_delta_carbon(tile, options, .FALSE.)
+        CALL update_carbon_states_with_delta_carbon(tile, options)
       ENDIF
 
       ! c) update area fractions 
@@ -856,7 +836,6 @@ CONTAINS
 
   END SUBROUTINE update_apply_cohort_changes
 
-  ! TODO-JN-COHORTS: does not really make sense to aggregate mean_age?! 
   SUBROUTINE aggregate_apply_cohort_changes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -889,8 +868,6 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-!TODO-JN Question: does this happen from leaf or from this tile??? (required: leaf!)
-! Aja, also ich fürchte es fängt von diesem tile an und deshalb haut es nicht hin!
     IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
@@ -914,10 +891,17 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1_ta,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
+
+      ! in case of disturbance also these variables need to be aggregated:
+      dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_GreenLitterPools_ta, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_WoodLitterPools_ta,  weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_atmos_ta,            weighted_by_fract)
+
+      !TODO-JN: other aggregations required?
     ENDIF
 
-    !NOTE: despite changes, no aggregation of fractions because:
-    !      fractions are only redistributed on child tiles, i.e. no changes on above
+    !NOTE: despite changes, currently no aggregation of fractions because:
+    !      for fage fractions are only redistributed on child tiles, i.e. no changes on above tiles
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -940,7 +924,6 @@ CONTAINS
   ! 
   SUBROUTINE rescale_carbon_upon_reference_area_change(tile, options, oldRefArea, newRefArea)
 
-    USE mo_exception,           ONLY: message, finish
     USE mo_util,                ONLY: real2string
 
     ! Arguments
@@ -1079,7 +1062,6 @@ CONTAINS
   SUBROUTINE update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
       source_tile, sink_tile, options, delta_fract, prev_fract )
 
-    USE mo_exception,           ONLY: finish
     USE mo_carbon_process,      ONLY: update_delta_carbon_rp
 
     ! Arguments
@@ -1090,8 +1072,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     dsl4jsb_Def_config(PHENO_)
 
-    !TODO-JN: discuss with Reiner about the dsl4jsb -- i.e. what if operating on two different tiles like here 
-    ! dsl4jsb_Def_memory(CARBON_)
+    !TODO-JN: new dsl4jsb allowing to pass tile name on dsl4jsb_Def_memory(CARBON_)
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
     TYPE(t_carbon_memory), POINTER :: carbon__mem__sink
 
@@ -1100,7 +1081,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
       & TRIM(modname)//':update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER                     :: ics, ice, iblk, nc, i
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green
     dsl4jsb_Real2D_onChunk ::  Cpool_woods
@@ -1188,16 +1169,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sink
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sink
 
-    !Assertion prev_fract + delta_fract .GE. 0._wp  TODO-JN: EPSILON(1._wp)?
-    IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
-      print *, prev_fract(:)
-      print *, delta_fract(:)
-      CALL finish(TRIM(routine), &
-        & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
-    ENDIF
-    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
-    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
-
+    !-------------------------
     model => Get_model(source_tile%owner_model_id)
 
     dsl4jsb_Get_config(PHENO_)
@@ -1211,8 +1183,22 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
-! dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )
+    !Assertion prev_fract + delta_fract .GE. 0._wp
+    IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
+      DO i = 1,nc
+        IF (prev_fract(i) + delta_fract(i) .LT. 0_wp ) THEN
+          WRITE (message_text,*) 'Violation of assertion: area to be changed (', delta_fract(i), &
+            & ') needs to be .LE. existing area (', prev_fract(i) ,')'
+          CALL finish(TRIM(routine), message_text)
+        ENDIF
+      ENDDO
+    ENDIF
+    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
+    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
+
+    !TODO-JN: introduce dsl4jsb with tile name -- dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )
     Cpool_green => carbon__mem__source%Cpool_green%ptr(ics:ice,iblk)  ! inout
     Cpool_woods => carbon__mem__source%Cpool_woods%ptr(ics:ice,iblk)  ! inout
     Cpool_reserve => carbon__mem__source%Cpool_reserve%ptr(ics:ice,iblk)  ! inout
@@ -1362,7 +1348,8 @@ CONTAINS
   !>
   !! @brief updates delta of carbon state variables upon disturbance
   !!        -> source densities stay the same
-  !!        -> sink gets fraction of source litter/soil + fraction of green/reserve/wood also into litter/soil
+  !!        -> sink (first cohort) gets fraction of source litter/soil 
+  !!            + fraction of green/reserve/wood are also dirstibuted into litter/soil
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to work on from somewhere else?
   !!       or as a vector ?
@@ -1373,7 +1360,6 @@ CONTAINS
   SUBROUTINE update_delta_carbon_rp_upon_disturbance( &
       source_tile, sink_tile, l_sourceisfirstChild, options, delta_fract, prev_fract )
 
-    USE mo_exception,           ONLY: finish
     USE mo_carbon_process,      ONLY: update_delta_carbon_rp, relocate_carbon_fire, relocate_carbon_damage
 
     ! Arguments
@@ -1385,8 +1371,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     dsl4jsb_Def_config(PHENO_)
 
-    !TODO-JN: maybe new dsl4jsb -- operating on two different tiles
-    ! dsl4jsb_Def_memory(CARBON_)
+    !TODO-JN: new dsl4jsb -- dsl4jsb_Def_memory(CARBON_)
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
     TYPE(t_carbon_memory), POINTER :: carbon__mem__sink
 
@@ -1395,7 +1380,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
       & TRIM(modname)//':update_delta_carbon_rp_upon_disturbance'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER                     :: ics, ice, iblk, nc, i
     REAL(wp), DIMENSION(options%nc) :: helper, d_green_new, d_reserve_new, d_wood_new
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green
@@ -1425,8 +1410,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  veg_frac_correction
 
-    dsl4jsb_Real2D_onChunk ::  carbon_2_GreenLitterPools
-    dsl4jsb_Real2D_onChunk ::  carbon_2_WoodLitterPools
+    dsl4jsb_Real2D_onChunk ::  delta_carbon_2_GreenLitterPools_rp_sink
+    dsl4jsb_Real2D_onChunk ::  delta_carbon_2_WoodLitterPools_rp_sink
 
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp_sink
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp_sink
@@ -1456,13 +1441,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sink
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sink
 
-    !Assertion prev_fract + delta_fract .GE. 0._wp  TODO-JN: EPSILON(1._wp)?
-    IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
-      print *, prev_fract(:)
-      print *, delta_fract(:)
-      CALL finish(TRIM(routine), &
-        & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
-    ENDIF
+
     ! TODO-JN: do they still need smallest possible fraction 1e-10? 
     ! (Then the following should not happen and other Assertions and MAX statements will be required!)
 
@@ -1479,6 +1458,18 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    ice   = options%nc
+
+    !Assertion prev_fract + delta_fract .GE. 0._wp
+    IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
+      DO i = 1,nc
+        IF (prev_fract(i) + delta_fract(i) .LT. 0_wp ) THEN
+          WRITE (message_text,*) 'Violation of assertion: area to be changed (', delta_fract(i), &
+            & ') needs to be .LE. existing area (', prev_fract(i) ,')'
+          CALL finish(TRIM(routine), message_text)
+        ENDIF
+      ENDDO
+    ENDIF
 
 ! dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )
     Cpool_green => carbon__mem__source%Cpool_green%ptr(ics:ice,iblk)  ! in
@@ -1508,8 +1499,8 @@ CONTAINS
 
     veg_frac_correction => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! in
 
-    carbon_2_GreenLitterPools => carbon__mem__source%carbon_2_GreenLitterPools%ptr(ics:ice,iblk)  ! in
-    carbon_2_WoodLitterPools => carbon__mem__source%carbon_2_WoodLitterPools%ptr(ics:ice,iblk)  ! in
+    delta_carbon_2_GreenLitterPools_rp_sink => carbon__mem__sink%delta_carbon_2_GreenLitterPools_rp%ptr(ics:ice,iblk)  ! inout
+    delta_carbon_2_WoodLitterPools_rp_sink => carbon__mem__sink%delta_carbon_2_WoodLitterPools_rp%ptr(ics:ice,iblk)  ! inout
 
     delta_Cpool_green_rp_sink => carbon__mem__sink%delta_Cpool_green_rp%ptr(ics:ice,iblk)  ! inout
     delta_Cpool_woods_rp_sink => carbon__mem__sink%delta_Cpool_woods_rp%ptr(ics:ice,iblk)  ! inout
@@ -1620,8 +1611,8 @@ CONTAINS
       & d_green_new(:),                & ! inout
       & d_wood_new(:),                & ! inout
       & d_reserve_new(:),              & ! inout
-      & carbon_2_GreenLitterPools(:),  & ! inout
-      & carbon_2_WoodLitterPools(:),   & ! inout
+      & delta_carbon_2_GreenLitterPools_rp_sink(:),  & ! inout
+      & delta_carbon_2_WoodLitterPools_rp_sink(:),   & ! inout
       & delta_YCpool_acid_ag1_rp_sink(:),            & ! inout
       & delta_YCpool_water_ag1_rp_sink(:),           & ! inout
       & delta_YCpool_ethanol_ag1_rp_sink(:),         & ! inout
@@ -1642,21 +1633,13 @@ CONTAINS
       & delta_YCpool_humus_2_rp_sink(:)              & ! inout
       & )
 
-    !JN-TODO-COHORTS: ich glaube ich muss carbon_2_GreenLitterPools und carbon_2_WoodLitterPools
-    ! irgendwie wieder zurück rechnen, weil die hier jetzt rp (relative to parent tile) berechnet sind
-
-
-    !TODO: ich glaube nicht, dass ich das hier brauche - sink ist first cohort und die wird eh null gesetzt!
-    !      remove!?
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-      !TODO-JN: think
-      delta_current_max_green_rp_sink => carbon__mem__sink%delta_current_max_green_rp%ptr(ics:ice,iblk)  ! inout
-      delta_veg_carbon_at_max_green_rp_sink => carbon__mem__sink%delta_veg_carbon_at_max_green_rp%ptr(ics:ice,iblk)  ! inout
-
-      delta_current_max_green_rp_sink = 0._wp
-      delta_veg_carbon_at_max_green_rp_sink = 0._wp
-    ENDIF
-
+    ! -> not required -- sink is the first cohort and current max green as well as veg carbon are set to zero anyways upon ageing
+    ! IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+    !   delta_current_max_green_rp_sink => carbon__mem__sink%delta_current_max_green_rp%ptr(ics:ice,iblk)  ! inout
+    !   delta_veg_carbon_at_max_green_rp_sink => carbon__mem__sink%delta_veg_carbon_at_max_green_rp%ptr(ics:ice,iblk)  ! inout
+    !   delta_current_max_green_rp_sink = 0._wp
+    !   delta_veg_carbon_at_max_green_rp_sink = 0._wp
+    ! ENDIF
 
   END SUBROUTINE update_delta_carbon_rp_upon_disturbance
 
@@ -1683,7 +1666,6 @@ CONTAINS
       & carbon_2_GreenLitterPools, carbon_2_WoodLitterPools, carbon_2_atmos)
 !litter_flux
 
-    USE mo_exception,         ONLY: finish
     USE mo_carbon_process,    ONLY: get_per_tile
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg
 
@@ -1901,20 +1883,18 @@ CONTAINS
   !! @brief Adds delta carbon to carbon state variables and sets delta to zero
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to work on from somewhere else?
-  !! TODO.JN-COHORTS: discuss how Cpool_crop_harvest should be dealt with here - in my opinion it should anyway not be a density!
+  !! TODO-JN-COHORTS: discuss how Cpool_crop_harvest should be dealt with here - in my opinion it should anyway not be a density!
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_carbon_states_with_delta_carbon(tile, options, tmpL)
+  SUBROUTINE update_carbon_states_with_delta_carbon(tile, options)
 
-    USE mo_exception,           ONLY: finish
     USE mo_carbon_process,      ONLY: update_state_reset_delta
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
-    LOGICAL, INTENT(in) :: tmpL
 
     TYPE(t_jsb_model), POINTER                :: model
 
@@ -1924,7 +1904,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':update_carbon_states_with_delta_carbon'
-    INTEGER                         :: ics, ice, iblk
+    INTEGER                         :: ics, ice, iblk, nc, i
     REAL(wp), DIMENSION(options%nc) :: delta_fract, prev_fract
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green
@@ -1951,6 +1931,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
+
+    dsl4jsb_Real2D_onChunk ::  carbon_2_GreenLitterPools
+    dsl4jsb_Real2D_onChunk ::  carbon_2_WoodLitterPools
+    dsl4jsb_Real2D_onChunk ::  carbon_2_atmos
 
     dsl4jsb_Real2D_onChunk ::  current_max_green
     dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
@@ -1980,8 +1964,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_nonsoluble_bg2_rp
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_humus_2_rp
 
+    dsl4jsb_Real2D_onChunk ::  delta_carbon_2_GreenLitterPools_rp
+    dsl4jsb_Real2D_onChunk ::  delta_carbon_2_WoodLitterPools_rp
+
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp
+    dsl4jsb_Real2D_onChunk ::  delta_carbon_2_atmos_rp
 
     dsl4jsb_Real2D_onChunk ::  veg_frac_correction
 
@@ -1994,6 +1982,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_reserve )             ! inout
@@ -2020,6 +2009,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! inout 
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_GreenLitterPools) ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_WoodLitterPools)  ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_atmos)            ! inout 
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_Cpool_green_rp )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_Cpool_reserve_rp )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_Cpool_woods_rp )               ! inout
@@ -2045,6 +2038,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_nonsoluble_bg2_rp)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_humus_2_rp)            ! inout 
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_carbon_2_GreenLitterPools_rp) ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_carbon_2_WoodLitterPools_rp)  ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_carbon_2_atmos_rp)            ! inout 
+
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       dsl4jsb_Get_var2D_onChunk(CARBON_,  current_max_green)                ! inout 
       dsl4jsb_Get_var2D_onChunk(CARBON_,  veg_carbon_at_max_green)          ! inout 
@@ -2058,19 +2055,20 @@ CONTAINS
     delta_fract(:)=tile%delta_fract(ics:ice, iblk)
     CALL tile%Get_fraction(ics, ice, iblk, fract=prev_fract(:))
 
-IF(tmpL)THEN
-
     !Assertion prev_fract + delta_fract .GE. 0._wp
     IF (ANY(prev_fract(:) + delta_fract(:) .LT. 0_wp )) THEN
-      print *, 'fract', prev_fract(:)
-      print *, 'delta', delta_fract(:)
-      CALL finish(TRIM(routine), &
-        & 'Violation of assertion: area to be changed needs to be .LE. existing area!')
+      DO i = 1,nc
+        IF (prev_fract(i) + delta_fract(i) .LT. 0_wp ) THEN
+          WRITE (message_text,*) 'Violation of assertion: area to be changed (', delta_fract(i), &
+            & ') needs to be .LE. existing area (', prev_fract(i) ,')'
+          CALL finish(TRIM(routine), message_text)
+        ENDIF
+      ENDDO
     ENDIF
+
     ! TODO-JN: do they still need smallest possible fraction 1e-10? 
     ! (Then the following should not happen and other Assertions and MAX statements will be required!)
 
-    !TODO-JN: maybe add assertions on positive Cpools?
     CALL update_state_reset_delta(Cpool_green(:), delta_Cpool_green_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
     CALL update_state_reset_delta(Cpool_reserve(:), delta_Cpool_reserve_rp(:), delta_fract(:), &
@@ -2118,6 +2116,15 @@ IF(tmpL)THEN
     CALL update_state_reset_delta(YCpool_humus_2(:), delta_YCpool_humus_2_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
 
+    ! TODO-JN: Only required if with disturbances
+    CALL update_state_reset_delta(carbon_2_GreenLitterPools(:), delta_carbon_2_GreenLitterPools_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(carbon_2_WoodLitterPools(:), delta_carbon_2_WoodLitterPools_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(carbon_2_atmos(:), delta_carbon_2_atmos_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+
+
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL update_state_reset_delta(current_max_green(:), delta_current_max_green_rp(:), delta_fract(:), &
         & veg_frac_correction(:), prev_fract(:))
@@ -2136,82 +2143,9 @@ IF(tmpL)THEN
       & YCpool_ethanol_bg1 = YCpool_ethanol_bg1(:), YCpool_nonsoluble_bg1 = YCpool_nonsoluble_bg1(:), &
       & YCpool_acid_bg2 = YCpool_acid_bg2(:), YCpool_water_bg2 = YCpool_water_bg2(:), &
       & YCpool_ethanol_bg2 = YCpool_ethanol_bg2(:), YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2(:), &
-      & YCpool_humus_1 = YCpool_humus_1(:), YCpool_humus_2 = YCpool_humus_2(:))
-
-ELSE
-
-!TODO remove and also remove the boolean
-IF(ANY(delta_Cpool_green_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_Cpool_green_rp(:)
-ENDIF
-IF(ANY(delta_Cpool_reserve_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_Cpool_reserve_rp(:)
-ENDIF
-IF(ANY(delta_Cpool_woods_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_Cpool_woods_rp(:)
-ENDIF
-IF(ANY(delta_Cpool_crop_harvest_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_Cpool_crop_harvest_rp(:)
-ENDIF
-
-IF(ANY(delta_YCpool_acid_ag1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_acid_ag1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_water_ag1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_water_ag1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_ethanol_ag1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_ethanol_ag1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_nonsoluble_ag1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_nonsoluble_ag1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_acid_bg1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_acid_bg1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_water_bg1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_water_bg1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_ethanol_bg1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_ethanol_bg1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_nonsoluble_bg1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_nonsoluble_bg1_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_humus_1_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_humus_1_rp(:)
-ENDIF
-
-IF(ANY(delta_YCpool_acid_ag2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_acid_ag2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_water_ag2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_water_ag2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_ethanol_ag2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_ethanol_ag2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_nonsoluble_ag2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_nonsoluble_ag2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_acid_bg2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_acid_bg2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_water_bg2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_water_bg2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_ethanol_bg2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_ethanol_bg2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_nonsoluble_bg2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_nonsoluble_bg2_rp(:)
-ENDIF
-IF(ANY(delta_YCpool_humus_2_rp(:) .NE. 0._wp)) THEN
-  print *, 'HUCH', delta_YCpool_humus_2_rp(:)
-ENDIF
-
-
-ENDIF
+      & YCpool_humus_1 = YCpool_humus_1(:), YCpool_humus_2 = YCpool_humus_2(:),       &
+      & carbon_2_GreenLitterPools = carbon_2_GreenLitterPools(:), &
+      & carbon_2_WoodLitterPools = carbon_2_WoodLitterPools(:), carbon_2_atmos = carbon_2_atmos(:))
 
   END SUBROUTINE update_carbon_states_with_delta_carbon
 
@@ -2229,7 +2163,6 @@ ENDIF
   ! 
   SUBROUTINE calculate_current_c_state_sum(tile, options, current_c_state_sum)
 
-    USE mo_exception,           ONLY: message, finish
     USE mo_util,                ONLY: real2string
 
     ! Arguments
@@ -2322,7 +2255,6 @@ ENDIF
   ! 
   SUBROUTINE check_carbon_conservation_for_operation(tile, options, old_c_state_sum, cflux, Cconserve)
 
-    USE mo_exception,           ONLY: message, finish
     USE mo_util,                ONLY: real2string
 
     ! Arguments

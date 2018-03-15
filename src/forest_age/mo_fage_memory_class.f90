@@ -42,10 +42,6 @@ MODULE mo_fage_memory_class
   TYPE(t_jsb_var_real3d) :: &
       & fract_per_age, cohort_max_age
 
-  ! parameters
-  ! TODO-JN currently none
-
-
   CONTAINS
     PROCEDURE :: Init => Init_fage_memory
   END TYPE t_fage_memory

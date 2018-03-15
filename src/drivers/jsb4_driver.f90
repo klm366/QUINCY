@@ -381,7 +381,7 @@ PROGRAM jsb4_driver
 
           !TODO-JN: where to put this cconservation test? 
 !IF (iblk .EQ. 1) THEN
-IF (ANY(cconservation(:,iblk) .GT. 1.e-13_wp)) THEN
+IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, '----------------'
   print *, 'iblk: ', iblk
   print *, 'current sum: ', old_c_state_sum(:,iblk)
@@ -390,14 +390,12 @@ IF (ANY(cconservation(:,iblk) .GT. 1.e-13_wp)) THEN
 ENDIF
           CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
 !IF (iblk .EQ. 1) THEN
-IF (ANY(cconservation(:,iblk) .GT. 1.e-13_wp)) THEN
+IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
   print *, '***********************'
   print *, 'iblk:', iblk
   print *, 'old sum:', old_c_state_sum(:,iblk)
-!STOP
 ENDIF
-IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
-
+IF (ANY(cconservation(:,iblk) .GT. 1.e-11_wp)) THEN
   time_loop:DO 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN
@@ -408,9 +406,9 @@ IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
     CALL time_reset
     IF(is_newyear()) STOP
   ENDDO time_loop
-
 STOP
 ENDIF
+
         ENDIF
       ENDIF
       

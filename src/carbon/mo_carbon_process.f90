@@ -1580,9 +1580,8 @@ CONTAINS
     real(wp),intent(in)    ::  delta_fract, prev_fract, veg_frac_correction
     real(wp),intent(inout) ::  org_Cpool, delta_Cpool
 
-    ! TODO-JN-COHORTS: as in JSBACH3 calculations are done no matter if there is any area or not
-    !                  with cohorts we require the densities to be zero if there is no area!
-    !                  -- potential conflict  
+    ! as in JSBACH3 calculations are done no matter if there is any area or not
+    ! with cohorts we require the densities to be zero if there is no area -- potential conflict  
     IF ( prev_fract .EQ. 0._wp) THEN
         org_Cpool = 0._wp
     ENDIF
@@ -1601,7 +1600,7 @@ CONTAINS
     ENDIF
     delta_Cpool = 0._wp
 
-    ! TODO, or should the densities not be altered and empty tiles can have non zero densities???
+    ! TODO-JN, or should the densities not be altered and empty tiles can have non zero densities???
     ! -- what if with 1e-10 as smallest possible fraction?
 
   end subroutine update_state_reset_delta

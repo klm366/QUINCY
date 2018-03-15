@@ -46,8 +46,10 @@ CONTAINS
 
     CLASS(t_fage_config), INTENT(inout) :: config
 
-    INTEGER, PARAMETER :: ncohorts = 5 !16 !TODO-JN-COHORTS should be a namelist parameter - get from model%config%
+    INTEGER, PARAMETER :: ncohorts = 5 !16 !TODO-JN-COHORTS should be a namelist parameter 
+                                       ! I wanted to add it to model%config%
                                        ! since it is also required in the usecases (see there...)
+                                       ! but here I have no tile and thus no model?!
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
@@ -61,7 +63,6 @@ CONTAINS
 
 !TODO-JN: namelist char selecting different cohort schemes "cohort_scheme"
 !  (e.g. static-equal, static-shorterYoung, dynamic-biomass, dynamic-MaxLai, ...)
-! for now to faster see an effect: static-shorterYoung
 !TODO-JN: namelist char for disturbance_distribution_scheme?
 
 
@@ -76,8 +77,8 @@ CONTAINS
 
     ! Set defaults
     active            = .TRUE.
-    bc_filename       = 'bc_land_fage.nc'  !JN: TODO do I need it at all?
-    ic_filename       = 'ic_land_fage.nc'  !JN: TODO
+    bc_filename       = 'bc_land_fage.nc'  !TODO-JN do I need it at all?
+    ic_filename       = 'ic_land_fage.nc'  !TODO-JN
     max_age           = 150
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -103,7 +104,7 @@ CONTAINS
     !Assertion: 
     IF ( max_age .LT. ncohorts) CALL finish(TRIM(routine), 'Assertion: number of cohorts needs to be less or equal to max age!')
 
-!TODO-JN-COHORTS ncohorts < X 
+!TODO-JN-COHORTS assert ncohorts < X 
 
     CALL close_nml(nml_handler)
 

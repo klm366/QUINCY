@@ -352,7 +352,6 @@ CONTAINS
 
     ! JN: changed order npp and disturbances because disturbances might change area 
     !     and by swapping dist and carbon less variables have to be aggregated upon area shift
-!TODO  switched of for testing disturbances on cohorts, switch back on at some point!
     IF (model%processes(CARBON_)%p%config%active) THEN
       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
     END IF

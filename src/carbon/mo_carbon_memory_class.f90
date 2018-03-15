@@ -228,7 +228,10 @@ MODULE mo_carbon_memory_class
       delta_YCpool_nonsoluble_bg2_rp,      & 
       delta_YCpool_humus_2_rp,             &
       delta_current_max_green_rp,          & 
-      delta_veg_carbon_at_max_green_rp
+      delta_veg_carbon_at_max_green_rp,    &
+      delta_carbon_2_GreenLitterPools_rp,  &
+      delta_carbon_2_WoodLitterPools_rp,   &
+      delta_carbon_2_atmos_rp
 
 
   CONTAINS
@@ -718,7 +721,6 @@ CONTAINS
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                      &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
 
 
 
@@ -1227,6 +1229,21 @@ CONTAINS
           & t_cf('delta_YCpool_humus_2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_humus_2.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_c2glpools_rp', mem%delta_carbon_2_GreenLitterPools_rp, hgrid, surface, &
+          & t_cf('delta_carbon_2_GreenLitterPools_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_GreenLitterPools.'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c2wlpools_rp', mem%delta_carbon_2_WoodLitterPools_rp, hgrid, surface, &
+          & t_cf('delta_carbon_2_WoodLitterPools_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_WoodLitterPools.'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c2atmos_rp', mem%delta_carbon_2_atmos_rp, hgrid, surface, &
+          & t_cf('delta_carbon_2_atmos_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_atmos.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+
       END IF ! (model%processes(FAGE_)%p%config%active) THEN
 
     END IF

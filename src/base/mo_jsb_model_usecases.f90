@@ -278,8 +278,8 @@ CONTAINS
 
     INTEGER, PARAMETER :: npft = 11
     INTEGER, PARAMETER :: ncohorts = 5 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
-                                       ! -> cannot get it via model%processes(FAGE_)%p%config%
-                                       !    thus, if on model%config% !
+                                       ! -> cannot get it via model%processes(FAGE_)%p%config% here!?
+                                       !    thus, on model%config% ? But then how to get it in mo_fage_config_class???
                                        ! + test ncohorts >0 & <=99 ! (cohort_name len=10 -- pft_shortname + '_fc' + j)
 
     CHARACTER(len=5) :: pft_shortname
@@ -377,7 +377,7 @@ CONTAINS
 
               CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
 
-              !TODO-JN: unfortunately this does not work as I thought it would (gves seg fault)
+              !TODO-JN: unfortunately this does not work as I thought it would (gives seg fault)
 !              CALL veg_tile%Set_process_action(FAGE_, ON_TILE_, SKIP_)
 
               DO j=1,ncohorts
