@@ -296,6 +296,12 @@ MODULE mo_sb_memory_class
 
     ! 2D transport fluxes for communication with groundwater and atmosphere
     TYPE(t_jsb_var_real2d)          :: & 
+                                    leaching_dom_carbon, &      !< land to groundwater flux of DOM-C [µmol m-2 s-1]
+                                    leaching_dom_nitrogen, &    !< land to groundwater flux of DOM-N [µmol m-2 s-1]
+                                    leaching_dom_phosphorus, &  !< land to groundwater flux of DOM-P [µmol m-2 s-1]
+                                    leaching_dom_carbon13, &    !< land to groundwater flux of DOM-C13 [µmol m-2 s-1]
+                                    leaching_dom_carbon14, &    !< land to groundwater flux of DOM-C14 [µmol m-2 s-1]
+                                    leaching_dom_nitrogen15, &  !< land to groundwater flux of DOM-N15 [µmol m-2 s-1]
                                     leaching_nh4_solute, &      !< land to groundwater flux of NH4 [µmol m-2 s-1]
                                     leaching_no3_solute, &      !< land to groundwater flux of NO3 [µmol m-2 s-1]
                                     leaching_po4_solute, &      !< land to groundwater flux of PO4 [µmol m-2 s-1]
@@ -1970,6 +1976,54 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'lithology_class_sl', mem%lithology_class_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_carbon', mem%leaching_dom_carbon, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_carbon13', mem%leaching_dom_carbon13, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_carbon14', mem%leaching_dom_carbon14, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

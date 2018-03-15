@@ -42,7 +42,11 @@ CONTAINS
   SUBROUTINE calc_liquid_phase_transport_wrapper(options,percolation_sl,soil_depth_sl, &
                                          pool_dom, nh4_solute, no3_solute, po4_solute, nh4_n15_solute, no3_n15_solute, & 
                                          transport_dom, transport_nh4_solute, transport_no3_solute, & 
-                                         transport_po4_solute, transport_nh4_n15_solute, transport_no3_n15_solute)
+                                         transport_po4_solute, transport_nh4_n15_solute, transport_no3_n15_solute, &
+                                         leaching_dom_carbon, leaching_dom_nitrogen, leaching_dom_phosphorus, & 
+                                         leaching_dom_carbon13, leaching_dom_carbon14, leaching_dom_nitrogen15, &
+                                         leaching_nh4_solute, leaching_no3_solute, leaching_po4_solute, &
+                                         leaching_nh4_n15_solute, leaching_no3_n15_solute)
                                          
     dsl4slm_Use_memory_a_sb
                                          
@@ -64,9 +68,19 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_po4_solute   !< rate of PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_nh4_n15_solute !< rate of N15H4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_dom_carbon      !< rate of DOM-C leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_dom_nitrogen    !< rate of DOM-N leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_dom_phosphorus  !< rate of DOM-P leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_dom_carbon13    !< rate of DOM-C13 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_dom_carbon14    !< rate of DOM-C14 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_dom_nitrogen15  !< rate of DOM-N15 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_nh4_solute      !< rate of NH4 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_no3_solute      !< rate of NO3 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_po4_solute      !< rate of PO4 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_nh4_n15_solute  !< rate of 14NH4 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: leaching_no3_n15_solute  !< rate of 15NO3 leaching [µmol/m2/s]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)       :: leaching
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -82,39 +96,39 @@ CONTAINS
     !!
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         pool_dom%carbon(:,:),transport_dom%carbon(:,:), &
-                                        leaching(:)) 
+                                        leaching_dom_carbon(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         pool_dom%nitrogen(:,:),transport_dom%nitrogen(:,:), &
-                                        leaching(:)) 
+                                        leaching_dom_nitrogen(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         pool_dom%phosphorus(:,:),transport_dom%phosphorus(:,:), & 
-                                        leaching(:)) 
+                                        leaching_dom_phosphorus(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         pool_dom%carbon13(:,:),transport_dom%carbon13(:,:), &
-                                        leaching(:)) 
+                                        leaching_dom_carbon13(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         pool_dom%carbon14(:,:),transport_dom%carbon14(:,:), &
-                                        leaching(:)) 
+                                        leaching_dom_carbon14(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         pool_dom%nitrogen15(:,:),transport_dom%nitrogen15(:,:), & 
-                                        leaching(:)) 
+                                        leaching_dom_nitrogen15(:)) 
 
     !> 2.0 transport of other solutes (NH4, NO3, PO4, and their isotopes)
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         nh4_solute(:,:),transport_nh4_solute(:,:), &
-                                        leaching(:)) 
+                                        leaching_nh4_solute(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         no3_solute(:,:),transport_no3_solute(:,:), &
-                                        leaching(:)) 
+                                        leaching_no3_solute(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         po4_solute(:,:),transport_po4_solute(:,:), &
-                                        leaching(:)) 
+                                        leaching_po4_solute(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:), &
-                                        leaching(:)) 
+                                        leaching_nh4_n15_solute(:)) 
     CALL calc_liquid_phase_transport(options, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         no3_n15_solute(:,:),transport_no3_n15_solute(:,:), & 
-                                        leaching(:)) 
+                                        leaching_no3_n15_solute(:)) 
 
   END SUBROUTINE calc_liquid_phase_transport_wrapper
 

@@ -72,6 +72,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: emission_noy
     dsl4jsb_Real2D_onChunk :: emission_n2o
     dsl4jsb_Real2D_onChunk :: emission_n2
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
+    dsl4jsb_Real2D_onChunk :: leaching_dom_phosphorus
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon13
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon14
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
+    dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2_n15
     ! 3D SB_
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
@@ -121,12 +133,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_noy_n15
     dsl4jsb_Real3D_onChunk :: transport_n2o_n15
     dsl4jsb_Real3D_onChunk :: transport_n2_n15
-    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
-    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
-    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
-    dsl4jsb_Real2D_onChunk :: emission_noy_n15
-    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
-    dsl4jsb_Real2D_onChunk :: emission_n2_n15
     dsl4jsb_Real3D_onChunk :: volatilisation_nh4
     dsl4jsb_Real3D_onChunk :: nitrification_no3
     dsl4jsb_Real3D_onChunk :: nitrification_noy
@@ -171,6 +177,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_phosphorus)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! out
@@ -265,6 +277,12 @@ CONTAINS
     leaching_nh4_solute(:)       = zero
     leaching_no3_solute(:)       = zero
     leaching_po4_solute(:)       = zero
+    leaching_dom_carbon(:)       = zero
+    leaching_dom_nitrogen(:)     = zero
+    leaching_dom_phosphorus(:)   = zero
+    leaching_dom_carbon13(:)     = zero
+    leaching_dom_carbon14(:)     = zero
+    leaching_dom_nitrogen15(:)   = zero
     emission_nh3(:)              = zero
     emission_noy(:)              = zero
     emission_n2o(:)              = zero

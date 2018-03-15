@@ -157,6 +157,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
+    dsl4jsb_Real2D_onChunk :: leaching_dom_phosphorus
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon13
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon14
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
+    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -249,6 +260,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_phosphorus)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! out
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
@@ -417,7 +439,11 @@ CONTAINS
                                    nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
                                    sb_transport%dom, transport_nh4_solute(:,:), & 
                                    transport_no3_solute(:,:),transport_po4_solute(:,:), & 
-                                   transport_nh4_n15_solute(:,:),transport_no3_n15_solute(:,:))
+                                   transport_nh4_n15_solute(:,:),transport_no3_n15_solute(:,:), &
+                                   leaching_dom_carbon(:), leaching_dom_nitrogen(:), leaching_dom_phosphorus(:), & 
+                                   leaching_dom_carbon13(:), leaching_dom_carbon14(:), leaching_dom_nitrogen15(:), &
+                                   leaching_nh4_solute(:), leaching_no3_solute(:), leaching_po4_solute(:), &
+                                   leaching_nh4_n15_solute(:), leaching_no3_n15_solute(:))
 
     !> 5.2 transport due to bioturbation
     !!
