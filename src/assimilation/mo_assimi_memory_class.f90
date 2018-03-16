@@ -41,6 +41,8 @@ MODULE mo_assimi_memory_class
                               canopy_cond           , &      !< canopy-integrated conductance for water (m/s)
                               co2_conc_leaf         , &      !< canopy-integrated internal leaf CO2 concentration (ppm) 
                               beta_air              , &      !< scaling factor to account for air humidity effects on conductance
+                              beta_soa              , &      !< scaling factor to account for spring in coniferous forests
+                              soa_mavg              , &      !< state of acclimation, used in calculation of beta_soa
                               beta_soil_ps          , &      !< scaling factor to account for soil moisture constraints on photosynthesis
                               beta_soil_gs          , &      !< scaling factor to account for soil moisture constraints on conductance
                               t_jmax_opt                     !< optimal temperature for electron transport 
@@ -61,7 +63,8 @@ MODULE mo_assimi_memory_class
                               beta_air_daytime          , &   !< average of the previous day
                               beta_air_daytime_dacc     , &   !< average of the previous day
                               beta_air_tfrac_mavg       , &   !< scaling factor to account for air humidity effects on conductance
-                              beta_air_tcnl_mavg              !< scaling factor to account for air humidity effects on conductance
+                              beta_air_tcnl_mavg        , &   !< scaling factor to account for air humidity effects on conductance
+			      beta_soa_mavg  
 
     TYPE(t_jsb_var_real2d)    :: &
                               beta_soil_ps_daytime      , &   !< average of the previous day
@@ -206,7 +209,31 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
-  
+ 
+      CALL jsb_add_var(mem, 'beta_soa', mem%beta_soa, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'soa_mavg', mem%soa_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'beta_soa_mavg', mem%beta_soa_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
             hgrid, surface, &
             t_cf('', '', ''), &

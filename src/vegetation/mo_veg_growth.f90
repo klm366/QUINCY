@@ -105,6 +105,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: swpar_fdiffuse
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_air
+    dsl4jsb_Real2D_onChunk      :: beta_soa
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
@@ -269,6 +270,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                        ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                        ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                    ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                    ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)          ! in
@@ -510,6 +512,7 @@ CONTAINS
                                         co2_mixing_ratio_tcnl_mavg(:)    , &
                                         beta_sinklim_ps_tcnl_mavg(:)     , &
                                         beta_air_tcnl_mavg(:)            , &
+                                        beta_soa(:)                      , &
                                         beta_soil_ps_tcnl_mavg(:)        , &
                                         beta_soil_gs_tcnl_mavg(:)        , &
                                         fn_chl_cl(:,:)                   , &
@@ -563,7 +566,8 @@ CONTAINS
                                               ga(:)                       , & 
                                               net_assimilation(:)         , & 
                                               canopy_cond(:)              , & 
-                                              beta_air(:)                 , & 
+                                              beta_air(:)                 , &
+                                              beta_soa(:)                 , & 
                                               beta_soil_ps(:)             , & 
                                               beta_soil_gs(:)             , & 
                                               veg_pool%leaf%carbon(:)     , &  

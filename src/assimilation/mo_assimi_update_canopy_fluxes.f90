@@ -20,7 +20,7 @@ MODULE mo_assimi_update_canopy_fluxes
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis, calc_soil_moisture_stress
+  PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis, calc_soil_moisture_stress, calc_beta_soa
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'
@@ -103,6 +103,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: canopy_cond
     dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
     dsl4jsb_Real2D_onChunk      :: beta_air
+    dsl4jsb_Real2D_onChunk      :: beta_soa
+    dsl4jsb_Real2D_onChunk      :: soa_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
@@ -170,6 +172,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)                 ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)               ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                    ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                    ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_mavg)                    ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)                  ! out
@@ -227,6 +231,9 @@ CONTAINS
 
     ga(:) = heat_transfer_coef(drag_srf(:),model%options%steplen) * MAX(wind_10m, min_wind) 
 
+    ! Calculate the state of acclimation, slowing photosynthesis in evergreen conifers in spring
+    beta_soa(:) = calc_beta_soa(soa_mavg(:),lctlib%phenology_type)
+
     !> 2.0 calculate photosynthesis per layer
     !!
     DO icanopy = 1,dsl4jsb_Config(ASSIMI_)%ncanopy
@@ -241,6 +248,7 @@ CONTAINS
                                  ppfd_shaded_cl(:,icanopy)             , &
                                  fleaf_sunlit_cl(:,icanopy)            , &
                                  beta_air(:)                           , &
+                                 beta_soa(:)                           , &
                                  beta_soil_ps(:)                       , &
                                  beta_sinklim_ps(:)                    , &
                                  beta_soil_gs(:)                       , &
@@ -337,6 +345,7 @@ CONTAINS
                                             ppfd_shaded_cl      , &
                                             fleaf_sunlit_cl     , &
                                             beta_air            , &
+					    beta_soa            , &
                                             beta_soil_ps        , &
                                             beta_sinklim_ps     , &
                                             beta_soil_gs        , &
@@ -380,6 +389,7 @@ CONTAINS
   REAL(wp),                 INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit
   REAL(wp),                 INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
   REAL(wp),                 INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
+  REAL(wp),                 INTENT(IN) :: beta_soa                !< scaling factor to account for spring in coniferous forests
   REAL(wp),                 INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on photosynthesis
   REAL(wp),                 INTENT(IN) :: beta_sinklim_ps         !< scaling factor to account for sink limitation constraints on photosynthesis
   REAL(wp),                 INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
@@ -452,10 +462,10 @@ CONTAINS
       pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa
 
       !> N specific rate of electron transport rate
-      n1 = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/lctlib%t_jmax_omega)**2)) * beta_soil_ps * beta_sinklim_ps
+      n1 = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/lctlib%t_jmax_omega)**2)) * beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> N specific rate of Rubisco turnover
-      n2 = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps * beta_sinklim_ps
+      n2 = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> Initial guess of leaf internal CO2 concentration
       SELECT CASE (lctlib%ps_pathway)
@@ -703,6 +713,37 @@ CONTAINS
       beta = 1.0_wp - exp(-(lambda*theta)**weibull_k)
     END IF
   END FUNCTION calc_soil_moisture_stress
+
+  !-------------------------------------------------------------------------------------------------------
+  ! Sub Task to update_canopy_fluxes
+  !
+  !-------------------------------------------------------------------------------------------------------
+  !> Calculate spring recovery period for coniferous forests
+  !    Based on Mäkelä et al., 2004 
+  !-------------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION calc_beta_soa(soa_mavg,phenology_type) RESULT(beta_soa)
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: soa_mavg  !< state of acclimation
+    INTEGER, INTENT(in)  :: phenology_type
+    REAL(wp) :: beta_soa              ! beta value of soa
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_soa'
+    REAL(wp) :: min_temp 
+    REAL(wp) :: max_temp 
+
+    min_temp = -5.0_wp
+    max_temp = 5.0_wp
+    IF (phenology_type == 1) THEN
+      beta_soa = (soa_mavg - min_temp) / (-min_temp + max_temp)
+      beta_soa = MIN ( MAX(beta_soa,0.01_wp), 1.0_wp)
+    ELSE
+      beta_soa = 1.0_wp
+    END IF
+
+  END FUNCTION calc_beta_soa
+
 
 
   !-----------------------------------------------------------------------------------------------------

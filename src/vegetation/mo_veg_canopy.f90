@@ -51,6 +51,7 @@ CONTAINS
                                 co2_mixing_ratio  , &
                                 ga                , &
                                 beta_air          , &
+                                beta_soa          , &
                                 beta_soil_ps      , &
                                 beta_sinklim_ps   , &
                                 beta_soil_gs      , &
@@ -87,6 +88,7 @@ CONTAINS
     REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: co2_mixing_ratio      !< CO2 concentration (avg)
     REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: ga                    !< aerodynamic conductance (avg)
     REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: beta_air              !< beta air (avg)
+    REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: beta_soa              !< beta soa (avg)
     REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: beta_soil_ps          !< beta soil ps (avg)
     REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: beta_sinklim_ps       !< beta sinklim ps (avg)
     REAL(wp),DIMENSION(options%nc),INTENT(in),OPTIONAL   :: beta_soil_gs          !< beta soil gs (avg)
@@ -321,6 +323,7 @@ CONTAINS
                                                co2_mixing_ratio(:)        , &
                                                ga(:)                      , &
                                                beta_air(:)                , &
+                                               beta_soa(:)                , &
                                                beta_soil_ps(:)            , &
                                                beta_sinklim_ps(:)         , &
                                                beta_soil_gs(:)            , &
@@ -357,6 +360,7 @@ CONTAINS
                                     co2_mixing_ratio          , &
                                     ga                        , &
                                     beta_air                  , &
+	                            beta_soa                  , &
                                     beta_soil_ps              , &
                                     beta_sinklim_ps           , &
                                     beta_soil_gs              , &
@@ -390,6 +394,7 @@ CONTAINS
                                              & co2_mixing_ratio, &    !< CO2 mixing ratio (day-time running mean, ppm)
                                              & ga,               &    !< aerodynamic conductance (day-time running mean, m/s)
                                              & beta_air,         &    !< beta air (day-time running mean, --)
+                                             & beta_soa,         &    !< beta soa (day-time running mean, --)
                                              & beta_soil_ps,     &    !< beta soil for PS (day-time running mean, --)
                                              & beta_sinklim_ps,  &    !< beta sinklim for PS (day-time running mean, --)
                                              & beta_soil_gs,     &    !< beta soil for GC (day-time running mean, --)
@@ -440,6 +445,7 @@ CONTAINS
                                  ppfd_shaded_cl                , &
                                  fleaf_sunlit_cl               , &
                                  beta_air                      , &
+	                         beta_soa                      , &
                                  beta_soil_ps                  , &
                                  beta_sinklim_ps               , &
                                  beta_soil_gs                  , &
@@ -476,7 +482,7 @@ CONTAINS
        CALL calc_photosynthesis(options, lctlib, &
                  t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                  ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
-                 beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
+                 beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
                  fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), &
                  fn_pepc_cl*(1._wp-fn_oth_cl),&
                  lai_cl                        , &    ! used for: IF statement whether this routine may run or not
@@ -505,7 +511,7 @@ CONTAINS
           CALL calc_photosynthesis(options, lctlib, &
                    t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                    ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
-                   beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
+                   beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
                    fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
                    fn_pepc_cl*(1._wp-fn_oth_cl),&
                    lai_cl                        , &    ! used for: IF statement whether this routine may run or not
@@ -703,6 +709,7 @@ CONTAINS
                                                   net_assimilation  , &
                                                   canopy_cond       , &
                                                   beta_air          , &
+                                                  beta_soa          , &
                                                   beta_soil_ps      , &
                                                   beta_soil_gs      , &
                                                   veg_pool_leaf_carbon    , & 
@@ -746,7 +753,8 @@ CONTAINS
                                                   ga               , &   !< air temperature (K)
                                                   net_assimilation , &   !< net assimilation rate (µmol CO2 / m2 / s)
                                                   canopy_cond      , &   !< canopy conductance (m/s)
-                                                  beta_air         , &   !< air humidity limiting factor for photosynthesis
+						  beta_air         , &   !< air humidity limiting factor for photosynthesis
+                                                  beta_soa         , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis
                                                   beta_soil_ps     , &   !< soil moisture limiting factor for photosynthesis
                                                   beta_soil_gs           !< soil moisture limiting factor for canopy conductance
     REAL(wp),DIMENSION(:),          INTENT(in) :: veg_pool_leaf_carbon    , & !< ..
@@ -871,6 +879,7 @@ CONTAINS
                                     loc_ppfd_shaded_cl(:,icanopy)   , &
                                     loc_fleaf_sunlit_cl(:,icanopy)  , &
                                     beta_air(:)                     , &
+	                            beta_soa(:)                     , &
                                     beta_soil_ps(:)                 , &
                                     beta_sinklim_ps(:)              , &
                                     beta_soil_gs(:)                 , &
@@ -944,6 +953,7 @@ CONTAINS
                                         co2_mixing_ratio_tcnl_mavg    , &
                                         beta_sinklim_ps_tcnl_mavg     , &
                                         beta_air_tcnl_mavg            , &
+	                                beta_soa_mavg                 , &
                                         beta_soil_ps_tcnl_mavg        , &
                                         beta_soil_gs_tcnl_mavg        , &
                                         fn_chl_cl                     , &
@@ -990,6 +1000,7 @@ CONTAINS
                                                              co2_mixing_ratio_tcnl_mavg , &
                                                              beta_sinklim_ps_tcnl_mavg  , &
                                                              beta_air_tcnl_mavg         , &
+	                                                     beta_soa_mavg              , &
                                                              beta_soil_ps_tcnl_mavg     , &
                                                              beta_soil_gs_tcnl_mavg
     REAL(wp),DIMENSION(options%nc,ncanopy), INTENT(in)    :: fn_chl_cl                  , &
@@ -1121,6 +1132,7 @@ CONTAINS
                        ppfd_shaded_tcnl_mavg_cl(ichunk,icanopy)      , &
                        fleaf_sunlit_tcnl_mavg_cl(ichunk,icanopy)     , &
                        beta_air_tcnl_mavg(ichunk)                    , &
+	               beta_soa_mavg(ichunk)                         , &
                        beta_soil_ps_tcnl_mavg(ichunk)                , &
                        beta_sinklim_ps_tcnl_mavg(ichunk)             , &
                        beta_soil_gs_tcnl_mavg(ichunk)                , &

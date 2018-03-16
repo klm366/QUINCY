@@ -75,6 +75,8 @@ MODULE mo_shared_constants
     REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp      !< vegetation dynamics processes 
     REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp       !< respiration acclimation
     REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp       !< microbial community acclimation
+    REAL(wp),SAVE :: mavg_period_soa               = 2.0_wp      !< memory time_scale for state of acclimation
+
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
