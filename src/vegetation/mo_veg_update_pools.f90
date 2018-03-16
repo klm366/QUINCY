@@ -91,6 +91,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soa_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
     ! SOIL_
@@ -181,6 +182,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)      ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)         ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_mavg)               ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
     ! ---------------------------
@@ -444,6 +446,7 @@ CONTAINS
                              co2_mixing_ratio_tfrac_mavg(:)     , &
                              ga_tfrac_mavg(:)                   , &
                              beta_air_tfrac_mavg(:)             , &
+                             beta_soa_mavg(:)                   , &
                              beta_soil_ps_tfrac_mavg(:)         , &
                              beta_sinklim_ps_tfrac_mavg(:)      , &
                              beta_soil_gs_tfrac_mavg(:)         , & 
