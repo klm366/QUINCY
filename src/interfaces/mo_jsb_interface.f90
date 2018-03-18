@@ -54,7 +54,7 @@ CONTAINS
     & swvis_srf_down,   &
     & swnir_srf_down,   &
     & swpar_srf_down,   &
-    & frac_par_diffuse, &
+    & fract_par_diffuse, &
     & press_srf,        &
     & drag_srf,         &
     & t_acoef,          &
@@ -121,7 +121,7 @@ CONTAINS
       & swvis_srf_down    (:), &
       & swnir_srf_down    (:), &
       & swpar_srf_down    (:), &
-      & frac_par_diffuse  (:), &
+      & fract_par_diffuse  (:), &
       & press_srf         (:), &
       & drag_srf          (:), &
       & t_acoef           (:), &
@@ -230,7 +230,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
-      & frac_par_diffuse   = frac_par_diffuse(:),   &
+      & fract_par_diffuse   = fract_par_diffuse(:),   &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -321,7 +321,7 @@ CONTAINS
 !     & swvis_srf_net,    &
 !     & swnir_srf_net,    &
 !     & swpar_srf_down,   &
-!     & frac_par_diffuse, &
+!     & fract_par_diffuse, &
 !     & press_srf,        &
 !     & drag_srf,         &
 !     & t_acoef,          &
@@ -375,7 +375,7 @@ CONTAINS
 !       & swvis_srf_net     (:), &
 !       & swnir_srf_net     (:), &
 !       & swpar_srf_down    (:), &
-!       & frac_par_diffuse  (:), &
+!       & fract_par_diffuse  (:), &
 !       & press_srf         (:), &
 !       & drag_srf          (:), &
 !       & t_acoef           (:), &
@@ -461,7 +461,7 @@ CONTAINS
 !       & swvis_srf_net      = swvis_srf_net(:),      &
 !       & swnir_srf_net      = swnir_srf_net(:),      &
 !       & swpar_srf_down     = swpar_srf_down(:),     &
-!       & frac_par_diffuse   = frac_par_diffuse(:),   &
+!       & fract_par_diffuse   = fract_par_diffuse(:),   &
 !       & press_srf          = press_srf(:),          &
 !       & drag_srf           = drag_srf(:),           &
 !       & t_acoef            = t_acoef(:),            &

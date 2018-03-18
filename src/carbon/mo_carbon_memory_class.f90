@@ -125,7 +125,7 @@ MODULE mo_carbon_memory_class
       cflux_fire_all_2_atm                ! R: should be later renamed to C_2_atmos
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !frac_litter_wood_new,       & ! new fraction in above ground wood litter pool 
+      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool 
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
@@ -198,7 +198,7 @@ MODULE mo_carbon_memory_class
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
 
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      frac_litter_wood_new_ta,       & ! new fraction in above ground wood litter pool 
+      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool 
       ! former (JS3) local variables. R: nur auf tile area benötigt!
       cflux_npp_2_atm_ta,            & ! [kg(CO2)/m^2 s]  tile averages of net CO2 fluxes between
       cflux_soilresp_2_atm_ta,       & !  .. biosphere (due to NPP, soil respiration and
@@ -701,9 +701,9 @@ CONTAINS
         & prefix, suffix,                                                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-!       CALL jsb_add_var( mem, 'frac_litter_wood_new', mem%frac_litter_wood_new,                     &
+!       CALL jsb_add_var( mem, 'fract_litter_wood_new', mem%fract_litter_wood_new,                     &
 !         & hgrid, surface,                                                                          &
-!         & t_cf('frac_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
+!         & t_cf('fract_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !         & prefix, suffix,                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -1112,9 +1112,9 @@ CONTAINS
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
-!       CALL jsb_add_var( mem, 'frac_litter_wood_new_ta', mem%frac_litter_wood_new_ta,                     &
+!       CALL jsb_add_var( mem, 'fract_litter_wood_new_ta', mem%fract_litter_wood_new_ta,                     &
 !         & hgrid, surface,                                                                          &
-!         & t_cf('frac_litter_wood_new_ta', 'mol(C) m-2', 'New fraction in wood litter pool.'), &
+!         & t_cf('fract_litter_wood_new_ta', 'mol(C) m-2', 'New fraction in wood litter pool.'), &
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !         & prefix, suffix,                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3

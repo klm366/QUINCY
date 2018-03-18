@@ -330,9 +330,9 @@ CONTAINS
 
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Real2D_onChunk :: frac_litter_wood_new
+    !dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
     !
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI 
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
@@ -480,9 +480,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )           ! out
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,  frac_litter_wood_new )
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,  fract_litter_wood_new )
     !
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )      ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
@@ -524,11 +524,11 @@ CONTAINS
     !    In JS3 the areaWeightingFactor rescales the canopy area up to the whole Gridbox. E.g. for the C pools.
     !    In JS4 this upscaling has normally to be done by the accumulation procedures. However, the canopy area
     !    still has to be scaled to the PFT tile area for JS4. As the C pools are calculated on m^2 canopy also in JS4
-    !    => Cpool(on PFT tile) =Cpool(canopy) * veg_frac_correction. 
+    !    => Cpool(on PFT tile) =Cpool(canopy) * veg_fract_correction. 
     !
     ! Therefore this gets arbitary:
     ! Prepare area weighting factor to rescale from 1/[m^2(canopy)] to 1/[m^2(grid box)]
-    ! areaWeightingFactor(:,:) = veg_frac_correction(:,:) * surface%cover_fract(kidx0:kidx1,:) &
+    ! areaWeightingFactor(:,:) = veg_fract_correction(:,:) * surface%cover_fract(kidx0:kidx1,:) &
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
 
 
@@ -583,16 +583,16 @@ CONTAINS
                               topSoilTemp_yDayMean,                             & ! in
                               alpha_yDayMean,                                   & ! in
                               !
-                              dsl4jsb_Lctlib_param(frac_npp_2_woodPool),        & ! in
-                              dsl4jsb_Lctlib_param(frac_NPP_2_reservePool),     & ! in
-                              dsl4jsb_Lctlib_param(frac_NPP_2_exudates),        & ! in
+                              dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
+                              dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
+                              dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
                               !
-                              dsl4jsb_Lctlib_param(frac_green_2_herbivory),     & ! in
+                              dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
                               dsl4jsb_Lctlib_param(tau_c_litter_leaf),      & ! in
                               dsl4jsb_Lctlib_param(tau_c_litter_wood),      & ! in
                               dsl4jsb_Lctlib_param(tau_c_woods),            & ! in
                               dsl4jsb_Lctlib_param(LAI_shed_constant),          & ! in
-                              dsl4jsb_Lctlib_param(frac_C_litter_green2atmos),  & ! in
+                              dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
                               dsl4jsb_Lctlib_param(Max_C_content_woods),        & ! in
                               dsl4jsb_Lctlib_param(specificLeafArea_C),         & ! in
                               dsl4jsb_Lctlib_param(reserveC2leafC),             & ! in
@@ -628,7 +628,7 @@ CONTAINS
                               cflux_herb_2_atm,                            & ! out
                               NPP_act_yDayMean,                                 & ! out
                               !
-    !frac_litter_wood_new    = frac_litter_wood_new,       & ! inout, optional. Only for spitfire
+    !fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
                               ! variables only needed with yasso:
                               ! R: Note, in the moment the procedure is only used with Yasso.
    temp2_30d               =  pseudo_temp_yDay,                                 & ! in, optional, necessary with yasso
@@ -690,29 +690,29 @@ CONTAINS
        ! ------------------------------------------------------------------------------------------------------------------------
 
        ! C pools
-       c_green_ta           = c_green           * veg_frac_correction * fract_fpc_max
-       c_woods_ta           = c_woods           * veg_frac_correction * fract_fpc_max
-       c_reserve_ta         = c_reserve         * veg_frac_correction * fract_fpc_max
-       c_crop_harvest_ta    = c_crop_harvest    * veg_frac_correction * fract_fpc_max
+       c_green_ta           = c_green           * veg_fract_correction * fract_fpc_max
+       c_woods_ta           = c_woods           * veg_fract_correction * fract_fpc_max
+       c_reserve_ta         = c_reserve         * veg_fract_correction * fract_fpc_max
+       c_crop_harvest_ta    = c_crop_harvest    * veg_fract_correction * fract_fpc_max
 
-       c_acid_ag1_ta       = c_acid_ag1       * veg_frac_correction * fract_fpc_max
-       c_water_ag1_ta      = c_water_ag1      * veg_frac_correction * fract_fpc_max
-       c_ethanol_ag1_ta    = c_ethanol_ag1    * veg_frac_correction * fract_fpc_max
-       c_nonsoluble_ag1_ta = c_nonsoluble_ag1 * veg_frac_correction * fract_fpc_max
-       c_acid_bg1_ta       = c_acid_bg1       * veg_frac_correction * fract_fpc_max
-       c_water_bg1_ta      = c_water_bg1      * veg_frac_correction * fract_fpc_max
-       c_ethanol_bg1_ta    = c_ethanol_bg1    * veg_frac_correction * fract_fpc_max
-       c_nonsoluble_bg1_ta = c_nonsoluble_bg1 * veg_frac_correction * fract_fpc_max
-       c_humus_1_ta        = c_humus_1        * veg_frac_correction * fract_fpc_max
-       c_acid_ag2_ta       = c_acid_ag2       * veg_frac_correction * fract_fpc_max
-       c_water_ag2_ta      = c_water_ag2      * veg_frac_correction * fract_fpc_max
-       c_ethanol_ag2_ta    = c_ethanol_ag2    * veg_frac_correction * fract_fpc_max
-       c_nonsoluble_ag2_ta = c_nonsoluble_ag2 * veg_frac_correction * fract_fpc_max
-       c_acid_bg2_ta       = c_acid_bg2       * veg_frac_correction * fract_fpc_max
-       c_water_bg2_ta      = c_water_bg2      * veg_frac_correction * fract_fpc_max
-       c_ethanol_bg2_ta    = c_ethanol_bg2    * veg_frac_correction * fract_fpc_max
-       c_nonsoluble_bg2_ta = c_nonsoluble_bg2 * veg_frac_correction * fract_fpc_max
-       c_humus_2_ta        = c_humus_2        * veg_frac_correction * fract_fpc_max
+       c_acid_ag1_ta       = c_acid_ag1       * veg_fract_correction * fract_fpc_max
+       c_water_ag1_ta      = c_water_ag1      * veg_fract_correction * fract_fpc_max
+       c_ethanol_ag1_ta    = c_ethanol_ag1    * veg_fract_correction * fract_fpc_max
+       c_nonsoluble_ag1_ta = c_nonsoluble_ag1 * veg_fract_correction * fract_fpc_max
+       c_acid_bg1_ta       = c_acid_bg1       * veg_fract_correction * fract_fpc_max
+       c_water_bg1_ta      = c_water_bg1      * veg_fract_correction * fract_fpc_max
+       c_ethanol_bg1_ta    = c_ethanol_bg1    * veg_fract_correction * fract_fpc_max
+       c_nonsoluble_bg1_ta = c_nonsoluble_bg1 * veg_fract_correction * fract_fpc_max
+       c_humus_1_ta        = c_humus_1        * veg_fract_correction * fract_fpc_max
+       c_acid_ag2_ta       = c_acid_ag2       * veg_fract_correction * fract_fpc_max
+       c_water_ag2_ta      = c_water_ag2      * veg_fract_correction * fract_fpc_max
+       c_ethanol_ag2_ta    = c_ethanol_ag2    * veg_fract_correction * fract_fpc_max
+       c_nonsoluble_ag2_ta = c_nonsoluble_ag2 * veg_fract_correction * fract_fpc_max
+       c_acid_bg2_ta       = c_acid_bg2       * veg_fract_correction * fract_fpc_max
+       c_water_bg2_ta      = c_water_bg2      * veg_fract_correction * fract_fpc_max
+       c_ethanol_bg2_ta    = c_ethanol_bg2    * veg_fract_correction * fract_fpc_max
+       c_nonsoluble_bg2_ta = c_nonsoluble_bg2 * veg_fract_correction * fract_fpc_max
+       c_humus_2_ta        = c_humus_2        * veg_fract_correction * fract_fpc_max
 
 
        C_sum_natural_ta =   c_green_ta           + c_woods_ta            &
@@ -728,17 +728,17 @@ CONTAINS
                           + c_humus_1_ta        + c_humus_2_ta
 
        ! C fluxes
-       soil_respiration_ta         = soil_respiration      * veg_frac_correction * fract_fpc_max
-       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_frac_correction * fract_fpc_max
-       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_frac_correction * fract_fpc_max
-       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_frac_correction * fract_fpc_max
-       NPP_flux_correction_ta      = NPP_flux_correction   * veg_frac_correction * fract_fpc_max
-       GPP_yDayMean_ta             = GPP_yDayMean          * veg_frac_correction * fract_fpc_max
-       cflux_c_greenwood_2_litter_ta              = cflux_c_greenwood_2_litter           * veg_frac_correction * fract_fpc_max
-       root_exudates_ta            = root_exudates         * veg_frac_correction * fract_fpc_max
-       cflux_c_green_2_herb_ta          = cflux_c_green_2_herb       * veg_frac_correction * fract_fpc_max
-       ! cflux_herb_2_littergreen_ta      = cflux_herb_2_littergreen    * veg_frac_correction * fract_fpc_max
-       ! cflux_herb_2_atm_ta   = cflux_herb_2_atm * veg_frac_correction * fract_fpc_max
+       soil_respiration_ta         = soil_respiration      * veg_fract_correction * fract_fpc_max
+       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_fract_correction * fract_fpc_max
+       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_fract_correction * fract_fpc_max
+       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_fract_correction * fract_fpc_max
+       NPP_flux_correction_ta      = NPP_flux_correction   * veg_fract_correction * fract_fpc_max
+       GPP_yDayMean_ta             = GPP_yDayMean          * veg_fract_correction * fract_fpc_max
+       cflux_c_greenwood_2_litter_ta              = cflux_c_greenwood_2_litter           * veg_fract_correction * fract_fpc_max
+       root_exudates_ta            = root_exudates         * veg_fract_correction * fract_fpc_max
+       cflux_c_green_2_herb_ta          = cflux_c_green_2_herb       * veg_fract_correction * fract_fpc_max
+       ! cflux_herb_2_littergreen_ta      = cflux_herb_2_littergreen    * veg_fract_correction * fract_fpc_max
+       ! cflux_herb_2_atm_ta   = cflux_herb_2_atm * veg_fract_correction * fract_fpc_max
 
    END IF
 
@@ -747,17 +747,17 @@ CONTAINS
    ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
    cflux_npp_2_atm_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+              (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
                        - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
 
 
    cflux_soilresp_2_atm_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
+              (- veg_fract_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
                    * soil_respiration      )                    ! .. soil respiration
 
    cflux_herb_2_atm_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+              (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * cflux_herb_2_atm )                    ! .. herbivory
 
 
@@ -845,7 +845,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,       weighted_by_fract)
    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen_ta, weighted_by_fract)
    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, frac_litter_wood_new_ta,  weighted_by_fract)
+   ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_ta,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_soilresp_2_atm_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)

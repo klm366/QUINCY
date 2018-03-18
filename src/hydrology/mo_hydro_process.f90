@@ -1327,14 +1327,14 @@ CONTAINS
   !
   REAL(wp) ELEMENTAL FUNCTION Get_snow_fract_noforest(snow, orodev)
 
-    USE mo_hydro_constants, ONLY: wsn2frac_const, wsn2frac_eps, wsn2frac_sigfac
+    USE mo_hydro_constants, ONLY: wsn2fract_const, wsn2fract_eps, wsn2fract_sigfac
 
     REAL(wp), INTENT(in) :: &
       & snow,   &
       & orodev
 
-    Get_snow_fract_noforest = wsn2frac_const * TANH(snow * 100._wp) &
-                               & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2frac_eps + wsn2frac_sigfac * orodev))
+    Get_snow_fract_noforest = wsn2fract_const * TANH(snow * 100._wp) &
+                               & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2fract_eps + wsn2fract_sigfac * orodev))
 
   END FUNCTION Get_snow_fract_noforest
 

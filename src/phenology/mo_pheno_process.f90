@@ -700,7 +700,7 @@ MODULE mo_pheno_process
 
                    ! If also yesterdays net production is positive let it grow
                    IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN
-                      grRate = PhenoParam%CRP%leafAlloc_frac * lctlib_specificLeafArea_C * & ! => growth rate is high (depending on NPP)
+                      grRate = PhenoParam%CRP%leafAlloc_fract * lctlib_specificLeafArea_C * & ! => growth rate is high (depending on NPP)
                                  MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / lai                     !    .. and is in units of 1/days
                       lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_wp, LaiMax_corrected)
                    ELSE                                                                ! else ..
@@ -732,7 +732,7 @@ MODULE mo_pheno_process
 
                ! If yesterdays net production is positive let it grow
                IF(previous_day_NPP_pot_rate_ca > 0._wp ) THEN
-                  grRate = PhenoParam%CRP%leafAlloc_frac * lctlib_specificLeafArea_C *  & ! => growth rate
+                  grRate = PhenoParam%CRP%leafAlloc_fract * lctlib_specificLeafArea_C *  & ! => growth rate
                                 MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / lai                   !    .. is in units of 1/days
                   lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
                ELSE

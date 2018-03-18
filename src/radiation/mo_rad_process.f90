@@ -93,7 +93,7 @@ CONTAINS
      & alb_vis_soil,             & ! in
      & lai,                      & ! in
      & cos_zenith_angle,         & ! in
-     & frac_par_direct,          & ! in
+     & fract_par_direct,          & ! in
      & canopy_bound_lai,         & ! in
      & canopy_bound_lai_delta,   & ! in
      & B4_layer_above,           & ! inout
@@ -121,7 +121,7 @@ CONTAINS
                                   alb_vis_soil,          &
                                   lai,                   &
                                   cos_zenith_angle,      &
-                                  frac_par_direct,       &
+                                  fract_par_direct,       &
                                   canopy_bound_lai,      &
                                   canopy_bound_lai_delta
 
@@ -156,7 +156,7 @@ CONTAINS
                              lai,                    &
                              soil_reflectivity_par,  &
                              cos_zenith_angle,       &
-                             frac_par_direct,        &
+                             fract_par_direct,        &
                              canopy_bound_lai,       &
                              canopy_bound_lai_delta, &
                              B4_layer_above,         & ! <- inout
@@ -176,7 +176,7 @@ CONTAINS
      & lai,                    & ! in
      & soil_reflectivity_par,  & ! in
      & cos_zenith_angle,       & ! in
-     & frac_par_direct,        & ! in
+     & fract_par_direct,        & ! in
      & canopy_bound_lai,       & ! in
      & canopy_bound_lai_delta, & ! in
      & B4_layer_above,         & ! inout
@@ -193,7 +193,7 @@ CONTAINS
      REAL(wp), intent(in)    :: lai,                    & ! Total LAI. (Varies only per grid cell.)
                                 soil_reflectivity_par,  & ! Soil albedo. (Varies only per grid cell.)
                                 cos_zenith_angle,       & ! Cosine of solar zenith angle. (Varies only per grid cell.)
-                                frac_par_direct,        & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
+                                fract_par_direct,        & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
                                                           ! (Varies only per grid cell.)
                                 canopy_bound_lai,       & ! Canopy layer border in units of LAI.
                                                           ! (Varies only for each canopy layer, e.g. (0, 1/3, 2/3, 1).)
@@ -382,23 +382,23 @@ CONTAINS
         ! => F*RPAR = Rd + q1*R0
         ! i.e. calculation takes RPAR=1
         !-----------------------------------------------------------
-        F = 1._wp - frac_par_direct + Q1 * frac_par_direct
+        F = 1._wp - fract_par_direct + Q1 * fract_par_direct
         !-------------------------------------------------------------
         ! B1*RPAR = B1, B2*RPAR = B2, B4*RPAR = R(0) + Rdown(0) - Rup(0)
         !  B1 = + ( eta*R0 - (Rd+q1*R0) * gamma2 )/(gamma1 - gamma2)
         !------------------------------------------------------------
-        B1 = (X2 * frac_par_direct - F * X0) / (X1 - X0)
+        B1 = (X2 * fract_par_direct - F * X0) / (X1 - X0)
         !-----------------------------------------------------------
         !  B2 = - ( eta*R0 - (Rd+q1*R0) * gamma1 )/(gamma1 - gamma2)
         !     = eta*R0/(gamma2-gamma1) + (Rd+q1*R0) / (1-gamma2/gamma1)
         !  Note: the second form is used to avoid compiler-dependent ambiguity in the
         !        result of gamma1/(gamma1-gamma2) if gamma1 = infinity
         !-----------------------------------------------------------
-        B0 = X2 * frac_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
+        B0 = X2 * fract_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
         !-----------------------------------------------------------
         !  R(l)+Rdown-Rup = (1-q1-q2)* R0*EXP(-kl) + (1-p1)* B1*EXP(hl) + (1-p2)* B2*EXP(-hl)
         !----------------------------------------------------------------------------
-        B4 = (1._wp - Q0 - Q1) * frac_par_direct &
+        B4 = (1._wp - Q0 - Q1) * fract_par_direct &
              + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
      ENDIF ! cos_zenith_angle
 
@@ -430,7 +430,7 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kl)+(1-p1)*B1*EXP(hl)+(1-p2)*B2*EXP(-hl)
            !  i.e. X0*RPAR = above
            !----------------------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL0 * frac_par_direct &
+           X0 = (1._wp - Q0 - Q1) * EKL0 * fract_par_direct &
                 + (1._wp - ZP1) * B1 / EHL0 &
                 + (1._wp - ZP0) * B0 * EHL0
            !----------------------------------------------------------------
@@ -455,7 +455,7 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kLAI)+(1-p1)*B1*EXP(hLAI)+(1-p2)*B2*EXP(-hLAI)
            !  i.e. X0*RPAR = above for the lower boundary
            !------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL * frac_par_direct &
+           X0 = (1._wp - Q0 - Q1) * EKL * fract_par_direct &
                 + (1._wp - ZP1) * B1 / EHL &
                 + (1._wp - ZP0) * B0 * EHL          ! these variables do not change with canopy level
            !------------------------------------------------------------------

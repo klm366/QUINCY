@@ -413,8 +413,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_vis_soil          ! Soil albedo in the visible range
     dsl4jsb_Real2D_onChunk :: lai                   ! Leaf area index [-]
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle      ! Angle of incoming radiation [-]
-    dsl4jsb_Real2D_onChunk :: frac_par_direct       ! Fraction of direct (in contrast to diffuse) PAR [-]
-    dsl4jsb_Real2D_onChunk :: frac_par_diffuse      ! Fraction of diffuse (in contrast to direct) PAR [-]
+    dsl4jsb_Real2D_onChunk :: fract_par_direct       ! Fraction of direct (in contrast to diffuse) PAR [-]
+    dsl4jsb_Real2D_onChunk :: fract_par_diffuse      ! Fraction of diffuse (in contrast to direct) PAR [-]
     dsl4jsb_Real2D_onChunk :: canopy_bound_lai
     dsl4jsb_Real2D_onChunk :: apar_nacc
 
@@ -456,10 +456,10 @@ CONTAINS
     
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in (received from the atmosphere)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   frac_par_diffuse)      ! in (received from the atmosphere)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)      ! in (received from the atmosphere)
     dsl4jsb_Get_var2D_onChunk(A2L_,   swpar_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                   ! in    
-    dsl4jsb_Get_var2D_onChunk(RAD_,   frac_par_direct)       ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_,   fract_par_direct)       ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_soil)          ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par)                   ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol)          ! inout
@@ -488,8 +488,8 @@ CONTAINS
     par(:) = swpar_srf_down(:)
 
     ! Compute direct fraction of PAR.
-    ! R:  frac_par_direct = in ECHAM jsswdifpar, which is zsw_par_frac_diffuse = frac_diffuse_par  =sw_par_fract_direct
-    frac_par_direct = 1._wp - frac_par_diffuse
+    ! R:  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
+    fract_par_direct = 1._wp - fract_par_diffuse
                                                  
     B4_layer_above = 7777777 ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate first layer
     DO icanopy=1,ncanopy
@@ -505,7 +505,7 @@ CONTAINS
          & alb_vis_soil(:),           & ! in
          & lai(:),                    & ! in
          & cos_zenith_angle(:),       & ! in
-         & frac_par_direct(:),        & ! in
+         & fract_par_direct(:),        & ! in
          & canopy_bound_lai(icanopy), & ! in
          & canopy_bound_lai_delta,    & ! in
          & B4_layer_above,            & ! inout

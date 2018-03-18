@@ -115,7 +115,7 @@ PROGRAM jsb4_driver
 
   !! TODO: so far not used in jsb4 but already read from forcing file/ calculated in mo_jsb4_forcing
   REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
-  REAL(wp), ALLOCATABLE :: frac_par_diffuse(:,:)
+  REAL(wp), ALLOCATABLE :: fract_par_diffuse(:,:)
 
   !! JSB4 interface variables - output, required for next timesteps forcing (if not reading interface vars)
   REAL(wp), ALLOCATABLE :: t_srf_proc(:,:)
@@ -230,7 +230,7 @@ PROGRAM jsb4_driver
   ALLOCATE(cos_zenith_angle(nproma, nblks))
 
   ALLOCATE(CO2_concentration(nproma, nblks))
-  ALLOCATE(frac_par_diffuse(nproma, nblks))
+  ALLOCATE(fract_par_diffuse(nproma, nblks))
 
   ! output required for next timesteps forcing (if not reading interface vars)
   ALLOCATE(t_srf_proc(nproma, nblks))
@@ -348,7 +348,7 @@ PROGRAM jsb4_driver
       CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
-        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse,                              &
+        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
         & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
 
@@ -370,7 +370,7 @@ PROGRAM jsb4_driver
 
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
-        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), frac_par_diffuse(:,iblk), &
+        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
         & press_srf(:,iblk), drag_srf(:,iblk), &
         & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk), &
         & CO2_concentration(:,iblk), &
@@ -436,7 +436,7 @@ PROGRAM jsb4_driver
 
   ! deallocate in- and output arrays
   DEALLOCATE(t_air_K, q_air, rain, snow, wind_air, wind_10m)
-  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse)
+  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse)
   DEALLOCATE(press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, CO2_concentration)
 
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
