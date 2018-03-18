@@ -222,7 +222,7 @@ CONTAINS
       IF (PRESENT(fact_q_air))    fact_q_air(:)       =                dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
       IF (PRESENT(fact_qsat_srf)) fact_qsat_srf(:)    =                dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
       IF (PRESENT(evapopot))      evapopot(:)         =                dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_lnd)
+      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))   latent_hflx(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx)) sensible_hflx(:)    = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
       IF (PRESENT(grnd_hflx))     grnd_hflx(:)        =                dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and
@@ -267,7 +267,7 @@ CONTAINS
       IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
       IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
       IF (PRESENT(evapopot))        evapopot(:)         = dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapo_lnd)
+      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
       IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and

@@ -125,7 +125,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: rough_m_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: evap_act2pot_proc(:,:)
 !  REAL(wp), ALLOCATABLE :: evap_act_sum_proc(:,:)
-!  REAL(wp), ALLOCATABLE :: evap_pot_sum_proc(:,:)
+!  REAL(wp), ALLOCATABLE :: evapo_pot_sum_proc(:,:)
 
 
   !! JSB4 interface variables - output
@@ -240,7 +240,7 @@ PROGRAM jsb4_driver
   ALLOCATE(rough_m_srf_proc(nproma, nblks))
   ALLOCATE(evap_act2pot_proc(nproma, nblks))
 !  ALLOCATE(evap_act_sum_proc(nproma, nblks))
-!  ALLOCATE(evap_pot_sum_proc(nproma, nblks))
+!  ALLOCATE(evapo_pot_sum_proc(nproma, nblks))
 
   ! output
   ALLOCATE(t_eff_srf(nproma))
@@ -285,7 +285,7 @@ PROGRAM jsb4_driver
     evap_act2pot_proc = 1._wp
 
 !    evap_act_sum_proc = 0._wp
-!    evap_pot_sum_proc = 0._wp
+!    evapo_pot_sum_proc = 0._wp
   ENDIF
 
   IF(jsbach_is_restarted()) THEN
@@ -381,18 +381,18 @@ PROGRAM jsb4_driver
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
-        ! To ensure restart identity, the daily evap_act_sum and evap_pot_sum would need to be calculated in jsbach!
+        ! To ensure restart identity, the daily evap_act_sum and evapo_pot_sum would need to be calculated in jsbach!
         ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
         evap_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
 !        evap_act_sum_proc(:,iblk) = evap_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
-!        evap_pot_sum_proc(:,iblk) = evap_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
+!        evapo_pot_sum_proc(:,iblk) = evapo_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF
     ENDDO
 
 !    IF ((.NOT. read_interface_vars) .AND. is_newday()) THEN
-!      evap_act2pot_proc = evap_act_sum_proc / evap_pot_sum_proc
+!      evap_act2pot_proc = evap_act_sum_proc / evapo_pot_sum_proc
 !      evap_act_sum_proc = 0._wp
-!      evap_pot_sum_proc = 0._wp
+!      evapo_pot_sum_proc = 0._wp
 !    ENDIF
 
     CALL out_streams
@@ -447,7 +447,7 @@ PROGRAM jsb4_driver
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
     DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evap_act2pot_proc)
-    !DEALLOCATE(evap_act_sum_proc, evap_pot_sum_proc)
+    !DEALLOCATE(evap_act_sum_proc, evapo_pot_sum_proc)
   ENDIF
 
   ! Stop MPI
