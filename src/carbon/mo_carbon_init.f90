@@ -60,13 +60,7 @@ CONTAINS
 
     dtime = get_time_dt()
 
-    !R: Subroutine carbon_init should be called only if experiment is started or restarted. Therefore this is arbitary:
-    !   IF (dsl4jsb_Config(CARBON_)%read_cpools   .AND.  (is_time_experiment_start() .OR. is_time_restart()  ) THEN
-
-    IF (dsl4jsb_Config(CARBON_)%read_cpools ) THEN ! This "IF" is necessary because we do not want the model to stop when
-                                                   ! there is no ic_land_carbon.nc file.
-      CALL carbon_init_ic(tile)
-    END IF
+    CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)
 
 
@@ -125,7 +119,7 @@ CONTAINS
 
   END SUBROUTINE carbon_init_bc
 
-  RECURSIVE SUBROUTINE carbon_init_ic(tile)
+  SUBROUTINE carbon_init_ic(tile)
 
     !USE mo_carbon_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial
 
@@ -136,14 +130,24 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     !INTEGER :: icarbon
-    REAL(wp), POINTER :: &
-      & return_pointer  (:,  :) !, & !< temporary pointer
+    REAL(wp), POINTER ::          &
+      & return_pointer  (:,  :) , &  !< temporary pointer just used to "call" the reading
       ! & return_pointer3d(:,:,:)
+      & memory_pointer  (:,  :)      !< pointer the memory of the current variable of the current tile
     !LOGICAL :: &
     !  read_cpools
 
     TYPE(t_input_file) :: input_file
-    !INTEGER :: i, n1, n2
+
+    INTEGER, PARAMETER :: npools = 21
+    INTEGER            :: i
+    CHARACTER(len=40)            :: invar_name
+    CHARACTER(len=20), PARAMETER :: Cpool_name(npools) = [character(len=20) ::                          &
+      & 'c_green_ta',  'c_woods_ta',  'c_reserve_ta',                                                   &
+      & 'c_acid_ag1_ta',  'c_water_ag1_ta', 'c_ethanol_ag1_ta', 'c_nonsoluble_ag1_ta',                  &
+      & 'c_acid_bg1_ta',  'c_water_bg1_ta', 'c_ethanol_bg1_ta', 'c_nonsoluble_bg1_ta', 'c_humus_1_ta',  &
+      & 'c_acid_ag2_ta',  'c_water_ag2_ta', 'c_ethanol_ag2_ta', 'c_nonsoluble_ag2_ta',                  &
+      & 'c_acid_bg2_ta',  'c_water_bg2_ta', 'c_ethanol_bg2_ta', 'c_nonsoluble_bg2_ta', 'c_humus_2_ta' ]
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':carbon_init_ic'
 
@@ -157,153 +161,88 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Reading carbon pools in memory for tile '//TRIM(tile%name))
 
-    ! Initialize physical state
+    ! Initialize the C Pools
     !
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
+    ! This procedure is only called if the experiment is started or restarted. Therefore 
+    ! the C pools should be always read in here when read_cpools is true.
 
-    ! TBD: adapt names of variables in input files to names in memory
+    IF (dsl4jsb_Config(CARBON_)%read_cpools ) THEN
 
-    ! R: These variables should be 3D as they are tile dependent. However for THIS tile they would be 2D but 
-    !    in the input file they are 3D!
-    ! R: TBD: 3D Variablen einlesen. Dann wäre es dxsl4jsb_var3D_onDomain!
-    !    Bisher wurden 3D variablen irgendwo über einlesen vom File initialisiert!
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_green',           &
-      & fill_array = dsl4jsb_var_ptr(CARBON_,c_green))
-    dsl4jsb_var2D_onDomain(CARBON_,c_green) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_green), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_green) >= 0._wp)
+        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_woods',             &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_woods))
-    dsl4jsb_var2D_onDomain(CARBON_, c_woods) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_woods), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_woods) >= 0._wp)
+        ! TBD: adapt names of variables in input files to names in memory
 
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_reserve',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_reserve))
-    dsl4jsb_var2D_onDomain(CARBON_,c_reserve) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_reserve), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_reserve) >= 0._wp)
+        ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and 
+        !       eventually in addition for each of the existing tile (6x21x14=5166 lines).
 
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_acid_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) >= 0._wp)
+        ! If we do not want to read carbon pools for each tile we would have to add this
+        ! case construct to choose the behaviour for each tile:
+        !SELECT CASE(tile%name) 
+        !CASE (box)
+        !CASE (land)
+        !CASE (veg)
+        !CASE (pft01)
+        ! ...
 
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_acid_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_ethanol_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_nonsoluble_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag1), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag1) >= 0._wp)
-      
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_acid_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_water_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_water_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_water_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_water_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_water_bg1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_ethanol_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_nonsoluble_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg1), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_humus_1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_humus_1))
-    dsl4jsb_var2D_onDomain(CARBON_,c_humus_1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_humus_1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_humus_1) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_acid_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_water_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_water_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_water_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_water_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_water_ag2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_ethanol_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_nonsoluble_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag2), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag2) >= 0._wp)
+        DO i=1,npools
+          invar_name = 'carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name)
 
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_acid_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_water_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_water_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_water_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_water_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_water_bg2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_ethanol_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_nonsoluble_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg2), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg2) >= 0._wp)
-    !
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='c_humus_2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, c_humus_2))
-    dsl4jsb_var2D_onDomain(CARBON_,c_humus_2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_humus_2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_humus_2) >= 0._wp)
+          SELECT CASE(Cpool_name(i))
+          CASE ("c_green_ta")
+            memory_pointer => CARBON__mem%c_green_ta%ptr ! CARBON__mem= tile%mem(carbon_)%p 
+          CASE ("c_woods_ta")
+            memory_pointer => CARBON__mem%c_woods_ta%ptr
+          CASE ("c_reserve_ta")
+            memory_pointer => CARBON__mem%c_reserve_ta%ptr
+          CASE ("c_acid_ag1_ta")
+            memory_pointer => CARBON__mem%c_acid_ag1_ta%ptr
+          CASE ("c_water_ag1_ta")
+            memory_pointer => CARBON__mem%c_water_ag1_ta%ptr
+          CASE ("c_ethanol_ag1_ta")
+            memory_pointer => CARBON__mem%c_ethanol_ag1_ta%ptr
+          CASE ("c_nonsoluble_ag1_ta")
+            memory_pointer => CARBON__mem%c_nonsoluble_ag1_ta%ptr
+          CASE ("c_acid_bg1_ta")
+            memory_pointer => CARBON__mem%c_acid_bg1_ta%ptr
+          CASE ("c_water_bg1_ta")
+            memory_pointer => CARBON__mem%c_water_bg1_ta%ptr
+          CASE ("c_ethanol_bg1_ta")
+            memory_pointer => CARBON__mem%c_ethanol_bg1_ta%ptr
+          CASE ("c_nonsoluble_bg1_ta")
+            memory_pointer => CARBON__mem%c_nonsoluble_bg1_ta%ptr
+          CASE ("c_humus_1_ta")
+            memory_pointer => CARBON__mem%c_humus_1_ta%ptr
+          CASE ("c_acid_ag2_ta")
+            memory_pointer => CARBON__mem%c_acid_ag2_ta%ptr
+          CASE ("c_water_ag2_ta")
+            memory_pointer => CARBON__mem%c_water_ag2_ta%ptr
+          CASE ("c_ethanol_ag2_ta")
+            memory_pointer => CARBON__mem%c_ethanol_ag2_ta%ptr
+          CASE ("c_nonsoluble_ag2_ta")
+            memory_pointer => CARBON__mem%c_nonsoluble_ag2_ta%ptr
+          CASE ("c_acid_bg2_ta")
+            memory_pointer => CARBON__mem%c_acid_bg2_ta%ptr
+          CASE ("c_water_bg2_ta")
+            memory_pointer => CARBON__mem%c_water_bg2_ta%ptr
+          CASE ("c_ethanol_bg2_ta")
+            memory_pointer => CARBON__mem%c_ethanol_bg2_ta%ptr
+          CASE ("c_nonsoluble_bg2_ta")
+            memory_pointer => CARBON__mem%c_nonsoluble_bg2_ta%ptr
+          CASE ("c_humus_2_ta")
+            memory_pointer => CARBON__mem%c_humus_2_ta%ptr
+          END SELECT
 
+          return_pointer => input_file%Read_2d(         &
+              & variable_name = invar_name,              &
+              & fill_array = memory_pointer )
+
+          memory_pointer(:,:) = &
+              & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+
+        END DO
+ 
+    END IF
 
     CALL input_file%Close()
 
