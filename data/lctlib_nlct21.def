@@ -88,14 +88,14 @@ Frac_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822
 #                   (The rest enters slow pool.)                      
 Frac_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
                      
-#Tau_Cpool_litter_leaf: Life time of leaf litter [days]                     
-Tau_Cpool_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
+#Tau_c_litter_leaf: Life time of leaf litter [days]                     
+Tau_c_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
                      
-#Tau_Cpool_litter_wood: Life time of woody litter [days]                     
-Tau_Cpool_litter_wood 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0
+#Tau_c_litter_wood: Life time of woody litter [days]                     
+Tau_c_litter_wood 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0
                      
-#Tau_Cpool_woods: Time scale of the Cpool_woods and vegetation dynamics [years]                      
-Tau_Cpool_woods 1.0 30.0 30.0 60.0 60.0 60.0 60.0 60.0 60.0 12.0 24.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+#Tau_c_woods: Time scale of the Cpool_woods and vegetation dynamics [years]                      
+Tau_c_woods 1.0 30.0 30.0 60.0 60.0 60.0 60.0 60.0 60.0 12.0 24.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
                      
 #LAI_shed_constant: Time in which leaves are constantly shedded [days-1]                     
 LAI_shed_constant 0.0 0.000342 0.000456 0.0 0.0 0.0 0.0 0.0 0.0 0.00183 0.0 0.00548 0.00548 0.00548 0.00548 0.00548 0.0 0.0 0.00274 0.00274 0.00274

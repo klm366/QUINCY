@@ -23,26 +23,26 @@ CONTAINS
 
   ! Calculate fuel (JSBACH3 algorithm)
   PURE ELEMENTAL SUBROUTINE calc_fuel_jsbach( &
-    & Ycpool_acid_ag1,       & ! in
-    & YCpool_water_ag1,      & ! in
-    & YCpool_ethanol_ag1,    & ! in
-    & YCpool_nonsoluble_ag1, & ! in
-    & YCpool_acid_ag2,       & ! in
-    & YCpool_water_ag2,      & ! in
-    & YCpool_ethanol_ag2,    & ! in
-    & YCpool_nonsoluble_ag2, & ! in
+    & c_acid_ag1,       & ! in
+    & c_water_ag1,      & ! in
+    & c_ethanol_ag1,    & ! in
+    & c_nonsoluble_ag1, & ! in
+    & c_acid_ag2,       & ! in
+    & c_water_ag2,      & ! in
+    & c_ethanol_ag2,    & ! in
+    & c_nonsoluble_ag2, & ! in
     & fuel                   & ! out
     & )
 
     ! Input Arguments
-    REAL(wp), INTENT(in)  :: Ycpool_acid_ag1
-    REAL(wp), INTENT(in)  :: YCpool_water_ag1
-    REAL(wp), INTENT(in)  :: YCpool_ethanol_ag1
-    REAL(wp), INTENT(in)  :: YCpool_nonsoluble_ag1
-    REAL(wp), INTENT(in)  :: Ycpool_acid_ag2
-    REAL(wp), INTENT(in)  :: YCpool_water_ag2
-    REAL(wp), INTENT(in)  :: YCpool_ethanol_ag2
-    REAL(wp), INTENT(in)  :: YCpool_nonsoluble_ag2
+    REAL(wp), INTENT(in)  :: c_acid_ag1
+    REAL(wp), INTENT(in)  :: c_water_ag1
+    REAL(wp), INTENT(in)  :: c_ethanol_ag1
+    REAL(wp), INTENT(in)  :: c_nonsoluble_ag1
+    REAL(wp), INTENT(in)  :: c_acid_ag2
+    REAL(wp), INTENT(in)  :: c_water_ag2
+    REAL(wp), INTENT(in)  :: c_ethanol_ag2
+    REAL(wp), INTENT(in)  :: c_nonsoluble_ag2
 
     ! Output Arguments
     REAL(wp), INTENT(OUT)   :: fuel
@@ -52,10 +52,10 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    fuel =  Ycpool_acid_ag1    + YCpool_water_ag1      &
-        & + YCpool_ethanol_ag1 + YCpool_nonsoluble_ag1 & 
-        & + YCpool_acid_ag2    + YCpool_water_ag2      &
-        & + YCpool_ethanol_ag2 + YCpool_nonsoluble_ag2
+    fuel =  c_acid_ag1    + c_water_ag1      &
+        & + c_ethanol_ag1 + c_nonsoluble_ag1 & 
+        & + c_acid_ag2    + c_water_ag2      &
+        & + c_ethanol_ag2 + c_nonsoluble_ag2
 
   END SUBROUTINE calc_fuel_jsbach
 

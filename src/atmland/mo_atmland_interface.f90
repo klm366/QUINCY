@@ -237,9 +237,9 @@ CONTAINS
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
                                   CO2_flux(:)         = fact_land(:) *                              &
-          &                             (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                             (   dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)       &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)  &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta) &
           &                             )
         ELSE
                                   CO2_flux(:)         = 0._wp
@@ -282,9 +282,9 @@ CONTAINS
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
                                   CO2_flux(:)           =                                             &
-          &                               (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
-          &                                 + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
-          &                                 + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                               (   dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)       &
+          &                                 + dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)  &
+          &                                 + dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta) &
           &                               )
         ELSE
                                     CO2_flux(:)         = 0._wp

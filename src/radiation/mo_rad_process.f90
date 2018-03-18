@@ -619,7 +619,7 @@ CONTAINS
   ! boxC_litter_green_ag and boxC_slow (canopy) of all tiles and builds a whole grid cell average. (This is done in subroutine update_albedo.
   ! Note, the glacier tile implementation of the scheme is arbitary as JSBACH3 could never handle a glacier tile.) Then:
   ! From boxC_slow an albedo reduction may be calculated for the soil (linear or log).
-  ! From Cpool_litter_green_ag the albedo of litter may be calculted (linear).
+  ! From c_litter_green_ag the albedo of litter may be calculted (linear).
   ! Then soil and litter albedos may be summed up according to the litter view fraction.
   ! However, the JSBACH3 scheme is not useable for the new JSBACH4 concept of child tiles. To keep the JSBACH3 concept in JSBACH4
   ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful albedo.
@@ -635,8 +635,8 @@ CONTAINS
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
-    & Cpool_litter_green_ag,     &
-    & Cpool_slow,                &
+    & c_litter_green_ag,     &
+    & c_slow,                &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
     & alb_background,            &
@@ -655,8 +655,8 @@ CONTAINS
     CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
     LOGICAL,      INTENT(in)    :: use_alb_soil_litter
 
-    REAL(wp),     INTENT(in)    :: Cpool_litter_green_ag, & 
-                                   Cpool_slow,            &
+    REAL(wp),     INTENT(in)    :: c_litter_green_ag, & 
+                                   c_slow,            &
                                    SpecificLeafArea_C,    &
                                    AlbedoLitterVIS,       & 
                                    alb_background
@@ -711,11 +711,11 @@ CONTAINS
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
-      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(Cpool_slow,Soil_C_min)
-      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(Cpool_slow,Soil_C_min)
+      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_slow,Soil_C_min)
+      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_slow,Soil_C_min)
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_slow)),0.1_wp)
+      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_slow)),0.2_wp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,
@@ -730,7 +730,7 @@ CONTAINS
 
     ! albedo of litter on soil
     IF(use_alb_soil_litter) THEN
-      litter_area = Cpool_litter_green_ag * specificLeafArea_C
+      litter_area = c_litter_green_ag * specificLeafArea_C
       alb_vis_litter = litter_area * AlbedoLitterVIS
 
       IF (litter_area <= EPSILON(1._wp)) THEN
