@@ -225,9 +225,9 @@ CONTAINS
           & prefix, suffix,                                                                 &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'prev_day_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca, &
+        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
           & hgrid, surface,                                                              &
-          & t_cf('previous_day_NPP_pot_rate_ca', '', ''),                                &
+          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
