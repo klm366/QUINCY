@@ -142,12 +142,12 @@ CONTAINS
     INTEGER, PARAMETER :: npools = 21
     INTEGER            :: i
     CHARACTER(len=40)            :: invar_name
-    CHARACTER(len=20), PARAMETER :: Cpool_name(npools) = [character(len=20) ::                          &
-      & 'c_green_ta',  'c_woods_ta',  'c_reserve_ta',                                                   &
-      & 'c_acid_ag1_ta',  'c_water_ag1_ta', 'c_ethanol_ag1_ta', 'c_nonsoluble_ag1_ta',                  &
-      & 'c_acid_bg1_ta',  'c_water_bg1_ta', 'c_ethanol_bg1_ta', 'c_nonsoluble_bg1_ta', 'c_humus_1_ta',  &
-      & 'c_acid_ag2_ta',  'c_water_ag2_ta', 'c_ethanol_ag2_ta', 'c_nonsoluble_ag2_ta',                  &
-      & 'c_acid_bg2_ta',  'c_water_bg2_ta', 'c_ethanol_bg2_ta', 'c_nonsoluble_bg2_ta', 'c_humus_2_ta' ]
+    CHARACTER(len=20), PARAMETER :: Cpool_name(npools) = [character(len=20) ::           &
+      & 'c_green',  'c_woods',  'c_reserve',                                             &
+      & 'c_acid_ag1',  'c_water_ag1', 'c_ethanol_ag1', 'c_nonsoluble_ag1',               &
+      & 'c_acid_bg1',  'c_water_bg1', 'c_ethanol_bg1', 'c_nonsoluble_bg1', 'c_humus_1',  &
+      & 'c_acid_ag2',  'c_water_ag2', 'c_ethanol_ag2', 'c_nonsoluble_ag2',               &
+      & 'c_acid_bg2',  'c_water_bg2', 'c_ethanol_bg2', 'c_nonsoluble_bg2', 'c_humus_2' ]
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':carbon_init_ic'
 
@@ -159,92 +159,91 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(CARBON_)%active) RETURN
 
-    CALL message(TRIM(routine), 'Reading carbon pools in memory for tile '//TRIM(tile%name))
-
     ! Initialize the C Pools
     !
-
     ! This procedure is only called if the experiment is started or restarted. Therefore 
     ! the C pools should be always read in here when read_cpools is true.
 
     IF (dsl4jsb_Config(CARBON_)%read_cpools ) THEN
 
-        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
+      CALL message(TRIM(routine), 'Reading carbon pools in memory for tile '//TRIM(tile%name))
 
-        ! TBD: adapt names of variables in input files to names in memory
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
-        ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and 
-        !       eventually in addition for each of the existing tile (6x21x14=5166 lines).
+      ! TBD: adapt names of variables in input files to names in memory
 
-        ! If we do not want to read carbon pools for each tile we would have to add this
-        ! case construct to choose the behaviour for each tile:
-        !SELECT CASE(tile%name) 
-        !CASE (box)
-        !CASE (land)
-        !CASE (veg)
-        !CASE (pft01)
-        ! ...
+      ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and 
+      !       eventually in addition for each of the existing tile (6x21x14=5166 lines).
 
-        DO i=1,npools
-          invar_name = 'carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name)
+      ! If we do not want to read carbon pools for each tile we would have to add this
+      ! case construct to choose the behaviour for each tile:
+      !SELECT CASE(tile%name) 
+      !CASE (box)
+      !CASE (land)
+      !CASE (veg)
+      !CASE (pft01)
+      ! ...
 
-          SELECT CASE(Cpool_name(i))
-          CASE ("c_green_ta")
-            memory_pointer => CARBON__mem%c_green_ta%ptr ! CARBON__mem= tile%mem(carbon_)%p 
-          CASE ("c_woods_ta")
-            memory_pointer => CARBON__mem%c_woods_ta%ptr
-          CASE ("c_reserve_ta")
-            memory_pointer => CARBON__mem%c_reserve_ta%ptr
-          CASE ("c_acid_ag1_ta")
-            memory_pointer => CARBON__mem%c_acid_ag1_ta%ptr
-          CASE ("c_water_ag1_ta")
-            memory_pointer => CARBON__mem%c_water_ag1_ta%ptr
-          CASE ("c_ethanol_ag1_ta")
-            memory_pointer => CARBON__mem%c_ethanol_ag1_ta%ptr
-          CASE ("c_nonsoluble_ag1_ta")
-            memory_pointer => CARBON__mem%c_nonsoluble_ag1_ta%ptr
-          CASE ("c_acid_bg1_ta")
-            memory_pointer => CARBON__mem%c_acid_bg1_ta%ptr
-          CASE ("c_water_bg1_ta")
-            memory_pointer => CARBON__mem%c_water_bg1_ta%ptr
-          CASE ("c_ethanol_bg1_ta")
-            memory_pointer => CARBON__mem%c_ethanol_bg1_ta%ptr
-          CASE ("c_nonsoluble_bg1_ta")
-            memory_pointer => CARBON__mem%c_nonsoluble_bg1_ta%ptr
-          CASE ("c_humus_1_ta")
-            memory_pointer => CARBON__mem%c_humus_1_ta%ptr
-          CASE ("c_acid_ag2_ta")
-            memory_pointer => CARBON__mem%c_acid_ag2_ta%ptr
-          CASE ("c_water_ag2_ta")
-            memory_pointer => CARBON__mem%c_water_ag2_ta%ptr
-          CASE ("c_ethanol_ag2_ta")
-            memory_pointer => CARBON__mem%c_ethanol_ag2_ta%ptr
-          CASE ("c_nonsoluble_ag2_ta")
-            memory_pointer => CARBON__mem%c_nonsoluble_ag2_ta%ptr
-          CASE ("c_acid_bg2_ta")
-            memory_pointer => CARBON__mem%c_acid_bg2_ta%ptr
-          CASE ("c_water_bg2_ta")
-            memory_pointer => CARBON__mem%c_water_bg2_ta%ptr
-          CASE ("c_ethanol_bg2_ta")
-            memory_pointer => CARBON__mem%c_ethanol_bg2_ta%ptr
-          CASE ("c_nonsoluble_bg2_ta")
-            memory_pointer => CARBON__mem%c_nonsoluble_bg2_ta%ptr
-          CASE ("c_humus_2_ta")
-            memory_pointer => CARBON__mem%c_humus_2_ta%ptr
-          END SELECT
+      DO i=1,npools
+        invar_name = 'carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name)
 
-          return_pointer => input_file%Read_2d(         &
-              & variable_name = invar_name,              &
-              & fill_array = memory_pointer )
+        SELECT CASE(Cpool_name(i))
+        CASE ("c_green")
+          memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p 
+        CASE ("c_woods")
+          memory_pointer => CARBON__mem%c_woods%ptr
+        CASE ("c_reserve")
+          memory_pointer => CARBON__mem%c_reserve%ptr
+        CASE ("c_acid_ag1")
+          memory_pointer => CARBON__mem%c_acid_ag1%ptr
+        CASE ("c_water_ag1")
+          memory_pointer => CARBON__mem%c_water_ag1%ptr
+        CASE ("c_ethanol_ag1")
+          memory_pointer => CARBON__mem%c_ethanol_ag1%ptr
+        CASE ("c_nonsoluble_ag1")
+          memory_pointer => CARBON__mem%c_nonsoluble_ag1%ptr
+        CASE ("c_acid_bg1")
+          memory_pointer => CARBON__mem%c_acid_bg1%ptr
+        CASE ("c_water_bg1")
+          memory_pointer => CARBON__mem%c_water_bg1%ptr
+        CASE ("c_ethanol_bg1")
+          memory_pointer => CARBON__mem%c_ethanol_bg1%ptr
+        CASE ("c_nonsoluble_bg1")
+          memory_pointer => CARBON__mem%c_nonsoluble_bg1%ptr
+        CASE ("c_humus_1")
+          memory_pointer => CARBON__mem%c_humus_1%ptr
+        CASE ("c_acid_ag2")
+          memory_pointer => CARBON__mem%c_acid_ag2%ptr
+        CASE ("c_water_ag2")
+          memory_pointer => CARBON__mem%c_water_ag2%ptr
+        CASE ("c_ethanol_ag2")
+          memory_pointer => CARBON__mem%c_ethanol_ag2%ptr
+        CASE ("c_nonsoluble_ag2")
+          memory_pointer => CARBON__mem%c_nonsoluble_ag2%ptr
+        CASE ("c_acid_bg2")
+          memory_pointer => CARBON__mem%c_acid_bg2%ptr
+        CASE ("c_water_bg2")
+          memory_pointer => CARBON__mem%c_water_bg2%ptr
+        CASE ("c_ethanol_bg2")
+          memory_pointer => CARBON__mem%c_ethanol_bg2%ptr
+        CASE ("c_nonsoluble_bg2")
+          memory_pointer => CARBON__mem%c_nonsoluble_bg2%ptr
+        CASE ("c_humus_2")
+          memory_pointer => CARBON__mem%c_humus_2%ptr
+        END SELECT
 
-          memory_pointer(:,:) = &
-              & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+        return_pointer => input_file%Read_2d(        &
+          & variable_name = invar_name,              &
+          & fill_array = memory_pointer )
 
-        END DO
+        memory_pointer(:,:) = &
+          & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+
+      END DO
  
-    END IF
+      CALL input_file%Close()
 
-    CALL input_file%Close()
+    END IF
 
   END SUBROUTINE carbon_init_ic
 

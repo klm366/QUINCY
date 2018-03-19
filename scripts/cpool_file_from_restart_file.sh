@@ -12,11 +12,11 @@ INFILE="JS045_restart_atm_19870201T000000Z.nc"
 OUTFILE="ic_land_Cpools.nc"
 
 PROCESS="carbon"
-VARNAME_LIST="c_green_ta   c_woods_ta   c_reserve_ta 
-              c_acid_ag1_ta   c_water_ag1_ta  c_ethanol_ag1_ta  c_nonsoluble_ag1_ta
-              c_acid_bg1_ta   c_water_bg1_ta  c_ethanol_bg1_ta  c_nonsoluble_bg1_ta  c_humus_1_ta
-              c_acid_ag2_ta   c_water_ag2_ta  c_ethanol_ag2_ta  c_nonsoluble_ag2_ta
-              c_acid_bg2_ta   c_water_bg2_ta  c_ethanol_bg2_ta  c_nonsoluble_bg2_ta  c_humus_2_ta"
+VARNAME_LIST="c_green   c_woods   c_reserve 
+              c_acid_ag1   c_water_ag1  c_ethanol_ag1  c_nonsoluble_ag1
+              c_acid_bg1   c_water_bg1  c_ethanol_bg1  c_nonsoluble_bg1  c_humus_1
+              c_acid_ag2   c_water_ag2  c_ethanol_ag2  c_nonsoluble_ag2
+              c_acid_bg2   c_water_bg2  c_ethanol_bg2  c_nonsoluble_bg2  c_humus_2"
 TILE_LIST="box  land  veg  pft01  pft02  pft03  pft04  pft05  pft06  pft07  pft08  pft09  pft10  pft11 "
 
 ### Evtl. löschen des vorhandenen Output-Files
