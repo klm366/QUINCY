@@ -579,7 +579,7 @@ CONTAINS
       CALL message(TRIM(routine),"Type of air humidity forcing: "//TRIM(forcing_qair_type))
       ! --- CO2 unit
       SELECT CASE(TRIM(tolower(forcing_co2_unit)))
-      CASE("ppmv")
+      CASE("ppmv","1.e-6")
         CALL message(TRIM(routine),'CO2 forcing in ppmv')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg * 0.000001_wp
       CASE("mol_per_mol", "mol/mol")
@@ -750,8 +750,9 @@ CONTAINS
           input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
           CALL get_time_dimension(input_file%file_id, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+!ghg scenario files have "1.e-6"
+!          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+!            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
           CALL input_file%Close()
         ENDIF
 
@@ -774,11 +775,11 @@ CONTAINS
             CALL finish(TRIM(routine), 'The ghg_scenario file "'//TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) &
               &//'" does not contain the required input year '//TRIM(ADJUSTL(year_label)))
           ENDIF
-
           ! get the data -- TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
-          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
+!          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
           CALL nf_check(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
-          CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ currentTimeStep /), (/ 1 /), hlp_r ))
+          CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1, 1, currentTimeStep /), (/ 1, 1, 1 /), hlp_r ))
           CALL input_file%Close()
         ENDIF
 
