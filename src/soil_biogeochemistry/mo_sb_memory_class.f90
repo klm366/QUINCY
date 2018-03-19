@@ -4312,11 +4312,10 @@ CONTAINS
     INTEGER, INTENT(in)     :: ics, ice, nc, iblk, nsoil_sb   !< information about dimensions of variables in memory
     ! ---------------------------
     ! 0.2 Local
-    INTEGER                 :: npoints                        !< number of point in the chunk
-    
-    
-    ! temporary solution
-    npoints = ice
+    INTEGER                 :: npoints                        !< number of points in the chunk
+
+    ! set dimension to number of points in this chunk
+    npoints = nc
 
 
     !< 1.0  ALLOCATE variables
