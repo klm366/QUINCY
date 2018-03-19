@@ -727,8 +727,22 @@ CONTAINS
     
     ENDDO
 
-    !> 2.5 calculate rooting zone water content and theta for compatability 
-    !!       with bucket scheme and vegetation water stress.
+    !> 2.5. diagnose deep drainage
+    !!
+    drainage(:) = drainage_sl(:,options%nsoil_sb) 
+    WHERE(w_soil_sl_old(:,:) > eps8)
+      percolation_sl(:,:) = MIN( MAX((drainage_sl(:,:)/1000_wp*dtime) / w_soil_sl_old(:,:), -1.0_wp), 1.0_wp) * &
+                            1000._wp/dtime
+    ELSEWHERE
+      percolation_sl(:,:) = 0.0_wp
+    ENDWHERE
+
+
+    !> 3.0 final diagnostics
+    !!
+
+    !> 3.1 calculate rooting zone water content and theta for compatability 
+    !!       vegetation water stress calculation.
     !!       If a soil layer is only partially filled with roots, the plant-accessible 
     !!       water is limited to the AWC of the root zone. All of the layer's water 
     !!       (fc-w) deficit is substracted from the root accessible AWC (fc-pwp)*root_depth
@@ -749,27 +763,13 @@ CONTAINS
        ENDWHERE
     ENDDO
 
-    !> 2.6. diagnose deep drainage
-    !!
-    drainage(:) = drainage_sl(:,options%nsoil_sb) 
-    WHERE(w_soil_sl_old(:,:) > eps8)
-      percolation_sl(:,:) = MIN( MAX((drainage_sl(:,:)/1000_wp*dtime) / w_soil_sl_old(:,:), -1.0_wp), 1.0_wp) * &
-                            1000._wp/dtime
-    ELSEWHERE
-      percolation_sl(:,:) = 0.0_wp
-    ENDWHERE
-
-
-    !> 3.0 final diagnostics
-    !!
-
-    !> 3.1 calculate plant fractional water availability 
+    !> 3.2 calculate plant fractional water availability 
     !!
     w_soil_root_theta(:) = ( w_soil_root(:) - w_soil_root_pwp(:) ) / &
                            ( w_soil_root_fc(:) - w_soil_root_pwp(:) ) 
     w_soil_root_theta(:) = MAX(w_soil_root_theta(:),0.0_wp)
 
-    !> 3.2 calculate soil water potential according to Campbell et al 1974 
+    !> 3.3 calculate root zone and layer soil water potential according to Campbell et al 1974 
     !! 
     hlp1(:) = MIN(w_soil_root_fc(:),w_soil_root(:)) / root_depth(:)
     ! for numerical reasons, constrain to minimum water potential 
@@ -786,7 +786,7 @@ CONTAINS
     ENDWHERE
     w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
 
-    !> 3.3 Diagnostic fraction of water mass lost from the soil colum per second, for SB module 
+    !> 3.4 Diagnostic fraction of water mass lost from the soil colum per second, for SB simple_0d module 
     !!
     WHERE(w_soil_root_old(:) > eps8)
        drainage_fraction(:) = drainage(:) / 1000._wp / w_soil_root_old(:)
