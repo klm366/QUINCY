@@ -16,7 +16,8 @@
 !!   -- After revision 304 (https://svn.zmaw.de/svn/jsbach/branches/jsbach-jn r304): removed currently not required functions:
 !!      several sw schemes (shortwave_from_cloudcover, shortwave_from_fpar_orig, shortwave_from_fpar_ccdas, shortwave_from_fsw,
 !!      shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
-!! Adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 -- r8893  by Julia Nabel (2017-07)
+!! Adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 -- jsb3 r8893  by Julia Nabel (2017-07)
+!! + Added fix: zenith angle larger than 89 degrees - changed Aug. 2017 following T. Raddatz, Jan. 2015 -- jsb3 r9248
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
