@@ -233,7 +233,7 @@ CONTAINS
       & t_cf('surface_evapotranspiration', 'kg m-2 s-1', 'Evapotranspiration from surface'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                    &
+      & lrestart=.TRUE.,                                                             &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -243,7 +243,7 @@ CONTAINS
       & t_cf('surface_evaporation_potential', 'kg m-2 s-1', 'Potential evaporation from surface'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                    &
+      & lrestart=.TRUE.,                                                             &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_snow', mem%evapo_snow,                                   &

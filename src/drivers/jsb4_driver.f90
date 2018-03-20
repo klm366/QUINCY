@@ -307,7 +307,7 @@ PROGRAM jsb4_driver
       rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
       rough_m_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_m)
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotranspiration),-EPSILON(1._wp)) &
+      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
 
