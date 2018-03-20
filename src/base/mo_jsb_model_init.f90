@@ -178,6 +178,8 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fage_init,           ONLY: fage_init
+    USE mo_fm_init,             ONLY: fm_init
+    USE mo_harv_init,           ONLY: harv_init
     USE mo_fuel_init,           ONLY: fuel_init
     USE mo_disturb_init,        ONLY: disturb_init
 #ifndef __NO_JSBACH_HD__
@@ -188,7 +190,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
-    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, FAGE_
+    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, FAGE_, FM_, HARV_
     dsl4jsb_Use_config(PHENO_)
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -197,6 +199,8 @@ CONTAINS
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(FM_)
+    dsl4jsb_Use_config(HARV_)
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
@@ -205,6 +209,8 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FM_)
+    dsl4jsb_Def_config(HARV_)
     dsl4jsb_Def_config(FAGE_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
@@ -242,6 +248,8 @@ CONTAINS
     dsl4jsb_Get_config(FUEL_)
     dsl4jsb_Get_config(DISTURB_)
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(FM_)
+    dsl4jsb_Get_config(HARV_)
 
     ! Crosscheck process configs
     IF (model%config%l_compat401) THEN
@@ -289,6 +297,14 @@ CONTAINS
     !Aging happens once at the beginning of each year at the start of a timestep. 
     IF (model%processes(FAGE_)%p%config%active) THEN
        CALL model%Queue_task(FAGE_, "calculate_ageing")
+       CALL model%Queue_task(CARBON_, "apply_cohort_changes")
+    END IF
+
+    !TODO-JN: discuss if forest management should happen before or after ageing
+    !Forest Management happens once at the beginning of each year at the start of a timestep - after ageing 
+    IF (model%processes(FM_)%p%config%active) THEN
+       CALL model%Queue_task(FM_,     "forest_management")
+       CALL model%Queue_task(HARV_,   "forest_harvest")
        CALL model%Queue_task(CARBON_, "apply_cohort_changes")
     END IF
 
@@ -439,6 +455,14 @@ CONTAINS
 
       IF (one_of(tile%process_action(FAGE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL fage_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(FM_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL fm_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(HARV_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL harv_init(tile)
       END IF
 
 #ifndef __NO_JSBACH_HD__

@@ -15,7 +15,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, &
-    & CARBON_, DISTURB_, FUEL_, FAGE_
+    & CARBON_, DISTURB_, FUEL_, FAGE_, FM_, HARV_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_, SKIP_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -319,6 +319,10 @@ CONTAINS
     END IF
 #endif
 
+    IF (model%processes(FM_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(FM_, ON_TILE_)
+    END IF
+
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
@@ -376,6 +380,13 @@ CONTAINS
               END IF
 
               CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
+
+              IF (model%processes(FM_)%p%config%active) THEN
+                IF (.NOT. model%processes(HARV_)%p%config%active) THEN
+                  CALL finish(TRIM(routine), "There is no sense in running forest management without HARV and vice versa!")
+                END IF
+                CALL pft_tile%Set_process_action(HARV_, ON_TILE_, AGGREGATE_)
+              END IF
 
               !TODO-JN: unfortunately this does not work as I thought it would (gives seg fault)
 !              CALL veg_tile%Set_process_action(FAGE_, ON_TILE_, SKIP_)

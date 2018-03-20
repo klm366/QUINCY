@@ -65,7 +65,8 @@ MODULE mo_jsb4_forcing
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, sat_specific_humidity
+  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, sat_specific_humidity &
+    &, get_data_and_update_field, input_variable_type, ANNUAL_
 
   ! --- CONSTANTS
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsbalone_forcing'
@@ -118,6 +119,8 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER  :: TIMESTEP_ = 3
   ! additional option for CO2
   INTEGER,PARAMETER  :: GHG_SCENARIO_  = 5
+  ! and harvest
+  INTEGER,PARAMETER  :: ANNUAL_  = 4
 
   ! options controlling atmospheric humidity input data
   INTEGER,PARAMETER :: NONE_ = 0         ! calculate specific humidity from temperature
@@ -794,17 +797,21 @@ CONTAINS
       RETURN
     ENDIF
 
-    ! ----- For all other variables and frequencies:
-    !Assertion: Rest of the routine only implemented for daily or timestep frequency
-    IF ( (frequency .NE. TIMESTEP_) .AND. (frequency .NE. DAILY_) ) CALL finish(TRIM(routine), &
-      & 'Violation of assertion: routine only implemented for constant, daily or timestep frequency, please check program flow')
+    !TODO-JN: hack
+    IF (.NOT. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
+      ! ----- For all other variables and frequencies:
+      !Assertion: Rest of the routine only implemented for daily or timestep frequency
+      IF ( (frequency .NE. TIMESTEP_) .AND. (frequency .NE. DAILY_) ) CALL finish(TRIM(routine), &
+        & 'Violation of assertion: routine only implemented for constant, daily or timestep frequency, please check program flow')
+    ENDIF
 
     ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
     ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time)+1 !+1 because 00:00/X => 0; and 1 based vector
     ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
-    IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
+    IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume &
+          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
@@ -818,16 +825,24 @@ CONTAINS
         currentTimeStep = 1
         thisDayStart = 0
         thisDayEnd = 0
-        ! determine current date in the file
-        DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
-          IF ( ydate .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
-            IF (thisDayStart .EQ. 0) thisDayStart = currentTimeStep
-            thisDayEnd = currentTimeStep
-          ELSEIF ( ydate .LT. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
-            EXIT
-          ENDIF
-          currentTimeStep = currentTimeStep + 1
-        ENDDO
+
+        !TODO-JN: hack
+        IF (.NOT. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
+          ! determine current date in the file
+          DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
+            IF ( ydate .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+              IF (thisDayStart .EQ. 0) thisDayStart = currentTimeStep
+              thisDayEnd = currentTimeStep
+            ELSEIF ( ydate .LT. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+              EXIT
+            ENDIF
+            currentTimeStep = currentTimeStep + 1
+          ENDDO
+        ELSE
+          thisDayStart = 1
+          thisDayEnd = 1
+        ENDIF
+
         ! Assert that current date has been found
         IF (( currentTimeStep .GT. forcing_input_variable%length_time_series) &
           & .OR. (( currentTimeStep .EQ. 1) .AND. ( ydate .NE. INT(forcing_input_variable%timevalues(1)))))  THEN
@@ -858,7 +873,8 @@ CONTAINS
     thisDayEnd = forcing_input_variable%currentDayEnd
 
     ! --- if its a new day or new run - read the data
-    IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
+    IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume &
+          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file
@@ -901,6 +917,8 @@ CONTAINS
     IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
       current_forcing_array = forcing_input_variable%data_read(:,:,ith_timestep)
     ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
+      current_forcing_array = forcing_input_variable%data_read(:,:,1)
+    ELSEIF(forcing_input_variable%frequency .EQ. ANNUAL_) THEN
       current_forcing_array = forcing_input_variable%data_read(:,:,1)
     ENDIF
 
