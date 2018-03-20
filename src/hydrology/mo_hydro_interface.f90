@@ -474,9 +474,6 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
 
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
-
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(A2L_)
@@ -917,6 +914,9 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
+    LOGICAL  :: ltpe_open
+    LOGICAL  :: ltpe_closed
+
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
     INTEGER  :: nsoil
@@ -949,6 +949,11 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
+    ltpe_open = .FALSE.
+    ltpe_closed = .FALSE.
+    IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
+    IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
+
 !!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
 !!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
@@ -971,6 +976,7 @@ CONTAINS
       & soil_w%dz(:), &
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
+      & ltpe_closed, ltpe_open,                             &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &
@@ -993,6 +999,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_ice_sl          ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &
