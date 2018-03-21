@@ -236,7 +236,7 @@ CONTAINS
       max_leaf_shedding_rate      = 0.05_wp
 
   ! vegetation dynamics
-      background_mort_rate_tree   = 0.005_wp 
+      background_mort_rate_tree   = 0.01_wp 
       background_mort_rate_grass  = 0.05_wp 
       lambda_mort_light  = 0.15_wp 
       k_mort_light       = 4.0_wp  
