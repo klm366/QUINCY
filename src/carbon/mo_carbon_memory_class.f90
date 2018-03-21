@@ -203,6 +203,7 @@ MODULE mo_carbon_memory_class
 
     ! Changes in state variables resulting due to area changes of the currently operating process 
     ! TODO-JN-COHORTS needs to be adapted for absolute fractions: currently in [mol(C)/m^2(parent)]
+    ! TODO-JN currently only required for forests - but they do not have an lct_id
     TYPE(t_jsb_var_real2d) ::              &
       delta_Cpool_green_rp,                & 
       delta_Cpool_woods_rp,                & 
@@ -626,7 +627,7 @@ CONTAINS
         & t_cf('NPP_pot_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean NPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
-        & lrestart=.FALSE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
       CALL jsb_add_var( mem, 'npp_act_ydaymean', mem%NPP_act_yDayMean,                                &
@@ -634,7 +635,7 @@ CONTAINS
         & t_cf('NPP_act_yDayMean', 'mol(C) m-2(canopy) s-1', 'Actual NPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & loutput = .TRUE.,lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
       CALL jsb_add_var( mem, 'gpp_ydaymean', mem%GPP_yDayMean,                                  &
@@ -979,7 +980,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
         & output_level=BASIC,                                                                                &
-        & lrestart=.FALSE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
       CALL jsb_add_var( mem, 'npp_act_ydaymean_ta', mem%NPP_act_yDayMean_ta,                                &
@@ -988,7 +989,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
         & output_level=BASIC,                                                                                &
-        & lrestart=.FALSE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
       CALL jsb_add_var( mem, 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                       &

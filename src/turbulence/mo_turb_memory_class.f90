@@ -82,7 +82,7 @@ CONTAINS
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
       & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
+      & lrestart=.TRUE.,                                                    &
       & output_level=BASIC, &
       & loutput = .TRUE.,initval_r=1.0_wp )
 
@@ -91,7 +91,7 @@ CONTAINS
       & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
       & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
+      & lrestart=.TRUE.,                                                    &
       & output_level=BASIC, &
       & loutput = .TRUE.,initval_r=1.0_wp )
 

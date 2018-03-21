@@ -335,7 +335,6 @@ PROGRAM jsb4_driver
       evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotranspiration),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
-
   ENDIF
 
   IF(tile%Is_process_active(FM_)) THEN
@@ -415,36 +414,37 @@ PROGRAM jsb4_driver
           CALL check_carbon_conservation_for_operation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
             & - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
 
-          !TODO-JN: where to put this cconservation test? 
-          !IF (iblk .EQ. 1) THEN
-          IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
-            print *, '----------------'
-            print *, 'iblk: ', iblk
-            print *, 'current sum: ', old_c_state_sum(:,iblk)
-            print *, 'flux: ', - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
-            print *, 'error: ', cconservation(:,iblk)
-          ENDIF
-                    CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
-          !IF (iblk .EQ. 1) THEN
-          IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
-            print *, '***********************'
-            print *, 'iblk:', iblk
-            print *, 'old sum:', old_c_state_sum(:,iblk)
-          ENDIF
-          IF (ANY(cconservation(:,iblk) .GT. 1.e-11_wp)) THEN
-            time_loop:DO 
-              CALL time_set   !(echam!)
-              IF(is_newday()) THEN
-                CALL write_date(current_date,'Calculate for: ')
-              ENDIF
-              CALL out_streams
+          IF(.NOT. jsbach_is_restarted()) THEN
+            !TODO-JN: where to put this cconservation test? 
+            !IF (iblk .EQ. 1) THEN
+            IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+              print *, '----------------'
+              print *, 'iblk: ', iblk
+              print *, 'current sum: ', old_c_state_sum(:,iblk)
+              print *, 'flux: ', - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
+              print *, 'error: ', cconservation(:,iblk)
+            ENDIF
+                      CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
+            !IF (iblk .EQ. 1) THEN
+            IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+              print *, '***********************'
+              print *, 'iblk:', iblk
+              print *, 'old sum:', old_c_state_sum(:,iblk)
+            ENDIF
+            IF (ANY(cconservation(:,iblk) .GT. 1.e-11_wp)) THEN
+              time_loop:DO 
+                CALL time_set   !(echam!)
+                IF(is_newday()) THEN
+                  CALL write_date(current_date,'Calculate for: ')
+                ENDIF
+                CALL out_streams
 
-              CALL time_reset
-              IF(is_newyear()) STOP
-            ENDDO time_loop
-          STOP
+                CALL time_reset
+                IF(is_newyear()) STOP
+              ENDDO time_loop
+            STOP
+            ENDIF
           ENDIF
-
         ENDIF
       ENDIF
       

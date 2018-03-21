@@ -162,7 +162,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput = .TRUE.,output_level=BASIC, &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'canopy_cond_over_time', mem%canopy_cond_over_time,               &
         & hgrid, surface,                                                                           &

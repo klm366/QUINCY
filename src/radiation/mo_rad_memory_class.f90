@@ -341,14 +341,14 @@ CONTAINS
         & t_cf('sky_view_fract', '', ''),                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'sky_view_fract_stem', mem%sky_view_fract_stem,       &
         & hgrid, surface,                                                             &
         & t_cf('sky_view_fract_stem', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'par', mem%par, &
         & hgrid, surface,                                                                &
