@@ -327,7 +327,7 @@ CONTAINS
 
 
       ! Carbon variables on canopy area
-      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter', mem%cflux_c_greenwood_2_litter,                                             &
+      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter', mem%cflux_c_greenwood_2_litter,               &
         & hgrid, surface,                                                                                &
         & t_cf('cflux_c_greenwood_2_litter', 'mol(CO2) m-2(canopy) s-1', 'Total litter flux entering the soil pools.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
@@ -738,7 +738,7 @@ CONTAINS
 
 
       ! Carbon variables on tile area
-      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter_ta', mem%cflux_c_greenwood_2_litter_ta,                                       &
+      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter_ta', mem%cflux_c_greenwood_2_litter_ta,         &
         & hgrid, surface,                                                                                &
         & t_cf('cflux_c_greenwood_2_litter_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
