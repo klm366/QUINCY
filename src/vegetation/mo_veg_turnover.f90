@@ -260,21 +260,23 @@ CONTAINS
 
        !> 1.2 calculate signature of N transfer from labile to leaf or inverse
        !!  
-       WHERE(recycling_leaf(:) >= 0.0_wp)
+       WHERE(recycling_leaf(:) >= 0.0_wp)  ! for all positive values of recycling_fine_root(:)
           WHERE(veg_pool%leaf%nitrogen(:) > eps8)
             recycling_leaf_n15(:) = recycling_leaf_n15(:) + & 
                                     recycling_leaf(:)/veg_pool%leaf%nitrogen(:) * veg_pool%leaf%nitrogen15(:)
           END WHERE
+       ELSEWHERE  ! for all negative values of recycling_fine_root(:)
           WHERE(veg_pool%labile%nitrogen(:) > eps8)
             recycling_leaf_n15(:) = recycling_leaf_n15(:) + & 
                                     recycling_leaf(:)/veg_pool%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:)
           END WHERE
        END WHERE
-       WHERE(recycling_fine_root(:) >= 0.0_wp)
+       WHERE(recycling_fine_root(:) >= 0.0_wp)  ! for all positive values of recycling_fine_root(:)
           WHERE(veg_pool%fine_root%nitrogen(:) > eps8)
             recycling_fine_root_n15(:) = recycling_fine_root_n15(:) + & 
                                          recycling_fine_root(:)/veg_pool%fine_root%nitrogen(:) * veg_pool%fine_root%nitrogen15(:)
           END WHERE
+       ELSEWHERE  ! for all negative values of recycling_fine_root(:)
           WHERE(veg_pool%labile%nitrogen(:) > eps8)
             recycling_fine_root_n15(:) = recycling_fine_root_n15(:) + & 
                                          recycling_fine_root(:)/veg_pool%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:)
