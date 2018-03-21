@@ -18,6 +18,10 @@ MODULE mo_jsb_model_init
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,            ONLY: InputDimSync, inputdimdisp
+  USE mo_moffledac_iface,  ONLY: init_moffledac
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -118,6 +122,11 @@ CONTAINS
 
     model => jsbach%models(model_id)%m
 
+#ifdef HAVE_MOFFLEDAC
+    ! Setup input via MofFlEDAc for this model
+    CALL init_moffledac(model,model_id,patch=patch)
+#endif HAVE_MOFFLEDAC
+
     grid => new_grid(patch=patch)
     CALL Register_grid(grid)
     model%grid_id = grid%id
@@ -149,6 +158,11 @@ CONTAINS
       CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
 
     model => jsbach%models(model_id)%m
+
+#ifdef HAVE_MOFFLEDAC
+    ! Setup input via MofFlEDAc for this model
+    CALL init_moffledac(model,model_id,decomp=decomposition)
+#endif HAVE_MOFFLEDAC
 
     grid => new_grid(decomp=decomposition)
     CALL Register_grid(grid)
@@ -219,6 +233,11 @@ CONTAINS
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputDimSync()
+    call inputdimdisp()
+#endif
 
     CALL model%Set_mode(model%config%hsm_mode)
 

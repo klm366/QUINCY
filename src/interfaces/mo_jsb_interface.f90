@@ -25,6 +25,10 @@ MODULE mo_jsb_interface
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,               ONLY: InputUpdate, InputSubmodelSelect, InputTimeString
+  USE mo_timer,               ONLY: timer_input
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -551,6 +555,14 @@ CONTAINS
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     model => Get_model(model_id)
+
+#ifdef HAVE_MOFFLEDAC
+    CALL timer_start(timer_input)
+    CALL InputSubmodelSelect(model_id-1)
+call message(trim(routine),TRIM(InputTimeString(.FALSE.))//': Updating input')
+    CALL InputUpdate()
+    CALL timer_stop(timer_input)
+#endif
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

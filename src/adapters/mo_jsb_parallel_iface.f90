@@ -24,6 +24,7 @@ MODULE mo_jsb_parallel_iface
   PRIVATE
 
   PUBLIC :: init_parallel_iface, init_mpi_communicators, my_process_is_mpi_parallel, my_process_is_stdio, get_my_global_mpi_id
+  PUBLIC :: get_workgroup_parallel_setup
   PUBLIC :: p_io, mpi_comm, p_bcast
 
   INTEGER :: mpi_comm
@@ -93,6 +94,36 @@ CONTAINS
 
   END FUNCTION get_my_global_mpi_id
 #endif
+
+  SUBROUTINE get_workgroup_parallel_setup(comm,npe,mype,iope)
+#ifndef NOMPI
+#ifdef __ICON__
+    USE mo_mpi, ONLY: get_my_mpi_work_communicator, get_my_mpi_work_comm_size, get_my_mpi_work_id, p_io
+#else
+    USE mo_mpi, ONLY: p_all_comm, p_nprocs, p_pe, p_io
+#endif
+#endif
+    INTEGER, INTENT(out) :: comm,npe,mype,iope
+
+#ifdef NOMPI
+    comm = 0
+    npe  = 1
+    mype = 0
+    iope = 0
+#else
+    comm = mpi_comm
+    iope = p_io
+#ifdef __ICON__
+    ! Setup for ICON
+    npe  = get_my_mpi_work_comm_size()
+    mype = get_my_mpi_work_id()
+#else
+    ! Setup for ECHAM
+    npe  = p_nprocs    ! p_nprocs and p_pe seems to relate to p_all_comm (i.e. excluding nprocio)
+    mype = p_pe
+#endif
+#endif
+  END SUBROUTINE get_workgroup_parallel_setup
 
 #endif
 END MODULE mo_jsb_parallel_iface
