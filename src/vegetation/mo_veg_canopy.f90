@@ -360,7 +360,7 @@ CONTAINS
                                     co2_mixing_ratio          , &
                                     ga                        , &
                                     beta_air                  , &
-	                            beta_soa                  , &
+                                    beta_soa                  , &
                                     beta_soil_ps              , &
                                     beta_sinklim_ps           , &
                                     beta_soil_gs              , &
@@ -445,7 +445,7 @@ CONTAINS
                                  ppfd_shaded_cl                , &
                                  fleaf_sunlit_cl               , &
                                  beta_air                      , &
-	                         beta_soa                      , &
+                                 beta_soa                      , &
                                  beta_soil_ps                  , &
                                  beta_sinklim_ps               , &
                                  beta_soil_gs                  , &
@@ -753,7 +753,7 @@ CONTAINS
                                                   ga               , &   !< air temperature (K)
                                                   net_assimilation , &   !< net assimilation rate (µmol CO2 / m2 / s)
                                                   canopy_cond      , &   !< canopy conductance (m/s)
-						  beta_air         , &   !< air humidity limiting factor for photosynthesis
+                                                  beta_air         , &   !< air humidity limiting factor for photosynthesis
                                                   beta_soa         , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis
                                                   beta_soil_ps     , &   !< soil moisture limiting factor for photosynthesis
                                                   beta_soil_gs           !< soil moisture limiting factor for canopy conductance
@@ -879,7 +879,7 @@ CONTAINS
                                     loc_ppfd_shaded_cl(:,icanopy)   , &
                                     loc_fleaf_sunlit_cl(:,icanopy)  , &
                                     beta_air(:)                     , &
-	                            beta_soa(:)                     , &
+                                    beta_soa(:)                     , &
                                     beta_soil_ps(:)                 , &
                                     beta_sinklim_ps(:)              , &
                                     beta_soil_gs(:)                 , &
@@ -953,7 +953,7 @@ CONTAINS
                                         co2_mixing_ratio_tcnl_mavg    , &
                                         beta_sinklim_ps_tcnl_mavg     , &
                                         beta_air_tcnl_mavg            , &
-	                                beta_soa_mavg                 , &
+                                        beta_soa_tphen_mavg           , &
                                         beta_soil_ps_tcnl_mavg        , &
                                         beta_soil_gs_tcnl_mavg        , &
                                         fn_chl_cl                     , &
@@ -1000,7 +1000,7 @@ CONTAINS
                                                              co2_mixing_ratio_tcnl_mavg , &
                                                              beta_sinklim_ps_tcnl_mavg  , &
                                                              beta_air_tcnl_mavg         , &
-	                                                     beta_soa_mavg              , &
+                                                             beta_soa_tphen_mavg        , &
                                                              beta_soil_ps_tcnl_mavg     , &
                                                              beta_soil_gs_tcnl_mavg
     REAL(wp),DIMENSION(options%nc,ncanopy), INTENT(in)    :: fn_chl_cl                  , &
@@ -1132,7 +1132,7 @@ CONTAINS
                        ppfd_shaded_tcnl_mavg_cl(ichunk,icanopy)      , &
                        fleaf_sunlit_tcnl_mavg_cl(ichunk,icanopy)     , &
                        beta_air_tcnl_mavg(ichunk)                    , &
-	               beta_soa_mavg(ichunk)                         , &
+                       beta_soa_tphen_mavg(ichunk)                   , &
                        beta_soil_ps_tcnl_mavg(ichunk)                , &
                        beta_sinklim_ps_tcnl_mavg(ichunk)             , &
                        beta_soil_gs_tcnl_mavg(ichunk)                , &

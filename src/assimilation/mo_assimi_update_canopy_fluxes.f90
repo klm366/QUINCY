@@ -20,7 +20,7 @@ MODULE mo_assimi_update_canopy_fluxes
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis, calc_soil_moisture_stress, calc_beta_soa
+  PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis, calc_soil_moisture_stress
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'
@@ -104,7 +104,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soa
-    dsl4jsb_Real2D_onChunk      :: soa_mavg
+    dsl4jsb_Real2D_onChunk      :: soa_tsoa_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
@@ -173,7 +173,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)               ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                    ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                    ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_mavg)                    ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)               ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)                  ! out
@@ -232,7 +232,7 @@ CONTAINS
     ga(:) = heat_transfer_coef(drag_srf(:),model%options%steplen) * MAX(wind_10m, min_wind) 
 
     ! Calculate the state of acclimation, slowing photosynthesis in evergreen conifers in spring
-    beta_soa(:) = calc_beta_soa(soa_mavg(:),lctlib%phenology_type)
+    beta_soa(:) = calc_beta_soa(soa_tsoa_mavg(:),lctlib%phenology_type)
 
     !> 2.0 calculate photosynthesis per layer
     !!
@@ -345,7 +345,7 @@ CONTAINS
                                             ppfd_shaded_cl      , &
                                             fleaf_sunlit_cl     , &
                                             beta_air            , &
-					    beta_soa            , &
+					                                  beta_soa            , &
                                             beta_soil_ps        , &
                                             beta_sinklim_ps     , &
                                             beta_soil_gs        , &
@@ -462,10 +462,10 @@ CONTAINS
       pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa
 
       !> N specific rate of electron transport rate
-      n1 = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/lctlib%t_jmax_omega)**2)) * beta_soil_ps * beta_sinklim_ps * beta_soa
+      n1  = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/lctlib%t_jmax_omega)**2.0_wp)) * beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> N specific rate of Rubisco turnover
-      n2 = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps * beta_sinklim_ps * beta_soa
+      n2  = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> Initial guess of leaf internal CO2 concentration
       SELECT CASE (lctlib%ps_pathway)
@@ -714,6 +714,7 @@ CONTAINS
     END IF
   END FUNCTION calc_soil_moisture_stress
 
+
   !-------------------------------------------------------------------------------------------------------
   ! Sub Task to update_canopy_fluxes
   !
@@ -721,29 +722,34 @@ CONTAINS
   !> Calculate spring recovery period for coniferous forests
   !    Based on Mäkelä et al., 2004 
   !-------------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_beta_soa(soa_mavg,phenology_type) RESULT(beta_soa)
+  PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
+
+    USE mo_pheno_constants,            ONLY: ievergreen
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: soa_mavg  !< state of acclimation
-    INTEGER, INTENT(in)  :: phenology_type
-    REAL(wp) :: beta_soa              ! beta value of soa
+    REAL(wp), INTENT(in)  :: soa_tsoa_mavg    !< state of acclimation
+    INTEGER,  INTENT(in)  :: phenology_type   !< phenology type of the plant
+    REAL(wp)              :: beta_soa         !< beta value of soa
+    ! ---------------------------
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_soa'
     REAL(wp) :: min_temp 
     REAL(wp) :: max_temp 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_soa'
+
 
     min_temp = -5.0_wp
     max_temp = 5.0_wp
-    IF (phenology_type == 1) THEN
-      beta_soa = (soa_mavg - min_temp) / (-min_temp + max_temp)
+
+    IF (phenology_type == ievergreen) THEN
+      beta_soa = (soa_tsoa_mavg - min_temp) / (-min_temp + max_temp)
       beta_soa = MIN ( MAX(beta_soa,0.01_wp), 1.0_wp)
     ELSE
       beta_soa = 1.0_wp
     END IF
 
   END FUNCTION calc_beta_soa
-
 
 
   !-----------------------------------------------------------------------------------------------------

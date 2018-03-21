@@ -431,7 +431,8 @@ CONTAINS
     USE mo_shared_constants,        ONLY: mavg_period_weekly, mavg_period_monthly, &
                                           mavg_period_tlabile, mavg_period_tphen, mavg_period_tuptake, mavg_period_tfrac, &
                                           mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_tvegdyn, &
-                                          mavg_period_tacclim, mavg_period_tmic, mavg_period_soa
+                                          mavg_period_tacclim, mavg_period_tmic, mavg_period_tsoa, &
+                                          Tzero
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -487,8 +488,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime
     dsl4jsb_Real2D_onChunk      :: beta_air
-    dsl4jsb_Real2D_onChunk      :: soa_mavg
-    dsl4jsb_Real2D_onChunk      :: beta_soa_mavg
+    dsl4jsb_Real2D_onChunk      :: soa_tsoa_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soa
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
@@ -638,8 +639,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)
@@ -782,8 +783,8 @@ CONTAINS
     !! 
     t_air_tphen_mavg(:)           = calc_mavg(t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
     beta_soil_gs_tphen_mavg(:)    = calc_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
-    soa_mavg(:)                = calc_mavg(soa_mavg(:), t_air(:)-273.15_wp, mavg_period_soa)
-    beta_soa_mavg(:)           = calc_mavg(beta_soa_mavg(:), beta_soa(:), mavg_period_tphen)
+    soa_tsoa_mavg(:)              = calc_mavg(soa_tsoa_mavg(:), t_air(:)-Tzero, mavg_period_tsoa)
+    beta_soa_tphen_mavg(:)        = calc_mavg(beta_soa_tphen_mavg(:), beta_soa(:), mavg_period_tphen)
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
     !! 

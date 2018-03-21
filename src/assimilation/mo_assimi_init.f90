@@ -62,8 +62,8 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soa
-    dsl4jsb_Real2D_onChunk      :: soa_mavg
-    dsl4jsb_Real2D_onChunk      :: beta_soa_mavg
+    dsl4jsb_Real2D_onChunk      :: soa_tsoa_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
@@ -100,8 +100,8 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
@@ -126,8 +126,8 @@ CONTAINS
 
     beta_air(:)                     = 1.0_wp
     beta_soa(:)                     = 1.0_wp
-    soa_mavg(:)                     = -10.0_wp
-    beta_soa_mavg(:)                = 1.0_wp
+    soa_tsoa_mavg(:)                = -10.0_wp
+    beta_soa_tphen_mavg(:)          = 1.0_wp
     beta_soil_ps(:)                 = 1.0_wp
     beta_soil_gs(:)                 = 1.0_wp
     

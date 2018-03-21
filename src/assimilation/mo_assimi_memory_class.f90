@@ -30,7 +30,7 @@ MODULE mo_assimi_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
-  ! canopy integrated variables
+    ! canopy integrated variables
     TYPE(t_jsb_var_real2d)    :: &
                               gross_assimilation    , &      !< canopy-integrated gross assimilation rate (µmol CO2/m2/s) 
                               gross_assimilation_C13, &      !< canopy-integrated gross assimilation rate (µmol 13CO2/m2/s) 
@@ -42,10 +42,12 @@ MODULE mo_assimi_memory_class
                               co2_conc_leaf         , &      !< canopy-integrated internal leaf CO2 concentration (ppm) 
                               beta_air              , &      !< scaling factor to account for air humidity effects on conductance
                               beta_soa              , &      !< scaling factor to account for spring in coniferous forests
-                              soa_mavg              , &      !< state of acclimation, used in calculation of beta_soa
                               beta_soil_ps          , &      !< scaling factor to account for soil moisture constraints on photosynthesis
                               beta_soil_gs          , &      !< scaling factor to account for soil moisture constraints on conductance
                               t_jmax_opt                     !< optimal temperature for electron transport 
+
+    TYPE(t_jsb_var_real2d)    :: &
+                              soa_tsoa_mavg                  !< state of acclimation, used in calculation of beta_soa    
 
     TYPE(t_jsb_var_real3d)    :: &
                               gross_assimilation_cl     , &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
@@ -64,7 +66,7 @@ MODULE mo_assimi_memory_class
                               beta_air_daytime_dacc     , &   !< average of the previous day
                               beta_air_tfrac_mavg       , &   !< scaling factor to account for air humidity effects on conductance
                               beta_air_tcnl_mavg        , &   !< scaling factor to account for air humidity effects on conductance
-			      beta_soa_mavg  
+                              beta_soa_tphen_mavg             !< average of scaling factor to account for spring in coniferous forests
 
     TYPE(t_jsb_var_real2d)    :: &
                               beta_soil_ps_daytime      , &   !< average of the previous day
@@ -218,7 +220,7 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'soa_mavg', mem%soa_mavg, &
+      CALL jsb_add_var(mem, 'soa_tsoa_mavg', mem%soa_tsoa_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
@@ -226,7 +228,7 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'beta_soa_mavg', mem%beta_soa_mavg, &
+      CALL jsb_add_var(mem, 'beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
