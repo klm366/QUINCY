@@ -46,7 +46,7 @@ CONTAINS
 
     CLASS(t_fage_config), INTENT(inout) :: config
 
-    INTEGER, PARAMETER :: ncohorts = 5 !16 !TODO-JN-COHORTS should be a namelist parameter 
+    INTEGER, PARAMETER :: ncohorts = 16 !16 !TODO-JN-COHORTS should be a namelist parameter 
                                        ! I wanted to add it to model%config%
                                        ! since it is also required in the usecases (see there...)
                                        ! but here I have no tile and thus no model?!
@@ -76,7 +76,7 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting fage configuration')
 
     ! Set defaults
-    active            = .TRUE.
+    active            = .FALSE.
     bc_filename       = 'bc_land_fage.nc'  !TODO-JN do I need it at all?
     ic_filename       = 'ic_land_fage.nc'  !TODO-JN
     max_age           = 150

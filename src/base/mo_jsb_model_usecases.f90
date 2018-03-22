@@ -170,6 +170,10 @@ CONTAINS
     END IF
 #endif
 
+    IF (model%processes(FM_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(FM_, ON_TILE_)
+    END IF
+
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
@@ -235,6 +239,16 @@ CONTAINS
             DO i=1,npft
               pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+
+              IF (model%lctlib(pft_ids(i))%ForestFlag) THEN 
+                IF (model%processes(FM_)%p%config%active) THEN
+                  IF (.NOT. model%processes(HARV_)%p%config%active) THEN
+                    CALL finish(TRIM(routine), "There is no sense in running forest management without HARV and vice versa!")
+                  END IF
+                  CALL pft_tile%Set_process_action(HARV_, ON_TILE_, AGGREGATE_)
+                END IF
+              ENDIF
+
             END DO
 
     NULLIFY(box_tile)
@@ -277,7 +291,7 @@ CONTAINS
     INTEGER :: i, j
 
     INTEGER, PARAMETER :: npft = 11
-    INTEGER, PARAMETER :: ncohorts = 5 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
+    INTEGER, PARAMETER :: ncohorts = 16 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
                                        ! -> cannot get it via model%processes(FAGE_)%p%config% here!?
                                        !    thus, on model%config% ? But then how to get it in mo_fage_config_class???
                                        ! + test ncohorts >0 & <=99 ! (cohort_name len=10 -- pft_shortname + '_fc' + j)
