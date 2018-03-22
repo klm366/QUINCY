@@ -26,6 +26,10 @@ MODULE mo_jsb_varlist
                                   FILETYPE_NC2, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_jsb_process_class, ONLY: Get_process_name
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,             ONLY: InputDimAdd, InputVarAdd
+  USE mo_input_strings,     ONLY: RmSpc
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -134,8 +138,13 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarAdd('nproma,nblock',var%ptr,TRIM(name_loc),lmodel=.TRUE.,po5=var%field)
+!   CALL InputVarAdd('nproma,nblock',ptr,    TRIM(name_loc),lmodel=.TRUE.,po5=lptr)
+#else
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
     var%ptr => var%field(:,:,1,1,1)
+#endif
     p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
@@ -233,6 +242,9 @@ CONTAINS
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
     CHARACTER(len=:), ALLOCATABLE :: output_level_name
+#ifdef HAVE_MOFFLEDAC
+    CHARACTER(len=128) :: locInputDimNames, newDimName
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r3d'
 
@@ -248,6 +260,9 @@ CONTAINS
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
 
+#ifdef HAVE_MOFFLEDAC
+    locInputDimNames = 'nproma,'
+#endif
     ldims(1) = hgrid%nproma
     gdims(1) = hgrid%dims_g(1)
     IF (PRESENT(extra_dim_n)) THEN
@@ -261,17 +276,30 @@ CONTAINS
       ldims(3) = extra_dim_n
       gdims(2) = hgrid%dims_g(2)
       gdims(3) = extra_dim_n
+#ifdef HAVE_MOFFLEDAC
+      WRITE(NewDimName,*) 'extra_',extra_dim_n
+      CALL RmSpc(NewDimName,'?')
+      CALL InputDimAdd(TRIM(NewDimName),extent=extra_dim_n) ! May be defined multiple times, but that's ok
+      locInputDimNames = TRIM(locInputDimNames)//'nblock,'//TRIM(NewDimName)
+#ENDIF
     ELSE
       ldims(2) = vgrid%n_levels
       ldims(3) = hgrid%nblks
       gdims(2) = vgrid%n_levels
       gdims(3) = hgrid%dims_g(2)
+#ifdef HAVE_MOFFLEDAC
+      locInputDimNames = TRIM(locInputDimNames)//TRIM(vgrid%name)//',nblock'
+#endif
     END IF
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarAdd(TRIM(locInputDimNames),var%ptr,TRIM(name_loc),lmodel=.TRUE.,po5=var%field)
+#else
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
     var%ptr => var%field(:,:,:,1,1)
+#endif
     p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
@@ -355,7 +383,9 @@ CONTAINS
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
-!!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
+#ifdef HAVE_MOFFLEDAC
+    REAL(wp), POINTER :: lptr(:,:,:,:,:)
+#endif
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -391,6 +421,17 @@ CONTAINS
       & 'jsb_tile_fractions'                 &
       &      ]
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarAdd('nproma,nblock',ptr,TRIM(name_loc),lmodel=.TRUE.,po5=lptr)
+
+    CALL add_var_list_element_r2d( &
+      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, p5=lptr)
+#else
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
@@ -398,6 +439,7 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups)
+#endif
 
   END SUBROUTINE jsb_add_var_list_element_r2d_tile
 

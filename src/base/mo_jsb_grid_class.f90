@@ -391,6 +391,9 @@ CONTAINS
 
     USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisInqName, zaxisInqSize
     USE mo_jsb_io_iface, ONLY: Create_zaxis
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,        ONLY: InputDimAdd
+#endif
 
     CHARACTER(len=*),           INTENT(in) :: name
     INTEGER,                    INTENT(in) :: cdi_axis_type
@@ -483,6 +486,11 @@ CONTAINS
       new%cdiZaxisID = cdi_zaxis_ids(idx)
     END IF
     cdi_zaxis_ids(new%id) = new%cdiZaxisID
+
+#ifdef HAVE_MOFFLEDAC
+    ! Create dimension in MofFlEDAc
+    CALL InputDimAdd(TRIM(new%name),Extent=length)
+#endif
 
   END FUNCTION new_vgrid
 

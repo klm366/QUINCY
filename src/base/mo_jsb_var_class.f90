@@ -16,7 +16,7 @@ MODULE mo_jsb_var_class
   END ENUM
 
   TYPE, ABSTRACT :: t_jsb_var
-    REAL(wp), ALLOCATABLE      :: field(:,:,:,:,:)
+    REAL(wp), POINTER          :: field(:,:,:,:,:)
     CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
     CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
     INTEGER                    :: type            ! REAL2D / REAL3D
@@ -81,7 +81,11 @@ CONTAINS
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
     IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+#ifdef HAVE_MOFFLEDAC
+    IF (ASSOCIATED(this%field)) NULLIFY(this%field)
+#else
+    IF (ASSOCIATED(this%field)) DEALLOCATE(this%field)
+#endif
 
   END SUBROUTINE finalize_jsb_var_real2d
 
@@ -97,8 +101,11 @@ CONTAINS
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
     IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
-
+#ifndef HAVE_MOFFLEDAC
+    IF (ASSOCIATED(this%field)) NULLIFY(this%field)
+#else
+    IF (ASSOCIATED(this%field)) DEALLOCATE(this%field)
+#endif
   END SUBROUTINE finalize_jsb_var_real3d
 
 !!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)
