@@ -133,6 +133,8 @@ CONTAINS
         & prefix, suffix,                                                           &
         & lrestart=.TRUE., initval_r=0.0_wp ) 
 
+      !TODO-JN: since it only works on the pft level - exclude if FAGE not active
+      ! + also interface has to be adapted
       CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,              &
         & hgrid, surface,                                                           &
         & t_cf('cconservation_wind', 'mol(C) m-2(canopy)', &

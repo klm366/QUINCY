@@ -1139,6 +1139,7 @@ CONTAINS
 
 !TODO-JN-COHORTS: does not need to go to the output (loutput = .FALSE.) -- only now for testing
 !TODO-JN-COHORTS: change unit when absolute areas are implemented
+! ++ think about "fract_fpc_max"!
         CALL jsb_add_var( mem, 'delta_cpool_green_rp', mem%delta_Cpool_green_rp, hgrid, surface, &
           & t_cf('delta_Cpool_green_rp', 'mol(C) m-2(parent))', 'Change in Cpool_green.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
