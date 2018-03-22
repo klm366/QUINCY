@@ -123,9 +123,7 @@ CONTAINS
     dsl4jsb_Def_memory(FM_)
 
     dsl4jsb_Def_config(FM_)
-
-    dsl4jsb_Real2D_onChunk :: area_to_harvest
-
+    
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -149,9 +147,6 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(FM_)
 
-    ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(FM_,  area_to_harvest)
-
     !
     ! ---------------------------
     ! Go
@@ -159,7 +154,7 @@ CONTAINS
     IF (is_newyear()) THEN ! only once per year
 
       IF (TRIM(dsl4jsb_Config(FM_)%fm_scheme) == 'annually_from_file') THEN
-          ! TODO-JN -- Currently done in the driver -- to be done with Stiigs module?
+          ! TODO-JN -- Currently read in the driver -- to be done with Stiigs module?
       ELSE
           CALL finish(TRIM(routine),'Unknown fm scheme')
       ENDIF
@@ -206,8 +201,6 @@ CONTAINS
     dsl4jsb_Get_memory(FM_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-!    dsl4jsb_Aggregate_onChunk(FM_, area_to_harvest, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

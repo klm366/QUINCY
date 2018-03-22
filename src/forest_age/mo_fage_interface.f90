@@ -25,15 +25,18 @@ MODULE mo_fage_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_
+  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_, HARV_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(FAGE_)
+  dsl4jsb_Use_config(HARV_)
 
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(FAGE_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(DISTURB_)
+  dsl4jsb_Use_memory(HARV_)
+
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -65,6 +68,16 @@ MODULE mo_fage_interface
   END INTERFACE   tsk_nat_disturb_cohort_changes
 
 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_harvest_cohort_changes
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_harvest_cohort_changes    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_harvest_cohort_changes !< Aggregates computed task variables
+  END TYPE   tsk_harvest_cohort_changes
+
+  INTERFACE   tsk_harvest_cohort_changes
+    PROCEDURE Create_task_harvest_cohort_changes 
+  END INTERFACE   tsk_harvest_cohort_changes
+
 CONTAINS
   ! ================================================================================================================================
   !! Constructors for tasks
@@ -87,9 +100,6 @@ CONTAINS
 
   END FUNCTION Create_task_calculate_ageing
 
-  ! ================================================================================================================================
-  !! Constructors for tasks
-  
   !> Constructor for nat_disturb_cohort_changes task
   !!
   !! @param[in]     model_id     Model id
@@ -107,6 +117,25 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_nat_disturb_cohort_changes
+  
+  !> Constructor for harvest_cohort_changes task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "harvest_cohort_changes"
+  !!
+  FUNCTION Create_task_harvest_cohort_changes(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_harvest_cohort_changes::return_ptr)
+
+    return_ptr%name = 'harvest_cohort_changes'
+    return_ptr%process_id = FAGE_
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_harvest_cohort_changes
+
 
   ! =======================================================================================================
   !> Register tasks for fage process
@@ -121,6 +150,7 @@ CONTAINS
 
     CALL this%Register_task(tsk_calculate_ageing(model_id))
     CALL this%Register_task(tsk_nat_disturb_cohort_changes(model_id))
+    CALL this%Register_task(tsk_harvest_cohort_changes(model_id))
 
   END SUBROUTINE Register_fage_tasks
 
@@ -305,6 +335,7 @@ CONTAINS
     USE mo_fage_util,            ONLY: get_mean_age
     USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
     USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_upon_disturbance
+    USE mo_carbon_constants,     ONLY: WIND, FIRE
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -321,7 +352,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real3D_onChunk :: cohort_max_age
 
-    CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild, nextChild
+    CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild
     REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, disturbedArea, helper1, helper2
 
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
@@ -385,6 +416,8 @@ CONTAINS
 ! ++ generalisieren?
 ! ++ fire calculation is switched off currently in disturbances! 
 
+        !TODO-JN: ich glaube nicht, dass ich das brauche -- wieder rausnehmen, denn sonnst müsste ich:
+                      !TODO: if only > something than feed back into damaged frac!  mit aggregate und allem!
         !*** care for wind damage -     TODO-JN: check: work with max area to prevent numerical issues!?
         helper2(:) = 0._wp
         helper1(:) = damaged_frac(:) * source_fract(:)
@@ -401,7 +434,7 @@ CONTAINS
 
           ! b) carbon consequences 
           CALL update_delta_carbon_rp_upon_disturbance( &
-            currentChild, firstChild, l_sourceisfirstChild, options, damagedArea(:), source_fract(:) )
+            currentChild, firstChild, l_sourceisfirstChild, options, damagedArea(:), source_fract(:), WIND)
 
           ! c) TODO-JN-COHORTS what else to shift? 
         ENDIF
@@ -491,6 +524,189 @@ CONTAINS
 
   END SUBROUTINE aggregate_nat_disturb_cohort_changes
 
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Task "harvest_cohort_changes" calculates the required changes upon clearcut harvest 
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  ! NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
+  SUBROUTINE update_harvest_cohort_changes(tile, options)
+
+    USE mo_jsb_time,             ONLY: is_newday
+    USE mo_fage_util,            ONLY: get_mean_age
+    USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
+    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_upon_disturbance
+    USE mo_carbon_constants,     ONLY: CLEARCUT
+    USE mo_harvest_constants,    ONLY: HARVEST_OLDEST_TREES
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(HARV_)
+
+    dsl4jsb_Def_memory(FAGE_)
+    dsl4jsb_Def_memory(HARV_)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: area_to_harvest
+    dsl4jsb_Real2D_onChunk :: harvested_area
+
+    dsl4jsb_Real2D_onChunk :: mean_age
+    dsl4jsb_Real3D_onChunk :: fract_per_age
+    dsl4jsb_Real3D_onChunk :: cohort_max_age
+
+    CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild
+    REAL(wp), DIMENSION(options%nc)        :: source_fract, stillToHarvest, harvestFromThisCohort
+
+    INTEGER  :: i, oldestCohort, ncohorts, max_age, iblk, ics, ice, nc
+    LOGICAL  :: l_sourceisfirstChild
+    TYPE(t_jsb_model), POINTER :: model
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_harvest_cohort_changes'
+
+    ! ---------------------------
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+
+    IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_memory(FAGE_)
+
+    dsl4jsb_Get_config(HARV_)
+    dsl4jsb_Get_memory(HARV_)
+    
+    dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
+    dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
+    dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
+
+    dsl4jsb_Get_var2D_onChunk(HARV_, area_to_harvest)
+    dsl4jsb_Get_var2D_onChunk(HARV_, harvested_area)
+
+    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+    max_age = dsl4jsb_Config(FAGE_)%max_age
+
+    IF(is_newday() .AND. ANY(area_to_harvest(:) .GT. 0._wp)) THEN
+      dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
+
+      ! Area changes upon clearcut only have carbon consequences for the first child
+      !  (All other children will only have area changes)
+      dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .TRUE.
+
+      !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
+      !Assertion: TODO - fehler wenn youngest not empty!
+      l_sourceisfirstChild = .FALSE.
+
+      firstChild => tile%Get_first_child_tile()
+      currentChild => tile%Get_first_child_tile()
+
+      IF (dsl4jsb_Config(HARV_)%harv_kind .EQ. HARVEST_OLDEST_TREES) THEN
+        ! as opposed to damaged_frac in update_nat_disturb_cohort_changes area_to_harvest is already with respect
+        ! to this tiles area - i.e. not per cohort, thus it does not have to be multiplied with cohort fractions
+        stillToHarvest(:) = area_to_harvest(:)
+
+        ! Identify cohort with oldest available trees for any calculated gridcell
+        oldestCohort = 2 !TODO MAX(MAX(fract_per_age(:,:)))
+
+        ! Iterate over the children until currentChild points to that cohort
+        DO i=1,oldestCohort-1
+          !TODO: Assertion that current its not already the last
+          currentChild => currentChild%Get_next_sibling_tile()
+        ENDDO
+
+        ! then iterate backwards until either all demanded area is fulfilled or the lowest cohort is reached
+        DO i=oldestCohort,2,-1
+          ! Determine area to be harvested from this cohort
+          ! CALL TODO:  update_frac_per_age_and_determine_area_to_harvest_from_cohort(nc, max_age, ncohorts, &
+          !      & i, cohort_max_age(:,:), fract_per_age(:,:), harvestFromThisCohort(:), stillToHarvest(:))
+           
+          harvested_area(:) = harvested_area(:) + harvestFromThisCohort(:)
+
+          ! reduce current tiles delta fraction  
+          currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisCohort(:)
+          ! and add it to the first childs delta
+          firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisCohort(:)
+
+          ! b) carbon consequences 
+          CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+!          CALL update_delta_carbon_rp_upon_disturbance( &
+!            currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisCohort(:), source_fract(:), CLEARCUT)
+
+          ! c) TODO-JN-COHORTS what else to shift? 
+
+          ! Go to next child
+          currentChild => currentChild%Get_prev_sibling_tile()
+        ENDDO
+
+      ELSE
+          CALL finish(TRIM(routine),'Not implemented harvest kind')
+      ENDIF
+
+      ! recalculate mean age
+      mean_age (:) = get_mean_age(fract_per_age)
+
+    ELSE
+      dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
+    ENDIF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_harvest_cohort_changes
+
+ 
+  SUBROUTINE aggregate_harvest_cohort_changes(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_memory(FAGE_)
+    dsl4jsb_Def_memory(HARV_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_harvest_cohort_changes'
+
+    INTEGER  :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_memory(FAGE_)
+    dsl4jsb_Get_memory(HARV_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HARV_, harvested_area, weighted_by_fract)
+    ENDIF
+    !No other aggregations required in the calculation of ageing 
+    ! (aggregation is done in the CARBON_ process after applying the changes calculated here to carbon variables)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_harvest_cohort_changes
 
 #endif
 END MODULE mo_fage_interface

@@ -29,8 +29,9 @@ MODULE mo_fm_memory_class
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_fm_memory
 
-   TYPE(t_jsb_var_real2d) ::   &
-            area_to_harvest
+   TYPE(t_jsb_var_real3d) ::   &
+            to_harvest
+
   CONTAINS
     PROCEDURE :: Init => Init_fm_memory
   END TYPE t_fm_memory
@@ -55,7 +56,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid          ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface        ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_depth_water    ! Vertical grid
+!    TYPE(t_jsb_vgrid), POINTER :: cohort_grid    ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fm_memory'
@@ -65,13 +67,20 @@ CONTAINS
     table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
-    surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%area_to_harvest%ptr)) THEN
+    !TODO-JN: schön ist das nicht, aber die art des lesens ist eh nur temporär, 
+    ! deshalb nehme ich jetzt das zu große ncohorts und definiere kein neues grid!
+!    cohort_grid   => Get_vgrid('cohort_grid')
+    !TODO: cohort_grid only available with FAGE but I also want to harvest in pft usecase 
+    ! thus TODO: define own grid
+    soil_depth_water   => Get_vgrid('soil_depth_water')
 
-      CALL jsb_add_var( mem, 'area_to_harvest', mem%area_to_harvest,                   &
-        & hgrid, surface,                                                                    &
-        & t_cf('area_to_harvest', '', 'Area to be harvested.'), &
+    IF (.NOT. ASSOCIATED(mem%to_harvest%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'to_harvest', mem%to_harvest,                   &
+!        & hgrid, cohort_grid,                                                                    &
+        & hgrid, soil_depth_water, &
+        & t_cf('to_harvest', '', 'Whatever to Harvest.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 

@@ -25,6 +25,7 @@ MODULE mo_harv_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_harv_config
     CHARACTER(len=25)         :: harv_scheme
+    INTEGER                   :: harv_kind
   CONTAINS
      PROCEDURE :: Init => Init_harv_config
   END type t_harv_config
@@ -40,6 +41,7 @@ CONTAINS
   SUBROUTINE Init_harv_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_harvest_constants,  ONLY: HARVEST_OLDEST_TREES
 
     CLASS(t_harv_config), INTENT(inout) :: config
 
@@ -75,7 +77,8 @@ CONTAINS
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
 
-    config%harv_scheme       = TRIM("max_available_age")
+    config%harv_scheme       = TRIM("harvest_area")
+    config%harv_kind         = HARVEST_OLDEST_TREES
 
   END SUBROUTINE Init_harv_config
 

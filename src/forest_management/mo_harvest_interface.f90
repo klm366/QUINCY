@@ -26,15 +26,17 @@ MODULE mo_harv_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes HARV_, FM_
+  dsl4jsb_Use_processes HARV_, FM_, FAGE_, CARBON_
 
   ! Use of process configurations
   dsl4jsb_Use_config(HARV_)
   dsl4jsb_Use_config(FM_)
+  dsl4jsb_Use_config(FAGE_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(HARV_)
   dsl4jsb_Use_memory(FM_)
+  dsl4jsb_Use_memory(CARBON_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -108,6 +110,9 @@ CONTAINS
 
     USE mo_jsb_time,       ONLY: is_newyear
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
+    USE mo_carbon_process,        ONLY: relocate_carbon_damage
+    USE mo_carbon_interface,      ONLY: update_per_tile_vars, &
+      & calculate_current_c_state_sum, check_carbon_conservation_for_operation
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -115,6 +120,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
+    REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum, dummy1, dummy2, this_fract
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -123,12 +129,42 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_memory(HARV_)
     dsl4jsb_Def_memory(FM_)
+    dsl4jsb_Def_memory(CARBON_)
 
     dsl4jsb_Def_config(HARV_)
     dsl4jsb_Def_config(FM_)
+    dsl4jsb_Def_config(FAGE_)
 
-    dsl4jsb_Real2D_onChunk :: harvested_area
     dsl4jsb_Real2D_onChunk :: area_to_harvest
+    dsl4jsb_Real2D_onChunk :: harvested_area
+    dsl4jsb_Real2D_onChunk :: cconservation_harvest
+    dsl4jsb_Real3D_onChunk :: to_harvest
+
+    dsl4jsb_Real2D_onChunk :: Cpool_green
+    dsl4jsb_Real2D_onChunk :: Cpool_woods
+    dsl4jsb_Real2D_onChunk :: Cpool_reserve
+    !
+    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag1
+    dsl4jsb_Real2D_onChunk :: YCpool_water_ag1
+    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag1
+    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag1
+    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag2
+    dsl4jsb_Real2D_onChunk :: YCpool_water_ag2
+    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag2
+    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag2
+    ! below ground
+    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg1
+    dsl4jsb_Real2D_onChunk :: YCpool_water_bg1
+    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg1
+    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg2
+    dsl4jsb_Real2D_onChunk :: YCpool_water_bg2
+    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg2
+    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg2
+
+    dsl4jsb_Real2D_onChunk :: YCpool_humus_1
+    dsl4jsb_Real2D_onChunk :: YCpool_humus_2
+
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -136,36 +172,133 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(HARV_)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     ! Get model
     model   => Get_model(tile%owner_model_id)
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(HARV_)) RETURN
+    IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process configurations
     dsl4jsb_Get_config(HARV_)
     dsl4jsb_Get_config(FM_)
+    dsl4jsb_Get_config(FAGE_)
 
     ! Get process memories
     dsl4jsb_Get_memory(HARV_)
     dsl4jsb_Get_memory(FM_)
+    dsl4jsb_Get_memory(CARBON_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(HARV_,  harvested_area)
-    dsl4jsb_Get_var2D_onChunk(FM_,  area_to_harvest)
+    dsl4jsb_Get_var2D_onChunk(HARV_, area_to_harvest)
+    dsl4jsb_Get_var2D_onChunk(HARV_, harvested_area)
+    dsl4jsb_Get_var2D_onChunk(HARV_, cconservation_harvest)
+    
+    dsl4jsb_Get_var3D_onChunk(FM_,   to_harvest)
+
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_green)              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_woods)              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_reserve)            ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag1)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag1)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag1)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag1)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag2)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag2)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag2)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag2)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg1)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg1)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg1)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg1)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg2)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg2)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg2)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg2)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_1)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_2)           ! inout
 
     !
     ! ---------------------------
     ! Go
-
     IF (is_newyear()) THEN ! only once per year
 
-      print *, area_to_harvest
+      IF (TRIM(dsl4jsb_Config(HARV_)%harv_scheme) == 'harvest_area') THEN
 
-      IF (TRIM(dsl4jsb_Config(HARV_)%harv_scheme) == 'max_available_age') THEN
-          print *, 'harvest forest from max age'
+        harvested_area(:) = 0._wp
+        area_to_harvest(:) = MAX(to_harvest(:,tile%lcts(1)%lib_id), 0._wp)
+
+        IF ( tile%Is_process_active(FAGE_) ) THEN
+          ! In this case the carbon cannot be relocated immediately
+          ! because harvest now create new cohorts
+
+          !@todo: maybe for a more general concept it could be considered to always do it like this
+          !       i.e. only calculate the damage here and then apply it later maybe in a carbon task?
+          IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
+            & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of harvested carbon.')
+
+        ELSE
+          CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+
+          ! -> for now I use the relocate_carbon_damage
+          ! TODO-JN: implement own function using harvest pools
+
+          CALL tile%Get_fraction(ics, ice, iblk, fract=this_fract(:))
+          harvested_area(:)=MIN(area_to_harvest(:), this_fract(:)) 
+          dummy1(:) = 0._wp
+          dummy2(:) = 0._wp
+
+          CALL relocate_carbon_damage(       &
+            & harvested_area(:),             & ! in
+            & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
+            & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
+            & Cpool_green(:),                & ! inout
+            & Cpool_woods(:),                & ! inout
+            & Cpool_reserve(:),              & ! inout
+            & dummy1(:),                     & ! inout
+            & dummy2(:),                     & ! inout
+            & YCpool_acid_ag1(:),            & ! inout
+            & YCpool_water_ag1(:),           & ! inout
+            & YCpool_ethanol_ag1(:),         & ! inout
+            & YCpool_nonsoluble_ag1(:),      & ! inout
+            & YCpool_acid_ag2(:),            & ! inout
+            & YCpool_water_ag2(:),           & ! inout
+            & YCpool_ethanol_ag2(:),         & ! inout
+            & YCpool_nonsoluble_ag2(:),      & ! inout
+            & YCpool_acid_bg1(:),            & ! inout
+            & YCpool_water_bg1(:),           & ! inout
+            & YCpool_ethanol_bg1(:),         & ! inout
+            & YCpool_nonsoluble_bg1(:),      & ! inout
+            & YCpool_acid_bg2(:),            & ! inout
+            & YCpool_water_bg2(:),           & ! inout
+            & YCpool_ethanol_bg2(:),         & ! inout
+            & YCpool_nonsoluble_bg2(:),      & ! inout
+            & YCpool_humus_1(:),             & ! inout
+            & YCpool_humus_2(:)              & ! inout
+            & )
+
+          CALL update_per_tile_vars(tile, options, &
+            & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
+            & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
+            & YCpool_ethanol_ag1 = YCpool_ethanol_ag1(:), YCpool_nonsoluble_ag1 = YCpool_nonsoluble_ag1(:), &
+            & YCpool_acid_ag2 = YCpool_acid_ag2(:), YCpool_water_ag2 = YCpool_water_ag2(:), &
+            & YCpool_ethanol_ag2 = YCpool_ethanol_ag2(:), YCpool_nonsoluble_ag2 = YCpool_nonsoluble_ag2(:), &
+            & YCpool_acid_bg1 = YCpool_acid_bg1(:), YCpool_water_bg1 = YCpool_water_bg1(:), &
+            & YCpool_ethanol_bg1 = YCpool_ethanol_bg1(:), YCpool_nonsoluble_bg1 = YCpool_nonsoluble_bg1(:), &
+            & YCpool_acid_bg2 = YCpool_acid_bg2(:), YCpool_water_bg2 = YCpool_water_bg2(:), &
+            & YCpool_ethanol_bg2 = YCpool_ethanol_bg2(:), YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2(:), &
+            & YCpool_humus_1 = YCpool_humus_1(:), YCpool_humus_2 = YCpool_humus_2(:))
+
+          ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
+          dummy1 = 0._wp
+          CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+            & dummy1(:), cconservation_harvest(:))
+
+        ENDIF
+
       ELSE
           CALL finish(TRIM(routine),'Unknown harv scheme')
       ENDIF
@@ -213,7 +346,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HARV_, harvested_area, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HARV_, area_to_harvest, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

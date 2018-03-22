@@ -797,8 +797,8 @@ CONTAINS
       RETURN
     ENDIF
 
-    !TODO-JN: hack
-    IF (.NOT. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
+    !TODO-JN: hack -- find and remove "harvest"
+    IF (.NOT. TRIM(forcing_input_variable%variable_name) .EQ. "harvest") THEN
       ! ----- For all other variables and frequencies:
       !Assertion: Rest of the routine only implemented for daily or timestep frequency
       IF ( (frequency .NE. TIMESTEP_) .AND. (frequency .NE. DAILY_) ) CALL finish(TRIM(routine), &
@@ -811,7 +811,7 @@ CONTAINS
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume &
-          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
+          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "harvest") THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
@@ -827,7 +827,7 @@ CONTAINS
         thisDayEnd = 0
 
         !TODO-JN: hack
-        IF (.NOT. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
+        IF (.NOT. TRIM(forcing_input_variable%variable_name) .EQ. "harvest") THEN
           ! determine current date in the file
           DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
             IF ( ydate .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
@@ -874,7 +874,7 @@ CONTAINS
 
     ! --- if its a new day or new run - read the data
     IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume &
-          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "HARVEST_AREA") THEN
+          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "harvest") THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file

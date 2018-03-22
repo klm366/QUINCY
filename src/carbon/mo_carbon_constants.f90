@@ -28,5 +28,13 @@ MODULE mo_carbon_constants
    REAL(wp), parameter :: sec_per_day             = 86400._wp        ! seconds per day
    REAL(wp), parameter :: days_per_year           = 365.25_wp
    REAL(wp), parameter :: sec_per_year            = days_per_year*sec_per_day
+
+  ENUM, BIND(C)
+    ENUMERATOR :: &
+      & WIND = 1, & 
+      & FIRE,     & 
+      & CLEARCUT
+  END ENUM
+
 #endif
 END MODULE mo_carbon_constants

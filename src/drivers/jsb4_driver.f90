@@ -76,7 +76,7 @@ PROGRAM jsb4_driver
   REAL(wp), EXTERNAL:: util_walltime
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
-  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics, no_omp_thread
+  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics, no_omp_thread, pft
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -156,7 +156,8 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: old_c_state_sum(:,:), cconservation(:,:)
 
   !! only required for FM - temporal solution 
-  REAL(wp), ALLOCATABLE :: area_to_harvest(:,:)
+  REAL(wp), ALLOCATABLE :: harvest_from_files(:,:,:)
+  REAL(wp), ALLOCATABLE :: read_harvest(:,:)
   TYPE(input_variable_type) :: harvest_area_input
 
 
@@ -337,10 +338,13 @@ PROGRAM jsb4_driver
     ENDDO
   ENDIF
 
+  !TODO-JN: Temporäre Lösung bis Stiigs module verfügbar ist!
   IF(tile%Is_process_active(FM_)) THEN
     dsl4jsb_Get_memory(FM_)
-    ALLOCATE(area_to_harvest(nproma, nblks))
-    area_to_harvest(:,:) = -1._wp
+    ALLOCATE(harvest_from_files(nproma, 16, nblks))
+    ALLOCATE(read_harvest(nproma, nblks))
+    harvest_from_files(:,:,:) = -1._wp
+    read_harvest(:,:)=-1._wp
   ENDIF
 
 
@@ -384,22 +388,23 @@ PROGRAM jsb4_driver
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse,                              &
         & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
+      ! TODO-JN: for forest management test, before there is a better way available: 
       IF(tile%Is_process_active(FM_)) THEN
         IF(is_newyear() .AND. my_process_is_stdio()) THEN
-          ! for forest management test, before there is a better way available: read 2 arrays: 
-          ! one with harvest area and one with harvest age 
-          harvest_area_input%file_name_prefix = "Harvest_"
-          harvest_area_input%expectedUnit = ""
-          harvest_area_input%ocean_value = 0._wp
-          harvest_area_input%frequency = ANNUAL_
-          NULLIFY(harvest_area_input%timevalues)
+          DO pft = 1,4
+            write (harvest_area_input%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", pft, "_"
+            harvest_area_input%expectedUnit = ""
+            harvest_area_input%ocean_value = 0._wp
+            harvest_area_input%frequency = ANNUAL_
+            NULLIFY(harvest_area_input%timevalues)
 
-          harvest_area_input%variable_name = "HARVEST_AREA"
-          CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input, area_to_harvest)
+            harvest_area_input%variable_name = "harvest"
+            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input, read_harvest(:,:))
+            harvest_from_files(:,pft,:) = read_harvest(:,:)
+          ENDDO
         ENDIF
-
         DO iblk = 1, nblks
-          dsl4jsb_var2D_onChunk(FM_, area_to_harvest) = area_to_harvest(:,iblk)
+          dsl4jsb_var3D_onChunk(FM_, to_harvest) = harvest_from_files(:,:,iblk)
         ENDDO
       ENDIF
 

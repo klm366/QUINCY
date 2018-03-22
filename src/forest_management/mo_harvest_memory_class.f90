@@ -30,7 +30,9 @@ MODULE mo_harv_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_harv_memory
 
    TYPE(t_jsb_var_real2d) ::   &
-            harvested_area
+            area_to_harvest,   &
+            harvested_area,    &
+            cconservation_harvest
   CONTAINS
     PROCEDURE :: Init => Init_harv_memory
   END TYPE t_harv_memory
@@ -69,17 +71,32 @@ CONTAINS
 
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
         &  )                                       &
-        & .AND. .NOT. ASSOCIATED(mem%harvested_area%ptr)) THEN
+        & .AND. .NOT. ASSOCIATED(mem%area_to_harvest%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'harvested_area', mem%harvested_area,                   &
+      CALL jsb_add_var( mem, 'area_to_harvest', mem%area_to_harvest,                   &
         & hgrid, surface,                                                                    &
-        & t_cf('harvested_area', '', 'Area to be harvested.'), &
+        & t_cf('area_to_harvest', '', 'Area to be harvested.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
-    END IF
+      CALL jsb_add_var( mem, 'harvested_area', mem%harvested_area,                   &
+        & hgrid, surface,                                                                    &
+        & t_cf('harvested_area', '', 'Actually harvested area.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
+      !TODO-JN: since it only works on the pft level - exclude if FAGE not active!
+      CALL jsb_add_var( mem, 'cconservation_harvest', mem%cconservation_harvest,              &
+        & hgrid, surface,                                                           &
+        & t_cf('cconservation_harvest', 'mol(C) m-2(canopy)', &
+          & 'Test for c conservation on relocation for harvest.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+
+    END IF
 
   END SUBROUTINE Init_harv_memory
 

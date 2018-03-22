@@ -106,9 +106,6 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_C_NPP_pot_allocation
-
-  ! ================================================================================================================================
-  !! Constructors for tasks
   
   !> Constructor for apply_cohort_changes task
   !!
@@ -128,7 +125,7 @@ CONTAINS
 
   END FUNCTION Create_task_apply_cohort_changes
 
-  ! -------------------------------------------------------------------------------------------------------
+  ! =======================================================================================================
   !> Register tasks for carbon process
   !!
   !! @param[in,out] this      Instance of carbon process class
@@ -1346,27 +1343,34 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief updates delta of carbon state variables upon disturbance
+  !! @brief updates delta of carbon state variables upon disturbance (including clear-cuts!)
   !!        -> source densities stay the same
   !!        -> sink (first cohort) gets fraction of source litter/soil 
-  !!            + fraction of green/reserve/wood are also dirstibuted into litter/soil
+  !!            + fraction of green/reserve/wood are also distributed into litter/soil
   !!
   !! @todo discuss how to make more general, e.g. get the info on which state variables to work on from somewhere else?
   !!       or as a vector ?
   !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
+  !! @param[in,out] source_tile      Source tile of area and thus carbon - usually no carbon density changes here 
+  !! @param[in,out] sink_tile        Sink tiles to which area and thus carbon is added (here: always first child!)
+  !! @param[in] l_sourceisfirstChild Is first child the source? Then there'll be changes in vegetation carbon densities 
+  !! @param[in]     options          Additional run-time parameters
+  !! @param[in]     delta_fract      Change in area
+  !! @param[in]     prev_fract       Source fract before change
+  !! @param[in]     distKind         Kind of the executed disturbance - wind, fire, clearCut 
   !
   SUBROUTINE update_delta_carbon_rp_upon_disturbance( &
-      source_tile, sink_tile, l_sourceisfirstChild, options, delta_fract, prev_fract )
+      source_tile, sink_tile, l_sourceisfirstChild, options, delta_fract, prev_fract, distKind )
 
     USE mo_carbon_process,      ONLY: update_delta_carbon_rp, relocate_carbon_fire, relocate_carbon_damage
+    USE mo_carbon_constants,    ONLY: WIND, FIRE, CLEARCUT
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: source_tile, sink_tile
     LOGICAL,                    INTENT(in)            :: l_sourceisfirstChild
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
     REAL(wp),                   INTENT(in)            :: delta_fract(:), prev_fract(:)
+    INTEGER,                    INTENT(in)            :: distKind
 
     TYPE(t_jsb_model), POINTER                :: model
     dsl4jsb_Def_config(PHENO_)
@@ -1604,42 +1608,41 @@ CONTAINS
 !   &     + delta_YCpool_ethanol_bg2_rp_sink(:) + delta_YCpool_nonsoluble_bg2_rp_sink(:) + delta_YCpool_humus_2_rp_sink(:)
 
     helper(:) = 1._wp
-    ! Redistribute the carbon among the pools according to wind damage
-    CALL relocate_carbon_damage( helper(:), & ! in
-      & model%lctlib(sink_tile%lcts(1)%lib_id)%LeafLit_coef(1:5), & ! in
-      & model%lctlib(sink_tile%lcts(1)%lib_id)%WoodLit_coef(1:5), & ! in
-      & d_green_new(:),                & ! inout
-      & d_wood_new(:),                & ! inout
-      & d_reserve_new(:),              & ! inout
-      & delta_carbon_2_GreenLitterPools_rp_sink(:),  & ! inout
-      & delta_carbon_2_WoodLitterPools_rp_sink(:),   & ! inout
-      & delta_YCpool_acid_ag1_rp_sink(:),            & ! inout
-      & delta_YCpool_water_ag1_rp_sink(:),           & ! inout
-      & delta_YCpool_ethanol_ag1_rp_sink(:),         & ! inout
-      & delta_YCpool_nonsoluble_ag1_rp_sink(:),      & ! inout
-      & delta_YCpool_acid_ag2_rp_sink(:),            & ! inout
-      & delta_YCpool_water_ag2_rp_sink(:),           & ! inout
-      & delta_YCpool_ethanol_ag2_rp_sink(:),         & ! inout
-      & delta_YCpool_nonsoluble_ag2_rp_sink(:),      & ! inout
-      & delta_YCpool_acid_bg1_rp_sink(:),            & ! inout
-      & delta_YCpool_water_bg1_rp_sink(:),           & ! inout
-      & delta_YCpool_ethanol_bg1_rp_sink(:),         & ! inout
-      & delta_YCpool_nonsoluble_bg1_rp_sink(:),      & ! inout
-      & delta_YCpool_acid_bg2_rp_sink(:),            & ! inout
-      & delta_YCpool_water_bg2_rp_sink(:),           & ! inout
-      & delta_YCpool_ethanol_bg2_rp_sink(:),         & ! inout
-      & delta_YCpool_nonsoluble_bg2_rp_sink(:),      & ! inout
-      & delta_YCpool_humus_1_rp_sink(:),             & ! inout
-      & delta_YCpool_humus_2_rp_sink(:)              & ! inout
-      & )
 
-    ! -> not required -- sink is the first cohort and current max green as well as veg carbon are set to zero anyways upon ageing
-    ! IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-    !   delta_current_max_green_rp_sink => carbon__mem__sink%delta_current_max_green_rp%ptr(ics:ice,iblk)  ! inout
-    !   delta_veg_carbon_at_max_green_rp_sink => carbon__mem__sink%delta_veg_carbon_at_max_green_rp%ptr(ics:ice,iblk)  ! inout
-    !   delta_current_max_green_rp_sink = 0._wp
-    !   delta_veg_carbon_at_max_green_rp_sink = 0._wp
-    ! ENDIF
+    IF(distKind .EQ. WIND) THEN
+
+      ! Redistribute the carbon among the pools according to wind damage
+      CALL relocate_carbon_damage( helper(:), & ! in
+        & model%lctlib(sink_tile%lcts(1)%lib_id)%LeafLit_coef(1:5), & ! in
+        & model%lctlib(sink_tile%lcts(1)%lib_id)%WoodLit_coef(1:5), & ! in
+        & d_green_new(:),                & ! inout
+        & d_wood_new(:),                & ! inout
+        & d_reserve_new(:),              & ! inout
+        & delta_carbon_2_GreenLitterPools_rp_sink(:),  & ! inout
+        & delta_carbon_2_WoodLitterPools_rp_sink(:),   & ! inout
+        & delta_YCpool_acid_ag1_rp_sink(:),            & ! inout
+        & delta_YCpool_water_ag1_rp_sink(:),           & ! inout
+        & delta_YCpool_ethanol_ag1_rp_sink(:),         & ! inout
+        & delta_YCpool_nonsoluble_ag1_rp_sink(:),      & ! inout
+        & delta_YCpool_acid_ag2_rp_sink(:),            & ! inout
+        & delta_YCpool_water_ag2_rp_sink(:),           & ! inout
+        & delta_YCpool_ethanol_ag2_rp_sink(:),         & ! inout
+        & delta_YCpool_nonsoluble_ag2_rp_sink(:),      & ! inout
+        & delta_YCpool_acid_bg1_rp_sink(:),            & ! inout
+        & delta_YCpool_water_bg1_rp_sink(:),           & ! inout
+        & delta_YCpool_ethanol_bg1_rp_sink(:),         & ! inout
+        & delta_YCpool_nonsoluble_bg1_rp_sink(:),      & ! inout
+        & delta_YCpool_acid_bg2_rp_sink(:),            & ! inout
+        & delta_YCpool_water_bg2_rp_sink(:),           & ! inout
+        & delta_YCpool_ethanol_bg2_rp_sink(:),         & ! inout
+        & delta_YCpool_nonsoluble_bg2_rp_sink(:),      & ! inout
+        & delta_YCpool_humus_1_rp_sink(:),             & ! inout
+        & delta_YCpool_humus_2_rp_sink(:)              & ! inout
+        & )
+    ELSE
+      WRITE (message_text,*) 'Unknown disturbance kind (', distKind, ')'
+      CALL finish(TRIM(routine), message_text)
+    ENDIF
 
   END SUBROUTINE update_delta_carbon_rp_upon_disturbance
 

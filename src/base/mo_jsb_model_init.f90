@@ -300,13 +300,16 @@ CONTAINS
        CALL model%Queue_task(CARBON_, "apply_cohort_changes")
     END IF
 
-    !TODO-JN: discuss if forest management should happen before or after ageing
     !Forest Management happens once at the beginning of each year at the start of a timestep - after ageing 
+    !NOTE: In harvest cohort changes its ASSUMED that the task runs after ageing, and thus that the youngest cohort is empty! 
     IF (model%processes(FM_)%p%config%active) THEN
-       CALL model%Queue_task(FM_,     "forest_management")
-       CALL model%Queue_task(HARV_,   "forest_harvest")
-       CALL model%Queue_task(CARBON_, "apply_cohort_changes")
-    END IF
+      CALL model%Queue_task(FM_,     "forest_management")
+      CALL model%Queue_task(HARV_,   "forest_harvest")
+!      IF (model%processes(FAGE_)%p%config%active) THEN
+!        CALL model%Queue_task(FAGE_,   "harvest_cohort_changes")
+!        CALL model%Queue_task(CARBON_, "apply_cohort_changes")
+!      ENDIF
+    ENDIF
 
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
