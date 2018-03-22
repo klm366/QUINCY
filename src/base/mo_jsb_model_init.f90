@@ -240,6 +240,20 @@ CONTAINS
     dsl4jsb_Get_config(DISTURB_)
 
     ! Crosscheck process configs
+    IF (TRIM(model%config%tpe_scheme) /= '') THEN
+      CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
+      IF (model%config%use_lakes) THEN
+        CALL message('    ', '... using lakes')
+      ELSE
+        CALL message('    ', '... not using lakes')
+      END IF
+      IF (model%config%use_glacier) THEN
+        CALL message('    ', '... using glaciers')
+      ELSE
+        CALL message('    ', '... not using glaciers')
+      END IF
+    END IF
+
     IF (model%config%l_compat401) THEN
       CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
       CALL message('    ', '... using soil heat capacity from mineral soil map')
