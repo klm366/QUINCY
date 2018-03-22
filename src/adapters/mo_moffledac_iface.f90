@@ -19,6 +19,7 @@ CONTAINS
 
   SUBROUTINE init_moffledac(model,model_id,patch,decomp,nproca,nprocb)
 #ifdef HAVE_MOFFLEDAC
+    USE mo_io_units,           ONLY: nnml, find_next_free_unit
     USE mo_jsb_domain_iface,   ONLY: pe_decomposed, t_patch
     USE mo_jsb_time_iface,     ONLY: get_date_components, get_time_dt, get_time_start, get_time_current, get_year_length
     USE mo_jsb_parallel_iface, ONLY: get_workgroup_parallel_setup
@@ -33,7 +34,7 @@ CONTAINS
     USE mo_input_calendar,     ONLY: INPUT_CALENDAR_DAY360, INPUT_CALENDAR_DAY365, INPUT_CALENDAR_DAY366, &
                                      INPUT_CALENDAR_JULIAN, INPUT_CALENDAR_GREGORIAN, INPUT_CALENDAR_UNDEFINED, &
                                      TICKS_PER_SEC
-    USE mo_exception,          ONLY: message_text, message
+    USE mo_exception,          ONLY: message_text, message, finish
 
     TYPE (t_jsb_model),   POINTER              :: model
     INTEGER,              INTENT(in)           :: model_id
@@ -46,7 +47,7 @@ CONTAINS
     INTEGER  :: npe, mype, iope, comm               ! Parameters for parallel setup
     INTEGER  :: exp_start(4), run_start(4), dt, cal ! Parameters for time setup
     INTEGER  :: tmp(6), nblock
-    INTEGER  :: nday, g, l
+    INTEGER  :: nday, i, g, l
     REAL(wp) :: rtmp
 #ifdef __ICON__
     TYPE (input_file_list), POINTER :: IFile
@@ -55,7 +56,6 @@ CONTAINS
 #else
     TYPE (input_dim_list),  POINTER :: dim_par
     LOGICAL, ALLOCATABLE :: lmask(:), lAtPE(:,:)
-    INTEGER  :: i
     INTEGER :: n_hemisphere_lat, lons, lone, lonsz, col_blocks, col_blocks_per_pe, baseLo, baseHi
 #endif
 
@@ -89,15 +89,17 @@ CONTAINS
     CALL get_workgroup_parallel_setup(comm,npe,mype,iope)
 
     ! Global MofFlEDAc initialization
-    CALL InputCreate(exp_start(1), exp_start(2), exp_start(3), exp_start(4),       &
-                     calendar=cal, nml_setup=TRIM(model%config%namelist_filename), &
+    i = nnml
+    CALL InputCreate(exp_start(1), exp_start(2), exp_start(3), exp_start(4), calendar=cal,                     &
+                     nml_setup=TRIM(model%config%namelist_filename), unt=i, funt=find_next_free_unit(10,1000), &
                      npe=npe, pe=mype, iope=iope, comm=comm)
 
     ! Submodel type
     IF (jsbach_submodel_type < 0) jsbach_submodel_type = InputSubModelTypeGetNew()
 
     ! Initialize new MofFlEDAc sub-model
-    CALL InputInit(jsbach_submodel_type, dt, run_start(1), run_start(2), run_start(3), run_start(4))
+    CALL InputInit(jsbach_submodel_type, dt, run_start(1), run_start(2), run_start(3), run_start(4), &
+                   nml_file=TRIM(model%config%namelist_filename), unt = i)
 
     ! MofFlEDAc uses 0-based model numbers, JSBACH 1-based
     IF (InputSubModelGetCurr() /= model_id-1) CALL finish(routine,'Mismatch between general model id and moffledac''s submodel id')
@@ -115,24 +117,22 @@ CONTAINS
       ! ICON setup
 #ifdef __ICON__
       ! Get land sea mask
-      CALL InputDimAdd('ncells',alt_name='cell')
+      CALL InputDimAdd('cell',alt_name='ncells')
       CALL InputFileAdd(TRIM(model%config%fract_filename),IFile,dt_file=0)
-      CALL InputDimInq('ncells',global=g,local=l)
-!      CALL InputVarAdd('ncells',slm,'notsea',IFile,dt_update=0)
-!      CALL InputGetData() ! Obtain world size (size of ncells dimension)
-write(message_text,*) g,l
-call message(trim(routine),trim(message_text))
+      ! Obtain world size (size of ncells dimension)
+      CALL InputDimInq('cell',global=g,local=l)
+      IF (g /= l) CALL finish(TRIM(routine),'cell dimension not parallelized. Should thus have same local and global size')
+!      CALL InputVarAdd('cell',slm,'notsea',IFile,dt_update=0)
+!      CALL InputGetData()
       n = SIZE(patch%cells%decomp_info%glb_index)
       DO WHILE (patch%cells%decomp_info%glb_index(n) == 0)
         n = n - 1
       ENDDO
-      CALL InputDimLocalSet(dim_name='ncells',idx=patch%cells%decomp_info%glb_index(1:n))
+      CALL InputDimLocalSet(dim_name='cell',idx=patch%cells%decomp_info%glb_index(1:n))
       nblock = (SIZE(patch%cells%decomp_info%glb_index)+nproma-1) / nproma
       CALL InputDimAdd('nproma',extent=nproma)
       CALL InputDimAdd('nblock',extent=nblock);
-write(message_text,*) n,nproma,nblock
-call message(trim(routine),trim(message_text))
-      CALL InputDimEquivalence('nproma,nblock','ncells')
+      CALL InputDimEquivalence('nproma,nblock','cell')
 #else
       CALL finish(routine,'Inconsistent model setup')
 #endif
