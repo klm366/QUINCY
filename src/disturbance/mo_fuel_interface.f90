@@ -130,14 +130,14 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
     !
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag1_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag2_ta
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_acid_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
     !
     ! Locally allocated vectors
     !
@@ -168,14 +168,14 @@ CONTAINS
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag1_ta)       ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag1_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag1_ta)    ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag1_ta) ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag2_ta)       ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag2_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag2_ta)    ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag2_ta) ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)       ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)    ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta) ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)       ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)    ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta) ! in
 
     !
     ! ---------------------------
@@ -187,14 +187,14 @@ CONTAINS
         CASE (1) !! jsbach algorithm
 
           CALL calc_fuel_jsbach( &
-            & YCpool_acid_ag1_ta(:),       & ! in
-            & YCpool_water_ag1_ta(:),      & ! in
-            & YCpool_ethanol_ag1_ta(:),    & ! in
-            & YCpool_nonsoluble_ag1_ta(:), & ! in
-            & YCpool_acid_ag2_ta(:),       & ! in
-            & YCpool_water_ag2_ta(:),      & ! in
-            & YCpool_ethanol_ag2_ta(:),    & ! in
-            & YCpool_nonsoluble_ag2_ta(:), & ! in
+            & c_acid_ag1_ta(:),       & ! in
+            & c_water_ag1_ta(:),      & ! in
+            & c_ethanol_ag1_ta(:),    & ! in
+            & c_nonsoluble_ag1_ta(:), & ! in
+            & c_acid_ag2_ta(:),       & ! in
+            & c_water_ag2_ta(:),      & ! in
+            & c_ethanol_ag2_ta(:),    & ! in
+            & c_nonsoluble_ag2_ta(:), & ! in
             & fuel(:)                      & ! out
             & )
 

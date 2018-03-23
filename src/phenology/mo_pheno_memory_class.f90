@@ -78,15 +78,15 @@ MODULE mo_pheno_memory_class
                                       ! growing period (autumn to spring) and negative during summer. (stream)
       & chill_days_SG,              & ! Number of chill days --- needed for the phenology of summer- and
       & chill_days_EG,              & ! evergreens (stream)
-      & veg_frac_correction           ! Factor representing clumpyness of vegetation (for each tile type).
+      & veg_fract_correction          ! Factor representing clumpyness of vegetation (for each tile type).
                                       ! To write it in the output file we define it as 2d even when there is no change
                                       ! between gridcells as it is in fact a 1d constant for each tile.
                                       ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
-                                      ! canopy area = veg_frac_correction * tile area.
-                                      ! var (tile area) = veg_frac_correction * var(canopy area).
+                                      ! canopy area = veg_fract_correction * tile area.
+                                      ! var (tile area) = veg_fract_correction * var(canopy area).
                                       ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
                                       !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
-                                      ! var (tile area) = veg_frac_correction * var(canopy area)  * fract_fpc_max.
+                                      ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
@@ -180,7 +180,7 @@ CONTAINS
         & output_level=BASIC, &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'veg_frac_correction', mem%veg_frac_correction, &
+      CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
         & hgrid, surface,                                                    &
         & t_cf('Correction factor to convert tile to canopy area', '', '') , &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -225,9 +225,9 @@ CONTAINS
           & prefix, suffix,                                                                 &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'prev_day_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca, &
+        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
           & hgrid, surface,                                                              &
-          & t_cf('previous_day_NPP_pot_rate_ca', '', ''),                                &
+          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )

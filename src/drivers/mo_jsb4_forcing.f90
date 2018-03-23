@@ -233,7 +233,7 @@ CONTAINS
   SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
     & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
-    & swnir_srf_down, swpar_srf_down, frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
 
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, nblks
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
@@ -248,7 +248,7 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
 
     REAL(wp), INTENT(OUT) :: CO2_concentration(:,:)
-    REAL(wp), INTENT(OUT) :: frac_par_diffuse(:,:)
+    REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
 
     REAL(wp), INTENT(OUT) :: t_air_K(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
@@ -403,7 +403,7 @@ CONTAINS
     ALLOCATE(rad_uv_down(ice, nblks))
     CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%shortwave, temporary_data1)
     CALL shortwave_from_direct_shortwave(day_of_year, cos_zenith_angle, coslat, sinlat, press_srf, &
-      & temporary_data1, rad_uv_down, swpar_srf_down, swnir_srf_down, frac_par_diffuse, help1, help2)
+      & temporary_data1, rad_uv_down, swpar_srf_down, swnir_srf_down, fract_par_diffuse, help1, help2)
     ! jsb3 standalone: swvis_srf_down = rad_uv_down + rad_par_down (& rad_par_down = swpar_srf_down)
     swvis_srf_down(:,:) = rad_uv_down(:,:) + swpar_srf_down(:,:)
     DEALLOCATE(rad_uv_down)
@@ -578,7 +578,7 @@ CONTAINS
       CALL message(TRIM(routine),"Type of air humidity forcing: "//TRIM(forcing_qair_type))
       ! --- CO2 unit
       SELECT CASE(TRIM(tolower(forcing_co2_unit)))
-      CASE("ppmv")
+      CASE("ppmv","1.e-6")
         CALL message(TRIM(routine),'CO2 forcing in ppmv')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg * 0.000001_wp
       CASE("mol_per_mol", "mol/mol")
@@ -749,8 +749,8 @@ CONTAINS
           input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
           CALL get_time_dimension(input_file%file_id, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+!          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+!            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
           CALL input_file%Close()
         ENDIF
 
@@ -777,7 +777,7 @@ CONTAINS
           ! get the data -- TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
           input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
           CALL nf_check(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
-          CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ currentTimeStep /), (/ 1 /), hlp_r ))
+          CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
           CALL input_file%Close()
         ENDIF
 
@@ -1184,10 +1184,10 @@ CONTAINS
     ! Temperature calculations
     REAL(wp) :: declination       ! solar declination
     REAL(wp) :: cpds, spds        ! cosine and sine contributions to zenith angle
-    REAL(wp) :: frac_daylight     ! fraction of day between sunrise and sunset
-    REAL(wp) :: frac_since_sunset ! time between current time step and sunset expressed as fraction of day
-    REAL(wp) :: frac_sunrise      ! time of sunrise expressed as fraction of day since midnight
-    REAL(wp) :: frac_sunset       ! time of sunset expressed as fraction of day since midnight
+    REAL(wp) :: fract_daylight     ! fraction of day between sunrise and sunset
+    REAL(wp) :: fract_since_sunset ! time between current time step and sunset expressed as fraction of day
+    REAL(wp) :: fract_sunrise      ! time of sunrise expressed as fraction of day since midnight
+    REAL(wp) :: fract_sunset       ! time of sunset expressed as fraction of day since midnight
     REAL(wp) :: temp_sunset       ! temperature at sunset
     REAL(wp) :: dtmp              ! mean day temperature
     REAL(wp) :: dtran             ! day temperature range: maximum - minimum
@@ -1224,41 +1224,41 @@ CONTAINS
 
       arg = -spds/cpds                        ! faulty?: for cpds=0 arg gets infinite
       IF (arg > 1._wp) THEN               ! polar night:
-        frac_daylight = 0._wp            ! ... day length is zero
+        fract_daylight = 0._wp            ! ... day length is zero
       ELSE IF (arg < -1._wp) THEN         ! polar day:
-        frac_daylight = 1._wp            ! ... day length is the whole day
+        fract_daylight = 1._wp            ! ... day length is the whole day
       ELSE                                ! normal day / night:
-        frac_daylight = ACOS(arg)/pi    ! ... day length expressed as fraction of the whole day
+        fract_daylight = ACOS(arg)/pi    ! ... day length expressed as fraction of the whole day
       END IF
       dtmp = 0.5_wp*(Tmax(i)+Tmin(i)) ! The mean day temperature
       dtran = Tmax(i)- Tmin(i)        ! temperature range
       DO j = 1,time_steps_per_day
         tstep=j/nstep
         ! -------- normal day ---------------------------------------------
-        IF (frac_daylight>=rat2 .AND. frac_daylight<=rat3) THEN
-          frac_sunrise = 0.5_wp - frac_daylight/2._wp             ! time of sunrise expressed as fraction of day since midnight
-          frac_sunset = frac_sunrise+frac_daylight                ! time of sunset expressed as fraction of day since midnight
+        IF (fract_daylight>=rat2 .AND. fract_daylight<=rat3) THEN
+          fract_sunrise = 0.5_wp - fract_daylight/2._wp             ! time of sunrise expressed as fraction of day since midnight
+          fract_sunset = fract_sunrise+fract_daylight                ! time of sunset expressed as fraction of day since midnight
 
           ! For time steps at daylight ...
-          IF (tstep>frac_sunrise .AND. tstep<frac_sunset) THEN
-            sd = COS(pi*(tstep-rat1)/(frac_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that
+          IF (tstep>fract_sunrise .AND. tstep<fract_sunset) THEN
+            sd = COS(pi*(tstep-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that
                                                                  !   temperature is at maximum at rat1 (2 pm) and at average at
                                                                  !   sunrise-rat4/2 and sunset+rat4/2
             tmp(j) = dtmp + sd*dtran/2._wp                       ! temperature modulated by temperature range
 
           ! For time steps at night ...
           ELSE
-            sd = COS(pi*(frac_sunset-rat1)/(frac_daylight/2._wp+rat4)) ! modulation factor for temperature at sunset
+            sd = COS(pi*(fract_sunset-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for temperature at sunset
             temp_sunset = dtmp + dtran/2._wp*sd                        ! temperature at sunset
-            frac_since_sunset = MOD(tstep-frac_sunset+1._wp,1._wp)     ! day fraction since sunset
-            tmp(j) = Tmin(i)+(temp_sunset-Tmin(i))*(1._wp-frac_since_sunset/(1._wp-frac_daylight))! linear interpolation
+            fract_since_sunset = MOD(tstep-fract_sunset+1._wp,1._wp)     ! day fraction since sunset
+            tmp(j) = Tmin(i)+(temp_sunset-Tmin(i))*(1._wp-fract_since_sunset/(1._wp-fract_daylight))! linear interpolation
                                                                      ! ... of temperature such that temperature is equal to the
                                                                      ! ... temperature at sunset and drops until the minimum ...
                                                                      ! ... temperature is met at sunrise.
           END IF
         ! --- long day (close to polar day) ------------------------------------------------------
-        ELSEIF (frac_daylight>rat3) THEN
-          sd = COS(pi*(tstep-rat1)/(frac_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that ...
+        ELSEIF (fract_daylight>rat3) THEN
+          sd = COS(pi*(tstep-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that ...
                                                                ! ... temperature is at maximum at rat1 (2 pm) and at average
                                                                ! ... at sunrise-rat4/2 and sunset+rat4/2
           tmp(j) = dtmp + dtran/2._wp*sd                       ! temperature modulated by temperature range
@@ -1589,16 +1589,16 @@ CONTAINS
 
     INTEGER    :: yearday           ! the number of the day of the current timestep in the current year
     REAL(wp)   :: year_instant      ! the time of the current time step in yearday-fraction-of-day format
-    REAL(wp)   :: frac_timestep     ! the current time step expressed as the fraction of the current day
-    REAL(wp)   :: frac_localtime    ! local time at a particular grid point expressed as the fraction of the current ...
+    REAL(wp)   :: fract_timestep     ! the current time step expressed as the fraction of the current day
+    REAL(wp)   :: fract_localtime    ! local time at a particular grid point expressed as the fraction of the current ...
                                     ! ... day since midnight (mod 1
-    REAL(wp)   :: frac_UTC_offset   ! offset between UTC and local time (depends on longitude)
+    REAL(wp)   :: fract_UTC_offset   ! offset between UTC and local time (depends on longitude)
     REAL(wp)   :: declination       ! solar declination
     REAL(wp)   :: cpds, spds        ! cosine and sine contributions to zenith angle
-    REAL(wp)   :: frac_daylight     ! fraction of day between sunrise and sunset
-    REAL(wp)   :: frac_since_sunset ! time between current time step and sunset expressed as fraction of day
-    REAL(wp)   :: frac_sunrise      ! time of sunrise expressed as fraction of day since midnight
-    REAL(wp)   :: frac_sunset       ! time of sunset expressed as fraction of day since midnight
+    REAL(wp)   :: fract_daylight     ! fraction of day between sunrise and sunset
+    REAL(wp)   :: fract_since_sunset ! time between current time step and sunset expressed as fraction of day
+    REAL(wp)   :: fract_sunrise      ! time of sunrise expressed as fraction of day since midnight
+    REAL(wp)   :: fract_sunset       ! time of sunset expressed as fraction of day since midnight
     REAL(wp)   :: temp_sunset       ! temperature at sunset
     REAL(wp)   :: dtmp              ! mean day temperature
     REAL(wp)   :: dtran             ! day temperature range: maximum - minimum
@@ -1611,31 +1611,31 @@ CONTAINS
 
     year_instant=get_year_day(date)            ! conversion of current time step from day-seconds to yearday-dayfraction format
     yearday = INT(year_instant)                ! number of day of the current time step since the beginning of the current year
-    frac_timestep=year_instant-REAL(yearday,wp)   ! fractional part of the day of the current time step since midnight in UTC
+    fract_timestep=year_instant-REAL(yearday,wp)   ! fractional part of the day of the current time step since midnight in UTC
 
     DO j = 1,nblks
       DO i = 1,ice
-        frac_UTC_offset = lon(i,j)/360._wp   ! difference between local time and UTC as fraction of a day
-        frac_localtime = MOD(frac_timestep+frac_UTC_offset+2._wp,1._wp) ! local time as fraction of the local day (modulo 1)
+        fract_UTC_offset = lon(i,j)/360._wp   ! difference between local time and UTC as fraction of a day
+        fract_localtime = MOD(fract_timestep+fract_UTC_offset+2._wp,1._wp) ! local time as fraction of the local day (modulo 1)
         spds = sinlat(i,j)*SIN(declination)  ! sine contribution to solar zenith angle
         cpds = coslat(i,j)*COS(declination)  ! cosine contribution to solar zenith angle
         arg = -spds/cpds                        ! faulty?: for cpds=0 arg gets infinite
         IF (arg > 1._wp) THEN               ! polar night:
-          frac_daylight = 0._wp            ! ... day length is zero
+          fract_daylight = 0._wp            ! ... day length is zero
         ELSEIF (arg < -1._wp) THEN         ! polar day:
-          frac_daylight = 1._wp            ! ... day length is the whole day
+          fract_daylight = 1._wp            ! ... day length is the whole day
         ELSE                                ! normal day / night:
-          frac_daylight = ACOS(arg)/pi    ! ... day length expressed as fraction of the whole day
+          fract_daylight = ACOS(arg)/pi    ! ... day length expressed as fraction of the whole day
         ENDIF
 
         !! BLARPP empirical correction to account for the fact that the scheme does actually not
         !! consered dtmp=0.5*(max+min). The night-day turn temperature is adjusted such that the mean
         !! temperature is within 0.05 K of the 0.5*(tmax+tmin) temperature
-        IF (frac_daylight>=rat2 ) THEN ! -------- normal day ---------------------------------------------
-          IF(frac_daylight < 0.36_wp)THEN
-            arg=-8._wp * (frac_daylight-0.36_wp)**2 + 0.685_wp
+        IF (fract_daylight>=rat2 ) THEN ! -------- normal day ---------------------------------------------
+          IF(fract_daylight < 0.36_wp)THEN
+            arg=-8._wp * (fract_daylight-0.36_wp)**2 + 0.685_wp
           ELSE
-            arg=-0.8_wp * (frac_daylight-0.36_wp)**2 + 0.685_wp
+            arg=-0.8_wp * (fract_daylight-0.36_wp)**2 + 0.685_wp
           ENDIF
         ELSE
           arg = 0.5_wp
@@ -1644,11 +1644,11 @@ CONTAINS
         dtmp = arg * dtmp_max(i,j) + (1._wp-arg) * dtmp_min(i,j) ! The dusk day temperature
         !dtmp = 0.5_wp*(dtmp_max(i,j)+dtmp_min(i,j)) ! The mean day temperature
         dtran = dtmp_max(i,j)- dtmp_min(i,j)        ! temperature range
-        IF (frac_daylight>=rat2 .AND. frac_daylight<=rat3) THEN ! -------- normal day ---------------------------------------------
-          frac_sunrise = 0.5_wp - frac_daylight/2._wp             ! time of sunrise expressed as fraction of day since midnight
-          frac_sunset = frac_sunrise+frac_daylight                ! time of sunset expressed as fraction of day since midnight
-          IF (frac_localtime > frac_sunrise .AND. frac_localtime <= frac_sunset) THEN  ! For time steps at daylight ...
-            sd = COS(pi*(frac_localtime-rat1)/(frac_daylight/2._wp+rat4)) ! ... modulation factor for day-temperature such that
+        IF (fract_daylight>=rat2 .AND. fract_daylight<=rat3) THEN ! -------- normal day ---------------------------------------------
+          fract_sunrise = 0.5_wp - fract_daylight/2._wp             ! time of sunrise expressed as fraction of day since midnight
+          fract_sunset = fract_sunrise+fract_daylight                ! time of sunset expressed as fraction of day since midnight
+          IF (fract_localtime > fract_sunrise .AND. fract_localtime <= fract_sunset) THEN  ! For time steps at daylight ...
+            sd = COS(pi*(fract_localtime-rat1)/(fract_daylight/2._wp+rat4)) ! ... modulation factor for day-temperature such that
                                                                     ! .. temperature is at maximum at rat1 (2 pm) and at average at
                                                                     ! .. sunrise-rat4/2 and sunset+rat4/2
             IF (sd >= 0) THEN
@@ -1658,23 +1658,23 @@ CONTAINS
             ENDIF
             !tmp(i,j) = dtmp + sd*dtran/2._wp                       ! temperature modulated by temperature range
           ELSE                                                 ! For time steps at night ...
-            sd = COS(pi*(frac_sunset-rat1)/(frac_daylight/2._wp+rat4)) ! modulation factor for temperature at sunset
+            sd = COS(pi*(fract_sunset-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for temperature at sunset
             IF (sd >= 0) THEN
               temp_sunset = dtmp + sd*(dtmp_max(i,j)-dtmp)                       ! temperature modulated by temperature range
             ELSE
               temp_sunset = dtmp + sd*(dtmp-dtmp_min(i,j))                       ! temperature modulated by temperature range
             ENDIF
             !temp_sunset = dtmp + dtran/2._wp*sd                     ! temperature at sunset
-            frac_since_sunset = MOD(frac_localtime-frac_sunset+1._wp,1._wp) ! day fraction since sunset
+            fract_since_sunset = MOD(fract_localtime-fract_sunset+1._wp,1._wp) ! day fraction since sunset
             tmp(i,j) = dtmp_min(i,j)+(temp_sunset-dtmp_min(i,j)) &
-              & *(1._wp-frac_since_sunset/(1._wp-frac_daylight))! linear interpolation
+              & *(1._wp-fract_since_sunset/(1._wp-fract_daylight))! linear interpolation
                                                                 ! ... of temperature such that temperature is equal to the
                                                                 ! ... temperature at sunset and drops until the minimum ...
                                                                 ! ... temperature is met at sunrise.
           ENDIF
-        ELSEIF (frac_daylight>rat3) THEN ! --- long day (close to polar day) ------------------------------------------------------
+        ELSEIF (fract_daylight>rat3) THEN ! --- long day (close to polar day) ------------------------------------------------------
           ! case is now obsolete
-          sd = COS(pi*(frac_localtime-rat1)/(frac_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that ...
+          sd = COS(pi*(fract_localtime-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that ...
                                                                        ! ... temperature is at maximum at rat1 (2 pm) and at average
                                                                        ! ... at sunrise-rat4/2 and sunset+rat4/2
           tmp(i,j) = dtmp + dtran/2._wp*sd                             ! temperature modulated by temperature range
@@ -1851,7 +1851,7 @@ CONTAINS
   ! J. Climate 5 (1992) 56-65.
   ! [4] G.W. Paltridge and C.M.R. Platt, "Radiative Processes in Meteorology and Climatology" (Elsevier, Amsterdam, 1976).
   ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave(day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
-    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw,rad_sw_pot )
+    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,fract_PAR_diffuse,rad_sw,rad_sw_pot )
 
     INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
     REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
@@ -1867,7 +1867,7 @@ CONTAINS
 
     REAL(wp),INTENT(out) :: rad_NIR          !! "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
                                              !! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
+    REAL(wp),INTENT(out) :: fract_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
                                              !! .. (values in [0,1])
     REAL(wp),INTENT(out) :: rad_sw,rad_sw_pot
 
@@ -1881,7 +1881,7 @@ CONTAINS
     REAL(wp) :: rad_sw_in_corr
     REAL(wp) :: delta,v,u,hh,sinehh,K
 
-    REAL(wp), PARAMETER  ::  frac_UV = 0.1_wp ! UV fraction of (UV + PAR)
+    REAL(wp), PARAMETER  ::  fract_UV = 0.1_wp ! UV fraction of (UV + PAR)
 
     day_angle = 2._wp*pi*(day_of_year+10._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
 
@@ -1926,22 +1926,22 @@ CONTAINS
       hlp2_r=hlp_r*hlp_r
       F_invers=1._wp + (1.185_wp-0.437_wp*hlp_r-0.494_wp*hlp2_r)* &
         & EXP(MIN(2.534_wp,(0.0305_wp-0.208_wp*hlp_r+0.495_wp*hlp2_r)/cos_zenith)) ! Eq. (9) from above
-      rad_UV = rad_sw * frac_UV / F_invers
-      rad_PAR = rad_sw * (1._wp - frac_UV) / F_invers   ! This is "Rtot"; Eq. (8) from above
+      rad_UV = rad_sw * fract_UV / F_invers
+      rad_PAR = rad_sw * (1._wp - fract_UV) / F_invers   ! This is "Rtot"; Eq. (8) from above
       rad_NIR = rad_sw - rad_PAR - rad_UV ! This is "Rnir"; Eq. (10) from above
       IF(fsw <= 0.2_wp) THEN
-         frac_PAR_diffuse = 1._wp                                                  ! Eq. (12)-(15) from above
+         fract_PAR_diffuse = 1._wp                                                 ! Eq. (12)-(15) from above
       ELSEIF(fsw >= 0.9_wp) THEN
-         frac_PAR_diffuse = 0.08_wp                                                ! Eq. (12)-(15) from above
+         fract_PAR_diffuse = 0.08_wp                                               ! Eq. (12)-(15) from above
       ELSE
-         frac_PAR_diffuse = 1._wp - &
+         fract_PAR_diffuse = 1._wp - &
            & (1._wp- ((0.9_wp -fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
       ENDIF
     ELSE ! zenith angle larger than 89 degrees - changed Aug. 2017 following T. Raddatz, Jan. 2015
       rad_UV = 0._wp
       rad_PAR = rad_sw * 0.5_wp
       rad_NIR = rad_sw * 0.5_wp
-      frac_PAR_diffuse = 1._wp ! (could also be another value in this case)
+      fract_PAR_diffuse = 1._wp ! (could also be another value in this case)
       rad_sw_pot  = rad_sw
     ENDIF
 

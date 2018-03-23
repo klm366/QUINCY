@@ -94,7 +94,7 @@ MODULE mo_rad_memory_class
       & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
       & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
       & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
-      & frac_par_direct,      & ! Fraction of direct PAR
+      & fract_par_direct,      & ! Fraction of direct PAR
       & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
@@ -395,7 +395,7 @@ CONTAINS
         & prefix, suffix,                                                           &
         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'frac_par_direct', mem%frac_par_direct, &
+      CALL jsb_add_var( mem, 'fract_par_direct', mem%fract_par_direct, &
         & hgrid, surface,                                                             &
         & t_cf('Fraction of direct PAR', '', ''),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &

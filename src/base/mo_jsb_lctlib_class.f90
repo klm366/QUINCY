@@ -83,14 +83,14 @@ MODULE mo_jsb_lctlib_class
 
     ! --- Parameters used in the carbon balance model -----------------------------------------------------------------------------
     REAL(wp) :: reserveC2leafC        !! Ratio of opt. C content of the reserve pool to the opt. C content of leaves
-    REAL(wp) :: frac_npp_2_woodPool   !! Maximum fraction of NPP put into the wood pool of the carbon balance model
-    REAL(wp) :: frac_npp_2_reservePool!! Optimal fraction of NPP put into the reserve pool of the carbon balance model
-    REAL(wp) :: frac_npp_2_exudates   !! Optimal fraction of NPP put into the root exudates of the carbon balance model
-    REAL(wp) :: frac_green_2_herbivory!! Fraction of NPP that is grazed by herbivores
-    REAL(wp) :: tau_Cpool_litter_leaf !! Time constant by which leaf litter pool is depreciated  [days]
-    REAL(wp) :: tau_Cpool_litter_wood !! Time constant by which woody litter pool is depreciated  [days]
+    REAL(wp) :: fract_npp_2_woodPool   !! Maximum fraction of NPP put into the wood pool of the carbon balance model
+    REAL(wp) :: fract_npp_2_reservePool!! Optimal fraction of NPP put into the reserve pool of the carbon balance model
+    REAL(wp) :: fract_npp_2_exudates   !! Optimal fraction of NPP put into the root exudates of the carbon balance model
+    REAL(wp) :: fract_green_2_herbivory!! Fraction of NPP that is grazed by herbivores
+    REAL(wp) :: tau_c_litter_leaf !! Time constant by which leaf litter pool is depreciated  [days]
+    REAL(wp) :: tau_c_litter_wood !! Time constant by which woody litter pool is depreciated  [days]
     REAL(wp) :: LAI_shed_constant     !!
-    REAL(wp) :: frac_C_litter_green2atmos !! Fraction of heterotrophic loss of green litter pools emitted to the
+    REAL(wp) :: fract_C_litter_green2atmos !! Fraction of heterotrophic loss of green litter pools emitted to the
                                                       !! .. atmosphere (rest enters slow pool)
     REAL(wp) :: Max_C_content_woods   !! Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
                                                   !! .. forests this is closely related to the yield, usually measured in
@@ -98,14 +98,14 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: ClumpinessFactor      !! Factor to calculate vegetation clumpiness:
                                                   !! Former in JSBACH3:   veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
                                                   !! converting natural PFTs into agricultural PFTs
-    REAL(wp) :: frac_wood_2_onSite    !! Fraction of wood pool to anthropogenically controlled onSite pool wenn
+    REAL(wp) :: fract_wood_2_onSite    !! Fraction of wood pool to anthropogenically controlled onSite pool wenn
                                                   !! converting natural PFTs into agricultural PFTs
-    REAL(wp) :: frac_wood_2_paper     !! Fraction of wood pool to paper (intermediately longlived) pool wenn...
-    REAL(wp) :: frac_wood_2_construction !! Fract of wood pool to constructions (e.g. houses, furniture = longlived)
+    REAL(wp) :: fract_wood_2_paper     !! Fraction of wood pool to paper (intermediately longlived) pool wenn...
+    REAL(wp) :: fract_wood_2_construction !! Fract of wood pool to constructions (e.g. houses, furniture = longlived)
                                                   !!   pool when converting natural PFTs into agricultural PFTs
 
     ! --- Parameters used in the carbon balance model and the dynamic vegetation --------------------------------------------------
-    REAL(wp) :: tau_Cpool_woods           !! PFT-specific time scale for woody (lignified) plant tissue
+    REAL(wp) :: tau_c_woods           !! PFT-specific time scale for woody (lignified) plant tissue
 
     ! --- Parameters used by the dynamic vegetation -------------------------------------------------------------------------------
     LOGICAL  :: dynamic_PFT               !! indicates those PFTs which shall take part in the vegetation dynamics
@@ -234,15 +234,15 @@ CONTAINS
     LOGICAL            :: exist_knorr_leaf_growth_rate = .FALSE.
     LOGICAL            :: exist_knorr_max_lai          = .FALSE.
     LOGICAL            :: exist_reserveC2leafC         = .FALSE.
-    LOGICAL            :: exist_frac_npp_2_woodPool    = .FALSE.
-    LOGICAL            :: exist_frac_npp_2_reservePool = .FALSE.
-    LOGICAL            :: exist_frac_npp_2_exudates    = .FALSE.
-    LOGICAL            :: exist_frac_green_2_herbivory = .FALSE.
-    LOGICAL            :: exist_tau_Cpool_litter_leaf  = .FALSE.
-    LOGICAL            :: exist_tau_Cpool_litter_wood  = .FALSE.
-    LOGICAL            :: exist_tau_Cpool_woods        = .FALSE.
+    LOGICAL            :: exist_fract_npp_2_woodPool    = .FALSE.
+    LOGICAL            :: exist_fract_npp_2_reservePool = .FALSE.
+    LOGICAL            :: exist_fract_npp_2_exudates    = .FALSE.
+    LOGICAL            :: exist_fract_green_2_herbivory = .FALSE.
+    LOGICAL            :: exist_tau_c_litter_leaf  = .FALSE.
+    LOGICAL            :: exist_tau_c_litter_wood  = .FALSE.
+    LOGICAL            :: exist_tau_c_woods        = .FALSE.
     LOGICAL            :: exist_LAI_shed_constant      = .FALSE.
-    LOGICAL            :: exist_frac_C_litter_green2atmos = .FALSE.
+    LOGICAL            :: exist_fract_C_litter_green2atmos = .FALSE.
     LOGICAL            :: exist_Max_C_content_woods       = .FALSE.
     LOGICAL            :: exist_ClumpinessFactor          = .FALSE.
     LOGICAL            :: exists_dynamic_PFT              = .FALSE.
@@ -255,9 +255,9 @@ CONTAINS
     LOGICAL            :: exists_bclimit_min_gdd          = .FALSE.
     LOGICAL            :: exists_gdd_base                 = .FALSE.
     LOGICAL            :: exists_upper_tlim               = .FALSE.
-    LOGICAL            :: exists_frac_wood_2_onSite       = .FALSE.
-    LOGICAL            :: exists_frac_wood_2_paper        = .FALSE.
-    LOGICAL            :: exists_frac_wood_2_construction = .FALSE.
+    LOGICAL            :: exists_fract_wood_2_onSite       = .FALSE.
+    LOGICAL            :: exists_fract_wood_2_paper        = .FALSE.
+    LOGICAL            :: exists_fract_wood_2_construction = .FALSE.
     LOGICAL            :: exists_moist_extinction      = .FALSE.
     LOGICAL            :: exists_fuel_dens             = .FALSE.
     LOGICAL            :: exists_flame_length_f        = .FALSE.
@@ -468,35 +468,35 @@ CONTAINS
           CASE ('reservec2leafc')                                      ! ratio of C in reserve pool to C in leaves
              READ(line(pos:length),*) lctlib(1:nlct)%reserveC2leafC
              exist_reserveC2leafC = .TRUE.
-          CASE ('frac_npp_2_woodpool')                                 ! fraction of NPP directed to wood pool (see cbalance)
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_npp_2_woodPool
-             exist_frac_npp_2_woodPool = .TRUE.
-          CASE ('frac_npp_2_reservepool')                              ! fraction of NPP directed to reserve pool (see cbalance)
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_npp_2_reservePool
-             exist_frac_npp_2_reservePool = .TRUE.
-          CASE ('frac_npp_2_exudates')                                 ! fraction of NPP directed to root exudates (see cbalance)
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_npp_2_exudates
-             exist_frac_npp_2_exudates = .TRUE.
-          CASE ('frac_green_2_herbivory')                              ! fraction of Green directed to herbivory (see cbalance)
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_green_2_herbivory
-             exist_frac_green_2_herbivory = .TRUE.
-          CASE ('tau_cpool_litter_leaf')                           ! Time constant by which leaf litter pool is depreciated  [days]
-             READ(line(pos:length),*) lctlib(1:nlct)%tau_Cpool_litter_leaf
-             exist_tau_Cpool_litter_leaf = .TRUE.
-          CASE ('tau_cpool_litter_wood')                           ! Time constant by which woody litter pool is depreciated  [days]
-             READ(line(pos:length),*) lctlib(1:nlct)%tau_Cpool_litter_wood
-             exist_tau_Cpool_litter_wood = .TRUE.
-          CASE ('tau_cpool_woods')                              ! PFT-specific time_scale for Cpool_woods (and vegetation dynamics)
-             READ(line(pos:length),*) lctlib(1:nlct)%tau_Cpool_woods
+          CASE ('fract_npp_2_woodpool')                                 ! fraction of NPP directed to wood pool (see cbalance)
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_npp_2_woodPool
+             exist_fract_npp_2_woodPool = .TRUE.
+          CASE ('fract_npp_2_reservepool')                              ! fraction of NPP directed to reserve pool (see cbalance)
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_npp_2_reservePool
+             exist_fract_npp_2_reservePool = .TRUE.
+          CASE ('fract_npp_2_exudates')                                 ! fraction of NPP directed to root exudates (see cbalance)
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_npp_2_exudates
+             exist_fract_npp_2_exudates = .TRUE.
+          CASE ('fract_green_2_herbivory')                              ! fraction of Green directed to herbivory (see cbalance)
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_green_2_herbivory
+             exist_fract_green_2_herbivory = .TRUE.
+          CASE ('tau_c_litter_leaf')                           ! Time constant by which leaf litter pool is depreciated  [days]
+             READ(line(pos:length),*) lctlib(1:nlct)%tau_c_litter_leaf
+             exist_tau_c_litter_leaf = .TRUE.
+          CASE ('tau_c_litter_wood')                           ! Time constant by which woody litter pool is depreciated  [days]
+             READ(line(pos:length),*) lctlib(1:nlct)%tau_c_litter_wood
+             exist_tau_c_litter_wood = .TRUE.
+          CASE ('tau_c_woods')                              ! PFT-specific time_scale for c_woods (and vegetation dynamics)
+             READ(line(pos:length),*) lctlib(1:nlct)%tau_c_woods
              ! Conversion from years to days
-             lctlib(1:nlct)%tau_Cpool_woods = lctlib(1:nlct)%tau_Cpool_woods * 365._wp
-             exist_tau_Cpool_woods = .TRUE.
+             lctlib(1:nlct)%tau_c_woods = lctlib(1:nlct)%tau_c_woods * 365._wp
+             exist_tau_c_woods = .TRUE.
           CASE ('lai_shed_constant')                               ! Time constant by which leaves are constantly shedded [days-1]
              READ(line(pos:length),*) lctlib(1:nlct)%LAI_shed_constant
              exist_LAI_shed_constant = .TRUE.
-          CASE ('frac_c_litter_green2atmos')                    ! fraction of loss of fast pool emitted to atmosphere (see cbalance)
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_C_litter_green2atmos
-             exist_frac_C_litter_green2atmos = .TRUE.
+          CASE ('fract_c_litter_green2atmos')                    ! fraction of loss of fast pool emitted to atmosphere (see cbalance)
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_C_litter_green2atmos
+             exist_fract_C_litter_green2atmos = .TRUE.
           CASE ('max_c_content_woods')                          ! Maximum carbon content of wood pool (see cbalance)
              READ(line(pos:length),*) lctlib(1:nlct)%Max_C_content_woods
              exist_Max_C_content_woods = .TRUE.
@@ -546,15 +546,15 @@ CONTAINS
           CASE ('upper_tlim')                                   ! PFT-specific upper temperature limit (used for gdd_upper_tlim)
              READ(line(pos:length),*) lctlib(1:nlct)%upper_tlim
              exists_upper_tlim = .TRUE.
-          CASE ('frac_wood_2_onsite')                           ! PFT-specific fraction for wood to onSite conversion
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_wood_2_onSite
-             exists_frac_wood_2_onSite = .TRUE.
-          CASE ('frac_wood_2_paper')                            ! PFT-specific fraction for wood to paper conversion
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_wood_2_paper
-             exists_frac_wood_2_paper = .TRUE.
-          CASE ('frac_wood_2_construction')                     ! PFT-specific fraction for wood to construction conversion
-             READ(line(pos:length),*) lctlib(1:nlct)%frac_wood_2_construction
-             exists_frac_wood_2_construction = .TRUE.
+          CASE ('fract_wood_2_onsite')                           ! PFT-specific fraction for wood to onSite conversion
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_wood_2_onSite
+             exists_fract_wood_2_onSite = .TRUE.
+          CASE ('fract_wood_2_paper')                            ! PFT-specific fraction for wood to paper conversion
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_wood_2_paper
+             exists_fract_wood_2_paper = .TRUE.
+          CASE ('fract_wood_2_construction')                     ! PFT-specific fraction for wood to construction conversion
+             READ(line(pos:length),*) lctlib(1:nlct)%fract_wood_2_construction
+             exists_fract_wood_2_construction = .TRUE.
           CASE ('moist_extinction')
             READ(line(pos:length),*) lctlib(1:nlct)%moist_extinction    ! PFT-specific moisture of extinction
              exists_moist_extinction = .TRUE.
@@ -699,24 +699,24 @@ CONTAINS
 
        IF(.NOT. exist_reserveC2leafC) &
             CALL finish('init_lctlib','No data for reserveC2leafC found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_frac_npp_2_woodPool) &
-            CALL finish('init_lctlib','No data for frac_npp_2_woodPool found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_frac_npp_2_reservePool) &
-            CALL finish('init_lctlib','No data for frac_npp_2_reservePool found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_frac_npp_2_exudates) &
-            CALL finish('init_lctlib','No data for frac_npp_2_exudates found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_frac_green_2_herbivory) &
-            CALL finish('init_lctlib','No data for frac_green_2_herbivory found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_tau_Cpool_litter_leaf) &
-            CALL finish('init_lctlib','No data for tau_Cpool_litter_leaf found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_tau_Cpool_litter_wood) &
-            CALL finish('init_lctlib','No data for tau_Cpool_litter_wood found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_tau_Cpool_woods) &
-            CALL finish('init_lctlib','No data for tau_Cpool_woods found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_fract_npp_2_woodPool) &
+            CALL finish('init_lctlib','No data for fract_npp_2_woodPool found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_fract_npp_2_reservePool) &
+            CALL finish('init_lctlib','No data for fract_npp_2_reservePool found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_fract_npp_2_exudates) &
+            CALL finish('init_lctlib','No data for fract_npp_2_exudates found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_fract_green_2_herbivory) &
+            CALL finish('init_lctlib','No data for fract_green_2_herbivory found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_tau_c_litter_leaf) &
+            CALL finish('init_lctlib','No data for tau_c_litter_leaf found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_tau_c_litter_wood) &
+            CALL finish('init_lctlib','No data for tau_c_litter_wood found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_tau_c_woods) &
+            CALL finish('init_lctlib','No data for tau_c_woods found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_LAI_shed_constant) &
             CALL finish('init_lctlib','No data for LAI_shed_constant found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_frac_C_litter_green2atmos) &
-            CALL finish('init_lctlib','No data for frac_C_litter_green2atmos found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_fract_C_litter_green2atmos) &
+            CALL finish('init_lctlib','No data for fract_C_litter_green2atmos found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_Max_C_content_woods) &
             CALL finish('init_lctlib','No data for Max_C_content_woods found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_ClumpinessFactor) &
@@ -741,11 +741,11 @@ CONTAINS
             CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_upper_tlim) &
             CALL finish('init_lctlib','No data for UPPER_TLIM found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exists_frac_wood_2_onSite) &
+       IF(.NOT. exists_fract_wood_2_onSite) &
             CALL finish('init_lctlib','No data for FRAC_WOOD_2_ONSITE found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exists_frac_wood_2_paper) &
+       IF(.NOT. exists_fract_wood_2_paper) &
             CALL finish('init_lctlib','No data for FRACT_WOOD_2_PAPER found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exists_frac_wood_2_construction) &
+       IF(.NOT. exists_fract_wood_2_construction) &
             CALL finish('init_lctlib','No data for FRACT_WOOD_2_CONSTRUCTION found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_moist_extinction) &
             CALL finish('init_lctlib','No data for moisture of extinction found in '//TRIM(lctlib_file_name))
@@ -910,15 +910,15 @@ CONTAINS
        CALL p_bcast(lctlib(:)%knorr_leaf_growth_rate, p_io)
        CALL p_bcast(lctlib(:)%knorr_max_lai, p_io)
        CALL p_bcast(lctlib(:)%reserveC2leafC, p_io)
-       CALL p_bcast(lctlib(:)%frac_npp_2_woodPool, p_io)
-       CALL p_bcast(lctlib(:)%frac_npp_2_reservePool, p_io)
-       CALL p_bcast(lctlib(:)%frac_npp_2_exudates, p_io)
-       CALL p_bcast(lctlib(:)%frac_green_2_herbivory, p_io)
-       CALL p_bcast(lctlib(:)%tau_Cpool_litter_leaf, p_io)
-       CALL p_bcast(lctlib(:)%tau_Cpool_litter_wood, p_io)
-       CALL p_bcast(lctlib(:)%tau_Cpool_woods, p_io)
+       CALL p_bcast(lctlib(:)%fract_npp_2_woodPool, p_io)
+       CALL p_bcast(lctlib(:)%fract_npp_2_reservePool, p_io)
+       CALL p_bcast(lctlib(:)%fract_npp_2_exudates, p_io)
+       CALL p_bcast(lctlib(:)%fract_green_2_herbivory, p_io)
+       CALL p_bcast(lctlib(:)%tau_c_litter_leaf, p_io)
+       CALL p_bcast(lctlib(:)%tau_c_litter_wood, p_io)
+       CALL p_bcast(lctlib(:)%tau_c_woods, p_io)
        CALL p_bcast(lctlib(:)%LAI_shed_constant, p_io)
-       CALL p_bcast(lctlib(:)%frac_C_litter_green2atmos, p_io)
+       CALL p_bcast(lctlib(:)%fract_C_litter_green2atmos, p_io)
        CALL p_bcast(lctlib(:)%Max_C_content_woods, p_io)
        CALL p_bcast(lctlib(:)%ClumpinessFactor, p_io)
        CALL p_bcast(lctlib(:)%dynamic_pft, p_io)
@@ -931,9 +931,9 @@ CONTAINS
        CALL p_bcast(lctlib(:)%bclimit_min_gdd, p_io)
        CALL p_bcast(lctlib(:)%gdd_base, p_io)
        CALL p_bcast(lctlib(:)%upper_tlim, p_io)
-       CALL p_bcast(lctlib(:)%frac_wood_2_onSite, p_io)
-       CALL p_bcast(lctlib(:)%frac_wood_2_paper, p_io)
-       CALL p_bcast(lctlib(:)%frac_wood_2_construction, p_io)
+       CALL p_bcast(lctlib(:)%fract_wood_2_onSite, p_io)
+       CALL p_bcast(lctlib(:)%fract_wood_2_paper, p_io)
+       CALL p_bcast(lctlib(:)%fract_wood_2_construction, p_io)
        CALL p_bcast(lctlib(:)%moist_extinction, p_io)
        CALL p_bcast(lctlib(:)%fuel_dens, p_io)
        CALL p_bcast(lctlib(:)%flame_length_f, p_io)

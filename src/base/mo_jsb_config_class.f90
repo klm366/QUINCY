@@ -26,6 +26,8 @@ MODULE mo_jsb_config_class
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
+    LOGICAL                        :: use_glacier
+    CHARACTER(len=10)              :: tpe_scheme       ! For terraplanet setup: open/closed
     CHARACTER(len=10)              :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
@@ -72,16 +74,20 @@ CONTAINS
       grid_name
 
     LOGICAL                     :: use_lakes
+    LOGICAL                     :: use_glacier
     LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=40)           :: usecase
+    CHARACTER(len=10)           :: tpe_scheme
     CHARACTER(len=10)           :: hsm_mode
     CHARACTER(len=10)           :: output_tiles(99)
 
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
+      use_glacier, &
       l_compat401, &
       usecase, &
+      tpe_scheme, &
       hsm_mode, &
       fract_filename, &
       output_tiles
@@ -96,10 +102,12 @@ CONTAINS
 
     ! Set defaults
     use_lakes       = .TRUE.
+    use_glacier     = .TRUE.
     l_compat401     = .FALSE.
     grid_filename   = ''
     grid_name       = ''
     usecase         = ''
+    tpe_scheme      = ''
     hsm_mode        = 'simple'
     fract_filename  = 'bc_land_frac.nc'
     output_tiles(:) = ''
@@ -119,8 +127,10 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     model_config%use_lakes         = use_lakes
+    model_config%use_glacier       = use_glacier
     model_config%l_compat401       = l_compat401
     model_config%usecase           = usecase
+    model_config%tpe_scheme        = tpe_scheme
     model_config%hsm_mode          = hsm_mode
     model_config%fract_filename    = fract_filename
     model_config%namelist_filename = namelist_filename

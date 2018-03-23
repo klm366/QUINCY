@@ -139,7 +139,7 @@ MODULE mo_pheno_constants
                            heat_sum_harvest = 1300.0, & ! [Degree days] Heat sum (degree days) at which crops are harvested
                            shedRate_growth = 0.03333, & ! [1/days] Leaf shedding rate in the growth phase [1/days]
                            shedRate_rest = 0.1428,    & ! [1/days] Shed rate for cold season of crops [1/days]
-                           leafAlloc_frac = 0.8         ! [--]Fraction of NPP maximally allocated to leaves during growth     
+                           leafAlloc_fract = 0.8         ! [--]Fraction of NPP maximally allocated to leaves during growth     
   END TYPE t_crop_param
 !  PUBLIC :: t_crop_param
 

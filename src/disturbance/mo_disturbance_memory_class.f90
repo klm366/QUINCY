@@ -30,8 +30,8 @@ MODULE mo_disturb_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
 
    TYPE(t_jsb_var_real2d) ::   &
-      burned_frac,             & ! burned fraction of tile
-      damaged_frac,            & ! windbreak fraction of tile
+      burned_fract,             & ! burned fraction of tile
+      damaged_fract,            & ! windbreak fraction of tile
       q_rel_air_climbuf,       & ! Relative humiditiy of lowest air layer smoothed in time.
       q_rel_air_climbuf_yday,  & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
                                  ! This is only needed for cbalone forcing!
@@ -76,19 +76,19 @@ CONTAINS
     surface => Get_vgrid('surface')
     !canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%burned_frac%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%burned_fract%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'burned_frac', mem%burned_frac,                              &
+      CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                              &
         & hgrid, surface,                                                                 &
-        & t_cf('burned_frac', 'frac', 'Fraction of tile that is burned.'),                &
+        & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
         & prefix, suffix,                                                                 &
         & output_level=BASIC,                                                             &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'damaged_frac', mem%damaged_frac,                            &
+      CALL jsb_add_var( mem, 'damaged_fract', mem%damaged_fract,                            &
         & hgrid, surface,                                                                 &
-        & t_cf('damaged_frac', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
+        & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
         & prefix, suffix,                                                                 &
         & output_level=BASIC,                                                             &
@@ -122,7 +122,7 @@ CONTAINS
         & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp ) 
+        & lrestart=.TRUE., initval_r=0.0_wp ) 
 
       CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,              &
         & hgrid, surface,                                                           &

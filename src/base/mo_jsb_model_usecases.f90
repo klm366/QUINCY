@@ -52,12 +52,6 @@ CONTAINS
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
 
-    CASE ('jsbach_lite_tpe_open')
-      CALL init_usecase_lite_tpe_open(model)
-
-    CASE ('jsbach_lite_tpe_closed')
-      CALL init_usecase_lite_tpe_closed(model)
-
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
 
@@ -105,9 +99,11 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
@@ -180,11 +176,13 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
@@ -242,25 +240,5 @@ CONTAINS
 
   END SUBROUTINE init_usecase_pfts
   
-  SUBROUTINE init_usecase_lite_tpe_open(model)
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_open'
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CALL init_usecase_lite(model)
-
-  END SUBROUTINE init_usecase_lite_tpe_open
-
-  SUBROUTINE init_usecase_lite_tpe_closed(model)
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_closed'
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CALL init_usecase_lite(model)
-
-  END SUBROUTINE init_usecase_lite_tpe_closed
-
 #endif
 END MODULE mo_jsb_model_usecases
