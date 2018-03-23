@@ -1316,7 +1316,7 @@ CONTAINS
     
     ! Potential evaporation using old values of air and surface humidity
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  heat_transfer_coef(drag_srf, steplen) * (q_air - qsat_srf_old) * -1._wp ! Positive upwards
+    evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen) * (q_air - qsat_srf_old)  ! Positive upwards
     
     ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy; same for skin reservoir
@@ -1388,13 +1388,13 @@ CONTAINS
     ! R: In the following lines I just kicked out the contribution of w_skin_can as compared to JSBACH3. For the intension of
     !    the parametrization this can be done so easily for the bare type and it is consistent with JSBACH3.
     IF (fract_snow_soil > 0._wp .AND. w_snow_soil > EPSILON(1._wp)) THEN
-      fract_snow_soil = fract_snow_soil / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * &
-        & MAX(EPSILON(1._wp),(w_snow_soil))))
+      fract_snow_soil = fract_snow_soil &
+        & / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), w_snow_soil)))
     END IF
     ! Same for water cover on soil
     IF (fract_water > 0._wp .AND. w_skin > EPSILON(1._wp)) THEN
-      fract_water = fract_water / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * &
-        & MAX(EPSILON(1._wp), w_skin)))
+      fract_water = fract_water & 
+        & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), w_skin)))
     END IF
 
   END SUBROUTINE calc_wskin_fractions_bare
