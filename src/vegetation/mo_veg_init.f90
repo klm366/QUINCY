@@ -296,8 +296,8 @@ CONTAINS
         !> no vegetation dynamics and not starting with bare ground
         !! 
         ELSE  
-          veg_pool%reserve%carbon      = 50.0_wp
-          dens_ind(:)                  = 1.0_wp
+          veg_pool%reserve%carbon      = 5.0_wp
+          dens_ind(:)                  = 0.4_wp
 
           veg_pool%reserve%nitrogen    = veg_pool%reserve%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
           veg_pool%reserve%phosphorus  = veg_pool%reserve%nitrogen  / lctlib%np_leaf
