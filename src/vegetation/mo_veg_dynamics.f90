@@ -275,7 +275,8 @@ CONTAINS
        END WHERE
 
        ! convert to mortality rate per timestep 
-       mortality_rate(:) = mortality_rate(:) / one_year / one_day * dtime 
+       mortality_rate(:) = background_mort_rate_tree / one_year / one_day * dtime 
+       !mortality_rate(:) = mortality_rate(:) / one_year / one_day * dtime 
     
     ELSE
                        
