@@ -11,11 +11,15 @@
 #  Nov 10, 2016: Reiner Schnur, MPIM
 #  
 
-import sys, getopt, re, os, fnmatch, io
+import sys, getopt, re, os, fnmatch, io, hashlib
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
 #re_function = re.compile(r'.*(dsl4jsb_(.*?)( |\())+', re.IGNORECASE)
 re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
+
+# Search pattern to find hash value of original file in processed file
+#re_hash = re.compile(r'with md5 hash: *(.*) *', re.IGNORECASE)
+re_hash = re.compile(r'with md5 hash:\s*(\S*)\s*', re.IGNORECASE)
 
 # Table of macros
 #   Each entry is of the form
@@ -125,10 +129,32 @@ def tolower(match):
     return match.group(1).lower()+'_'
 
 def process_file(inputfile, outputfile, verbose=False, cwd=None):
+    # Compute hash value of input file
+    hasher = hashlib.md5()
+    with io.open(inputfile, 'rb') as infile:
+        buf = infile.read()
+        hasher.update(buf)
+    # If output file exists, extract hash value of file this one was generated from
+    hash = None
+    if outputfile != '' and os.path.isfile(outputfile):
+        with io.open(outputfile, 'r', encoding="utf-8") as outfile:
+            for line in outfile:
+                matches = re_hash.findall(line)
+                if matches:
+                    hash = matches[0]
+                    #print(hash)
+                    break
+    # If both hashes are equal, don't generate new file
+    if hasher.hexdigest() == hash:
+        if verbose:
+            print('File hasn"t changed: ' + os.path.realpath(os.path.abspath(inputfile)))
+        return
+
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
             outfile.write(u'!\n! This file was automatically generated from:\n')
-            outfile.write(u'!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n')
+            outfile.write(u'!         ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
+            outfile.write(u'!    with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
