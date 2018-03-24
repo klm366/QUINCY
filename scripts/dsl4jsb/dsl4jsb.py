@@ -144,7 +144,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
         hasher.update(buf)
     # If output file exists, extract hash value of file
     # this one was generated from
-    hash = None
+    hash = ''
     if outputfile != '' and os.path.isfile(outputfile):
         with io.open(outputfile, 'r', encoding="utf-8") as outfile:
             for line in outfile:
