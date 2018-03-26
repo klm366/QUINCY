@@ -26,9 +26,11 @@ flist_pool = unique(flist_pool)
 flist_flux = Sys.glob(paste0("vegflux*","_",tstep_flux,"*.txt"))
 flist_flux = c(flist_flux,Sys.glob(paste0("soilflux*","_",tstep_flux,"*.txt")))
 flist_flux = c(flist_flux,Sys.glob(paste0("mycoflux*","_",tstep_flux,"*.txt")))
+# get other output files
+flist_other = Sys.glob(paste0("sb_massBalance","_",tstep_flux,"*.txt"))
 
 # create overall file list
-flist=c(flist_pool,flist_flux)
+flist=c(flist_pool,flist_flux,flist_other)
 # number of output files
 nOutFiles=length(flist)
 
@@ -56,7 +58,11 @@ for (i in 1:nOutFiles) {
       xAxis <- tstep_flux
     }
     for (v in 2:nvar) {
-      if(!all(is.na(dat[,v]))) plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
+      if(!all(is.na(dat[,v]))){
+        plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
+        # plot a brown horizontal line at 0 for sb_massBalance only
+        if(grepl("sb_massBalance",flist[i])) abline(h=0,col="sienna",lty=1,lwd=0.4)
+      }
     }
   }
 }

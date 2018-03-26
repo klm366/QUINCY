@@ -1200,9 +1200,19 @@ CONTAINS
     !! 
     !! 
     lun = 100 + 30    ! -> max of 30 files for pool output
-    
+
+    ! land
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant')
+      CASE('land')  ! for "land & soil" see below
+        ! mycofluxCNP
+        fname = 'mycofluxCNP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+    END SELECT
+
+    ! land/plant & canopy & soil
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant') ! additional to CASE('land')
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
@@ -1221,22 +1231,20 @@ CONTAINS
         fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! soilfluxCdC13DC14
         fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! soilfluxN
         fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! soilfluxP
         fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! soilfluxdN
         fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'mycofluxCNP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
 
@@ -1274,17 +1282,26 @@ CONTAINS
     END SELECT
 
     !! land & soil
-    !! detailed data per layer only for simple_1d and jsm
+    !!  simple_0d and simple_1d and jsm
+    !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','soil')
+        ! simple_0d and simple_1d and jsm
+          ! sb_massBalance
+          fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+          lun=lun+1
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
+            ! soilfluxC_lay
             fname = 'soilfluxC_lay'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilfluxN_lay
             fname = 'soilfluxN_lay'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilfluxP_lay
             fname = 'soilfluxP_lay'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
@@ -1324,21 +1341,35 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 30 (any lun > 129 in pool output throws an exception)
     lun = 100 + 30
+    
+    ! land 
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant')
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse RootExudation'
-        lun=lun+1   
-        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
-                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+      CASE('land')
+        ! mycofluxCNP
+        WRITE(lun,'(a)') 'Time mycoExportC mycoExportN mycoExportP mycoExportC13 mycoExportC14 mycoExportN15'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation dN15Fixation PlantUptake_d15NH4 PlantUptake_d15NO3'
+    END SELECT
+
+    ! land/plant & canopy & soil
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant') ! additional to CASE('land')
+        ! vegfluxC
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC'
+        lun=lun+1 
+        ! vegfluxdC13DC14
+        WRITE(lun,'(a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
+        ! vegfluxN
+        WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_d15NH4 Uptake_d15NO3'
+        lun=lun+1
+        ! vegfluxP
+        WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
+        ! soilfluxCdC13DC14
         WRITE(lun,'(a)') 'Time HetResp HetResp_dC13 HetResp_DC14'
         lun=lun+1
         ! soilfluxN
@@ -1352,13 +1383,6 @@ CONTAINS
         ! soilfluxdN
         WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2', &
                           ' Leaching_d15NH4 Leaching_d15NO3'
-        lun=lun+1
-        ! mycofluxCNP
-        WRITE(lun,'(a)') 'Time mycoExportC mycoExportN mycoExportP mycoExportC13 mycoExportC14 mycoExportN15'
-        lun=lun+1
-        ! sb_massBalance_*.txt
-        WRITE(lun,'(2a)') 'Time sb_dPoolC sb_dPoolN sb_dPoolP sb_dPoolC13 sb_dPoolC14 sb_dPoolN15 ', &
-                          'sb_totalFluxC sb_totalFluxN sb_totalFluxP sb_totalFluxC13 sb_totalFluxC14 sb_totalFluxN15'
         lun=lun+1
 
       CASE('canopy') ! subset of CASE('land','plant')
@@ -1388,17 +1412,24 @@ CONTAINS
         lun=lun+1   
         ! soilfluxP  (plus litterfall compared to land soilfluxP output file)
         WRITE(lun,'(3a)') 'Time Litterfall ', &
-                          'PDeposition Leaching_PO4 Leaching_DOM Net_Mineralisation_PO4 PlantUptake_PO4 Weathering_PO4 Occlusion_PO4 ', &
-                          'Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
+                          'PDeposition Leaching_PO4 Leaching_DOM Net_Mineralisation_PO4 PlantUptake_PO4 Weathering_PO4 ', &
+                          'Occlusion_PO4 Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
 
     END SELECT
 
     
     !! land & soil
-    !! detailed data per layer only for simple_1d and jsm
+    !!  simple_0d and simple_1d and jsm
+    !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','soil')
+        ! simple_0d and simple_1d and jsm
+          ! sb_massBalance
+          WRITE(lun,'(2a)') 'Time sb_deltaPoolC sb_deltaPoolN sb_deltaPoolP sb_deltaPoolC13 sb_deltaPoolC14 sb_deltaPoolN15 ', &
+                            'sb_totalFluxC sb_totalFluxN sb_totalFluxP sb_totalFluxC13 sb_totalFluxC14 sb_totalFluxN15'
+          lun=lun+1
+            
         SELECT CASE(TRIM(sb_model_scheme))
           CASE('simple_1d','jsm')
             ! soilfluxC_lay
@@ -1631,12 +1662,12 @@ CONTAINS
     REAL(wp), SAVE                        :: sb_total_flux_carbon13_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_c_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_n_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_p_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_c13_acc = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_c14_acc = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_n15_acc = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_c_acc             = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_n_acc             = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_p_acc             = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_c13_acc           = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_c14_acc           = 0.0_wp
+    REAL(wp), SAVE                        :: myco_export_n15_acc           = 0.0_wp
     ! variables with accumulated information per soil layer
     ! hardcoded max soil layer number (20)
     REAL(wp), DIMENSION(max_soil_layers), SAVE :: &
@@ -1993,7 +2024,7 @@ CONTAINS
     !! 
     !! land/plant/canopy
     !! soil
-    !! land/soil
+    !! land/soil  (simple_0d/simple_1d/jsm  &  simple_1d/jsm)
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')
 
@@ -2112,25 +2143,6 @@ CONTAINS
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
              myco_export_n15_acc = myco_export_n15_acc  + SUM(sb_mycorrhiza_export%nitrogen15(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             ! for mass balance checks in SB_
-              sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
-                                                SUM(sb_delta_pools%carbon(ipoi,:)*soil_depth_sl(ipoi,:))
-              sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + &
-                                                SUM(sb_delta_pools%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))
-              sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + &
-                                                SUM(sb_delta_pools%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))
-              sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + &
-                                                SUM(sb_delta_pools%carbon13(ipoi,:)*soil_depth_sl(ipoi,:))
-              sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + &
-                                                SUM(sb_delta_pools%carbon14(ipoi,:)*soil_depth_sl(ipoi,:))
-              sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + &
-                                                SUM(sb_delta_pools%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))
-              sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(ipoi)
-              sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(ipoi)
-              sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(ipoi)
-              sb_total_flux_carbon13_acc    = sb_total_flux_carbon13_acc    + total_flux_carbon13(ipoi)
-              sb_total_flux_carbon14_acc    = sb_total_flux_carbon14_acc    + total_flux_carbon14(ipoi)
-              sb_total_flux_nitrogen15_acc  = sb_total_flux_nitrogen15_acc  + total_flux_nitrogen15(ipoi)
 
              !> 1.2 write fluxes and set to zero
              !!
@@ -2142,22 +2154,37 @@ CONTAINS
                  albedo_acc = albedo_acc / ndat_acc
                ENDIF
        
-               ! write
+               ! set starting-lun for write
                lun = 100 + 30
-               SELECT CASE(TRIM(base_config%slm_model_name))
-                 CASE('land','plant')
-                   write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
-                                         n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                         npp_acc, res_use_c_acc, exudationC_acc
+               
+               ! land
+               SELECT CASE(TRIM(base_config%slm_model_name))  ! cases: land & land/plant & canopy
+                 CASE('land')
+                   ! mycofluxCNP
+                   write(lun,'(7F24.12)') time_d, & 
+                                          myco_export_c_acc, myco_export_n_acc, myco_export_p_acc, &
+                                          myco_export_c13_acc, myco_export_c14_acc, myco_export_n15_acc
                    lun=lun+1
+               END SELECT
+
+               ! land/plant & canopy & soil
+               SELECT CASE(TRIM(base_config%slm_model_name))
+                 CASE('land','plant') ! additional to CASE('land')
+                   ! vegfluxC
+                   write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                                          n_transform_resp_acc,n_fixation_resp_acc         , & 
+                                          npp_acc, res_use_c_acc, exudationC_acc
+                   lun=lun+1
+                   ! vegfluxdC13DC14
                    dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
-                   dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
-                   dC13rm = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
+                   dC13rg  = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
+                   dC13rm  = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
                    write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
                                          calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
+                   ! vegfluxN
                    write(lun,'(10F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
                                           res_use_n_acc, n_fixation_acc, & 
                                           calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
@@ -2165,6 +2192,7 @@ CONTAINS
                                           calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
 
                    lun=lun+1
+                   ! vegfluxP
                    write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                    lun=lun+1
                    write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, & 
@@ -2203,18 +2231,6 @@ CONTAINS
                          calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
                          calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
                          calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc)
-                   lun=lun+1
-                   ! mycofluxCNP
-                   write(lun,'(7F20.10)') time_d, & 
-                                         myco_export_c_acc, myco_export_n_acc, myco_export_p_acc, &
-                                         myco_export_c13_acc, myco_export_c14_acc , myco_export_n15_acc
-                   lun=lun+1
-                   ! sb_massBalance_..txt
-                   write(lun,'(13F24.12)') time_d, &
-                                        sb_delta_pools_carbon_acc, sb_delta_pools_nitrogen_acc, sb_delta_pools_phosphorus_acc, &
-                                        sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
-                                        sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
-                                        sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
                    lun=lun+1
 
                  CASE('canopy') ! subset of CASE('land','plant')
@@ -2287,25 +2303,25 @@ CONTAINS
                qg_acc            = 0.0_wp
                albedo_acc        = 0.0_wp
                appfd_acc         = 0.0_wp
-               ndat_acc          = 0
+               ndat_acc          = 0        ! INTEGER 
                het_respC_acc     = 0.0_wp
                het_respC13_acc   = 0.0_wp
                het_respC14_acc   = 0.0_wp
                net_min_nh4_acc   = 0.0_wp
                nitrification_acc = 0.0_wp
                denitrification_acc = 0.0_wp
-               emission_noy_acc = 0.0_wp
-               emission_noy_n15_acc = 0.0_wp
-               emission_n2o_acc = 0.0_wp
-               emission_n2o_n15_acc = 0.0_wp
-               emission_n2_acc = 0.0_wp
-               emission_n2_n15_acc = 0.0_wp
-               leaching_nh4_acc = 0.0_wp
-               leaching_nh4_n15_acc = 0.0_wp
-               leaching_no3_acc = 0.0_wp
-               leaching_no3_n15_acc = 0.0_wp
-               asymb_n_fixation_acc = 0.0_wp
-               asymb_n_fixation_n15_acc = 0.0_wp
+               emission_noy_acc               = 0.0_wp
+               emission_noy_n15_acc           = 0.0_wp
+               emission_n2o_acc               = 0.0_wp
+               emission_n2o_n15_acc           = 0.0_wp
+               emission_n2_acc                = 0.0_wp
+               emission_n2_n15_acc            = 0.0_wp
+               leaching_nh4_acc               = 0.0_wp
+               leaching_nh4_n15_acc           = 0.0_wp
+               leaching_no3_acc               = 0.0_wp
+               leaching_no3_n15_acc           = 0.0_wp
+               asymb_n_fixation_acc           = 0.0_wp
+               asymb_n_fixation_n15_acc       = 0.0_wp
                p_deposition_acc               = 0.0_wp
                leaching_po4_acc               = 0.0_wp
                net_min_po4_acc                = 0.0_wp
@@ -2320,18 +2336,6 @@ CONTAINS
                myco_export_c13_acc            = 0.0_wp
                myco_export_c14_acc            = 0.0_wp
                myco_export_n15_acc            = 0.0_wp
-               sb_delta_pools_carbon_acc      = 0.0_wp
-               sb_delta_pools_nitrogen_acc    = 0.0_wp
-               sb_delta_pools_phosphorus_acc  = 0.0_wp
-               sb_delta_pools_carbon13_acc    = 0.0_wp
-               sb_delta_pools_carbon14_acc    = 0.0_wp
-               sb_delta_pools_nitrogen15_acc  = 0.0_wp
-               sb_total_flux_carbon_acc       = 0.0_wp
-               sb_total_flux_nitrogen_acc     = 0.0_wp
-               sb_total_flux_phosphorus_acc   = 0.0_wp
-               sb_total_flux_carbon13_acc     = 0.0_wp
-               sb_total_flux_carbon14_acc     = 0.0_wp
-               sb_total_flux_nitrogen15_acc   = 0.0_wp
              END IF ! l_flux_output_interval
            END IF   ! l_flux_calc_acc_output
         END IF      ! on/off switch specific to 'special case: fluxnet output'
@@ -2471,10 +2475,58 @@ CONTAINS
 
 
     !! land & soil
-    !! detailed data per layer only for simple_1d and jsm (max of 20 soil layers)
+    !!  simple_0d and simple_1d and jsm
+    !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','soil')
       IF (l_flux_calc_acc_output) THEN
+        ! simple_0d and simple_1d and jsm
+          ! accumulate variables
+          ! for mass balance checks in SB_
+          sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
+                                            SUM(sb_delta_pools%carbon(ipoi,:)*soil_depth_sl(ipoi,:))
+          sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + &
+                                            SUM(sb_delta_pools%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))
+          sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + &
+                                            SUM(sb_delta_pools%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))
+          sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + &
+                                            SUM(sb_delta_pools%carbon13(ipoi,:)*soil_depth_sl(ipoi,:))
+          sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + &
+                                            SUM(sb_delta_pools%carbon14(ipoi,:)*soil_depth_sl(ipoi,:))
+          sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + &
+                                            SUM(sb_delta_pools%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))
+          sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(ipoi)
+          sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(ipoi)
+          sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(ipoi)
+          sb_total_flux_carbon13_acc    = sb_total_flux_carbon13_acc    + total_flux_carbon13(ipoi)
+          sb_total_flux_carbon14_acc    = sb_total_flux_carbon14_acc    + total_flux_carbon14(ipoi)
+          sb_total_flux_nitrogen15_acc  = sb_total_flux_nitrogen15_acc  + total_flux_nitrogen15(ipoi)
+
+          ! write output & zero acc variables
+          IF(l_flux_output_interval) THEN
+            ! sb_massBalance
+            write(lun,'(13F24.12)') time_d, &
+                                    sb_delta_pools_carbon_acc, sb_delta_pools_nitrogen_acc, sb_delta_pools_phosphorus_acc, &
+                                    sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
+                                    sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
+                                    sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
+            lun=lun+1
+
+            !! set acc variables to zero          
+            sb_delta_pools_carbon_acc      = 0.0_wp
+            sb_delta_pools_nitrogen_acc    = 0.0_wp
+            sb_delta_pools_phosphorus_acc  = 0.0_wp
+            sb_delta_pools_carbon13_acc    = 0.0_wp
+            sb_delta_pools_carbon14_acc    = 0.0_wp
+            sb_delta_pools_nitrogen15_acc  = 0.0_wp
+            sb_total_flux_carbon_acc       = 0.0_wp
+            sb_total_flux_nitrogen_acc     = 0.0_wp
+            sb_total_flux_phosphorus_acc   = 0.0_wp
+            sb_total_flux_carbon13_acc     = 0.0_wp
+            sb_total_flux_carbon14_acc     = 0.0_wp
+            sb_total_flux_nitrogen15_acc   = 0.0_wp
+          END IF
+
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE('simple_1d','jsm')
           ! accumulate variables
