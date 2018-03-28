@@ -773,23 +773,23 @@ CONTAINS
   ! 
   SUBROUTINE update_apply_cohort_changes(tile, options)
 
-    USE mo_pheno_process,      ONLY: update_pheno_delta_vars
+!    USE mo_pheno_process,      ONLY: update_pheno_delta_vars
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(PHENO_)
+    ! dsl4jsb_Def_memory(PHENO_)
 !    dsl4jsb_Def_memory(FAGE_)
     dsl4jsb_Def_config(FAGE_)
 
     LOGICAL :: l_isFirstChild
-    REAL(wp), DIMENSION(options%nc)        :: source_fract, old_veg_frac_correction
+    REAL(wp), DIMENSION(options%nc)        :: source_fract!, old_veg_frac_correction
 
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction
-    dsl4jsb_Real2D_onChunk :: delta_veg_frac_correction
+    ! dsl4jsb_Real2D_onChunk :: veg_frac_correction
+    ! dsl4jsb_Real2D_onChunk :: delta_veg_frac_correction
 
-    dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: delta_lai
+    ! dsl4jsb_Real2D_onChunk :: lai
+    ! dsl4jsb_Real2D_onChunk :: delta_lai
 
     INTEGER  :: iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
@@ -814,13 +814,13 @@ CONTAINS
     ! Get reference to variables for current block
     dsl4jsb_Get_config(FAGE_)
 !    dsl4jsb_Get_memory(FAGE_)
-    dsl4jsb_Get_memory(PHENO_)
+!    dsl4jsb_Get_memory(PHENO_)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)           ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    delta_veg_frac_correction)     ! inout
+!    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)           ! inout
+!    dsl4jsb_Get_var2D_onChunk(PHENO_,    delta_veg_frac_correction)     ! inout
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)           ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    delta_lai)     ! inout
+!    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)           ! inout
+!    dsl4jsb_Get_var2D_onChunk(PHENO_,    delta_lai)     ! inout
 
     IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
 
@@ -828,16 +828,16 @@ CONTAINS
       IF((tile%Is_first_child()) .OR. (.NOT. dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child)) THEN
         ! TODO-JN-COHORTS: would be cleaner, if this would happen in an own phenology task before this task is called 
         ! denken: ich glaube nur, wenn es sich geändert hat, sonst nichts machen?!
-        old_veg_frac_correction(:) = veg_frac_correction(:)
-        CALL update_pheno_delta_vars(source_fract(:), tile%delta_fract(ics:ice, iblk), &
-          delta_veg_frac_correction(:), veg_frac_correction(:))
+!        old_veg_frac_correction(:) = veg_frac_correction(:)
+!        CALL update_pheno_delta_vars(source_fract(:), tile%delta_fract(ics:ice, iblk), &
+!          delta_veg_frac_correction(:), veg_frac_correction(:))
 
-        IF(ANY(source_fract(:) .GT. 0._wp)) THEN
-          CALL rescale_carbon_upon_reference_area_change(tile, options, old_veg_frac_correction, veg_frac_correction)
-        ENDIF
+!        IF(ANY(source_fract(:) .GT. 0._wp)) THEN
+!          CALL rescale_carbon_upon_reference_area_change(tile, options, old_veg_frac_correction, veg_frac_correction)
+!        ENDIF
 
-        CALL update_pheno_delta_vars(source_fract(:), tile%delta_fract(ics:ice, iblk), &
-          delta_lai(:), lai(:))
+!        CALL update_pheno_delta_vars(source_fract(:), tile%delta_fract(ics:ice, iblk), &
+!          delta_lai(:), lai(:))
 
         ! a) TODO-JN-COHORTS what else to update? 
 

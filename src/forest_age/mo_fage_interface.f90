@@ -164,9 +164,11 @@ CONTAINS
   ! 
   SUBROUTINE update_calculate_ageing(tile, options)
 
-    USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing, correct_and_synchronise_fracts
+    USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing, correct_and_synchronise_fracts, &
+      & weighted_avg_var_upon_area_change
     USE mo_jsb_time,             ONLY: is_newyear
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift
+    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift, &
+      & rescale_carbon_upon_reference_area_change
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -179,18 +181,18 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: veg_frac_correction_source
-    dsl4jsb_Real2D_onChunk :: delta_veg_frac_correction_sink
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction_sink
     dsl4jsb_Real2D_onChunk :: lai_source
-    dsl4jsb_Real2D_onChunk :: delta_lai_sink
+    dsl4jsb_Real2D_onChunk :: lai_sink
 
 
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
 
 
-    CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, nextChild
-    REAL(wp), DIMENSION(options%nc)        :: fract_this_max_age, fract_sum, remainder, &
-                                            & source_fract, sink_fract, altered_sink_fract
+    CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, prevChild
+    REAL(wp), DIMENSION(options%nc)        :: fract_source_max_age, fract_sum, remainder, &
+                                            & source_fract, sink_fract, altered_sink_fract, old_veg_frac_correction_sink
 
     REAL(wp) :: fractSum
     INTEGER  :: i,j, ncohorts, max_age, iblk, ics, ice, nc
@@ -243,17 +245,17 @@ CONTAINS
         IF (i .LT. ncohorts) currentChild => currentChild%Get_next_sibling_tile()
       ENDDO
 
-      !TODO: Assert that currentChild is last child and start working from there? nextChild%Get_prev_sibling_tile()
+      !TODO: Assert that currentChild is last child
+      IF(.NOT. currentChild%Is_last_child()) &
+        & CALL finish(TRIM(routine), 'Violation of assertion: expected last child after iterating over ncohorts')
 
       !----- care for shifts among cohort boundaries
-      currentChild => tile%Get_first_child_tile()
-
-      ! only iterate until -1 -- oldest cohort only accumulates in update_calculate_ageing
-      DO i=1,ncohorts-1
+      ! only iterate until 2 - youngest cohort can not get area from below
+      DO i=ncohorts,2,-1
         !TODO-JN-COHORTS maybe work with a getter?
-        nextChild => currentChild%Get_next_sibling_tile()
-        CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-        CALL nextChild%Get_fraction(ics, ice, iblk, fract=sink_fract(:))
+        prevChild => currentChild%Get_prev_sibling_tile()
+        CALL prevChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+        CALL currentChild%Get_fraction(ics, ice, iblk, fract=sink_fract(:))
 
         ! a) identify delta fraction for shifts from one to the next cohort
         !TODO-JN needs to be adapted when working with absolute areas
@@ -262,35 +264,46 @@ CONTAINS
         !                 if there would be dynamic changes individual per grid cell, 
         !                 if only static (as currently) it could be implemented easier (maybe in the config of fage?!)
         DO j=1,nc
-          fract_this_max_age(j) = fract_per_age(j,cohort_max_age(j,i))
+          fract_source_max_age(j) = fract_per_age(j,cohort_max_age(j,i-1))
         ENDDO
 
-        ! reduce current tiles delta fraction  
-        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - fract_this_max_age(:)
+        ! reduce prev tiles delta fraction  
+        prevChild%delta_fract(ics:ice, iblk) = prevChild%delta_fract(ics:ice, iblk) - fract_source_max_age(:)
 
-        ! and add them to the next childs delta 
-        nextChild%delta_fract(ics:ice, iblk) = nextChild%delta_fract(ics:ice, iblk) + fract_this_max_age(:)
+        ! and add them to the current childs delta 
+        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) + fract_source_max_age(:)
 
         ! b) accordingly move carbon from one cohort to the next cohorts delta
         CALL update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
-          & currentChild, nextChild, options, fract_this_max_age(:), source_fract(:))
+          & prevChild, currentChild, options, fract_source_max_age(:), source_fract(:))
 
-        ! c) schedule changes in veg_frac_correction - required for recalculation of the carbon pools
+        ! c) correct veg_frac_correction - required for correct recalculation the carbon pools  
         !     -> particularly max_green_veg_c for subsequent maxLAI calculation!
-        SELECT TYPE (mm => currentChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
-        SELECT TYPE (mm => nextChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__sink => mm ; END SELECT
-        veg_frac_correction_source => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! inout
-        delta_veg_frac_correction_sink => pheno__mem__sink%delta_veg_frac_correction%ptr(ics:ice,iblk)  ! inout
-        delta_veg_frac_correction_sink = delta_veg_frac_correction_sink + veg_frac_correction_source * fract_this_max_age(:)
+        SELECT TYPE (mm => prevChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
+        SELECT TYPE (mm => currentChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__sink => mm ; END SELECT
+        veg_frac_correction_source => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! in
+        veg_frac_correction_sink => pheno__mem__sink%veg_frac_correction%ptr(ics:ice,iblk)      ! inout
 
-        lai_source => pheno__mem__source%lai%ptr(ics:ice,iblk)  ! inout
-        delta_lai_sink => pheno__mem__sink%delta_lai%ptr(ics:ice,iblk)  ! inout
-        delta_lai_sink = delta_lai_sink + lai_source * fract_this_max_age(:)
+        old_veg_frac_correction_sink(:) = veg_frac_correction_sink(:)
+        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
+          & veg_frac_correction_source(:), veg_frac_correction_sink(:)) 
+
+        IF(ANY(old_veg_frac_correction_sink(:) .NE. veg_frac_correction_sink(:))) THEN
+          CALL rescale_carbon_upon_reference_area_change(currentChild, options, &
+            & old_veg_frac_correction_sink(:), veg_frac_correction_sink(:))
+        ENDIF
+
+        ! TODO-JN: hm, do this also has to be weighted with the new veg_frac_corr? If so it also would need to be
+        ! rescaled each time the veg_frac_correction changes!?!
+        lai_source => pheno__mem__source%lai%ptr(ics:ice,iblk)  ! in
+        lai_sink => pheno__mem__sink%lai%ptr(ics:ice,iblk)      ! inout
+        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
+          & lai_source(:), lai_sink(:)) 
 
         ! d) TODO-JN-COHORTS what else to shift? 
 
         ! move further in the child list
-        currentChild => nextChild
+        currentChild => prevChild
       ENDDO
 
       ! update the area per age tracking vector - for ageing this can be done for all children at once

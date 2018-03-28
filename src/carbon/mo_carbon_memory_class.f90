@@ -643,7 +643,7 @@ CONTAINS
         & t_cf('GPP_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean GPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
       CALL jsb_add_var( mem, 'topsoiltemp_ydaymean', mem%topSoilTemp_yDayMean,                             &

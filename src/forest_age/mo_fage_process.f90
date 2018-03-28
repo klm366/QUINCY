@@ -17,7 +17,8 @@ MODULE mo_fage_process
    PRIVATE
 
    PUBLIC :: update_frac_per_age_upon_ageing, update_frac_per_age_equally_upon_disturbance, &
-     & update_frac_per_age_and_determine_area_to_harvest_from_cohort, correct_and_synchronise_fracts 
+     & update_frac_per_age_and_determine_area_to_harvest_from_cohort, correct_and_synchronise_fracts, &
+     & weighted_avg_var_upon_area_change
 
    !TODO-JN: merge_cohorts update_age?
 
@@ -211,6 +212,27 @@ MODULE mo_fage_process
     ENDDO
 
   END SUBROUTINE update_frac_per_age_and_determine_area_to_harvest_from_cohort
+
+
+  ELEMENTAL SUBROUTINE weighted_avg_var_upon_area_change( & 
+                                          & old_fract,     & ! <- in
+                                          & delta_fract,   & ! <- in
+                                          & new_var,       & ! <- in
+                                          & old_var)         ! <- inout
+
+     !-----------------------------------------------------------------------
+     !  ARGUMENTS
+     REAL(wp), intent(in)    :: old_fract, delta_fract, new_var
+     REAL(wp), intent(inout) :: old_var
+
+     IF (delta_fract .GT. 0._wp) THEN 
+       old_var = ((old_var * old_fract) + (new_var * delta_fract)) / (old_fract + delta_fract)
+     ENDIF
+
+     RETURN
+
+  END SUBROUTINE weighted_avg_var_upon_area_change
+
 
 #endif
 END MODULE mo_fage_process
