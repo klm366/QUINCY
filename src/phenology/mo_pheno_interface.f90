@@ -729,8 +729,9 @@ CONTAINS
       IF (is_newyear()) THEN
         dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
-        dsl4jsb_Aggregate_onChunk(PHENO_, biennial_avg_veg_c_inc,    weighted_by_fract)
-        dsl4jsb_Aggregate_onChunk(PHENO_, decennial_avg_veg_c_inc,    weighted_by_fract)
+!TODO-JN: erstens brauche ich die nicht, zweitens ist es falsch wegen ta vs per canopy!
+!        dsl4jsb_Aggregate_onChunk(PHENO_, biennial_avg_veg_c_inc,    weighted_by_fract)
+!        dsl4jsb_Aggregate_onChunk(PHENO_, decennial_avg_veg_c_inc,    weighted_by_fract)
         !NOTE: despite changes, no aggregation of cpools necessary:
         ! PHENO changes Cpools once a year, but only densities, not per tile (ta) values
       ENDIF
