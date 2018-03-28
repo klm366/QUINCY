@@ -435,6 +435,7 @@ CONTAINS
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
+      CALL update_phenology       (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
 
       !! accumulation over time - daytime & moving average

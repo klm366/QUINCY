@@ -46,13 +46,15 @@ CONTAINS
     USE mo_rad_constants,       ONLY: rfr_ratio_toc 
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
     USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
-    USE mo_veg_constants,       ONLY: itree,eta_nfixation
+    USE mo_veg_constants,       ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(PHENO_)    
     
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,    ONLY: veg_pool, veg_growth, veg_litterfall, &
@@ -80,9 +82,11 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
-    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),      POINTER :: sb__mem
+    dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),       POINTER :: pheno__mem
+    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),         POINTER :: veg__mem
+    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),          POINTER :: sb__mem
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
@@ -94,6 +98,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
+    ! PHENO_
+    dsl4jsb_Logical2D_onChunk   :: growing_season 
     ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SOIL_ 3D
@@ -171,8 +177,10 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(RAD_)
@@ -185,6 +193,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                 ! in
@@ -373,58 +383,77 @@ CONTAINS
        veg_pool%reserve%carbon14      = veg_pool%reserve%carbon14     * (1._wp - lambda_C14 * dtime )
        veg_pool%seed_bed%carbon14     = veg_pool%seed_bed%carbon14    * (1._wp - lambda_C14 * dtime )
    
-       !> 2.0 Update plant diagnostics given the above fluxes
-       !!
-       !! 
-       lai(:)      = veg_pool%leaf%carbon(:) * lctlib%sla
-       dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
-       WHERE(dens_ind(:) > 0.0_wp .AND. lctlib%growthform == itree)
-          diameter(:)  = calc_diameter_from_woody_biomass(lctlib                        , &
-                                                          veg_pool%sap_wood%carbon(:)   , &
-                                                          veg_pool%heart_wood%carbon(:) , &
-                                                          dens_ind(:))
-          height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
-       END WHERE
-
-       WHERE(veg_pool%leaf%carbon(:) > eps8)
-           mean_leaf_age(:) = (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
-         ELSE WHERE
-           mean_leaf_age(:) = 0.0_wp
-       END WHERE
-
-       dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
-
-       ! in case of complete harvest, set all pools to zero (to account for wood extraction, which would
-       ! otherwise leave some wood, and reset the key plant diagnostics
-       IF(base_config%l_do_stand_replacing_harvest) THEN 
-          veg_pool%leaf        = veg_pool%leaf * 0.0_wp
-          veg_pool%fine_root   = veg_pool%fine_root * 0.0_wp
-          veg_pool%coarse_root = veg_pool%coarse_root * 0.0_wp
-          veg_pool%sap_wood    = veg_pool%sap_wood * 0.0_wp
-          veg_pool%heart_wood  = veg_pool%heart_wood * 0.0_wp
-          veg_pool%fruit       = veg_pool%fruit * 0.0_wp
-          veg_pool%labile%carbon(:)     = 0.1_wp 
-          veg_pool%labile%nitrogen(:)   = veg_pool%labile%carbon(:) * & 
-                                          veg_pool%seed_bed%nitrogen(:)/veg_pool%seed_bed%carbon(:)
-          veg_pool%labile%phosphorus(:) = veg_pool%labile%carbon(:) * & 
-                                          veg_pool%seed_bed%phosphorus(:)/veg_pool%seed_bed%carbon(:)
-          veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon(:) * & 
-                                          veg_pool%seed_bed%carbon13(:)/veg_pool%seed_bed%carbon(:)
-          veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon(:) * & 
-                                          veg_pool%seed_bed%carbon14(:)/veg_pool%seed_bed%carbon(:)
-          veg_pool%labile%nitrogen15(:) = veg_pool%labile%carbon(:) * & 
-                                          veg_pool%seed_bed%nitrogen15(:)/veg_pool%seed_bed%carbon(:)
-          veg_pool%reserve     = veg_pool%reserve * 0.0_wp
-          height(:)            = 0.0_wp
-          diameter(:)          = 0.0_wp
-          dens_ind(:)          = 0.1_wp
-          lai(:)               = 0.0_wp
-          mean_leaf_age(:)     = 0.0_wp
-          dphi(:)              = w_soil_root_pot(:) - lctlib%phi_leaf_min 
-          rfr_ratio_boc_tvegdyn_mavg(:) = rfr_ratio_toc 
-       ENDIF
+    CASE ('canopy')
+   
+       ! diagnose required change in leaf C given phenology to attain prescribed LAI max
+       WHERE(growing_season(:))
+          veg_growth%leaf%carbon(:) = dsl4jsb_Config(PHENO_)%lai_max / lctlib%sla * &
+                                      (1._wp - exp(-k_leafon_canopy * (dsl4jsb_Config(PHENO_)%lai_max - lai(:)) / dsl4jsb_Config(PHENO_)%lai_max)) * &
+                                     dtime / one_day 
+       ELSEWHERE
+          veg_litterfall%leaf%carbon(:) = MAX(veg_pool%leaf%carbon(:), & 
+                                              lai(:)/lctlib%sla * max_leaf_shedding_rate * dtime / one_day * & 
+                                              dsl4jsb_Config(PHENO_)%lai_max / MAX(eps4,lai(:)))
+       ENDWHERE
+ 
+       ! update leaf C:N:P pools 
+       veg_pool%leaf%carbon(:) = veg_pool%leaf%carbon(:) + veg_growth%leaf%carbon(:) - veg_litterfall%leaf%carbon(:) 
+       veg_pool%leaf%nitrogen(:) = veg_pool%leaf%carbon(:) / lctlib%cn_leaf 
+       veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf 
 
     END SELECT
+
+    !> 2.0 Update plant diagnostics given the above fluxes
+    !!
+    !! 
+    lai(:)      = veg_pool%leaf%carbon(:) * lctlib%sla
+    dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
+    WHERE(dens_ind(:) > 0.0_wp .AND. lctlib%growthform == itree)
+       diameter(:)  = calc_diameter_from_woody_biomass(lctlib                        , &
+                                                       veg_pool%sap_wood%carbon(:)   , &
+                                                       veg_pool%heart_wood%carbon(:) , &
+                                                       dens_ind(:))
+       height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
+    END WHERE
+
+    WHERE(veg_pool%leaf%carbon(:) > eps8)
+        mean_leaf_age(:) = (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
+      ELSE WHERE
+        mean_leaf_age(:) = 0.0_wp
+    END WHERE
+
+    dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
+
+    ! in case of complete harvest, set all pools to zero (to account for wood extraction, which would
+    ! otherwise leave some wood, and reset the key plant diagnostics
+    IF(base_config%l_do_stand_replacing_harvest) THEN 
+       veg_pool%leaf        = veg_pool%leaf * 0.0_wp
+       veg_pool%fine_root   = veg_pool%fine_root * 0.0_wp
+       veg_pool%coarse_root = veg_pool%coarse_root * 0.0_wp
+       veg_pool%sap_wood    = veg_pool%sap_wood * 0.0_wp
+       veg_pool%heart_wood  = veg_pool%heart_wood * 0.0_wp
+       veg_pool%fruit       = veg_pool%fruit * 0.0_wp
+       veg_pool%labile%carbon(:)     = 0.1_wp 
+       veg_pool%labile%nitrogen(:)   = veg_pool%labile%carbon(:) * & 
+                                       veg_pool%seed_bed%nitrogen(:)/veg_pool%seed_bed%carbon(:)
+       veg_pool%labile%phosphorus(:) = veg_pool%labile%carbon(:) * & 
+                                       veg_pool%seed_bed%phosphorus(:)/veg_pool%seed_bed%carbon(:)
+       veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon(:) * & 
+                                       veg_pool%seed_bed%carbon13(:)/veg_pool%seed_bed%carbon(:)
+       veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon(:) * & 
+                                       veg_pool%seed_bed%carbon14(:)/veg_pool%seed_bed%carbon(:)
+       veg_pool%labile%nitrogen15(:) = veg_pool%labile%carbon(:) * & 
+                                       veg_pool%seed_bed%nitrogen15(:)/veg_pool%seed_bed%carbon(:)
+       veg_pool%reserve     = veg_pool%reserve * 0.0_wp
+       height(:)            = 0.0_wp
+       diameter(:)          = 0.0_wp
+       dens_ind(:)          = 0.1_wp
+       lai(:)               = 0.0_wp
+       mean_leaf_age(:)     = 0.0_wp
+       dphi(:)              = w_soil_root_pot(:) - lctlib%phi_leaf_min 
+       rfr_ratio_boc_tvegdyn_mavg(:) = rfr_ratio_toc 
+    ENDIF
+
 
     !> 3.0 Given current vegetation pools, update canopy layers 
     !!
