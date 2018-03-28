@@ -103,7 +103,7 @@ MODULE mo_pheno_memory_class
                                       ! growing period (autumn to spring) and negative during summer. (stream)
       & chill_days_SG,              & ! Number of chill days --- needed for the phenology of summer- and
       & chill_days_EG,              & ! evergreens (stream)
-      & veg_frac_correction           ! Factor representing clumpyness of vegetation (for each tile type).
+      & veg_frac_correction,        & ! Factor representing clumpyness of vegetation (for each tile type).
                                       ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                       ! canopy area = veg_frac_correction * tile area.
                                       ! var (tile area) = veg_frac_correction * var(canopy area).
@@ -113,6 +113,8 @@ MODULE mo_pheno_memory_class
                                       ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
                                       !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                       ! var (tile area) = veg_frac_correction * var(canopy area)  * fract_fpc_max.
+      & delta_veg_frac_correction,  &
+      & delta_lai
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
@@ -213,6 +215,25 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.TRUE.,                                                  &
         & loutput = .TRUE.,initval_r=0.0_wp )
+
+
+      !TODO-JN-COHORTS: only required if FAGE is active (and l_forestRegrowth)
+      CALL jsb_add_var( mem, 'delta_veg_frac_correction', mem%delta_veg_frac_correction, &
+        & hgrid, surface,                                                    &
+        & t_cf('delta_veg_frac_correction', '', 'Change in correction factor upon ageing') , &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                  &
+        & loutput = .FALSE.,initval_r=0.0_wp )
+      
+      CALL jsb_add_var( mem, 'delta_lai', mem%delta_lai, &
+        & hgrid, surface,                                                    &
+        & t_cf('delta_lai', '', 'Change in lai upon ageing') , &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.TRUE.,                                                  &
+        & loutput = .FALSE.,initval_r=0.0_wp )
+
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 

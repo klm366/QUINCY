@@ -16,7 +16,8 @@ MODULE mo_fage_process
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: update_frac_per_age_upon_ageing, update_frac_per_age_equally_upon_disturbance, correct_and_synchronise_fracts 
+   PUBLIC :: update_frac_per_age_upon_ageing, update_frac_per_age_equally_upon_disturbance, &
+     & update_frac_per_age_and_determine_area_to_harvest_from_cohort, correct_and_synchronise_fracts 
 
    !TODO-JN: merge_cohorts update_age?
 
@@ -159,6 +160,57 @@ MODULE mo_fage_process
     ENDDO
   END SUBROUTINE update_frac_per_age_equally_upon_disturbance
 
+
+  !TODO-JN: make faster?
+  SUBROUTINE update_frac_per_age_and_determine_area_to_harvest_from_cohort( &
+                    harvest_kind, nidx, nage, ncohorts, iThisCohort, &   !in
+                    cohort_max_age,                                  &   !in
+                    fract_per_age,                                   &   !inout
+                    harvested_area,                                  &   !inout
+                    to_be_harvested_area                             &   !inout
+                    )
+
+    USE mo_harvest_constants,    ONLY: HARVEST_OLDEST_TREES
+
+    !-----------------------------------------------------------------------
+    !  ARGUMENTS
+    INTEGER,  INTENT(in)    ::  harvest_kind, nidx, nage, ncohorts, iThisCohort
+    REAL(wp), INTENT(inout), DIMENSION(nidx) :: harvested_area, to_be_harvested_area
+    REAL(wp), INTENT(inout), DIMENSION(nidx, ncohorts) :: cohort_max_age
+    REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age
+
+    !-----------------------------------------------------------------------
+    !  LOCAL
+    INTEGER :: j, k, thisMinAge, thisMaxAge
+    REAL(wp) :: thisHarvest
+
+    !-----------------------------------------------------------------------
+    ! CONTENT
+    IF(iThisCohort .EQ. 1) RETURN !area is only distributed to the first child - not from
+
+    ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
+    DO j=1,nidx
+      thisMinAge = int(cohort_max_age(j,iThisCohort-1)+1)
+      thisMaxAge = int(cohort_max_age(j,iThisCohort))
+
+      IF (harvest_kind .EQ. HARVEST_OLDEST_TREES) THEN
+        DO k=thisMaxAge,thisMinAge,-1
+          IF(to_be_harvested_area(j) .GT. 0._wp) THEN
+            thisHarvest = MIN(fract_per_age(j,k), to_be_harvested_area(j))
+            fract_per_age(j,k) = fract_per_age(j,k) - thisHarvest
+            fract_per_age(j,1) = fract_per_age(j,1) + thisHarvest
+            to_be_harvested_area(j) = to_be_harvested_area(j) - thisHarvest
+            harvested_area(j) = harvested_area(j) + thisHarvest
+          ELSE
+            EXIT
+          ENDIF
+        ENDDO
+      ELSE
+        CALL finish('update_frac_per_age_and_determine_area_to_harvest_from_cohort','Not implemented harvest kind')
+      ENDIF
+    ENDDO
+
+  END SUBROUTINE update_frac_per_age_and_determine_area_to_harvest_from_cohort
 
 #endif
 END MODULE mo_fage_process

@@ -20,7 +20,8 @@ MODULE mo_pheno_process
 
    PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, calc_previous_day_NPP, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
-             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool 
+             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, &
+             update_pheno_delta_vars
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
@@ -1007,6 +1008,29 @@ MODULE mo_pheno_process
      RETURN
 
   END SUBROUTINE track_max_green_pool
+
+
+
+  ELEMENTAL SUBROUTINE update_pheno_delta_vars( & 
+                                          & old_fract,     & ! <- in
+                                          & delta_fract,   & ! <- in
+                                          & delta_var,     & ! <- inout
+                                          & old_var)         ! <- inout
+
+     !-----------------------------------------------------------------------
+     !  ARGUMENTS
+     REAL(wp), intent(in)    :: old_fract, delta_fract
+     REAL(wp), intent(inout) :: delta_var, old_var
+
+     IF ((delta_var .GT. 0._wp) .AND. (delta_fract .GT. 0._wp)) THEN 
+       old_var = ((old_var * old_fract) + delta_var) / (old_fract + delta_fract)
+     ENDIF
+     delta_var = 0._wp
+
+     RETURN
+
+  END SUBROUTINE update_pheno_delta_vars
+
 
 
   ! --- get_letItDie() ----------------------------------------------------------------------------------------------------------------

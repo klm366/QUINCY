@@ -305,10 +305,10 @@ CONTAINS
     IF (model%processes(FM_)%p%config%active) THEN
       CALL model%Queue_task(FM_,     "forest_management")
       CALL model%Queue_task(HARV_,   "forest_harvest")
-!      IF (model%processes(FAGE_)%p%config%active) THEN
-!        CALL model%Queue_task(FAGE_,   "harvest_cohort_changes")
-!        CALL model%Queue_task(CARBON_, "apply_cohort_changes")
-!      ENDIF
+      IF (model%processes(FAGE_)%p%config%active) THEN
+        CALL model%Queue_task(FAGE_,   "harvest_cohort_changes")
+        CALL model%Queue_task(CARBON_, "apply_cohort_changes")
+      ENDIF
     ENDIF
 
     ! Temporary for testing ... should be in separate subroutine

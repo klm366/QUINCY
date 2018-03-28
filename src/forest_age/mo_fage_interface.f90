@@ -25,7 +25,7 @@ MODULE mo_fage_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_, HARV_
+  dsl4jsb_Use_processes FAGE_, CARBON_, DISTURB_, HARV_, PHENO_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(FAGE_)
@@ -36,7 +36,7 @@ MODULE mo_fage_interface
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(HARV_)
-
+  dsl4jsb_Use_memory(PHENO_)
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -156,7 +156,8 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Task "calculate_ageing" calculates the required changes in delta fract and delta cpools upon ageing
+  !! @brief Task "calculate_ageing" calculates the required changes upon ageing 
+  !!        changes in delta fract, delta cpools, delta veg_frac_correction 
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -173,7 +174,16 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
+    TYPE(t_pheno_memory), POINTER :: pheno__mem__source
+    TYPE(t_pheno_memory), POINTER :: pheno__mem__sink
+
     ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction_source
+    dsl4jsb_Real2D_onChunk :: delta_veg_frac_correction_sink
+    dsl4jsb_Real2D_onChunk :: lai_source
+    dsl4jsb_Real2D_onChunk :: delta_lai_sink
+
+
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
 
@@ -233,6 +243,8 @@ CONTAINS
         IF (i .LT. ncohorts) currentChild => currentChild%Get_next_sibling_tile()
       ENDDO
 
+      !TODO: Assert that currentChild is last child and start working from there? nextChild%Get_prev_sibling_tile()
+
       !----- care for shifts among cohort boundaries
       currentChild => tile%Get_first_child_tile()
 
@@ -263,7 +275,19 @@ CONTAINS
         CALL update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
           & currentChild, nextChild, options, fract_this_max_age(:), source_fract(:))
 
-        ! c) TODO-JN-COHORTS what else to shift? 
+        ! c) schedule changes in veg_frac_correction - required for recalculation of the carbon pools
+        !     -> particularly max_green_veg_c for subsequent maxLAI calculation!
+        SELECT TYPE (mm => currentChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
+        SELECT TYPE (mm => nextChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__sink => mm ; END SELECT
+        veg_frac_correction_source => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! inout
+        delta_veg_frac_correction_sink => pheno__mem__sink%delta_veg_frac_correction%ptr(ics:ice,iblk)  ! inout
+        delta_veg_frac_correction_sink = delta_veg_frac_correction_sink + veg_frac_correction_source * fract_this_max_age(:)
+
+        lai_source => pheno__mem__source%lai%ptr(ics:ice,iblk)  ! inout
+        delta_lai_sink => pheno__mem__sink%delta_lai%ptr(ics:ice,iblk)  ! inout
+        delta_lai_sink = delta_lai_sink + lai_source * fract_this_max_age(:)
+
+        ! d) TODO-JN-COHORTS what else to shift? 
 
         ! move further in the child list
         currentChild => nextChild
@@ -535,9 +559,9 @@ CONTAINS
   ! NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
   SUBROUTINE update_harvest_cohort_changes(tile, options)
 
-    USE mo_jsb_time,             ONLY: is_newday
+    USE mo_jsb_time,             ONLY: is_newyear
     USE mo_fage_util,            ONLY: get_mean_age
-    USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
+    USE mo_fage_process,         ONLY: update_frac_per_age_and_determine_area_to_harvest_from_cohort
     USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: CLEARCUT
     USE mo_harvest_constants,    ONLY: HARVEST_OLDEST_TREES
@@ -597,67 +621,70 @@ CONTAINS
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
-    IF(is_newday() .AND. ANY(area_to_harvest(:) .GT. 0._wp)) THEN
-      dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
+    dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
+    IF(is_newyear()) THEN
+      harvested_area(:) = 0._wp
 
-      ! Area changes upon clearcut only have carbon consequences for the first child
-      !  (All other children will only have area changes)
-      dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .TRUE.
+      IF(ANY(area_to_harvest(:) .GT. 0._wp)) THEN
+        dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
 
-      !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
-      !Assertion: TODO - fehler wenn youngest not empty!
-      l_sourceisfirstChild = .FALSE.
+        ! Area changes upon clearcut only have carbon consequences for the first child
+        !  (All other children will only have area changes)
+        dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .TRUE.
 
-      firstChild => tile%Get_first_child_tile()
-      currentChild => tile%Get_first_child_tile()
+        !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
+        !Assertion: TODO - fehler wenn youngest not empty!
+        l_sourceisfirstChild = .FALSE.
 
-      IF (dsl4jsb_Config(HARV_)%harv_kind .EQ. HARVEST_OLDEST_TREES) THEN
-        ! as opposed to damaged_frac in update_nat_disturb_cohort_changes area_to_harvest is already with respect
-        ! to this tiles area - i.e. not per cohort, thus it does not have to be multiplied with cohort fractions
-        stillToHarvest(:) = area_to_harvest(:)
+        firstChild => tile%Get_first_child_tile()
+        currentChild => tile%Get_first_child_tile()
 
-        ! Identify cohort with oldest available trees for any calculated gridcell
-        oldestCohort = 2 !TODO MAX(MAX(fract_per_age(:,:)))
+        IF (dsl4jsb_Config(HARV_)%harv_kind .EQ. HARVEST_OLDEST_TREES) THEN
+          ! as opposed to damaged_frac in update_nat_disturb_cohort_changes area_to_harvest is already with respect
+          ! to this tiles area - i.e. not per cohort, thus it does not have to be multiplied with cohort fractions
+          stillToHarvest(:) = area_to_harvest(:)
 
-        ! Iterate over the children until currentChild points to that cohort
-        DO i=1,oldestCohort-1
-          !TODO: Assertion that current its not already the last
-          currentChild => currentChild%Get_next_sibling_tile()
-        ENDDO
+          ! TODO: Identify cohort with oldest available trees for any calculated gridcell
+          oldestCohort = ncohorts
 
-        ! then iterate backwards until either all demanded area is fulfilled or the lowest cohort is reached
-        DO i=oldestCohort,2,-1
-          ! Determine area to be harvested from this cohort
-          ! CALL TODO:  update_frac_per_age_and_determine_area_to_harvest_from_cohort(nc, max_age, ncohorts, &
-          !      & i, cohort_max_age(:,:), fract_per_age(:,:), harvestFromThisCohort(:), stillToHarvest(:))
-           
-          harvested_area(:) = harvested_area(:) + harvestFromThisCohort(:)
+          ! Iterate over the children until currentChild points to that cohort
+          DO i=1,oldestCohort-1
+            !TODO: Assertion that current its not already the last
+            currentChild => currentChild%Get_next_sibling_tile()
+          ENDDO
 
-          ! reduce current tiles delta fraction  
-          currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisCohort(:)
-          ! and add it to the first childs delta
-          firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisCohort(:)
+          ! then iterate backwards until either all demanded area is fulfilled or the lowest cohort is reached
+          DO i=oldestCohort,2,-1
+            ! Determine area to be harvested from this cohort
+            harvestFromThisCohort = 0._wp
+            CALL update_frac_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
+              & max_age, ncohorts, i, cohort_max_age(:,:), fract_per_age(:,:), harvestFromThisCohort(:), stillToHarvest(:))
+             
+            harvested_area(:) = harvested_area(:) + harvestFromThisCohort(:)
 
-          ! b) carbon consequences 
-          CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-!          CALL update_delta_carbon_rp_upon_disturbance( &
-!            currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisCohort(:), source_fract(:), CLEARCUT)
+            ! reduce current tiles delta fraction  
+            currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisCohort(:)
+            ! and add it to the first childs delta
+            firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisCohort(:)
 
-          ! c) TODO-JN-COHORTS what else to shift? 
+            ! b) carbon consequences 
+            CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+            CALL update_delta_carbon_rp_upon_disturbance( &
+              currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisCohort(:), source_fract(:), CLEARCUT)
 
-          ! Go to next child
-          currentChild => currentChild%Get_prev_sibling_tile()
-        ENDDO
+            ! c) TODO-JN-COHORTS what else to shift? 
 
-      ELSE
-          CALL finish(TRIM(routine),'Not implemented harvest kind')
+            ! Go to next child
+            currentChild => currentChild%Get_prev_sibling_tile()
+          ENDDO
+
+        ELSE
+            CALL finish(TRIM(routine),'Not implemented harvest kind')
+        ENDIF
+
+        ! recalculate mean age
+        mean_age (:) = get_mean_age(fract_per_age)
       ENDIF
-
-      ! recalculate mean age
-      mean_age (:) = get_mean_age(fract_per_age)
-
-    ELSE
-      dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

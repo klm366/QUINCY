@@ -997,6 +997,7 @@ CONTAINS
         & t_cf('GPP_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean GPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
+        & loutput = .TRUE., &
         & output_level=BASIC,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
