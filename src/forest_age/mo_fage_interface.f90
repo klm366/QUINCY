@@ -245,7 +245,7 @@ CONTAINS
         IF (i .LT. ncohorts) currentChild => currentChild%Get_next_sibling_tile()
       ENDDO
 
-      !TODO: Assert that currentChild is last child
+      !Assert that currentChild is last child
       IF(.NOT. currentChild%Is_last_child()) &
         & CALL finish(TRIM(routine), 'Violation of assertion: expected last child after iterating over ncohorts')
 
@@ -294,7 +294,7 @@ CONTAINS
         ENDIF
 
         ! TODO-JN: hm, do this also has to be weighted with the new veg_frac_corr? If so it also would need to be
-        ! rescaled each time the veg_frac_correction changes!?!
+        ! rescaled each time the veg_frac_correction changes!?! - Kim and I currently (28.03.18) interprete LAI as per tile
         lai_source => pheno__mem__source%lai%ptr(ics:ice,iblk)  ! in
         lai_sink => pheno__mem__sink%lai%ptr(ics:ice,iblk)      ! inout
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
@@ -657,12 +657,15 @@ CONTAINS
           ! to this tiles area - i.e. not per cohort, thus it does not have to be multiplied with cohort fractions
           stillToHarvest(:) = area_to_harvest(:)
 
-          ! TODO: Identify cohort with oldest available trees for any calculated gridcell
+          ! TODO: Identify cohort with oldest available trees for any calculated gridcell?
           oldestCohort = ncohorts
 
           ! Iterate over the children until currentChild points to that cohort
           DO i=1,oldestCohort-1
-            !TODO: Assertion that current its not already the last
+            !Assertion that current its not already the last
+            IF(currentChild%Is_last_child()) &
+              & CALL finish(TRIM(routine), 'Violation of assertion: unexpected last child.')
+
             currentChild => currentChild%Get_next_sibling_tile()
           ENDDO
 
