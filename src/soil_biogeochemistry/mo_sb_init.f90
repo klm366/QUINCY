@@ -44,6 +44,7 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_sb_jsm_processes
+    USE mo_soil_util,             ONLY: calc_qmax_texture
     USE mo_sb_jsm_transport
     USE mo_veg_constants,         ONLY: itree
     USE mo_sb_constants             ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
@@ -84,6 +85,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onChunk :: silt_sl
+    dsl4jsb_Real3D_onChunk :: clay_sl
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: nh4_solute
     dsl4jsb_Real3D_onChunk :: no3_solute
@@ -126,6 +132,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_org_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_om_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     silt_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     clay_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)
@@ -205,8 +216,10 @@ CONTAINS
              ! inital Qmax based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
              bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-             qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
-                                                  qmax_po4_mineral,qmax_po4_mineral)
+             qmax_po4_min_sl(:,:)     = calc_qmax_texture(qmax_po4_fine_particle, 0.0_wp, 1._wp)
+             qmax_po4_om_sl(:,:)      = qmax_po4_min_sl(:,:)/1000._wp
+             qmax_po4(:,:)            = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                        qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
 
              ! initialise mineral soil P pools
              CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
@@ -244,12 +257,13 @@ CONTAINS
              nh4_solute(:,:) = nh4_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
              no3_solute(:,:) = no3_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
 
-
-             ! inital Qmax based on current soil carbon content
+             ! inital bulk density and qmax_po4 based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
-             bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-             qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
-                                                  qmax_po4_mineral,qmax_po4_mineral)
+             bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))            
+             qmax_po4_min_sl(:,:) = calc_qmax_texture(qmax_po4_fine_particle, 0.0_wp, 1._wp)
+             qmax_po4_om_sl(:,:) = qmax_po4_min_sl(:,:)/1000._wp
+             qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
+                                      qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
 
              ! initialise mineral soil P pools
              CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
@@ -331,7 +345,7 @@ CONTAINS
              sb_pool%microbial%carbon(:,isoil) = MAX(hlp4/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil), &
                                                      min_mic_biomass)
              sb_pool%residue%carbon(:,isoil) = hlp5/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
-             sb_pool%residue_assoc%carbon(:,isoil) = qmax_org_mineral/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
+             sb_pool%residue_assoc%carbon(:,isoil) = dsl4jsb_Config(SB_)%qmax_org_fine_particle/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
           ENDDO
           sb_pool%soluable_litter%nitrogen(:,:)   = sb_pool%soluable_litter%carbon(:,:) / microbial_cn 
           sb_pool%soluable_litter%phosphorus(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / microbial_np
@@ -365,13 +379,17 @@ CONTAINS
           no3_solute(:,:) = 1.0_wp 
           no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))  
  
-          ! inital Qmax based on current soil carbon content
-          bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
-          bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
-          qmax_org(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
-                                               qmax_org_om,qmax_org_mineral)
-          qmax_po4(:,:)            = calc_qmax(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
-                                                   qmax_po4_mineral,qmax_po4_mineral)
+         ! inital bulk density, Qmax_org & Qmax_po4 based on current soil carbon content
+         bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+         bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
+         qmax_org_min_sl(:,:) = calc_qmax_texture(dsl4jsb_Config(SB_)%qmax_org_fine_particle, silt_sl(:,:), clay_sl(:,:))
+         qmax_po4_min_sl(:,:) = calc_qmax_texture(qmax_po4_fine_particle, 0.0_wp, 1._wp)
+         qmax_po4_om_sl(:,:) = qmax_po4_min_sl(:,:)/1000._wp
+         qmax_org(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
+                         0._wp,qmax_org_min_sl(:,:))
+         qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
+                         qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
+
   
           ! initialise diffusion by bioturbation
           k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:)) 

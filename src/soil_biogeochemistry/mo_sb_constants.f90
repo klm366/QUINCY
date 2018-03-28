@@ -44,6 +44,7 @@ MODULE mo_sb_constants
       carbon_per_dryweight_SOM, &  !< C per unit dryweight SOM [gC / gOM] 
       qmax_org_om, &               !< sorption capacity of organic matter [mol C kg-1 OM] 
       qmax_org_mineral, &          !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
+      qmax_po4_fine_particle, &    !< maximum sorption capacity of po4 to fine soil particle, mol P/ kg fine particle
       k_adsorpt_dom, & 
       k_desorpt_dom, &
       k_adsorpt_det, &
@@ -186,7 +187,7 @@ MODULE mo_sb_constants
 
    ! soil Pi fluxes
    REAL(wp), SAVE :: &
-      k_weath_mineral, &         !< Weathering coefficient of mineral soil [s-1]
+      k_weath_mineral, &         !< Weathering coefficient of mineral soil [mol P m-3 s-1]
       eq_sorp_mineral_po4, &     !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
       k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [s-1]
       vmax_biochem_po4, &        !< Maximum PO4 biochemical mineralization rate [s-1], MM kinetics (potentially also for ECA)
@@ -241,7 +242,8 @@ CONTAINS
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
     qmax_org_om         = 0.0_wp
     qmax_org_mineral    = 0.055_wp / molar_mass_C * 1000._wp 
-    k_adsorpt_dom       = 843.391_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s
+    qmax_po4_fine_particle = 0.5_wp / molar_mass_P ! [mol P kg-1 soil], 
+    k_adsorpt_dom       = 843.391_wp / one_year / one_day * molar_mass_C  / 1000._wp! conversion to m3 / mol C / s
     k_desorpt_dom       = 4301.741_wp / one_year / one_day
     k_adsorpt_det       = 6733.843_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s
     k_desorpt_det       = 2065.491_wp / one_year / one_day
@@ -334,11 +336,11 @@ CONTAINS
     k_plant_uptake_po4    = 12._wp / 100._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein/ 100._wp
     f_mic_carrier_po4     = 0.0015_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4   = 0.1_wp / 80._wp ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
-    qmax_po4_mineral      = 0.134_wp / molar_mass_P ! [mol P kg-1 soil], Olander and Vitousek 2005
-    km_adsorpt_po4        = 0.075_wp / molar_mass_P ! [mol P kg-1 soil], Wang et al. 2010
+    qmax_po4_mineral      = 0.5_wp / molar_mass_P ! [mol P kg-1 soil], Olander and Vitousek 2005
+    km_adsorpt_po4        = 0.225_wp / 1000._wp / molar_mass_P ! [mol P kg-1 soil], 
 
 
-    k_weath_mineral       = 0.001_wp / 30.0_wp / one_day ! [s-1], Yang et al. 2014
+    k_weath_mineral       = 0.01_wp / molar_mass_P / 1254._wp / one_year /one_day ! [mol P m-3 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
     eq_sorp_mineral_po4   = 80._wp / molar_mass_P ![mol P m-3] ! random guess based on init value of assoc_slow
     k_occlude_po4         = 1E-6_wp / 30._wp / one_day ! s-1, Yang et al. 2014
     vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day ![s-1], estimated from Bunemann et al. 2016, LUS site

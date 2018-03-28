@@ -46,7 +46,8 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_constants
-    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax, calc_adsorption_po4
+    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
+                                        calc_qmax_bulk_density_correction, calc_adsorption_po4
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_N15N14
 
     ! Use of process configurations (t_PROC_config)
@@ -71,12 +72,9 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc
-    INTEGER                               :: nsoil_sb
-    INTEGER                               :: isoil
-!!
+    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
+    INTEGER                               :: i, isoil
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon, p_deposition_sl, hlp1
-!!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -96,6 +94,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl
+    dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onChunk :: silt_sl
+    dsl4jsb_Real3D_onChunk :: clay_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: total_flux_carbon
     dsl4jsb_Real2D_onChunk :: total_flux_nitrogen
@@ -232,6 +235,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_org_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_om_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     silt_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     clay_sl)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
@@ -358,7 +366,7 @@ CONTAINS
 #undef Get_sb_mycorrhiza_export
 
 
-    p_deposition_sl(:,:) = 0.0_wp
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
@@ -518,7 +526,7 @@ CONTAINS
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-    !> 4.2 atmospheric deposition
+    !> 4.2 update of mineral P pools
     !!
     nh4_solute(:,1)      = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
     no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
@@ -589,12 +597,8 @@ CONTAINS
     !!
     bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
-    !DO isoil = 1,nsoil_sb
-    !   hlp1(:,isoil) = 0.9_wp * exp(-0.9_wp * SUM(soil_depth_sl(:,1:isoil),DIM=2)) + 0.1_wp
-    !ENDDO
-    !qmax_org = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_org_om,qmax_org_mineral*hlp1)
-    qmax_org = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_org_om,qmax_org_mineral)
-    qmax_po4 = calc_qmax(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_mineral,qmax_po4_mineral)
+    qmax_org = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,0._wp,qmax_org_min_sl)
+    qmax_po4 = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_om_sl,qmax_po4_min_sl)
 
     ! NH4
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
@@ -745,6 +749,7 @@ CONTAINS
 
 
 ! Pass back values to process memory
+dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 #define Passback_veg_litterfall
 #define Passback_veg_exudation
 #define Passback_sb_pool
@@ -923,6 +928,7 @@ CONTAINS
                   ((po4_solute(:,:) + km_adsorpt_po4_act(:,:))**2.0_wp + qmax_po4_mineral_act(:,:) * km_adsorpt_po4_act(:,:))
       hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
             (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_sorption_po4(:,:)) + transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
+
       WHERE (po4_solute(:,:) < (-hlp2(:,:)) .OR. po4_assoc_fast(:,:) < (-hlp2(:,:)) )
         hlp1(:,:) = po4_solute(:,:)/(po4_solute(:,:)+po4_assoc_fast(:,:))
       ENDWHERE

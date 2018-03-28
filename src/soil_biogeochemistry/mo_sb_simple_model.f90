@@ -49,6 +49,8 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(SOIL_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -102,6 +104,8 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
@@ -242,6 +246,8 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SOIL_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
@@ -570,6 +576,7 @@ CONTAINS
                                     rtm_decomposition_act(:,:), &
                                     rmm_decomposition_act(:,:), &
                                     km_dip_biochem_po4_act(:,:), &
+                                    bulk_dens_corr_sl(:,:), &
                                     po4_solute(:,:), &
                                     po4_assoc_fast(:,:), &
                                     po4_assoc_slow(:,:), &
@@ -1651,6 +1658,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                    rtm_decomposition_act, &
                                                    rmm_decomposition_act, &
                                                    km_dip_biochem_po4_act, &
+                                                   bulk_dens_corr_sl, &
                                                    po4_solute, &
                                                    po4_assoc_fast, &
                                                    po4_assoc_slow, &
@@ -1675,6 +1683,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: rtm_decomposition_act, &   !< temperature response of decomposition
                                                                      rmm_decomposition_act, &   !< moisture response of decomposition
                                                                      km_dip_biochem_po4_act, &  !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
+                                                                     bulk_dens_corr_sl, &       !< bulk density of the soil layer, [kg/m3]
                                                                      po4_solute, &              !< soluble PO4 pool [mol/m3]
                                                                      po4_assoc_fast, &          !< fast minerally associated PO4 pool [mol/m3]
                                                                      po4_assoc_slow, &          !< slow minerally associated PO4 pool [mol/m3]
@@ -1695,20 +1704,25 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !!
-    weathering_po4 = k_weath_mineral_act * po4_primary * dtime
+    weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * dtime
+    WHERE (weathering_po4(:,:) > po4_primary(:,:)) 
+      weathering_po4(:,:) = po4_primary(:,:)
+    ELSEWHERE
+      weathering_po4(:,:) = 0.0_wp
+    END WHERE
     !> 1.1 Calculate P occlusion rate from occluded PO4 pool (mol /m3 / timestep)
-    occlusion_po4 = po4_assoc_slow * k_occlude_po4 * dtime
+    occlusion_po4(:,:)     = po4_assoc_slow(:,:) * k_occlude_po4 * dtime
     !> 1.2 Calculate P slow adsorption rate (mol /m3 / timestep)
-    hlp1 = k_desorpt_po4_act * po4_assoc_slow * dtime
-    hlp2 = k_adsorpt_po4_act * po4_assoc_fast * dtime
-    slow_sorption_po4 = hlp2 - hlp1  
+    hlp1(:,:)              = k_desorpt_po4_act(:,:) * po4_assoc_slow(:,:) * dtime
+    hlp2(:,:)              = k_adsorpt_po4_act(:,:) * po4_assoc_fast(:,:) * dtime
+    slow_sorption_po4(:,:) = hlp2(:,:) - hlp1(:,:)  
 
     !> 2.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
     !!
-    IF(.NOT.flag_sb_prescribe_po4)THEN
-       hlp1 = km_dip_biochem_po4_act / (km_dip_biochem_po4_act + po4_solute)
-       biochem_mineralisation_po4(:,:) = rtm_decomposition_act(:,:)*rmm_decomposition_act(:,:)/tau_biomineralisation * & 
-                                         sb_pool_residue_phosphorus(:,:) * hlp1 * dtime
+    IF(.NOT.flag_sb_prescribe_po4) THEN
+       hlp1(:,:)                       = km_dip_biochem_po4_act(:,:) / (km_dip_biochem_po4_act(:,:) + po4_solute(:,:))
+       biochem_mineralisation_po4(:,:) = rtm_decomposition_act(:,:) * rmm_decomposition_act(:,:) / tau_biomineralisation * & 
+                                         sb_pool_residue_phosphorus(:,:) * hlp1(:,:) * dtime
     ELSE
        biochem_mineralisation_po4(:,:) = 0.0_wp
     ENDIF 

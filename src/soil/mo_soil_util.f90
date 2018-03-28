@@ -19,7 +19,7 @@ MODULE mo_soil_util
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: soil_depth_to_layers_2d
+  PUBLIC :: soil_depth_to_layers_2d, calc_qmax_texture
   PUBLIC :: reset_soil_fluxes           ! called in the land model interface prior to all Tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_util'
@@ -67,6 +67,29 @@ CONTAINS
 
   END FUNCTION soil_depth_to_layers_2d
 
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION calc_qmax_texture
+  !!
+  !! Output: sorption capacity for organic material 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_qmax_texture(qmax_fine_particle, silt_sl, clay_sl) RESULT(qmax_texture)
+
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: qmax_fine_particle    !< maximum sorption capacity of fine soil particle [mol / kg fine particle (silt or clay)]
+    REAL(wp), INTENT(in) :: silt_sl               !< silt content of the mineral soil [kg silt / kg mineral soil]
+    REAL(wp), INTENT(in) :: clay_sl               !< clay content of the mineral soil [kg clay / kg mineral soil]
+    REAL(wp)             :: qmax_texture          !< maximum sorption capacity of the soil [mol / kg]
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_texture'
+
+    ! maximum sorption capacity per kg mineral soil (mol/kg)
+    qmax_texture = qmax_fine_particle * (silt_sl + clay_sl)
+
+  END FUNCTION calc_qmax_texture
 
   !-----------------------------------------------------------------------------------------------------
   !> init/reset soil fluxes (with/to zero)

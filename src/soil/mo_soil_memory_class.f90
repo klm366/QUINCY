@@ -102,7 +102,11 @@ MODULE mo_soil_memory_class
     TYPE(t_jsb_var_real3d)          :: & 
                                     sand_sl             , &  !< soil sand proportion
                                     silt_sl             , &  !< soil silt proportion
-                                    clay_sl                  !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+                                    clay_sl             , &  !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+                                    qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
+                                    qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
+                                    qmax_po4_om_sl           !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
+
                                     
 
 
@@ -446,6 +450,30 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
             
       CALL jsb_add_var(mem, 'clay_sl', mem%clay_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_org_min_sl', mem%qmax_org_min_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_po4_min_sl', mem%qmax_po4_min_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_po4_om_sl', mem%qmax_po4_om_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

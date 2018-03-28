@@ -449,17 +449,19 @@ CONTAINS
             p1str=''
             p2str=''
             p3str=''
+            p4str=''
             DO isoil = 1,nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
               ELSE
                 WRITE(layerstr,'(I2)') isoil
               ENDIF
-              WRITE(p1str,'(a)') TRIM(p1str)//' Qmax_L'//TRIM(layerstr)
+              WRITE(p1str,'(a)') TRIM(p1str)//' QmaxOrg_L'//TRIM(layerstr)
               WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' CUEmic_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' QmaxPo4_L'//TRIM(layerstr)
             ENDDO
-            WRITE(lun,'(4a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str)
+            WRITE(lun,'(5a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)
             lun=lun+1                 
         END SELECT
     END SELECT
@@ -869,7 +871,11 @@ CONTAINS
                                       SUM(sb_pool%microbial%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))          + &
                                       SUM(sb_pool%residue%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
                                       SUM(sb_pool%mycorrhiza%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))         + &
-                                      SUM(po4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
+                                      SUM(po4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                            + & 
+                                      SUM(po4_assoc_fast(ipoi,:)*soil_depth_sl(ipoi,:))                        + &
+                                      SUM(po4_assoc_slow(ipoi,:)*soil_depth_sl(ipoi,:))                        + &
+                                      SUM(po4_occluded(ipoi,:)*soil_depth_sl(ipoi,:))                          + &
+                                      SUM(po4_primary(ipoi,:)*soil_depth_sl(ipoi,:))                           + &
                                       veg_total_biomass%phosphorus(ipoi)                                     , &
                                      SUM(sb_pool%soluable_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
                                       SUM(sb_pool%polymeric_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))   + & 
@@ -1113,7 +1119,7 @@ CONTAINS
                             sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
           ! soil_diagnostics_lay
-          write(lun,'(61F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:)
+          write(lun,'(81F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), qmax_po4(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_output .OR. l_soil_output

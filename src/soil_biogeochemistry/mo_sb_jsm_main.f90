@@ -340,7 +340,7 @@ CONTAINS
                             sb_pool%residue%phosphorus(:,:), sb_pool%residue_assoc%phosphorus(:,:), &
                             sb_loss%polymeric_litter%phosphorus(:,:), sb_loss%dom_assoc%phosphorus(:,:), &
                             sb_loss%residue%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), & 
-                            po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_primary(:,:), &
+                            po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_primary(:,:), bulk_dens_corr_sl(:,:), &
                             biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
 
     !! Microbial and plant P uptake
