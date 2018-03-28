@@ -20,7 +20,8 @@
   canopy_layer_scheme="standard"
 /
 &PHENOLOGY_CTL
-  lai=6.0
+  ! LAI at the site, used to set pheno:lai_max
+  lai_site_specific=6.0
 /
 &RADIATION_CTL
   ! nothing here yet

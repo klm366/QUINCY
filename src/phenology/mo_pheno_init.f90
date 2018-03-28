@@ -95,7 +95,12 @@ CONTAINS
       growing_season=.FALSE.
     ENDIF
 
-    lai_max(:)      = dsl4jsb_Config(PHENO_)%lai
+    ! set lai_max from the site specific LAI from all_site_list.dat (saved in pheno_config:lai_max) and check for sensible values
+    IF (dsl4jsb_Config(PHENO_)%lai_max > 0.5_wp .AND. dsl4jsb_Config(PHENO_)%lai_max < 8.0_wp) THEN
+      lai_max(:) = dsl4jsb_Config(PHENO_)%lai_max
+    ELSE
+      lai_max(:) = 6.0_wp
+    END IF
 
   END SUBROUTINE pheno_init
 

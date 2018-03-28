@@ -26,7 +26,7 @@ MODULE mo_pheno_config_class
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
-    REAL(wp)        :: lai        ! site specific lai, used to init lai_max in PHENO_
+    REAL(wp)        :: lai_max        ! site specific lai, used to init lai_max in PHENO_
   CONTAINS
     PROCEDURE :: Init => Init_pheno_config
   END type t_pheno_config
@@ -52,15 +52,16 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    REAL(wp)                    :: lai
+    CHARACTER(len=filename_max) :: ic_filename, &
+                                   bc_filename
+    REAL(wp)                    :: lai_site_specific        ! site specific lai, used to init lai_max in PHENO_
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
 
-    NAMELIST /phenology_ctl/       & 
-      & active,       &
-      & ic_filename,  &
-      & bc_filename,  &
-      & lai      !    , &
+    NAMELIST /phenology_ctl/        & 
+      & active,                     &
+      & ic_filename,                &
+      & bc_filename,                &
+      & lai_site_specific   !       , &             ! site specific lai, used to init lai_max in PHENO_
 
 
     ! variables for reading model-options from namelist
@@ -72,7 +73,7 @@ CONTAINS
     active              = .TRUE.
     bc_filename         = 'bc_land_phenology.nc'    
     ic_filename         = 'ic_land_phenology.nc'
-    lai                 = 6.0_wp
+    lai_site_specific   = 6.0_wp
 
     ! read the namelist
     ! &PHENOLOGY_CTL
@@ -85,7 +86,7 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    config%lai                 = lai
+    config%lai_max             = lai_site_specific      ! site specific lai, used to init lai_max in PHENO_
 
     CALL close_nml(nml_handler)
 

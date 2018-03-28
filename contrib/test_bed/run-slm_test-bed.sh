@@ -690,7 +690,7 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
     changeNamelistValue usda_taxonomy_class   "$(awk '{print $14}' <<< "$siteData")"
     changeNamelistValue nwrb_taxonomy_class   "$(awk '{print $15}' <<< "$siteData")"
     changeNamelistValue lithology_class       "$(awk '{print $16}' <<< "$siteData")"
-    changeNamelistValue lai                   "$(awk '{print $17}' <<< "$siteData")"
+    changeNamelistValue lai_site_specific     "$(awk '{print $17}' <<< "$siteData")"
     pftID=0
     case "$pftName" in
       TrBE)

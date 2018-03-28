@@ -216,7 +216,7 @@ changeNamelistValue soil_ph               "$(awk '{print $13}' <<< "$siteData")"
 changeNamelistValue usda_taxonomy_class   "$(awk '{print $14}' <<< "$siteData")"
 changeNamelistValue nwrb_taxonomy_class   "$(awk '{print $15}' <<< "$siteData")"
 changeNamelistValue lithology_class       "$(awk '{print $16}' <<< "$siteData")"
-changeNamelistValue lai                   "$(awk '{print $17}' <<< "$siteData")"
+changeNamelistValue lai_site_specific     "$(awk '{print $17}' <<< "$siteData")"
 changeNamelistValue stand_replacing_year  "$(awk '{print $21}' <<< "$siteData")"
 [ $useSiteSpecificAWC == "T" ] && \
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi

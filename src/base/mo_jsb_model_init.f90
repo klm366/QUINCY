@@ -336,14 +336,15 @@ CONTAINS
         CALL soil_init    (tile, model%options)
         CALL sb_init      (tile, model%options)
       CASE('canopy')
-        CALL veg_init     (tile, model%options)
+        CALL pheno_init   (tile, model%options)
         CALL assimi_init  (tile, model%options)
         CALL rad_init     (tile, model%options)
+        CALL veg_init     (tile, model%options)
         CALL soil_init    (tile, model%options)
       CASE('test_canopy')
-        CALL veg_init     (tile, model%options)
         CALL assimi_init  (tile, model%options)
         CALL rad_init     (tile, model%options)
+        CALL veg_init     (tile, model%options)
         ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
         CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
