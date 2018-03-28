@@ -27,6 +27,8 @@ if [ "$1" == "postprocessing" ]
     jobNameS3="$7"
 
     echo " starting postprocessing of auto SLM testruns for Revision: ""$svnRev"
+    date
+    echo " "
     echo " jobs are:"
     echo "  ""$jobNameD"
     echo "  ""$jobNameD2"
@@ -39,7 +41,6 @@ if [ "$1" == "postprocessing" ]
     mkdir -p "$saveFolder"
 
     ## do some stats and analysis on the debug-run simulation results ##
-    date
     echo "analysis of: ""$jobNameD"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameD" "$saveFolder"
@@ -51,7 +52,6 @@ if [ "$1" == "postprocessing" ]
     echo " "
 
     ## do some stats and analysis on the debug-run simulation results ##
-    date
     echo "analysis of: ""$jobNameD2"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameD2" "$saveFolder"
@@ -63,7 +63,6 @@ if [ "$1" == "postprocessing" ]
     echo " "
 
     ## do some stats and analysis on the standard-run simulation results ##
-    date
     echo "analysis of: ""$jobNameS"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameS" "$saveFolder"
@@ -75,7 +74,6 @@ if [ "$1" == "postprocessing" ]
     echo " "
 
     ## do some stats and analysis on the standard-run simulation results ##
-    date
     echo "analysis of: ""$jobNameS2"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameS2" "$saveFolder"
@@ -87,7 +85,6 @@ if [ "$1" == "postprocessing" ]
     echo " "
 
     ## do some stats and analysis on the standard-run simulation results ##
-    date
     echo "analysis of: ""$jobNameS3"
     # move simulation results
     mv "$bgiJEScratchFolder"slm/"$jobNameS3" "$saveFolder"
@@ -100,6 +97,9 @@ if [ "$1" == "postprocessing" ]
     
 
   # ok postprocessing done exiting this script
+  echo " postprocessing of automated testruns finished"
+  date
+  echo " "
   exit 0
 fi
 
@@ -121,6 +121,18 @@ localWCopySrc=$(svn info ./src | grep "Rev:" | awk '{print $4}')
 # run test runs only if a newer revision of the trunk/src/ folder is available | or if "ignoreRev" is passed as argument to the script (for manual testing purpose)
 if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
   then
+  
+  # check for changing the customSiteList= F/T, per default it is T
+  # check whether the "allsites" argument is present, then it will change to F
+  flagCustomSiteList="T"
+  allSitesArg="$(grep -w "allsites" <<< "$@")"  # check the list of arguments for "allsites" string
+  if [ ! -z "${allSitesArg// }" ]               # -z test is explicitly for: the length of string is zero
+   then 
+    flagCustomSiteList="F"
+    echo " autotestrun simulations will be done for all fluxnet sites, i.e., not using the auto_testrun_flux_sites_list.dat."
+    echo " "
+  fi    
+  
 	# update local working copy
 	svn update && sleep 2
 
@@ -134,12 +146,12 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
   
   # run 100 years fluxnet simulations in debug mode with simple_0d: usecase 02
   jobNameD="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s0d"
-  ./prep_run_slm.sh -u 02 -e "$jobNameD"
+  ./prep_run_slm.sh -u 02 -e "$jobNameD" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameD="exp_""$jobNameD"
   sleep 30s 
   # run 100 years fluxnet simulations in debug mode with simple_1d: usecase 04
   jobNameD2="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s1d"
-  ./prep_run_slm.sh -u 04 -e "$jobNameD2"
+  ./prep_run_slm.sh -u 04 -e "$jobNameD2" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameD2="exp_""$jobNameD2"
 
   ##########################
@@ -152,17 +164,17 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
   
   # run 500 years fluxnet simulations in standard mode with simple_0d: usecase 03
   jobNameS="auto_r""$revRepoTrunk""_500yfluxdef_std_s0d"
-  ./prep_run_slm.sh -u 03 -e "$jobNameS"
+  ./prep_run_slm.sh -u 03 -e "$jobNameS" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameS="exp_""$jobNameS"
   sleep 30s 
   # run 500 years fluxnet simulations in standard mode with simple_1d: usecase 05
   jobNameS2="auto_r""$revRepoTrunk""_500yfluxdef_std_s1d"
-  ./prep_run_slm.sh -u 05 -e "$jobNameS2"
+  ./prep_run_slm.sh -u 05 -e "$jobNameS2" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameS2="exp_""$jobNameS2"
   sleep 30s 
   # run 500 years fluxnet simulations in standard mode with SLM Soil jsm: usecase 06
   jobNameS3="auto_r""$revRepoTrunk""_500yfluxdef_std_soiljsm"
-  ./prep_run_slm.sh -u 06 -e "$jobNameS3"
+  ./prep_run_slm.sh -u 06 -e "$jobNameS3" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameS3="exp_""$jobNameS3"
 
 
