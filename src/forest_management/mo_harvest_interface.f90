@@ -244,10 +244,15 @@ CONTAINS
           CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
 
           ! -> for now I use the relocate_carbon_damage
-          ! TODO-JN: implement own function using harvest pools
 
-          CALL tile%Get_fraction(ics, ice, iblk, fract=this_fract(:))
-          harvested_area(:)=MIN(area_to_harvest(:), this_fract(:)) 
+          ! TODO-JN: implement own function using harvest pools and area 
+          !    relative to parent/ or absolute area, not relative to this_fract?!
+          !          CALL tile%Get_fraction(ics, ice, iblk, fract=this_fract(:))
+          !          harvested_area(:)=MIN(area_to_harvest(:), this_fract(:)) 
+          !-> in relocate_carbon_damage it is the area relative to this pft 
+          !   and here area_to_harvest is already relatoive to the pft!  
+          harvested_area(:)=area_to_harvest(:)
+
           dummy1(:) = 0._wp
           dummy2(:) = 0._wp
 
