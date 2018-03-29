@@ -28,13 +28,13 @@ MODULE mo_sb_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
     !> options
-    !    
+    !! 
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: sb_bnf_scheme
     CHARACTER(15)         :: sb_adsorp_scheme
     !> flags
-    !
+    !! 
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -51,15 +51,17 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_ECA_upt_po4
     LOGICAL               :: flag_sb_CLE_po4
     LOGICAL               :: flag_sb_LK_po4
+    !> parameter
+    !! 
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
+    INTEGER               :: lithology_class
     REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
     REAL(wp)              :: soil_p_depth
     REAL(wp)              :: soil_p_labile
     REAL(wp)              :: soil_p_slow
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
-    INTEGER               :: lithology_class
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -105,14 +107,19 @@ CONTAINS
     LOGICAL               :: flag_sb_LK_po4
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
-    REAL(wp)              :: soil_ph
-    REAL(wp)              :: soil_p_depth, soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary
     INTEGER               :: lithology_class
+    REAL(wp)              :: soil_ph
+    REAL(wp)              :: soil_p_depth,        &
+                             soil_p_labile,       &
+                             soil_p_slow,         &
+                             soil_p_occluded,     &
+                             soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
-      active,                      &
-      ic_filename, bc_filename,    &
+                      active                    , &
+                      ic_filename               , &
+                      bc_filename               , &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
@@ -132,13 +139,13 @@ CONTAINS
                       flag_sb_LK_po4            , &    
                       usda_taxonomy_class       , &
                       nwrb_taxonomy_class       , &
+                      lithology_class           , &
                       soil_ph                   , &
-                      soil_p_depth         ,  &
-                      soil_p_labile        ,  &
-                      soil_p_slow          ,  &
-                      soil_p_occluded      ,  &
-                      soil_p_primary       ,  &
-                      lithology_class      ,  &
+                      soil_p_depth              , &
+                      soil_p_labile             , &
+                      soil_p_slow               , &
+                      soil_p_occluded           , &
+                      soil_p_primary            , &
                       qmax_org_fine_particle
 
     ! variables for reading model-options from namelist
@@ -149,11 +156,11 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
 
     ! Set defaults
-    active          = .TRUE.
-    ic_filename     = 'ic_land_srf.nc'
-    bc_filename     = 'bc_land_srf.nc'
+    active                      = .TRUE.
+    ic_filename                 = 'ic_land_srf.nc'
+    bc_filename                 = 'bc_land_srf.nc'
     sb_model_scheme             = "simple_0d"       ! simple_0d simple_1d jsm
-    sb_nloss_scheme             = "fixed"           ! none fixed dynamic 
+    sb_nloss_scheme             = "dynamic"         ! none fixed dynamic 
     sb_bnf_scheme               = "standard"        ! none standard unlimited 
     sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     flag_sb_prescribe_nh4       = .FALSE.
@@ -171,13 +178,13 @@ CONTAINS
     flag_sb_LK_po4              = .TRUE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
-    soil_ph                     = 6.5_wp
-    soil_p_depth                = 0.5_wp
+    lithology_class             = 1
+    soil_ph                     = 6.5_wp 
+    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?!
     soil_p_labile               = 50._wp
     soil_p_slow                 = 70._wp
     soil_p_occluded             = 150._wp
     soil_p_primary              = 100._wp
-    lithology_class             = 1
     qmax_org_fine_particle      = 6.5537_wp
 
     ! read the namelist
@@ -230,13 +237,13 @@ CONTAINS
     config%flag_sb_LK_po4                  = flag_sb_LK_po4
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
+    config%lithology_class                 = lithology_class
     config%soil_ph                         = soil_ph 
     config%soil_p_depth                    = soil_p_depth
     config%soil_p_labile                   = soil_p_labile 
     config%soil_p_slow                     = soil_p_slow 
     config%soil_p_occluded                 = soil_p_occluded 
     config%soil_p_primary                  = soil_p_primary    
-    config%lithology_class                 = lithology_class
     config%qmax_org_fine_particle          = qmax_org_fine_particle
 
   END SUBROUTINE Init_sb_config

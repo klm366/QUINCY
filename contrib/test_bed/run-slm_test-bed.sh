@@ -497,7 +497,7 @@ function changeNamelistValue {
 oldValue=$(grep -w $1 ./namelist.slm | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
 lineNum=$(grep -wn $1 ./namelist.slm | cut -d : -f 1)                       # get line number of variable $1
 if [[ $(uname -s) == "Darwin" ]]; then                                      # make it work at Notebook "Darwin" -> Mac operating system
-  gsed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm                             # replace the old value in line $lineNum with $2
+  gsed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm                          # replace the old value in line $lineNum with $2
 else 
   sed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm
 fi
@@ -678,19 +678,28 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
 
     # get data of the particular site
     siteData=$(grep "$siteNameShort" "$allSiteDatFile")
-    # change namelist values accordingly
-    changeNamelistValue longitude             "$(awk '{print $2}'  <<< "$siteData")"
-    changeNamelistValue latitude              "$(awk '{print $3}'  <<< "$siteData")"
+    # change namelist values accordingly, column numbers from all_sites_list.dat are:
+    # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 
+    # 11:awc 12:bd 13:pH 14:taxusda 15:taxnwrb 16:lith_glim 17:LAI 18:Nleaf 19:SLA 20:Height 
+    # 21:PlantYear
+    changeNamelistValue longitude               "$(awk '{print $2}'  <<< "$siteData")"
+    changeNamelistValue latitude                "$(awk '{print $3}'  <<< "$siteData")"
     pftName="$(awk '{print $4}' <<< "$siteData")"
-    changeNamelistValue soil_clay             "$(awk '{print $8}'  <<< "$siteData")"
-    changeNamelistValue soil_silt             "$(awk '{print $9}'  <<< "$siteData")"
-    changeNamelistValue soil_sand             "$(awk '{print $10}' <<< "$siteData")"
-    changeNamelistValue bulk_density          "$(awk '{print $12}' <<< "$siteData")"
-    changeNamelistValue soil_ph               "$(awk '{print $13}' <<< "$siteData")"
-    changeNamelistValue usda_taxonomy_class   "$(awk '{print $14}' <<< "$siteData")"
-    changeNamelistValue nwrb_taxonomy_class   "$(awk '{print $15}' <<< "$siteData")"
-    changeNamelistValue lithology_class       "$(awk '{print $16}' <<< "$siteData")"
-    changeNamelistValue lai_site_specific     "$(awk '{print $17}' <<< "$siteData")"
+    changeNamelistValue soil_clay               "$(awk '{print $8}'  <<< "$siteData")"
+    changeNamelistValue soil_silt               "$(awk '{print $9}'  <<< "$siteData")"
+    changeNamelistValue soil_sand               "$(awk '{print $10}' <<< "$siteData")"
+    changeNamelistValue bulk_density            "$(awk '{print $12}' <<< "$siteData")"
+    changeNamelistValue soil_ph                 "$(awk '{print $13}' <<< "$siteData")"
+    changeNamelistValue usda_taxonomy_class     "$(awk '{print $14}' <<< "$siteData")"
+    changeNamelistValue nwrb_taxonomy_class     "$(awk '{print $15}' <<< "$siteData")"
+    changeNamelistValue lithology_class         "$(awk '{print $16}' <<< "$siteData")"
+    changeNamelistValue lai_site_specific       "$(awk '{print $17}' <<< "$siteData")"
+    # changeNamelistValue soil_p_depth            "$(awk '{print $XX}' <<< "$siteData")"
+    # changeNamelistValue soil_p_labile           "$(awk '{print $XX}' <<< "$siteData")"
+    # changeNamelistValue soil_p_slow             "$(awk '{print $XX}' <<< "$siteData")"
+    # changeNamelistValue soil_p_occluded         "$(awk '{print $XX}' <<< "$siteData")"
+    # changeNamelistValue soil_p_primary          "$(awk '{print $XX}' <<< "$siteData")"
+    # changeNamelistValue qmax_org_fine_particle  "$(awk '{print $XX}' <<< "$siteData")"
     pftID=0
     case "$pftName" in
       TrBE)

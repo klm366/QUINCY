@@ -55,20 +55,20 @@
   sb_bnf_scheme="standard"
   sb_adsorp_scheme="eca_full"
   ! 
-  ! flags
+  ! N & P flags
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.
   flag_sb_prescribe_po4=.FALSE.
-  ! mycorrhiza
+  ! mycorrhiza flags
   flag_mycorrhiza=.FALSE.
   flag_myco_inorganic=.FALSE.
   flag_myco_organic=.FALSE.
   flag_myco_priming=.FALSE.
-  ! JSM
+  ! JSM flags
   flag_sb_jsm_transport=.FALSE.
   flag_sb_jsm_litter_input=.FALSE.
   flag_sb_jsm_OM_sorption=.FALSE.
-  ! ECA
+  ! ECA flags
   flag_sb_ECA_upt_po4=.TRUE.
   flag_sb_CLE_po4=.TRUE.
   flag_sb_LK_po4=.TRUE.
@@ -76,8 +76,14 @@
   ! parameter values
   usda_taxonomy_class=1
   nwrb_taxonomy_class=1
-  soil_ph=6.5
   lithology_class=1
+  soil_ph=6.5
+  soil_p_depth=0.5
+  soil_p_labile=50.0
+  soil_p_slow=70.0
+  soil_p_occluded=150.0
+  soil_p_primary=100.0
+  qmax_org_fine_particle=6.5537
 /
 &BASE_CTL
   ! basic model config
