@@ -323,6 +323,7 @@ CONTAINS
         l_forcing = .FALSE.
     END SELECT
     ! run model init
+    ! note on sequence: sb_init needs soil_init to be finished
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
         CALL pheno_init   (tile, model%options)
@@ -332,7 +333,7 @@ CONTAINS
         CALL soil_init    (tile, model%options)
         CALL sb_init      (tile, model%options)
       CASE('soil')
-        CALL veg_init     (tile, model%options)       ! strictly speaking not necessary, but to be safe
+        CALL veg_init     (tile, model%options)
         CALL soil_init    (tile, model%options)
         CALL sb_init      (tile, model%options)
       CASE('canopy')

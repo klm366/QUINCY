@@ -86,10 +86,6 @@ MODULE mo_soil_memory_class
     TYPE(t_jsb_var_real3d)          :: &
                                     w_soil_pot_sl        !< soil water potential per layer [MPa]
 
-    ! should go to SLM VEG after change to 2D/3D  *slmdev
-    TYPE(t_jsb_var_real3d)          :: &
-                                    root_fraction_sl     !< fractions of root per layer
-
     ! soil energy 
     TYPE(t_jsb_var_real3d)          :: &
                                     t_soil_sl            !< soil temperature [K] 
@@ -202,14 +198,6 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'root_depth', mem%root_depth, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

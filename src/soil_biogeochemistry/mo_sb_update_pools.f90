@@ -89,10 +89,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
+    ! VEG_
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! SOIL
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl
     dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
@@ -231,9 +232,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_deposition)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)            ! in
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_org_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_min_sl)             ! in
@@ -572,7 +574,7 @@ CONTAINS
             DO isoil = 1,nsoil_sb
               fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) * veg_pool%fine_root%carbon(:)
             ENDDO
-            !fine_root_carbon = root_fraction_sl * 600._wp !temporary solution
+            !fine_root_carbon = root_fraction_sl(:,:) * 600._wp !temporary solution
             CALL calc_adsorption_po4(options, fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), bulk_dens_corr_sl(:,:), &
                                        po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
                                        weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &

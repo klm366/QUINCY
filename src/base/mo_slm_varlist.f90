@@ -401,7 +401,9 @@ CONTAINS
   !!
   !!  t_jsb_memory:mem <- t_jsb_var_r3d:var
   !! 
-  !!    
+  !!  Note ! the dimension of real3d variables [ncanopy / nsoil_water (nsoil_sb)] is not anymore exclusively determined by process_memory ! \n
+  !!    with r1098 (ticket #342) a new CASE statement is introduced here, checking for some variables explicitly and set DIMENSION
+  !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r3d( &
     mem, name, var, &
@@ -460,6 +462,15 @@ CONTAINS
 
     var%name = TRIM(name)
     var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+
+    ! some variables might differ from the DIMENSION of the process_memory they come from
+    ! each of these variables need to be explicitly handled by var%name using the following CASE statement
+    SELECT CASE(var%name)
+      CASE('root_fraction_sl') ! variables from veg_memory with nsoil_water (nsoil_sb) DIMENSION
+        nlevel = dsl4jsb_Config(SOIL_)%nsoil_water
+      ! CASE('...') ! ... 
+      !   nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
+    END SELECT
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN

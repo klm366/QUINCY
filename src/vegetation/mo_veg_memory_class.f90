@@ -173,8 +173,8 @@ MODULE mo_veg_memory_class
 
     !> variables
     !! 
-
-    ! basic plant
+    !! 
+    ! basic plant 2D
     TYPE(t_jsb_var_real2d)          :: &   
                                     height            , &            !< plant height in m
                                     diameter          , &            !< plant diameter in m
@@ -192,6 +192,10 @@ MODULE mo_veg_memory_class
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
                                     target_lai        , &            !< LAI implied from sap wood area
                                     kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
+
+    ! basic plant 3D 
+    TYPE(t_jsb_var_real3d)          :: &
+                                    root_fraction_sl     !< fractions of root per layer, with DIMENSION(nsoil_sb) !
 
     ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
     TYPE(t_jsb_var_real2d)          :: &
@@ -251,7 +255,7 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_p      , & !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
                                     net_growth                      !< npp minus turnover (µmol CO2 m-2 s-1)
 
-    ! everything else...
+    ! everything else 2D
     TYPE(t_jsb_var_real2d)          :: &   
                                     fmaint_rate               , & !< current N-specific maintentance respiration (~µmol C/mol N / s ) 
                                     unit_npp                  , & !< incremental change in NPP. Needed for optimal allocation
@@ -269,7 +273,8 @@ MODULE mo_veg_memory_class
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio
                                     leaf2root_mass_ratio          !< leaf to root mass ratio
 
-    ! daytime averages
+    !> daytime averages
+    !! 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_daytime_cl          !<  average of the previous day
     TYPE(t_jsb_var_real2d)          :: &   
@@ -291,7 +296,8 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &   
                                     daytime_counter  !< number of timesteps of current day with light available & daytime_avrg variables were added up
 
-    ! moving averages
+    !> moving averages
+    !! 
     ! 1.1 memory of conditions for the labile pool dynamics
     TYPE(t_jsb_var_real2d)          :: &   
                                     gpp_tlabile_mavg               , &  !< gpp  (µmol m-2 s-1)
@@ -1131,7 +1137,15 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
-  
+
+      CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'target_cn_fine_root', mem%target_cn_fine_root, &
             hgrid, surface, &
             t_cf('', '', ''), &

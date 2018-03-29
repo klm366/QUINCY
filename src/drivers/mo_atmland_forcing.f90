@@ -183,10 +183,11 @@ CONTAINS
                      fruit_dC13_r, fruit_DC14_r, fruit_dN15_r , &
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_dC13_r, seed_bed_DC14_r, seed_bed_dN15_r
-    REAL(wp), DIMENSION(nsoil_sb) :: & 
-                     t_soil_sl_r, &
-                     w_soil_sl_r, &
-                     percolation_sl_r, &
+    REAL(wp), DIMENSION(nsoil_sb) ::  & 
+                     t_soil_sl_r,     &
+                     w_soil_sl_r,     &
+                     percolation_sl_r
+    REAL(wp), DIMENSION(nsoil_sb) ::  & 
                      root_fraction_sl_r
     REAL(wp) ::      veg_pool_fine_root_carbon_r
     ! other local variables
@@ -209,11 +210,12 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
+    ! VEG_
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! SOIL_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
-    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -228,10 +230,11 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall

@@ -47,7 +47,7 @@ CONTAINS
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SOIL_)
-
+    dsl4jsb_Use_memory(VEG_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -70,7 +70,11 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
+    ! VEG_
+    dsl4jsb_Real3D_onChunk    :: root_fraction_sl
+    ! SOIL_
     dsl4jsb_Real2D_onChunk    :: soil_depth
     dsl4jsb_Real2D_onChunk    :: root_depth
     dsl4jsb_Real2D_onChunk    :: t_srf_old 
@@ -84,7 +88,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk    :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk    :: heat_capa_sl
     dsl4jsb_Real3D_onChunk    :: therm_cond_sl
-    dsl4jsb_Real3D_onChunk    :: root_fraction_sl
     dsl4jsb_Real3D_onChunk    :: w_soil_pwp_sl
     dsl4jsb_Real3D_onChunk    :: w_soil_fc_sl 
     dsl4jsb_Real3D_onChunk    :: w_soil_sat_sl 
@@ -115,7 +118,10 @@ CONTAINS
     dsl4jsb_Get_config(SOIL_)
     ! Get process memories
     dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, soil_depth)
     dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)
     dsl4jsb_Get_var2D_onChunk(SOIL_, t_srf_old)
@@ -129,7 +135,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sat_sl)
@@ -225,7 +230,9 @@ CONTAINS
     saxtonC(:,:)      = 3.0_wp - 2._wp * saxtonB(:,:)
 
     !> 6.0 rooting depth given by prescribed AWC
-    !! soil water in the rooting zone [m]
+    !! soil water in the rooting zone [m] \n
+    !! the init of 'root_fraction_sl(:,:)' (sec 6.3) depends on this init of the root_depth(:)
+    !! 
     soil_awc(:)         = 0._wp
     w_soil_root_pwp(:)  = 0._wp
     w_soil_root_fc(:)   = 0._wp
@@ -262,6 +269,9 @@ CONTAINS
     !!   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
     !! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) \n
     !!   thus for each layer
+    !!
+    !! root_fraction_sl(:,:) is a variable of veg_mem and depends on the init of root_depth(:), see section 6.0 and ticket #358
+    !! 
     ! layer 1
     root_fraction_sl(:,1) = (1._wp - exp(-lctlib%k_root_dist * dsl4jsb_Config(SOIL_)%soil_depth_water(1))) / &
                             (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))

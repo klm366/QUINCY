@@ -40,14 +40,14 @@ CONTAINS
                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14, &
                                         calc_fractionation
-    USE mo_shared_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_shared_constants,                ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_sb_jsm_processes
-    USE mo_soil_util,             ONLY: calc_qmax_texture
+    USE mo_soil_util,                       ONLY: calc_qmax_texture
     USE mo_sb_jsm_transport
-    USE mo_veg_constants,         ONLY: itree
-    USE mo_sb_constants             ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
+    USE mo_veg_constants,                   ONLY: itree
+    USE mo_sb_constants                     ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
@@ -58,6 +58,7 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,       ONLY: sb_pool
     dsl4jsb_Use_memory(SOIL_)
+    dsl4jsb_Use_memory(VEG_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -71,7 +72,8 @@ CONTAINS
     INTEGER                                      :: isoil
     INTEGER                                      :: iblk, ics, ice, nc
     INTEGER                                      :: nsoil_sb
-    REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,frac_c13,frac_c14
+    REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6
+    REAL(wp)                                     :: frac_c13, frac_c14
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -80,9 +82,11 @@ CONTAINS
     dsl4jsb_Def_config(SOIL_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
-    ! SOIL_ 3D
+    ! VEG_
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
@@ -128,8 +132,10 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
+    dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_org_min_sl)

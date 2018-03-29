@@ -111,9 +111,11 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
-    ! VEG_
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
     dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! Declare pointers to variables in memory
     ! A2L
     dsl4jsb_Real2D_onChunk :: p_deposition
@@ -122,7 +124,6 @@ CONTAINS
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
@@ -258,11 +259,11 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_n_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)
+    dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_,     drainage_fraction)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 

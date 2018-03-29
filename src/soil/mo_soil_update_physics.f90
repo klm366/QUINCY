@@ -61,7 +61,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
-    INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_physics'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -116,7 +116,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk                :: heat_capa_sl
     dsl4jsb_Real3D_onChunk                :: therm_cond_sl
-    dsl4jsb_Real3D_onChunk                :: root_fraction_sl
     dsl4jsb_Real3D_onChunk                :: w_soil_pwp_sl
     dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl 
     dsl4jsb_Real3D_onChunk                :: w_soil_sat_sl 
@@ -133,14 +132,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: canopy_cond
     ! RAD_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
-    ! VEG_
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk                :: lai 
     dsl4jsb_Real2D_onChunk                :: height
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk                :: root_fraction_sl
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SOIL_)) RETURN
@@ -199,7 +201,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sat_sl)       ! in 
@@ -219,6 +220,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in 
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in 
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
 
 
     ! ------------------------------------------------------------------------------------------------------------

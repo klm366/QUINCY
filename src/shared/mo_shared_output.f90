@@ -2841,7 +2841,7 @@ CONTAINS
     REAL(wp)                              :: dN15_leaf,dN15_fine_root,dN15_coarse_root,dN15_sap_wood,dN15_heart_wood,dN15_labile, & 
                                              dN15_reserve,dN15_fruit,dN15_seed_bed
     INTEGER                               :: lun          ! logical unit number
-    INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_soil_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -2856,16 +2856,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition 
     dsl4jsb_Real2D_onChunk      :: noy_n15_deposition 
     dsl4jsb_Real2D_onChunk      :: p_deposition 
+    ! VEG_
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! SOIL_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
-    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
+    iblk      = options%iblk
+    ics       = options%ics
+    ice       = options%ice
+    nc        = options%nc
+    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -2881,16 +2883,17 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)                         
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
-    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
-    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
-    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
-    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  p_deposition)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall

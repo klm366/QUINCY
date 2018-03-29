@@ -84,15 +84,28 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_) 
-    dsl4jsb_Def_memory(A2L_)                             ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(A2L_)                              ! TYPE(t_veg_memory),      POINTER :: a2l__mem
     ! Declare pointers to variables in memory
     ! SOIL_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl 
     ! A2L
     dsl4jsb_Real2D_onChunk :: p_deposition
-    ! SB_
+    ! VEG_
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    ! SB_ 2D
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
+    dsl4jsb_Real2D_onChunk :: leaching_dom_phosphorus
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon13
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon14
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
+    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
+    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rtm_sorption
@@ -157,17 +170,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
-    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
-    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
-    dsl4jsb_Real2D_onChunk :: leaching_dom_phosphorus
-    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon13
-    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon14
-    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
-    dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
-    dsl4jsb_Real2D_onChunk :: leaching_no3_solute
-    dsl4jsb_Real2D_onChunk :: leaching_po4_solute
-    dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
-    dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -192,10 +194,22 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)            ! in
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_phosphorus)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! soil: in
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)              ! soil: in
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)                ! soil: in
@@ -260,17 +274,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)         ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen)       ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_phosphorus)     ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! out
-    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! out
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
@@ -301,8 +304,9 @@ CONTAINS
 !    fine_root_carbon(:,:) = root_fraction_sl(:,:) * 600._wp 
     DO isoil = 1,nsoil_sb
        WHERE(soil_depth_sl(:,isoil) > eps8)
-          fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * & 
-                                      veg_pool%fine_root%carbon(:)
+         fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+       ELSEWHERE
+         fine_root_carbon(:,isoil) = 0.0_wp
        ENDWHERE
     ENDDO
 
