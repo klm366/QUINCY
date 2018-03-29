@@ -37,6 +37,8 @@ CONTAINS
 
     CHARACTER(LEN=*), PARAMETER :: routine = modname//"::setup_zaxes_jsbach"
 
+    IF (.NOT. ALLOCATED(jsbach_vgrids)) RETURN
+ 
     DO i=1,SIZE(jsbach_vgrids)
       vgrid => jsbach_vgrids(i)%p
       CALL Setup_jsb_vertical_axis(vertical_axis_list, &
@@ -61,6 +63,8 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: jsb_vgrid
     INTEGER :: i
 
+    IF (.NOT. ALLOCATED(jsbach_vgrids)) RETURN
+ 
     DO i=1,SIZE(jsbach_vgrids)
       jsb_vgrid => jsbach_vgrids(i)%p
       CALL Set_jsb_restart_vgrid(vgrid_defs, count,  &
