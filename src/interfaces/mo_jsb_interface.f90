@@ -13,7 +13,6 @@ MODULE mo_jsb_interface
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_util_string,         ONLY: int2string
-  USE mo_jsb_parallel,        ONLY: Get_omp_thread
 
   USE mo_jsb_control,         ONLY: debug_on, l_timer
   USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
@@ -24,7 +23,7 @@ MODULE mo_jsb_interface
   USE mo_hsm_class,           ONLY: t_Hsm, t_Message, t_State
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
-  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id
+  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id, Get_omp_thread, Is_omp_inside_serial
 
   IMPLICIT NONE
   PRIVATE
@@ -540,17 +539,23 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id)
  
+    INTEGER,  INTENT(in) ::  model_id
+
     INTEGER :: p_pe
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
 
-    INTEGER,  INTENT(in) ::  model_id
-
-    TYPE(t_jsb_model), POINTER :: model
-
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
     model => Get_model(model_id)
+
+    ! Reset all tiles at the beginning of the timestep
+    CALL model%Reset_tiles()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -563,21 +568,24 @@ CONTAINS
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 
-    INTEGER :: p_pe
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
-
     INTEGER, INTENT(in)  :: model_id
     REAL(wp), INTENT(in) :: steplen
 
+    INTEGER :: p_pe
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
 
     INTEGER :: no_omp_thread
 
     no_omp_thread = Get_omp_thread()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
 
     model => Get_model(model_id)
     tile => model%Get_top_tile()
