@@ -50,25 +50,17 @@ MODULE mo_jsb_task_class
 !!$    PROCEDURE(Integrate_task), POINTER, NOPASS :: Integrate
 !!$    PROCEDURE(Aggregate_task), POINTER, NOPASS :: Aggregate
   CONTAINS
-    PROCEDURE(Integrate_task), DEFERRED, NOPASS :: Integrate
-    PROCEDURE(Aggregate_task), DEFERRED, NOPASS :: Aggregate
+    PROCEDURE(Interface_task), DEFERRED, NOPASS :: Integrate
+    PROCEDURE(Interface_task), DEFERRED, NOPASS :: Aggregate
     PROCEDURE :: Do_it
   END TYPE t_jsb_process_task
 
   ABSTRACT INTERFACE
-    SUBROUTINE Integrate_task(tile, options)
+    SUBROUTINE Interface_task(tile, options)
       IMPORT :: t_jsb_tile_abstract, t_jsb_task_options
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_task_options),   INTENT(in) :: options
-    END SUBROUTINE Integrate_task
-  END INTERFACE
-
-  ABSTRACT INTERFACE
-    SUBROUTINE Aggregate_task(tile, options)
-      IMPORT :: t_jsb_tile_abstract, t_jsb_task_options
-      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-      TYPE(t_jsb_task_options),   INTENT(in) :: options
-    END SUBROUTINE Aggregate_task
+    END SUBROUTINE Interface_task
   END INTERFACE
 
   TYPE t_jsb_process_task_p

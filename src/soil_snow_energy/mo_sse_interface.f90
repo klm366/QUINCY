@@ -218,9 +218,6 @@ CONTAINS
       nsnow = snow_e%n_levels
     END IF
 
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
-
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SSE_)

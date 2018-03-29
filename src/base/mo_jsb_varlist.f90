@@ -22,8 +22,7 @@ MODULE mo_jsb_varlist
                                   t_var_metadata, t_list_element,   &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
                                   VARNAME_LEN
-  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, missval, &
-                                  FILETYPE_NC2, tables
+  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_jsb_process_class, ONLY: Get_process_name
 
@@ -60,8 +59,8 @@ CONTAINS
     IF (.NOT. ASSOCIATED(return_ptr)) THEN
       ALLOCATE(return_ptr)
       CALL jsb_new_var_list(return_ptr, TRIM(name), patch_id, &
-        & loutput=.TRUE., output_type=FILETYPE_NC2, &
-        & lrestart=.TRUE., restart_type=FILETYPE_NC2, table=tables(1))
+        & loutput=.TRUE., &
+        & lrestart=.TRUE., table=tables(1))
     END IF
 
   END FUNCTION Get_varlist
@@ -126,7 +125,7 @@ CONTAINS
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
@@ -157,9 +156,9 @@ CONTAINS
     END IF
 
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
@@ -246,7 +245,7 @@ CONTAINS
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     gdims(1) = hgrid%dims_g(1)
@@ -293,9 +292,9 @@ CONTAINS
     END IF
 
     CALL add_var_list_element_r3d( &
-      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
@@ -377,7 +376,7 @@ CONTAINS
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
@@ -392,9 +391,9 @@ CONTAINS
       &      ]
 
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups)
