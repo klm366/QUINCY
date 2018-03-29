@@ -64,11 +64,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
-
-    grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -118,7 +115,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     INTEGER :: i
 
@@ -147,7 +143,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_pfts'
 
-    grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &

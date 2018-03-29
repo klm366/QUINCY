@@ -21,12 +21,11 @@ MODULE mo_jsb_io_iface
   USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, &
                             & ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND, &
                             & FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
+                            & GRID_UNSTRUCTURED, &
                             & TSTEP_CONSTANT, TSTEP_INSTANT, &
-                            & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
-                            & zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
-                            & zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
                             & cdiDefMissval
-  USE mo_cdi_constants, ONLY: GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
+  USE mo_cdi_constants, ONLY: GRID_CELL, GRID_UNSTRUCTURED_CELL
+  USE mo_zaxis_type,    ONLY: zaxisTypeList, ZA_SURFACE
 #else
   USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
   USE mo_netcdf,        ONLY: add_dim
@@ -40,12 +39,11 @@ MODULE mo_jsb_io_iface
   PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
             ZAXIS_SURFACE, ZAXIS_GENERIC, ZAXIS_DEPTH_BELOW_LAND,               &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
-            GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, &
-            ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, TSTEP_INSTANT, &
-            zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
-            zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
-            zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
+            GRID_CELL, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, &
+            TSTEP_CONSTANT, TSTEP_INSTANT, &
             Create_zaxis, cdiDefMissval, read_io_namelist
+            ! Create_zaxis, Destroy_zaxis, cdiDefMissval, read_io_namelist
+
 
 #ifndef __ICON__
   TYPE t_cf_var
@@ -67,11 +65,8 @@ MODULE mo_jsb_io_iface
   INCLUDE 'cdi.inc'
 
   ! From ICON mo_cdi_constants.f90
-  INTEGER, PARAMETER :: ZA_SURFACE             =  1
-  INTEGER, PARAMETER :: ZA_DEPTH_BELOW_LAND    = 11
   INTEGER, PARAMETER :: GRID_CELL              =  1
   INTEGER, PARAMETER :: GRID_UNSTRUCTURED_CELL =  1
-  INTEGER, PARAMETER :: GRID_REFERENCE         =  9
 #endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
@@ -117,11 +112,11 @@ CONTAINS
   END FUNCTION grib2_var
 #endif
 
-  SUBROUTINE Create_zaxis(cdiZaxisID, echamZaxisID, cdi_axis_type, length, name, &
+  SUBROUTINE Create_zaxis(ZaxisID, echamZaxisIdx, cdi_axis_type, length, name, &
     & levels, units, longname, lbounds, ubounds)
 
-    INTEGER,           INTENT(inout) :: cdiZaxisID
-    INTEGER,           INTENT(inout) :: echamZaxisID
+    INTEGER,           INTENT(out)   :: ZaxisID
+    INTEGER,           INTENT(out)   :: echamZaxisIdx
     INTEGER,           INTENT(in)    :: cdi_axis_type
     INTEGER,           INTENT(in)    :: length
     CHARACTER(len=*),  INTENT(in)    :: name
@@ -131,23 +126,46 @@ CONTAINS
     REAL(wp),          INTENT(in)    :: lbounds(:)
     REAL(wp),          INTENT(in)    :: ubounds(:)
 
-    cdiZaxisID = zaxisCreate(cdi_axis_type, length)
-    CALL zaxisDefName    (cdiZaxisID, TRIM(name))
-    CALL zaxisDefLevels  (cdiZaxisID, levels(1:length))
-    CALL zaxisDefLbounds (cdiZaxisID, lbounds(1:length))
-    CALL zaxisDefUbounds (cdiZaxisID, ubounds(1:length))
-    CALL zaxisDefUnits   (cdiZaxisID, TRIM(units))
-    CALL zaxisDefLongname(cdiZaxisID, TRIM(longname))
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Create_zaxis'
 
 #ifdef __ICON__
-    echamZaxisID = -1
+    echamZaxisIdx = -1
+
+    IF (TRIM(name) == 'surface') THEN
+      ZaxisID = ZA_SURFACE
+      RETURN
+    ELSE
+      ZaxisID = zaxisTypeList%register(cdi_zaxis_type=cdi_axis_type, is_2D=(length==1))
+    END IF
 #else
+    ZaxisID = zaxisCreate(cdi_axis_type, length)
+    CALL zaxisDefName    (ZaxisID, TRIM(name))
+    CALL zaxisDefLevels  (ZaxisID, levels(1:length))
+    CALL zaxisDefLbounds (ZaxisID, lbounds(1:length))
+    CALL zaxisDefUbounds (ZaxisID, ubounds(1:length))
+    CALL zaxisDefUnits   (ZaxisID, TRIM(units))
+    CALL zaxisDefLongname(ZaxisID, TRIM(longname))
+
     CALL add_dim(TRIM(name), length, &
       & longname=TRIM(longname), units=TRIM(units), VALUE=levels(1:length), &
-      & indx=echamZaxisID)
+      & indx=echamZaxisIdx)
 #endif
 
   END SUBROUTINE Create_zaxis
+
+!   SUBROUTINE Destroy_zaxis(ZaxisID)
+
+!     INTEGER, INTENT(in) :: ZaxisID
+
+!     ! In ICON, mo_vertical_axis_types:t_verticalAxisList_finalize takes care of destroying the vertical
+!     ! axes and corresponding CDI zaxes. It is called in mo_name_list_output:close_name_list_output
+! #ifndef __ICON__
+!     CALL zaxisDestroy(ZaxisID)
+! #endif
+
+!   END SUBROUTINE Destroy_zaxis
 
   SUBROUTINE read_io_namelist(filename)
 
