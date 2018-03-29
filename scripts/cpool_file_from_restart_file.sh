@@ -14,7 +14,7 @@ set +ex
 
 ### User Interface
 INFILE="JS045_restart_atm_19870201T000000Z.nc"
-OUTFILE="ic_land_cpools.nc"
+OUTFILE="ic_land_carbon.nc"
 
 PROCESS="carbon"
 VARNAME_LIST="c_green   c_woods   c_reserve 
