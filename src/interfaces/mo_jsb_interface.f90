@@ -539,10 +539,22 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id)
  
-    INTEGER,  INTENT(in) ::  model_id
+    USE mo_jsb_time,          ONLY: is_time_experiment_start
+    USE mo_jsb_time_iface,    ONLY: is_time_restart
+    USE mo_carbon_init,       ONLY: carbon_start_cpools
+    USE mo_util,              ONLY: one_of
+    USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
 
-    INTEGER :: p_pe
+    dsl4jsb_Use_processes CARBON_
+    dsl4jsb_Use_config(CARBON_)
+
+    dsl4jsb_Def_config(CARBON_)
+
+    INTEGER,  INTENT(in) :: model_id
+
     TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+    INTEGER :: p_pe, no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
 
@@ -552,10 +564,45 @@ CONTAINS
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
+    no_omp_thread = Get_omp_thread()   ! Should always be 1
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(CARBON_)
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
+
+    !-----------------------------------
+    ! Do stuff at beginning of totally new experiment or after restart from existing experiment
+    IF (is_time_experiment_start() .OR. is_time_restart()) THEN
+
+      ! Iterate over tiles
+      tile => model%Get_top_tile()
+      IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+
+      DO WHILE (ASSOCIATED(tile))
+
+        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+          tile => model%Goto_next_tile()
+          CYCLE
+        END IF
+
+        ! Read carbon pools from file
+        IF (dsl4jsb_Config(CARBON_)%read_cpools) THEN
+          IF  (one_of(tile%process_action(CARBON_), &
+            &         (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0 &
+            & ) THEN                                      ! R: cpool file also contains aggregated tiles!
+            CALL carbon_start_cpools(tile)
+          END IF
+        END IF
+
+        tile => model%Goto_next_tile()
+      END DO
+
+    END IF ! start or restart of experiment
+    !
+    !-----------------------------------
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
