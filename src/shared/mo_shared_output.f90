@@ -2224,9 +2224,9 @@ CONTAINS
                                           leaching_no3_acc
                    lun=lun+1
                    ! soilfluxP
-                   write(lun,'(20F18.8)') time_d, p_deposition_acc, leaching_po4_acc, net_min_po4_acc, &
-                                          weathering_po4_acc, occlusion_po4_acc, &
-                                          slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
+                   write(lun,'(20F20.12)') time_d, p_deposition_acc, leaching_po4_acc, net_min_po4_acc, &
+                                           weathering_po4_acc, occlusion_po4_acc, &
+                                           slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
                    lun=lun+1
                    ! soilfluxdN
                    write(lun,'(20F18.8)') time_d, & 
@@ -2439,10 +2439,10 @@ CONTAINS
                                               leaching_nh4_acc, leaching_no3_acc, leachingNorg_acc
                lun = lun + 1
                ! soilfluxP (litterfall is added here compared to the SLM land output)
-               write(lun,'(20F18.8)') time_d, litterfallP_acc, &
-                                      p_deposition_acc, leaching_po4_acc, leachingPorg_acc, net_min_po4_acc, uptake_po4_acc, &
-                                      weathering_po4_acc, occlusion_po4_acc, &
-                                      slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
+               write(lun,'(20F20.12)') time_d, litterfallP_acc, &
+                                       p_deposition_acc, leaching_po4_acc, leachingPorg_acc, net_min_po4_acc, uptake_po4_acc, &
+                                       weathering_po4_acc, occlusion_po4_acc, &
+                                       slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
                lun = lun + 1
                
                !! set acc variables to zero
