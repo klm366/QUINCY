@@ -1,0 +1,29 @@
+# default SLM usecase: 07_autotestrun_500yr_std_s1d_Pcycle
+# 
+# used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
+# for automated test runs of SLM
+# 
+
+slmModel="land"
+forcingDataSet="fluxnet"
+forcingMode="static"
+singleSiteName=""
+
+specialFluxnetOutput="F"
+compareSimCRUNCEPvsGFDB="F"
+paramSensitivitySim="F"
+
+sb_model_scheme="simple_1d"
+flag_sb_prescribe_po4="F"
+soil_depth=9.5
+nsoil_layer=9
+
+simulation_length_number=500
+output_interval_pool="weekly"
+output_interval_flux="weekly"
+output_start_first_day_year=1
+output_end_last_day_year=500
+
+useSiteSpecificAWC="T"
+p_deposition_scheme="dynamic"
+queue="io_perform"

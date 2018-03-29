@@ -14,6 +14,7 @@ compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
 sb_model_scheme="simple_1d"
+flag_sb_prescribe_po4="T"
 soil_depth=9.5
 nsoil_layer=9
 

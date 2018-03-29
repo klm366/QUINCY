@@ -25,6 +25,7 @@ if [ "$1" == "postprocessing" ]
     jobNameS="$5"
     jobNameS2="$6"
     jobNameS3="$7"
+    jobNameS4="$8"
 
     echo " starting postprocessing of auto SLM testruns for Revision: ""$svnRev"
     date
@@ -35,10 +36,12 @@ if [ "$1" == "postprocessing" ]
     echo "  ""$jobNameS"
     echo "  ""$jobNameS2"
     echo "  ""$jobNameS3"
+    echo "  ""$jobNameS4"
     echo " "
 
     saveFolder="$bgiJEScratchFolder""$autoTestRunFolder""$svnRev""/"
     mkdir -p "$saveFolder"
+    sync
 
     ## do some stats and analysis on the debug-run simulation results ##
     echo "analysis of: ""$jobNameD"
@@ -94,11 +97,22 @@ if [ "$1" == "postprocessing" ]
     sync
     ls -lah "$saveFolder""$jobNameS3"_err.txt
     echo " "
-    
+
+    ## do some stats and analysis on the standard-run simulation results ##
+    echo "analysis of: ""$jobNameS4"
+    # move simulation results
+    mv "$bgiJEScratchFolder"slm/"$jobNameS4" "$saveFolder"
+    sync && sleep 2
+    # extract potential error messages into one file
+    cat "$saveFolder""$jobNameS4"/*/error/err* > "$saveFolder""$jobNameS4"_err.txt    
+    sync
+    ls -lah "$saveFolder""$jobNameS4"_err.txt
+    echo " "    
 
   # ok postprocessing done exiting this script
   echo " postprocessing of automated testruns finished"
   date
+  echo " "
   echo " "
   exit 0
 fi
@@ -176,6 +190,11 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
   jobNameS3="auto_r""$revRepoTrunk""_500yfluxdef_std_soiljsm"
   ./prep_run_slm.sh -u 06 -e "$jobNameS3" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameS3="exp_""$jobNameS3"
+  sleep 30s 
+  # run 500 years fluxnet simulations in standard mode with simple_1d and P cycle: usecase 07
+  jobNameS4="auto_r""$revRepoTrunk""_500yfluxdef_std_s1d_p_cycle"
+  ./prep_run_slm.sh -u 07 -e "$jobNameS4" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
+  jobNameS4="exp_""$jobNameS4"
 
 
   ####################
@@ -185,7 +204,7 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
 
   ##########################
   # start the postprocessing job that calls this script and executes the above postprocessing code only
-  sleep 20
+  sleep 30
   echo " "
   echo " preparing and sending to the queue the postprocessing job"
       
@@ -194,8 +213,9 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
   jobS="$jobNameS""Cleanup"
   jobS2="$jobNameS2""Cleanup"
   jobS3="$jobNameS3""Cleanup"
-  jobsToWait=$(echo "ended(""$jobD"") && ended(""$jobD2"") && ended(""$jobS"") && ended(""$jobS2"") && ended(""$jobS3"")")
-  bsub -w "$jobsToWait" -q "io" -J "autotestrun_post" "$workingCopyFolder""contrib/additional_scripts/automated_slm_testrun.sh" postprocessing "$revRepoTrunk" "$jobNameD" "$jobNameD2" "$jobNameS" "$jobNameS2" "$jobNameS3" 
+  jobS4="$jobNameS4""Cleanup"
+  jobsToWait=$(echo "ended(""$jobD"") && ended(""$jobD2"") && ended(""$jobS"") && ended(""$jobS2"") && ended(""$jobS3"") && ended(""$jobS4"")")
+  bsub -w "$jobsToWait" -q "io" -J "autotestrun_post" "$workingCopyFolder""contrib/additional_scripts/automated_slm_testrun.sh" postprocessing "$revRepoTrunk" "$jobNameD" "$jobNameD2" "$jobNameS" "$jobNameS2" "$jobNameS3" "$jobNameS4" 
 
   echo " "
   echo "Done!"
