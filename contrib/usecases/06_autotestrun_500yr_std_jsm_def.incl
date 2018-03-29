@@ -7,7 +7,6 @@
 slmModel="soil"
 forcingDataSet="fluxnet"
 forcingMode="static"
-customSiteList="F"
 singleSiteName=""
 
 specialFluxnetOutput="F"

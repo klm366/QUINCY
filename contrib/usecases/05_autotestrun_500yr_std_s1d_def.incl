@@ -7,7 +7,6 @@
 slmModel="land"
 forcingDataSet="fluxnet"
 forcingMode="static"
-customSiteList="F"
 singleSiteName=""
 
 specialFluxnetOutput="F"
