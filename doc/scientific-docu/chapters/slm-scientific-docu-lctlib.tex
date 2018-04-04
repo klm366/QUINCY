@@ -112,5 +112,102 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\
 \section{Land Cover Type Library - Lctlib - PFT values}\label{sec:lctlib_pft_values}
 
 
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|l|l|X|} % textwidth  
+\hline 
+Parameter name in code & PFT specific values (1-8) & Notes \\ 
+\hline 
 
-% table goes here ...
+\multicolumn{3}{l}{\bf Lctlib Parameter Values per PFT 1/3}\\
+\hline
+\texttt{LctNumber} & 1 2 3 4 5 6 7 8 & not used in the model \\
+\texttt{LandcoverClass} & 3 3 3 3 3 3 4 4 & bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7 \\
+\texttt{growthform} & 1 1 1 1 1 1 2 2 & tree: 1; grass: 2 \\
+\texttt{ps\_pathway} & 1 1 1 1 1 1 1 2 & C3: 1; C4: 2 \\
+\texttt{phenology\_type} & 1 1 3 2 1 2 4 4 & evergreen: 1; summergreen: 2; raingreen: 3; perennial: 4 \\
+\texttt{sla} & 9.46 8.99 15.4 15.4 5.0 10.09 20.12 19.23 & converted at runtime from mm/mgDW to $m^2$/mol C \\
+\texttt{sigma\_vis} & 0.17 0.17 0.17 0.17 0.15 0.15 0.2 0.2 & • \\
+\texttt{sigma\_nir} & 0.76 0.76 0.76 0.76 0.73 0.73 0.8 0.8 & • \\
+\texttt{omega\_clumping} & 0.9 0.9 0.9 0.9 0.5 0.7 1.0 1.0 & • \\
+\texttt{crown\_shape\_factor} & 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34 & • \\
+\texttt{cn\_leaf} & 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 & converted at runtime from nitrogen concentration mg N/gDW to CN mol C / mol N \\
+\texttt{np\_leaf} & 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36 & converted at runtime from from phosphorus concentration mg P/gDW to NP mol N / mol P \\
+\texttt{k0\_fn\_struc} & 0.75 0.70 0.63 0.63 0.83 0.79 0.3 0.3 & • \\
+\texttt{fn\_oth\_min} & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 & calculation of actual values at runtime \\
+\texttt{t\_jmax\_opt} & 30.0 30.0 25.0 25.0 25.0 25.0 25.0 35.0 & • \\
+\texttt{t\_jmax\_omega} & 18.0 18.0 18.0 18.0 18.0 18.0 18.0 18.0 & • \\
+\texttt{g0} & 0.01 0.01 0.01 0.01 0.01 0.01 0.03 0.03 & • \\
+\texttt{g1} & 9.3 8.3 7.0 10.9 5.5 7.0 9.3 2.0 & • \\
+\texttt{gmin} & 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006 & • \\
+\texttt{lambda\_soil\_ps} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
+\texttt{weibull\_k\_soil\_ps} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
+\texttt{lambda\_soil\_gs} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
+\texttt{weibull\_k\_soil\_gs} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
+%\texttt{} & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|l|l|X|} % textwidth  
+\hline 
+Parameter name in code & PFT specific values (1-8) & Notes \\ 
+\hline 
+
+\multicolumn{3}{l}{\bf Lctlib Parameter Values per PFT 2/3}\\
+\hline
+\texttt{tau\_leaf} & 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 & converted at runtime from month to years \\
+\texttt{tau\_fine\_root} & 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 & • \\
+\texttt{tau\_coarse\_root} & 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 & • \\
+\texttt{tau\_branches} & 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 & • \\
+\texttt{tau\_sap\_wood} & 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 & • \\
+\texttt{tau\_fruit} & 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 & • \\
+\texttt{tau\_seed\_litter} & 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 & • \\
+\texttt{tau\_seed\_est} & 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 & • \\
+\texttt{tau\_mycorrhiza} & 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 & • \\
+\texttt{vmax\_uptake\_n} & 0.14 0.14 0.14 0.14 0.14 0.14 0.14 0.14 & tuned from OCN's 1.5 gN/gC/1800s \\
+\texttt{vmax\_uptake\_p} & 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 & tuned from OCN's 1.5 gN/gC/1800s \\
+\texttt{bnf\_base} & 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0 & converted at runtime from g N /$m^2$ /year to $\mu$mol N $m^{-2} s^{-1}$ \\
+\texttt{lambda\_est\_light} & 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 & • \\
+\texttt{k\_est\_light} & 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0 & • \\
+\texttt{seed\_size} & 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 & • \\
+\texttt{beta\_soil\_flush} & 0.0 0.0 0.0 0.98 0.0 0.0 0.9 0.9 & • \\
+\texttt{beta\_soil\_senescence} & 0.0 0.0 0.0 0.5 0.0 0.0 0.01 0.01 & • \\
+\texttt{gdd\_t\_air\_threshold} & 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 & converted at runtime to Kelvin \\
+\texttt{gdd\_req\_max} & 0.0 0.0 0.0 800.0 0.0 800.0 10.0 10.0 & • \\
+\texttt{k\_gdd\_dormance} & 0.0 0.0 0.0 0.007 0.0 0.0098 0.1 0.1 & • \\
+\texttt{t\_air\_senescence} & 0.0 0.0 0.0 8.5 0.0 5.0 0.0 0.0 & converted at runtime to Kelvin \\
+\texttt{min\_leaf\_age} & 10 10 10 50 10 10 10 10 & • \\
+%\texttt{} & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|l|l|X|} % textwidth  
+\hline 
+Parameter name in code & PFT specific values (1-8) & Notes \\ 
+\hline 
+
+\multicolumn{3}{l}{\bf Lctlib Parameter Values per PFT 3/3}\\
+\hline
+\texttt{frac\_sapwood\_branch} & 0.05 0.05 0.05 0.05 0.05 0.05 1.0 1.0 & • \\
+\texttt{wood\_density} & 0.3 0.3 0.3 0.3 0.3 0.3 0.22 0.22 & converted at runtime from g C $cm^{-3}$ to mol C $m^{-3}$ \\
+\texttt{k\_latosa} & 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 & • \\
+\texttt{k\_crtos} & 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 & • \\
+\texttt{k\_rtos} & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 & calculation of actual values at runtime \\
+\texttt{k2\_fruit\_alloc} & 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 & • \\
+\texttt{allom\_k1} & 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 & • \\
+\texttt{allom\_k2} & 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 & • \\
+\texttt{phi\_leaf\_min} & -1.0 -1.0 -1.0 -1.0 -1.0 -1.0 -0.75 -0.75 & • \\
+\texttt{k\_root} & 2.3 2.3 2.3 4.3 2.3 2.3 2.3 2.3 & converted at runtime from $10^{10} m^3 mol^{-1} s^{-1} MPa^{-1}$ to $m^3 mol^{-1} s^{-1} MPa^{-1}$ \\
+\texttt{k\_sapwood} & 3.0 3.0 3.0 3.0 1.3 1.3 0.0 0.0 & converted at runtime from $10^3 m^2 s^{-1} MPa^{-1}$ to $m^2 s^{-1} MPa^{-1}$ \\
+\texttt{c0\_allom} & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 & calculation of actual values at runtime \\
+\texttt{k\_root\_dist} & 3.5 2.8 2.5 3.5 3.5 3.5 5.5 5.5 & • \\
+%\texttt{} & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
