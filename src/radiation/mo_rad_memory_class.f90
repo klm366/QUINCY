@@ -129,6 +129,9 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     USE mo_rad_constants,     ONLY: AlbedoLakeWater, AlbedoLakeIceMin
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd
+#endif
 
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
@@ -152,6 +155,10 @@ CONTAINS
     canopy_layer => Get_vgrid('canopy_layer')
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('radiation_'//TRIM(suffix),dt_update=0)
+#endif
 
       CALL jsb_add_var( mem, 'sw_srf_net', mem%sw_srf_net,                        &
         & hgrid, surface,                                                                                 &
@@ -241,12 +248,20 @@ CONTAINS
         & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupEnd()
+#endif
+
     END IF
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0       &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('radiation_'//TRIM(suffix))
+#endif
 
       CALL jsb_add_var( mem, 'alb_vis_lnd', mem%alb_vis_lnd,                        &
         & hgrid, surface,                                                           &
@@ -272,6 +287,10 @@ CONTAINS
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0   &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                   &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('radiation_'//TRIM(suffix))
+#endif
 
       CALL jsb_add_var( mem, 'alb_vis_soil', mem%alb_vis_soil,      &
         & hgrid, surface,                                                           &
@@ -305,11 +324,19 @@ CONTAINS
         & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupEnd()
+#endif
+
     END IF
 
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('radiation_'//TRIM(suffix))
+#endif
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,        &
         & hgrid, surface,                                                           &
@@ -444,10 +471,18 @@ CONTAINS
          & prefix, suffix,                                                           &
          & lrestart=.FALSE., initval_r=0.0_wp )
 
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupEnd()
+#endif
+
     END IF
 
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_lwtr%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('radiation_'//TRIM(suffix))
+#endif
 
       CALL jsb_add_var( mem, 'rad_net_lwtr', mem%rad_net_lwtr,                      &
         & hgrid, surface,                                                           &
@@ -482,6 +517,10 @@ CONTAINS
         & prefix, suffix,                                                           &
         & output_level=MEDIUM, &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupEnd()
+#endif
 
     END IF
 

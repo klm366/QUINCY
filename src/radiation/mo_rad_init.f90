@@ -11,7 +11,7 @@ MODULE mo_rad_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
+  USE mo_exception,         ONLY: message, message_text
   USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -81,7 +81,12 @@ CONTAINS
 !    USE mo_rad_util,    ONLY: radiation_depth_to_layers_2d
     USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
+#ifdef HAVE_MOFFLEDAC
+    USE mo_timer, ONLY: timer_start, timer_stop, timer_input
+    USE mo_input, ONLY: input_file_list, InputFileAdd, InputOptAdd, InputGetData, moffledac
 
+    TYPE (input_file_list), POINTER :: IFile
+#endif
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),         POINTER :: model
@@ -114,18 +119,6 @@ CONTAINS
 
     ! Initialize physical state
     !
-
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD_)%bc_filename), model%grid_id)
-
-    ! TBD: adapt names of variables in input files to names in memory
-
-    ! background albedo (without snow or canopy)
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='albedo',           &
-      & fill_array = dsl4jsb_var_ptr(RAD_,alb_background))
-    dsl4jsb_var2D_onDomain(RAD_,alb_background) = &
-      MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_background), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_background) >= 0._wp)
-
     IF (tile%is_lake) THEN
       dsl4jsb_var2D_onDomain(RAD_,alb_vis) = AlbedoLakeWater
       dsl4jsb_var2D_onDomain(RAD_,alb_nir) = AlbedoLakeWater
@@ -141,6 +134,43 @@ CONTAINS
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
     END IF
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(RAD_)%bc_filename),file_ref=IFile)
+    CALL InputOptAdd(var_name='rad_alb_background_'//TRIM(tile%name),var_file_name='albedo', &
+                     fill_val=0._wp,valid_range=(/0._wp,1._wp/),AFile=IFile)
+    IF (tile%contains_soil) THEN
+      CALL InputOptAdd(var_name='rad_alb_vis_soil_'//TRIM(tile%name),var_file_name='albedo_soil_vis', &
+                       fill_val=0._wp,valid_range=(/0._wp,1._wp/),AFile=IFile)
+      CALL InputOptAdd(var_name='rad_alb_nir_soil_'//TRIM(tile%name),var_file_name='albedo_soil_nir', &
+                       fill_val=0._wp,valid_range=(/0._wp,1._wp/),AFile=IFile)
+    ENDIF
+    IF (tile%contains_vegetation) THEN
+      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+        CALL InputOptAdd(var_name='rad_alb_vis_can_'//TRIM(tile%name),var_file_name='albedo_veg_vis', &
+                         fill_val=0._wp,valid_range=(/0._wp,1._wp/),AFile=IFile)
+        CALL InputOptAdd(var_name='rad_alb_nir_can_'//TRIM(tile%name),var_file_name='albedo_veg_nir', &
+                         fill_val=0._wp,valid_range=(/0._wp,1._wp/),AFile=IFile)
+      ELSE
+        dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
+        dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
+      ENDIF
+    ENDIF
+
+    CALL timer_start(timer_input)
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_input)
+#else
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD_)%bc_filename), model%grid_id)
+
+    ! TBD: adapt names of variables in input files to names in memory
+
+    ! background albedo (without snow or canopy)
+    return_pointer => input_file%Read_2d(         &
+      & variable_name='albedo',           &
+      & fill_array = dsl4jsb_var_ptr(RAD_,alb_background))
+    dsl4jsb_var2D_onDomain(RAD_,alb_background) = &
+      MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_background), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_background) >= 0._wp)
     ! soil albedo
     IF (tile%contains_soil) THEN
       return_pointer => input_file%Read_2d(         &
@@ -176,7 +206,12 @@ CONTAINS
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
+    END IF
 
+    CALL input_file%Close()
+#endif
+
+    IF (tile%contains_vegetation) THEN
       ! The albedo of snow on canopy:
       ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).
       !    For snow on soil this is done with calculations of snow age and temperature and with differentiation between vis and nir
@@ -193,8 +228,6 @@ CONTAINS
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
     
     END IF
-
-    CALL input_file%Close()
 
   END SUBROUTINE rad_init_ic
 
