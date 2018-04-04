@@ -1,85 +1,116 @@
 \chapter{Land-cover specific parameters (Lctlib)}\label{ch:lctlib}
 
 
+%\newpage
+\section{Land Cover Type Library - Lctlib - Parameter}\label{sec:lctlib_parameter}
+
 \begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\begin{tabularx}{\linewidth}{|c|X|l|c|c|c|} % textwidth  
 \hline 
-Symbol & Parameter long name & Name in code & Unit & Citation \\ 
+Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\ 
 \hline 
 
-\multicolumn{5}{l}{\bf Parameters from t\_slm\_veg\_param 1/2}\\
+\multicolumn{6}{l}{\bf Lctlib Parameter Description part 1/3}\\
 \hline
-• & vegetation growth form & \texttt{growthform} & • & • \\
-• & photosynthetic pathway  & \texttt{ps\_pathway} & • & • \\
-• & phenological type & \texttt{phenology\_type} & • & • \\
-$\tau_{leaf}$  & average turnover time of a leaf & \texttt{tau\_leaf} & years & \cite{Kattge:2011fc} \\
-$\tau_{branch}$ & turnover time of the fraction of sapwood that is in branches & \texttt{tau\_branches} & years & • \\
-$\tau_{{sap}\_{wood}}$ & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & years  & • \\
-$\tau_{{fine}\_{root}}$ & average turnover time of a fine root & \texttt{tau\_fine\_root} & years & \cite{Ahrens:2014gi} \\
-$\tau_{{coarse}\_{root}}$ & average turnover time of a coarse root & \texttt{tau\_coarse\_root} & years & \cite{Ahrens:2014gi} \\
-$\tau_{fruit}$ & turnover time of the fruit pool & \texttt{tau\_fruit} & years & • \\
-$\tau_{{litter}\_{seed}}$ & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & years &  • \\
-$\tau_{{est}\_{seed}}$ & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & years & • \\
-$sla$ & specific leaf area of a plant & \texttt{sla} & $m^{2}$ / mol C & \cite{Kattge:2011fc}\\
-$\chi_{leaf}^{C:N}$ & default leaf C:N, if not calculated dynamically & \texttt{cn\_leaf} & molC/molN & \cite{Kattge:2011fc}, Table 5 \\
-$\chi_{leaf}^{C:N}$ & default leaf N:P, if not calculated dynamically & \texttt{np\_leaf} & molN/molP & \cite{Kattge:2011fc}, Table 5 \\
-• & fraction of leaf N not used for photosynthesis & \texttt{k0\_fnl\_struc} &  & Friend 1997; \cite{Kattge:2011fc} \\
-• & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{tjmax\_opt} & deg C & • \\              
-• & • & \texttt{tjmax\_omega} & • & • \\
-$g0$ & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & & \cite{Lin:2015er} \\
-$g1$ & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & &  \cite{Lin:2015er} \\
-$t_{air}^{GDD}$ & temperature threshold for growing degree days & \texttt{gdd\_t\_air\_threshold} & $K$ & n.a. \\    
-$GDD_{req}^{max}$ & maximum GDD requirement & \texttt{gdd\_req\_max} & days & n.a. \\  
-$k_{dormance} $ & exponent factor in GDD - nd\_dormance equation & \texttt{k\_gdd\_dormance} & days$^{-1}$ & n.a. \\        
-$t_{air}^{sen} $ & average air temperature initiating leaf senescence & \texttt{t\_air\_senescence} & $K$ & n.a. \\    
-$\beta_{soil}^{flush}$ & value of beta\_soil at leaf flushing & \texttt{beta\_soil\_flush} & -- & n.a. \\        
-$\beta_{soil}^{sen}$ & value of beta\_soil at leaf shedding  & \texttt{beta\_soil\_senescence} & -- & n.a. \\   
-
+ • & landcover type index numbers & \texttt{LctNumber} & • & • & • \\
+ • & landcover classes (not to be confused with landcover types) & \texttt{LandcoverClass} & • & • & • \\
+ • & vegetation growth form (tree, grass) & \texttt{growthform} & • & • & • \\
+ • & photosynthetic pathway (C3, C4)  & \texttt{ps\_pathway} & • & • & • \\
+ • & phenological type (evergreen, summergreen, raingreen, perennial) & \texttt{phenology\_type} & • & • & • \\
+$sla$ & specific leaf area of a plant & \texttt{sla} & mm/mgDW & • & \cite{Kattge:2011fc}, Table 5 \\
+$\sigma_{vis}$ & single leaf scattering albedo in the visible range & \texttt{sigma\_vis} & • & • & • \\
+$\sigma_{nir}$ & single leaf scattering albedo in the near infrared range & \texttt{sigma\_nir} & • & • & • \\
+$\omega_{clumping}$ & canopy clumping factor & \texttt{omega\_clumping} & • & • & • \\
+ • & crown shape factor & \texttt{crown\_shape\_factor} & • & • & • \\
+$\chi_{leaf}^{C:N}$ & default leaf nitrogen concentration & \texttt{cn\_leaf} & mgN/gDW & • & \cite{Kattge:2011fc}, Table 5 \\
+$\chi_{leaf}^{N:P}$ & default leaf phosphorus concentration & \texttt{np\_leaf} & mgP/gDW & • & \cite{Kattge:2011fc}, Table 5 \\
+ • & fraction of leaf N not used for photosynthesis & \texttt{k0\_fn\_struc} & • & • & (Friend 1997) \\
+ • & minimum fraction of non-photosynthetic leaf N & \texttt{fn\_oth\_min} & • & • & • \\
+ • & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{t\_jmax\_opt} & degC & • & • \\
+$\omega_{t jmax}$ & • & \texttt{t\_jmax\_omega} & • & • & • \\
+$g0$ & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & • & • & \\
+$g1$ & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & • & • & \cite{Lin:2015er} \\
+$g_{min}$ & minimum stomatal conductance & \texttt{gmin} & m/s & • & • \\
+ • & response of leaf-level photosynthesis to fractional water availability (weibull parameter) & \texttt{lambda\_soil\_ps} & • & • & • \\
+ • & response of leaf-level photosynthesis to fractional water availability (weibull parameter) & \texttt{weibull\_k\_soil\_ps} & • & • & • \\
+ • & response of stomatal conductance to fractional water availability (weibull parameter) & \texttt{lambda\_soil\_gs} & • & • & • \\
+ • & response of stomatal conductance to fractional water availability (weibull parameter) & \texttt{weibull\_k\_soil\_gs} & • & • & • \\
+% • & • & \texttt{} & • & • & • \\
+% • & • & \texttt{} & • & • & • \\
 \hline 
 \end{tabularx}
 \end{sidewaystable}
 
 
 \begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\begin{tabularx}{\linewidth}{|c|X|l|c|c|c|} % textwidth  
 \hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & Citation \\ 
+Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\ 
 \hline 
 
-\multicolumn{6}{l}{\bf Parameters from t\_slm\_veg\_param 2/2}\\
+\multicolumn{6}{l}{\bf Lctlib Parameter Description part 2/3}\\
 \hline
-• & response of leaf-level photosynthesis to fractional water availability & \texttt{lambda\_soil\_ps} & • & • & 3.0 & • \\
-• & response of leaf-level photosynthesis to fractional water availability & \texttt{weibull\_k\_soil\_ps} & • & • & 3.0 & • \\
-• & response of stomatal conductance to fractional water availability & \texttt{lambda\_soil\_gs} & • & • & 3.0 & • \\
-• & response of stomatal conductance to fractional water availability & \texttt{weibull\_k\_soil\_gs} & • & • & 3.0 & • \\
-• & wood density & \texttt{wood\_density} & mol C / $m^{3}$ & • & • & • \\
-• & leaf area to sapwood area ratio & \texttt{k\_latosa} & • & • & 4000.0 & • \\
-• & coarse root to sapwood mass ratio & \texttt{k\_rtos} & • & • & • & • \\
-• & trade-off parametr for hydraulic investment into sapwood or fine roots & \texttt{k\_crtos} & • & • & 0.2 & • \\
-• & maximum fraction of biomass growth going to fruits & \texttt{k2\_fruit\_alloc} & • & • & 0.1 (grass), 0.2 (other)  & • \\
-• & paramter in height diameter relationship & \texttt{allom\_k1} & • & • & • & • \\
-• & paramter in height diameter relationship & \texttt{allom\_k2} & • & • & • & • \\
-• & $v_{max}$ of N uptake & \texttt{vmax\_uptake\_n} & $\sim$$\mu$mol N/ mol C/ s & • & 14.0 & tuned from OCN \\
-• & $v_{max}$ of P uptake & \texttt{vmax\_uptake\_p} & $\sim$$\mu$mol P/ mol C/ s & • & 14.28 & tuned from OCN \\
-• & low-affinity uptake & \texttt{soil\_n\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\              
-• & half saturation of high-affinity uptake & \texttt{soil\_n\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
-• & low-affinity uptake & \texttt{soil\_p\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\
-• & half saturation of high-affinity uptake & \texttt{soil\_p\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
-• & placeholder constant BNf rate & \texttt{bnf\_base} & $\mu$mol N/ s & • & • & • \\
-• & controlling light-limited establishment & \texttt{lambda\_est\_light} & • & • & • & • \\
-• & controlling light-limited establishment & \texttt{k\_est\_light} & • & • & • & • \\
-• & seed size & \texttt{seed\_size} & mol C & • & • & • \\
- 
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\              
+$\tau_{leaf}$  & average turnover time of a leaf & \texttt{tau\_leaf} & months & • & \cite{Kattge:2011fc}, Table 5 \\
+$\tau_{{fine}\_{root}}$ & average turnover time of a fine root & \texttt{tau\_fine\_root} & years & • & \cite{Ahrens:2014gi} \\
+$\tau_{{coarse}\_{root}}$ & average turnover time of a coarse root & \texttt{tau\_coarse\_root} & years & • & \cite{Ahrens:2014gi} \\
+$\tau_{branch}$ & turnover time of the fraction of sapwood that is in branches & \texttt{tau\_branches} & years & • & • \\
+$\tau_{{sap}\_{wood}}$ & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & years & • & • \\
+$\tau_{fruit}$ & turnover time of the fruit pool & \texttt{tau\_fruit} & years & • & • \\
+$\tau_{{seed}\_{litter}}$ & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & years & • & • \\
+$\tau_{{seed}\_{est}}$ & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & years & • & • \\
+$\tau_{mycorrhiza}$  & turnover time of mycorrhizal fungi & \texttt{tau\_mycorrhiza} & years & • & • \\
+ • & $v_{max}$ of N uptake & \texttt{vmax\_uptake\_n} & $\sim\mu$mol N/mol C/s & • & tuned from OCN \\
+ • & $v_{max}$ of P uptake & \texttt{vmax\_uptake\_p} & $\sim\mu$mol P/mol C/s & • & tuned from OCN \\
+ • & base nitrogen fixation rate & \texttt{bnf\_base} & g N /$m^2$ /year & • & • \\
+ • & control of light-limited establishment (weibull parameter) & \texttt{lambda\_est\_light} & • & • & • \\
+ • & control of light-limited establishment (weibull parameter) & \texttt{k\_est\_light} & • & • & • \\
+ • & seed size & \texttt{seed\_size} & mol C & • & • \\
+$\beta_{soil}^{flush}$ & soil moisture limitation factor on stomatal conductance inducing leaf flushing & \texttt{beta\_soil\_flush} & • & • & • \\
+$\beta_{soil}^{sen}$ & soil moisture limitation factor on stomatal conductance inducing leaf senescence & \texttt{beta\_soil\_senescence} & • & • & • \\
+$t_{air}^{GDD}$ & temperature threshold for the accumulation of growing degree days & \texttt{gdd\_t\_air\_threshold} & degC & • & • \\
+$GDD_{req}^{max}$ & maximum GDD requirement (degC days) in the absence of chilling & \texttt{gdd\_req\_max} & days & • & • \\
+$k_{GDD}^{dormance} $ & scaling factor in the GDD to number of dormant days relationship & \texttt{k\_gdd\_dormance} & days$^{-1}$ & • & • \\
+$t_{air}^{sen} $ & weekly air temperature threshold inducing senescence of leaves & \texttt{t\_air\_senescence} & degC & • & • \\
+ • & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & • & • \\
+% • & • & \texttt{} & • & • & • \\
+% • & • & \texttt{} & • & • & • \\
 \hline 
 \end{tabularx}
 \end{sidewaystable}
 
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|c|c|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Lctlib Parameter Description part 3/3}\\
+\hline
+ • & fraction of sapwood that is in branches & \texttt{frac\_sapwood\_branch} & • & • & • \\
+ • & wood density & \texttt{wood\_density} & g C /$cm^3$ & • & • \\
+ • & leaf area to sapwood area ratio & \texttt{k\_latosa} & • & • & • \\
+ • & coarse root to sapwood mass ratio & \texttt{k\_crtos} & • & • & • \\
+ • & trade-off parameter for hydraulic investment into sapwood or fine roots & \texttt{k\_rtos} & • & • & • \\
+ • & maximum fraction of biomass growth going to fruits & \texttt{k2\_fruit\_alloc} & • & • & • \\
+ • & paramter in height diameter relationship & \texttt{allom\_k1} & • & • & • \\
+ • & paramter in height diameter relationship & \texttt{allom\_k2} & • & • & • \\
+ • & minimum leaf water potential & \texttt{phi\_leaf\_min} & MPa & • & • \\
+ • & fine root hydraulic conductance & \texttt{k\_root} & $10^{10} m^3 mol^{-1} s^{-1} MPa^{-1}$ & • & • \\
+ • & sapwood hydraulic conductance & \texttt{k\_sapwood} & $10^3 m^2 s^{-1} MPa^{-1}$ & • & • \\
+ • & hydraulic trade-off parameter for fine root growth & \texttt{c0\_allom} & • & • & • \\
+ • & • & \texttt{k\_root\_dist} & • & • & • \\
+% • & • & \texttt{} & • & • & • \\
+% • & • & \texttt{} & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\newpage
+\section{Land Cover Type Library - Lctlib - PFT values}\label{sec:lctlib_pft_values}
+
+
+
+% table goes here ...
