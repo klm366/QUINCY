@@ -810,8 +810,7 @@ CONTAINS
     ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
-    IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume &
-          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "harvest") THEN
+    IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
@@ -873,8 +872,7 @@ CONTAINS
     thisDayEnd = forcing_input_variable%currentDayEnd
 
     ! --- if its a new day or new run - read the data
-    IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume &
-          & .OR. TRIM(forcing_input_variable%variable_name) .EQ. "harvest") THEN
+    IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file
@@ -911,6 +909,8 @@ CONTAINS
         CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,1))
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
+      ELSE
+        CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,1))
       ENDIF
     ENDIF
 

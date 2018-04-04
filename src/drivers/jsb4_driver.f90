@@ -158,8 +158,10 @@ PROGRAM jsb4_driver
   !! only required for FM - temporal solution 
   REAL(wp), ALLOCATABLE :: harvest_from_files(:,:,:)
   REAL(wp), ALLOCATABLE :: read_harvest(:,:)
-  TYPE(input_variable_type) :: harvest_area_input
-
+  TYPE(input_variable_type) :: harvest_area_input1
+  TYPE(input_variable_type) :: harvest_area_input2
+  TYPE(input_variable_type) :: harvest_area_input3
+  TYPE(input_variable_type) :: harvest_area_input4
 
     NAMELIST /jsb_parallel_nml/     &
       nproca, npedim,             &
@@ -341,7 +343,7 @@ PROGRAM jsb4_driver
   !TODO-JN: Temporäre Lösung bis Stiigs module verfügbar ist!
   IF(tile%Is_process_active(FM_)) THEN
     dsl4jsb_Get_memory(FM_)
-    ALLOCATE(harvest_from_files(nproma, 16, nblks))
+    ALLOCATE(harvest_from_files(nproma, 5, nblks)) !TODO-JN soil_depth_water?
     ALLOCATE(read_harvest(nproma, nblks))
     harvest_from_files(:,:,:) = -1._wp
     read_harvest(:,:)=-1._wp
@@ -390,19 +392,48 @@ PROGRAM jsb4_driver
 
       ! TODO-JN: for forest management test, before there is a better way available: 
       IF(tile%Is_process_active(FM_)) THEN
-        IF(is_newyear() .AND. my_process_is_stdio()) THEN
-          DO pft = 1,4
-            write (harvest_area_input%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", pft, "_"
-            harvest_area_input%expectedUnit = ""
-            harvest_area_input%ocean_value = 0._wp
-            harvest_area_input%frequency = ANNUAL_
-            NULLIFY(harvest_area_input%timevalues)
+!TODO: oje, ich muss davon 4 verschiedene machen!
+! ist deshalb auch in der site die gleich, ne, oder? denn ich hab ja auch die input daten verglichen!?!
+!        IF(is_newyear() .AND. my_process_is_stdio()) THEN
+!          DO pft = 1,4
+            write (harvest_area_input1%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 1, "_"
+            harvest_area_input1%expectedUnit = ""
+            harvest_area_input1%ocean_value = 0._wp
+            harvest_area_input1%frequency = ANNUAL_
+            NULLIFY(harvest_area_input1%timevalues)
+            harvest_area_input1%variable_name = "harvest"
+            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input1, read_harvest(:,:))
+            harvest_from_files(:,1,:) = read_harvest(:,:)
 
-            harvest_area_input%variable_name = "harvest"
-            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input, read_harvest(:,:))
-            harvest_from_files(:,pft,:) = read_harvest(:,:)
-          ENDDO
-        ENDIF
+            write (harvest_area_input2%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 2, "_"
+            harvest_area_input2%expectedUnit = ""
+            harvest_area_input2%ocean_value = 0._wp
+            harvest_area_input2%frequency = ANNUAL_
+            NULLIFY(harvest_area_input2%timevalues)
+            harvest_area_input2%variable_name = "harvest"
+            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input2, read_harvest(:,:))
+            harvest_from_files(:,2,:) = read_harvest(:,:)
+
+            write (harvest_area_input3%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 3, "_"
+            harvest_area_input3%expectedUnit = ""
+            harvest_area_input3%ocean_value = 0._wp
+            harvest_area_input3%frequency = ANNUAL_
+            NULLIFY(harvest_area_input3%timevalues)
+            harvest_area_input3%variable_name = "harvest"
+            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input3, read_harvest(:,:))
+            harvest_from_files(:,3,:) = read_harvest(:,:)
+
+            write (harvest_area_input4%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 4, "_"
+            harvest_area_input4%expectedUnit = ""
+            harvest_area_input4%ocean_value = 0._wp
+            harvest_area_input4%frequency = ANNUAL_
+            NULLIFY(harvest_area_input4%timevalues)
+            harvest_area_input4%variable_name = "harvest"
+            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input4, read_harvest(:,:))
+            harvest_from_files(:,4,:) = read_harvest(:,:)
+
+!          ENDDO
+!        ENDIF
         DO iblk = 1, nblks
           dsl4jsb_var3D_onChunk(FM_, to_harvest) = harvest_from_files(:,:,iblk)
         ENDDO
