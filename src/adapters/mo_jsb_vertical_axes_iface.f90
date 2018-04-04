@@ -80,7 +80,7 @@ CONTAINS
 
 #else
 
-  SUBROUTINE Setup_jsb_vertical_axis(verticalAxisList, zaxix_id, name, length, longname, units, levels, lbounds, ubounds)
+  SUBROUTINE Setup_jsb_vertical_axis(verticalAxisList, zaxis_id, name, length, longname, units, levels, lbounds, ubounds)
     ! Dummy
     TYPE(t_verticalAxisList), INTENT(inout) :: verticalAxisList
     INTEGER,                  INTENT(in)    :: zaxis_id
