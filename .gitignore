@@ -6,3 +6,5 @@
 .idea/
 /doc/html
 /doc/latex
+dfs
+*.swp
