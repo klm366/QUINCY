@@ -734,7 +734,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
             hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
             hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
                     (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
-            WHERE (hlp6 * dtime + solute + assoc_fast < eps8 .AND. solute > eps8)
+            WHERE ((hlp6 * dtime + solute + assoc_fast) < eps8 .AND. solute > eps8)
                 hlp1 = microbial_uptake + plant_uptake
                 hlp3 = (hlp6 + hlp1) * dtime + solute + assoc_fast
                 microbial_uptake = microbial_uptake / hlp1 * hlp3
@@ -780,7 +780,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
             hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
             hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
                     (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
-            WHERE (hlp6 * dtime + solute + assoc_fast < eps8 .AND. solute > eps8)
+            WHERE ((hlp6 * dtime + solute + assoc_fast) < eps8 .AND. solute > eps8)
                 hlp1 = microbial_uptake + plant_uptake
                 hlp3 = (hlp6 + hlp1) * dtime + solute + assoc_fast
                 microbial_uptake = microbial_uptake / hlp1 * hlp3
@@ -859,7 +859,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     !!
     mortality_rate(:,:) = k_mort_microbial * dtime
     hlp1(:,:)           = mortality_rate(:,:) * pool_microbial%carbon(:,:) 
-    WHERE(pool_microbial%carbon(:,:) - hlp1(:,:) < min_mic_biomass)
+    WHERE((pool_microbial%carbon(:,:) - hlp1(:,:)) < min_mic_biomass)
       mortality_rate(:,:) = 1._wp - (min_mic_biomass / pool_microbial%carbon(:,:))
     ENDWHERE
 
@@ -1037,14 +1037,14 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
        WHERE(growth_c(:,:) <= growth_n(:,:) .AND. growth_c(:,:) <= growth_p(:,:))
           ! carbon uptake is limiting, full uptake rate is realised
           f_uptake(:,:) = f_uptake(:,:) 
-       ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:).AND.pool_dom%carbon(:,:)>eps8)
+       ELSEWHERE(growth_n(:,:) < growth_c(:,:) .AND. growth_n(:,:) <= growth_p(:,:).AND.pool_dom%carbon(:,:) > eps8)
           ! nitrogen uptake is limiting
           ! calculate uptake rate that satisfies N constraint and CUE
           f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), & 
                                          ((microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) * microbial_cn) / & 
                                          (microbial_cue_eff_mavg(:,:) * pool_dom%carbon(:,:) - & 
                                           microbial_nue * pool_dom%nitrogen(:,:) * microbial_cn)))
-       ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:).AND.pool_dom%carbon(:,:)>eps8)
+       ELSEWHERE(growth_p(:,:) < growth_c(:,:) .AND. growth_p(:,:) < growth_n(:,:) .AND. pool_dom%carbon(:,:) > eps8)
           ! phosphorus uptake is limiting
           ! calculate uptake rate that satisfies P constraint and CUE
           f_uptake(:,:) = MAX(0.0_wp,MIN(f_uptake(:,:), &
@@ -1071,7 +1071,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     WHERE(growth_c(:,:) < growth_n(:,:)) 
        ! inorganic N immobilisation flux in agreement with C growth
        hlp1(:,:) = MAX(growth_c(:,:) / microbial_cn - microbial_nue * uptake_n(:,:),0.0_wp)
-       WHERE(microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:) > eps8)
+       WHERE((microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) > eps8)
           scal(:,:) = hlp1(:,:) / (microbial_uptake_nh4_sl(:,:) + microbial_uptake_no3_sl(:,:)) 
        ELSEWHERE
           scal(:,:) = 0.0_wp

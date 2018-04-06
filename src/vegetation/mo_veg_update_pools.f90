@@ -418,7 +418,7 @@ CONTAINS
 
     WHERE(veg_pool%leaf%carbon(:) > eps8)
         mean_leaf_age(:) = (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
-      ELSE WHERE
+      ELSEWHERE
         mean_leaf_age(:) = 0.0_wp
     END WHERE
 

@@ -256,8 +256,7 @@ CONTAINS
        !!     below a minimum threshold mortality rises to 100%
        !!
        WHERE(greff(:) > min_greff)
-          mortality_rate(:) = MAX(background_mort_rate_tree, & 
-                                  k1_mort_greff / (k2_mort_greff * greff(:) + 1.0_wp))
+          mortality_rate(:) = MAX(background_mort_rate_tree, k1_mort_greff / (k2_mort_greff * greff(:) + 1.0_wp))
        ELSEWHERE
           mortality_rate(:) = 1.0_wp / (k3_mort_greff * greff(:) + 1.0_wp)
        ENDWHERE
@@ -269,7 +268,7 @@ CONTAINS
        !! transformed to a mortality estimate using a Weibull function
        boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp &  
                          - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib%tau_leaf/lctlib%sla
-       WHERE(boc_cbalance(:) < -eps4 )
+       WHERE(boc_cbalance(:) < (-eps4))
           mortality_rate(:) = mortality_rate(:) & 
                               + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light))
        END WHERE
@@ -297,7 +296,7 @@ CONTAINS
     ELSEWHERE
        fscal(:) = 0.0_wp 
     ENDWHERE
-    WHERE(mortality_rate(:)<fscal(:))
+    WHERE(mortality_rate(:) < fscal(:))
        fscal(:) = mortality_rate(:)
     ENDWHERE 
     veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * fscal(:)
@@ -420,9 +419,9 @@ CONTAINS
     !> 1.2 temperature and soil moisture limitation 
     !! 
     !! OBS: should be top soil moisture!
-    WHERE(t_air_week_mavg(:) - Tzero < 0.0_wp .OR..NOT. growing_season(:))
+    WHERE((t_air_week_mavg(:) - Tzero) < 0.0_wp .OR..NOT. growing_season(:))
       flim_temp(:) = 0.0_wp
-    ELSE WHERE
+    ELSEWHERE
       flim_temp(:) = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero))**k_est_temp)
     END WHERE
     flim_moist(:)  = 1.0_wp - exp(-(lambda_est_moist * w_soil_root_theta(:))**k_est_moist) 
@@ -431,7 +430,7 @@ CONTAINS
     !!
     establishment_rate(:) = flim_light(:) * flim_temp(:) * flim_moist(:) * & 
                             1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
-    WHERE(establishment_rate(:)<eps8)
+    WHERE(establishment_rate(:) < eps8)
        establishment_rate(:) = 0.0_wp
     ENDWHERE
 

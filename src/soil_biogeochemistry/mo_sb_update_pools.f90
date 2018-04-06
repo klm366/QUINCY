@@ -904,7 +904,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       hlp2(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
             (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_sorption_po4(:,1))) * dtime / 1000000._wp
 
-      WHERE (po4_solute(:,1) < (-hlp2(:,1)) .OR. po4_assoc_fast(:,1) < (-hlp2(:,1)) )
+      WHERE (po4_solute(:,1) < (-hlp2(:,1)) .OR. po4_assoc_fast(:,1) < (-hlp2(:,1)))
         hlp1(:,1) = po4_solute(:,1)/(po4_solute(:,1)+po4_assoc_fast(:,1))
       ENDWHERE
 
@@ -931,7 +931,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
             (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_sorption_po4(:,:)) + transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
 
-      WHERE (po4_solute(:,:) < (-hlp2(:,:)) .OR. po4_assoc_fast(:,:) < (-hlp2(:,:)) )
+      WHERE (po4_solute(:,:) < (-hlp2(:,:)) .OR. po4_assoc_fast(:,:) < (-hlp2(:,:)))
         hlp1(:,:) = po4_solute(:,:)/(po4_solute(:,:)+po4_assoc_fast(:,:))
       ENDWHERE
 

@@ -247,7 +247,7 @@ CONTAINS
                                   veg_pool%fine_root%carbon(:) / target_cn_fine_root(:) ) / tau_nutrient_recycling/one_day * dtime
        !> 1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
        !! 
-       WHERE( -1.0_wp * (recycling_leaf(:) + recycling_fine_root(:)) > eps8)
+       WHERE((-1.0_wp * (recycling_leaf(:) + recycling_fine_root(:))) > eps8)
           hlp1(:) = -1.0_wp * ( 1.0_wp/tau_labile/one_day * veg_pool%labile%nitrogen(:) * dtime ) / & 
                               ( recycling_leaf(:) + recycling_fine_root(:) ) 
           WHERE(hlp1(:) < 1.0_wp)
@@ -291,7 +291,7 @@ CONTAINS
                                   tau_nutrient_recycling/one_day * dtime
        !> 2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
        !! 
-       WHERE( -1.0_wp * ( recycling_leaf(:) + recycling_fine_root(:) ) > eps8)
+       WHERE((-1.0_wp * (recycling_leaf(:) + recycling_fine_root(:))) > eps8)
           hlp1(:) = -1.0_wp * ( 1.0_wp/tau_labile/one_day * veg_pool%labile%phosphorus(:) * dtime ) / & 
                               ( recycling_leaf(:) + recycling_fine_root(:) ) 
           WHERE(hlp1(:) < 1.0_wp)
@@ -377,24 +377,24 @@ CONTAINS
       CASE (iraingreen, isummergreen)
          WHERE(growing_season(:))
             fturn_leaf(:) = 0.0_wp              ! herbivory
-         ELSE WHERE
-             WHERE(lai(:) > eps4)
-                fturn_leaf(:) = MAX(eps4, max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
-             ELSE WHERE
-                fturn_leaf(:) = 1.0_wp
-             END WHERE
+         ELSEWHERE
+           WHERE(lai(:) > eps4)
+              fturn_leaf(:) = MAX(eps4, max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
+           ELSEWHERE
+              fturn_leaf(:) = 1.0_wp
+           END WHERE
          END WHERE
       CASE (iperennial)
          WHERE(growing_season(:))
-            fturn_leaf(:) = 1.0_wp /lctlib%tau_leaf /one_day /one_year * dtime
-         ELSE WHERE
-             WHERE(lai(:) > eps4)
-                fturn_leaf(:) = MAX(1.0_wp /lctlib%tau_leaf /one_day /one_year *dtime, & 
-                                    max_leaf_shedding_rate *dtime /one_day *target_lai(:) /lai(:))
-             ELSE WHERE
-                fturn_leaf(:) = 1.0_wp
-             END WHERE
-       END WHERE
+           fturn_leaf(:) = 1.0_wp /lctlib%tau_leaf /one_day /one_year * dtime
+         ELSEWHERE
+           WHERE(lai(:) > eps4)
+             fturn_leaf(:) = MAX(1.0_wp /lctlib%tau_leaf /one_day /one_year *dtime, & 
+                                 max_leaf_shedding_rate *dtime /one_day *target_lai(:) /lai(:))
+           ELSEWHERE
+             fturn_leaf(:) = 1.0_wp
+           END WHERE
+         END WHERE
     END SELECT
     veg_litterfall%leaf = veg_litterfall%leaf + veg_pool%leaf * fturn_leaf(:)
     net_growth(:)       = net_growth(:) - veg_pool%leaf%carbon(:) * fturn_leaf(:)

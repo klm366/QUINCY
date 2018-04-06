@@ -244,6 +244,7 @@ CONTAINS
 
     !> 1.0 if light is available (i.e. daytime)
     !!
+    !! note: all _dacc variables and the daytime_counter are set to zero below (at the timestep after local midnight)
 
     !> 1.1 1D variables
     !!
@@ -856,7 +857,7 @@ CONTAINS
 
     WHERE (growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
-    ELSE WHERE
+    ELSEWHERE
        hlp(:) = 0._wp
     ENDWHERE
     growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
@@ -876,9 +877,9 @@ CONTAINS
     npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), npp(:), mavg_period_talloc, do_calc=growing_season(:))
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
-         WHERE (n_fixation(:)>0._wp)
-            hlp(:) = n_fixation(:)/ veg_pool%fine_root%carbon
-         ELSE WHERE
+         WHERE (n_fixation(:) > 0._wp)
+            hlp(:) = n_fixation(:)/ veg_pool%fine_root%carbon(:)
+         ELSEWHERE
             hlp(:) = 0.0_wp
          ENDWHERE
          n_fixation_talloc_mavg(:)      = calc_mavg(n_fixation_talloc_mavg(:), hlp(:), &
@@ -914,14 +915,14 @@ CONTAINS
 
     WHERE(growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
-    ELSE WHERE
+    ELSEWHERE
        hlp(:) = 0._wp
     END WHERE
     growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_season(:))
 
     WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
        hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
-    ELSE WHERE
+    ELSEWHERE
        hlp(:) = 0._wp
     END WHERE
 
@@ -931,7 +932,7 @@ CONTAINS
     !!
     WHERE (veg_pool%fine_root%carbon(:) > eps8)
        hlp(:) = veg_pool%leaf%carbon(:) / veg_pool%fine_root%carbon(:)
-    ELSE WHERE
+    ELSEWHERE
        hlp(:) = 0._wp
     END WHERE
     leaf2root_troot_mavg(:)          = calc_mavg(leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &

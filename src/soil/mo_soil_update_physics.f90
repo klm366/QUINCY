@@ -411,7 +411,7 @@ CONTAINS
          transpiration(:) = press_srf(:) / &
                             ( r_gas_dryair * t_air(:) ) * (q_sat(:) - q_air(:)) / &
                             (1._wp / canopy_cond(:) + 1._wp / (heat_tcoef(:) * wind_air(:))) 
-      ELSE WHERE
+      ELSEWHERE
          transpiration(:) = 0.0_wp 
       END WHERE
   
@@ -426,7 +426,7 @@ CONTAINS
   
       !> 2.4 calculate interception loss
       !! 
-      WHERE(w_skin_max * lai(:) > eps8)
+      WHERE((w_skin_max * lai(:)) > eps8)
          ! kg / m2 / s
          interception(:) = MIN(MAX(press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
                                    (q_sat_srf(:) - q_air(:)) / ( 1._wp / (heat_tcoef(:) * wind_air(:))) * &
@@ -477,10 +477,10 @@ CONTAINS
       ! info_catch_t_jump(:) = .TRUE.       ! uncomment for debug only (also see declaration above)
       WHERE (t_soil_sl(:,1) < t_srf_new(:))
         t_soil_sl(:,1) = t_soil_sl(:,1) + 15.0_wp
-      ELSE WHERE
+      ELSEWHERE
         t_soil_sl(:,1) = t_soil_sl(:,1) - 15.0_wp
       END WHERE
-    ELSE WHERE
+    ELSEWHERE
       t_soil_sl(:,1) = t_srf_new(:)
     END WHERE
     ! ! write info if one or more values are TRUE -> uncomment for debug only
@@ -604,7 +604,7 @@ CONTAINS
 
     !> 1.0 Update skin reservoir and calculate interception loss
     !!
-    WHERE(w_skin_max * lai(:) > eps8)
+    WHERE((w_skin_max * lai(:)) > eps8)
        ! m / timestep
        water_to_skin(:) = MIN(InterceptionEfficiency * (rain(:) + snow(:)) / 1000.0_wp * dtime, & 
                               MAX(interception(:) * dtime / 1000.0_wp + w_skin_max * lai(:) - w_skin(:), 0._wp))
@@ -624,7 +624,7 @@ CONTAINS
     !!
     ftranspiration(:,:) = 0.0_wp
     DO isoil = 1,options%nsoil_sb
-       WHERE(w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil) > eps8)
+       WHERE((w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) > eps8)
           hlp1(:) = (w_soil_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) / & 
                     (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
           hlp1(:) = calc_soil_moisture_stress(hlp1(:), lctlib%lambda_soil_gs, lctlib%weibull_k_soil_gs)

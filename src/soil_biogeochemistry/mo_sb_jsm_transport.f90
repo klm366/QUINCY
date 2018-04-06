@@ -639,7 +639,7 @@ CONTAINS
     !> 1.0 advective transport in the vertical axis of the soil (i.e. down)
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
     DO isoil = 1,options%nsoil_sb-1
-       WHERE(particle_fluxrate(:,isoil)>0.0_wp)
+       WHERE(particle_fluxrate(:,isoil) > 0.0_wp)
           hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil)
        ELSEWHERE
           hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil+1)
@@ -652,7 +652,7 @@ CONTAINS
    !> 2.0 lower boundary condition,??
    !!  based on the assumption that there is no upward flux, and that all other 
    !!  material is lost
-!   WHERE(particle_fluxrate(:,options%nsoil_sb)>0.0_wp)
+!   WHERE(particle_fluxrate(:,options%nsoil_sb) > 0.0_wp)
 !      hlp1(:) = particle_fluxrate(:,options%nsoil_sb) * pool(:,options%nsoil_sb) * soil_depth_sl(:,options%nsoil_sb)
 !   ELSEWHERE
       hlp1(:) = 0.0_wp 
@@ -700,7 +700,7 @@ CONTAINS
     !> 1.0 advective transport in the vertical axis of the soil (i.e. down)
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
     DO isoil = 1,options%nsoil_sb-1
-       WHERE(percolation_sl(:,isoil)>0.0_wp)
+       WHERE(percolation_sl(:,isoil) > 0.0_wp)
           hlp1(:) = percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil) * soil_depth_sl(:,isoil)
 !! BLARPP for now no upward transport - need to properly think about this in update_soil_physics
        ELSEWHERE
@@ -713,7 +713,7 @@ CONTAINS
     !> 2.0 lower boundary condition,
     !!  based on the assumption that there is no upward flux from below, 
     !!  and that all other material is lost
-    WHERE(percolation_sl(:,options%nsoil_sb)>0.0_wp)
+    WHERE(percolation_sl(:,options%nsoil_sb) > 0.0_wp)
       hlp1(:) = percolation_sl(:,options%nsoil_sb) * dtime/1000._wp * pool(:,options%nsoil_sb) * soil_depth_sl(:,options%nsoil_sb)
     ELSEWHERE
       hlp1(:) = 0.0_wp 

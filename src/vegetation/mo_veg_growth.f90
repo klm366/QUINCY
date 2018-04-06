@@ -1053,28 +1053,28 @@ CONTAINS
     ! multiplier is Croot / Croot * (1 + fresp_growth + fresp_maint
     ! maintenance respiration cost of a unit fine root carbon over its lifetime (mol C/mol C)
     WHERE(fine_root_carbon(:) > eps8)
-        fresp_maint(:) = fmaint_rate_troot_mavg(:) * fine_root_nitrogen(:) / fine_root_carbon(:)  * &
-                         lctlib%tau_fine_root * one_day * one_year / 1.e6_wp
-    ELSE WHERE
-        fresp_maint(:) = 0.0_wp
+      fresp_maint(:) = fmaint_rate_troot_mavg(:) * fine_root_nitrogen(:) / fine_root_carbon(:)  * &
+                       lctlib%tau_fine_root * one_day * one_year / 1.e6_wp
+    ELSEWHERE
+      fresp_maint(:) = 0.0_wp
     END WHERE
     gain_n(:) = unit_uptake_n_troot_mavg(:) / (1._wp + fresp_growth+fresp_maint(:)) !+ uptake_norg / veg_exudation%carbon
     !! ToDo!! Idea for coupling BNF and Mycos... Somewhere in the future
  
     ! transformation costs depend on NH4 and NO3 uptake rates   
-    WHERE(uptake_nh4(:) + uptake_no3(:) > eps8)
+    WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8)
        hlp1(:) = uptake_nh4(:) / (uptake_nh4(:) + uptake_no3(:))
        hlp2(:) = uptake_no3(:) / (uptake_nh4(:) + uptake_no3(:))
-    ELSE WHERE
+    ELSEWHERE
        hlp1(:) = 1.0_wp
        hlp2(:) = 0.0_wp
     END WHERE
 
     ! root uptake costs
     WHERE(gain_n(:) > eps8)
-        cost_n_uptake_root(:) = gain_c(:) / gain_n(:) + &
-                                (hlp1(:) * transform_cost_nh4 + hlp2(:) * transform_cost_no3)
-    ELSE WHERE
+      cost_n_uptake_root(:) = gain_c(:) / gain_n(:) + &
+                              (hlp1(:) * transform_cost_nh4 + hlp2(:) * transform_cost_no3)
+    ELSEWHERE
         cost_n_uptake_root(:) = 1000._wp ! an arbitrarily large value !
     END WHERE
                        
@@ -1110,10 +1110,10 @@ CONTAINS
          f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
          n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
 
-         WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:))
-               scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
-               uptake_nh4(:) = uptake_nh4(:) * scal(:)
-               uptake_no3(:) = uptake_no3(:) * scal(:)
+         WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8 .AND. (f_nacq_nup(:) * n_demand(:)) < (uptake_nh4(:) + uptake_no3(:)))
+           scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
+           uptake_nh4(:) = uptake_nh4(:) * scal(:)
+           uptake_no3(:) = uptake_no3(:) * scal(:)
          END WHERE
     ENDSELECT 
 
@@ -1122,7 +1122,7 @@ CONTAINS
     IF(flag_mycorrhiza) THEN
        f_exudate(:) = 0.5_wp   
        hlp1(:)      = SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2) 
-       WHERE( hlp1(:) > eps8) 
+       WHERE(hlp1(:) > eps8) 
           f_exudate(:) = MIN(f_exudate(:), &
                              hlp1(:) / (hlp1(:) + (uptake_nh4(:) + uptake_no3(:)) * dtime / 1.e6_wp )) ! Mycofon
        ENDWHERE 
@@ -1193,7 +1193,7 @@ CONTAINS
     WHERE(fine_root_carbon(:) > eps8)
       unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / fine_root_carbon(:)
       unit_uptake_p_act(:) = uptake_po4(:) / fine_root_carbon(:)
-    ELSE WHERE
+    ELSEWHERE
       unit_uptake_n_act(:) = unit_uptake_n_pot(:) * demand_uptake_n_tuptake_mavg(:)
       unit_uptake_p_act(:) = unit_uptake_p_pot(:) * demand_uptake_p_tuptake_mavg(:)
     END WHERE
@@ -1783,24 +1783,27 @@ CONTAINS
     !! 
     !! phi_storage is adjusted by phi_phenology to avoid storage building to interfere with flushing (push phi_storage towards 
     !!  reserve at times of low LAI or labile pool to give priority to growth and maintentance)
-    phi_phenology(:)   = 0._wp
-    phi_maintenance(:) = 0._wp
-    phi_storage(:)     = 0._wp
     hlp1(:) = MIN( MAX(min_lai, target_lai(:)), target_lai_max)
     WHERE(lai(:) < hlp1(:) .AND. growing_season(:))
       phi_phenology(:) = exp(-(lambda_phiphen * lai(:) / hlp1(:) )**k_phiphen) - exp(-(lambda_phiphen)**k_phiphen) 
+    ELSEWHERE
+      phi_phenology(:) = 0._wp
     END WHERE
 
     hlp1(:) = MAX(0.0_wp, veg_pool_labile%carbon(:))
     WHERE(target_labile_pool_carbon(:) > eps8 .AND. hlp1(:) < target_labile_pool_carbon(:))
       phi_maintenance(:) = exp(-(lambda_phimaint * hlp1(:) / target_labile_pool_carbon(:))**k_phimaint) & 
                            - exp(-(lambda_phimaint)**k_phimaint)
+    ELSEWHERE
+      phi_maintenance(:) = 0._wp
     END WHERE
 
     hlp1(:) = MAX(0.0_wp, veg_pool_reserve%carbon(:))
     WHERE(target_reserve_pool_carbon(:) > eps8 .AND. hlp1(:) < target_reserve_pool_carbon(:))
       phi_storage(:) = exp(-(lambda_phistore * hlp1(:) / target_reserve_pool_carbon(:))**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
+    ELSEWHERE
+      phi_storage(:) = 0._wp
     END WHERE
 
     phi_storage(:) = phi_storage(:) * ( 1.0_wp - phi_phenology(:)) 
@@ -1826,28 +1829,30 @@ CONTAINS
     !!
     !> 2.1 supply of reserve N to labile pool during growing season 
     !!
-    phi_maintenance(:)  = 0._wp
-    hlp1(:)             = MAX(0.0_wp, veg_pool_labile%nitrogen(:))
+    hlp1(:) = MAX(0.0_wp, veg_pool_labile%nitrogen(:))
     WHERE(target_labile_pool_nitrogen(:) > eps8    .AND. & 
           hlp1(:) < target_labile_pool_nitrogen(:) .AND. & 
           growing_season(:))
       phi_maintenance(:) = exp(-(lambda_phimaint * hlp1(:) / target_labile_pool_nitrogen(:))**k_phimaint) & 
                            - exp(-(lambda_phimaint)**k_phimaint)
-    END WHERE
+    ELSEWHERE
+      phi_maintenance(:) = 0._wp
+    ENDWHERE
 
     !> 2.2 build-up of reserve N (composed of a pull of N to the reserve and a push from the labile to avoid 
     !!     too strong accumulation of N in the labile)
     !! 
-    phi_storage(:)      = 0._wp
     WHERE(target_reserve_pool_nitrogen(:) > eps8 .AND. veg_pool_reserve%nitrogen(:) < target_reserve_pool_nitrogen(:))
       phi_storage(:) = exp(-(lambda_phistore * veg_pool_reserve%nitrogen(:) / target_reserve_pool_nitrogen(:))**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
-    END WHERE
+    ELSEWHERE
+      phi_storage(:) = 0._wp      
+    ENDWHERE
     WHERE(target_labile_pool_nitrogen(:) > eps8 .AND. veg_pool_labile%nitrogen(:) > target_labile_pool_nitrogen(:))
       phi_storage(:) = MAX(phi_storage(:), &
                            MIN((veg_pool_labile%nitrogen(:) - target_labile_pool_nitrogen(:)) / target_labile_pool_nitrogen(:), &
                                1.0_wp)) 
-    END WHERE
+    ENDWHERE
 
     !> 2.3 Limit push from labile to reserve to maximum storage capacity
     !!
@@ -1866,22 +1871,24 @@ CONTAINS
     !! 
     !> 3.1 supply of reserve P to labile pool during growing season 
     !!
-    phi_maintenance(:) = 0._wp
-    hlp1(:)            = MAX(0.0_wp, veg_pool_labile%phosphorus(:))
+    hlp1(:) = MAX(0.0_wp, veg_pool_labile%phosphorus(:))
     WHERE(target_labile_pool_phosphorus(:) > eps8    .AND. & 
           hlp1(:) < target_labile_pool_phosphorus(:) .AND. & 
           growing_season(:))
       phi_maintenance(:) = exp(-(lambda_phimaint * hlp1(:) / target_labile_pool_phosphorus(:))**k_phimaint) & 
                            - exp(-(lambda_phimaint)**k_phimaint)
+    ELSEWHERE
+      phi_maintenance(:) = 0._wp
     END WHERE
 
     !> 3.2 build-up of reserve P (composed of a pull of N to the reserve and a push from the labile to avoid
     !!     too strong accumulation of P in the labile)
     !!
-    phi_storage(:)     = 0._wp
     WHERE(target_reserve_pool_phosphorus(:) > eps8 .AND. veg_pool_reserve%phosphorus(:) < target_reserve_pool_phosphorus(:))
       phi_storage(:) = exp(-(lambda_phistore * veg_pool_reserve%phosphorus(:) / target_reserve_pool_phosphorus(:))**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
+    ELSEWHERE
+      phi_storage(:) = 0._wp      
     END WHERE
     WHERE(target_labile_pool_phosphorus(:) > eps8 .AND. veg_pool_labile%phosphorus(:) > target_labile_pool_phosphorus(:))
       phi_storage(:) = MAX(phi_storage(:), &
@@ -1893,8 +1900,8 @@ CONTAINS
     !!
     hlp1(:) = veg_pool_reserve%phosphorus(:) + phi_storage(:) * veg_pool_labile%phosphorus(:) / tau_labile / one_day * dtime
     WHERE(veg_pool_labile%phosphorus(:) > eps8 .AND. hlp1(:) > target_reserve_pool_phosphorus(:))
-       phi_storage(:) = MAX(0.0_wp,(target_reserve_pool_phosphorus(:) - veg_pool_reserve%phosphorus(:))) / &
-                            (veg_pool_labile%phosphorus(:) / tau_labile / one_day * dtime)
+      phi_storage(:) = MAX(0.0_wp,(target_reserve_pool_phosphorus(:) - veg_pool_reserve%phosphorus(:))) / &
+                           (veg_pool_labile%phosphorus(:) / tau_labile / one_day * dtime)
     ENDWHERE
 
     veg_reserve_use%phosphorus(:) = (phi_maintenance(:) * veg_pool_reserve%phosphorus(:) - & 
@@ -2091,7 +2098,7 @@ CONTAINS
               coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * lctlib%k_crtos & 
                                           - coarse_root_carbon(:), 0.0_wp)
               root_carbon_inc(:) = MAX(k1_opt + k2_opt * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
-            ELSE WHERE
+            ELSEWHERE
               leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt + root_carbon(:))/(1.0_wp+k2_opt), 0.0_wp)
               root_carbon_inc(:)        = MAX(k1_opt + k2_opt * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
               sap_wood_carbon_inc(:)    = 0.0_wp
@@ -2123,7 +2130,7 @@ CONTAINS
               coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
                                                lctlib%k_crtos - coarse_root_carbon, 0.0_wp)
               root_carbon_inc(:)        = MAX(( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2root_mass_ratio - root_carbon, 0.0_wp)
-            ELSE WHERE ! special case of no wood growth (phenology etc.): redistribute available carbon 
+            ELSEWHERE ! special case of no wood growth (phenology etc.): redistribute available carbon 
               leaf_carbon_inc(:)  = MAX(( b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio + root_carbon(:) ) / & 
                                         (1.0_wp + 1._wp/ leaf2root_mass_ratio),0.0_wp)
               root_carbon_inc(:)  = MAX(0.0_wp,MIN(b_inc(:) - leaf_carbon_inc(:), & 
@@ -2315,6 +2322,7 @@ CONTAINS
                                                    growth_respiration               !< growth respiration
     ! ---------------------------
     ! 0.2 Local
+    REAL(wp), DIMENSION(options%nc)             :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
 
 
@@ -2361,7 +2369,8 @@ CONTAINS
                                             veg_pool%labile%phosphorus(:) * kstar_labile(:) * dtime/one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
     WHERE(growth_req_p(:) > eps8)
-      WHERE(veg_growth%labile%nitrogen(:) > veg_growth%labile%phosphorus(:) / MAX(growth_req_p(:),eps8)) ! MAX() is necessary for cases with growth_req_p(:) < eps8
+      hlp1(:) = veg_growth%labile%phosphorus(:) / growth_req_p(:)
+      WHERE(veg_growth%labile%nitrogen(:) > hlp1(:))
         veg_growth%labile%nitrogen(:) = veg_growth%labile%phosphorus(:) / growth_req_p(:)
       END WHERE
     END WHERE
@@ -2373,7 +2382,8 @@ CONTAINS
        veg_growth%labile%nitrogen(:) =  veg_growth%labile%carbon(:) * growth_req_n(:)
     ELSE
        WHERE(growth_req_n(:) > eps8)
-         WHERE(veg_growth%labile%carbon(:) > veg_growth%labile%nitrogen(:) / MAX(growth_req_n(:),eps8)) ! MAX() is necessary for cases with growth_req_n(:) < eps8
+         hlp1(:) = veg_growth%labile%nitrogen(:) / growth_req_n(:)
+         WHERE(veg_growth%labile%carbon(:) > hlp1(:))
            veg_growth%labile%carbon(:) = veg_growth%labile%nitrogen(:) / growth_req_n(:)
          END WHERE
        END WHERE  

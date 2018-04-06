@@ -996,7 +996,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       km_denitrification_c_act(:,:) = km_denitrification_c
       km_denitrification_no3_act(:,:) = km_denitrification_no3
       root_depth_avg(:) = sum(root_fraction_sl(:,:)*soil_depth_sl(:,:),DIM=2)
-      WHERE(root_depth_avg(:)>eps8) 
+      WHERE(root_depth_avg(:) > eps8) 
          km1_uptake_nh4_act(:,1) = km1_up_nh4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
          km1_uptake_no3_act(:,1) = km1_up_no3 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
          km1_uptake_po4_act(:,1) = km1_up_po4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
@@ -1269,9 +1269,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         !> 1.1 constrain potential N uptake by avaiable C for N transformation to organic
         !!
         hlp1(:,isoil) = mycorrhiza_uptake_nh4_sl(:,isoil) * transform_cost_nh4 + & 
-                      mycorrhiza_uptake_no3_sl(:,isoil) * transform_cost_no3 
+                        mycorrhiza_uptake_no3_sl(:,isoil) * transform_cost_no3 
 
-        WHERE(hlp1(:,isoil)  > sb_pool_mycorrhiza_carbon(:,isoil) * f_maxresp_myc / one_day * dtime )
+        WHERE(hlp1(:,isoil)  > (sb_pool_mycorrhiza_carbon(:,isoil) * f_maxresp_myc / one_day * dtime))
           WHERE(hlp1(:,isoil) > eps8)
             hlp2(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * f_maxresp_myc / one_day * dtime / & 
                             (hlp1(:,isoil)) 
@@ -1836,7 +1836,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                    mycorrhiza_uptake_nh4_sl(:,:) - (nh4_solute(:,:) + transport_nh4_solute(:,:)),0.0_wp)
        microbial_uptake_nh4_sl(:,:) = microbial_uptake_nh4_sl(:,:) + asymb_n_fixation(:,:) 
     ELSE
-       WHERE(microbial_uptake_nh4_sl(:,:)>=0.0_wp)
+       WHERE(microbial_uptake_nh4_sl(:,:) >= 0.0_wp)
           hlp1(:,:) = microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
           hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
           WHERE(hlp2(:,:) < hlp1(:,:)) 
@@ -1851,7 +1851,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                  nitrification_no3(:,:) = 0.0_wp 
                  mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
               ENDWHERE 
-           ENDWHERE
+          ENDWHERE
        ELSEWHERE
           hlp1(:,:) = plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + mycorrhiza_uptake_nh4_sl(:,:)
           hlp2(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:) - microbial_uptake_nh4_sl(:,:)
@@ -1865,7 +1865,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                  nitrification_no3(:,:) = 0.0_wp 
                  mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
               ENDWHERE 
-           ENDWHERE
+          ENDWHERE
        ENDWHERE 
     ENDIF
  
@@ -1897,8 +1897,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                        (sb_loss%soluable_litter%nitrogen(:,:) + & 
                         sb_loss%polymeric_litter%nitrogen(:,:)) 
     hlp2(:,:) = 1.0_wp
-    WHERE(microbial_uptake_nh4_sl(:,:)<hlp1(:,:))
-       WHERE(hlp1(:,:)>eps8)
+    WHERE(microbial_uptake_nh4_sl(:,:) < hlp1(:,:))
+       WHERE(hlp1(:,:) > eps8)
            hlp2(:,:) = microbial_uptake_nh4_sl(:,:) / hlp1(:,:)
        ELSEWHERE
            hlp2(:,:) = 0.0_wp
@@ -1928,7 +1928,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 3.1 constrain P uptake by microbes and plants to the available sum of P from P_soluable, 
     !!     biomineralisation and transport (mol /m3 / timestep)   
-    WHERE(microbial_uptake_po4_sl(:,:)>0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
+    WHERE(microbial_uptake_po4_sl(:,:) > 0.0_wp) ! if microbes take up P, constrain both microbial and plant uptake to available P 
       hlp1(:,:) = microbial_uptake_po4_sl(:,:) + plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:)
       hlp2(:,:) = po4_solute(:,:) + transport_po4_solute(:,:) 
       WHERE(hlp2(:,:) < hlp1(:,:))
@@ -2098,7 +2098,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!     which depends on the fraction of the source consumed f = (sum of fluxes)/stock = hlp1. 
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     ! fraction of NH4 that is consumed
-    WHERE(nh4_solute(:,:)>eps8)
+    WHERE(nh4_solute(:,:) > eps8)
        hlp1(:,:) = MAX((plant_uptake_nh4_sl(:,:) + mycorrhiza_uptake_nh4_sl(:,:) + microbial_uptake_nh4_sl(:,:) + & 
                     nitrification_no3(:,:) + nitrification_noy(:,:) + nitrification_n2o(:,:)) / nh4_solute(:,:),eps8)
     ELSEWHERE
@@ -2106,7 +2106,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDWHERE
 
     ! calculate reduction factor for discrimination 
-    WHERE(hlp1(:,:)<1.0_wp-eps8)
+    WHERE(hlp1(:,:) < (1.0_wp - eps8))
        hlp2(:,:) = (hlp1(:,:) - 1.0_wp) * log ( 1.0_wp - hlp1(:,:)) / hlp1(:,:)
     ELSEWHERE
        hlp2(:,:) = 0.0_wp
@@ -2132,8 +2132,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     hlp1(:,:) = plant_uptake_nh4_n15_sl(:,:) + mycorrhiza_uptake_nh4_n15_sl(:,:) + microbial_uptake_nh4_n15_sl(:,:) + & 
                 nitrification_no3_n15(:,:) + nitrification_noy_n15(:,:) + nitrification_n2o_n15(:,:)
     hlp2(:,:) = nh4_n15_solute + transport_nh4_n15_solute(:,:) 
-    WHERE(hlp2 < hlp1(:,:))
-       WHERE(hlp1>eps8)
+    WHERE(hlp2(:,:) < hlp1(:,:))
+       WHERE(hlp1(:,:) > eps8)
           plant_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * plant_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
           mycorrhiza_uptake_nh4_n15_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
           microbial_uptake_nh4_n15_sl(:,:)   = hlp2(:,:) * microbial_uptake_nh4_n15_sl(:,:) / hlp1(:,:) 
@@ -2154,13 +2154,13 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!     which depends on the fraction of the source consumed f = (sum of fluxes)/stock = hlp1. 
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     ! fraction of NO3 that is consumed
-    WHERE(no3_solute(:,:)>eps8)
+    WHERE(no3_solute(:,:) > eps8)
        hlp1(:,:) = MAX((plant_uptake_no3_sl(:,:) + mycorrhiza_uptake_no3_sl(:,:) + microbial_uptake_no3_sl(:,:) + & 
                     denitrification_noy(:,:) + denitrification_n2o(:,:) + denitrification_n2(:,:)) / no3_solute(:,:),eps8)
     ELSEWHERE
        hlp1(:,:) = 1.0_wp
     ENDWHERE
-    WHERE(hlp1(:,:)<1.0_wp-eps8)
+    WHERE(hlp1(:,:) < (1.0_wp - eps8))
        hlp2(:,:) = (hlp1(:,:) - 1.0_wp) * log ( 1.0_wp - hlp1(:,:)) / hlp1(:,:)
     ELSEWHERE
        hlp2(:,:) = 0.0_wp
@@ -2186,8 +2186,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     hlp1(:,:) = plant_uptake_no3_n15_sl(:,:) + mycorrhiza_uptake_no3_n15_sl(:,:) + microbial_uptake_no3_n15_sl(:,:) + & 
                 denitrification_noy_n15(:,:) + denitrification_n2o_n15(:,:) + denitrification_n2_n15(:,:)
     hlp2(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
-    WHERE(hlp2 < hlp1(:,:))
-       WHERE(hlp1>eps8)
+    WHERE(hlp2(:,:) < hlp1(:,:))
+       WHERE(hlp1(:,:) > eps8)
           plant_uptake_no3_n15_sl(:,:) = hlp2(:,:) * plant_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
           mycorrhiza_uptake_no3_n15_sl(:,:) = hlp2(:,:) * mycorrhiza_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
           microbial_uptake_no3_n15_sl(:,:)   = hlp2(:,:) * microbial_uptake_no3_n15_sl(:,:) / hlp1(:,:) 
@@ -2419,8 +2419,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_woody_litter(:,:) = 0.0_wp
     WHERE(sb_loss%woody_litter%nitrogen(:,:) > eps8) 
        fc_soluable_woody_litter(:,:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_woody_litter * &
-           sb_loss%woody_litter%carbon(:,:) / sb_loss%woody_litter%nitrogen(:,:))
-       WHERE(fc_soluable_woody_litter(:,:)>eps8)
+                                       sb_loss%woody_litter%carbon(:,:) / sb_loss%woody_litter%nitrogen(:,:))
+       WHERE(fc_soluable_woody_litter(:,:) > eps8)
           fn_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) / &
                                           (k_fn_soluable*fc_soluable_woody_litter(:,:)))
           fp_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) / &
@@ -2596,7 +2596,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.0 case of fixed N losses: N loss proportional to net mineralisation
     !!
-    WHERE(net_mineralisation_nh4(:,:)>0.0_wp)
+    WHERE(net_mineralisation_nh4(:,:) > 0.0_wp)
         ! N lost to atmosphere during processing of net mineralisation [mol m-3 timestep-1]
         volatilisation_nh4(:,:)      = net_mineralisation_nh4(:,:)     * floss_nmin 
         volatilisation_nh4_n15(:,:)  = net_mineralisation_nh4_n15(:,:) * floss_nmin 
@@ -2664,8 +2664,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_leaf(:) = 0.0_wp
     WHERE(veg_litterfall%leaf%nitrogen(:) > eps8)
        fc_soluable_leaf(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib%sla) * & 
-                                 veg_litterfall%leaf%carbon(:) / veg_litterfall%leaf%nitrogen(:))
-       WHERE(fc_soluable_leaf(:)>eps8)
+                             veg_litterfall%leaf%carbon(:) / veg_litterfall%leaf%nitrogen(:))
+       WHERE(fc_soluable_leaf(:) > eps8)
           fn_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fn_soluable*fc_soluable_leaf(:)))
           fp_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fp_soluable*fc_soluable_leaf(:)))
        END WHERE
@@ -2676,8 +2676,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_fine_root(:) = 0.0_wp 
     WHERE(veg_litterfall%fine_root%nitrogen(:) > eps8)
        fc_soluable_fine_root(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_fine_root * & 
-                                      veg_litterfall%fine_root%carbon(:) / veg_litterfall%fine_root%nitrogen(:))
-       WHERE(fc_soluable_fine_root(:)>eps8)
+                                  veg_litterfall%fine_root%carbon(:) / veg_litterfall%fine_root%nitrogen(:))
+       WHERE(fc_soluable_fine_root(:) > eps8)
           fn_soluable_fine_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fine_root(:))/(k_fn_soluable*fc_soluable_fine_root(:)))
           fp_soluable_fine_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fine_root(:))/(k_fp_soluable*fc_soluable_fine_root(:)))
        END WHERE
@@ -2688,8 +2688,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_coarse_root(:) = 0.0_wp 
     WHERE(veg_litterfall%coarse_root%nitrogen(:) > eps8)
        fc_soluable_coarse_root(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_coarse_root * & 
-                                        veg_litterfall%coarse_root%carbon(:) / veg_litterfall%coarse_root%nitrogen(:))
-       WHERE(fc_soluable_coarse_root(:)>eps8)
+                                    veg_litterfall%coarse_root%carbon(:) / veg_litterfall%coarse_root%nitrogen(:))
+       WHERE(fc_soluable_coarse_root(:) > eps8)
           fn_soluable_coarse_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(:))/(k_fn_soluable*fc_soluable_coarse_root(:)))
           fp_soluable_coarse_root(:) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(:))/(k_fp_soluable*fc_soluable_coarse_root(:)))
         END WHERE
@@ -2700,8 +2700,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_fruit(:) = 0.0_wp
     WHERE(veg_litterfall%fruit%nitrogen(:) > eps8)
        fc_soluable_fruit(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_fruit * & 
-                                  veg_litterfall%fruit%carbon(:) / veg_litterfall%fruit%nitrogen(:))
-       WHERE(fc_soluable_fruit(:)>eps8)
+                              veg_litterfall%fruit%carbon(:) / veg_litterfall%fruit%nitrogen(:))
+       WHERE(fc_soluable_fruit(:) > eps8)
           fn_soluable_fruit(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(:))/(k_fn_soluable*fc_soluable_fruit(:)))
           fp_soluable_fruit(:) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(:))/(k_fp_soluable*fc_soluable_fruit(:)))
        END WHERE
@@ -2712,8 +2712,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     fp_soluable_seed_bed(:) = 0.0_wp
     WHERE(veg_litterfall%seed_bed%nitrogen(:) > eps8)
        fc_soluable_seed_bed(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_seed_bed * & 
-                                     veg_litterfall%seed_bed%carbon(:) / veg_litterfall%seed_bed%nitrogen(:))
-       WHERE(fc_soluable_seed_bed(:)>eps8)
+                                 veg_litterfall%seed_bed%carbon(:) / veg_litterfall%seed_bed%nitrogen(:))
+       WHERE(fc_soluable_seed_bed(:) > eps8)
           fn_soluable_seed_bed(:) = 1._wp / (1._wp + (1._wp - fc_soluable_seed_bed(:))/(k_fn_soluable*fc_soluable_seed_bed(:)))
           fp_soluable_seed_bed(:) = 1._wp / (1._wp + (1._wp - fc_soluable_seed_bed(:))/(k_fp_soluable*fc_soluable_seed_bed(:)))
        END WHERE
@@ -2989,11 +2989,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
-    WHERE(sb_pool%mycorrhiza%nitrogen(:,:) > eps8 .AND. &
-          sb_pool%mycorrhiza%carbon(:,:) / sb_pool%mycorrhiza%nitrogen(:,:) < mycorrhiza_cn)
+    
+    WHERE(sb_pool%mycorrhiza%nitrogen(:,:) > eps8)
+      hlp1(:,:) = sb_pool%mycorrhiza%carbon(:,:) / sb_pool%mycorrhiza%nitrogen(:,:)
+      WHERE(hlp1(:,:) < mycorrhiza_cn)
         mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
         mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
         mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp
+      ENDWHERE
     ENDWHERE
 
     ! calculate respiration costs associated with N transformation (mol C / m3 / timestep)
@@ -3183,7 +3186,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        CASE("fixed", "standard")
           WHERE(hlp1_2d(:,:) < soil_n_threshold_bnf .AND. & 
                 sb_pool_microbial_carbon(:,:) > eps4 .AND. & 
-                soil_depth_sl(:,:)>eps8)
+                soil_depth_sl(:,:) > eps8)
              asymb_n_fixation(:,:) = rtm_fixation_act(:,:) * rmm_fixation_act(:,:) * &
                                      root_fraction_act_sl(:,:) * hlp2_2d(:,:) 
           ENDWHERE

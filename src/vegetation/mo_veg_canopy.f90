@@ -831,7 +831,7 @@ CONTAINS
     ! equivalent leaf N assuming any new leaf growth will have target CN
     WHERE(veg_pool_leaf_carbon(:) > eps8)
        leaf_nitrogen_new(:) = veg_pool_leaf_nitrogen(:) + veg_pool_leaf_nitrogen(:) / veg_pool_leaf_carbon(:)
-    ELSE WHERE
+    ELSEWHERE
        leaf_nitrogen_new(:) = 1._wp / lctlib%cn_leaf
     END WHERE
 
@@ -917,7 +917,7 @@ CONTAINS
                                 (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / ga(:) ) - &
                                 press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
                                 (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(:) + 1._wp / ga(:) )
-    ELSEWHERE (canopy_cond_new(:) > eps8)
+    ELSEWHERE (canopy_cond_new(:) > eps8) ! this might cover only the points in the vector that are not true in the above where statement
        unit_transpiration(:) =  press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
                          (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / ga(:) )
     ELSEWHERE

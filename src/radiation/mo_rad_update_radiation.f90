@@ -220,7 +220,7 @@ CONTAINS
 
     !> 4.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    WHERE(swvis_srf_down(:) + swnir_srf_down(:) > eps8)
+    WHERE((swvis_srf_down(:) + swnir_srf_down(:)) > eps8)
       albedo(:) = ( alb_vis(:) * swvis_srf_down(:)   + & 
                     alb_nir(:) * swnir_srf_down(:) ) / & 
                     (swvis_srf_down(:) + swnir_srf_down(:)) 
