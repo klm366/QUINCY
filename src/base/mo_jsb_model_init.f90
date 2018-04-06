@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
   USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
 #ifdef HAVE_MOFFLEDAC
-  USE mo_input,            ONLY: InputDimSync, inputdimdisp
+  USE mo_input,            ONLY: InputDimSync, inputdimdisp, INPUT_PE_SHOW_ALL, INPUT_PE_SHOW_PE
   USE mo_moffledac_iface,  ONLY: init_moffledac
 #endif
 
@@ -236,7 +236,7 @@ CONTAINS
 
 #ifdef HAVE_MOFFLEDAC
     CALL InputDimSync()
-    call inputdimdisp()
+    call inputdimdisp(level=1,pe=INPUT_PE_SHOW_ALL+INPUT_PE_SHOW_PE)
 #endif
 
     CALL model%Set_mode(model%config%hsm_mode)
