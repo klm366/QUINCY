@@ -20,6 +20,10 @@ MODULE mo_sse_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,             ONLY: timer_start, timer_stop, timer_input
+  USE mo_input
+#endif
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -57,6 +61,10 @@ CONTAINS
   END SUBROUTINE sse_init
 
   SUBROUTINE sse_init_bc(tile)
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+    TYPE (input_var_list),  POINTER :: vfao
+#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -87,6 +95,25 @@ CONTAINS
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(SSE_)%bc_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarGroupStart('sse_'//TRIM(tile%name))
+    CALL InputVarAdd('nproma,nblock',fao,'fao_'//TRIM(tile%name),var_ref=vfao,dt_update=0)
+    CALL InputVarGroupEnd()
+    CALL InputOptAdd(fill_val=0._wp,valid_range=(/REAL(LBOUND(fao_thermal_diff,1),wp),REAL(UBOUND(fao_thermal_diff,1),wp)/), &
+                     AVar=vfao,AFile=IFile,var_file_name='fao')
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
+      CALL InputOptAdd(var_name='sse_vol_heat_cap_'//TRIM(tile%name),AFile=IFile,var_file_name='heat_capacity', &
+                       fill_val=2.e6_wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
+    ENDIF
+    IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+      CALL InputOptAdd(var_name='sse_heat_cond_'//TRIM(tile%name),AFile=IFile,var_file_name='heat_conductivity', &
+                       fill_val=0.2_wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
+    ENDIF
+    CALL timer_start(timer_input)
+    CALL InputGetData(IFile=IFile,msg=TRIM(routine))
+    CALL timer_stop(timer_input)
+#else
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
     ! Thermal diffusivity of soil
@@ -95,40 +122,55 @@ CONTAINS
     fao(:,:) = MERGE(fao(:,:), 0._wp, fao(:,:) >= 0._wp)
     fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), fao(:,:)))
 
-    DO iblk=1,SIZE(fao,2)
-      dsl4jsb_var_ptr(SSE_,thermal_diffusivity)(:,iblk) = fao_thermal_diff(NINT(fao(:,iblk)))
-    END DO
-
-    ! Volumetric heat capacity of dry soil [J/(m^3*K)]
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
       ptr_2D => input_file%Read_2d(         &
         & variable_name='heat_capacity',            &
         & fill_array = dsl4jsb_var_ptr(SSE_, vol_heat_cap))
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
-    ELSE
-      DO iblk=1,SIZE(fao,2)
-        dsl4jsb_var_ptr(SSE_,vol_heat_cap)(:,iblk) = fao_vol_hcap(NINT(fao(:,iblk)))
-      END DO
-    END IF
+    ENDIF
 
-    ! Heat conductivity of mineral soil
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
       ptr_2D => input_file%Read_2d(         &
         & variable_name='heat_conductivity',         &
         & fill_array = dsl4jsb_var_ptr(SSE_, heat_cond))
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
-    ELSE
+    ENDIF 
+
+    CALL input_file%Close()                              ! Temporary
+#endif
+
+    DO iblk=1,SIZE(fao,2)
+      dsl4jsb_var_ptr(SSE_,thermal_diffusivity)(:,iblk) = fao_thermal_diff(NINT(fao(:,iblk)))
+    END DO
+
+    ! Volumetric heat capacity of dry soil [J/(m^3*K)] if not read
+    IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
+      DO iblk=1,SIZE(fao,2)
+        dsl4jsb_var_ptr(SSE_,vol_heat_cap)(:,iblk) = fao_vol_hcap(NINT(fao(:,iblk)))
+      END DO
+    END IF
+
+    ! Heat conductivity of mineral soil if not read
+    IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
       dsl4jsb_var2D_onDomain(SSE_, heat_cond) = &
         & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
     END IF
 
-    CALL input_file%Close()                              ! Temporary
+#ifdef HAVE_MOFFLEDAC
+    ! Clean up temporary variables
+    CALL InputVarReleaseMem(var_ref=vfao)
+#endif
 
   END SUBROUTINE sse_init_bc
 
   SUBROUTINE sse_init_ic(tile)
 
     USE mo_sse_process, ONLY: init_soil_temperature
+
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+    TYPE (input_var_list),  POINTER :: var
+#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -163,6 +205,14 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputDimAdd('clim_month_year',Extent=12)
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(SSE_)%ic_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarAdd('nproma,nblock,clim_month_year',t_srf_mon,'surf_temp_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
+    CALL InputOptAdd(AVar=var,var_file_name='surf_temp',fill_val=280._wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
+    CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_month_year')
+    CALL InputGetData(var=var,msg=TRIM(routine))
+#else
     input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
 
     ! Soil and surface temperatures
@@ -171,6 +221,9 @@ CONTAINS
     t_srf_mon => input_file%Read_2d_time(         &   ! Temporary
       & variable_name='surf_temp')
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
+
+    CALL input_file%Close()
+#endif
 
     DO iblk=1,SIZE(t_srf_mon, DIM=2)
       CALL init_soil_temperature(                     &
@@ -181,9 +234,12 @@ CONTAINS
     END DO
     dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
-    CALL input_file%Close()
-
     CALL init_soil_properties(tile)
+
+#ifdef HAVE_MOFFLEDAC
+    ! Clean up temporary variables
+    CALL InputVarReleaseMem(var_ref=var)
+#endif
 
   END SUBROUTINE sse_init_ic
 

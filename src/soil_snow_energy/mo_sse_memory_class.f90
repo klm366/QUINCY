@@ -72,6 +72,9 @@ CONTAINS
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd
+#endif
 
     CLASS(t_sse_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
@@ -103,6 +106,10 @@ CONTAINS
     END IF
 
     IF (ASSOCIATED(mem%vol_heat_cap%ptr)) RETURN
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarGroupStart('sse_'//TRIM(suffix),dt_update=0)
+#endif
 
     CALL jsb_add_var( mem, 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
@@ -258,7 +265,11 @@ CONTAINS
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
 
-    END SUBROUTINE Init_sse_memory
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarGroupEnd()
+#endif
+
+  END SUBROUTINE Init_sse_memory
 
 #endif
 END MODULE mo_sse_memory_class
