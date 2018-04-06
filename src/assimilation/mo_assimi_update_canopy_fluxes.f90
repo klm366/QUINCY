@@ -209,11 +209,6 @@ CONTAINS
 
     !> 0.9 set output to zero
     !! 
-    gross_assimilation(:)     = 0.0_wp
-    gross_assimilation_C13(:) = 0.0_wp
-    gross_assimilation_C14(:) = 0.0_wp
-    net_assimilation(:)       = 0.0_wp
-    maint_respiration_leaf(:) = 0.0_wp
     canopy_cond(:)            = 0.0_wp
     co2_conc_leaf(:)          = 0.0_wp
 

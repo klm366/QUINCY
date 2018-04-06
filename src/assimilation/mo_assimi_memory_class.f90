@@ -22,7 +22,7 @@ MODULE mo_assimi_memory_class
   PRIVATE
   PUBLIC :: t_assimi_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40   ! default JSBACH4
+  INTEGER, PARAMETER :: max_no_of_vars = 60 
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for assimi memory
@@ -30,56 +30,60 @@ MODULE mo_assimi_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
-    ! canopy integrated variables
+    ! fluxes
     TYPE(t_jsb_var_real2d)    :: &
                               gross_assimilation    , &      !< canopy-integrated gross assimilation rate (µmol CO2/m2/s) 
                               gross_assimilation_C13, &      !< canopy-integrated gross assimilation rate (µmol 13CO2/m2/s) 
                               gross_assimilation_C14, &      !< canopy-integrated gross assimilation rate (µmol 14CO2/m2/s) 
                               net_assimilation      , &      !< canopy-integrated net assimilation rate (µmol CO2/m2/s) 
                               net_assimilation_boc  , &      !< net assimilation rate at the bottom of the canopy (µmol CO2/m2/s) 
-                              maint_respiration_leaf, &      !< canopy-integrated foliar respiration rate (µmol CO2/m2/s)
-                              canopy_cond           , &      !< canopy-integrated conductance for water (m/s)
-                              co2_conc_leaf         , &      !< canopy-integrated internal leaf CO2 concentration (ppm) 
+                              maint_respiration_leaf         !< canopy-integrated foliar respiration rate (µmol CO2/m2/s)
+
+    TYPE(t_jsb_var_real3d)    :: &
+                              gross_assimilation_cl     , &  !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
+                              net_assimilation_cl       , &  !< net assimilation rate per canopy layer (µmol CO2/m2/s)
+                              maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
+
+    ! other 
+    TYPE(t_jsb_var_real2d)    :: &
                               beta_air              , &      !< scaling factor to account for air humidity effects on conductance
                               beta_soa              , &      !< scaling factor to account for spring in coniferous forests
                               beta_soil_ps          , &      !< scaling factor to account for soil moisture constraints on photosynthesis
                               beta_soil_gs          , &      !< scaling factor to account for soil moisture constraints on conductance
+                              canopy_cond           , &      !< canopy-integrated conductance for water (m/s)
+                              co2_conc_leaf         , &      !< canopy-integrated internal leaf CO2 concentration (ppm) 
                               t_jmax_opt                     !< optimal temperature for electron transport 
 
-    TYPE(t_jsb_var_real2d)    :: &
-                              soa_tsoa_mavg                  !< state of acclimation, used in calculation of beta_soa    
-
     TYPE(t_jsb_var_real3d)    :: &
-                              gross_assimilation_cl     , &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
-                              net_assimilation_cl       , &   !< net assimilation rate per canopy layer (µmol CO2/m2/s)
-                              maint_respiration_leaf_cl , &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
-                              canopy_cond_cl            , &   !< conductance for water per canopy layer (m/s)
-                              co2_conc_leaf_cl                !< internal leaf CO2 concentration per canopy layer (ppm)
+                              canopy_cond_cl        , &      !< conductance for water per canopy layer (m/s)
+                              co2_conc_leaf_cl               !< internal leaf CO2 concentration per canopy layer (ppm)
 
     ! diagnostics
     TYPE(t_jsb_var_real3d)    :: &
-                              jmax_cl                   , &   !< maximum rate of electron transport (µmol CO2/m2/s)
-                              vcmax_cl                        !< maximum rate of carboxylation (µmol CO2/m2/s)
+                              jmax_cl                   , &  !< maximum rate of electron transport (µmol CO2/m2/s)
+                              vcmax_cl                       !< maximum rate of carboxylation (µmol CO2/m2/s)
+
+    ! averaging
+    TYPE(t_jsb_var_real2d)    :: &
+                              soa_tsoa_mavg                  !< state of acclimation, used in calculation of beta_soa    
 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_air_daytime          , &   !< average of the previous day
-                              beta_air_daytime_dacc     , &   !< average of the previous day
-                              beta_air_tfrac_mavg       , &   !< scaling factor to account for air humidity effects on conductance
-                              beta_air_tcnl_mavg        , &   !< scaling factor to account for air humidity effects on conductance
-                              beta_soa_tphen_mavg             !< average of scaling factor to account for spring in coniferous forests
+                              beta_air_daytime          , &  !< average of the previous day
+                              beta_air_daytime_dacc     , &  !< average of the previous day
+                              beta_air_tfrac_mavg       , &  !< scaling factor to account for air humidity effects on conductance
+                              beta_air_tcnl_mavg        , &  !< scaling factor to account for air humidity effects on conductance
+                              beta_soa_tphen_mavg            !< average of scaling factor to account for spring in coniferous forests
 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_soil_ps_daytime      , &   !< average of the previous day
-                              beta_soil_ps_daytime_dacc , &   !< average of the previous day
-                              beta_soil_ps_tfrac_mavg   , &   !< scaling factor to account for soil moisture constraints on photosynthesis 
-                              beta_soil_ps_tcnl_mavg    , &   !< scaling factor to account for soil moisture constraints on conductance
-                              beta_soil_gs_daytime      , &   !< average of the previous day
-                              beta_soil_gs_daytime_dacc , &   !< average of the previous day
-                              beta_soil_gs_tphen_mavg   , &   !< scaling factor to account for soil moisture constraints on conductance
-                              beta_soil_gs_tfrac_mavg   , &   !< scaling factor to account for soil moisture constraints on conductance
-                              beta_soil_gs_tcnl_mavg          !< scaling factor to account for soil moisture constraints on conductance
-
-
+                              beta_soil_ps_daytime      , &  !< average of the previous day
+                              beta_soil_ps_daytime_dacc , &  !< average of the previous day
+                              beta_soil_ps_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on photosynthesis 
+                              beta_soil_ps_tcnl_mavg    , &  !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_gs_daytime      , &  !< average of the previous day
+                              beta_soil_gs_daytime_dacc , &  !< average of the previous day
+                              beta_soil_gs_tphen_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance
 
 
   CONTAINS

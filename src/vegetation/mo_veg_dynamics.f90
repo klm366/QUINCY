@@ -31,7 +31,6 @@ CONTAINS
   !!
   !! a background_mort_rate exists for each trees and grasses, defined as mortality rate per year
   !!
-  !! fluxes are set to zero at each time step: set_zero_vegetation_fluxes:mo_assimi_update_canopy_fluxes
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_dynamics(tile, options)
 
