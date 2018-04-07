@@ -556,225 +556,220 @@ CONTAINS
     IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY 
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
-       LAI_sum          = LAI_sum          + LAI
-       NPP_pot_sum      = NPP_pot_sum      + NPP_pot_rate_ca
-       GPP_sum          = GPP_sum          + gross_assimilation_ca
-       topSoilTemp_sum  = topSoilTemp_sum  + topSoilTemp ! 2d
-       alpha_sum        = alpha_sum        + alpha
+      LAI_sum          = LAI_sum          + LAI
+      NPP_pot_sum      = NPP_pot_sum      + NPP_pot_rate_ca
+      GPP_sum          = GPP_sum          + gross_assimilation_ca
+      topSoilTemp_sum  = topSoilTemp_sum  + topSoilTemp ! 2d
+      alpha_sum        = alpha_sum        + alpha
 
     ELSE                                    ! A NEW DAY BEGINS and we DID NOT START AN 
                                             ! TOTALLY NEW EXPERIMENT ==> perform carbon balance
 
-       ! First save as "previous previous days" and "previous days" means
-       LAI_yyDayMean  = LAI_yDayMean
-       LAI_yDayMean   = LAI_sum/time_steps_per_day()
+      ! First save as "previous previous days" and "previous days" means
+      LAI_yyDayMean  = LAI_yDayMean
+      LAI_yDayMean   = LAI_sum/time_steps_per_day()
 
-       NPP_pot_yDayMean     = NPP_pot_sum/time_steps_per_day()
-       GPP_yDayMean         = GPP_sum/time_steps_per_day()
-       topSoilTemp_yDayMean = topSoilTemp_sum/time_steps_per_day() ! 2d
-       alpha_yDayMean       = alpha_sum/time_steps_per_day()
+      NPP_pot_yDayMean     = NPP_pot_sum/time_steps_per_day()
+      GPP_yDayMean         = GPP_sum/time_steps_per_day()
+      topSoilTemp_yDayMean = topSoilTemp_sum/time_steps_per_day() ! 2d
+      alpha_yDayMean       = alpha_sum/time_steps_per_day()
 
-       ! Then restart summing of this days values
-       LAI_sum             = LAI
-       NPP_pot_sum         = NPP_pot_rate_ca
-       GPP_sum             = gross_assimilation_ca
-       topSoilTemp_sum     = topSoilTemp ! 2d
-       alpha_sum           = alpha
-       !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
+      ! Then restart summing of this days values
+      LAI_sum             = LAI
+      NPP_pot_sum         = NPP_pot_rate_ca
+      GPP_sum             = gross_assimilation_ca
+      topSoilTemp_sum     = topSoilTemp ! 2d
+      alpha_sum           = alpha
+      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
 
-       ! Save other variables (for yasso) as "previous days"
-       pseudo_temp_yDay   = pseudo_temp
-       pseudo_precip_yDay = pseudo_precip
+      ! Save other variables (for yasso) as "previous days"
+      pseudo_temp_yDay   = pseudo_temp
+      pseudo_precip_yDay = pseudo_precip
 
-       ! Now update the C pools
-       CALL calc_Cpools(      LAI_yDayMean,                                     & ! in
-                              LAI_yyDayMean,                                    & ! in
-                              NPP_pot_yDayMean,                                 & ! in
-                              topSoilTemp_yDayMean,                             & ! in
-                              alpha_yDayMean,                                   & ! in
+      ! Now update the C pools
+      CALL calc_Cpools( &
+        &  LAI_yDayMean,                                      & ! in
+        &  LAI_yyDayMean,                                     & ! in
+        &  NPP_pot_yDayMean,                                  & ! in
+        &  topSoilTemp_yDayMean,                              & ! in
+        &  alpha_yDayMean,                                    & ! in
+        !
+        &  dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
+        &  dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
+        &  dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
+        !
+        &  dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
+        &  dsl4jsb_Lctlib_param(tau_c_litter_leaf),           & ! in
+        &  dsl4jsb_Lctlib_param(tau_c_litter_wood),           & ! in
+        &  dsl4jsb_Lctlib_param(tau_c_woods),                 & ! in
+        &  dsl4jsb_Lctlib_param(LAI_shed_constant),           & ! in
+        &  dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
+        &  dsl4jsb_Lctlib_param(Max_C_content_woods),         & ! in
+        &  dsl4jsb_Lctlib_param(specificLeafArea_C),          & ! in
+        &  dsl4jsb_Lctlib_param(reserveC2leafC),              & ! in
+        &  dsl4jsb_Lctlib_param(MaxLAI),                      & ! in
+        &  dsl4jsb_Lctlib_param(PhenologyType),               & ! in  R: is it crop? If yes then this is 5!
+        &  time_steps_per_day(),                              & ! in
+        &  dtime,                                             & ! in
+        !
+        &  c_green,                                           & ! inout
+        &  c_woods,                                           & ! inout
+        &  c_reserve,                                         & ! inout
+        &  c_crop_harvest,                                    & ! inout
+        &  c_litter_green_ag,                                 & ! inout
+        &  c_litter_green_bg,                                 & ! inout
+        &  c_litter_wood_ag,                                  & ! inout
+        &  c_litter_wood_bg,                                  & ! inout
+        ! &  CBAL c_slow,                                       & ! inout
+        !
+        &  soil_respiration,                                  & ! out
+        &  NPP_flux_correction,                               & ! out
+        &  excess_NPP,                                        & ! out
+        &  root_exudates,                                     & ! out
+        &  cflux_c_greenwood_2_litter,                        & ! out
+        &  cflux_c_green_2_herb,                              & ! out
+        &  cflux_herb_2_littergreen,                          & ! out
+        &  cflux_herb_2_atm,                                  & ! out
+        &  NPP_act_yDayMean,                                  & ! out
+        !
+        !&  fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
+        !
+        ! variables only needed with yasso:
+        ! R: Note, in the moment the procedure is only used with Yasso.
+        &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
+        &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
+                             !
+        &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
+        &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
+        &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
+        &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
+        &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
+        &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
+        &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
+        &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
+        &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
+        &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
                               !
-                              dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
-                              dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
-                              dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
-                              !
-                              dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
-                              dsl4jsb_Lctlib_param(tau_c_litter_leaf),      & ! in
-                              dsl4jsb_Lctlib_param(tau_c_litter_wood),      & ! in
-                              dsl4jsb_Lctlib_param(tau_c_woods),            & ! in
-                              dsl4jsb_Lctlib_param(LAI_shed_constant),          & ! in
-                              dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
-                              dsl4jsb_Lctlib_param(Max_C_content_woods),        & ! in
-                              dsl4jsb_Lctlib_param(specificLeafArea_C),         & ! in
-                              dsl4jsb_Lctlib_param(reserveC2leafC),             & ! in
-                              dsl4jsb_Lctlib_param(MaxLAI),                     & ! in
-                                                                                  ! R: Rename MaxLAI in lctlib to
-                                                                                  !    LAI_max in JS3 comes from
-                                                                                  !    theLand%Vegetation%LAI_max,
-                                                                                  !    which is for each vegetated
-                                                                                  !    tile taken from MaxLAI
-                                                                                  !    in the lct library.
-                              dsl4jsb_Lctlib_param(PhenologyType),              & ! in  R: is it crop?
-                                                                                  ! If yes then this is 5!
-                              time_steps_per_day(),                             & ! in
-                              dtime,                                            & ! in
-                              !
-                              c_green,                                      & ! inout
-                              c_woods,                                      & ! inout
-                              c_reserve,                                    & ! inout
-                              c_crop_harvest,                               & ! inout
-                              c_litter_green_ag,                            & ! inout
-                              c_litter_green_bg,                            & ! inout
-                              c_litter_wood_ag,                             & ! inout
-                              c_litter_wood_bg,                             & ! inout
-                              !CBAL c_slow,                                       & ! inout
-                              !
-                              soil_respiration,                                 & ! out
-                              NPP_flux_correction,                              & ! out
-                              excess_NPP,                                       & ! out
-                              root_exudates,                                    & ! out
-                              cflux_c_greenwood_2_litter,                                      & ! out
-                              cflux_c_green_2_herb,                                  & ! out
-                              cflux_herb_2_littergreen,                               & ! out
-                              cflux_herb_2_atm,                            & ! out
-                              NPP_act_yDayMean,                                 & ! out
-                              !
-    !fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
-                              ! variables only needed with yasso:
-                              ! R: Note, in the moment the procedure is only used with Yasso.
-   temp2_30d               =  pseudo_temp_yDay,                                 & ! in, optional, necessary with yasso
-   precip_30d              =  pseudo_precip_yDay,                               & ! in, optional, necessary with yasso
-                              !
-   c_acid_ag1         =  c_acid_ag1,                                  & ! inout, optional, necessary with yasso
-   c_water_ag1        =  c_water_ag1,                                 & ! inout, optional, necessary with yasso
-   c_ethanol_ag1      =  c_ethanol_ag1,                               & ! inout, optional, necessary with yasso
-   c_nonsoluble_ag1   =  c_nonsoluble_ag1,                            & ! inout, optional, necessary with yasso
-   c_acid_bg1         =  c_acid_bg1,                                  & ! inout, optional, necessary with yasso
-   c_water_bg1        =  c_water_bg1,                                 & ! inout, optional, necessary with yasso
-   c_ethanol_bg1      =  c_ethanol_bg1,                               & ! inout, optional, necessary with yasso
-   c_nonsoluble_bg1   =  c_nonsoluble_bg1,                            & ! inout, optional, necessary with yasso
-   c_humus_1          =  c_humus_1,                                   & ! inout, optional, necessary with yasso
-   c_acid_ag2         =  c_acid_ag2,                                  & ! inout, optional, necessary with yasso
-   c_water_ag2        =  c_water_ag2,                                 & ! inout, optional, necessary with yasso
-   c_ethanol_ag2      =  c_ethanol_ag2,                               & ! inout, optional, necessary with yasso
-   c_nonsoluble_ag2   =  c_nonsoluble_ag2,                            & ! inout, optional, necessary with yasso
-   c_acid_bg2         =  c_acid_bg2,                                  & ! inout, optional, necessary with yasso
-   c_water_bg2        =  c_water_bg2,                                 & ! inout, optional, necessary with yasso
-   c_ethanol_bg2      =  c_ethanol_bg2,                               & ! inout, optional, necessary with yasso
-   c_nonsoluble_bg2   =  c_nonsoluble_bg2,                            & ! inout, optional, necessary with yasso
-   c_humus_2          =  c_humus_2,                                   & ! inout, optional, necessary with yasso
-                              !
-   LeafLit_coef1           =  dsl4jsb_Lctlib_param(LeafLit_coef(1)),            & ! in, optional, necessary with yasso
-   LeafLit_coef2           =  dsl4jsb_Lctlib_param(LeafLit_coef(2)),            & ! in, optional, necessary with yasso
-   LeafLit_coef3           =  dsl4jsb_Lctlib_param(LeafLit_coef(3)),            & ! in, optional, necessary with yasso
-   LeafLit_coef4           =  dsl4jsb_Lctlib_param(LeafLit_coef(4)),            & ! in, optional, necessary with yasso
-   LeafLit_coef5           =  dsl4jsb_Lctlib_param(LeafLit_coef(5)),            & ! in, optional, necessary with yasso
-   WoodLit_coef1           =  dsl4jsb_Lctlib_param(WoodLit_coef(1)),            & ! in, optional, necessary with yasso
-   WoodLit_coef2           =  dsl4jsb_Lctlib_param(WoodLit_coef(2)),            & ! in, optional, necessary with yasso
-   WoodLit_coef3           =  dsl4jsb_Lctlib_param(WoodLit_coef(3)),            & ! in, optional, necessary with yasso
-   WoodLit_coef4           =  dsl4jsb_Lctlib_param(WoodLit_coef(4)),            & ! in, optional, necessary with yasso
-   WoodLit_coef5           =  dsl4jsb_Lctlib_param(WoodLit_coef(5)),            & ! in, optional, necessary with yasso
-   WoodLitterSize          =  dsl4jsb_Lctlib_param(WoodLitterSize)              & ! in, optional, necessary with yasso
-                              )
+        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
+        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
+        & )
 
-   c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + c_humus_1 + &  ! Size class 1; green litter
-              c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + c_humus_2      ! Size class 2; woody litter
+      c_bg_sum =   c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + c_humus_1 &  ! Size class 1; green litter
+        &        + c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + c_humus_2    ! Size class 2; woody litter
 
-       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
-       !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
-       !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
-       !    konsistent auf dieselbe Fläche zu beziehen. Sonst machen wir den Code unnötig unübersichtlich.
-       !    Dadurch würde z.B. die Variablen-Verdopplung vermieden.
-       !    Ich habe die Assimilation zwar schon auf tile Fläche umgerechnet und könnte daher prinzipiell
-       !    die Cpools und Fluxe alle über das NPP-auf-Tile-Fläche rechnen.
-       !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepaßt 
-       !    werden müßten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
-       !    specific_leaf_area_C  (=> c_green_max und c_reserve_optimal), Max_C_content_woods. usw.
-       !    Dazu kommt, daß Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden müssten.
-       !    Wie auch immer wenn später etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
-       !    Fläche zu bleiben.
-       !    => daher habe ich das doppelte Flächenkonzept von JSBACH3 übernommen.
-       !
-       !    Um die Benennungen wenigstens richtig zu machen müsste ich jede dieser 30 Variablen in allen
-       !    Files (Konsistenz!) mit _ca versehen. Da der Code hier aber ein Provisorium ist:
-       !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Fläche bezogen sind.
+      ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
+      !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
+      !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
+      !    konsistent auf dieselbe Fläche zu beziehen. Sonst machen wir den Code unnötig unübersichtlich.
+      !    Dadurch würde z.B. die Variablen-Verdopplung vermieden.
+      !    Ich habe die Assimilation zwar schon auf tile Fläche umgerechnet und könnte daher prinzipiell
+      !    die Cpools und Fluxe alle über das NPP-auf-Tile-Fläche rechnen.
+      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepaßt 
+      !    werden müßten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
+      !    specific_leaf_area_C  (=> c_green_max und c_reserve_optimal), Max_C_content_woods. usw.
+      !    Dazu kommt, daß Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden müssten.
+      !    Wie auch immer wenn später etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
+      !    Fläche zu bleiben.
+      !    => daher habe ich das doppelte Flächenkonzept von JSBACH3 übernommen.
+      !
+      !    Um die Benennungen wenigstens richtig zu machen müsste ich jede dieser 30 Variablen in allen
+      !    Files (Konsistenz!) mit _ca versehen. Da der Code hier aber ein Provisorium ist:
+      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Fläche bezogen sind.
 
-       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
-       ! ------------------------------------------------------------------------------------------------------------------------
+      ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
+      ! ------------------------------------------------------------------------------------------------------------------------
 
-       ! C pools
-       c_green_ta           = c_green           * veg_fract_correction * fract_fpc_max
-       c_woods_ta           = c_woods           * veg_fract_correction * fract_fpc_max
-       c_reserve_ta         = c_reserve         * veg_fract_correction * fract_fpc_max
-       c_crop_harvest_ta    = c_crop_harvest    * veg_fract_correction * fract_fpc_max
+      ! C pools
+      c_green_ta           = c_green           * veg_fract_correction * fract_fpc_max
+      c_woods_ta           = c_woods           * veg_fract_correction * fract_fpc_max
+      c_reserve_ta         = c_reserve         * veg_fract_correction * fract_fpc_max
+      c_crop_harvest_ta    = c_crop_harvest    * veg_fract_correction * fract_fpc_max
 
-       c_acid_ag1_ta       = c_acid_ag1       * veg_fract_correction * fract_fpc_max
-       c_water_ag1_ta      = c_water_ag1      * veg_fract_correction * fract_fpc_max
-       c_ethanol_ag1_ta    = c_ethanol_ag1    * veg_fract_correction * fract_fpc_max
-       c_nonsoluble_ag1_ta = c_nonsoluble_ag1 * veg_fract_correction * fract_fpc_max
-       c_acid_bg1_ta       = c_acid_bg1       * veg_fract_correction * fract_fpc_max
-       c_water_bg1_ta      = c_water_bg1      * veg_fract_correction * fract_fpc_max
-       c_ethanol_bg1_ta    = c_ethanol_bg1    * veg_fract_correction * fract_fpc_max
-       c_nonsoluble_bg1_ta = c_nonsoluble_bg1 * veg_fract_correction * fract_fpc_max
-       c_humus_1_ta        = c_humus_1        * veg_fract_correction * fract_fpc_max
-       c_acid_ag2_ta       = c_acid_ag2       * veg_fract_correction * fract_fpc_max
-       c_water_ag2_ta      = c_water_ag2      * veg_fract_correction * fract_fpc_max
-       c_ethanol_ag2_ta    = c_ethanol_ag2    * veg_fract_correction * fract_fpc_max
-       c_nonsoluble_ag2_ta = c_nonsoluble_ag2 * veg_fract_correction * fract_fpc_max
-       c_acid_bg2_ta       = c_acid_bg2       * veg_fract_correction * fract_fpc_max
-       c_water_bg2_ta      = c_water_bg2      * veg_fract_correction * fract_fpc_max
-       c_ethanol_bg2_ta    = c_ethanol_bg2    * veg_fract_correction * fract_fpc_max
-       c_nonsoluble_bg2_ta = c_nonsoluble_bg2 * veg_fract_correction * fract_fpc_max
-       c_humus_2_ta        = c_humus_2        * veg_fract_correction * fract_fpc_max
+      c_acid_ag1_ta       = c_acid_ag1       * veg_fract_correction * fract_fpc_max
+      c_water_ag1_ta      = c_water_ag1      * veg_fract_correction * fract_fpc_max
+      c_ethanol_ag1_ta    = c_ethanol_ag1    * veg_fract_correction * fract_fpc_max
+      c_nonsoluble_ag1_ta = c_nonsoluble_ag1 * veg_fract_correction * fract_fpc_max
+      c_acid_bg1_ta       = c_acid_bg1       * veg_fract_correction * fract_fpc_max
+      c_water_bg1_ta      = c_water_bg1      * veg_fract_correction * fract_fpc_max
+      c_ethanol_bg1_ta    = c_ethanol_bg1    * veg_fract_correction * fract_fpc_max
+      c_nonsoluble_bg1_ta = c_nonsoluble_bg1 * veg_fract_correction * fract_fpc_max
+      c_humus_1_ta        = c_humus_1        * veg_fract_correction * fract_fpc_max
+      c_acid_ag2_ta       = c_acid_ag2       * veg_fract_correction * fract_fpc_max
+      c_water_ag2_ta      = c_water_ag2      * veg_fract_correction * fract_fpc_max
+      c_ethanol_ag2_ta    = c_ethanol_ag2    * veg_fract_correction * fract_fpc_max
+      c_nonsoluble_ag2_ta = c_nonsoluble_ag2 * veg_fract_correction * fract_fpc_max
+      c_acid_bg2_ta       = c_acid_bg2       * veg_fract_correction * fract_fpc_max
+      c_water_bg2_ta      = c_water_bg2      * veg_fract_correction * fract_fpc_max
+      c_ethanol_bg2_ta    = c_ethanol_bg2    * veg_fract_correction * fract_fpc_max
+      c_nonsoluble_bg2_ta = c_nonsoluble_bg2 * veg_fract_correction * fract_fpc_max
+      c_humus_2_ta        = c_humus_2        * veg_fract_correction * fract_fpc_max
 
-       c_bg_sum_ta         = c_bg_sum         * veg_fract_correction * fract_fpc_max
+      c_bg_sum_ta         = c_bg_sum         * veg_fract_correction * fract_fpc_max
 
-       C_sum_natural_ta =   c_green_ta           + c_woods_ta            &
-                          + c_reserve_ta         + c_crop_harvest_ta     &
-                          + c_acid_ag1_ta       + c_acid_ag2_ta        &
-                          + c_water_ag1_ta      + c_water_ag2_ta       &
-                          + c_ethanol_ag1_ta    + c_ethanol_ag2_ta     &
-                          + c_nonsoluble_ag1_ta + c_nonsoluble_ag2_ta  &
-                          + c_acid_bg1_ta       + c_acid_bg2_ta        &
-                          + c_water_bg1_ta      + c_water_bg2_ta       &
-                          + c_ethanol_bg1_ta    + c_ethanol_bg2_ta     &
-                          + c_nonsoluble_bg1_ta + c_nonsoluble_bg2_ta  &
-                          + c_humus_1_ta        + c_humus_2_ta
+      C_sum_natural_ta =  &
+        &   c_green_ta          + c_woods_ta           &
+        & + c_reserve_ta        + c_crop_harvest_ta    &
+        & + c_acid_ag1_ta       + c_acid_ag2_ta        &
+        & + c_water_ag1_ta      + c_water_ag2_ta       &
+        & + c_ethanol_ag1_ta    + c_ethanol_ag2_ta     &
+        & + c_nonsoluble_ag1_ta + c_nonsoluble_ag2_ta  &
+        & + c_acid_bg1_ta       + c_acid_bg2_ta        &
+        & + c_water_bg1_ta      + c_water_bg2_ta       &
+        & + c_ethanol_bg1_ta    + c_ethanol_bg2_ta     &
+        & + c_nonsoluble_bg1_ta + c_nonsoluble_bg2_ta  &
+        & + c_humus_1_ta        + c_humus_2_ta
 
-       ! C fluxes
-       soil_respiration_ta         = soil_respiration      * veg_fract_correction * fract_fpc_max
-       !soil_respiration_pot_ta     = soil_respiration_pot  * veg_fract_correction * fract_fpc_max
-       NPP_pot_yDayMean_ta         = NPP_pot_yDayMean      * veg_fract_correction * fract_fpc_max
-       NPP_act_yDayMean_ta         = NPP_act_yDayMean      * veg_fract_correction * fract_fpc_max
-       NPP_flux_correction_ta      = NPP_flux_correction   * veg_fract_correction * fract_fpc_max
-       GPP_yDayMean_ta             = GPP_yDayMean          * veg_fract_correction * fract_fpc_max
-       cflux_c_greenwood_2_litter_ta              = cflux_c_greenwood_2_litter           * veg_fract_correction * fract_fpc_max
-       root_exudates_ta            = root_exudates         * veg_fract_correction * fract_fpc_max
-       cflux_c_green_2_herb_ta          = cflux_c_green_2_herb       * veg_fract_correction * fract_fpc_max
-       ! cflux_herb_2_littergreen_ta      = cflux_herb_2_littergreen    * veg_fract_correction * fract_fpc_max
-       ! cflux_herb_2_atm_ta   = cflux_herb_2_atm * veg_fract_correction * fract_fpc_max
+      ! C fluxes
+      soil_respiration_ta           = soil_respiration           * veg_fract_correction * fract_fpc_max
+      !soil_respiration_pot_ta       = soil_respiration_pot      * veg_fract_correction * fract_fpc_max
+      NPP_pot_yDayMean_ta           = NPP_pot_yDayMean           * veg_fract_correction * fract_fpc_max
+      NPP_act_yDayMean_ta           = NPP_act_yDayMean           * veg_fract_correction * fract_fpc_max
+      NPP_flux_correction_ta        = NPP_flux_correction        * veg_fract_correction * fract_fpc_max
+      GPP_yDayMean_ta               = GPP_yDayMean               * veg_fract_correction * fract_fpc_max
+      cflux_c_greenwood_2_litter_ta = cflux_c_greenwood_2_litter * veg_fract_correction * fract_fpc_max
+      root_exudates_ta              = root_exudates              * veg_fract_correction * fract_fpc_max
+      cflux_c_green_2_herb_ta          = cflux_c_green_2_herb    * veg_fract_correction * fract_fpc_max
+      ! cflux_herb_2_littergreen_ta    = cflux_herb_2_littergreen    * veg_fract_correction * fract_fpc_max
+      ! cflux_herb_2_atm_ta   = cflux_herb_2_atm * veg_fract_correction * fract_fpc_max
 
-   END IF
+    END IF
 
-   ! Compute net CO2 fluxes exchanged with atmosphere at each time step
-   !-------------------------------------------------------------------
-   ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
+    ! Compute net CO2 fluxes exchanged with atmosphere at each time step
+    !-------------------------------------------------------------------
+    ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
-   cflux_npp_2_atm_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
-              (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
-                   * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
-                       - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
+    cflux_npp_2_atm_ta = molarMassCO2_kg *                      & ! Conversion factor from mol to kg CO2
+               (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+                    * (NPP_pot_rate_ca                          & ! current (not actual) NPP rate
+                        - (NPP_pot_yDayMean-NPP_act_yDayMean)) )  ! corrected with yesterdays actual NPP defizit
 
 
-   cflux_soilresp_2_atm_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
-              (- veg_fract_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
-                   * soil_respiration      )                    ! .. soil respiration
+    cflux_soilresp_2_atm_ta = molarMassCO2_kg *                 & ! Conversion factor from mol to kg CO2
+               (- veg_fract_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
+                    * soil_respiration      )                    ! .. soil respiration
 
-   cflux_herb_2_atm_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
-              (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
-                   * cflux_herb_2_atm )                    ! .. herbivory
+    cflux_herb_2_atm_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
+               (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+                    * cflux_herb_2_atm )                          ! .. herbivory
 
-
-   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
 
   END SUBROUTINE update_C_NPP_pot_allocation
@@ -814,8 +809,7 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter, weighted_by_fract)
+    ! non-yasso-pools
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve,         weighted_by_fract)
@@ -824,29 +818,34 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg,  weighted_by_fract)
-    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum,         weighted_by_fract)
+    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow,       weighted_by_fract)
+    ! ag1 and bg1
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1,         weighted_by_fract)
+    !ag2 and bg2
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2,         weighted_by_fract)
+    ! sums
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum,               weighted_by_fract)
+    ! fluxes
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP,            weighted_by_fract)
@@ -856,45 +855,52 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb,       weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_test,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb,  weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen, weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm, weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm,      weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_test,  weighted_by_fract)
 
+
+    ! same for ta variables
+    ! non-yasso-pools
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag_ta,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,   weighted_by_fract)
+    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,        weighted_by_fract)
+    ! ag1 and bg1
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1_ta,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1_ta,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1_ta,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1_ta,          weighted_by_fract)
+    !ag2 and bg2
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2_ta,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2_ta,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2_ta,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,          weighted_by_fract)
+    ! sums
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
+    ! fluxes
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest_ta,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,  weighted_by_fract)
-    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1_ta,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1_ta,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1_ta,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2_ta,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2_ta,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2_ta,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_ta,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP_ta,            weighted_by_fract)
@@ -904,14 +910,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,       weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen_ta, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new_ta,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,  weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen_ta, weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_ta,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_soilresp_2_atm_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_test_ta,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta,      weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_test_ta,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
