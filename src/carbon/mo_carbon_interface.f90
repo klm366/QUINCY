@@ -676,6 +676,8 @@ CONTAINS
    WoodLitterSize          =  dsl4jsb_Lctlib_param(WoodLitterSize)              & ! in, optional, necessary with yasso
                               )
 
+   c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + c_humus_1 + &  ! Size class 1; green litter
+              c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + c_humus_2      ! Size class 2; woody litter
 
        ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
        !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
