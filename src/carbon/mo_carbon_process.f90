@@ -57,7 +57,7 @@ CONTAINS
                                     c_litter_green_bg,     & ! inout
                                     c_litter_wood_ag,      & ! inout
                                     c_litter_wood_bg,      & ! inout
-                                    c_slow,                & ! inout
+                                    !CBAL c_slow,                & ! inout
                                     !
                                     soilResp_rate,             & ! out
                                     NPP_flux_correction,       & ! out
@@ -121,7 +121,9 @@ CONTAINS
     real(wp),intent(in)    :: fract_green_2_herbivory
     real(wp),intent(in)    :: tau_c_litter_green ! Time constant by which green litter pool is depreciated  [days]
     real(wp),intent(in)    :: tau_c_litter_wood  ! Time constant by which woody litter pool is depreciated  [days]
-    real(wp),intent(in)    :: tau_c_woods        ! Time constant by which woods Pool is depreciated  !!! [years] !!!
+    real(wp),intent(in)    :: tau_c_woods        ! Time constant by which woods Pool is depreciated  !! [days] !!
+                                                 ! Note, in the lct lib it is given in [years] but when it is read in 
+                                                 ! by JS4 it is converted to [days].
     real(wp),intent(in)    :: LAI_shed_constant      ! Leaf shedding at a constant rate for evergreens etc. [1/day]
     real(wp),intent(in)    :: fract_C_litter_green2atmos ! Fraction of heterotrophic loss of green litter pools emitted to
                                                         ! the atmosphere
@@ -146,7 +148,7 @@ CONTAINS
     real(wp),intent(inout) :: c_litter_green_bg  ! Below ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_litter_wood_ag   ! Above ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_litter_wood_bg   ! Below ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: c_slow             ! Slow soil carbon pool: on input last value; updated on output 
+    !CBAL real(wp),intent(inout) :: c_slow             ! Slow soil carbon pool: on input last value; updated on output 
                                                      ! [mol(C)/m^2(canopy)]
     !
     real(wp),intent(out)   :: soilResp_rate          ! Soil (=heterotrophic) respiration rate  [mol(C)/m^2 s] Note: this is a loss,
@@ -220,7 +222,7 @@ CONTAINS
     ! locals
     logical  :: is_crop                 ! logical crop mask
 
-    real(wp) :: d_c_slow
+    !CBAL real(wp) :: d_c_slow
     real(wp) :: d_c_litter_green_ag, d_c_litter_green_bg
     real(wp) :: d_c_litter_wood_ag, d_c_litter_wood_bg
     real(wp) :: c_green_max,c_reserve_optimal
@@ -231,7 +233,7 @@ CONTAINS
     real(wp) :: alpha_mod
 
     real(wp) :: c_green_pot, c_woods_pot         !! values of potential carbon pools i.e. before accounting for N-limitation
-    real(wp) :: c_slow_pot, c_reserve_pot
+    real(wp) :: c_reserve_pot !c_slow_pot,
     real(wp) :: c_litter_green_ag_pot, c_litter_green_bg_pot
     real(wp) :: c_litter_wood_ag_pot, c_litter_wood_bg_pot
 
@@ -241,7 +243,7 @@ CONTAINS
     real(wp) :: Cflx_litter_wood_ag_2_atmos_pot,Cflx_litter_wood_bg_2_atmos_pot
     real(wp) :: Cflx_litter_wood_ag_2_slow_pot,Cflx_litter_wood_bg_2_slow_pot
     real(wp) :: Cflx_2_crop_harvest, Cflx_crop_harvest_2_atmos
-    real(wp) :: Cflx_slow_2_atmos
+    !CBAL real(wp) :: Cflx_slow_2_atmos
     real(wp) :: Cflx_faeces_2_LG, Cflx_faeces_2_atm
     ! R: only for spitfire
     !real(wp) :: litter_wood_new, litter_wood_total
@@ -458,11 +460,11 @@ CONTAINS
        !! ---------------------------------------------------------------------------------
        !! 2. Wood shedding: Transfer of C from wood pool to wood litter pools
        !! 
-                                                                                     !! Assuming that forests continously die at the inverse lifetime of trees
-       C_2_litter_woodPool = c_woods /              &                            ! The bigger tau gets, the weaker the C pools will be depreciated:
-                                                                                     ! tau_c_woods: [years] -> [timestep]
-                             &  (tau_c_woods * 365._wp )                         !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
-       c_litter_wood_ag = c_litter_wood_ag      &                            !! .. is put partly into the above ground woody litter pool
+                                                               !! Assuming that forests continously die at the inverse lifetime of trees
+       C_2_litter_woodPool = c_woods / tau_c_woods             ! The bigger tau gets, the weaker the C pools will be depreciated:
+                                                               ! tau_c_woods: [days] -> [timestep]
+                                                               !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
+       c_litter_wood_ag = c_litter_wood_ag      &              !! .. is put partly into the above ground woody litter pool
             + fract_wood_aboveGround*C_2_litter_woodPool
        ! R: only for spitfire
        ! if (present(fract_litter_wood_new))     litter_wood_new = fract_wood_aboveGround * C_2_litter_woodPool  
@@ -499,12 +501,12 @@ CONTAINS
        !! ----------------------------------------------------------------------------
        !! 4. Decomposition of slow soil pool (i) C-flux (ii) Mineral N-flux
        !!
-       d_c_slow = &
-            -MIN(alpha_mod**kappa * q10**((topSoilTemp - referenceTemp_Q10)/10._wp)  / & !! Slow soil respiration
-            tau_c_slow,1._wp)  * c_slow                                          !! .. according to Q10-model
-       c_slow = c_slow + d_c_slow                 !! Remove respired Carbon (note the negative sign!)
+       !CBAL d_c_slow = &
+       !CBAL     -MIN(alpha_mod**kappa * q10**((topSoilTemp - referenceTemp_Q10)/10._wp)  / & !! Slow soil respiration
+       !CBAL     tau_c_slow,1._wp)  * c_slow                                          !! .. according to Q10-model
+       !CBAL c_slow = c_slow + d_c_slow                 !! Remove respired Carbon (note the negative sign!)
 
-       Cflx_slow_2_atmos            = -d_c_slow          !! Remember the decomposition flux to the atmosphere (CO2-release)
+       !CBAL Cflx_slow_2_atmos            = -d_c_slow          !! Remember the decomposition flux to the atmosphere (CO2-release)
 
 
        !!
@@ -632,10 +634,10 @@ CONTAINS
 
 
        ! Update Slow Soil Pool (uptake of C from litter pools, decomposition has already been handled above)
-       c_slow_pot = c_slow  
-       c_slow_pot = c_slow_pot                                                           &
-            - (1._wp - fract_C_litter_wood2atmos) * (d_c_litter_wood_ag + d_c_litter_wood_bg)  &
-            - (1._wp - fract_C_litter_green2atmos) * (d_c_litter_green_ag + d_c_litter_green_bg)           
+       !CBAL c_slow_pot = c_slow  
+       !CBAL c_slow_pot = c_slow_pot                                                           &
+       !CBAL      - (1._wp - fract_C_litter_wood2atmos) * (d_c_litter_wood_ag + d_c_litter_wood_bg)  &
+       !CBAL      - (1._wp - fract_C_litter_green2atmos) * (d_c_litter_green_ag + d_c_litter_green_bg)           
 
 
 
@@ -702,9 +704,9 @@ CONTAINS
        c_litter_wood_bg = c_litter_wood_bg       &
             - redFact_Nlimitation * (Cflx_litter_wood_bg_2_atmos_pot + Cflx_litter_wood_bg_2_slow_pot)
 
-       c_slow        = c_slow     &
-            + redFact_Nlimitation * (  Cflx_litterGreen_ag_2_slow_pot + Cflx_litterGreen_bg_2_slow_pot &
-                                     + Cflx_litter_wood_ag_2_slow_pot  + Cflx_litter_wood_bg_2_slow_pot  )
+       !CBAL c_slow        = c_slow     &
+       !CBAL     + redFact_Nlimitation * (  Cflx_litterGreen_ag_2_slow_pot + Cflx_litterGreen_bg_2_slow_pot &
+       !CBAL                              + Cflx_litter_wood_ag_2_slow_pot  + Cflx_litter_wood_bg_2_slow_pot  )
 
 
 

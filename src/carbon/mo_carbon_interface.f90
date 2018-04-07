@@ -174,7 +174,7 @@ CONTAINS
                                                      !    plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_litter_wood_bg  ! C-pool for litter originating from below ground woody parts of the
                                                      !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_slow            ! C-pool for below ground organic material (coming from the litter
+    !CBAL dsl4jsb_Real2D_onChunk ::  c_slow            ! C-pool for below ground organic material (coming from the litter
                                                      !     pools) [mol(C)/m^2(canopy)]
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
@@ -232,8 +232,11 @@ CONTAINS
                                                      !    plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_litter_wood_bg_ta  ! C-pool for litter originating from below ground woody parts of the
                                                      !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_slow_ta         ! C-pool for below ground organic material (coming from the litter
+    !CBAL dsl4jsb_Real2D_onChunk ::  c_slow_ta         ! C-pool for below ground organic material (coming from the litter
                                                      !     pools) [mol(C)/m^2(canopy)]
+
+    dsl4jsb_Real2D_onChunk ::  c_bg_sum          ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
+
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1_ta     ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -272,6 +275,7 @@ CONTAINS
                                                       !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_humus_2_ta      ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_bg_sum_ta          ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
     !
     !
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
@@ -385,7 +389,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_bg )     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_ag  )     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_bg  )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow            )     ! inout
+    !CBAL dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow            )     ! inout
     !SIZE CLASS 1
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! inout
@@ -406,6 +410,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout 
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout 
+
     !
     ! This is on tile area:
     dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta)          ! inout
@@ -417,7 +424,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_bg_ta ) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_ag_ta  ) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_bg_ta  ) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow_ta            ) ! inout
+    !CBAL dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow_ta            ) ! inout
     !SIZE CLASS 1
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)        ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)       ! inout
@@ -438,6 +445,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2_ta)    ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta) ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)        ! inout
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum_ta)             ! inout
+
     !
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
@@ -616,7 +626,7 @@ CONTAINS
                               c_litter_green_bg,                            & ! inout
                               c_litter_wood_ag,                             & ! inout
                               c_litter_wood_bg,                             & ! inout
-                              c_slow,                                       & ! inout
+                              !CBAL c_slow,                                       & ! inout
                               !
                               soil_respiration,                                 & ! out
                               NPP_flux_correction,                              & ! out
@@ -714,6 +724,7 @@ CONTAINS
        c_nonsoluble_bg2_ta = c_nonsoluble_bg2 * veg_fract_correction * fract_fpc_max
        c_humus_2_ta        = c_humus_2        * veg_fract_correction * fract_fpc_max
 
+       c_bg_sum_ta         = c_bg_sum         * veg_fract_correction * fract_fpc_max
 
        C_sum_natural_ta =   c_green_ta           + c_woods_ta            &
                           + c_reserve_ta         + c_crop_harvest_ta     &
@@ -802,7 +813,55 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_green,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_woods,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg,  weighted_by_fract)
+    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb,       weighted_by_fract)
+   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen, weighted_by_fract)
+   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm, weighted_by_fract)
+   ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm, weighted_by_fract)
+   ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_test,  weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,         weighted_by_fract)
@@ -811,7 +870,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,            weighted_by_fract)
+    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1_ta,    weighted_by_fract)
@@ -830,6 +889,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_ta,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,               weighted_by_fract)

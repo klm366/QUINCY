@@ -612,7 +612,7 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag2,     weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm,            weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm, weighted_by_fract)
 
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,               weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,               weighted_by_fract)

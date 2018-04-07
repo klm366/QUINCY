@@ -636,7 +636,7 @@ CONTAINS
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
     & c_litter_green_ag,     &
-    & c_slow,                &
+    & c_bg_sum,                &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
     & alb_background,            &
@@ -650,23 +650,22 @@ CONTAINS
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for alb_vis_mineralsoil
 
     ! Arguments
-    LOGICAL,      INTENT(in)    :: l_day
-    LOGICAL,      INTENT(in)    :: use_alb_mineralsoil_const
-    CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
-    LOGICAL,      INTENT(in)    :: use_alb_soil_litter
-
-    REAL(wp),     INTENT(in)    :: c_litter_green_ag, & 
-                                   c_slow,            &
-                                   SpecificLeafArea_C,    &
-                                   AlbedoLitterVIS,       & 
-                                   alb_background
-   
-    REAL(wp),     INTENT(inout) ::                        &
-                                   alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                                                ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
-                                   alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                   alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-                                   alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+    LOGICAL,          INTENT(in)  :: l_day
+    LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
+    CHARACTER(LEN=*), INTENT(in)  :: use_alb_soil_organic_C
+    LOGICAL,          INTENT(in)  :: use_alb_soil_litter
+    REAL(wp),         INTENT(in)  :: &
+      c_litter_green_ag,  & 
+      & c_bg_sum,           &
+      & SpecificLeafArea_C, &
+      & AlbedoLitterVIS,    & 
+      & alb_background
+    REAL(wp),         INTENT(inout) :: &
+      & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
+                                 ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
+      & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
+      & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+      & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
 
 
     ! Local variables
@@ -711,11 +710,11 @@ CONTAINS
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
-      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_slow,Soil_C_min)
-      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_slow,Soil_C_min)
+      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_bg_sum,Soil_C_min)
+      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_bg_sum,Soil_C_min)
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_slow)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_slow)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.1_wp)
+      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.2_wp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,
