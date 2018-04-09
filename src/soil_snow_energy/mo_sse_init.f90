@@ -208,10 +208,20 @@ CONTAINS
 #ifdef HAVE_MOFFLEDAC
     CALL InputDimAdd('clim_month_year',Extent=12)
     CALL InputFileAdd(TRIM(dsl4jsb_Config(SSE_)%ic_filename),file_ref=IFile,dt_file=0)
-    CALL InputVarAdd('nproma,nblock,clim_month_year',t_srf_mon,'surf_temp_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
+    CALL InputVarAdd('nproma,clim_month_year,nblock',t_srf_mon,'surf_temp_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
     CALL InputOptAdd(AVar=var,var_file_name='surf_temp',fill_val=280._wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
     CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_month_year')
     CALL InputGetData(var=var,msg=TRIM(routine))
+    DO iblk=1,SIZE(t_srf_mon, DIM=3)
+      CALL init_soil_temperature(                     &
+        & soil_e%levels(:),                           &
+        & t_srf_mon(:,1:12,iblk),                     &
+        & dsl4jsb_var_ptr(SSE_,t_soil)(:,:,iblk),   &
+        & dsl4jsb_var_ptr(SEB_,t)(:,iblk))
+    END DO
+
+    ! Clean up temporary variables
+    CALL InputVarReleaseMem(var_ref=var)
 #else
     input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
 
@@ -223,7 +233,6 @@ CONTAINS
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
 
     CALL input_file%Close()
-#endif
 
     DO iblk=1,SIZE(t_srf_mon, DIM=2)
       CALL init_soil_temperature(                     &
@@ -232,14 +241,10 @@ CONTAINS
         & dsl4jsb_var_ptr(SSE_,t_soil)(:,:,iblk),   &
         & dsl4jsb_var_ptr(SEB_,t)(:,iblk))
     END DO
+#endif
     dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
     CALL init_soil_properties(tile)
-
-#ifdef HAVE_MOFFLEDAC
-    ! Clean up temporary variables
-    CALL InputVarReleaseMem(var_ref=var)
-#endif
 
   END SUBROUTINE sse_init_ic
 
