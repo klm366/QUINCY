@@ -450,6 +450,7 @@ CONTAINS
             p2str=''
             p3str=''
             p4str=''
+            p5str=''
             DO isoil = 1,nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -460,8 +461,9 @@ CONTAINS
               WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' CUEmic_L'//TRIM(layerstr)
               WRITE(p4str,'(a)') TRIM(p4str)//' QmaxPo4_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' KmPo4_L'//TRIM(layerstr)
             ENDDO
-            WRITE(lun,'(5a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)
+            WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str)
             lun=lun+1                 
         END SELECT
     END SELECT
@@ -591,6 +593,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: po4_primary
     dsl4jsb_Real3D_onChunk      :: qmax_org
     dsl4jsb_Real3D_onChunk      :: qmax_po4
+    dsl4jsb_Real3D_onChunk      :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg 
     ! Get local variables from options argument
@@ -669,6 +672,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  po4_primary)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_org)
     dsl4jsb_Get_var3D_onChunk(SB_,  qmax_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  km_adsorpt_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)
     ! Get process memory pool structures
@@ -1119,7 +1123,7 @@ CONTAINS
                             sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
           ! soil_diagnostics_lay
-          write(lun,'(81F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), qmax_po4(ipoi,:)
+          write(lun,'(81F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_output .OR. l_soil_output

@@ -42,8 +42,6 @@ MODULE mo_sb_constants
       k_diff_org, &                !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]                       
       rho_bulk_org, &              !< bulk density of organic material [kg m-3]
       carbon_per_dryweight_SOM, &  !< C per unit dryweight SOM [gC / gOM] 
-      qmax_org_om, &               !< sorption capacity of organic matter [mol C kg-1 OM] 
-      qmax_org_mineral, &          !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
       qmax_po4_fine_particle, &    !< maximum sorption capacity of po4 to fine soil particle, mol P/ kg fine particle
       k_adsorpt_dom, & 
       k_desorpt_dom, &
@@ -145,7 +143,7 @@ MODULE mo_sb_constants
       f_mic_carrier_po4, &       !< ratio between microbial P transport and microbial biomass, []
       f_plant_carrier_po4, &     !< ratio between plant P transport and fine root biomass, []
       qmax_po4_mineral, &        !< Maximum PO4 sorption capacity of mineral soil [mol P kg-1 soil], ECA and Langmuir
-      km_adsorpt_po4             !< Half-saturation concentration for PO4 mineral soil adsorption [mol P kg-1 soil], ECA and Langmuir
+      km_adsorpt_mineral_po4     !< Half-saturation concentration for PO4 mineral soil adsorption [mol P kg-1 fine mineral soil], ECA and Langmuir
 
    ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
    REAL(wp), SAVE :: & 
@@ -153,7 +151,7 @@ MODULE mo_sb_constants
       ed_nitrification, &        !< deactivation energy for nitrification [J mol-1]
       t_opt_nitrification, &     !< optimum temperature for nitrification [K]
       ea_denitrification, &      !< activation energy for denitrification [J mol-1]
-      ea_gasdiffusion, &         !< activation energy for denitrification [J mol-1]
+      ea_gasdiffusion, &         !< activation energy for gas diffusion [J mol-1]
       lambda_anvf, &             !< lambda in the Weibull function relating soil moisture to the anaerobic volume fraction
       k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
       vmax_nitrification, &      !< maximum nitrification rate [µmol mol-1 s-1] 
@@ -240,8 +238,6 @@ CONTAINS
     k_diff_org          = 0.286933_wp / 8.0_wp / one_year / one_day
     rho_bulk_org        = 150.3935_wp 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
-    qmax_org_om         = 0.0_wp
-    qmax_org_mineral    = 0.055_wp / molar_mass_C * 1000._wp 
     qmax_po4_fine_particle = 0.5_wp / molar_mass_P ! [mol P kg-1 soil], 
     k_adsorpt_dom       = 843.391_wp / one_year / one_day * molar_mass_C  / 1000._wp! conversion to m3 / mol C / s
     k_desorpt_dom       = 4301.741_wp / one_year / one_day
@@ -283,7 +279,7 @@ CONTAINS
     km_depolymerisation = 0.08876_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
 
     ! parameters controlliong litter partitioning
-    f_soluable_residue  = 0.172_wp
+    f_soluable_residue   = 0.172_wp
     f_soluable_leaf      = 0.5_wp
     f_soluable_fine_root = 0.5_wp
     f_soluable_fruit     = 0.5_wp
@@ -337,7 +333,7 @@ CONTAINS
     f_mic_carrier_po4     = 0.0015_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4   = 0.1_wp / 80._wp ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     qmax_po4_mineral      = 0.5_wp / molar_mass_P ! [mol P kg-1 soil], Olander and Vitousek 2005
-    km_adsorpt_po4        = 0.225_wp / 1000._wp / molar_mass_P ! [mol P kg-1 soil], 
+    km_adsorpt_mineral_po4= 0.225_wp / 1000._wp / molar_mass_P ! [mol P kg-1 fine mineral soil], 
 
 
     k_weath_mineral       = 0.01_wp / molar_mass_P / 1254._wp / one_year /one_day ! [mol P m-3 s-1], Wang et al. 2010 combining with BBR soil weight of 1m

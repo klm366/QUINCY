@@ -204,6 +204,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_desorption
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
     ! Get local variables from options argument
@@ -345,6 +346,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
     ! Get process memory pool structures
@@ -552,6 +554,7 @@ CONTAINS
                                        root_fraction_sl(:,:), &
                                        bulk_dens_corr_sl(:,:), &
                                        qmax_po4(:,:), &
+                                       km_adsorpt_po4_sl(:,:), &
                                        p_deposition_sl(:,:), &
                                        rtm_sorption(:,:), &
                                        rmm_sorption(:,:), &
@@ -575,8 +578,8 @@ CONTAINS
               fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) * veg_pool%fine_root%carbon(:)
             ENDDO
             !fine_root_carbon = root_fraction_sl(:,:) * 600._wp !temporary solution
-            CALL calc_adsorption_po4(options, fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), bulk_dens_corr_sl(:,:), &
-                                       po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
+            CALL calc_adsorption_po4(options, fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), km_adsorpt_po4_sl(:,:), &
+                                       bulk_dens_corr_sl(:,:), po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
                                        weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
                                        transport_po4_solute(:,:), transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), &
                                        gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), sb_pool%microbial%carbon(:,:),  &
@@ -601,6 +604,8 @@ CONTAINS
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
     qmax_org = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,0._wp,qmax_org_min_sl)
     qmax_po4 = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_om_sl,qmax_po4_min_sl)
+    km_adsorpt_po4_sl = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl, &
+                        km_adsorpt_mineral_po4/1000._wp,km_adsorpt_mineral_po4)
 
     ! NH4
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
@@ -790,6 +795,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                   root_fraction_sl, &
                                   bulk_dens_corr_sl, &
                                   qmax_po4_corr_sl, &
+                                  km_adsorpt_po4_sl, &
                                   p_deposition_sl, &
                                   rtm_sorption, &
                                   rmm_sorption, &
@@ -819,6 +825,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        root_fraction_sl, &           !< fraction of root mass in layer
                                                                        bulk_dens_corr_sl, &          !< bulk density of the mineral soil [kg / m3]
                                                                        qmax_po4_corr_sl, &           !< maximum sorption capacity of po4, [mol P/ m3]
+                                                                       km_adsorpt_po4_sl, &          !< half saturation of po4 sorption capacity, [mol P/ m3]
                                                                        p_deposition_sl, &            !< actual P deposition rate, [µmol P / m3 / s]
                                                                        rtm_sorption, &               !< temperature response scalar for po4 sorption
                                                                        rtm_desorption, &             !< temperature response scalar for po4 desorption
@@ -874,11 +881,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       ENDDO
       k_adsorpt_po4_act(:,1) = rtm_sorption_act(:,1) * rmm_sorption_act(:,1) * k_adsorpt_po4
       k_desorpt_po4_act(:,1) = rtm_desorption_act(:,1) * rmm_desorption_act(:,1) * k_desorpt_po4
-      km_adsorpt_po4_act(:,1) = bulk_dens_corr_sl_act(:,1) * km_adsorpt_po4
+      km_adsorpt_po4_act(:,1) = km_adsorpt_po4_sl(:,1)
     ELSEIF (sb_model_scheme=="simple_1d") THEN
       k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * rmm_sorption(:,:) * k_adsorpt_po4
       k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * rmm_desorption(:,:) * k_desorpt_po4
-      km_adsorpt_po4_act(:,:) = bulk_dens_corr_sl(:,:) * km_adsorpt_po4
+      km_adsorpt_po4_act(:,:) = km_adsorpt_po4_sl(:,:)
       qmax_po4_mineral_act(:,:) = qmax_po4_corr_sl(:,:)
     ENDIF
 

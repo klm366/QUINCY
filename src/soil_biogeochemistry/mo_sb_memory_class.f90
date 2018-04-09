@@ -319,7 +319,8 @@ MODULE mo_sb_memory_class
     ! 3D 
     TYPE(t_jsb_var_real3d)          :: &
                                     qmax_org, &                   !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
-                                    qmax_po4, &                   !< sorption capacity of po4 of mineral soil [kg C kg-1 mineral soil]
+                                    qmax_po4, &                   !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
+                                    km_adsorpt_po4_sl, &          !< half saturation of po4 sorption isotherm [mol P m-3 soil]
                                     k_bioturb, &                  !< diffusion rate resulting from bioturbation
                                     bulk_dens_corr_sl, &          !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &        !< bulk soil density of carbon [kg m-3] 
@@ -1896,6 +1897,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'qmax_po4', mem%qmax_po4, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'km_adsorpt_po4_sl', mem%km_adsorpt_po4_sl, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

@@ -168,6 +168,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: k_bioturb 
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
     ! Get local variables from options argument
@@ -272,6 +273,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
     ! Get process memory pool structures
@@ -351,7 +353,7 @@ CONTAINS
     !!
     CALL calc_po4_uptake_ECA(sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), po4_solute(:,:), &
                                 rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                                qmax_po4(:,:), po4_assoc_fast(:,:), microbial_uptake_po4_sl(:,:), &
+                                qmax_po4(:,:), km_adsorpt_po4_sl(:,:), po4_assoc_fast(:,:), microbial_uptake_po4_sl(:,:), &
                                 plant_uptake_po4_sl(:,:), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4)
 
     !! P adsorption

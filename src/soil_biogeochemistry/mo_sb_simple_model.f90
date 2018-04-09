@@ -1708,9 +1708,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * dtime
     WHERE (weathering_po4(:,:) > po4_primary(:,:)) 
       weathering_po4(:,:) = po4_primary(:,:)
-    ELSEWHERE
-      weathering_po4(:,:) = 0.0_wp
-    END WHERE
+    ENDWHERE
     !> 1.1 Calculate P occlusion rate from occluded PO4 pool (mol /m3 / timestep)
     occlusion_po4(:,:)     = po4_assoc_slow(:,:) * k_occlude_po4 * dtime
     !> 1.2 Calculate P slow adsorption rate (mol /m3 / timestep)

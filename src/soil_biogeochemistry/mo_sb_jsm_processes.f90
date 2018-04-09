@@ -515,10 +515,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_po4_uptake_ECA(  microbial_carbon, fine_root_carbon, solute, &
                                              rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &
-                                             qmax_po4, assoc_fast, microbial_uptake, plant_uptake, flag_sb_ECA_upt_po4)
+                                             qmax_po4, km_adsorpt_po4_sl, assoc_fast, microbial_uptake, plant_uptake, flag_sb_ECA_upt_po4)
 
     USE mo_sb_constants,    ONLY: f_mic_carrier_po4, km_mic_uptake_po4, km_plant_uptake_po4, f_plant_carrier_po4, &
-                                  km_adsorpt_po4, k_mic_uptake_po4, k_plant_uptake_po4, vmax_mic_uptake_po4, vmax_plant_uptake_po4
+                                  k_mic_uptake_po4, k_plant_uptake_po4, vmax_mic_uptake_po4, vmax_plant_uptake_po4
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -530,6 +530,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: rmm_hsc                   !< moisture rate modifier for half_saturation constants
     REAL(wp), INTENT(in)    :: solute                    !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp), INTENT(in)    :: qmax_po4                  !< sorption capacity of po4 to mineral soil [mol P / m3]
+    REAL(wp), INTENT(in)    :: km_adsorpt_po4_sl         !< half-saturation of po4 sorption to mineral soil [mol P / m3]
     REAL(wp), INTENT(in)    :: assoc_fast                !< fast minerally associated PO4 pool [mol/m3]
     LOGICAL,  INTENT(in)    :: flag_sb_ECA_upt_po4       !< uptake option for P, TRUE: ECA; FALSE: non-ECA
     REAL(wp), INTENT(out)   :: microbial_uptake          !< microbial uptake flux (µmol / m3 / s)
@@ -549,13 +550,13 @@ CONTAINS
 
       !> 1.1 ECA approach
       !! 
-        avail_sorption_sites = qmax_po4 - assoc_fast 
+        avail_sorption_sites = MAX(eps8, qmax_po4 - assoc_fast) 
         hlp1 = km_mic_uptake_po4 + solute + f_mic_carrier_po4 * microbial_carbon + &
                km_mic_uptake_po4 / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon + &
-               km_mic_uptake_po4 / km_adsorpt_po4 * avail_sorption_sites
+               km_mic_uptake_po4 / km_adsorpt_po4_sl * avail_sorption_sites
         hlp2 = km_plant_uptake_po4 + solute + f_plant_carrier_po4 * fine_root_carbon + &
                km_plant_uptake_po4 / km_mic_uptake_po4 * f_mic_carrier_po4 * microbial_carbon + &
-               km_plant_uptake_po4 / km_adsorpt_po4 * avail_sorption_sites
+               km_plant_uptake_po4 / km_adsorpt_po4_sl * avail_sorption_sites
 
         microbial_uptake = rtm_mic_uptake * rmm_mic_uptake * k_mic_uptake_po4 * solute * f_mic_carrier_po4 * &
                             microbial_carbon / hlp1 * 1.e6_wp
@@ -591,8 +592,8 @@ CONTAINS
   !!
   !! Output: adsorption rate
   !-----------------------------------------------------------------------------------------------------
-SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition_sl, bulk_dens_corr_sl, &
-                                        solute, assoc_fast, assoc_slow, &
+SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition_sl, km_adsorpt_po4_sl, &
+                                        bulk_dens_corr_sl, solute, assoc_fast, assoc_slow, &
                                         weathering_po4, occlusion_po4, slow_sorption_po4, &
                                         transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, &
                                         gross_mineralisation_po4, biochem_min_po4, microbial_carbon, &
@@ -619,6 +620,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_solute      !< transport of soluble PO4 [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_fast  !< transport of fast_assoc_po4 [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_slow  !< transport of slow_assoc_po4 [µmol P / m3 / s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: km_adsorpt_po4_sl !< half-saturation of po4 sorption to soil [kg / m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: bulk_dens_corr_sl !< bulk density of the mineral soil [kg / m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: microbial_carbon  !< microbial carbon density (mol / m3)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: gross_mineralisation_po4  !< phosphorus gross mineralization rate, [µmol P /m3 /s]
@@ -654,7 +656,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         !> 2.1 By default, full ECA only applies to Langmuir kinetics; option with Constant Equilibrium
         !! potential adsorption is defined as the fast adsorption rate of Langmuir kinetics in Van der Zee et al. 1989
         !! constant Langmuir equilibrium is maintained by FUNCTION calc_CLE_po4
-            hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
+            hlp4 = km_adsorpt_po4_sl
             hlp5 = avail_sorption_sites
             hlp2 = hlp4 + solute + hlp5 + &
                    hlp4 / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon + &
@@ -690,7 +692,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         !> 2.2 By default, full ECA only applies to Langmuir kinetics; option with non-Equilibrium
         !! Langmuir equilibrium is not constantly maintained
             scal = 1.0_wp
-            hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
+            hlp4 = km_adsorpt_po4_sl
             hlp5 = avail_sorption_sites
             hlp2 = hlp4 + solute + hlp5 + &
                    hlp4 / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon + &
@@ -730,7 +732,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         ELSEIF (flag_sb_CLE_po4 .AND. (.NOT. flag_sb_LK_po4)) THEN
         !> 3.2 option with constant equilibrium, i.e. the same as Wang et al. 2007 and so forth
         !! 
-            hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
+            hlp4 = km_adsorpt_po4_sl
             hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
             hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
                     (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
@@ -776,7 +778,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         ELSEIF (flag_sb_CLE_po4 .AND. (.NOT. flag_sb_LK_po4)) THEN
         !> 4.2 option with constant equilibrium, i.e. the same as Wang et al. 2007 and so forth
         !! 
-            hlp4 = km_adsorpt_po4 * bulk_dens_corr_sl
+            hlp4 = km_adsorpt_po4_sl
             hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
             hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
                     (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
