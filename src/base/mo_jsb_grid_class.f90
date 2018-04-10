@@ -389,10 +389,6 @@ CONTAINS
 
   FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds, dz) RESULT(new)
 
-#ifdef HAVE_MOFFLEDAC
-    USE mo_input,        ONLY: InputDimAdd
-#endif
-
     CHARACTER(len=*),           INTENT(in) :: name
     INTEGER,                    INTENT(in) :: cdi_axis_type
     INTEGER,                    INTENT(in) :: length
@@ -513,11 +509,6 @@ CONTAINS
         END IF
       END IF
     END IF
-
-#ifdef HAVE_MOFFLEDAC
-    ! Create dimension in MofFlEDAc
-    CALL InputDimAdd(TRIM(new%name),Extent=length)
-#endif
 
   END FUNCTION new_vgrid
 

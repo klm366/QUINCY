@@ -23,6 +23,7 @@ CONTAINS
     USE mo_jsb_domain_iface,   ONLY: pe_decomposed, t_patch
     USE mo_jsb_time_iface,     ONLY: get_date_components, get_time_dt, get_time_start, get_time_current, get_year_length
     USE mo_jsb_parallel_iface, ONLY: get_workgroup_parallel_setup
+    USE mo_jsb_vertical_axes,  ONLY: jsbach_vgrids
     USE mo_input,              ONLY: InputSubModelTypeGetNew, InputSubModelGetCurr, InputInit, InputCreate, InputOptImport, &
                                      InputDimLocalSet, InputDimEquivalence
 #ifdef __ICON__
@@ -190,6 +191,12 @@ CONTAINS
       CALL finish(routine,'Sorry, setup for JSBACH standalone not yet done')
     ENDIF
 #endif
+
+    ! Register all vertical axes known to JSBACH also for MofFlEDAc
+    DO i=1,SIZE(jsbach_vgrids)
+      CALL InputDimAdd(TRIM(jsbach_vgrids(i)%p%name),Extent=jsbach_vgrids(i)%p%n_levels)
+    ENDDO
+
   END SUBROUTINE init_moffledac
 
 #endif
