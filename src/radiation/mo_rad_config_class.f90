@@ -113,7 +113,7 @@ CONTAINS
     ic_filename         = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
-    use_alb_soil_organic_C    = 'none'
+    use_alb_soil_organic_C    = ''
     use_alb_soil_litter       = .FALSE.
     use_alb_soil_scheme       = .FALSE.
     use_alb_canopy            = .TRUE.

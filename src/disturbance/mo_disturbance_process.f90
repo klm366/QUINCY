@@ -31,7 +31,7 @@ CONTAINS
     & fire_tau,                 & ! in
     & q_rel_air_climbuf,        & ! in
     & fuel,                     & ! in
-    & burned_fract               & ! out
+    & burned_fract              & ! out
     & )
 
     ! Input Arguments
@@ -60,9 +60,9 @@ CONTAINS
     burned_fract = fire_minimum * delta_time_yr
 
     IF (       q_rel_air_climbuf < fire_rel_hum_threshold   &
-         .AND. fuel > fire_litter_threshold                 &
+         & .AND. fuel > fire_litter_threshold               &
        ) THEN
-      burned_fract = burned_fract                                                      &
+      burned_fract = burned_fract                                                                        &
         &           + (fire_rel_hum_threshold - q_rel_air_climbuf) / (fire_tau * fire_rel_hum_threshold) &
         &             * delta_time_yr
     END IF
@@ -71,23 +71,23 @@ CONTAINS
 
   ! Calculate windbreak for woody types
   PURE ELEMENTAL SUBROUTINE broken_woody_fract_jsbach( &
-    & wind_threshold,        & ! in
-    & wind_damage_scale,     & ! in
-    & cover_fract_pot,        & ! in
-    & prev_day_max_wind_10m, & ! in
-    & max_wind_10m,          & ! in
-    & damaged_fract           & ! out
-                                      )
+    & wind_threshold,                                  & ! in
+    & wind_damage_scale,                               & ! in
+    & cover_fract_pot,                                 & ! in
+    & prev_day_max_wind_10m,                           & ! in
+    & max_wind_10m,                                    & ! in
+    & damaged_fract                                    & ! out
+    & )
 
     ! Arguments
     REAL(wp), INTENT(in) ::    &
       & wind_threshold,        &
       & wind_damage_scale,     &
-      & cover_fract_pot,        &
+      & cover_fract_pot,       &
       & prev_day_max_wind_10m, &
       & max_wind_10m
 
-    REAL(wp), INTENT(out) :: &
+    REAL(wp), INTENT(out) ::   &
       & damaged_fract
 
     ! Locals
@@ -95,11 +95,11 @@ CONTAINS
 
     delta_time_yr = 1._wp / 365._wp
 
-    IF (      cover_fract_pot > EPSILON(1._wp) &
+    IF (      cover_fract_pot > EPSILON(1._wp)                      &
         .AND. prev_day_max_wind_10m > max_wind_10m * wind_threshold &
        ) THEN
       damaged_fract = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot,                                          &
-        &                 delta_time_yr * wind_damage_scale * prev_day_max_wind_10m ** 3._wp / max_wind_10m &
+        &                 delta_time_yr * wind_damage_scale * prev_day_max_wind_10m ** 3._wp / max_wind_10m   &
         &               )
     ENDIF
 
