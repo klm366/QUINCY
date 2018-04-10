@@ -16,10 +16,10 @@ MODULE mo_rad_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: &
-    & calc_radiation_surface_net, &
+  PUBLIC ::                        &
+    & calc_radiation_surface_net,  &
     & calc_par, calc_fapar_lai_cl, &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
     & calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
@@ -46,22 +46,22 @@ CONTAINS
     & lw_net         & ! output, optional
     & )
 
-    USE mo_phy_schemes,          ONLY: lwnet_from_lwdown
+    USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
     REAL(wp),  INTENT(in) :: &
-      & swvis_down, &
-      & swnir_down, &
-      & alb_vis,    &
-      & alb_nir,    &
-      & lw_down,    &
+      & swvis_down,          &
+      & swnir_down,          &
+      & alb_vis,             &
+      & alb_nir,             &
+      & lw_down,             &
       & t
 
     REAL(wp),  INTENT(out) :: &
       & rad_net
     REAL(wp),  INTENT(out), OPTIONAL :: &
-      & swvis_net, & ! net shortwave radiation in visible range
-      & swnir_net, & ! net shortwave radiation in near infrared range
-      & sw_net,    &
+      & swvis_net,                      & ! net shortwave radiation in visible range
+      & swnir_net,                      & ! net shortwave radiation in near infrared range
+      & sw_net,                         &
       & lw_net
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
@@ -93,7 +93,7 @@ CONTAINS
      & alb_vis_soil,             & ! in
      & lai,                      & ! in
      & cos_zenith_angle,         & ! in
-     & fract_par_direct,          & ! in
+     & fract_par_direct,         & ! in
      & canopy_bound_lai,         & ! in
      & canopy_bound_lai_delta,   & ! in
      & B4_layer_above,           & ! inout
@@ -121,7 +121,7 @@ CONTAINS
                                   alb_vis_soil,          &
                                   lai,                   &
                                   cos_zenith_angle,      &
-                                  fract_par_direct,       &
+                                  fract_par_direct,      &
                                   canopy_bound_lai,      &
                                   canopy_bound_lai_delta
 
@@ -156,7 +156,7 @@ CONTAINS
                              lai,                    &
                              soil_reflectivity_par,  &
                              cos_zenith_angle,       &
-                             fract_par_direct,        &
+                             fract_par_direct,       &
                              canopy_bound_lai,       &
                              canopy_bound_lai_delta, &
                              B4_layer_above,         & ! <- inout
@@ -176,7 +176,7 @@ CONTAINS
      & lai,                    & ! in
      & soil_reflectivity_par,  & ! in
      & cos_zenith_angle,       & ! in
-     & fract_par_direct,        & ! in
+     & fract_par_direct,       & ! in
      & canopy_bound_lai,       & ! in
      & canopy_bound_lai_delta, & ! in
      & B4_layer_above,         & ! inout
@@ -193,7 +193,7 @@ CONTAINS
      REAL(wp), intent(in)    :: lai,                    & ! Total LAI. (Varies only per grid cell.)
                                 soil_reflectivity_par,  & ! Soil albedo. (Varies only per grid cell.)
                                 cos_zenith_angle,       & ! Cosine of solar zenith angle. (Varies only per grid cell.)
-                                fract_par_direct,        & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
+                                fract_par_direct,       & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
                                                           ! (Varies only per grid cell.)
                                 canopy_bound_lai,       & ! Canopy layer border in units of LAI.
                                                           ! (Varies only for each canopy layer, e.g. (0, 1/3, 2/3, 1).)
@@ -484,8 +484,8 @@ CONTAINS
   !---------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE calc_alb_lwtr( &
-    & l_day,       &
-    & alb_lwtr     &
+    & l_day,                               &
+    & alb_lwtr                             &
     & )
 
     ! Use declarations
@@ -580,12 +580,12 @@ CONTAINS
 
     ! Arguments
     LOGICAL,  INTENT(in)    :: &
-      & l_day          
+      & l_day
     REAL(wp), INTENT(in)    :: &
       & t
     REAL(wp), INTENT(inout) :: &
-      & alb_vis, & ! Albedo of canopy in the VIS range without snow cover.
-      & alb_nir    ! Albedo of canopy in the NIR range without snow cover.
+      & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
+      & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
 
     ! ---------------------------
     ! Go
@@ -600,10 +600,10 @@ CONTAINS
        alb_vis = AlbedoGlacierVisMax
        alb_nir = AlbedoGlacierNirMax
     ELSE
-       alb_vis = AlbedoGlacierVisMin + &
+       alb_vis = AlbedoGlacierVisMin +                                  &
             (tmelt - t) * (AlbedoGlacierVisMax - AlbedoGlacierVisMin) / &
             TempAlbedoGlacierMax
-       alb_nir = AlbedoGlacierNirMin + &
+       alb_nir = AlbedoGlacierNirMin +                                  &
             (tmelt - t) * (AlbedoGlacierNirMax - AlbedoGlacierNirMin) / &
              TempAlbedoGlacierMax
     END IF
@@ -636,7 +636,7 @@ CONTAINS
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
     & c_litter_green_ag,     &
-    & c_slow,                &
+    & c_bg_sum,                &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
     & alb_background,            &
@@ -650,23 +650,22 @@ CONTAINS
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for alb_vis_mineralsoil
 
     ! Arguments
-    LOGICAL,      INTENT(in)    :: l_day
-    LOGICAL,      INTENT(in)    :: use_alb_mineralsoil_const
-    CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
-    LOGICAL,      INTENT(in)    :: use_alb_soil_litter
-
-    REAL(wp),     INTENT(in)    :: c_litter_green_ag, & 
-                                   c_slow,            &
-                                   SpecificLeafArea_C,    &
-                                   AlbedoLitterVIS,       & 
-                                   alb_background
-   
-    REAL(wp),     INTENT(inout) ::                        &
-                                   alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                                                ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
-                                   alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                   alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-                                   alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+    LOGICAL,          INTENT(in)  :: l_day
+    LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
+    CHARACTER(LEN=*), INTENT(in)  :: use_alb_soil_organic_C
+    LOGICAL,          INTENT(in)  :: use_alb_soil_litter
+    REAL(wp),         INTENT(in)  :: &
+      & c_litter_green_ag,  & 
+      & c_bg_sum,           &
+      & SpecificLeafArea_C, &
+      & AlbedoLitterVIS,    & 
+      & alb_background
+    REAL(wp),         INTENT(inout) :: &
+      & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
+                                 ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
+      & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
+      & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+      & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
 
 
     ! Local variables
@@ -711,11 +710,11 @@ CONTAINS
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
-      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_slow,Soil_C_min)
-      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_slow,Soil_C_min)
+      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_bg_sum,Soil_C_min)
+      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_bg_sum,Soil_C_min)
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_slow)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_slow)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.1_wp)
+      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.2_wp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,

@@ -262,6 +262,8 @@ CONTAINS
     REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=VARNAME_LEN) :: name
+    CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
+    CHARACTER(len=2)           :: model_id_char
     INTEGER                    :: ilct, i, no_of_children, child_no
 
     INTEGER :: isteptype
@@ -269,6 +271,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
+
+    WRITE(model_id_char, '(I2.2)') this%owner_model_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
@@ -305,7 +309,7 @@ CONTAINS
         END IF
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -336,7 +340,7 @@ CONTAINS
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
@@ -378,7 +382,8 @@ CONTAINS
     END IF
 
     ! Add fraction(s) of this tile to stream
-    CALL jsb_add_var(TRIM(varlist_name), 'fract', tmp_fract,                                 &
+    varlist_name_loc =  TRIM(varlist_name)//'_'//model_id_char
+    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -387,7 +392,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tmp_fract,                         &
+    CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
       &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -396,7 +401,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_old', tmp_fract,                                 &
+    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -405,7 +410,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_max_old', tmp_fract,                         &
+    CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max_old', '',                                                                          &
       &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -490,7 +495,7 @@ CONTAINS
     ! Loop over lcts of this tile and add variables for fractions for each lct
     DO ilct=1,SIZE(this%lcts)
 
-      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
+      CALL jsb_add_var(varlist_name_loc, 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,             &
         & hgrid, surface,                                                                                         &
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &

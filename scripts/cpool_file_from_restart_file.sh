@@ -3,13 +3,18 @@ set +ex
 
 #module load  nco
 
-########################################################################################################################################
-### Dieses Programm holt eine Liste von Variablen z.B. c-Pools aus einem ICON Restartfile und packt sie in ein eigenes File zusammen ###
-########################################################################################################################################
+##############################################################################################
+### Dieses Programm holt eine Liste von Variablen z.B. c-Pools aus einem ICON Restartfile
+### und packt sie in ein eigenes File zusammen ###
+###
+### Note: Tested with nco version 4.6.7 ... older versions might not work.
+###       As of March 2018, it doesn't work on MPI workstations because nco is too old.
+###       It does work on mistral.
+##############################################################################################
 
 ### User Interface
 INFILE="JS045_restart_atm_19870201T000000Z.nc"
-OUTFILE="ic_land_Cpools.nc"
+OUTFILE="ic_land_carbon.nc"
 
 PROCESS="carbon"
 VARNAME_LIST="c_green   c_woods   c_reserve 
@@ -52,6 +57,7 @@ done
 
 ncks -C -x -v time            ZWERG2       ZWERG3      # Delete variable time
 ncwa -O -a time               ZWERG3       ${OUTFILE}  # Delete dimension time
+ncrename -d ncells_2,ncells ${OUTFILE}   ! This needs a recent nco version!
 
 ### Clean up
 rm ZWERG1  ZWERG2  ZWERG3

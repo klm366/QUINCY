@@ -127,8 +127,9 @@ CONTAINS
       ptr_2D => input_file%Read_2d(         &
         & fill_array = dsl4jsb_var_ptr(HYDRO_, max_moist),  &
         & variable_name='maxmoist')
+      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
       dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = &
-        MERGE(dsl4jsb_var2D_onDomain(HYDRO_, max_moist), 0.2_wp, dsl4jsb_var2D_onDomain(HYDRO_, max_moist) >= 0._wp)
+        MERGE(dsl4jsb_var2D_onDomain(HYDRO_, max_moist), 0.2_wp, dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
         dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = &
           & MIN(dsl4jsb_var2D_onDomain(HYDRO_, max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
