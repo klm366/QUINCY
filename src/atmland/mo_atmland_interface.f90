@@ -295,6 +295,8 @@ CONTAINS
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(t_lice))            t_lice(:)            = 0._wp                                   ! Temporary
+      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         = 0._wp
+      IF (PRESENT(qsat_lice))         qsat_lice(:)         = 0._wp
       IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = 0._wp
       IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = 0._wp
       IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = 0._wp
