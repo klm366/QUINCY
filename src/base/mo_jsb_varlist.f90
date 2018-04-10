@@ -424,9 +424,9 @@ CONTAINS
     CALL InputVarAdd('nproma,nblock',ptr,TRIM(name_loc),lmodel=.TRUE.,po5=lptr)
 
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, p5=lptr)
