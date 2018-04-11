@@ -1,0 +1,235 @@
+diff -r mpiesm-landveg/landveg-compile.ksh ../rref/mpiesm-landveg/landveg-compile.ksh
+9c9
+< vers=ej4_test            # model version (tag used in the executable name)
+---
+> vers=ej4-rref            # model version (tag used in the executable name)
+16,17c16,17
+< configure=no             # yes: run configure, e.g. if dependencies changed
+< automake=no              # yes: run automake, e.g. if new modules had been added (only with configure=yes)
+---
+> configure=yes            # yes: run configure, e.g. if dependencies changed
+> automake=yes             # yes: run automake, e.g. if new modules had been added (only with configure=yes)
+138c138
+<       git checkout jsbach-stw
+---
+>       git checkout jsbach4echam
+141,143d140
+<     if [[ ! -d moffledac ]]; then
+<       git clone git@git.mpimet.mpg.de:moffledac moffledac
+<     fi
+162d158
+<   enable_moffledac="--enable-moffledac"
+166d161
+<   enable_moffledac=""
+179c174
+<         ../src/echam/configure --with-fortran=${compiler} ${enable_jsbvers} ${enable_moffledac}
+---
+>         ../src/echam/configure --with-fortran=${compiler} ${enable_jsbvers}
+182c177
+<         ../src/echam/configure --disable-shared --with-fortran=${compiler} --enable-cdi-pio ${enable_jsbvers} ${enable_moffledac}
+---
+>         ../src/echam/configure --disable-shared --with-fortran=${compiler} --enable-cdi-pio ${enable_jsbvers}
+191c186
+<         ../src/echam/configure --with-fortran=${compiler} --enable-jsbach-standalone ${enable_jsbvers} ${enable_moffledac}
+---
+>         ../src/echam/configure --with-fortran=${compiler} --enable-jsbach-standalone ${enable_jsbvers}
+194c189
+<         ../src/echam/configure --disable-shared --with-fortran=${compiler} --enable-jsbach-standalone ${enable_jsbvers} ${enable_moffledac}
+---
+>         ../src/echam/configure --disable-shared --with-fortran=${compiler} --enable-jsbach-standalone ${enable_jsbvers}
+diff -r mpiesm-landveg/src/echam/config/createMakefiles.pl ../rref/mpiesm-landveg/src/echam/config/createMakefiles.pl
+72,74d71
+< if ENABLE_MOFFLEDAC
+< activeSources += \$(moffledac_SOURCES)
+< endif
+80,82d76
+< if ENABLE_MOFFLEDAC
+< AM_FCFLAGS += \$(FC_DEFINE)HAVE_MOFFLEDAC \$(FC_DEFINE)HAVE_F2003 \$(FC_DEFINE)HAVE_MO_MPI
+< endif
+129,135d122
+< print MAKEFILE "if ENABLE_MOFFLEDAC
+< echam6_SOURCES += ";
+< 
+< my @moffledac_echam_srcs = grep { $_ !~ /driver.f90$/} <moffledac/src/*.f90>;
+< &PrintWords(8, 0, @moffledac_echam_srcs);
+< print MAKEFILE "\nendif\n\n";
+< 
+159,164d145
+< 
+< #print MAKEFILE "moffledac_SOURCES = ";
+< #my @moffledac_srcs = ((grep { $_ eq 'moffledac/m_driver.f90' or $_ !~ /driver.f90$/} <moffledac/*.f90>),
+< #		    (grep { $_ ne 'echam/echam6.f90' } uniq(<echam/*.f90 echam/*.f echam/*.F echam/*.c>, 'version.c')));
+< #&PrintWords(8, 0, @moffledac_srcs);
+< #print MAKEFILE "\n\n";
+diff -r mpiesm-landveg/src/echam/configure ../rref/mpiesm-landveg/src/echam/configure
+674,675d673
+< ENABLE_MOFFLEDAC_FALSE
+< ENABLE_MOFFLEDAC_TRUE
+906d903
+< enable_moffledac
+1577d1573
+<   --enable-moffledac      Enable MofFlEDAc version 4 data obtaining module [default: as --enable-jsbach4]
+24747,24756d24742
+< # Check whether --enable-moffledac was given.
+< if test "${enable_moffledac+set}" = set; then :
+<   enableval=$enable_moffledac; enable_moffledac=$enableval
+<   ENABLE_MOFFLEDAC_TRUE=
+<   ENABLE_MOFFLEDAC_FALSE='#'
+< else
+<   enable_moffledac=no
+<   ENABLE_MOFFLEDAC_TRUE='#'
+<   ENABLE_MOFFLEDAC_FALSE=
+< fi
+26801,26804d26786
+< Usually this means the macro was only invoked conditionally." "$LINENO" 5
+< fi
+< if test -z "${ENABLE_MOFFLEDAC_TRUE}" && test -z "${ENABLE_MOFFLEDAC_FALSE}"; then
+<   as_fn_error $? "conditional \"ENABLE_MOFFLEDAC\" was never defined.
+diff -r mpiesm-landveg/src/echam/configure.ac ../rref/mpiesm-landveg/src/echam/configure.ac
+454,459d453
+< AC_ARG_ENABLE([moffledac],
+<   [AC_HELP_STRING([--enable-moffledac],
+<      [Enable MofFlEDAc version 4 data obtaining module @<:@default: no@:>@])],
+<   [enable_moffledac=$enableval],[enable_moffledac=no])
+< AS_IF([test x"$enable_moffledac" != xno],[enable_moffledac=yes])
+< AM_CONDITIONAL([ENABLE_MOFFLEDAC],[test $enable_moffledac = yes])
+diff -r mpiesm-landveg/src/echam/src/echam/control.f90 ../rref/mpiesm-landveg/src/echam/src/echam/control.f90
+73,75c73,74
+<   USE mo_jsb_base,        ONLY: jsbach_setup => jsbach_setup_models, jsbach_setup_tiles
+<   USE mo_jsb_model_init,  ONLY: jsbach_setup_grid, jsbach_init
+<   USE mo_jsb_interface,   ONLY: jsbach_start_timestep
+---
+>   USE mo_jsb_base,        ONLY: jsbach_init_base => init_base
+>   USE mo_jsb_model_init,  ONLY: jsbach_init_model => init_model
+186,189c185,186
+<   CALL jsbach_setup('namelist.jsbach')
+<   CALL jsbach_setup_grid( 1, ldc )
+<   CALL jsbach_setup_tiles(1)
+<   CALL jsbach_init(1)
+---
+>   CALL jsbach_init_base('namelist.jsbach')
+>   CALL jsbach_init_model( 1, ldc )
+241,242d237
+< #else
+<   CALL jsbach_start_timestep(1)
+diff -r mpiesm-landveg/src/echam/src/echam/mo_surface.f90 ../rref/mpiesm-landveg/src/echam/src/echam/mo_surface.f90
+904a905,909
+>     pco2_flux_land(1:nproma) = pco2_flux_npp(1:nproma) +               &
+>                                pco2_flux_soilresp(1:nproma) +          &
+>                                pco2_flux_herbivory(1:nproma) +         &
+>                                pco2_flux_dynveg(1:nproma)
+> 
+921c926
+<       & fract_par_diffuse = sw_par_frac_diffuse(1:nproma),                   & ! in
+---
+>       & frac_par_diffuse = sw_par_frac_diffuse(1:nproma),                    & ! in
+977,981d981
+< 
+<     pco2_flux_land(1:nproma) = pco2_flux_npp(1:nproma) +               &
+<                                pco2_flux_soilresp(1:nproma) +          &
+<                                pco2_flux_herbivory(1:nproma) +         &
+<                                pco2_flux_dynveg(1:nproma)
+diff -r mpiesm-landveg/src/echam/src/echam/mo_timer.f90 ../rref/mpiesm-landveg/src/echam/src/echam/mo_timer.f90
+31d30
+<   INTEGER, PUBLIC :: timer_input
+249d247
+<     timer_input             = new_timer('stepon: input IO')
+diff -r mpiesm-landveg/src/echam/src/echam/stepon.f90 ../rref/mpiesm-landveg/src/echam/src/echam/stepon.f90
+121,123d120
+< #else
+<   USE mo_jsb_interface,      ONLY: jsbach_start_timestep, jsbach_finish_timestep
+<   USE mo_time_control,       ONLY: time_step_len
+325a323
+> #ifndef JSBACH4     
+328d325
+< #ifndef JSBACH4     
+330,332d326
+< #else
+<        CALL jsbach_start_timestep(1)
+< #endif   
+334a329
+> #endif   
+424,425d418
+< #else
+<      CALL jsbach_finish_timestep(1, time_step_len)
+diff -r mpiesm-landveg/util/running/adjunct_files/jsbach4/lctlib_nlct21.def ../rref/mpiesm-landveg/util/running/adjunct_files/jsbach4/lctlib_nlct21.def
+2a3,5
+> #                     
+> # $HeadURL: https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg/util/running/adjunct_files/jsbach/lctlib_nlct21.def $                     
+> # $Revision: 7624 $                     
+75,76c78,79
+< #Fract_npp_2_woodPool: Maximum fraction of NPP used for buildup of woody parts                     
+< Fract_npp_2_woodPool 0.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.0 0.0 0.0 0.0 0.0 0.3 0.3 0.0 0.0 0.0
+---
+> #Frac_npp_2_woodPool: Maximum fraction of NPP used for buildup of woody parts                     
+> Frac_npp_2_woodPool 0.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.0 0.0 0.0 0.0 0.0 0.3 0.3 0.0 0.0 0.0
+78,79c81,82
+< #Fract_npp_2_reservePool: Maximum fraction of NPP put into the storage pool                     
+< Fract_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.15 0.15 0.15 0.15 0.1 0.1 0.2 0.2 0.2
+---
+> #Frac_npp_2_reservePool: Maximum fraction of NPP put into the storage pool                     
+> Frac_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.15 0.15 0.15 0.15 0.1 0.1 0.2 0.2 0.2
+81,82c84,85
+< #Fract_npp_2_exudates: Maximum fraction of NPP put into the root exudates                     
+< Fract_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+---
+> #Frac_npp_2_exudates: Maximum fraction of NPP put into the root exudates                     
+> Frac_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+84,85c87,88
+< #Fract_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
+< Fract_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
+---
+> #Frac_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
+> Frac_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
+87c90
+< #Fract_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
+---
+> #Frac_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
+89c92
+< Fract_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
+---
+> Frac_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
+91,92c94,95
+< #Tau_c_litter_leaf: Life time of leaf litter [days]                     
+< Tau_c_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
+---
+> #Tau_Cpool_litter_leaf: Life time of leaf litter [days]                     
+> Tau_Cpool_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
+94,95c97,98
+< #Tau_c_litter_wood: Life time of woody litter [days]                     
+< Tau_c_litter_wood 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0
+---
+> #Tau_Cpool_litter_wood: Life time of woody litter [days]                     
+> Tau_Cpool_litter_wood 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0
+97,98c100,101
+< #Tau_c_woods: Time scale of the Cpool_woods and vegetation dynamics [years]                      
+< Tau_c_woods 1.0 30.0 30.0 60.0 60.0 60.0 60.0 60.0 60.0 12.0 24.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+---
+> #Tau_Cpool_woods: Time scale of the Cpool_woods and vegetation dynamics [years]                      
+> Tau_Cpool_woods 1.0 30.0 30.0 60.0 60.0 60.0 60.0 60.0 60.0 12.0 24.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+110,111c113,114
+< #fract_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
+< fract_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+---
+> #frac_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
+> frac_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+113,114c116,117
+< #fract_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
+< fract_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+---
+> #frac_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
+> frac_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+116,117c119,120
+< #fract_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
+< fract_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+---
+> #frac_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
+> frac_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+diff -r mpiesm-landveg/util/running/headers/incl_mod_jsbach4/namelist_jsbach4.h ../rref/mpiesm-landveg/util/running/headers/incl_mod_jsbach4/namelist_jsbach4.h
+287a288
+>   fuel_algorithm         = 0
+289,292d289
+< /
+< &jsb_fuel_nml
+<   active                 = .${carbon}.
+<   fuel_algorithm         = 1
