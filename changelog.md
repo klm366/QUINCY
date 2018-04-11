@@ -1,5 +1,22 @@
 #Changelog for JSBACH4+
 
+##jsbach-4.20p3
+
+_Release Date: 10 April 2018_
+
+- Give back new saturated specific humidity over lakes (water and ice) to the atmosphere
+
+  With the corresponding fix in the ICON atmosphere which puts qsat_lwtr and qsat_lice into the bb_btm array, this closes a water leakage bug
+
+- Some bug fixes in the carbon module
+- Some other bug fixes
+- Some changes to jsbach4_ini_files_from_gauss.sh script for generation of input files
+
+  - updated module versions (cdo etc)
+  - output files for debugging are in T255 (icon)
+  - updated files for coupled setup
+  - changed default cdo remap scheme from "con" to "ycon"
+
 ##jsbach-4.20p2
 
 _Release Date: 29 March 2018_

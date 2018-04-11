@@ -729,6 +729,8 @@ CONTAINS
         ALLOCATE(c_bg_sum(nc))
         c_bg_sum(:) = 0._wp                           ! dummy
       END IF
+    ELSE
+      c_bg_sum => NULL()
     END IF
 
     ! Set pointers to variables in memory

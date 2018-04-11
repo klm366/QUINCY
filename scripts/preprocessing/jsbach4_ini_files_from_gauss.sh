@@ -79,6 +79,7 @@ varlist="${varlist} cover_fract"
 coupled=false    # land sea mask for coupled experiment?
 coupled_grid_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/ATMOOCEANINP_pre04_OceWithCoast_158km_editSLOHH2017_G.cdo172.nc
 coupled_lsf_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/lsf.remapycon.pre04_158km_editSLOHH2017_G.nc
+# Set hd_file to empty if there's no hd_file for this setup available, yet.
 hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/hd_para_icon_r2b4_pre04_ff_vs1_7.nc
 
 debug=false             # true/false
@@ -146,7 +147,7 @@ function generate_gauss_data {
   fi
 
   [[ -d initial_tarfiles ]] && rm -rf initial_tarfiles
-  svn -r 9124 checkout https://svn.zmaw.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
+  svn -r 9124 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
   cd initial_tarfiles
   
   export interactive_ctrl=1                    # 1: swich off interactive mode
@@ -189,13 +190,7 @@ function generate_land_sea_mask {
     echo "Generating land sea mask ..."
     if [[ ${coupled} == "true" ]]
     then
-        if [[ ${bisection} -ne 4 ]] || [[ "${old_r2b4_amip}" != "true" ]]
-        then
-            echo "Generation of files for coupled experiments currently only supported for r2b4"
-            exit
-        else
-            ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
-        fi
+        ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
     else
         if [[ "${old_r2b4_amip}" != "true" ]]; then
             # Note: blend out some grid boxes which are land in FR_LAND_TOPO
@@ -833,7 +828,11 @@ do
     ${cpmv} ${grid_name}_bc_land_sso_$year.nc  ${output_dir}/bc_land_sso_$year.nc
     ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_$year.nc
 
-    [[ ${coupled} == "true" ]] && cp -p ${hd_file} ${output_dir}/bc_land_hd.nc
+    if [[ ${coupled} == "true" ]] && [[ ${hd_file}x != 'x' ]]
+    then
+      cp -p ${hd_file} ${output_dir}/bc_land_hd.nc
+    fi
+
   fi
 
 done

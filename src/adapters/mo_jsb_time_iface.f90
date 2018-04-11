@@ -369,7 +369,8 @@ CONTAINS
   LOGICAL FUNCTION is_time_restart()
 
 #ifdef __ICON__
-    is_time_restart = isRestart()
+    ! In ICON, the first computed time step is one time step after the restart date
+    is_time_restart = .NOT. is_time_experiment_start() .AND. (get_time_previous() == time_config%tc_startdate)
 #else
     is_time_restart = lresume
 #endif
