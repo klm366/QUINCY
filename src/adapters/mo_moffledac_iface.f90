@@ -18,14 +18,13 @@ MODULE mo_moffledac_iface
 CONTAINS
 
   SUBROUTINE init_moffledac(model,model_id,patch,decomp,nproca,nprocb)
-#ifdef HAVE_MOFFLEDAC
-    USE mo_io_units,           ONLY: nnml, find_next_free_unit
     USE mo_jsb_domain_iface,   ONLY: pe_decomposed, t_patch
     USE mo_jsb_time_iface,     ONLY: get_date_components, get_time_dt, get_time_start, get_time_current, get_year_length
     USE mo_jsb_parallel_iface, ONLY: get_workgroup_parallel_setup
     USE mo_jsb_vertical_axes,  ONLY: jsbach_vgrids
     USE mo_input,              ONLY: InputSubModelTypeGetNew, InputSubModelGetCurr, InputInit, InputCreate, InputOptImport, &
                                      InputDimLocalSet, InputDimEquivalence
+#ifdef HAVE_MOFFLEDAC
 #ifdef __ICON__
     USE mo_parallel_config,    ONLY: nproma
     USE mo_input,              ONLY: input_file_list, InputVarAdd, InputFileAdd, InputGetData, InputDimAdd, InputDimInq
@@ -44,7 +43,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: nproca, nprocb
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_moffledac'
-
+#ifdef HAVE_MOFFLEDAC
     INTEGER  :: npe, mype, iope, comm               ! Parameters for parallel setup
     INTEGER  :: exp_start(4), run_start(4), dt, cal ! Parameters for time setup
     INTEGER  :: tmp(6), nblock
@@ -190,12 +189,12 @@ CONTAINS
     ELSE
       CALL finish(routine,'Sorry, setup for JSBACH standalone not yet done')
     ENDIF
-#endif
 
     ! Register all vertical axes known to JSBACH also for MofFlEDAc
     DO i=1,SIZE(jsbach_vgrids)
       CALL InputDimAdd(TRIM(jsbach_vgrids(i)%p%name),Extent=jsbach_vgrids(i)%p%n_levels)
     ENDDO
+#endif
 
   END SUBROUTINE init_moffledac
 
