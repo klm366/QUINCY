@@ -26,6 +26,7 @@ CONTAINS
                                      InputDimLocalSet, InputDimEquivalence
 #ifdef HAVE_MOFFLEDAC
 #ifdef __ICON__
+    USE mo_io_units,           ONLY: nnml, find_next_free_unit
     USE mo_parallel_config,    ONLY: nproma
     USE mo_input,              ONLY: input_file_list, InputVarAdd, InputFileAdd, InputGetData, InputDimAdd, InputDimInq
 #else
@@ -35,7 +36,9 @@ CONTAINS
                                      INPUT_CALENDAR_JULIAN, INPUT_CALENDAR_GREGORIAN, INPUT_CALENDAR_UNDEFINED, &
                                      TICKS_PER_SEC
     USE mo_exception,          ONLY: message_text, message, finish
-
+    USE mo_filename,           ONLY: find_next_free_unit
+    INTEGER :: nnml = 10
+#endif
     TYPE (t_jsb_model),   POINTER              :: model
     INTEGER,              INTENT(in)           :: model_id
     TYPE (t_patch),       INTENT(in), OPTIONAL :: patch
