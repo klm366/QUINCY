@@ -178,6 +178,9 @@ CONTAINS
          fname = 'veg_diagnostics'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+      CASE ('canopy')
+         fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
     END SELECT
 
@@ -309,6 +312,8 @@ CONTAINS
          & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
          & 'growing_season cost_nup cost_bnf unit_transp transp'
          lun=lun+1
+      CASE ('canopy')
+         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
 
     END SELECT
 
@@ -1001,7 +1006,15 @@ CONTAINS
                 cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
               lun=lun+1
-        END IF  ! write output T/F (l_land_plant_output)
+           END IF  ! write output T/F (l_land_plant_output)
+        CASE ('canopy')
+            DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
+                write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
+                                      fn_rub_cl(ipoi,icanopy), fn_chl_cl(ipoi,icanopy),&
+                                      fn_pepc_cl(ipoi,icanopy), fn_oth_cl(ipoi,icanopy),leaf_nitrogen_cl(ipoi,icanopy), &
+                                      jmax_cl(ipoi,icanopy), vcmax_cl(ipoi,icanopy)
+             END DO
+             
     END SELECT  ! select land/plant
 
 

@@ -429,9 +429,10 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_assimi_fluxes(tile,model%options)! mo_assimi_util
-      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
+       CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
       CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
+
+
 
       !! run Tasks
       !!
@@ -445,7 +446,13 @@ CONTAINS
       !! accumulation over time - daytime & moving average
       !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
-
+      
+      !! output pool: write output in certain intervals, see mo_shared_output
+      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
+      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
+      !!
+      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
+      
       !! output flux: write output in certain intervals, see mo_shared_output
       !! ! only some flux files are written, see CASE statements in shared_output
       !!
