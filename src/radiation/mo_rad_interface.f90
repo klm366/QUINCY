@@ -691,7 +691,7 @@ CONTAINS
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     ! Set model
     model => Get_model(tile%owner_model_id)
 
@@ -707,7 +707,8 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
-    
+    NULLIFY(c_bg_sum)
+
     ! Set pointers to variables in config
     use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
     use_alb_soil_scheme       = dsl4jsb_Config(RAD_) %use_alb_soil_scheme
