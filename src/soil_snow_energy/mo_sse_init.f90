@@ -22,7 +22,8 @@ MODULE mo_sse_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 #ifdef HAVE_MOFFLEDAC
   USE mo_timer,             ONLY: timer_start, timer_stop, timer_input
-  USE mo_input
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
+                                  InputGetData, InputVarReleaseMem, input_file_list, input_var_list
 #endif
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
@@ -208,7 +209,9 @@ CONTAINS
 #ifdef HAVE_MOFFLEDAC
     CALL InputDimAdd('clim_month_year',Extent=12)
     CALL InputFileAdd(TRIM(dsl4jsb_Config(SSE_)%ic_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarGroupStart('sse_'//TRIM(tile%name))
     CALL InputVarAdd('nproma,clim_month_year,nblock',t_srf_mon,'surf_temp_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
+    CALL InputVarGroupEnd()
     CALL InputOptAdd(AVar=var,var_file_name='surf_temp',fill_val=280._wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
     CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_month_year')
     CALL InputGetData(var=var,msg=TRIM(routine))
