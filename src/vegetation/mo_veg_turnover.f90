@@ -445,8 +445,7 @@ CONTAINS
     !> 4.2 heart wood formation, including nutrient recycling
     !! 
     IF(lctlib%growthform == itree)THEN
-        fturn(:)              = (1._wp - lctlib%frac_sapwood_branch) /lctlib%tau_sap_wood /one_day /one_year *dtime
-        fturn(:)              = 1.0_wp /lctlib%tau_sap_wood /one_day /one_year *dtime
+        fturn(:)              = (1.0_wp - lctlib%frac_sapwood_branch) /lctlib%tau_sap_wood /one_day /one_year *dtime
         veg_growth%heart_wood = veg_growth%heart_wood + veg_pool%sap_wood * fturn(:)
         veg_growth%sap_wood   = veg_growth%sap_wood   - veg_pool%sap_wood * fturn(:) 
 

@@ -120,10 +120,15 @@ MODULE mo_veg_constants
       lambda_est_moist     ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
       k_est_moist          ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
       wood_extraction_rate ,     & !< fraction of wood removed from site after harvesting
-      min_greff            ,     & !<
-      k1_mort_greff        ,     & !<
-      k2_mort_greff        ,     & !<
-      k3_mort_greff                 !<
+      min_greff            ,     & !< minimum growth efficiency (mol C / m2 (LAI) / yr)
+      k1_mort_greff        ,     & !< asymptotic growth efficiency mortality rate (1/yr)
+      k2_mort_greff        ,     & !< scaling coefficient 
+      k3_mort_greff        ,     & !< scaling coefficient in growth efficiency mortality below minimum growth efficiency
+      max_crown_area       ,     & !< maximum crown area (m2)
+      min_diameter         ,     & !< minimum diameter for crown area calculation (m)
+      k_crown_area         ,     & !< scaling parameter in crownarea to diameter relationship
+      k_rp                 ,     & !< scaling exponent in crownarea to diameter relationship
+      fpc_max                      !< maximum foliage projective cover
 
   ! other
   REAL(wp), SAVE :: & 
@@ -247,10 +252,15 @@ CONTAINS
       lambda_est_moist   = 10._wp  
       k_est_moist        = 2.0_wp  
       wood_extraction_rate = 0.8_wp
-      k1_mort_greff      = 0.01_wp 
-      k2_mort_greff      = 0.3_wp * molar_mass_C ! from LPJ in yr / mol
-      k3_mort_greff      = 40.0_wp * molar_mass_C ! from LPJ in yr / mol
+      k1_mort_greff      = 0.05_wp 
+      k2_mort_greff      = 0.3_wp 
+      k3_mort_greff      = 25.0_wp 
       min_greff          = 1.0_wp    ! mol C / LAI / year
+      max_crown_area     = 15._wp
+      min_diameter       = 0.01_wp
+      k_crown_area       = 100._wp
+      k_rp               = 1.6_wp
+      fpc_max            = 0.95_wp
 
   ! other
       carbon_per_dryweight_leaf   = 0.48_wp  
