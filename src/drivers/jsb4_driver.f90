@@ -62,6 +62,10 @@ PROGRAM jsb4_driver
   ! ICON would be:
   ! USE mo_psrad_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
 !<<<
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,               ONLY: InputUpdate, InputDone, InputTimeString
+  USE mo_timer,               ONLY: timer_input, timer_start, timer_stop
+#endif
 
   IMPLICIT NONE
 
@@ -321,6 +325,13 @@ PROGRAM jsb4_driver
   ! - Main loop
   main_loop:DO 
 
+#ifdef HAVE_MOFFLEDAC
+    CALL timer_start(timer_input)
+call message('',TRIM(InputTimeString(.FALSE.))//': Updating input')
+    CALL InputUpdate()
+    CALL timer_stop(timer_input)
+#endif
+
     CALL time_set   !(echam!)
 !    CALL write_date(current_date,'Calculate for: ')
 
@@ -435,6 +446,10 @@ PROGRAM jsb4_driver
     CALL message('',message_text)
     CALL message ('', '')
   END IF
+
+#ifdef HAVE_MOFFLEDAC
+  CALL InputDone()
+#endif
 
   ! deallocate in- and output arrays
   DEALLOCATE(t_air_K, q_air, rain, snow, wind_air, wind_10m)

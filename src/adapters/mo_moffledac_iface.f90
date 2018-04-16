@@ -9,7 +9,6 @@ MODULE mo_moffledac_iface
   PRIVATE
 
   INTEGER, SAVE :: jsbach_submodel_type = -1
-!$OMP PRIVATE (jsbach_submodel_type)
 
   PUBLIC :: init_moffledac
 
@@ -17,20 +16,20 @@ MODULE mo_moffledac_iface
 
 CONTAINS
 
-  SUBROUTINE init_moffledac(model,model_id,patch,decomp,nproca,nprocb)
+  SUBROUTINE init_moffledac(model,model_id,patch,decomp)
     USE mo_jsb_domain_iface,   ONLY: pe_decomposed, t_patch
+#ifdef HAVE_MOFFLEDAC
     USE mo_jsb_time_iface,     ONLY: get_date_components, get_time_dt, get_time_start, get_time_current, get_year_length
     USE mo_jsb_parallel_iface, ONLY: get_workgroup_parallel_setup
     USE mo_jsb_vertical_axes,  ONLY: jsbach_vgrids
     USE mo_input,              ONLY: InputSubModelTypeGetNew, InputSubModelGetCurr, InputInit, InputCreate, InputOptImport, &
-                                     InputDimLocalSet, InputDimEquivalence
-#ifdef HAVE_MOFFLEDAC
+                                     InputDimLocalSet, InputDimEquivalence, InputDimAdd
 #ifdef __ICON__
     USE mo_io_units,           ONLY: nnml, find_next_free_unit
     USE mo_parallel_config,    ONLY: nproma
-    USE mo_input,              ONLY: input_file_list, InputVarAdd, InputFileAdd, InputGetData, InputDimAdd, InputDimInq
+    USE mo_input,              ONLY: InputFileAdd, InputDimInq, input_file_list
 #else
-    USE mo_input,              ONLY: input_dim_list, InputDimAdd, InputDimLocalSetMulti, InputDimInq
+    USE mo_input,              ONLY: InputDimLocalSetMulti, input_dim_list
 #endif
     USE mo_input_calendar,     ONLY: INPUT_CALENDAR_DAY360, INPUT_CALENDAR_DAY365, INPUT_CALENDAR_DAY366, &
                                      INPUT_CALENDAR_JULIAN, INPUT_CALENDAR_GREGORIAN, INPUT_CALENDAR_UNDEFINED, &
@@ -43,7 +42,6 @@ CONTAINS
     INTEGER,              INTENT(in)           :: model_id
     TYPE (t_patch),       INTENT(in), OPTIONAL :: patch
     TYPE (pe_decomposed), INTENT(in), OPTIONAL :: decomp
-    INTEGER,              INTENT(in), OPTIONAL :: nproca, nprocb
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_moffledac'
 #ifdef HAVE_MOFFLEDAC
@@ -114,8 +112,7 @@ CONTAINS
     CALL InputDimAdd('time',lRecSep=.TRUE.)
 
     ! Setup the horizontal grid and spread it correctly across PEs
-    IF (.NOT. PRESENT(patch) .AND. .NOT. PRESENT(decomp) .AND. (.NOT. PRESENT(nproca) .OR. .NOT. PRESENT(nprocb))) &
-      CALL finish(routine,'Called with insufficient parameters')
+    IF (PRESENT(patch) .EQV. PRESENT(decomp)) CALL finish(routine,'Called with insufficient/inconsistent parameters')
     IF (PRESENT(patch)) THEN
       ! ICON setup
 #ifdef __ICON__
@@ -139,7 +136,7 @@ CONTAINS
 #else
       CALL finish(routine,'Inconsistent model setup')
 #endif
-    ELSEIF (PRESENT(decomp)) THEN
+    ELSE
 #ifdef __ICON__
       CALL finish(routine,'Inconsistent model setup')
 #else
@@ -189,8 +186,6 @@ CONTAINS
         CALL InputDimEquivalence('nproma,nblock','lon_iloc,lat_iloc')
       ENDIF
 #endif
-    ELSE
-      CALL finish(routine,'Sorry, setup for JSBACH standalone not yet done')
     ENDIF
 
     ! Register all vertical axes known to JSBACH also for MofFlEDAc

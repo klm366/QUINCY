@@ -73,6 +73,11 @@ CONTAINS
     CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
+#ifdef HAVE_MOFFLEDAC
+    ! Setup input via MofFlEDAc for this model
+    CALL init_moffledac(model,model_id,decomp=decomposition) 
+#endif
+
 #ifndef __ICON__
     CALL inigau               ! beside others required for get_area, i.e. required before new_grid
     CALL init_convect_tables
