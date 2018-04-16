@@ -139,7 +139,6 @@ CONTAINS
 
 #ifdef HAVE_MOFFLEDAC
     CALL InputVarAdd('nproma,nblock',var%ptr,TRIM(name_loc),lmodel=.TRUE.,po5=var%field)
-!   CALL InputVarAdd('nproma,nblock',ptr,    TRIM(name_loc),lmodel=.TRUE.,po5=lptr)
 #else
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
     var%ptr => var%field(:,:,1,1,1)

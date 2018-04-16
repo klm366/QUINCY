@@ -83,7 +83,7 @@ CONTAINS
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
 #ifdef HAVE_MOFFLEDAC
     USE mo_timer, ONLY: timer_start, timer_stop, timer_input
-    USE mo_input, ONLY: input_file_list, InputFileAdd, InputOptAdd, InputGetData, moffledac
+    USE mo_input, ONLY: input_file_list, InputFileAdd, InputOptAdd, InputGetData
 
     TYPE (input_file_list), POINTER :: IFile
 #endif
