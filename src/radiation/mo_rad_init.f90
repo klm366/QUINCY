@@ -102,7 +102,7 @@ CONTAINS
 
     TYPE(t_input_file) :: input_file
     INTEGER :: i, n1, n2
-                         
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init_ic'
 
     model => get_model(tile%owner_model_id)
