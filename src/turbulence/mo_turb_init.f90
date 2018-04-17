@@ -59,6 +59,11 @@ CONTAINS
 
   RECURSIVE SUBROUTINE turb_init_ic(tile)
 
+#ifdef HAVE_MOFFLEDAC
+    USE mo_timer, ONLY: timer_start, timer_stop, timer_input
+    USE mo_input, ONLY: InputOptAdd, InputGetData
+#endif
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
@@ -87,6 +92,14 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), &
          'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputOptAdd(var_name='turb_rough_m_'//TRIM(tile%name),var_file_name='roughness_length', &
+                     file_name=TRIM(dsl4jsb_Config(TURB_)%bc_filename),                          &
+                     fill_val=1._wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
+    CALL timer_start(timer_input)
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_input)
+#else
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
 
     ! Surface roughness length
@@ -97,6 +110,7 @@ CONTAINS
       MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
 
     CALL input_file%Close()
+#endif
 
   END SUBROUTINE turb_init_ic
 

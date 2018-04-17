@@ -54,6 +54,9 @@ CONTAINS
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd
+#endif
 
     CLASS(t_turb_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
@@ -76,6 +79,10 @@ CONTAINS
     surface => Get_vgrid('surface')
 
     IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarGroupStart('turb_'//TRIM(suffix),dt_update=0)
+#endif
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                       &
       & hgrid, surface,                                                           &
@@ -128,6 +135,11 @@ CONTAINS
         & initval_r=0.5_wp )
 
     END IF
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarGroupEnd()
+#endif
+
 
   END SUBROUTINE Init_turb_memory
 
