@@ -168,12 +168,12 @@ CONTAINS
 
     USE mo_sse_process, ONLY: init_soil_temperature
 
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
 #ifdef HAVE_MOFFLEDAC
     TYPE (input_file_list), POINTER :: IFile
     TYPE (input_var_list),  POINTER :: var
 #endif
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),         POINTER :: model
     dsl4jsb_Def_config(SSE_)
@@ -207,13 +207,13 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
 #ifdef HAVE_MOFFLEDAC
-    CALL InputDimAdd('clim_month_year',Extent=12)
+    CALL InputDimAdd('clim_monthly_year',Extent=12)
     CALL InputFileAdd(TRIM(dsl4jsb_Config(SSE_)%ic_filename),file_ref=IFile,dt_file=0)
     CALL InputVarGroupStart('sse_'//TRIM(tile%name))
-    CALL InputVarAdd('nproma,clim_month_year,nblock',t_srf_mon,'surf_temp_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
+    CALL InputVarAdd('nproma,clim_monthly_year,nblock',t_srf_mon,'surf_temp_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
     CALL InputVarGroupEnd()
     CALL InputOptAdd(AVar=var,var_file_name='surf_temp',fill_val=280._wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
-    CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_month_year')
+    CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_monthly_year')
     CALL InputGetData(var=var,msg=TRIM(routine))
     DO iblk=1,SIZE(t_srf_mon, DIM=3)
       CALL init_soil_temperature(                     &
