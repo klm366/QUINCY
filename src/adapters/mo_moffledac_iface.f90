@@ -131,7 +131,7 @@ CONTAINS
       CALL InputDimLocalSet(dim_name='cell',idx=patch%cells%decomp_info%glb_index(1:n))
       nblock = (SIZE(patch%cells%decomp_info%glb_index)+nproma-1) / nproma
       CALL InputDimAdd('nproma',extent=nproma)
-      CALL InputDimAdd('nblock',extent=nblock);
+      CALL InputDimAdd('nblock',extent=nblock,global=-1);
       CALL InputDimEquivalence('nproma,nblock','cell')
 #else
       CALL finish(routine,'Inconsistent model setup')
