@@ -108,6 +108,9 @@ CONTAINS
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd
+#endif
 
     ! Arguments
     CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem
@@ -144,6 +147,10 @@ CONTAINS
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  )                                       &
       & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('pheno_'//TRIM(suffix),dt_update=0)
+#endif
 
       CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
         & hgrid, surface,                                                      &
@@ -296,6 +303,10 @@ CONTAINS
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
       END IF
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupEnd()
+#endif
 
     END IF
 

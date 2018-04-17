@@ -22,6 +22,12 @@ MODULE mo_pheno_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
 
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,             ONLY: timer_start, timer_stop, timer_input
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
+                                  InputGetData, InputVarReleaseMem, input_file_list, input_var_list
+#endif
+
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_memory(PHENO_)
@@ -67,6 +73,11 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+    TYPE (input_var_list),  POINTER :: var, var2
+#endif
+
     TYPE(t_jsb_model),       POINTER :: model
 
     dsl4jsb_Def_config(PHENO_)
@@ -74,6 +85,9 @@ CONTAINS
 
     REAL(wp), POINTER ::  &
       & ptr_mon(:,:,:),   &
+#ifdef HAVE_MOFFLEDAC
+      & ptr_mon2(:,:,:),  &
+#endif
       & ptr_2D(:,:)
 
     TYPE(t_input_file) :: input_file
@@ -88,6 +102,30 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputDimAdd('clim_monthly_year',Extent=12)
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(PHENO_)%bc_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarGroupStart('pheno_'//TRIM(tile%name),IFile=IFile,dt_update=0)
+    CALL InputVarAdd('nproma,nblock,clim_monthly_year',ptr_mon, 'lai_clim_' //TRIM(tile%name),var_ref=var)
+    CALL InputVarAdd('nproma,nblock,clim_monthly_year',ptr_mon2,'veg_fract_'//TRIM(tile%name),var_ref=var2)
+    CALL InputVarGroupEnd()
+    CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_monthly_year')
+    CALL InputOptAdd(AVar=var, var_file_name='lai_clim', fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputOptAdd(AVar=var2,var_file_name='veg_fract',fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputOptAdd(var_name='pheno_fract_forest_'//TRIM(tile%name),var_file_name='forest_fract', &
+                     file_name=TRIM(dsl4jsb_Config(PHENO_)%bc_filename),fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputOptAdd(var_name='pheno_fract_fpc_max_'//TRIM(tile%name),var_file_name='veg_ratio_max', &
+                     file_name=TRIM(model%config%fract_filename),fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputGetData(msg=TRIM(routine))
+    dsl4jsb_memory(PHENO_)%lai_mon      (:,:,1:12) = ptr_mon (:,:,1:12)
+    dsl4jsb_memory(PHENO_)%lai_mon      (:,:,0   ) = ptr_mon (:,:,12  )
+    dsl4jsb_memory(PHENO_)%lai_mon      (:,:,13  ) = ptr_mon (:,:,1   )
+    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,1:12) = ptr_mon2(:,:,1:12)
+    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,0   ) = ptr_mon2(:,:,12  )
+    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,13  ) = ptr_mon2(:,:,1   )
+    CALL InputVarReleaseMem(var_ref=var)
+    CALL InputVarReleaseMem(var_ref=var2)
+#ELSE
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
 
     ! Leaf area index climatology
@@ -135,6 +173,8 @@ CONTAINS
     NULLIFY(ptr_2D)
 
     CALL input_file%Close()
+
+#endif
 
     ! R: veg_fract_correction is used in many modules in JS3 (e.g. in the albedo calculations). However, in JS4
     !    it is only necessary for the assimilation and for the carbon distribution of the tile (and in the
