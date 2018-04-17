@@ -212,8 +212,16 @@ CONTAINS
       END DO
       fact_lake(:) = tile%lcts(i)%fract(ics:ice,iblk)
       fact_land(:) = 1._wp - fact_lake(:)
-      fact_lake(:) = MERGE(1._wp / fact_lake(:), 1._wp, fact_lake(:) > 0._wp)
-      fact_land(:) = MERGE(1._wp / fact_land(:), 1._wp, fact_land(:) > 0._wp) 
+      WHERE (fact_lake(:) > 0._wp)
+        fact_lake(:) = 1._wp / fact_lake(:)
+      ELSE WHERE
+        fact_lake(:) = 1._wp
+      END WHERE
+      WHERE (fact_land(:) > 0._wp)
+        fact_land(:) = 1._wp / fact_land(:)
+      ELSE WHERE
+        fact_land(:) = 1._wp
+      END WHERE
 
       IF (PRESENT(t_srf))         t_srf(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_filt)
       IF (PRESENT(t_eff_srf))     t_eff_srf(:)        =                dsl4jsb_var2D_onChunk(SEB_,   t_eff)
