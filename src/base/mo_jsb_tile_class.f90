@@ -173,8 +173,9 @@ MODULE mo_jsb_tile_class
   END INTERFACE
 
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:) ! R: (grid%nproma, grid%nblks, no_children)), e.g. (ics:ice,iblk,child_no_i)
-                                                    !  variable under consideration
+    REAL(wp), ALLOCATABLE :: fractions(:,:,:) ! R: (grid%nproma, grid%nblks, no_children))
+    REAL(wp), ALLOCATABLE :: fract_sum(:,:)
+    REAL(wp), ALLOCATABLE :: data_sum(:,:)
   CONTAINS
     PROCEDURE :: Set_fractions => Set_fractions_aggregator
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_2d
@@ -650,6 +651,8 @@ CONTAINS
 
     grid => Get_grid(grid_id)
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
+    ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
+    ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
 
   END FUNCTION Create_aggregator_weighted_by_fract
 
@@ -717,12 +720,7 @@ CONTAINS
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, j, iproc, nc
-    ! CLASS(t_jsb_tile_abstract), POINTER :: current
-    ! TYPE(t_jsb_var_real2d), POINTER :: var_tmp
-    CLASS(t_jsb_var), POINTER            :: var_tmp
-    REAL(wp), ALLOCATABLE :: data(:,:), fractions(:,:)    ! Collected data and fractions from children
-    REAL(wp)              :: fract_sum(ice-ics+1)
+    INTEGER :: no_children, i, iproc, nc
     REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
@@ -744,6 +742,8 @@ CONTAINS
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
+    IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
+
     no_children = tile%Get_no_of_children()
 
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
@@ -752,45 +752,20 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    ALLOCATE(data     (nc,no_children))
-    ALLOCATE(fractions(nc,no_children))
+    this%data_sum (:,iblk) = 0._wp
+    this%fract_sum(:,iblk) = 0._wp
 
-    j = 0
-    fractions(:,:) = 0._wp
-    fract_sum(:)   = 0._wp
-    data     (:,:) = 0._wp
-
-    ! current => tile%first_child_tile
     DO i=1,no_children
-      ! IF (ASSOCIATED(current%mem(iproc)%p)) THEN  ! Process is active on child tile
-      !   SELECT TYPE (v => current%mem(iproc)%p%Get_var_real2d(TRIM(var%name)))
-      !   TYPE IS (t_jsb_var_real2d)
-      !     var_tmp => v
-      !   END SELECT
-      ! IF (var%child_idx(i) > 0) THEN
-      !   var_tmp => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
-      ! ELSE
-      !   var_tmp => NULL()
-      ! END IF
-      ! IF (ASSOCIATED(var_tmp)) THEN
-      IF (var%child_idx(i) > 0 .AND. ASSOCIATED(tile%mem(iproc)%p)) THEN
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p)) THEN
-          CALL finish(TRIM(routine), 'ERROR - this should not happen!')
-        ELSE
-          var_tmp => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
-        END IF
-        fractions(:,i) = this%fractions(ics:ice,iblk,i)
-        IF (.NOT. var%l_aggregate_all) fract_sum(:)   = fract_sum(:) + fractions(:,i)
-        data(:,i) = var_tmp%field(ics:ice,iblk,1,1,1)
-        ! data(:,i) = var_tmp%ptr(ics:ice,iblk)
-        j = j + 1
+      IF (var%child_idx(i) > 0) THEN
+        ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1), &
+          &        fractions  => this%fractions(ics:ice,iblk,i))
+          this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
+          this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+        END ASSOCIATE
       END IF
-      ! END IF
-      ! current => current%next_sibling_tile
     END DO
-    j=no_children
-    IF (j == 0) CALL finish(TRIM(routine), 'Variable '//TRIM(var%name)//' not found in any of children of tile '//&
-      &                                    TRIM(tile%name)//' - this should not happen!')
+    ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
+      ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   ! print*, fract_sum
@@ -800,21 +775,19 @@ CONTAINS
     !   CALL finish(TRIM(routine),  '    ... this should not happen')
     ! END IF
 
-    IF (j == 1 .AND. .NOT. var%l_aggregate_all) THEN
+    IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
       ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction 
-      var%ptr(ics:ice,iblk) = SUM(data(:,:), DIM=2)
+      var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk)
     ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
       ! For tiles where variable is not defined data(:,tile) is 0
-      var%ptr(ics:ice,iblk) = SUM(fractions(:,:) * data(:,:), DIM=2)
+      var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk)
     ELSE
-      WHERE (fract_sum(:) > 0._wp)
-        var%ptr(ics:ice,iblk) = SUM(fractions(:,:) * data(:,:), DIM=2) / fract_sum(:)
+      WHERE (this%fract_sum(ics:ice,iblk) > 0._wp)
+        var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk) / this%fract_sum(ics:ice,iblk)
       !ELSE WHERE
       !  var%ptr(ics:ice,iblk) = missval
       END WHERE
     END IF
-
-    DEALLOCATE(data, fractions)
 
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
@@ -834,20 +807,15 @@ CONTAINS
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, j, iproc, nc, ilev
-    ! CLASS(t_jsb_tile_abstract), POINTER :: current
-    ! TYPE(t_jsb_var_real3d), POINTER :: var_tmp
-    CLASS(t_jsb_var), POINTER :: var_tmp
-    REAL(wp), ALLOCATABLE :: data(:,:,:), fractions(:,:)    ! Collected data and fractions from children
-    REAL(wp)              :: fract_sum(ice-ics+1)
+    INTEGER :: no_children, i, iproc, nc, ilev
     REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
 
     IF (debug_on()) THEN
-      routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
+      routine = TRIM(modname)//':Aggregate_weighted_by_fract_3d'//'(called by '//TRIM(caller)//')'
     ELSE
-      routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'
+      routine = TRIM(modname)//':Aggregate_weighted_by_fract_3d'
     END IF
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
@@ -861,6 +829,8 @@ CONTAINS
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
+    IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
+
     no_children = tile%Get_no_of_children()
 
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
@@ -869,40 +839,32 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    ALLOCATE(data     (nc, SIZE(var%ptr,2), no_children))
-    ALLOCATE(fractions(nc,                  no_children))
-
-    j = 0
-    fractions(:,:)   = 0._wp
-    fract_sum(:  )   = 0._wp
-    data     (:,:,:) = 0._wp
-    ! current => tile%first_child_tile
-    DO i=1,no_children
-      ! IF (ASSOCIATED(current%mem(iproc)%p)) THEN   ! Process is active on child tile
-      !   SELECT TYPE (v => current%mem(iproc)%p%Get_var_real2d(TRIM(var%name)))
-      !   TYPE IS (t_jsb_var_real3d)
-      !     var_tmp => v
-      !   END SELECT
-        ! var_tmp => current%mem(iproc)%p%Get_var_real3d(TRIM(var%name))
-        ! IF (ASSOCIATED(var_tmp)) THEN
-      IF (var%child_idx(i) > 0 .AND. ASSOCIATED(tile%mem(iproc)%p)) THEN
-        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p)) THEN
-          CALL finish(TRIM(routine), 'ERROR - this should not happen!')
-        ELSE
-          var_tmp => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
+    DO ilev=1,SIZE(var%ptr,2)
+      this%fract_sum(:,iblk) = 0._wp
+      this%data_sum (:,iblk) = 0._wp
+      DO i=1,no_children
+        IF (var%child_idx(i) > 0) THEN
+          ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
+            &        fractions  => this%fractions(ics:ice,iblk,i))
+            this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
+            this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+          END ASSOCIATE
         END IF
-        fractions(:,i) = this%fractions(ics:ice,iblk,i)
-        IF (.NOT. var%l_aggregate_all) fract_sum(:)   = fract_sum(:) + fractions(:,i)
-        data(:,:,i) = var_tmp%field(ics:ice,:,iblk,1,1)
-        ! data(:,:,i) = var_tmp%ptr(ics:ice,:,iblk)
-        j = j + 1
+      END DO
+      IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
+        ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction 
+        var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
+      ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
+        ! For tiles where variable is not defined data(:,ilev,tile) is 0
+        var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
+      ELSE
+        WHERE (this%fract_sum(ics:ice,iblk) > 0._wp)
+          var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk) / this%fract_sum(ics:ice,iblk)
+        ! ELSE WHERE
+          ! var%ptr(ics:ice,ilev,iblk) = missval
+        END WHERE
       END IF
-      ! END IF
-      ! current => current%next_sibling_tile
     END DO
-    j=no_children
-    IF (j == 0) CALL finish(TRIM(routine), 'Variable '//TRIM(var%name)//' not found in any of children of tile '//&
-      &                                    TRIM(tile%name)//' - this should not happen!')
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
@@ -910,24 +872,6 @@ CONTAINS
     !     &          all_print=.TRUE.)
     !   CALL finish(TRIM(routine),  '    ... this should not happen')
     ! END IF
-
-    DO ilev=1,SIZE(data,2)
-      IF (j == 1 .AND. .NOT. var%l_aggregate_all) THEN
-        ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction 
-        var%ptr(ics:ice,ilev,iblk) = SUM(data(:,ilev,:), DIM=2)
-      ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
-        ! For tiles where variable is not defined data(:,ilev,tile) is 0
-        var%ptr(ics:ice,ilev,iblk) = SUM(fractions(:,:) * data(:,ilev,:), DIM=2)
-      ELSE
-        WHERE (fract_sum(:) > 0._wp)
-          var%ptr(ics:ice,ilev,iblk) = SUM(fractions(:,:) * data(:,ilev,:), DIM=2) / fract_sum(:)
-        ! ELSE WHERE
-          ! var%ptr(ics:ice,ilev,iblk) = missval
-        END WHERE
-      END IF
-    END DO
-
-    DEALLOCATE(data, fractions)
 
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
