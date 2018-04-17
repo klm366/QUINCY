@@ -22,6 +22,10 @@ CONTAINS
     USE mo_jsb_time_iface,     ONLY: get_date_components, get_time_dt, get_time_start, get_time_current, get_year_length
     USE mo_jsb_parallel_iface, ONLY: get_workgroup_parallel_setup
     USE mo_jsb_vertical_axes,  ONLY: jsbach_vgrids
+    USE mo_exception,          ONLY: message_text, message, finish
+    USE mo_input_calendar,     ONLY: INPUT_CALENDAR_DAY360, INPUT_CALENDAR_DAY365, INPUT_CALENDAR_DAY366, &
+                                     INPUT_CALENDAR_JULIAN, INPUT_CALENDAR_GREGORIAN, INPUT_CALENDAR_UNDEFINED, &
+                                     TICKS_PER_SEC
     USE mo_input,              ONLY: InputSubModelTypeGetNew, InputSubModelGetCurr, InputInit, InputCreate, InputOptImport, &
                                      InputDimLocalSet, InputDimEquivalence, InputDimAdd
 #ifdef __ICON__
@@ -30,13 +34,9 @@ CONTAINS
     USE mo_input,              ONLY: InputFileAdd, InputDimInq, input_file_list
 #else
     USE mo_input,              ONLY: InputDimLocalSetMulti, input_dim_list
-#endif
-    USE mo_input_calendar,     ONLY: INPUT_CALENDAR_DAY360, INPUT_CALENDAR_DAY365, INPUT_CALENDAR_DAY366, &
-                                     INPUT_CALENDAR_JULIAN, INPUT_CALENDAR_GREGORIAN, INPUT_CALENDAR_UNDEFINED, &
-                                     TICKS_PER_SEC
-    USE mo_exception,          ONLY: message_text, message, finish
     USE mo_filename,           ONLY: find_next_free_unit
     INTEGER :: nnml = 10
+#endif
 #endif
     TYPE (t_jsb_model),   POINTER              :: model
     INTEGER,              INTENT(in)           :: model_id
