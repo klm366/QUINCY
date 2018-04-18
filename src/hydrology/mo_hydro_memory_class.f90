@@ -172,6 +172,9 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: &
       & dens_snow, &   ! Density of snow (l_dynsnow=.FALSE.)
       & dens_snow_min  ! Density of fresh snow (l_dynsnow=.TRUE.)
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd
+#endif
 
     CLASS(t_hydro_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)    :: prefix
@@ -210,6 +213,10 @@ CONTAINS
 
     ! Common variables
     IF (ASSOCIATED(mem%fract_snow%ptr)) RETURN
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarGroupStart('hydro_'//TRIM(suffix),dt_update=0)
+#endif
 
     CALL jsb_add_var( mem, 'fract_snow', mem%fract_snow, &
       & hgrid, surface,                                                          &
@@ -846,6 +853,10 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarGroupEnd()
+#endif
 
     END SUBROUTINE Init_hydro_memory
 #endif
