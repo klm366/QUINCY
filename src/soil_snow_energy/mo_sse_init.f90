@@ -214,7 +214,9 @@ CONTAINS
     CALL InputVarGroupEnd()
     CALL InputOptAdd(AVar=var,var_file_name='surf_temp',fill_val=280._wp,valid_range=(/0._wp,1.e300_wp/),missing_val=0._wp)
     CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_monthly_year')
+    CALL timer_start(timer_input)
     CALL InputGetData(var=var,msg=TRIM(routine))
+    CALL timer_stop(timer_input)
     DO iblk=1,SIZE(t_srf_mon, DIM=3)
       CALL init_soil_temperature(                     &
         & soil_e%levels(:),                           &
