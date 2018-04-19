@@ -329,7 +329,6 @@ PROGRAM jsb4_driver
 
 #ifdef HAVE_MOFFLEDAC
     CALL timer_start(timer_input)
-call message('',TRIM(InputTimeString(.FALSE.))//': Updating input')
     CALL InputUpdate()
     CALL timer_stop(timer_input)
 #endif
