@@ -549,7 +549,6 @@ CONTAINS
  
     USE mo_jsb_time,          ONLY: is_time_experiment_start
     USE mo_jsb_time_iface,    ONLY: is_time_restart
-    USE mo_carbon_init,       ONLY: carbon_start_cpools
     USE mo_util,              ONLY: one_of
     USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
 
@@ -589,37 +588,6 @@ call message(trim(routine),TRIM(InputTimeString(.FALSE.))//': Updating input')
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
-
-    !-----------------------------------
-    ! Do stuff at beginning of totally new experiment or after restart from existing experiment
-    IF (is_time_experiment_start() .OR. is_time_restart()) THEN
-
-      ! Iterate over tiles
-      tile => model%Get_top_tile()
-      IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
-
-      DO WHILE (ASSOCIATED(tile))
-
-        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-          tile => model%Goto_next_tile()
-          CYCLE
-        END IF
-
-        ! Read carbon pools from file
-        IF (dsl4jsb_Config(CARBON_)%read_cpools) THEN
-          IF  (one_of(tile%process_action(CARBON_), &
-            &         (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0 &
-            & ) THEN                                      ! R: cpool file also contains aggregated tiles!
-            CALL carbon_start_cpools(tile)
-          END IF
-        END IF
-
-        tile => model%Goto_next_tile()
-      END DO
-
-    END IF ! start or restart of experiment
-    !
-    !-----------------------------------
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

@@ -155,6 +155,9 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                     break
     # If both hashes are equal, don't generate new file
     if hasher.hexdigest() == hash:
+        # Since input file hasn't changed, reset its modification time to the one
+        # of the output file, so that make doesn't think the input file is newer
+        os.utime(inputfile, (os.path.getatime(inputfile), os.path.getmtime(outputfile)))
         if verbose:
             print('File hasn"t changed: ' + os.path.realpath(os.path.abspath(inputfile)))
         return

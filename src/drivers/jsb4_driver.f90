@@ -13,7 +13,7 @@ PROGRAM jsb4_driver
 
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
-  USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init
+  USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday
@@ -318,6 +318,8 @@ PROGRAM jsb4_driver
     ENDDO
 
   ENDIF
+
+  CALL jsbach_init_after_restart(model_id)
 
   CALL init_output
   CALL open_output_streams
