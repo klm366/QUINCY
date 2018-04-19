@@ -51,7 +51,7 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_base,           ONLY: jsbach
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_time,           ONLY: get_date_components
   USE mo_jsb_class,          ONLY: get_model
@@ -597,55 +597,55 @@ CONTAINS
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
-      CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io)
-      CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io)
-      CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io)
-      CALL p_bcast(forcing_options%type_of_qair_forcing, p_io)
-      CALL p_bcast(forcing_options%conv_CO2_2_MassRatio, p_io)
-      CALL p_bcast(forcing_options%heightWind, p_io)
-      CALL p_bcast(forcing_options%heightHumidity, p_io)
+      CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%type_of_qair_forcing, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%conv_CO2_2_MassRatio, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%heightWind, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%heightHumidity, p_io, mpi_comm)
 
       ! other namelist parameters
-      CALL p_bcast(forcing_temp_file_prefix, p_io)
-      CALL p_bcast(forcing_temp_frequ, p_io)
-      CALL p_bcast(forcing_temp_const_tmin, p_io)
-      CALL p_bcast(forcing_temp_const_tmax, p_io)
-      CALL p_bcast(forcing_temp_ocean, p_io)
-      CALL p_bcast(forcing_temp_unit, p_io)
+      CALL p_bcast(forcing_temp_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_temp_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_temp_const_tmin, p_io, mpi_comm)
+      CALL p_bcast(forcing_temp_const_tmax, p_io, mpi_comm)
+      CALL p_bcast(forcing_temp_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_temp_unit, p_io, mpi_comm)
 
-      CALL p_bcast(forcing_precip_file_prefix, p_io)
-      CALL p_bcast(forcing_precip_frequ, p_io)
-      CALL p_bcast(forcing_precip_const_precip, p_io)
-      CALL p_bcast(forcing_precip_ocean, p_io)
-      CALL p_bcast(forcing_precip_unit, p_io)
+      CALL p_bcast(forcing_precip_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_precip_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_precip_const_precip, p_io, mpi_comm)
+      CALL p_bcast(forcing_precip_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_precip_unit, p_io, mpi_comm)
 
-      CALL p_bcast(forcing_sw_file_prefix, p_io)
-      CALL p_bcast(forcing_sw_frequ, p_io)
-      CALL p_bcast(forcing_sw_ocean, p_io)
-      CALL p_bcast(forcing_sw_unit, p_io)
+      CALL p_bcast(forcing_sw_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_sw_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_sw_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_sw_unit, p_io, mpi_comm)
 
-      CALL p_bcast(forcing_lw_file_prefix, p_io)
-      CALL p_bcast(forcing_lw_frequ, p_io)
-      CALL p_bcast(forcing_lw_ocean, p_io)
-      CALL p_bcast(forcing_lw_unit, p_io)
+      CALL p_bcast(forcing_lw_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_lw_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_lw_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_lw_unit, p_io, mpi_comm)
 
-      CALL p_bcast(forcing_co2_file_prefix, p_io)
-      CALL p_bcast(forcing_co2_frequ, p_io)
-      CALL p_bcast(forcing_co2_const_co2, p_io)
-      CALL p_bcast(forcing_co2_ocean, p_io)
-      CALL p_bcast(forcing_co2_unit, p_io)
+      CALL p_bcast(forcing_co2_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_co2_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_co2_const_co2, p_io, mpi_comm)
+      CALL p_bcast(forcing_co2_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_co2_unit, p_io, mpi_comm)
 
-      CALL p_bcast(forcing_wind_file_prefix, p_io)
-      CALL p_bcast(forcing_wind_frequ, p_io)
-      CALL p_bcast(forcing_wind_const_wspeed, p_io)
-      CALL p_bcast(forcing_wind_ocean, p_io)
-      CALL p_bcast(forcing_wind_unit, p_io)
+      CALL p_bcast(forcing_wind_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_wind_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_wind_const_wspeed, p_io, mpi_comm)
+      CALL p_bcast(forcing_wind_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_wind_unit, p_io, mpi_comm)
 
-      CALL p_bcast(forcing_qair_file_prefix, p_io)
-      CALL p_bcast(forcing_qair_frequ, p_io)
-      CALL p_bcast(forcing_qair_const_rh, p_io)
-      CALL p_bcast(forcing_qair_ocean, p_io)
-      CALL p_bcast(forcing_qair_unit, p_io)
+      CALL p_bcast(forcing_qair_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_qair_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
+      CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -782,7 +782,7 @@ CONTAINS
         ENDIF
 
         IF(my_process_is_mpi_parallel()) THEN
-          CALL p_bcast(hlp_r, p_io)
+          CALL p_bcast(hlp_r, p_io, mpi_comm)
         ENDIF
 
         forcing_input_variable%data_read(:,:,1) = hlp_r(1)
@@ -843,8 +843,8 @@ CONTAINS
       ENDIF
 
       IF(my_process_is_mpi_parallel()) THEN
-        CALL p_bcast(forcing_input_variable%currentDayStart, p_io)
-        CALL p_bcast(forcing_input_variable%currentDayEnd, p_io)
+        CALL p_bcast(forcing_input_variable%currentDayStart, p_io, mpi_comm)
+        CALL p_bcast(forcing_input_variable%currentDayEnd, p_io, mpi_comm)
       ENDIF
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
