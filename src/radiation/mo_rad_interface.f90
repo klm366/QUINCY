@@ -106,10 +106,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_radiation::return_ptr)
-
-    return_ptr%name = 'surface_radiation'
-    return_ptr%process_id = RAD_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_radiation', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_radiation
 
@@ -125,10 +122,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_radiation_par::return_ptr)
-
-    return_ptr%name = 'radiation_par'
-    return_ptr%process_id = RAD_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='radiation_par', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_radiation_par
   
@@ -144,10 +138,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_albedo::return_ptr)
-
-    return_ptr%name = 'albedo'
-    return_ptr%process_id = RAD_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='albedo', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_albedo
 

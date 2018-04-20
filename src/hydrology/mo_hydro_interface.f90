@@ -184,10 +184,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_hydrology::return_ptr)
-
-    return_ptr%name = 'surface_hydrology'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_hydrology
   
@@ -203,10 +200,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_soil_properties::return_ptr)
-
-    return_ptr%name = 'soil_properties'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='soil_properties', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_properties
   
@@ -222,10 +216,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_soil_hydrology::return_ptr)
-
-    return_ptr%name = 'soil_hydrology'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='soil_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_hydrology
   
@@ -241,10 +232,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_unstressed', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_unstressed
   
@@ -260,10 +248,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_stressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_stressed'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_stressed', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_stressed
   
@@ -279,10 +264,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_evaporation::return_ptr)
-
-    return_ptr%name = 'evaporation'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='evaporation', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_evaporation
   
@@ -298,10 +280,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_snow_and_ice_hydrology::return_ptr)
-
-    return_ptr%name = 'snow_ice_hydrology'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='snow_ice_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snow_and_ice_hydrology
   
@@ -317,10 +296,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_snow_and_skin_fraction::return_ptr)
-
-    return_ptr%name = 'snow_and_skin_fraction'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='snow_and_skin_fraction', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snow_and_skin_fraction
 
@@ -336,10 +312,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_water_balance::return_ptr)
-
-    return_ptr%name = 'water_balance'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='water_balance', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_water_balance
   

@@ -103,10 +103,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_energy::return_ptr)
-
-    return_ptr%name = 'surface_energy'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_energy', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_energy
 
@@ -122,10 +119,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_snowmelt_correction::return_ptr)
-
-    return_ptr%name = 'snowmelt_correction'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='snowmelt_correction', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snowmelt_correction
 
@@ -141,10 +135,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_asselin_filter::return_ptr)
-
-    return_ptr%name = 'asselin_filter'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='asselin_filter', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_asselin_filter
 
@@ -160,10 +151,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_fluxes::return_ptr)
-
-    return_ptr%name = 'surface_fluxes'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_fluxes', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_fluxes
   
