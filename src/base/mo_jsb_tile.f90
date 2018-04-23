@@ -238,6 +238,11 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+#ifdef HAVE_MOFFLEDAC
+    USE mo_timer,               ONLY: timer_start, timer_stop, timer_input
+    USE mo_input,               ONLY: InputFileAdd, InputVarAdd, InputOptAdd, InputVarGroupStart, InputVarGroupEnd, InputGetData, &
+                                      InputVarReleaseMem, input_file_list, input_var_list
+#endif
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -246,6 +251,11 @@ CONTAINS
     LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: in_var_groups
 
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+    TYPE (input_var_list),  POINTER :: vfrc, vfrc_max
+    INTEGER                         :: st, en
+#endif
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
@@ -435,6 +445,42 @@ CONTAINS
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputFileAdd(TRIM(this%fract_filename),file_ref=IFile,dt_file=0)
+      CALL InputVarGroupStart('tile_'//TRIM(suffix))
+      CALL InputVarAdd('nproma,nblock',return_pointer,'loc_'//TRIM(prefix)//'_fract_'    //TRIM(suffix), &
+                       IFile,var_ref=vfrc,    dt_update=0)
+      CALL InputVarAdd('nproma,nblock',tmp_fract,     'loc_'//TRIM(prefix)//'_fract_max_'//TRIM(suffix), &
+                       IFile,var_ref=vfrc_max,dt_update=0)
+      CALL InputVarGroupEnd()
+      name_loc = TRIM(this%fract_varname)
+      st = 1; en = LEN_TRIM(name_loc)
+      IF (name_loc == '') THEN
+        name_loc = TRIM(prefix)//'_fract_'//TRIM(suffix)
+        st = 1; en = LEN_TRIM(name_loc)
+        IF (prefix == '') st = 2
+        IF (suffix == '') en = en - 1
+      ENDIF
+      CALL InputOptAdd(AVar=vfrc,var_file_name=name_loc(st:en),fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+      name_loc = TRIM(this%fract_varname)//'_max'
+      st = 1; en = LEN_TRIM(name_loc)
+      IF (TRIM(this%fract_varname) == '') THEN
+        name_loc = TRIM(prefix)//'_fract_max_'//TRIM(suffix)
+        st = 1; en = LEN_TRIM(name_loc)
+        IF (prefix == '') st = 2
+        IF (suffix == '') en = en - 1
+      ENDIF
+      CALL InputOptAdd(AVar=vfrc_max,var_file_name=name_loc(st:en), &
+                       def_val=1._wp,action_var_miss='ignore',fill_val=1._wp,valid_range=(/0._wp,1._wp/))
+      CALL timer_start(timer_input)
+      CALL InputGetData(msg=TRIM(routine))
+      CALL timer_stop(timer_input)
+      CALL this%Set_fraction(fract=return_pointer(:,:))
+      CALL this%Set_fraction(fract_max=tmp_fract(:,:))
+      CALL InputVarReleaseMem(var_ref=vfrc)
+      CALL InputVarReleaseMem(var_ref=vfrc_max)
+#else
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
       IF (this%fract_varname == '') THEN
@@ -468,6 +514,8 @@ CONTAINS
       END IF
 
       CALL input_file%Close()
+
+#endif
 
     END IF
 
@@ -505,7 +553,9 @@ CONTAINS
 
     END DO
 
+#ifndef HAVE_MOFFLEDAC
     DEALLOCATE(tmp_fract)
+#endif
 
   END SUBROUTINE Init_tile
 
