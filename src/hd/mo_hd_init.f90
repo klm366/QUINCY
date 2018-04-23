@@ -24,6 +24,11 @@ MODULE mo_hd_init
   USE mo_decomposition_tools, ONLY: get_local_index
   USE mo_sync,                ONLY: global_max
   USE mo_impl_constants,      ONLY: SEA_BOUNDARY
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,             ONLY: timer_start, timer_stop, timer_input
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
+                                  InputGetData, InputVarReleaseMem, input_file_list, input_var_list
+#endif
 
   dsl4jsb_Use_processes HD_
   dsl4jsb_Use_config(HD_)
@@ -55,6 +60,11 @@ CONTAINS
 
     TYPE(t_input_file)  :: input_file
 
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+    TYPE (input_var_list),  POINTER :: var
+#endif
+
     INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx 
     INTEGER :: nblks, nproma
 
@@ -67,6 +77,7 @@ CONTAINS
     dsl4jsb_Get_config(HD_)
 
     IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    NULLIFY(var)
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -90,6 +101,23 @@ CONTAINS
       ! Maximum number of inflow neighbor cells
       hd__mem%nneigh = 6
 
+#ifdef HAVE_MOFFLEDAC
+      CALL InputFileAdd(TRIM(dsl4jsb_Config(HD_)%bc_filename),file_ref=IFile,dt_file=0)
+      CALL InputDimAdd('nneigh',Extent=hd__mem%nneigh)
+      CALL InputVarGroupStart('hd_'//trim(tile%name))
+      CALL InputVarAdd('nproma,nneigh,nblock',return_pointer3d,'cells_up'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
+      CALL InputVarGroupEnd()
+      CALL InputOptAdd(AVar=var,var_file_name='CELLS_UP')
+      CALL InputOptAdd(var_name='hd_hd_mask_'//TRIM(tile%name),var_file_name='MASK',AFile=IFile)
+      CALL InputOptAdd(var_name='hd_ret_overlflow_' //TRIM(tile%name),var_file_name='ALF_K',AFile=IFile)
+      CALL InputOptAdd(var_name='hd_nres_overlflow_'//TRIM(tile%name),var_file_name='ALF_N',AFile=IFile)
+      CALL InputOptAdd(var_name='hd_ret_riverflow_' //TRIM(tile%name),var_file_name='ARF_K',AFile=IFile)
+      CALL InputOptAdd(var_name='hd_nres_riverflow_'//TRIM(tile%name),var_file_name='ARF_N',AFile=IFile)
+      CALL InputOptAdd(var_name='hd_ret_baseflow_'  //TRIM(tile%name),var_file_name='AGF_K',AFile=IFile)
+      CALL timer_start(timer_input)
+      CALL InputGetData(msg=TRIM(routine))
+      CALL timer_stop(timer_input)
+#else
       !CALL message(TRIM(routine), 'Initializing HD fractions for tile '//TRIM(tile%name)//&
       !  &                         ' from '//TRIM(dsl4jsb_Config(HD_)%fract_filneame))
       !input_file = jsb_netcdf_open_input('TRIM(dsl4jsb_Config(HD_)%fract_filneame', model%id)
@@ -133,13 +161,17 @@ CONTAINS
         & start_extdim=1, end_extdim=hd__mem%nneigh,    &
         & extdim_name='nneigh')
 
-        ! find local idices of grid cells upstream
-        nproma = grid%nproma
-        nblks  = grid%nblks
-        ALLOCATE(dsl4jsb_var_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
-        ALLOCATE(dsl4jsb_var_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
-        dsl4jsb_var_ptr(HD_,nidx_upstream) = -1
-        dsl4jsb_var_ptr(HD_,bidx_upstream)  = -1
+      CALL input_file%Close()
+
+#endif
+
+      ! find local idices of grid cells upstream
+      nproma = grid%nproma
+      nblks  = grid%nblks
+      ALLOCATE(dsl4jsb_var_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      ALLOCATE(dsl4jsb_var_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      dsl4jsb_var_ptr(HD_,nidx_upstream) = -1
+      dsl4jsb_var_ptr(HD_,bidx_upstream)  = -1
 
       blks = get_blk_start(grid)
       blke = get_blk_end(grid)
@@ -165,24 +197,42 @@ CONTAINS
         END DO
       END DO
 
-      CALL input_file%Close()
-
     CASE ('weighted_to_coast')
 
+#ifdef HAVE_MOFFLEDAC
+      CALL InputFileAdd(TRIM(grid%filename),file_ref=IFile,dt_file=0)
+      CALL InputVarGroupStart('hd_'//trim(tile%name))
+      CALL InputVarAdd('nproma,nblock',cell_sea_land_mask,'cell_sea_land_mask_'//TRIM(tile%name),IFile,var_ref=var,dt_update=0)
+      CALL InputVarGroupEnd()
+      CALL InputOptAdd(fill_val=0._wp,valid_range=(/0._wp,1._wp/),AVar=var,var_file_name='cell_sea_land_mask')
+      CALL timer_start(timer_input)
+      CALL InputGetData(msg=TRIM(routine))
+      CALL timer_stop(timer_input)
+#else
       input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
 
       ! coastal ocean cells
       cell_sea_land_mask => input_file%Read_2d( &
         & variable_name='cell_sea_land_mask')
+
+#endif
       dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
         & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+
+#ifndef HAVE_MOFFLEDAC
       DEALLOCATE(cell_sea_land_mask)
+#endif
 
       CALL input_file%Close()
 
     CASE ('zero')
 
     END SELECT
+
+#ifdef HAVE_MOFFLEDAC
+    ! Clean up temporary variables (either cells up or cell_sea_land_mask depending on case above)
+    CALL InputVarReleaseMem(var_ref=var)
+#endif
 
   END SUBROUTINE hd_init_bc
 
