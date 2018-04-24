@@ -226,6 +226,9 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd
+#endif
 
     CLASS(t_carbon_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
@@ -249,6 +252,10 @@ CONTAINS
     !canopy_layer => Get_vgrid('canopy_layer')
 
     IF (.NOT. ASSOCIATED(mem%pseudo_temp%ptr)) THEN
+
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupStart('carbon_'//TRIM(suffix),dt_update=0)
+#endif
 
 ! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
       CALL jsb_add_var( mem, 'n_pseudo_temp', mem%N_pseudo_temp, &
@@ -1172,6 +1179,9 @@ CONTAINS
 !         & prefix, suffix,                                                                                                      &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
+#ifdef HAVE_MOFFLEDAC
+      CALL InputVarGroupEnd()
+#endif
 
     END IF
 
