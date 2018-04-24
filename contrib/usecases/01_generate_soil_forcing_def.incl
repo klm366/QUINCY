@@ -74,7 +74,7 @@ ncanopy=10
 canopy_layer_scheme="fapar"
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
-flag_tile_veg_dynamics="T" 
+veg_dynamics_scheme="population"
 
 flag_read_dC13="T"    # 
 flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)

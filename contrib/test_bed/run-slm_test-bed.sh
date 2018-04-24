@@ -42,7 +42,7 @@ canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standa
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"      # does also set "start_bareground"
+veg_dynamics_scheme="population" # none population cohort
 
 # soil model options
 soil_depth=5.7                  # meter
@@ -290,6 +290,7 @@ validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
 validateSBModelScheme="simple_0d simple_1d jsm"
 validateSBNLossScheme="none fixed dynamic"
+validateVegDynamicsScheme="none population cohort"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
@@ -312,10 +313,10 @@ validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
 validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
+validateUserConfigValues "$veg_dynamics_scheme" "$validateVegDynamicsScheme" "veg_dynamics_scheme"
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
-validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
@@ -515,7 +516,8 @@ changeNamelistValue bnf_scheme "$bnf_scheme"
 changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
-changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
+changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
+changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_bnf_scheme "$bnf_scheme" 
@@ -579,12 +581,6 @@ if [ $flag_sb_prescribe_po4 == T ]
     changeNamelistValue flag_sb_prescribe_po4 ".TRUE."
   else
     changeNamelistValue flag_sb_prescribe_po4 ".FALSE."
-fi
-if [ $flag_tile_veg_dynamics == T ]
-  then
-    changeNamelistValue flag_tile_veg_dynamics ".TRUE."
-  else
-    changeNamelistValue flag_tile_veg_dynamics ".FALSE."
 fi
 if [ $flag_t_resp_acclimation == T ]
   then

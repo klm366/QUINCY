@@ -256,6 +256,7 @@ CONTAINS
     !!
     !! SLM models: land, plant,soil (case 1) and canopy (case 2)
     SELECT CASE(TRIM(base_config%slm_model_name))
+
       !> 1.1 Land & Plant & Soil
       !!
       CASE('land','plant','soil')
@@ -264,64 +265,76 @@ CONTAINS
         target_cn_fine_root(:)        = target_cn_leaf(:) / root2leaf_cn
         target_np_fine_root(:)        = target_np_leaf(:) / root2leaf_np
 
-        !> start bareground with vegetation dynamics switched on
+        !> differ between vegetation dynamics schemes
         !! 
-        IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics)THEN
-          veg_pool%seed_bed%carbon      = lctlib%seed_size * 10.0_wp
-          dens_ind(:)                   = 0.0_wp
+        SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
+          !> start bareground with vegetation dynamics switched on: cohort scheme
+          !! 
+          CASE ("cohort")
+            !> @todo  add vegetation dynamics scheme cohort to veg_init
+            !! 
+          !> start bareground with vegetation dynamics switched on: population scheme
+          !! 
+          CASE ("population")
+            veg_pool%seed_bed%carbon      = lctlib%seed_size * 10.0_wp
+            dens_ind(:)                   = 0.0_wp
 
-          veg_pool%seed_bed%nitrogen    = veg_pool%seed_bed%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-          veg_pool%seed_bed%phosphorus  = veg_pool%seed_bed%nitrogen  / lctlib%np_leaf
+            veg_pool%seed_bed%nitrogen    = veg_pool%seed_bed%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
+            veg_pool%seed_bed%phosphorus  = veg_pool%seed_bed%nitrogen  / lctlib%np_leaf
 
-          ! pool%seed_bed%carbon13
-          IF(lctlib%ps_pathway == ic3phot)THEN
-             hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-          ELSE
-             hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-          ENDIF
-          veg_pool%seed_bed%carbon13 = veg_pool%seed_bed%carbon * &
-                                       calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
+            ! pool%seed_bed%carbon13
+            IF(lctlib%ps_pathway == ic3phot)THEN
+               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+            ELSE
+               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+            ENDIF
+            veg_pool%seed_bed%carbon13 = veg_pool%seed_bed%carbon * &
+                                         calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
 
-          ! pool%seed_bed%carbon14
-          IF(lctlib%ps_pathway == ic3phot)THEN
-             hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-          ELSE
-             hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-          ENDIF
-          veg_pool%seed_bed%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
-                                       veg_pool%seed_bed%carbon 
+            ! pool%seed_bed%carbon14
+            IF(lctlib%ps_pathway == ic3phot)THEN
+               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+            ELSE
+               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+            ENDIF
+            veg_pool%seed_bed%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
+                                         veg_pool%seed_bed%carbon 
 
-          veg_pool%seed_bed%nitrogen15  = veg_pool%seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+            veg_pool%seed_bed%nitrogen15  = veg_pool%seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
-        !> no vegetation dynamics and not starting with bare ground
-        !! 
-        ELSE  
-          veg_pool%reserve%carbon      = 5.0_wp
-          dens_ind(:)                  = 0.4_wp
+          !> no vegetation dynamics and not starting with bare ground
+          !! 
+          CASE ("none")
+            veg_pool%reserve%carbon      = 5.0_wp
+            dens_ind(:)                  = 0.4_wp
 
-          veg_pool%reserve%nitrogen    = veg_pool%reserve%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-          veg_pool%reserve%phosphorus  = veg_pool%reserve%nitrogen  / lctlib%np_leaf
+            veg_pool%reserve%nitrogen    = veg_pool%reserve%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
+            veg_pool%reserve%phosphorus  = veg_pool%reserve%nitrogen  / lctlib%np_leaf
 
-          ! pool%reserve%carbon13
-          IF(lctlib%ps_pathway == ic3phot)THEN
-             hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-          ELSE
-             hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-          ENDIF
-          veg_pool%reserve%carbon13 = veg_pool%reserve%carbon * &
-                                      calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
+            ! pool%reserve%carbon13
+            IF(lctlib%ps_pathway == ic3phot)THEN
+               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+            ELSE
+               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+            ENDIF
+            veg_pool%reserve%carbon13 = veg_pool%reserve%carbon * &
+                                        calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
 
-          ! pool%reserve%carbon14
-          IF(lctlib%ps_pathway == ic3phot)THEN
-             hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-          ELSE
-             hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-          ENDIF
-          veg_pool%reserve%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
-                                      veg_pool%reserve%carbon 
+            ! pool%reserve%carbon14
+            IF(lctlib%ps_pathway == ic3phot)THEN
+               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+            ELSE
+               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+            ENDIF
+            veg_pool%reserve%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
+                                        veg_pool%reserve%carbon 
 
-          veg_pool%reserve%nitrogen15 = veg_pool%reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-        END IF
+            veg_pool%reserve%nitrogen15 = veg_pool%reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          CASE DEFAULT
+            WRITE(message_text,'(2a)') 'not a valid veg_dynamics_scheme: ',TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)
+            CALL finish("mo_veg_config_class:init_veg_config",message_text) 
+        ENDSELECT
+
 
       !> 1.2 Canopy & Test_Canopy
       !!
@@ -345,11 +358,12 @@ CONTAINS
         leaf_nitrogen_cl(:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
         lai_cl(:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
 
+
       !> 1.3 Default - error catching
       !!
       CASE DEFAULT
-        CALL finish('veg_init','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
-     END SELECT
+        CALL finish('veg_init','Invalid SLM model name. Use either land, plant, soil, canopy or test_canopy.')
+     ENDSELECT
 
 
     !> 2.0 vegetation init for all SLM models

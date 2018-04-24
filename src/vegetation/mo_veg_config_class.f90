@@ -33,8 +33,10 @@ MODULE mo_veg_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
     CHARACTER(15)    :: bnf_scheme                 !< select scheme to simulate BNF (biological nitrogen fixation)
-                                                   ! "none|fixed|standard|resistance|optimal"   
-    LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
+                                                   !! "none fixed standard optimal resistance unlimited"   
+    CHARACTER(15)    :: veg_dynamics_scheme        !< select scheme to calculate within-tile vegetation dynamics + start from bareground
+                                                   !! none: constant mortality
+                                                   !! "none population cohort"   
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
     LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
    CONTAINS
@@ -55,27 +57,30 @@ CONTAINS
 !    using the old JSBACH3 functions instead of wrappers implemented in JSBACH4 -> mo_jsb_namelist_iface
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_veg_config), INTENT(inout) :: config    !< config type for veg
-
+    ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    INTEGER       :: plant_functional_type_id
-    CHARACTER(15) :: bnf_scheme       
-    LOGICAL       :: flag_tile_veg_dynamics
-    LOGICAL       :: flag_optimal_Nleaf
-    LOGICAL       :: flag_optimal_allocation
+    CHARACTER(len=filename_max) :: ic_filename,   &
+                                   bc_filename
+    INTEGER                     :: plant_functional_type_id
+    CHARACTER(15)               :: bnf_scheme       
+    CHARACTER(15)               :: veg_dynamics_scheme
+    LOGICAL                     :: flag_optimal_Nleaf
+    LOGICAL                     :: flag_optimal_allocation
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /vegetation_ctl/       & 
-         active,                 &
-         ic_filename,            &
-         bc_filename,            &
-      bnf_scheme,                   & 
+      active,                       &
+      ic_filename,                  &
+      bc_filename,                  &
       plant_functional_type_id,     &
-      flag_tile_veg_dynamics,       &
+      bnf_scheme,                   & 
+      veg_dynamics_scheme,          &
       flag_optimal_Nleaf,           &
       flag_optimal_allocation
 
@@ -85,14 +90,14 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    active              = .TRUE.
-    bc_filename         = 'bc_land_phys.nc'
-    ic_filename         = 'ic_land_phys.nc'
-    bnf_scheme                     = "standard"  ! standard std_plus_costs resistance optimal
+    active                         = .TRUE.
+    bc_filename                    = 'bc_land_phys.nc'
+    ic_filename                    = 'ic_land_phys.nc'
     plant_functional_type_id       = 1
-    flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
+    bnf_scheme                     = "standard"
+    veg_dynamics_scheme            = "population"
+    flag_optimal_Nleaf             = .FALSE.
+    flag_optimal_allocation        = .FALSE.
 
     ! read the namelist
     ! &VEGETATION_CTL
@@ -111,13 +116,21 @@ CONTAINS
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
     ENDSELECT
 
+    ! check input for veg_dynamics scheme
+    SELECT CASE (TRIM(veg_dynamics_scheme))
+     CASE ("none","population")
+     CASE DEFAULT
+       WRITE(message_text,'(2a)') 'currently not implemented veg_dynamics_scheme: ',veg_dynamics_scheme
+       CALL finish("mo_veg_config_class:init_veg_config",message_text) 
+    ENDSELECT
+
     ! pass values as read from file
-    config%active              = active
-    config%ic_filename         = ic_filename
-    config%bc_filename         = bc_filename
-    config%bnf_scheme                    = TRIM(bnf_scheme)
+    config%active                        = active
+    config%ic_filename                   = ic_filename
+    config%bc_filename                   = bc_filename
     config%pft_id                        = plant_functional_type_id
-    config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
+    config%bnf_scheme                    = TRIM(bnf_scheme)
+    config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf
     config%flag_optimal_allocation       = flag_optimal_allocation
 

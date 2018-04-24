@@ -143,25 +143,33 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-    fpc(:) =  calc_foliage_projective_cover_tile(options,lctlib,veg_pool%sap_wood%carbon(:),& 
-                                                 dens_ind(:),height(:),diameter(:))
 
-    !> 1.0 Calculate mortality rate and veg\%litterfall
+
+    !> 1.0 Calculate foliage projective cover if vegetation dynamics are simulated, i.e., not needed for constant mortality
     !! 
-    !! retruns constant mortality_rate if flag_tile_veg_dynamics == false \n
-    !! but calcs mortality_rate dynamically if flag_tile_veg_dynamics == true
-    CALL calc_veg_mortality(options                                     , & ! in
-                            lctlib                                      , & 
-                            dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics , &
-                            an_boc_tvegdyn_mavg(:)                      , &
-                            net_growth_tvegdyn_mavg(:)                  , &
-                            lai_tvegdyn_mavg(:)                         , &
-                            fpc(:)                                      , &
-                            veg_pool                                    , &
-                            veg_litterfall                              , & ! inout
-                            mortality_rate(:)                           )   ! out
+    SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
+      CASE ("population","cohort")
+        fpc(:) = calc_foliage_projective_cover_tile(options,lctlib,veg_pool%sap_wood%carbon(:), & 
+                                                    dens_ind(:),height(:),diameter(:))
+    ENDSELECT
 
-    !> 1.1 Calculate stand harvest_rate and veg\%litterfall
+
+    !> 2.0 Calculate mortality rate and veg\%litterfall
+    !! 
+    !! retruns constant mortality_rate if veg_dynamics_scheme == none \n
+    !! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
+    CALL calc_veg_mortality(options                                         , & ! in
+                            lctlib                                          , & 
+                            TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
+                            an_boc_tvegdyn_mavg(:)                          , &
+                            net_growth_tvegdyn_mavg(:)                      , &
+                            lai_tvegdyn_mavg(:)                             , &
+                            fpc(:)                                          , &
+                            veg_pool                                        , &
+                            veg_litterfall                                  , & ! inout
+                            mortality_rate(:)                               )   ! out
+
+    !> 2.1 Calculate stand harvest_rate and veg\%litterfall
     !! 
     IF(base_config%l_do_stand_replacing_harvest)THEN 
        CALL calc_veg_harvest(options                                     , & ! in
@@ -171,35 +179,36 @@ CONTAINS
     ENDIF
 
 
-    !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
+    !> 3.0 with vegetation dynamics turned on (veg_dynamics_scheme /= none)
     !! 
-    IF(dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics.AND..NOT.base_config%l_do_stand_replacing_harvest) THEN 
+    SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
+    CASE ("population","cohort")
+      IF(.NOT. base_config%l_do_stand_replacing_harvest) THEN 
+        !> 3.1 Calculate establishment_rate and veg\%establishment
+        !! 
+        CALL calc_veg_establishment(options                         , & ! in
+                                    lctlib                          , & 
+                                    dsl4jsb_Config(ASSIMI_)%ncanopy , &
+                                    w_soil_root_theta(:)            , &
+                                    growing_season(:)               , &
+                                    t_air_week_mavg(:)              , &
+                                    fpc(:)                          , &
+                                    rfr_ratio_boc_tvegdyn_mavg(:)   , &
+                                    veg_pool%seed_bed               , &
+                                    veg_establishment               )   ! out
 
-      !> 2.1 Calculate establishment_rate and veg\%establishment
-      !! 
-      CALL calc_veg_establishment(options                         , & ! in
-                                  lctlib                          , & 
-                                  dsl4jsb_Config(ASSIMI_)%ncanopy , &
-                                  w_soil_root_theta(:)            , &
-                                  growing_season(:)               , &
-                                  t_air_week_mavg(:)              , &
-                                  fpc(:)                          , &
-                                  rfr_ratio_boc_tvegdyn_mavg(:)   , &
-                                  veg_pool%seed_bed               , &
-                                  veg_establishment               )   ! out
-
-      !> 2.2 Calculate change in individual density from mortality and establishment
-      !! 
-      IF(lctlib%growthform == itree) THEN
-         delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size , & 
-                                                 dens_ind(:)      , &
-                                                 mortality_rate(:), &
-                                                 veg_establishment%carbon(:)) 
-      ELSE 
-         delta_dens_ind(:) = 0.0_wp
-      ENDIF 
-
-    END IF  ! dsl4jsb_Config(VEG_)%flag_tile_veg_dynamics
+        !> 3.2 Calculate change in individual density from mortality and establishment
+        !! 
+        IF(lctlib%growthform == itree) THEN
+           delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size , & 
+                                                   dens_ind(:)      , &
+                                                   mortality_rate(:), &
+                                                   veg_establishment%carbon(:)) 
+        ELSE 
+           delta_dens_ind(:) = 0.0_wp
+        ENDIF
+      ENDIF
+    ENDSELECT
 
 ! Pass back values to process memory
 #define Passback_veg_pool
@@ -211,6 +220,7 @@ CONTAINS
 #undef Passback_veg_establishment
 
   END SUBROUTINE update_veg_dynamics
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
@@ -243,24 +253,27 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)             :: fpc                         !< foliage projective cover (fraction)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)             :: crown_area,lai_ind 
+    REAL(wp), DIMENSION(options%nc)             :: crown_area, &
+                                                   lai_ind 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_foliage_projective_cover_tile'
 
+
     WHERE(lctlib%growthform == itree .AND. dens_ind(:) .GT. eps4)
-       ! crown area derived from diameter following Sitch et al. 2003; eq 4
-       crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
-       ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by 
-       !! its crown area 
-       lai_ind(:) = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib%wood_density / height(:) * lctlib%k_latosa / & 
-                    crown_area(:)
-       ! foliage projective cover is then the product of density and individual crown area
-       fpc(:) = crown_area(:) * dens_ind(:) * (1._wp - exp(-0.5_wp * lai_ind(:)))
+      ! crown area derived from diameter following Sitch et al. 2003; eq 4
+      crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
+      ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by 
+      ! its crown area 
+      lai_ind(:) = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib%wood_density / height(:) * lctlib%k_latosa / & 
+                  crown_area(:)
+      ! foliage projective cover is then the product of density and individual crown area
+      fpc(:) = crown_area(:) * dens_ind(:) * (1._wp - exp(-0.5_wp * lai_ind(:)))
     ELSEWHERE
-       lai_ind(:) = 0.0_wp 
-       fpc(:) = 0.0_wp
+      lai_ind(:) = 0.0_wp 
+      fpc(:)     = 0.0_wp
     ENDWHERE
    
   END FUNCTION calc_foliage_projective_cover_tile
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
@@ -272,7 +285,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_veg_mortality(options                   , &
                                 lctlib                    , &
-                                flag_tile_veg_dynamics    , &
+                                veg_dynamics_scheme       , &
                                 an_boc_tvegdyn_mavg       , &
                                 net_growth_tvegdyn_mavg   , &
                                 lai_tvegdyn_mavg          , &
@@ -292,7 +305,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),        INTENT(in)    :: options                    !< model options
     TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
-    LOGICAL,                         INTENT(in)    :: flag_tile_veg_dynamics
+    CHARACTER(len=*),                INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population cohort
     REAL(wp), DIMENSION(options%nc), INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (µmol / m2 / s)
                                                       net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (µmol / m2 / s) 
                                                       lai_tvegdyn_mavg,        & !< long-term LAI of the plant
@@ -309,11 +322,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
 
 
-    IF(flag_tile_veg_dynamics) THEN
-
-       !> 1.0 mortality related to growth efficiency mortality 
-       !! 
-       WHERE(lai_tvegdyn_mavg(:) > eps8)
+    SELECT CASE (veg_dynamics_scheme)
+      CASE ("cohort")
+        !> @todo  add vegetation dynamics scheme cohort to calc_veg_mortality
+        !! 
+      CASE ("population")
+        !> 1.0 mortality related to growth efficiency mortality 
+        !! 
+        WHERE(lai_tvegdyn_mavg(:) > eps8)
           !> growth efficiency per unit leaf area in mol C / m2 LAI / yr
           !!
           greff(:) = net_growth_tvegdyn_mavg(:) / lai_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp
@@ -321,15 +337,15 @@ CONTAINS
           !!     below a minimum threshold mortality rises to 100%
           !!
           WHERE(greff(:) > min_greff)
-             greff_mortality_rate(:) = k1_mort_greff / (k2_mort_greff * greff(:) + 1.0_wp)
+            greff_mortality_rate(:) = k1_mort_greff / (k2_mort_greff * greff(:) + 1.0_wp)
           ELSEWHERE
-             greff_mortality_rate(:) = 1.0_wp / (k3_mort_greff * greff(:) + 1.0_wp)
+            greff_mortality_rate(:) = 1.0_wp / (k3_mort_greff * greff(:) + 1.0_wp)
           ENDWHERE
-       ENDWHERE 
- 
-       !> 1.2 self-thinning related mortality
-       !! 
-       self_thinning_mortality_rate(:) = MAX(fpc(:) - fpc_max,0.0_wp)
+        ENDWHERE 
+
+        !> 1.2 self-thinning related mortality
+        !! 
+        self_thinning_mortality_rate(:) = MAX(fpc(:) - fpc_max,0.0_wp)
                  
 !!       !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost \n
 !!       !! in mol / m2 LAI / year \n
@@ -341,30 +357,29 @@ CONTAINS
 !!                              + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light))
 !!       END WHERE
 
-       !> 1.3 quasi-stochastic background mortality
-       !!
-       SELECT CASE (lctlib%growthform)
-         CASE (itree)
+        !> 1.3 quasi-stochastic background mortality
+        !!
+        SELECT CASE (lctlib%growthform)
+          CASE (itree)
             bg_mortality_rate(:) = background_mort_rate_tree
-         CASE (igrass)
+          CASE (igrass)
             bg_mortality_rate(:) = background_mort_rate_grass
-       ENDSELECT
+        ENDSELECT
  
-       !> 1.4 total mortality is the sum of all mortality terms, and limited to one
-       !! 
-       mortality_rate(:) = MIN(greff_mortality_rate(:)+self_thinning_mortality_rate(:)+bg_mortality_rate(:),1.0_wp) & 
+        !> 1.4 total mortality is the sum of all mortality terms, and limited to one
+        !! 
+        mortality_rate(:) = MIN(greff_mortality_rate(:)+self_thinning_mortality_rate(:)+bg_mortality_rate(:),1.0_wp) & 
                            / one_year / one_day * dtime 
 
-    ELSE
-                       
-       SELECT CASE (lctlib%growthform)
-         CASE (itree)
+      CASE ("none")
+        SELECT CASE (lctlib%growthform)
+          CASE (itree)
             mortality_rate(:) = ((background_mort_rate_tree /  one_year) / one_day) * dtime
-         CASE (igrass)
+          CASE (igrass)
             mortality_rate(:) = ((background_mort_rate_grass / one_year) / one_day) * dtime
-       ENDSELECT 
-   
-   ENDIF
+        ENDSELECT
+    ENDSELECT ! veg_dynamics_scheme
+
 
     !> 2.0 calculate litter fall from mortality
     !!

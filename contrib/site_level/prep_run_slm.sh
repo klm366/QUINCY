@@ -112,27 +112,27 @@ ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
 # plant growth model options
-flag_optimal_Nleaf="F"          # optimal N leaf
-flag_optimal_allocation="F"     # optimal allocation
+flag_optimal_Nleaf="F"            # optimal N leaf
+flag_optimal_allocation="F"       # optimal allocation
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"      # does also set "start_bareground"
-flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
+veg_dynamics_scheme="population"  # none population cohort
+flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
-soil_depth=5.7                  # meters
-nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
+soil_depth=5.7                    # meters
+nsoil_layer=5                     # number of soil layers (default: 5 | min: 5 | max: 20)
 
 # JSM
-flag_sb_jsm_transport="F"       # ..
-flag_sb_jsm_litter_input="F"    # ..
-flag_sb_jsm_OM_sorption="F"     # ..
+flag_sb_jsm_transport="F"         # ..
+flag_sb_jsm_litter_input="F"      # ..
+flag_sb_jsm_OM_sorption="F"       # ..
 
 # simulation length & output
-simulation_length_number=30     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
-output_interval_pool="weekly"   # timestep daily weekly monthly yearly
-output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=1   # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
-output_end_last_day_year=30     # equal with or larger than option: output_start_first_day_year
+simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
+output_interval_pool="weekly"     # timestep daily weekly monthly yearly
+output_interval_flux="weekly"     # timestep daily weekly monthly yearly
+output_start_first_day_year=1     # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
+output_end_last_day_year=30       # equal with or larger than option: output_start_first_day_year
 
 # options for the forcingMode transient (only evaluated if forcingMode == transient)
 transient_spinup_start_year=1901      # default 1901; start year of spinup period
@@ -504,6 +504,7 @@ validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
 validateSBNLossScheme="none fixed dynamic"
+validateVegDynamicsScheme="none population cohort"
 validateSBModelScheme="simple_0d simple_1d jsm"
 validateQueue="all io BTM mpi_large io_perform"
 validateEmailNotification="yes no"
@@ -610,10 +611,10 @@ validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_scheme"
 validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
+validateUserConfigValues "$veg_dynamics_scheme" "$validateVegDynamicsScheme" "veg_dynamics_scheme"
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
-validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
@@ -1220,6 +1221,7 @@ changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme" 
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_bnf_scheme "$bnf_scheme" 
+changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
 if [ $flag_mycorrhiza == T ]
   then
     changeNamelistValue flag_mycorrhiza ".TRUE."
@@ -1273,12 +1275,6 @@ if [ $paramSensitivitySim == T ]
     changeNamelistValue set_parameter_values_from_file ".TRUE."
   else
     changeNamelistValue set_parameter_values_from_file ".FALSE."
-fi
-if [ $flag_tile_veg_dynamics == T ]
-  then
-    changeNamelistValue flag_tile_veg_dynamics ".TRUE."
-  else
-    changeNamelistValue flag_tile_veg_dynamics ".FALSE."
 fi
 if [ $flag_stand_harvest == T ]
   then

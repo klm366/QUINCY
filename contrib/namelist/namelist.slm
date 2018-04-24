@@ -1,11 +1,12 @@
 &VEGETATION_CTL
-  ! flags for the veg process
-  flag_tile_veg_dynamics=.FALSE.
+  ! vegetation process
+  ! flags
   flag_optimal_Nleaf=.FALSE.
   flag_optimal_allocation=.FALSE.
-  ! options for the vegetation
-  ! biological nitrogen fixation
+  !
+  ! options
   bnf_scheme="standard"
+  veg_dynamics_scheme="population"
   plant_functional_type_id=5
 /
 &ASSIMILATION_CTL

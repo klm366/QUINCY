@@ -48,7 +48,7 @@ canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standa
 flag_optimal_Nleaf="F"          # optimal N leaf
 flag_optimal_allocation="F"     # optimal allocation
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"      # does also set "start_bareground"
+veg_dynamics_scheme="population"
 flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
