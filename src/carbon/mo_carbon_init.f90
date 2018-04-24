@@ -153,6 +153,10 @@ CONTAINS
   END SUBROUTINE carbon_init_ic
 
   SUBROUTINE carbon_read_cpools(tile)
+#ifdef HAVE_MOFFLEDAC
+    USE mo_timer, ONLY: timer_start, timer_stop, timer_input
+    USE mo_input, ONLY: input_file_list, InputFileAdd, InputOptAdd, InputGetData
+#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -169,6 +173,10 @@ CONTAINS
     !  read_cpools
 
     TYPE(t_input_file) :: input_file
+
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+#endif
 
     INTEGER, PARAMETER :: npools = 21
     INTEGER            :: i
@@ -191,7 +199,16 @@ CONTAINS
     IF (.NOT. dsl4jsb_Config(CARBON_)%active) RETURN
 
     ! Initialize the C Pools
-
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(CARBON_)%ic_filename),file_ref=IFile,dt_file=0)
+    DO i=1,npools
+      CALL InputOptAdd(var_name='carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name),AFile=IFile, &
+                       valid_range=(/0._wp,1.e300_wp/),fill_val=0._wp)
+    ENDDO
+    CALL timer_start(timer_input)
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_input)
+#else
 
     CALL message(TRIM(routine), 'Reading carbon pools for tile '//TRIM(tile%name)// &
       &                         ' from '//TRIM(dsl4jsb_Config(CARBON_)%ic_filename))
@@ -270,6 +287,8 @@ CONTAINS
     END DO
 
     CALL input_file%Close()
+
+#endif
 
   END SUBROUTINE carbon_reaD_cpools
 
