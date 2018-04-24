@@ -100,10 +100,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>::return_ptr)
-
-    return_ptr%name = '<PROCESS_NAME_LOWER_CASE>_<TASK>'
-    return_ptr%process_id = <PROCESS_NAME_UPPER_CASE>
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='<PROCESS_NAME_LOWER_CASE>_<TASK>', process_id=<PROCESS_NAME_UPPER_CASE>, owner_model_id=model_id)
 
   END FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>
   

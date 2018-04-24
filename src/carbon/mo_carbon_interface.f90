@@ -81,10 +81,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_C_NPP_pot_allocation::return_ptr)
-
-    return_ptr%name = 'C_NPP_pot_allocation'
-    return_ptr%process_id = CARBON_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='C_NPP_pot_allocation', process_id=CARBON_, owner_model_id=model_id)
 
   END FUNCTION Create_task_C_NPP_pot_allocation
 

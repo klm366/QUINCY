@@ -87,10 +87,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_natural_disturbances::return_ptr)
-
-    return_ptr%name = 'natural_disturbances'
-    return_ptr%process_id = DISTURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='natural_disturbances', process_id=DISTURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_natural_disturbances
 
