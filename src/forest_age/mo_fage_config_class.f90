@@ -25,8 +25,6 @@ MODULE mo_fage_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_fage_config
     INTEGER                   :: max_age                        ! Maximum age tracked  
     INTEGER                   :: ncohorts                       ! number of cohorts
-    LOGICAL                   :: l_has_area_changes             ! Boolean used to control the apply_cohort_changes task
-    LOGICAL                   :: l_only_update_c_of_first_child ! Boolean used to control the apply_cohort_changes task
     CHARACTER(len=20)         :: cohort_scheme
     CHARACTER(len=20)         :: disturbance_distribution_scheme
   CONTAINS
@@ -95,9 +93,6 @@ CONTAINS
     config%cohort_scheme       = TRIM("static-equal")
 
     config%disturbance_distribution_scheme = TRIM("equal")
-
-    config%l_has_area_changes  = .FALSE.
-    config%l_only_update_c_of_first_child = .TRUE.
 
     ALLOCATE(fage_grid_levels(max_age))
 

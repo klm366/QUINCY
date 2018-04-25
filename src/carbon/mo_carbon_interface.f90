@@ -44,7 +44,6 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CARBON_)
-  dsl4jsb_Use_memory(FAGE_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -776,8 +775,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_config(FAGE_)
-
     LOGICAL :: l_isFirstChild
     REAL(wp), DIMENSION(options%nc)        :: source_fract
 
@@ -801,13 +798,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Get reference to variables for current block
-    dsl4jsb_Get_config(FAGE_)
-
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
-
+    IF(ANY(tile%parent_tile%l_delta_area_change(ics:ice, iblk))) THEN     
+      !TODO-JN: Achtung mit openmp geht das so nicht -> todo: vector wie in model_class 
       ! apply changes if required
-      IF((tile%Is_first_child()) .OR. (.NOT. dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child)) THEN
+      IF((tile%Is_first_child()) .OR. ANY(tile%l_update_c(ics:ice, iblk))) THEN
         ! a) TODO-JN-COHORTS what else to update? 
 
         ! b) update C states with deltas (+ reset C deltas to 0)
@@ -835,8 +829,6 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    dsl4jsb_Def_config(FAGE_)
-    dsl4jsb_Def_memory(FAGE_)
     dsl4jsb_Def_memory(CARBON_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -854,13 +846,10 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(FAGE_)
-    dsl4jsb_Get_memory(FAGE_)
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+    IF(ANY(tile%l_update_c(ics:ice, iblk))) THEN 
       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve_ta,             weighted_by_fract)

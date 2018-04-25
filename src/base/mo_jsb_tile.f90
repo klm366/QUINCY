@@ -428,6 +428,12 @@ CONTAINS
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE.
 
+    ALLOCATE(this%l_delta_area_change(hgrid%nproma, hgrid%nblks))
+    this%l_delta_area_change(:,:) = .FALSE.
+
+    ALLOCATE(this%l_update_c(hgrid%nproma, hgrid%nblks))
+    this%l_update_c(:,:) = .TRUE.
+
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (this%fract_varname == 'equal') THEN

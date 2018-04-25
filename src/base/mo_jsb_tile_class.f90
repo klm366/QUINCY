@@ -72,6 +72,8 @@ MODULE mo_jsb_tile_class
                                                                    !! fract_varname.
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
+    LOGICAL,                ALLOCATABLE    :: l_delta_area_change(:,:) !TODO-JN: probably nblks would be sufficient
+    LOGICAL,                ALLOCATABLE    :: l_update_c(:,:)          !         required dim only depends on parallelisation
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
     CLASS(t_jsb_memory_p),      POINTER    :: mem(:)
