@@ -224,21 +224,21 @@ CONTAINS
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
     IF(is_newyear()) THEN  ! year has changed - i.e. age - i.e. shift fractions!
-      dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
+      tile%l_delta_area_change(ics:ice, iblk) = .TRUE.
 
       ! Note that this update is done globally at the same time step (like the recalculation of maxLAI in PHENO), 
-      !  i.e. for different longitudes the updating happens at different local times 
-
-      ! Area changes upon ageing can have carbon consequences for all children
-      dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .FALSE.
+      !  i.e. for different longitudes the updating happens at different seasons etc 
 
       ! synchronise fract on child tiles and the fract_per_age vector
       currentChild => tile%Get_first_child_tile()
       DO i=1,ncohorts
+        ! Area changes upon ageing can have carbon consequences for all children
+        currentChild%l_update_c(ics:ice, iblk) = .TRUE.
+
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
 
         CALL correct_and_synchronise_fracts(nc, max_age, ncohorts, &
-          & i, cohort_max_age(:,:), fract_per_age(:,:), source_fract(:))
+          & i, tile%lcts(1)%lib_id, cohort_max_age(:,:), fract_per_age(:,:), source_fract(:))
 
         CALL currentChild%Set_fraction(ics, ice, iblk, fract=source_fract(:))
 
@@ -310,7 +310,7 @@ CONTAINS
       CALL update_frac_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
     ELSE
-      dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
+      tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -348,7 +348,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+    IF(ANY(tile%l_delta_area_change(ics:ice, iblk))) THEN 
       dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
     ENDIF
     !No other aggregations required in the calculation of ageing 
@@ -422,18 +422,18 @@ CONTAINS
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
     IF(is_newday()) THEN
-      dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
-
-      ! Area changes upon disturbances only have carbon consequences for the first child
-      !  (All other children only have area changes)
-      dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .TRUE.
+      tile%l_delta_area_change(ics:ice, iblk) = .TRUE.
 
       ! step one: determine changes due to disturbances
       firstChild => tile%Get_first_child_tile()
       currentChild => tile%Get_first_child_tile()
 
-      l_sourceisfirstChild = .TRUE.
+      ! Area changes upon disturbances only have carbon consequences for the first child
+      !  (All other children only have area changes)
+      firstChild%l_update_c(ics:ice, iblk) = .TRUE.
 
+      ! in the first iteration of the loop the first child is source and sink 
+      l_sourceisfirstChild = .TRUE.
       DO i=1,ncohorts
 
         ! -> damaged_frac and burned_frac were determined by the disturbance process and are a fraction of the tile
@@ -507,13 +507,16 @@ CONTAINS
         ! Move further in the hierarchy 
         currentChild => currentChild%Get_next_sibling_tile()
         l_sourceisfirstChild = .FALSE.
+        ! Area changes upon disturbances only have carbon consequences for the first child
+        !  (All other children only have area changes)
+        currentChild%l_update_c(ics:ice, iblk) = .FALSE.
       ENDDO
 
       !recalculate mean age
       mean_age (:) = get_mean_age(fract_per_age)
 
     ELSE
-      dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
+      tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -551,7 +554,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+    IF(ANY(tile%l_delta_area_change(ics:ice, iblk))) THEN 
       dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
     ENDIF
     !No other aggregations required in the calculation of ageing 
@@ -634,16 +637,12 @@ CONTAINS
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
-    dsl4jsb_Config(FAGE_)%l_has_area_changes = .FALSE.
+    tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
     IF(is_newyear()) THEN
       harvested_area(:) = 0._wp
 
       IF(ANY(area_to_harvest(:) .GT. 0._wp)) THEN
-        dsl4jsb_Config(FAGE_)%l_has_area_changes = .TRUE.
-
-        ! Area changes upon clearcut only have carbon consequences for the first child
-        !  (All other children will only have area changes)
-        dsl4jsb_Config(FAGE_)%l_only_update_c_of_first_child = .TRUE.
+        tile%l_delta_area_change(ics:ice, iblk) = .TRUE.
 
         !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
         !Assertion: TODO - fehler wenn youngest not empty!
@@ -651,6 +650,10 @@ CONTAINS
 
         firstChild => tile%Get_first_child_tile()
         currentChild => tile%Get_first_child_tile()
+
+        ! Area changes upon clearcut only have carbon density consequences for the first child
+        !  (All other children will only have area changes, but keep their densities)
+        firstChild%l_update_c(ics:ice, iblk) = .TRUE.
 
         IF (dsl4jsb_Config(HARV_)%harv_kind .EQ. HARVEST_OLDEST_TREES) THEN
           ! as opposed to damaged_frac in update_nat_disturb_cohort_changes area_to_harvest is already with respect
@@ -667,10 +670,13 @@ CONTAINS
               & CALL finish(TRIM(routine), 'Violation of assertion: unexpected last child.')
 
             currentChild => currentChild%Get_next_sibling_tile()
+            currentChild%l_update_c(ics:ice, iblk) = .FALSE.
           ENDDO
 
           ! then iterate backwards until either all demanded area is fulfilled or the lowest cohort is reached
           DO i=oldestCohort,2,-1
+            currentChild%l_update_c(ics:ice, iblk) = .FALSE.
+
             ! Determine area to be harvested from this cohort
             harvestFromThisCohort = 0._wp
             CALL update_frac_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
@@ -740,7 +746,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    IF(dsl4jsb_Config(FAGE_)%l_has_area_changes) THEN 
+    IF(ANY(tile%l_delta_area_change(ics:ice, iblk))) THEN 
       dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(HARV_, harvested_area, weighted_by_fract)
     ENDIF

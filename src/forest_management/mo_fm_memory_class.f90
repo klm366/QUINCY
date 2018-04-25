@@ -28,10 +28,8 @@ MODULE mo_fm_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_fm_memory
-
-   TYPE(t_jsb_var_real3d) ::   &
-            to_harvest
-
+    TYPE(t_jsb_var_real3d) ::   &
+          to_harvest                  !Array to keep harvest per pft on the grid cell for now 
   CONTAINS
     PROCEDURE :: Init => Init_fm_memory
   END TYPE t_fm_memory
@@ -68,11 +66,7 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
 
-    !TODO-JN: schön ist das nicht, aber die art des lesens ist eh nur temporär, 
-    ! deshalb nehme ich jetzt das zu große ncohorts und definiere kein neues grid!
-!    cohort_grid   => Get_vgrid('cohort_grid')
-    !TODO: cohort_grid only available with FAGE but I also want to harvest in pft usecase 
-    ! thus TODO: define own grid
+    !TODO-JN: this is a temporary solution - when replacing reading with e.g. Stiigs solution, here an own grid should be defined if still required 
     soil_depth_water   => Get_vgrid('soil_depth_water')
 
     IF (.NOT. ASSOCIATED(mem%to_harvest%ptr)) THEN

@@ -102,10 +102,10 @@ CONTAINS
       CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" and "static-equal" implemented as forest ageing schemes')
     ENDIF
 
-!TODO-JN
-IF(tile%lcts(1)%lib_id .eq. 1) THEN
-print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
-ENDIF
+!TODO-JN: for now it would be sufficient to get it from iblk=1
+!IF(tile%lcts(1)%lib_id .eq. 1) THEN
+!print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
+!ENDIF
 
     !Last cohort is not really restricted to a max age, but set to max_age for compliance with the fract_per_age field
     dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,ncohorts,:) = max_age
