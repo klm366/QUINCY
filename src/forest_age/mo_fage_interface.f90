@@ -238,7 +238,7 @@ CONTAINS
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
 
         CALL correct_and_synchronise_fracts(nc, max_age, ncohorts, &
-          & i, cohort_max_age(:,:), fract_per_age(:,:), source_fract(:))
+          & i, tile%lcts(1)%lib_id, cohort_max_age(:,:), fract_per_age(:,:), source_fract(:))
 
         CALL currentChild%Set_fraction(ics, ice, iblk, fract=source_fract(:))
 

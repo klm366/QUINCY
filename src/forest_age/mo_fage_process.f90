@@ -70,14 +70,14 @@ MODULE mo_fage_process
   !TODO-JN: make faster?
   SUBROUTINE correct_and_synchronise_fracts( &
                     nidx, nage, ncohorts, iThisCohort,     &   !in
-                    cohort_max_age,                        &   !in
++                   pftid, cohort_max_age,                 &   !in
                     fract_per_age,                         &   !inout
                     fract                                  &   !inout
                     )
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    INTEGER,  INTENT(in)    ::  nidx, nage, ncohorts, iThisCohort
+    INTEGER,  INTENT(in)    ::  nidx, nage, ncohorts, iThisCohort, pftid
     REAL(wp), INTENT(inout), DIMENSION(nidx, ncohorts) :: cohort_max_age
     REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age
     REAL(wp), INTENT(inout), DIMENSION(nidx) :: fract
@@ -100,7 +100,8 @@ MODULE mo_fage_process
 
         IF(thisAreaSum - fract(j) .GT. 1.e-14_wp) THEN !TODO-JN make 1.e-14_wp a constant somewhere
           WRITE (message_text,*) ' fract (', fract(j), &
-            & ') and fract per age sum (', thisAreaSum , ') missmatch for cohort ', iThisCohort
++            & ') and fage sum (', thisAreaSum , ') missmatch for cohort ', iThisCohort, &
++            & '-- pft ', pftid
           CALL finish ('correct_and_synchronise_fracts', message_text)
         ENDIF
 
