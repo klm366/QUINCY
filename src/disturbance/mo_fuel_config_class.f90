@@ -89,7 +89,7 @@ CONTAINS
       CASE (FUEL_JSB3)
         CALL Init_fuel_jsb3_config(config,nml_handler)
       CASE (FUEL_SPITFIRE)
-        CALL Init_fuel_spitfire_config(config)
+        CALL Init_fuel_spitfire_config(config,nml_handler)
     END SELECT
 
     CALL close_nml(nml_handler)
