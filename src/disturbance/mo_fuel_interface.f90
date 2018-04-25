@@ -109,7 +109,7 @@ CONTAINS
     USE mo_fuel_process,   ONLY: calc_fuel_jsbach
     USE mo_jsb_time,       ONLY: is_newday
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
-    USE mo_disturbance_constants, ONLY: FUEL_JSB3, FUEL_SPITFIRE
+    USE mo_fuel_constants, ONLY: FUEL_JSB3, FUEL_SPITFIRE
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

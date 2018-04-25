@@ -3,9 +3,11 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (06.04.2017)
+!! 2018-04-25, StW: Separating namelist in one general and one for each disturbance algorithm
 !!
 MODULE mo_fuel_config_class
 #ifndef __NO_JSBACH__
@@ -31,11 +33,6 @@ MODULE mo_fuel_config_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_fuel_config_class'
 
-  CHARACTER(len=*), PARAMETER :: fuel_names    = 'none jsb3 spitfire'
-  INTEGER, PUBLIC,  PARAMETER :: FUEL_NONE     = 0
-  INTEGER, PUBLIC,  PARAMETER :: FUEL_JSB3     = 1
-  INTEGER, PUBLIC,  PARAMETER :: FUEL_SPITFIRE = 2
-
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize fuel process
@@ -45,6 +42,7 @@ CONTAINS
   SUBROUTINE Init_fuel_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_fuel_constants,     ONLY: fuel_names, FUEL_NONE, FUEL_JSB3, FUEL_SPITFIRE
     USE mo_input_strings,      ONLY: GetStringIndex
 
     CLASS(t_fuel_config), INTENT(inout) :: config
@@ -78,8 +76,6 @@ CONTAINS
     nml_unit = position_nml('jsb_fuel_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_fuel_nml)
 
-    CALL close_nml(nml_handler)
-
     ! Write resulting values in config memory
     config%active                 = active
     config%ic_filename            = ic_filename
@@ -91,19 +87,23 @@ CONTAINS
       CASE (FUEL_NONE)
         ! By definition nothing to do
       CASE (FUEL_JSB3)
-        CALL Init_fuel_jsb3_config(config)
+        CALL Init_fuel_jsb3_config(config,nml_handler)
       CASE (FUEL_SPITFIRE)
         CALL Init_fuel_spitfire_config(config)
     END SELECT
 
+    CALL close_nml(nml_handler)
+
   END SUBROUTINE Init_fuel_config
 
-  SUBROUTINE Init_fuel_jsb3_config(config)
+  SUBROUTINE Init_fuel_jsb3_config(config,nml_handler)
     CLASS(t_fuel_config), INTENT(inout) :: config
+    INTEGER,              INTENT(in)    :: nml_handler
   END SUBROUTINE Init_fuel_jsb3_config
 
-  SUBROUTINE Init_fuel_spitfire_config(config)
+  SUBROUTINE Init_fuel_spitfire_config(config,nml_handler)
     CLASS(t_fuel_config), INTENT(inout) :: config
+    INTEGER,              INTENT(in)    :: nml_handler
   END SUBROUTINE Init_fuel_spitfire_config
 
 #endif

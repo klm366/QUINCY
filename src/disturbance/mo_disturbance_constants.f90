@@ -27,8 +27,6 @@ MODULE mo_disturbance_constants
   INTEGER,          PARAMETER :: FIRE_NONE       = 0
   INTEGER,          PARAMETER :: FIRE_JSB3       = 1
   INTEGER,          PARAMETER :: FIRE_SPITFIRE   = 2
-  INTEGER,          PARAMETER :: FUEL_JSB3       = FIRE_JSB3
-  INTEGER,          PARAMETER :: FUEL_SPITFIRE   = FIRE_SPITFIRE
 
   ! Constants regarding temporal smooting of disturbance relevant forcing field
   ! StW: would it make sense to move these to jsb_disturb_fire_jsb3/jsb_disturb_windbreak_jsb3 namelists respectively?
