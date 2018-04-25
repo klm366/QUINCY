@@ -11,64 +11,74 @@
 
 
 ## pass from bash the path to the simulation results main folder
-args<-commandArgs(TRUE)
-ipath<-args[1]  # /Net/Groups/BGI/scratch/""$username""/slm/"exp_ID"/
+args  <- commandArgs(TRUE)
+ipath <- args[1]  # /Net/Groups/BGI/scratch/""$username""/slm/"exp_ID"/
 setwd(ipath)
 
 
 ## detect sites
 # get all directories within the results folder - relative paths
-dirnames<-system('ls -d */',intern=T)
+dirnames  <- system('ls -d */',intern=T)
 # remove folders from list that contain other stuff than the simulation results
-dirnames<-dirnames[!grepl("x_binary",dirnames)]
-dirnames<-dirnames[!grepl("parameter_list",dirnames)]
-dirnames<-dirnames[!grepl("default_files",dirnames)]
-dirnames<-dirnames[!grepl("parameter_sensitivity_files",dirnames)]
-dirnames<-dirnames[!grepl("out",dirnames)]
-dirnames<-dirnames[!grepl("error",dirnames)]
+dirnames  <- dirnames[!grepl("x_binary",dirnames)]
+dirnames  <- dirnames[!grepl("parameter_list",dirnames)]
+dirnames  <- dirnames[!grepl("default_files",dirnames)]
+dirnames  <- dirnames[!grepl("parameter_sensitivity_files",dirnames)]
+dirnames  <- dirnames[!grepl("out",dirnames)]
+dirnames  <- dirnames[!grepl("error",dirnames)]
 # number of directories/sites
-nsite<-length(dirnames)
+nsite     <- length(dirnames)
 # create two arrays of length(directories and one column) that will be filled with the directory's names and Site-ID's (see loop)
-site_str<-array(NA,c(nsite,1))
-colnames(site_str)<-'Site_ID'
+site_str  <- array(NA,c(nsite,1))
+colnames(site_str) <- 'Site_ID'
 
 ## loop over sites
 for (s in 1:nsite) {
    print(paste(s,dirnames[[s]]))
    site_str[s]<-tail(unlist(strsplit(dirnames[[s]],'/')),n=1)
 
-   cpool<-read.table(paste(dirnames[[s]],'output/','vegpoolC_daily.txt',sep=''),header=T)
-   c1314pool<-read.table(paste(dirnames[[s]],'output/','vegpooldC13DC14_daily.txt',sep=''),header=T)
-   npool<-read.table(paste(dirnames[[s]],'output/','vegpoolN_daily.txt',sep=''),header=T)
-   n15pool<-read.table(paste(dirnames[[s]],'output/','vegpooldN15_daily.txt',sep=''),header=T)
-   ppool<-read.table(paste(dirnames[[s]],'output/','vegpoolP_daily.txt',sep=''),header=T)
-   h2opool<-read.table(paste(dirnames[[s]],'output/','soilpoolPhysics_daily.txt',sep=''),header=T)
-   diags<-read.table(paste(dirnames[[s]],'output/','veg_diagnostics_daily.txt',sep=''),header=T)
-   cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_daily.txt',sep=''),header=T)
-   nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_daily.txt',sep=''),header=T)
-   pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_daily.txt',sep=''),header=T)
-   cnp_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpoolOrg_daily.txt',sep=''),header=T)
-   c13c14_soilpool<-read.table(paste(dirnames[[s]],'output/','soilpooldC13DC14dN15_daily.txt',sep=''),header=T)
-   cc13c14_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
-   n_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxN_daily.txt',sep=''),header=T)  
-   p_soilflux<-read.table(paste(dirnames[[s]],'output/','soilfluxP_daily.txt',sep=''),header=T)  
+   cpool            <- read.table(paste(dirnames[[s]],'output/','vegpoolC_daily.txt',sep=''),header=T)
+   c1314pool        <- read.table(paste(dirnames[[s]],'output/','vegpooldC13DC14_daily.txt',sep=''),header=T)
+   npool            <- read.table(paste(dirnames[[s]],'output/','vegpoolN_daily.txt',sep=''),header=T)
+   n15pool          <- read.table(paste(dirnames[[s]],'output/','vegpooldN15_daily.txt',sep=''),header=T)
+   ppool            <- read.table(paste(dirnames[[s]],'output/','vegpoolP_daily.txt',sep=''),header=T)
+   h2opool          <- read.table(paste(dirnames[[s]],'output/','soilpoolPhysics_daily.txt',sep=''),header=T)
+   diags            <- read.table(paste(dirnames[[s]],'output/','veg_diagnostics_daily.txt',sep=''),header=T)
+   cflux            <- read.table(paste(dirnames[[s]],'output/','vegfluxC_daily.txt',sep=''),header=T)
+   nflux            <- read.table(paste(dirnames[[s]],'output/','vegfluxN_daily.txt',sep=''),header=T)
+   pflux            <- read.table(paste(dirnames[[s]],'output/','vegfluxP_daily.txt',sep=''),header=T)
+   cnp_soilpool     <- read.table(paste(dirnames[[s]],'output/','soilpoolOrg_daily.txt',sep=''),header=T)
+   c13c14_soilpool  <- read.table(paste(dirnames[[s]],'output/','soilpooldC13DC14dN15_daily.txt',sep=''),header=T)
+   cc13c14_soilflux <- read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
+   n_soilflux       <- read.table(paste(dirnames[[s]],'output/','soilfluxN_daily.txt',sep=''),header=T)  
+   p_soilflux       <- read.table(paste(dirnames[[s]],'output/','soilfluxP_daily.txt',sep=''),header=T)  
  
-   ntime<-dim(cpool)[1]
-   ncpoolvar<-dim(cpool)[2]-1
-   ncfluxvar<-dim(cflux)[2]-1
-   nnfluxvar<-dim(nflux)[2]-1
-   npfluxvar<-dim(pflux)[2]-1
-   ncnpsoilpoolvar<-dim(cnp_soilpool)[2]-1
-   ncsoilfluxvar<-dim(cc13c14_soilflux)[2]-1
-   nnsoilfluxvar<-dim(n_soilflux)[2]-1
-   npsoilfluxvar<-dim(p_soilflux)[2]-1
-   nyear=ntime/365
-   yearidx<- numeric(ntime)
-   years<-numeric(nyear)
+   ntime            <- dim(cpool)[1]
+   ncpoolvar        <- dim(cpool)[2]-1
+   ncfluxvar        <- dim(cflux)[2]-1
+   nnfluxvar        <- dim(nflux)[2]-1
+   npfluxvar        <- dim(pflux)[2]-1
+   ncnpsoilpoolvar  <- dim(cnp_soilpool)[2]-1
+   ncsoilfluxvar    <- dim(cc13c14_soilflux)[2]-1
+   nnsoilfluxvar    <- dim(n_soilflux)[2]-1
+   npsoilfluxvar    <- dim(p_soilflux)[2]-1
+   nyear            <- as.integer(round(ntime/365,0))
+   yearidx          <- numeric(ntime)  # creates a vector of length ntime
+   years            <- numeric(nyear)  # creates a vector of length nyear
+   
+   # add nyear sets of integer values of the particular year (usually 1 to 30)
    for (y in 1:nyear) {
      yearidx[(1:365)+(y-1)*365]<-y
    }
-   
+   # and correct for length of yearidx
+   yearidx <- yearidx[1:ntime]
+
+   ## default period of data used for analyses is 1:nyear (with nyear being usually 30)
+   # you could change it to a different period within this default period, such as 10:19
+   startYrDat <- 1
+   lastYrDat  <- nyear
+   ##
+
    # Cpools
    if(s==1) { 
       cpool_mean<-array(NA,c(nsite,ncpoolvar))
@@ -77,8 +87,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:ncpoolvar) {
      hlp1<-aggregate(cpool[,var+1],list(yearidx),max) 
-     cpool_mean[s,var]<-mean(hlp1$x)
-     cpool_std[s,var]<-sd(hlp1$x)
+     cpool_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     cpool_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
    # Cfluxes
    if(s==1) { 
@@ -88,8 +98,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:ncfluxvar) {
      hlp1<-aggregate(cflux[,var+1],list(yearidx),sum) 
-     cflux_mean[s,var]<-mean(hlp1$x)
-     cflux_std[s,var]<-sd(hlp1$x)
+     cflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     cflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
    # Nfluxes
    if(s==1) { 
@@ -99,8 +109,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:nnfluxvar) {
      hlp1<-aggregate(nflux[,var+1],list(yearidx),sum) 
-     nflux_mean[s,var]<-mean(hlp1$x)
-     nflux_std[s,var]<-sd(hlp1$x)
+     nflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     nflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
    # Pfluxes
    if(s==1) { 
@@ -110,8 +120,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:npfluxvar) {
      hlp1<-aggregate(pflux[,var+1],list(yearidx),sum) 
-     pflux_mean[s,var]<-mean(hlp1$x)
-     pflux_std[s,var]<-sd(hlp1$x)
+     pflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     pflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
    
    #leaf & labile CNP
@@ -126,10 +136,10 @@ for (s in 1:nsite) {
      hlp1<-aggregate(cpool[,var],list(yearidx),sum) 
      hlp2<-aggregate(npool[,var],list(yearidx),sum) 
      hlp3<-aggregate(ppool[,var],list(yearidx),sum) 
-     stoch_mean[s,res_idx]<-mean(hlp1$x/hlp2$x,na.rm=TRUE)
-     stoch_mean[s,res_idx+3]<-mean(hlp2$x/hlp3$x,na.rm=TRUE)
-     stoch_std[s,res_idx]<-sd(hlp1$x/hlp2$x,na.rm=TRUE)
-     stoch_std[s,res_idx+3]<-sd(hlp2$x/hlp3$x,na.rm=TRUE)
+     stoch_mean[s,res_idx]<-mean(hlp1$x[startYrDat:lastYrDat]/hlp2$x[startYrDat:lastYrDat],na.rm=TRUE)
+     stoch_mean[s,res_idx+3]<-mean(hlp2$x[startYrDat:lastYrDat]/hlp3$x[startYrDat:lastYrDat],na.rm=TRUE)
+     stoch_std[s,res_idx]<-sd(hlp1$x[startYrDat:lastYrDat]/hlp2$x[startYrDat:lastYrDat],na.rm=TRUE)
+     stoch_std[s,res_idx+3]<-sd(hlp2$x[startYrDat:lastYrDat]/hlp3$x[startYrDat:lastYrDat],na.rm=TRUE)
      res_idx<-res_idx+1
    }
 
@@ -142,8 +152,8 @@ for (s in 1:nsite) {
    var_idx<-which(colnames(c1314pool)=='Leaf_dC13'|colnames(c1314pool)=='SapWood_DC14'|colnames(c1314pool)=='HeartWood_DC14')
    for (var in var_idx) {
      hlp1<-aggregate(c1314pool[,var],list(yearidx),mean)
-     isotope_mean[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-mean(hlp1$x,na.rm=TRUE)
-     isotope_std[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-sd(hlp1$x,na.rm=TRUE)
+     isotope_mean[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+     isotope_std[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
    }
 
    #soil water
@@ -156,8 +166,8 @@ for (s in 1:nsite) {
    for (var in var_idx) {
      if(colnames(h2opool)[var]=='SoilMoisture') {hlp1<-aggregate(h2opool[,var],list(yearidx),mean)/aggregate(h2opool[,var],list(yearidx),max)} 
      else {hlp1<-aggregate(h2opool[,var],list(yearidx),min)} 
-     soilwater_mean[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-mean(hlp1$x,na.rm=TRUE)
-     soilwater_std[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-sd(hlp1$x,na.rm=TRUE)
+     soilwater_mean[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+     soilwater_std[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
    }
 
    #other diagnostics
@@ -170,8 +180,8 @@ for (s in 1:nsite) {
    for (var in var_idx) {
      if(colnames(diags)[var]=='LAI') {hlp1<-aggregate(diags[,var],list(yearidx),max)} 
      else {hlp1<-aggregate(diags[,var],list(yearidx),mean)} 
-     diag_mean[s,which(colnames(diag_mean)==colnames(diags)[var])]<-mean(hlp1$x,na.rm=TRUE)
-     diag_std[s,which(colnames(diag_mean)==colnames(diags)[var])]<-sd(hlp1$x,na.rm=TRUE)
+     diag_mean[s,which(colnames(diag_mean)==colnames(diags)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+     diag_std[s,which(colnames(diag_mean)==colnames(diags)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
    }
 
    # soil organic pools
@@ -182,8 +192,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:ncnpsoilpoolvar) {
      hlp1<-aggregate(cnp_soilpool[,var+1],list(yearidx),max) 
-     cnp_soilpool_mean[s,var]<-mean(hlp1$x)
-     cnp_soilpool_std[s,var]<-sd(hlp1$x)
+     cnp_soilpool_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     cnp_soilpool_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
    # soil cfluxes pools
    if(s==1) { 
@@ -193,8 +203,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:ncsoilfluxvar) {
      hlp1<-aggregate(cc13c14_soilflux[,var+1],list(yearidx),sum) 
-     cc13c14_soilflux_mean[s,var]<-mean(hlp1$x)
-     cc13c14_soilflux_std[s,var]<-sd(hlp1$x)
+     cc13c14_soilflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     cc13c14_soilflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
 
    # soil n fluxes
@@ -205,8 +215,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:nnsoilfluxvar) {
      hlp1<-aggregate(n_soilflux[,var+1],list(yearidx),sum) 
-     n_soilflux_mean[s,var]<-mean(hlp1$x)
-     n_soilflux_std[s,var]<-sd(hlp1$x)
+     n_soilflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     n_soilflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
 
    # soil p fluxes
@@ -217,8 +227,8 @@ for (s in 1:nsite) {
    }
    for (var in 1:npsoilfluxvar) {
      hlp1<-aggregate(p_soilflux[,var+1],list(yearidx),sum) 
-     p_soilflux_mean[s,var]<-mean(hlp1$x)
-     p_soilflux_std[s,var]<-sd(hlp1$x)
+     p_soilflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     p_soilflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
 }   
 
