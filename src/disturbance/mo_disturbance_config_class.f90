@@ -33,17 +33,17 @@ MODULE mo_disturb_config_class
     INTEGER           :: windbreak_algorithm ! Select windbreak algorithm: 0: none, 1: jsbach (default)
     LOGICAL           :: lburn_pasture       ! Allow pasture pfts to burn
     ! Settings for windbreak-jsbach
-    REAL(wp)          :: wnd_threshold, &    ! factor by which the previous day maximum wind speed
-                                             ! must be larger than the climatological daily maximum
-                                             ! wind speed to allow any wind damage
-                         wnd_damage_scale    ! scaling factor for wind damage
+    REAL(wp)          :: wnd_jsb3_threshold, &    ! factor by which the previous day maximum wind speed
+                                                  ! must be larger than the climatological daily maximum
+                                                  ! wind speed to allow any wind damage
+                         wnd_jsb3_damage_scale    ! scaling factor for wind damage
     ! Settings for fire-jsbach
-    REAL(wp)          :: fire_litter_threshold,  & ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
-                         fire_rel_hum_threshold, & ! maximal relative humidity for fire
-                         fire_minimum_woody,     & ! minimal fraction of act_fpc of woody PFT to be burned each year
-                         fire_minimum_grass,     & ! minimal fraction of act_fpc of grass PFT to be burned each year
-                         fire_tau_woody,         & ! return period of fire for woody PFT [year] at 0% relative humidity
-                         fire_tau_grass            ! return period of fire for grass PFT [year] at 0% relative humidity
+    REAL(wp)          :: fire_jsb3_litter_threshold,  & ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
+                         fire_jsb3_rel_hum_threshold, & ! maximal relative humidity for fire
+                         fire_jsb3_minimum_woody,     & ! minimal fraction of act_fpc of woody PFT to be burned each year
+                         fire_jsb3_minimum_grass,     & ! minimal fraction of act_fpc of grass PFT to be burned each year
+                         fire_jsb3_tau_woody,         & ! return period of fire for woody PFT [year] at 0% relative humidity
+                         fire_jsb3_tau_grass            ! return period of fire for grass PFT [year] at 0% relative humidity
 
     CONTAINS
       PROCEDURE :: Init => Init_disturb_config
@@ -169,8 +169,8 @@ CONTAINS
       CALL message(TRIM(routine), 'Obtained windbreak-jsb3 configuration from: '//TRIM(config%namelist_filename))
     ENDIF
 
-    config%wnd_threshold    = threshold
-    config%wnd_damage_scale = damage_scale
+    config%wnd_jsb3_threshold    = threshold
+    config%wnd_jsb3_damage_scale = damage_scale
 
   END SUBROUTINE Init_disturb_windbreak_jsb3_config
 
@@ -221,12 +221,12 @@ CONTAINS
       CALL message(TRIM(routine), 'Obtained fire-jsb3 configuration from: '//TRIM(config%namelist_filename))
     ENDIF
 
-    config%fire_litter_threshold  = litter_threshold
-    config%fire_rel_hum_threshold = rel_hum_threshold
-    config%fire_minimum_woody     = minimum_woody
-    config%fire_minimum_grass     = minimum_grass
-    config%fire_tau_woody         = tau_woody
-    config%fire_tau_grass         = tau_grass
+    config%fire_jsb3_litter_threshold  = litter_threshold
+    config%fire_jsb3_rel_hum_threshold = rel_hum_threshold
+    config%fire_jsb3_minimum_woody     = minimum_woody
+    config%fire_jsb3_minimum_grass     = minimum_grass
+    config%fire_jsb3_tau_woody         = tau_woody
+    config%fire_jsb3_tau_grass         = tau_grass
 
   END SUBROUTINE Init_disturb_fire_jsb3_config
 

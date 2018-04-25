@@ -376,21 +376,21 @@ CONTAINS
 
             ! Calculate burned area. Woody and grass types call the subroutine with different parameters 
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! Woody Type
-              fire_minimum = dsl4jsb_Config(DISTURB_)%fire_minimum_woody
-              fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_woody
+              fire_minimum = dsl4jsb_Config(DISTURB_)%fire_jsb3_minimum_woody
+              fire_tau     = dsl4jsb_Config(DISTURB_)%fire_jsb3_tau_woody
             ELSE                             ! all other types
-              fire_minimum = dsl4jsb_Config(DISTURB_)%fire_minimum_grass
-              fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
+              fire_minimum = dsl4jsb_Config(DISTURB_)%fire_jsb3_minimum_grass
+              fire_tau     = dsl4jsb_Config(DISTURB_)%fire_jsb3_tau_grass
             ENDIF
 
-            CALL burned_fractt_jsbach(                           &
-              & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
-              & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
-              & fire_minimum,                                    & ! in
-              & fire_tau,                                        & ! in
-              & q_rel_air_climbuf(:),                            & ! in
-              & fuel(:),                                         & ! in
-              & burned_fract(:)                                  & ! out
+            CALL burned_fractt_jsbach(                                &
+              & dsl4jsb_Config(DISTURB_)%fire_jsb3_rel_hum_threshold, &
+              & dsl4jsb_Config(DISTURB_)%fire_jsb3_litter_threshold,  &
+              & fire_minimum,                                         & ! in
+              & fire_tau,                                             & ! in
+              & q_rel_air_climbuf(:),                                 & ! in
+              & fuel(:),                                              & ! in
+              & burned_fract(:)                                       & ! out
               & )
 
           CASE (2) !! Arora & Boer algorithm
@@ -410,13 +410,13 @@ CONTAINS
         SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
           CASE (0) !! No windbreak algorithm
           CASE (1) !! jsbach algorithm
-            CALL broken_woody_fract_jsbach(                 & ! in
-              & dsl4jsb_Config(DISTURB_)%wnd_threshold,     & ! in
-              & dsl4jsb_Config(DISTURB_)%wnd_damage_scale,  & ! in
-              & cover_fract_pot(:),                         & ! in
-              & prev_day_max_wind_10m(:),                   & ! in
-              & max_wind_10m(:),                            & ! in
-              & damaged_fract(:)                            & ! out
+            CALL broken_woody_fract_jsbach(                     & ! in
+              & dsl4jsb_Config(DISTURB_)%wnd_jsb3_threshold,    & ! in
+              & dsl4jsb_Config(DISTURB_)%wnd_jsb3_damage_scale, & ! in
+              & cover_fract_pot(:),                             & ! in
+              & prev_day_max_wind_10m(:),                       & ! in
+              & max_wind_10m(:),                                & ! in
+              & damaged_fract(:)                                & ! out
               & )
           CASE DEFAULT
             CALL finish('disturbed_frac','Unknown windbreak algorithm')
