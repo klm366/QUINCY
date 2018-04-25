@@ -62,7 +62,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fuel_config'
 
-    CALL message(TRIM(routine), 'Starting fuel configuration')
 
     ! Set defaults
     active                 = .FALSE.
@@ -74,7 +73,10 @@ CONTAINS
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
     nml_unit = position_nml('jsb_fuel_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_fuel_nml)
+    IF (istat == POSITIONED) THEN
+      READ(nml_unit, jsb_fuel_nml)
+      CALL message(TRIM(routine), 'Obtained fuel configuration from: '//TRIM(config%namelist_filename))
+    ENDIF
 
     ! Write resulting values in config memory
     config%active                 = active
