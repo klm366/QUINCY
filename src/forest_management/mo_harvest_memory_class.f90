@@ -28,11 +28,10 @@ MODULE mo_harv_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_harv_memory
-
    TYPE(t_jsb_var_real2d) ::   &
-            area_to_harvest,   &
-            harvested_area,    &
-            cconservation_harvest
+            area_to_harvest,   &   ! are that should be harvested
+            harvested_area,    &   ! are that was harvested
+            cconservation_harvest  ! field for c conservation check for this process
   CONTAINS
     PROCEDURE :: Init => Init_harv_memory
   END TYPE t_harv_memory

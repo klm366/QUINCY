@@ -34,14 +34,11 @@ MODULE mo_fage_memory_class
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   TYPE, EXTENDS(t_jsb_memory) :: t_fage_memory
-
-  ! variables
-  TYPE(t_jsb_var_real2d) :: &
-      & mean_age
-
-  TYPE(t_jsb_var_real3d) :: &
-      & fract_per_age, cohort_max_age
-
+    TYPE(t_jsb_var_real2d) :: &
+      & mean_age                    ! Mean age of child cohorts
+    TYPE(t_jsb_var_real3d) :: &
+      & fract_per_age,        &     ! Area fraction having a certain age - age = index third dim
+      & cohort_max_age              ! maximum age of the child cohorts 
   CONTAINS
     PROCEDURE :: Init => Init_fage_memory
   END TYPE t_fage_memory
