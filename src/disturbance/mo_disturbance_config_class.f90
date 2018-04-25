@@ -44,6 +44,25 @@ MODULE mo_disturb_config_class
                          fire_jsb3_minimum_grass,     & ! minimal fraction of act_fpc of grass PFT to be burned each year
                          fire_jsb3_tau_woody,         & ! return period of fire for woody PFT [year] at 0% relative humidity
                          fire_jsb3_tau_grass            ! return period of fire for grass PFT [year] at 0% relative humidity
+    ! Settings for fire-spitfire
+    REAL(wp)          :: fire_spitfire_a_nd,              & ! Propensity of humans to ignite a fire
+                         fire_spitfire_human_para,        & ! Parameter to tune the human ignitions
+                         fire_spitfire_ign_para,          & ! Parameter to tune the sum of ignitions
+                         fire_spitfire_SurfArea2Vol(3),   & ! Surface to volume ratio for 1hr 10hr and 100hr fuels respectively
+                         fire_spitfire_moisture_scaling,  & ! Factor to convert SAtVR to fuel drying parameter
+                         fire_spitfire_wind_max,          & ! Maximum effective windspeed
+                         fire_spitfire_wind_slope,        & ! Determines the reduction of high windspeed
+                         fire_spitfire_flaming2total,     & ! Factor to calculate total burning time from flaming phase duration
+                         fire_spitfire_frac_green_active, & ! Fraction of leaves on woody types acting as fuel
+                         fire_spitfire_const_ignitions,   & ! Set ignitions to this constant (-1 = no, default -1)
+                         fire_spitfire_const_frac_fire,   & ! Set burned_frac to this constant (-1 = no, default -1)
+                         fire_spitfire_frac_N_2_atm         ! Fraction of burned Nitrogen entering the atmos (rest SMINN)
+    LOGICAL           :: fire_spitfire_llight_ground,     & ! File contains cloud to ground flashes only?
+                         fire_spitfire_lwind_speed_limit, & ! Wind speed use for fire spreading is limited?
+                         fire_spitfire_read_fuel_frac,    & ! Read fractions of fuel from file during initialization
+                         fire_spitfire_lduration_popd,    & ! Fire duration depends on population density
+                         fire_spitfire_lmortalityEQ1,     & ! Set mortality to 1 in all cases (default: .false.)
+                         fire_spitfire_ldiag                ! Produce additional output (StW: General disturbance parameter?)
 
     CONTAINS
       PROCEDURE :: Init => Init_disturb_config
@@ -229,6 +248,109 @@ CONTAINS
     config%fire_jsb3_tau_grass         = tau_grass
 
   END SUBROUTINE Init_disturb_fire_jsb3_config
+
+  ! Initialises configuration of fire algorithm spitfire
+  SUBROUTINE Init_disturb_fire_spitfire_config(config,nml_handler,lburn_pasture)
+
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+
+    CLASS(t_disturb_config), INTENT(inout) :: config
+    INTEGER,                 INTENT(in)    :: nml_handler
+    CHARACTER(len=*),        INTENT(in)    :: lburn_pasture
+
+    ! Local namelist parameters
+    REAL(wp) :: a_nd
+    REAL(wp) :: human_para
+    REAL(wp) :: ign_para
+    REAL(wp) :: wind_max
+    REAL(wp) :: wind_slope
+    REAL(wp) :: flaming2total
+    REAL(wp) :: SurfArea2Vol(3)
+    REAL(wp) :: moisture_scaling
+    REAL(wp) :: frac_green_active
+    REAL(wp) :: const_ignitions
+    REAL(wp) :: const_frac_fire
+    REAL(wp) :: frac_N_2_atm
+    LOGICAL  :: llight_ground
+    LOGICAL  :: read_fuel_frac
+    LOGICAL  :: lduration_popd
+    LOGICAL  :: lmortalityEQ1
+    LOGICAL  :: ldiag
+    LOGICAL  :: lwind_speed_limit
+
+    NAMELIST /jsb_disturb_fire_spitfire_nml/ &
+      llight_ground,                         &
+      lwind_speed_limit,                     &
+      a_nd,                                  &
+      human_para,                            &
+      ign_para,                              &
+      SurfArea2Vol,                          &
+      moisture_scaling,                      &
+      wind_max,                              &
+      wind_slope,                            &
+      read_fuel_frac,                        &
+      lduration_popd,                        &
+      flaming2total,                         &
+      lmortalityEQ1,                         &
+      const_ignitions,                       &
+      const_frac_fire,                       &
+      frac_green_active,                     &
+      frac_N_2_atm,                          &
+      ldiag
+
+    INTEGER :: nml_unit, istat
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_disturb_fire_jsb3_config'
+
+    ! Set default values
+    SurfArea2Vol(:)   = (/ 66.0_wp,3.58_wp,0.98_wp /)
+    a_nd              =     0.251_wp
+    human_para        =     0.4_wp
+    ign_para          =     0.22_wp
+    wind_max          =   150._wp
+    wind_slope        =     1.5_wp
+    moisture_scaling  = 30000.0_wp
+    flaming2total     = 5.0_wp
+    frac_N_2_atm      = 0.5_wp
+    llight_ground     = .FALSE.
+    lwind_speed_limit = .TRUE.
+    lduration_popd    = .TRUE.
+    frac_green_active = 0.3_wp
+    lmortalityEQ1     = .FALSE.
+    const_ignitions   = -1.0_wp
+    const_frac_fire   = -1.0_wp
+    ldiag             = .FALSE.
+    IF (LEN_TRIM(lburn_pasture)==0) THEN
+      config%lburn_pasture = .TRUE.
+    ENDIF
+
+    ! Read namelist
+    nml_unit = position_nml('jsb_disturb_fire_spitfire_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) THEN
+      READ(nml_unit, jsb_disturb_fire_spitfire_nml)
+      CALL message(TRIM(routine), 'Obtained fire-spitfire configuration from: '//TRIM(config%namelist_filename))
+    ENDIF
+
+    config%fire_spitfire_a_nd              = a_nd
+    config%fire_spitfire_human_para        = human_para
+    config%fire_spitfire_ign_para          = ign_para
+    config%fire_spitfire_wind_max          = wind_max
+    config%fire_spitfire_wind_slope        = wind_slope
+    config%fire_spitfire_flaming2total     = flaming2total
+    config%fire_spitfire_SurfArea2Vol(:)   = SurfArea2Vol(:)
+    config%fire_spitfire_moisture_scaling  = moisture_scaling
+    config%fire_spitfire_frac_green_active = frac_green_active
+    config%fire_spitfire_const_ignitions   = const_ignitions
+    config%fire_spitfire_const_frac_fire   = const_frac_fire
+    config%fire_spitfire_frac_N_2_atm      = frac_N_2_atm
+    config%fire_spitfire_llight_ground     = llight_ground
+    config%fire_spitfire_read_fuel_frac    = read_fuel_frac
+    config%fire_spitfire_lwind_speed_limit = lwind_speed_limit
+    config%fire_spitfire_lduration_popd    = lduration_popd
+    config%fire_spitfire_lmortalityEQ1     = lmortalityEQ1
+    config%fire_spitfire_ldiag             = ldiag
+
+  END SUBROUTINE Init_disturb_fire_spitfire_config
 
 #endif
 END MODULE mo_disturb_config_class
