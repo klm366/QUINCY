@@ -3,9 +3,11 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-05-04)
+!! 2018-04-25, StW: Using predefined algorithm numbers
 !!
 MODULE mo_fuel_interface
 #ifndef __NO_JSBACH__
@@ -107,6 +109,7 @@ CONTAINS
     USE mo_fuel_process,   ONLY: calc_fuel_jsbach
     USE mo_jsb_time,       ONLY: is_newday
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
+    USE mo_disturbance_constants, ONLY: FUEL_JSB3, FUEL_SPITFIRE
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -181,7 +184,7 @@ CONTAINS
     IF (is_newday()) THEN ! only once per day
 
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
-        CASE (1) !! jsbach algorithm
+        CASE (FUEL_JSB3) !! jsbach algorithm
 
           CALL calc_fuel_jsbach( &
             & c_acid_ag1_ta(:),       & ! in
@@ -195,11 +198,8 @@ CONTAINS
             & fuel(:)                      & ! out
             & )
 
-        CASE (2) !! Arora & Boer algorithm
-          CALL finish(TRIM(routine),'Arora & Boer fuel algorithm not implemented yet.')
-        CASE (3)
+        CASE (FUEL_SPITFIRE)
           CALL finish(TRIM(routine),'Thornicke/spitfire fuel algorithm not implemented yet.')
-        CASE (4) !! Read GFED
         CASE DEFAULT
           CALL finish(TRIM(routine),'Unknown fuel algorithm')
       END SELECT

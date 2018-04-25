@@ -3,9 +3,12 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-05-04)
+!! 2018-04-25, StW: Change of names of configuration parameters
+!! 2018-04-25, StW: Using predefined disturbance algorithm numbers
 !!
 MODULE mo_disturb_interface
 #ifndef __NO_JSBACH__
@@ -122,7 +125,8 @@ CONTAINS
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
-    USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
+    USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m,                                  &
+                                        WINDBREAK_NONE, WINDBREAK_JSB3, FIRE_NONE, FIRE_JSB3, FIRE_SPITFIRE
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -371,8 +375,8 @@ CONTAINS
          ) THEN
 
         SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
-          CASE (0) !! No fire algorithm
-          CASE (1) !! jsbach algorithm
+          CASE (FIRE_NONE) !! No fire algorithm
+          CASE (FIRE_JSB3) !! jsbach algorithm
 
             ! Calculate burned area. Woody and grass types call the subroutine with different parameters 
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! Woody Type
@@ -393,13 +397,10 @@ CONTAINS
               & burned_fract(:)                                       & ! out
               & )
 
-          CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
-          CASE (3)
-            CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
-          CASE (4) !! Read burned_fract
+          CASE (FIRE_SPITFIRE)
+            CALL finish(TRIM(routine),'Thonicke spitfire not implemented yet.')
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown fire algorithm')
+            CALL finish(TRIM(routine),'Unknown fire algorithm')
         END SELECT
 
       END IF
@@ -408,8 +409,8 @@ CONTAINS
       IF (dsl4jsb_Lctlib_param(woody_PFT) .AND. dsl4jsb_Lctlib_param(dynamic_PFT)) THEN
 
         SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
-          CASE (0) !! No windbreak algorithm
-          CASE (1) !! jsbach algorithm
+          CASE (WINDBREAK_NONE) !! No windbreak algorithm
+          CASE (WINDBREAK_JSB3) !! jsbach algorithm
             CALL broken_woody_fract_jsbach(                     & ! in
               & dsl4jsb_Config(DISTURB_)%wnd_jsb3_threshold,    & ! in
               & dsl4jsb_Config(DISTURB_)%wnd_jsb3_damage_scale, & ! in
@@ -433,8 +434,8 @@ CONTAINS
         !    Erst dort sollen dann alle Variablen an die eigentlichen Prozess-Prozeduren übergeben werden.
 
         SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
-          CASE (0) !! No windbreak algorithm
-          CASE (1) !! jsbach algorithm
+          CASE (WINDBREAK_NONE) !! No windbreak algorithm
+          CASE (WINDBREAK_JSB3) !! jsbach algorithm
             CALL relocate_carbon_damage(                 &
               & damaged_fract(:),                        & ! in
               & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
@@ -469,8 +470,8 @@ CONTAINS
 
         cflux_fire_all_2_atm_ta = 0._wp
         SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
-          CASE (0) !! No fire algorithm
-          CASE (1) !! jsbach algorithm
+          CASE (FIRE_NONE) !! No fire algorithm
+          CASE (FIRE_JSB3) !! jsbach algorithm
             CALL relocate_carbon_fire(                    &
               & burned_fract(:),                          & ! in, only for windbreak
               & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
@@ -501,13 +502,10 @@ CONTAINS
               & c_humus_2(:),                             & ! inout
               & cflux_fire_all_2_atm                      & ! out
               & )
-          CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
-          CASE (3)
-            CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
-          CASE (4) !! Read burned_fract
+          CASE (FIRE_SPITFIRE)
+            CALL finish(TRIM(routine),'Thonicke spitfire not implemented yet.')
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown fire algorithm')
+            CALL finish(TRIM(routine),'Unknown fire algorithm')
         END SELECT
 
         ! R: This corresponds to JS3, but I did not understand it...
