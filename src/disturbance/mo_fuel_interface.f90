@@ -106,7 +106,7 @@ CONTAINS
   !!
   SUBROUTINE update_fuel(tile, options)
 
-    USE mo_fuel_process,   ONLY: calc_fuel_jsbach
+    USE mo_fuel_process,   ONLY: calc_fuel_jsb3
     USE mo_jsb_time,       ONLY: is_newday
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
     USE mo_fuel_constants, ONLY: FUEL_JSB3, FUEL_SPITFIRE
@@ -186,7 +186,7 @@ CONTAINS
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (FUEL_JSB3) !! jsbach algorithm
 
-          CALL calc_fuel_jsbach( &
+          CALL calc_fuel_jsb3( &
             & c_acid_ag1_ta(:),       & ! in
             & c_water_ag1_ta(:),      & ! in
             & c_ethanol_ag1_ta(:),    & ! in

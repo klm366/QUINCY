@@ -3,9 +3,11 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
+!! 2018-04-25, StW: Changed routine names for consistency with namelists
 !!
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
@@ -18,13 +20,13 @@ MODULE mo_disturb_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: burned_fractt_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+  PUBLIC :: burned_fractt_jsb3, broken_woody_fract_jsb3, get_relative_humidity_air
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_process'
 
 CONTAINS
 
-  PURE ELEMENTAL SUBROUTINE burned_fractt_jsbach( &
+  PURE ELEMENTAL SUBROUTINE burned_fractt_jsb3( &
     & fire_rel_hum_threshold,   & ! in
     & fire_litter_threshold,    & ! in
     & fire_minimum,             & ! in
@@ -67,16 +69,16 @@ CONTAINS
         &             * delta_time_yr
     END IF
 
-  END SUBROUTINE burned_fractt_jsbach
+  END SUBROUTINE burned_fractt_jsb3
 
   ! Calculate windbreak for woody types
-  PURE ELEMENTAL SUBROUTINE broken_woody_fract_jsbach( &
-    & wind_threshold,                                  & ! in
-    & wind_damage_scale,                               & ! in
-    & cover_fract_pot,                                 & ! in
-    & prev_day_max_wind_10m,                           & ! in
-    & max_wind_10m,                                    & ! in
-    & damaged_fract                                    & ! out
+  PURE ELEMENTAL SUBROUTINE broken_woody_fract_jsb3( &
+    & wind_threshold,                                & ! in
+    & wind_damage_scale,                             & ! in
+    & cover_fract_pot,                               & ! in
+    & prev_day_max_wind_10m,                         & ! in
+    & max_wind_10m,                                  & ! in
+    & damaged_fract                                  & ! out
     & )
 
     ! Arguments
@@ -103,7 +105,7 @@ CONTAINS
         &               )
     ENDIF
 
-  END SUBROUTINE broken_woody_fract_jsbach
+  END SUBROUTINE broken_woody_fract_jsb3
 
   FUNCTION get_relative_humidity_air(nc, air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
 
