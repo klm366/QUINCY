@@ -3,9 +3,11 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (06.04.2017)
+!! 2018-04-25, StW: Splitted configuration namelist in one general and a specific for each disturbance algorithm
 !!
 MODULE mo_disturb_config_class
 #ifndef __NO_JSBACH__
@@ -16,6 +18,8 @@ MODULE mo_disturb_config_class
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
+  USE mo_disturbance_constants, ONLY: windbreak_names, WINDBREAK_NONE, WINDBREAK_JSB3,               &
+                                           fire_names,      FIRE_NONE,      FIRE_JSB3, FIRE_SPITFIRE
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -47,15 +51,6 @@ MODULE mo_disturb_config_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_config_class'
   
-  CHARACTER(len=*), PARAMETER :: windbreak_names = 'none jsb3'
-  INTEGER, PUBLIC,  PARAMETER :: WINDBREAK_NONE  = 0
-  INTEGER, PUBLIC,  PARAMETER :: WINDBREAK_JSB3  = 1
-
-  CHARACTER(len=*), PARAMETER :: fire_names      = 'none jsb3 spitfire'
-  INTEGER, PUBLIC,  PARAMETER :: FIRE_NONE       = 0
-  INTEGER, PUBLIC,  PARAMETER :: FIRE_JSB3       = 1
-  INTEGER, PUBLIC,  PARAMETER :: FIRE_SPITFIRE   = 2
-
 
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------

@@ -3,9 +3,11 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-04-15)
+!! 2018-04-25, StW: Added used constants and names - removed unused
 !!
 MODULE mo_disturbance_constants
 #ifndef __NO_JSBACH__
@@ -14,24 +16,22 @@ MODULE mo_disturbance_constants
 
   IMPLICIT NONE
   PUBLIC
-  ! Submodel identifiers for subroutine disturbed_frac and relocate_disturbed_carbon
-  ! to tell the subroutines which kind of parametrizations they should use.
-  ! However, only two of them are used in JS4.
-  !INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE_WOOD        =  1 !! Calculation wrt. burning woody pfts
-  !INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE_GRASS       =  2 !! Calculation wrt. burning grass pfts
-  INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE             =  3 !! Calculation wrt. any burning pfts
-  !INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK_WOOD   =  4 !! Calculation wrt. windbread of woody types
-  !INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK_GRASS  =  8 !! Calculation wrt. windbreak of grass types 
-  !                                                           !! (ok: 8 is unlikely to ever be used - maybe for extreme
-  !                                                           !! precipitation events?!)
-  INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK        = 12 !! Calculation wrt. windbreak of any pft types 
-  !INTEGER , PARAMETER, PUBLIC  :: FIRE_NONE             =  0
-  INTEGER , PARAMETER, PUBLIC  :: FIRE_JSBACH           =  1
-  !INTEGER , PARAMETER, PUBLIC  :: FIRE_ARORA            =  2
-  !INTEGER , PARAMETER, PUBLIC  :: FIRE_THONICKE         =  3
 
-  REAL(wp), PARAMETER          :: persist_rel_hum  = 0.95_wp   ! factor concerning the smoothing of relative air humidity (~14 days)
-  REAL(wp), PARAMETER          :: persist_wind_10m = 0.9995_wp ! factor concerning the smoothing of daily maximum wind speed
+  ! Constants for controlling windbreak algorithms
+  CHARACTER(len=*), PARAMETER :: windbreak_names = 'none jsb3'
+  INTEGER,          PARAMETER :: WINDBREAK_NONE  = 0
+  INTEGER,          PARAMETER :: WINDBREAK_JSB3  = 1
+
+  ! Constants for controlling fire algorithms
+  CHARACTER(len=*), PARAMETER :: fire_names      = 'none jsb3 spitfire'
+  INTEGER,          PARAMETER :: FIRE_NONE       = 0
+  INTEGER,          PARAMETER :: FIRE_JSB3       = 1
+  INTEGER,          PARAMETER :: FIRE_SPITFIRE   = 2
+
+  ! Constants regarding temporal smooting of disturbance relevant forcing field
+  ! StW: would it make sense to move these to jsb_disturb_fire_jsb3/jsb_disturb_windbreak_jsb3 namelists respectively?
+  REAL(wp), PARAMETER         :: persist_rel_hum  = 0.95_wp   ! factor concerning the smoothing of relative air humidity (~14 days)
+  REAL(wp), PARAMETER         :: persist_wind_10m = 0.9995_wp ! factor concerning the smoothing of daily maximum wind speed
 
 #endif
 END MODULE mo_disturbance_constants
