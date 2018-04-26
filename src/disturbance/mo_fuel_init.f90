@@ -3,9 +3,11 @@
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
+!!  Stiig Wilkenskjeld, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-06-20)
+!! 2018-04-26, StW: Added Spitfire support
 !!
 MODULE mo_fuel_init
 #ifndef __NO_JSBACH__
@@ -20,8 +22,15 @@ MODULE mo_fuel_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_time_iface,    ONLY: is_time_experiment_start, is_time_restart
 
+  ! Use of processes in this module
   dsl4jsb_Use_processes FUEL_
+  dsl4jsb_Use_processes DISTURB_
+
+  ! Use process configurations
   dsl4jsb_Use_config(FUEL_)
+  dsl4jsb_Use_config(DISTURB_)
+
+  ! Use process memory
   dsl4jsb_Use_memory(FUEL_)
 
   IMPLICIT NONE
@@ -57,6 +66,11 @@ CONTAINS
   END SUBROUTINE fuel_init
 
   SUBROUTINE fuel_init_bc(tile)
+
+#ifdef HAVE_MOFFLEDAC
+    USE mo_input, ONLY: InputOptAdd
+#endif
+
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -80,7 +94,10 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Setting fuel boundary conditions for tile '//TRIM(tile%name))
 
-    ! R: nothing to do in the moment ...
+#ifdef HAVE_MOFFLEDAC
+      CALL InputOptAdd(var_name='population_density'//TRIM(tile%name),file_name='population_density.nc', &
+                  var_file_name='population_density',dt_update_unit='1m',valid_time='ACTUAL',reads_per=1)
+#endif
 
   END SUBROUTINE fuel_init_bc
 
