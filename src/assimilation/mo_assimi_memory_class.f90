@@ -131,6 +131,7 @@ CONTAINS
         & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy)s (mean value)', 'Gross photosynthesis on canopy ground area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
+        & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'gross_assimilation', mem%gross_assimilation, &
@@ -138,6 +139,7 @@ CONTAINS
         & t_cf('gross_assimilation', 'mol(CO2)/m^2 s (mean value)', 'Gross photosynthesis on tile area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
+        & output_level=BASIC, &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'dark_respiration_ca', mem%dark_respiration_ca,     &
