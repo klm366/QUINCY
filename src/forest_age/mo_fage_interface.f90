@@ -428,13 +428,17 @@ CONTAINS
       firstChild => tile%Get_first_child_tile()
       currentChild => tile%Get_first_child_tile()
 
-      ! Area changes upon disturbances only have carbon consequences for the first child
-      !  (All other children only have area changes)
-      firstChild%l_update_c(ics:ice, iblk) = .TRUE.
-
       ! in the first iteration of the loop the first child is source and sink 
       l_sourceisfirstChild = .TRUE.
       DO i=1,ncohorts
+
+        ! Area changes upon disturbances only have carbon consequences for the first child
+        !  (All other children only have area changes)
+        IF(l_sourceisfirstChild) THEN
+          currentChild%l_update_c(ics:ice, iblk) = .TRUE.
+        ELSE
+          currentChild%l_update_c(ics:ice, iblk) = .FALSE.
+        ENDIF
 
         ! -> damaged_frac and burned_frac were determined by the disturbance process and are a fraction of the tile
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
@@ -507,9 +511,6 @@ CONTAINS
         ! Move further in the hierarchy 
         currentChild => currentChild%Get_next_sibling_tile()
         l_sourceisfirstChild = .FALSE.
-        ! Area changes upon disturbances only have carbon consequences for the first child
-        !  (All other children only have area changes)
-        currentChild%l_update_c(ics:ice, iblk) = .FALSE.
       ENDDO
 
       !recalculate mean age
@@ -673,8 +674,10 @@ CONTAINS
             currentChild%l_update_c(ics:ice, iblk) = .FALSE.
           ENDDO
 
-          ! then iterate backwards until either all demanded area is fulfilled or the lowest cohort is reached
+          ! then iterate backwards until either all demanded area is fulfilled or the second lowest cohort is reached
           DO i=oldestCohort,2,-1
+            ! Area changes upon clearcut only have carbon density consequences for the first child
+            !  (All other children will only have area changes, but keep their densities)
             currentChild%l_update_c(ics:ice, iblk) = .FALSE.
 
             ! Determine area to be harvested from this cohort

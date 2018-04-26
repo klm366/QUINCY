@@ -799,8 +799,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     IF(ANY(tile%parent_tile%l_delta_area_change(ics:ice, iblk))) THEN     
-      !TODO-JN: Achtung mit openmp geht das so nicht -> todo: vector wie in model_class 
-      ! apply changes if required
       IF((tile%Is_first_child()) .OR. ANY(tile%l_update_c(ics:ice, iblk))) THEN
         ! a) TODO-JN-COHORTS what else to update? 
 
