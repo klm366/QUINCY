@@ -179,26 +179,34 @@ CONTAINS
     ENDIF
 
 
-    !> 3.0 with vegetation dynamics turned on (veg_dynamics_scheme /= none)
+    !> 3.0 Calculate establishment_rate and veg\%establishment
     !! 
+    SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
+      CASE ("cohort")
+        !> @ todo add some veg establishment, needed after (frequent) cutting, to cohort scheme in mo_veg_dynamics
+        !! 
+      CASE ("population")
+        IF(.NOT. base_config%l_do_stand_replacing_harvest) THEN 
+          CALL calc_veg_establishment(options                         , & ! in
+                                      lctlib                          , & 
+                                      dsl4jsb_Config(ASSIMI_)%ncanopy , &
+                                      w_soil_root_theta(:)            , &
+                                      growing_season(:)               , &
+                                      t_air_week_mavg(:)              , &
+                                      fpc(:)                          , &
+                                      rfr_ratio_boc_tvegdyn_mavg(:)   , &
+                                      veg_pool%seed_bed               , &
+                                      veg_establishment               )   ! out
+        ENDIF
+    ENDSELECT
+
+
+    !> 4.0 Calculate change in individual density from mortality and establishment
+    !! 
+    !! only if no stand harvesting is done
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population","cohort")
       IF(.NOT. base_config%l_do_stand_replacing_harvest) THEN 
-        !> 3.1 Calculate establishment_rate and veg\%establishment
-        !! 
-        CALL calc_veg_establishment(options                         , & ! in
-                                    lctlib                          , & 
-                                    dsl4jsb_Config(ASSIMI_)%ncanopy , &
-                                    w_soil_root_theta(:)            , &
-                                    growing_season(:)               , &
-                                    t_air_week_mavg(:)              , &
-                                    fpc(:)                          , &
-                                    rfr_ratio_boc_tvegdyn_mavg(:)   , &
-                                    veg_pool%seed_bed               , &
-                                    veg_establishment               )   ! out
-
-        !> 3.2 Calculate change in individual density from mortality and establishment
-        !! 
         IF(lctlib%growthform == itree) THEN
            delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size , & 
                                                    dens_ind(:)      , &
@@ -323,10 +331,7 @@ CONTAINS
 
 
     SELECT CASE (veg_dynamics_scheme)
-      CASE ("cohort")
-        !> @todo  add vegetation dynamics scheme cohort to calc_veg_mortality
-        !! 
-      CASE ("population")
+      CASE ("population","cohort")
         !> 1.0 mortality related to growth efficiency mortality 
         !! 
         WHERE(lai_tvegdyn_mavg(:) > eps8)
