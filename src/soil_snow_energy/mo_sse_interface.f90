@@ -526,6 +526,10 @@ CONTAINS
 
     ! Locally allocated vectors
     !
+    dsl4jsb_Real3D_onChunk :: &
+      & fract_water,           &
+      & fract_ice
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
@@ -586,29 +590,38 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
+      ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
+      WHERE (soil_depth_sl(:,:) > 0._wp)
+        fract_water(:,:) = dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl) / soil_depth_sl(:,:)
+        fract_ice  (:,:) = dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:)
+      ELSE WHERE
+        fract_water(:,:) = 0._wp
+        fract_ice  (:,:) = 0._wp
+      END WHERE
       vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
-        &                             SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
-        &                                     fract_org_sl(:,:)                                                  , &
-        & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
-        & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
-        &                                     soil_depth_sl(:,:)                                                 , &
-        &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
+        &                        SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
+        &                                fract_org_sl(:,:)                                                  , &
+        &                                fract_water(:,:), &
+        &                                fract_ice  (:,:), &
+        &                                soil_depth_sl(:,:)                                                 , &
+        &                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         & )
+      DEALLOCATE(fract_water, fract_ice)
     ELSE
       vol_heat_cap_sl(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
     ENDIF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       heat_cond_sl (:,:) = calc_thermal_conductivity( &
-        &                             SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl)                                                         , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl)                                                          , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_field_cap_sl)                                                  , &
-        &                                     fract_org_sl(:,:)                                                  , &
-        &                                     soil_depth_sl(:,:)                                                 , &
-        &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
+        &                        SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl)                                                         , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl)                                                          , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, vol_field_cap_sl)                                                  , &
+        &                                fract_org_sl(:,:)                                                  , &
+        &                                soil_depth_sl(:,:)                                                 , &
+        &                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         & )
     ELSE
       heat_cond_sl(:,:) = SPREAD(heat_cond(:), DIM=2, ncopies=nsoil)
