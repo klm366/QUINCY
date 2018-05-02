@@ -8,6 +8,7 @@
 ##      * the variables you want to use for your parameter sensitivity analysis must already be present in the param.list, if not, ask Jan or Sönke
 ##      * you need to create an additional input file (see below for details)
 ##      * set the mainTask to 1, 2 or 3 (see below for details)
+##      * for mainTask 3 you can select the distribution of values (uniform/normal) and the SD of the normal distribution
 ## 
 ## Input you have to create:   
 ##      slm_parameter_sensitivity_input.txt 
@@ -36,6 +37,9 @@
 # Note: you can pass the mainTask number as argument to this script; for Main Task 2: ./contrib/generate_parameter_table.sh 2
 mainTask=1
 
+# Main Task 3 options:
+m3ProbDistr="u"       # [u]niform  [n]ormal distribution of values
+m3NormalSD=0.1        # SD of the normal distribution -> applied to values within range [0,1]
 
 # Input file for this script
 #   defaults to: ./slm_parameter_sensitivity_input.txt
@@ -85,6 +89,8 @@ else
    exit 1
  fi
 fi
+echo " "
+echo "You selected Main Task ""$mainTask"
 
 ## validate existence of param.list ##
 if [ ! -e ./param.list ]     # exit if non-existing
@@ -110,7 +116,6 @@ sync
 ## remove previous versions of output files ##
 rm -f $paramListDefault
 rm -f $paramTable
-echo " "
 echo "Previous output files have been removed (param.listD & param_table.txt, if existent)."
 echo " "
 
@@ -459,6 +464,7 @@ echo " (For three parameters and 80 parameter sets it takes two and a half minut
 R --slave --silent --no-save << EOF
 setwd("$workingDir")
 library(lhs)
+library(scales)
 
 # get input file
 inputFile <- read.csv("$paramInputFile",
@@ -469,6 +475,23 @@ inputFile <- inputFile[1:(nrow(inputFile)-1),]  # remove the last row containing
 sampleMatrix <- geneticLHS($paramSets,
                            $paramNumber,
                            pop=50, gen=20000, pMut=0.2, criterium="S", verbose=F)
+
+# if distribution is different from uniform
+# transform values into another distribution
+if ("$m3ProbDistr" != "u"){     # here the bash variable needs to be placed into "" to enable string comparison
+  # normal distribution
+  if ("$m3ProbDistr" == "n"){   # here the bash variable needs to be placed into "" to enable string comparison
+    print(paste0(" Applying a normal distribution to values with a SD of: ",$m3NormalSD,"."))
+    # transform to normal distribution
+    sampleMatrixT <- apply(sampleMatrix,  2, function(columnY) qnorm(columnY, mean = 0.5, sd = $m3NormalSD))
+    # rescale (back) to [0,1]
+    sampleMatrix  <- apply(sampleMatrixT, 2, function(columnY) rescale(columnY, to=c(0,1)))
+  }
+  # other distribution ..
+  # ..
+} else{
+  print(" Applying a uniform distribution to values.")
+}
 
 # transform [0,1] values into [min,max] values as defined in the input file
 for (p in 1:$paramNumber){
