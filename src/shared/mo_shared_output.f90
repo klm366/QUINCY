@@ -2149,8 +2149,10 @@ CONTAINS
              n_deposition_n15_acc = n_deposition_n15_acc  + (nhx_n15_deposition(ipoi) + noy_n15_deposition(ipoi)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
              net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              net_min_no3_acc  = net_min_no3_acc  + SUM(net_mineralisation_no3(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                     
-             uptake_nh4_acc_sl   = SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
-             uptake_no3_acc_sl   = SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             uptake_nh4_acc_sl   = uptake_nh4_acc_sl + &
+                                   SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
+             uptake_no3_acc_sl   = uptake_no3_acc_sl + &
+                                   SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              nitrification_acc   = nitrification_acc + & 
                                     SUM((nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + nitrification_n2o(ipoi,:)) * &
                                     soil_depth_sl(ipoi,:)) * dtime_one
@@ -2177,7 +2179,8 @@ CONTAINS
              leachingPorg_acc       = leachingPorg_acc + leaching_dom_phosphorus(ipoi) * dtime_one
              net_min_po4_acc        = net_min_po4_acc + &
                                         SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
-             uptake_po4_acc_sl         = SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             uptake_po4_acc_sl      = uptake_po4_acc_sl + &
+                                      SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              weathering_po4_acc     = weathering_po4_acc + &
                                         SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              occlusion_po4_acc      = occlusion_po4_acc + &
@@ -2468,8 +2471,10 @@ CONTAINS
              leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(ipoi)   * dtime_one           
              leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(ipoi)   * dtime_one           
              leachingNorg_acc = leachingNorg_acc + leaching_dom_nitrogen(ipoi) * dtime_one
-             uptake_nh4_acc_sl   = SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
-             uptake_no3_acc_sl   = SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             uptake_nh4_acc_sl   = uptake_nh4_acc_sl + &
+                                   SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
+             uptake_no3_acc_sl   = uptake_no3_acc_sl + &
+                                   SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              nitrification_acc   = nitrification_acc + & 
                                     SUM((nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + nitrification_n2o(ipoi,:)) * &
                                     soil_depth_sl(ipoi,:)) * dtime_one
@@ -2486,7 +2491,8 @@ CONTAINS
              leachingPorg_acc       = leachingPorg_acc + leaching_dom_phosphorus(ipoi) * dtime_one
              net_min_po4_acc        = net_min_po4_acc + &
                                         SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
-             uptake_po4_acc_sl      = SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+             uptake_po4_acc_sl      = uptake_po4_acc_sl + &
+                                      SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              weathering_po4_acc     = weathering_po4_acc + &
                                         SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              occlusion_po4_acc      = occlusion_po4_acc + &

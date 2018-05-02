@@ -777,7 +777,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation,[m2/s] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: pool                   !< current state of pool to be transported
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: transport              !< transport between layers per timestep 

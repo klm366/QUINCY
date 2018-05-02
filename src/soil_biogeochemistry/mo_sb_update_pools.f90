@@ -569,8 +569,8 @@ CONTAINS
                                        transport_po4_assoc_fast(:,:), &
                                        transport_po4_assoc_slow(:,:), &
                                        weathering_po4(:,:), &
-                                       slow_sorption_po4(:,:), &
                                        occlusion_po4(:,:), &
+                                       slow_sorption_po4(:,:), &
                                        fast_adsorption_po4(:,:))
 
        ELSEIF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm" ) THEN
@@ -831,20 +831,20 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        rtm_desorption, &             !< temperature response scalar for po4 desorption
                                                                        rmm_sorption, &               !< moisture response scalar for po4 sorption
                                                                        rmm_desorption, &             !< moisture response scalar for po4 desorption
-                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [mol / m3 / timestep]
-                                                                       transport_po4_solute, &       !< transport of soluble PO4 [mol / m3 / timestep]
-                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [mol / m3 / timestep]
-                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [mol / m3 / timestep]
-                                                                       weathering_po4                !< phosphorus weathering rate [mol P / m3 / timestep]   
+                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [µmol/ m3 / s]
+                                                                       transport_po4_solute, &       !< transport of soluble PO4 [µmol/ m3 / s]
+                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [µmol/ m3 / s]
+                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [µmol/ m3 / s]
+                                                                       weathering_po4                !< phosphorus weathering rate [µmol/ m3 / s]   
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
-                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [mol / m3 / timestep]
-                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [mol / m3 / timestep]
-                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [mol / m3 / timestep]
-                                                                       occlusion_po4, &              !< phosphorus occlusion rate [mol P / m3 / timestep]
-                                                                       net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
-                                                                       slow_sorption_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: fast_adsorption_po4           !< phosphorus adsorption rate, solute --> assoc_fast [mol P / m3 / timestep]
+                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [µmol/ m3 / s]
+                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [µmol/ m3 / s]
+                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [µmol/ m3 / s]
+                                                                       occlusion_po4, &              !< phosphorus occlusion rate [µmol/ m3 / s]
+                                                                       net_mineralisation_po4, &     !< net mineralisation of PO4 [µmol/ m3 / s]
+                                                                       slow_sorption_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol/ m3 / s]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: fast_adsorption_po4           !< phosphorus adsorption rate, solute --> assoc_fast [µmol/ m3 / s]
 
 
     ! 0.2 local
