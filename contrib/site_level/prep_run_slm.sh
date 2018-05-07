@@ -1400,7 +1400,7 @@ fi
 # the memory requirement is set to 1GB
 sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
-cleanQueue="BTM io all"
+cleanQueue="short"
 # start the job
 bsub -w "ended($jobName)" -q "$cleanQueue" -M "1000000" -R "rusage[mem=1000]" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
 
