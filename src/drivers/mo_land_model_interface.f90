@@ -278,8 +278,8 @@ CONTAINS
 
     !> 2.0 check stand harvest year (if this functionality is enabled: base_config\%flag_stand_harvest)
     !! 
-    !!
-    IF (base_config%flag_stand_harvest) THEN
+    !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
+    IF (base_config%flag_stand_harvest .AND. .NOT. l_transient_spinup) THEN
       IF (base_config%l_do_stand_replacing_harvest) THEN
         base_config%l_do_stand_replacing_harvest = .FALSE.    ! per default this flag is FALSE
       END IF

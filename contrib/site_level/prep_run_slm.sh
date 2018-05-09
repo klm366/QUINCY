@@ -612,6 +612,7 @@ validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "ca
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_scheme"
 validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
 validateUserConfigValues "$veg_dynamics_scheme" "$validateVegDynamicsScheme" "veg_dynamics_scheme"
+validateUserConfigValues "$flag_stand_harvest" "$validateFlags" "flag_stand_harvest"
 validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
 validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
