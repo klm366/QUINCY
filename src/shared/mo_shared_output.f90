@@ -1134,7 +1134,8 @@ CONTAINS
                             sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
           ! soil_diagnostics_lay
-          write(lun,'(81F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:)
+          write(lun,'(101F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), &
+                                 qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_canopy_out .OR. l_soil_output
@@ -1222,7 +1223,7 @@ CONTAINS
     !! 
     lun = 100 + 30    ! -> max of 30 files for pool output
 
-    ! land
+    !! land
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')  ! for "land & soil" see below
         ! mycofluxCNP
@@ -1231,7 +1232,7 @@ CONTAINS
         lun=lun+1
     END SELECT
 
-    ! land/plant & canopy & soil
+    !! land/plant & canopy  (land/soil below)
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
@@ -1252,6 +1253,27 @@ CONTAINS
         fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+      CASE('canopy') ! subset of CASE('land','plant')
+        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+    END SELECT
+
+    !! land & soil - additional to CASE('land')
+    !!  simple_0d and simple_1d and jsm
+    !!  layer-data for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','soil')
+        !! all soil models (simple_0d and simple_1d and jsm)
         ! soilfluxCdC13DC14
         fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
@@ -1268,44 +1290,11 @@ CONTAINS
         fname = 'soilfluxdN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-
-      CASE('canopy') ! subset of CASE('land','plant')
-        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        ! sb_massBalance
+        fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
-        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-
-      CASE('soil')
-        fname = 'soilfluxCdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'soilfluxN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'soilfluxP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        
-    END SELECT
-
-    !! land & soil
-    !!  simple_0d and simple_1d and jsm
-    !!  layer-data for simple_1d and jsm
-    SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','soil')
-        ! simple_0d and simple_1d and jsm
-          ! sb_massBalance
-          fname = 'sb_massBalance'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-          lun=lun+1
+        !! simple_1d & jsm layer-data
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
             ! soilfluxC_lay
@@ -1357,7 +1346,7 @@ CONTAINS
     !! lun of fluxes starts at a multiple of 100, plus 30 (any lun > 129 in pool output throws an exception)
     lun = 100 + 30
     
-    ! land 
+    !! land 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')
         ! mycofluxCNP
@@ -1365,7 +1354,7 @@ CONTAINS
         lun=lun+1
     END SELECT
 
-    ! land/plant & canopy & soil
+    !! land/plant & canopy  (land/soil below)
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxC
@@ -1384,6 +1373,26 @@ CONTAINS
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
+      CASE('canopy') ! subset of CASE('land','plant')
+        ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
+        lun=lun+1   
+        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
+                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+        lun=lun+1
+    END SELECT
+
+    
+    !! land & soil - additional to CASE('land')
+    !!  simple_0d and simple_1d and jsm
+    !!  layer-data for simple_1d and jsm
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','soil')
+        !! all soil models (simple_0d and simple_1d and jsm)
         ! soilfluxCdC13DC14
         WRITE(lun,'(2a)') 'Time Litterfall HetResp LeachingDOM Litterfall_dC13 HetResp_dC13 LeachingDOM_dC13 ', &
                           'Litterfall_dC14 HetResp_DC14 LeachingDOM_dC14'
@@ -1398,51 +1407,14 @@ CONTAINS
                           'Occlusion_PO4 Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
         ! soilfluxdN
-        WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2', &
-                          ' Leaching_d15NH4 Leaching_d15NO3'
+        WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2 ', &
+                          'Leaching_d15NH4 Leaching_d15NO3'
         lun=lun+1
-
-      CASE('canopy') ! subset of CASE('land','plant')
-        ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
-        lun=lun+1   
-        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
-                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+        ! sb_massBalance
+        WRITE(lun,'(2a)') 'Time sb_deltaPoolC sb_deltaPoolN sb_deltaPoolP sb_deltaPoolC13 sb_deltaPoolC14 sb_deltaPoolN15 ', &
+                          'sb_totalFluxC sb_totalFluxN sb_totalFluxP sb_totalFluxC13 sb_totalFluxC14 sb_totalFluxN15'
         lun=lun+1
-        WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
-        lun=lun+1
-        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
-        lun=lun+1
-
-      CASE('soil')
-        ! soilfluxCdC13DC14
-        WRITE(lun,'(2a)') 'Time Litterfall HetResp LeachingDOM Litterfall_dC13 HetResp_dC13 LeachingDOM_dC13 ', &
-                          'Litterfall_dC14 HetResp_DC14 LeachingDOM_dC14'
-        lun=lun+1
-        ! soilfluxN  
-        WRITE(lun,'(2a)') 'Time Litterfall NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
-                         'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM' 
-        lun=lun+1   
-        ! soilfluxP
-        WRITE(lun,'(3a)') 'Time Litterfall ', &
-                          'PDeposition Leaching_PO4 Leaching_DOM Net_Mineralisation_PO4 PlantUptake_PO4 Weathering_PO4 ', &
-                          'Occlusion_PO4 Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
-        lun=lun+1
-
-    END SELECT
-
-    
-    !! land & soil
-    !!  simple_0d and simple_1d and jsm
-    !!  layer-data for simple_1d and jsm
-    SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','soil')
-        ! simple_0d and simple_1d and jsm
-          ! sb_massBalance
-          WRITE(lun,'(2a)') 'Time sb_deltaPoolC sb_deltaPoolN sb_deltaPoolP sb_deltaPoolC13 sb_deltaPoolC14 sb_deltaPoolN15 ', &
-                            'sb_totalFluxC sb_totalFluxN sb_totalFluxP sb_totalFluxC13 sb_totalFluxC14 sb_totalFluxN15'
-          lun=lun+1
-            
+        !! simple_1d & jsm layer-data
         SELECT CASE(TRIM(sb_model_scheme))
           CASE('simple_1d','jsm')
             ! soilfluxC_lay
@@ -1491,7 +1463,8 @@ CONTAINS
               WRITE(p9str,'(a)') TRIM(p9str)//' MycoUptake_no3_L'//TRIM(layerstr)
               WRITE(p10str,'(a)') TRIM(p10str)//' Transport_DON_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
+            WRITE(lun,'(11a)') 'Time ', &
+                               TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
                                TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1
             ! soilfluxP_lay
@@ -1534,8 +1507,9 @@ CONTAINS
               WRITE(p14str,'(a)') TRIM(p14str)//' Trans_primary_L'//TRIM(layerstr)
               WRITE(p15str,'(a)') TRIM(p15str)//' Trans_DOP_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(16a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
-              TRIM(p8str),TRIM(p9str),TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str),TRIM(p15str)
+            WRITE(lun,'(16a)') 'Time ', &
+                               TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str), &
+                               TRIM(p9str),TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str),TRIM(p15str)
             lun=lun+1
         END SELECT
     END SELECT
@@ -1608,16 +1582,16 @@ CONTAINS
     REAL(wp), SAVE                        :: growth_resp_C14_acc = 0.0_wp
     REAL(wp), SAVE                        :: maint_resp_C14_acc  = 0.0_wp
     REAL(wp), SAVE                        :: uptake_nh4_acc      = 0.0_wp
-    REAL(wp), SAVE                        :: uptake_nh4_acc_sl   = 0.0_wp   
+    REAL(wp), SAVE                        :: plant_uptake_nh4_acc = 0.0_wp   
     REAL(wp), SAVE                        :: uptake_nh4_n15_acc  = 0.0_wp   
     REAL(wp), SAVE                        :: uptake_no3_acc      = 0.0_wp 
-    REAL(wp), SAVE                        :: uptake_no3_acc_sl   = 0.0_wp  
+    REAL(wp), SAVE                        :: plant_uptake_no3_acc = 0.0_wp  
     REAL(wp), SAVE                        :: uptake_no3_n15_acc  = 0.0_wp   
     REAL(wp), SAVE                        :: recycling_n_acc     = 0.0_wp  
     REAL(wp), SAVE                        :: res_use_n_acc       = 0.0_wp  
     REAL(wp), SAVE                        :: n_fixation_acc      = 0.0_wp   
     REAL(wp), SAVE                        :: n_fixation_n15_acc  = 0.0_wp   
-    REAL(wp), SAVE                        :: uptake_po4_acc_sl   = 0.0_wp
+    REAL(wp), SAVE                        :: plant_uptake_po4_acc = 0.0_wp
     REAL(wp), SAVE                        :: uptake_po4_acc      = 0.0_wp
     REAL(wp), SAVE                        :: recycling_p_acc     = 0.0_wp  
     REAL(wp), SAVE                        :: res_use_p_acc       = 0.0_wp   
@@ -2059,8 +2033,10 @@ CONTAINS
     !< 2.0  output
     !! 
     !! land/plant/canopy
-    !! soil
     !! land/soil  (simple_0d/simple_1d/jsm  &  simple_1d/jsm)
+    !! 
+    ! set starting-lun for write
+    lun = 100 + 30
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')
 
@@ -2070,7 +2046,7 @@ CONTAINS
            !! accumulate fluxes across the timesteps of one interval
            !! 
            IF(l_flux_calc_acc_output) THEN
-
+             ! Vegetation
              gpp_acc              = gpp_acc               + gross_assimilation(ipoi)        * dtime_one
              growth_resp_acc      = growth_resp_acc       + growth_respiration(ipoi)        * dtime_one
              maint_resp_acc       = maint_resp_acc        + maint_respiration(ipoi)         * dtime_one
@@ -2125,90 +2101,6 @@ CONTAINS
              qg_acc           = qg_acc            - ground_heat_flx(ipoi)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(ipoi)                      * dtime_one               
              ndat_acc         = ndat_acc          + 1 
-             litterfallC_acc = litterfallC_acc + (veg_litterfall%leaf%carbon(ipoi) + & 
-                                      veg_litterfall%fine_root%carbon(ipoi) + veg_litterfall%coarse_root%carbon(ipoi) + &
-                                      veg_litterfall%sap_wood%carbon(ipoi) + veg_litterfall%heart_wood%carbon(ipoi) + &
-                                      veg_litterfall%labile%carbon(ipoi) + veg_litterfall%reserve%carbon(ipoi) + &
-                                      veg_litterfall%fruit%carbon(ipoi) + veg_litterfall%seed_bed%carbon(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallC13_acc = litterfallC13_acc + (veg_litterfall%leaf%carbon13(ipoi) + & 
-                                      veg_litterfall%fine_root%carbon13(ipoi) + veg_litterfall%coarse_root%carbon13(ipoi) + &
-                                      veg_litterfall%sap_wood%carbon13(ipoi) + veg_litterfall%heart_wood%carbon13(ipoi) + &
-                                      veg_litterfall%labile%carbon13(ipoi) + veg_litterfall%reserve%carbon13(ipoi) + &
-                                      veg_litterfall%fruit%carbon13(ipoi) + veg_litterfall%seed_bed%carbon13(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallC14_acc = litterfallC14_acc + (veg_litterfall%leaf%carbon14(ipoi) + & 
-                                      veg_litterfall%fine_root%carbon14(ipoi) + veg_litterfall%coarse_root%carbon14(ipoi) + &
-                                      veg_litterfall%sap_wood%carbon14(ipoi) + veg_litterfall%heart_wood%carbon14(ipoi) + &
-                                      veg_litterfall%labile%carbon14(ipoi) + veg_litterfall%reserve%carbon14(ipoi) + &
-                                      veg_litterfall%fruit%carbon14(ipoi) + veg_litterfall%seed_bed%carbon14(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallN_acc = litterfallN_acc + (veg_litterfall%leaf%nitrogen(ipoi) + & 
-                                      veg_litterfall%fine_root%nitrogen(ipoi) + veg_litterfall%coarse_root%nitrogen(ipoi) + &
-                                      veg_litterfall%sap_wood%nitrogen(ipoi) + veg_litterfall%heart_wood%nitrogen(ipoi) + &
-                                      veg_litterfall%labile%nitrogen(ipoi) + veg_litterfall%reserve%nitrogen(ipoi) + &
-                                      veg_litterfall%fruit%nitrogen(ipoi) + veg_litterfall%seed_bed%nitrogen(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallP_acc = litterfallP_acc + (veg_litterfall%leaf%phosphorus(ipoi) + & 
-                                      veg_litterfall%fine_root%phosphorus(ipoi) + veg_litterfall%coarse_root%phosphorus(ipoi) + &
-                                      veg_litterfall%sap_wood%phosphorus(ipoi) + veg_litterfall%heart_wood%phosphorus(ipoi) + &
-                                      veg_litterfall%labile%phosphorus(ipoi) + veg_litterfall%reserve%phosphorus(ipoi) + &
-                                      veg_litterfall%fruit%phosphorus(ipoi) + veg_litterfall%seed_bed%phosphorus(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             
-             het_respC_acc      = het_respC_acc      + SUM(het_respiration(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             het_respC13_acc    = het_respC13_acc    + SUM(het_respiration_c13(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             het_respC14_acc    = het_respC14_acc    + SUM(het_respiration_c14(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             leachingCorg_acc   = leachingCorg_acc   + leaching_dom_carbon(ipoi)   * dtime_one
-             leachingC13org_acc = leachingC13org_acc + leaching_dom_carbon13(ipoi) * dtime_one
-             leachingC14org_acc = leachingC14org_acc + leaching_dom_carbon14(ipoi) * dtime_one
-             ! Nitrogen
-             n_deposition_acc = n_deposition_acc  + (nhx_deposition(ipoi) + noy_deposition(ipoi)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
-             n_deposition_n15_acc = n_deposition_n15_acc  + (nhx_n15_deposition(ipoi) + noy_n15_deposition(ipoi)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
-             net_min_nh4_acc = net_min_nh4_acc + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             net_min_no3_acc  = net_min_no3_acc  + SUM(net_mineralisation_no3(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                     
-             uptake_nh4_acc_sl   = uptake_nh4_acc_sl + &
-                                   SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
-             uptake_no3_acc_sl   = uptake_no3_acc_sl + &
-                                   SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             nitrification_acc   = nitrification_acc + & 
-                                    SUM((nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + nitrification_n2o(ipoi,:)) * &
-                                    soil_depth_sl(ipoi,:)) * dtime_one
-             denitrification_acc = denitrification_acc + & 
-                                    SUM((denitrification_n2(ipoi,:) + denitrification_noy(ipoi,:) + denitrification_n2o(ipoi,:))*&
-                                    soil_depth_sl(ipoi,:)) * dtime_one 
-             emission_noy_acc = emission_noy_acc + emission_noy(ipoi) * dtime_one
-             emission_noy_n15_acc = emission_noy_n15_acc + emission_noy_n15(ipoi) * dtime_one
-             emission_n2o_acc = emission_n2o_acc + emission_n2o(ipoi) * dtime_one
-             emission_n2o_n15_acc = emission_n2o_n15_acc + emission_n2o_n15(ipoi) * dtime_one
-             emission_n2_acc  = emission_n2_acc  + emission_n2(ipoi) * dtime_one
-             emission_n2_n15_acc  = emission_n2_n15_acc  + emission_n2_n15(ipoi) * dtime_one
-             leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(ipoi) * dtime_one
-             leaching_nh4_n15_acc = leaching_nh4_n15_acc + leaching_nh4_n15_solute(ipoi) * dtime_one
-             leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(ipoi) * dtime_one
-             leaching_no3_n15_acc = leaching_no3_n15_acc + leaching_no3_n15_solute(ipoi) * dtime_one
-             leachingNorg_acc = leachingNorg_acc + leaching_dom_nitrogen(ipoi) * dtime_one
-             asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)) * dtime_one
-             asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(ipoi,:)*soil_depth_sl(ipoi,:)) * &
-                                          dtime_one
-             ! Phosphorus
-             p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
-             leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
-             leachingPorg_acc       = leachingPorg_acc + leaching_dom_phosphorus(ipoi) * dtime_one
-             net_min_po4_acc        = net_min_po4_acc + &
-                                        SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
-             uptake_po4_acc_sl      = uptake_po4_acc_sl + &
-                                      SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             weathering_po4_acc     = weathering_po4_acc + &
-                                        SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             occlusion_po4_acc      = occlusion_po4_acc + &
-                                        SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             slow_sorption_po4_acc  = slow_sorption_po4_acc + &
-                                        SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             fast_adsorption_po4_acc        = fast_adsorption_po4_acc + &
-                                                SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
-                                              SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
              ! Mycorrhiza
              myco_export_c_acc   = myco_export_c_acc    + SUM(sb_mycorrhiza_export%carbon(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
@@ -2233,9 +2125,6 @@ CONTAINS
                  albedo_acc = albedo_acc / ndat_acc
                ENDIF
        
-               ! set starting-lun for write
-               lun = 100 + 30
-               
                ! land
                SELECT CASE(TRIM(base_config%slm_model_name))  ! cases: land & land/plant & canopy
                  CASE('land')
@@ -2285,39 +2174,7 @@ CONTAINS
                    write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
                    lun=lun+1
-                   ! soilfluxCdC13DC14
-                   dC13litterfall = calc_delta_C13(litterfallC_acc,litterfallC13_acc)
-                   dC13het_resp   = calc_delta_C13(het_respC_acc,het_respC13_acc)
-                   dC13leaching   = calc_delta_C13(leachingCorg_acc,leachingC13org_acc)
-                   write(lun,'(12F20.12)') time_d, litterfallC_acc, het_respC_acc, leachingCorg_acc, &
-                       dC13litterfall, dC13het_resp, dC13leaching, &
-                       calc_delta_C14(litterfallC_acc,litterfallC14_acc,dC13litterfall), &
-                       calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
-                       calc_delta_C14(leachingCorg_acc,leachingC14org_acc,dC13leaching)
-                   lun = lun + 1
-                   ! soilfluxN
-                   write(lun,'(20F20.12)') time_d,litterfallN_acc,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, net_min_no3_acc, &
-                                          nitrification_acc,denitrification_acc,emission_noy_acc,emission_n2o_acc,emission_n2_acc,& 
-                                          uptake_nh4_acc_sl,uptake_no3_acc,leaching_nh4_acc,leaching_no3_acc,leachingNorg_acc                    
-                   lun=lun+1
-                   ! soilfluxP
-                   write(lun,'(20F20.12)') time_d, litterfallP_acc, &
-                                           p_deposition_acc, leaching_po4_acc, leachingPorg_acc, net_min_po4_acc, uptake_po4_acc_sl, &
-                                           weathering_po4_acc, occlusion_po4_acc, &
-                                           slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
-                   lun = lun + 1 
-                   ! soilfluxdN
-                   write(lun,'(20F18.8)') time_d, & 
-                         calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
-                         calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
-                         calc_delta_N15(emission_noy_acc,emission_noy_n15_acc), &
-                         calc_delta_N15(emission_n2o_acc,emission_n2o_n15_acc), &
-                         calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
-                         calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
-                         calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc)
-                   lun=lun+1
-
-                 CASE('canopy') ! subset of CASE('land','plant')
+                 CASE('canopy') ! subset of the previous CASE('land','plant')
                    ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
                    write(lun,'(8F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                          n_transform_resp_acc,n_fixation_resp_acc         , & 
@@ -2345,304 +2202,270 @@ CONTAINS
                END SELECT ! land/plant & canopy
 
                !! set acc variables zero
-               gpp_acc           = 0.0_wp
-               growth_resp_acc   = 0.0_wp
-               maint_resp_acc    = 0.0_wp
-               n_transform_resp_acc = 0.0_wp
-               n_fixation_resp_acc = 0.0_wp
-               exudationC_acc    = 0.0_wp
-               npp_acc           = 0.0_wp
-               res_use_c_acc     = 0.0_wp
-               gpp_C13_acc       = 0.0_wp
-               growth_resp_C13_acc = 0.0_wp
-               maint_resp_C13_acc = 0.0_wp
-               gpp_C14_acc       = 0.0_wp
-               growth_resp_C14_acc = 0.0_wp
-               maint_resp_C14_acc = 0.0_wp
-               recycling_n_acc   = 0.0_wp
-               res_use_n_acc     = 0.0_wp
-               n_fixation_acc    = 0.0_wp
-               n_fixation_n15_acc = 0.0_wp
-               uptake_po4_acc    = 0.0_wp
-               recycling_p_acc   = 0.0_wp
-               res_use_p_acc     = 0.0_wp
-               precip_acc        = 0.0_wp
-               evaporation_acc   = 0.0_wp
-               interception_acc  = 0.0_wp
-               transpiration_acc = 0.0_wp
-               drainage_acc      = 0.0_wp
-               runoff_acc        = 0.0_wp
-               gc_acc            = 0.0_wp
-               ga_acc            = 0.0_wp
-               n_deposition_acc  = 0.0_wp
-               n_deposition_n15_acc = 0.0_wp
-               ppfd_acc          = 0.0_wp
-               rnet_acc          = 0.0_wp
-               qh_acc            = 0.0_wp
-               qle_acc           = 0.0_wp
-               qg_acc            = 0.0_wp
-               albedo_acc        = 0.0_wp
-               appfd_acc         = 0.0_wp
-               ndat_acc          = 0        ! INTEGER 
-               litterfallC_acc                = 0.0_wp
-               het_respC_acc                  = 0.0_wp
-               leachingCorg_acc               = 0.0_wp
-               litterfallC13_acc              = 0.0_wp
-               het_respC13_acc                = 0.0_wp
-               leachingC13org_acc             = 0.0_wp
-               litterfallC14_acc              = 0.0_wp
-               het_respC14_acc                = 0.0_wp
-               leachingC14org_acc             = 0.0_wp
-               nitrification_acc              = 0.0_wp
-               denitrification_acc            = 0.0_wp
-               litterfallN_acc                = 0.0_wp
-               net_min_nh4_acc                = 0.0_wp
-               net_min_no3_acc                = 0.0_wp
-               uptake_nh4_acc                 = 0.0_wp
-               uptake_nh4_acc_sl              = 0.0_wp
-               uptake_nh4_n15_acc             = 0.0_wp
-               uptake_no3_acc                 = 0.0_wp
-               uptake_no3_acc_sl              = 0.0_wp
-               uptake_no3_n15_acc             = 0.0_wp
-               leachingNorg_acc               = 0.0_wp
-               emission_noy_acc               = 0.0_wp
-               emission_noy_n15_acc           = 0.0_wp
-               emission_n2o_acc               = 0.0_wp
-               emission_n2o_n15_acc           = 0.0_wp
-               emission_n2_acc                = 0.0_wp
-               emission_n2_n15_acc            = 0.0_wp
-               leaching_nh4_acc               = 0.0_wp
-               leaching_nh4_n15_acc           = 0.0_wp
-               leaching_no3_acc               = 0.0_wp
-               leaching_no3_n15_acc           = 0.0_wp
-               asymb_n_fixation_acc           = 0.0_wp
-               asymb_n_fixation_n15_acc       = 0.0_wp
-               litterfallP_acc                = 0.0_wp
-               leachingPorg_acc               = 0.0_wp
-               p_deposition_acc               = 0.0_wp
-               leaching_po4_acc               = 0.0_wp
-               net_min_po4_acc                = 0.0_wp
-               uptake_po4_acc_sl              = 0.0_wp
-               weathering_po4_acc             = 0.0_wp
-               occlusion_po4_acc              = 0.0_wp
-               slow_sorption_po4_acc          = 0.0_wp
-               fast_adsorption_po4_acc        = 0.0_wp
-               biochem_mineralisation_po4_acc = 0.0_wp
-               myco_export_c_acc              = 0.0_wp
-               myco_export_n_acc              = 0.0_wp
-               myco_export_p_acc              = 0.0_wp
-               myco_export_c13_acc            = 0.0_wp
-               myco_export_c14_acc            = 0.0_wp
-               myco_export_n15_acc            = 0.0_wp
+               gpp_acc                    = 0.0_wp
+               growth_resp_acc            = 0.0_wp
+               maint_resp_acc             = 0.0_wp
+               n_transform_resp_acc       = 0.0_wp
+               n_fixation_resp_acc        = 0.0_wp
+               exudationC_acc             = 0.0_wp
+               npp_acc                    = 0.0_wp
+               res_use_c_acc              = 0.0_wp
+               gpp_C13_acc                = 0.0_wp
+               growth_resp_C13_acc        = 0.0_wp
+               maint_resp_C13_acc         = 0.0_wp
+               gpp_C14_acc                = 0.0_wp
+               growth_resp_C14_acc        = 0.0_wp
+               maint_resp_C14_acc         = 0.0_wp
+               recycling_n_acc            = 0.0_wp
+               res_use_n_acc              = 0.0_wp
+               n_fixation_acc             = 0.0_wp
+               n_fixation_n15_acc         = 0.0_wp
+               uptake_po4_acc             = 0.0_wp
+               recycling_p_acc            = 0.0_wp
+               res_use_p_acc              = 0.0_wp
+               precip_acc                 = 0.0_wp
+               evaporation_acc            = 0.0_wp
+               interception_acc           = 0.0_wp
+               transpiration_acc          = 0.0_wp
+               drainage_acc               = 0.0_wp
+               runoff_acc                 = 0.0_wp
+               gc_acc                     = 0.0_wp
+               ga_acc                     = 0.0_wp
+               ppfd_acc                   = 0.0_wp
+               rnet_acc                   = 0.0_wp
+               qh_acc                     = 0.0_wp
+               qle_acc                    = 0.0_wp
+               qg_acc                     = 0.0_wp
+               albedo_acc                 = 0.0_wp
+               appfd_acc                  = 0.0_wp
+               ndat_acc                   = 0        ! INTEGER 
+               uptake_no3_acc             = 0.0_wp
+               uptake_no3_n15_acc         = 0.0_wp
+               uptake_nh4_acc             = 0.0_wp
+               uptake_nh4_n15_acc         = 0.0_wp
+               myco_export_c_acc          = 0.0_wp
+               myco_export_n_acc          = 0.0_wp
+               myco_export_p_acc          = 0.0_wp
+               myco_export_c13_acc        = 0.0_wp
+               myco_export_c14_acc        = 0.0_wp
+               myco_export_n15_acc        = 0.0_wp
              END IF ! l_flux_output_interval
            END IF   ! l_flux_calc_acc_output
         END IF      ! on/off switch specific to 'special case: fluxnet output'
-
-      !! soil 
-      CASE('soil')
-
-           IF(l_flux_calc_acc_output) THEN
-       
-             litterfallC_acc = litterfallC_acc + (veg_litterfall%leaf%carbon(ipoi) + & 
-                                      veg_litterfall%fine_root%carbon(ipoi) + veg_litterfall%coarse_root%carbon(ipoi) + &
-                                      veg_litterfall%sap_wood%carbon(ipoi) + veg_litterfall%heart_wood%carbon(ipoi) + &
-                                      veg_litterfall%labile%carbon(ipoi) + veg_litterfall%reserve%carbon(ipoi) + &
-                                      veg_litterfall%fruit%carbon(ipoi) + veg_litterfall%seed_bed%carbon(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallC13_acc = litterfallC13_acc + (veg_litterfall%leaf%carbon13(ipoi) + & 
-                                      veg_litterfall%fine_root%carbon13(ipoi) + veg_litterfall%coarse_root%carbon13(ipoi) + &
-                                      veg_litterfall%sap_wood%carbon13(ipoi) + veg_litterfall%heart_wood%carbon13(ipoi) + &
-                                      veg_litterfall%labile%carbon13(ipoi) + veg_litterfall%reserve%carbon13(ipoi) + &
-                                      veg_litterfall%fruit%carbon13(ipoi) + veg_litterfall%seed_bed%carbon13(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallC14_acc = litterfallC14_acc + (veg_litterfall%leaf%carbon14(ipoi) + & 
-                                      veg_litterfall%fine_root%carbon14(ipoi) + veg_litterfall%coarse_root%carbon14(ipoi) + &
-                                      veg_litterfall%sap_wood%carbon14(ipoi) + veg_litterfall%heart_wood%carbon14(ipoi) + &
-                                      veg_litterfall%labile%carbon14(ipoi) + veg_litterfall%reserve%carbon14(ipoi) + &
-                                      veg_litterfall%fruit%carbon14(ipoi) + veg_litterfall%seed_bed%carbon14(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallN_acc = litterfallN_acc + (veg_litterfall%leaf%nitrogen(ipoi) + & 
-                                      veg_litterfall%fine_root%nitrogen(ipoi) + veg_litterfall%coarse_root%nitrogen(ipoi) + &
-                                      veg_litterfall%sap_wood%nitrogen(ipoi) + veg_litterfall%heart_wood%nitrogen(ipoi) + &
-                                      veg_litterfall%labile%nitrogen(ipoi) + veg_litterfall%reserve%nitrogen(ipoi) + &
-                                      veg_litterfall%fruit%nitrogen(ipoi) + veg_litterfall%seed_bed%nitrogen(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             litterfallP_acc = litterfallP_acc + (veg_litterfall%leaf%phosphorus(ipoi) + & 
-                                      veg_litterfall%fine_root%phosphorus(ipoi) + veg_litterfall%coarse_root%phosphorus(ipoi) + &
-                                      veg_litterfall%sap_wood%phosphorus(ipoi) + veg_litterfall%heart_wood%phosphorus(ipoi) + &
-                                      veg_litterfall%labile%phosphorus(ipoi) + veg_litterfall%reserve%phosphorus(ipoi) + &
-                                      veg_litterfall%fruit%phosphorus(ipoi) + veg_litterfall%seed_bed%phosphorus(ipoi)) * &
-                                      1000000.0_wp * dtime_one/dtime
-             
-             het_respC_acc      = het_respC_acc      + SUM(het_respiration(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             het_respC13_acc    = het_respC13_acc    + SUM(het_respiration_c13(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             het_respC14_acc    = het_respC14_acc    + SUM(het_respiration_c14(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             leachingCorg_acc   = leachingCorg_acc   + leaching_dom_carbon(ipoi)   * dtime_one
-             leachingC13org_acc = leachingC13org_acc + leaching_dom_carbon13(ipoi) * dtime_one
-             leachingC14org_acc = leachingC14org_acc + leaching_dom_carbon14(ipoi) * dtime_one
-
-             ! Nitrogen
-             n_deposition_acc = n_deposition_acc  + (nhx_deposition(ipoi) + noy_deposition(ipoi)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
-             asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)) * dtime_one
-             net_min_nh4_acc  = net_min_nh4_acc  + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             net_min_no3_acc  = net_min_no3_acc  + SUM(net_mineralisation_no3(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(ipoi)   * dtime_one           
-             leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(ipoi)   * dtime_one           
-             leachingNorg_acc = leachingNorg_acc + leaching_dom_nitrogen(ipoi) * dtime_one
-             uptake_nh4_acc_sl   = uptake_nh4_acc_sl + &
-                                   SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
-             uptake_no3_acc_sl   = uptake_no3_acc_sl + &
-                                   SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             nitrification_acc   = nitrification_acc + & 
-                                    SUM((nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + nitrification_n2o(ipoi,:)) * &
-                                    soil_depth_sl(ipoi,:)) * dtime_one
-             denitrification_acc = denitrification_acc + & 
-                                    SUM((denitrification_n2(ipoi,:) + denitrification_noy(ipoi,:) + denitrification_n2o(ipoi,:))*&
-                                    soil_depth_sl(ipoi,:)) * dtime_one 
-             emission_noy_acc = emission_noy_acc + emission_noy(ipoi) * dtime_one
-             emission_n2o_acc = emission_n2o_acc + emission_n2o(ipoi) * dtime_one
-             emission_n2_acc  = emission_n2_acc  + emission_n2(ipoi) * dtime_one
-
-             ! Phosphorus
-             p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
-             leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
-             leachingPorg_acc       = leachingPorg_acc + leaching_dom_phosphorus(ipoi) * dtime_one
-             net_min_po4_acc        = net_min_po4_acc + &
-                                        SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
-             uptake_po4_acc_sl      = uptake_po4_acc_sl + &
-                                      SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             weathering_po4_acc     = weathering_po4_acc + &
-                                        SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             occlusion_po4_acc      = occlusion_po4_acc + &
-                                        SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             slow_sorption_po4_acc  = slow_sorption_po4_acc + &
-                                        SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             fast_adsorption_po4_acc        = fast_adsorption_po4_acc + &
-                                                SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-             biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
-                                                SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
-
-             IF(l_flux_output_interval) THEN
-
-               lun = 100 + 30
-               ! soilfluxCdC13DC14
-               dC13litterfall = calc_delta_C13(litterfallC_acc,litterfallC13_acc)
-               dC13het_resp   = calc_delta_C13(het_respC_acc,het_respC13_acc)
-               dC13leaching   = calc_delta_C13(leachingCorg_acc,leachingC13org_acc)
-               write(lun,'(12F20.12)') time_d, litterfallC_acc, het_respC_acc, leachingCorg_acc, &
-                   dC13litterfall, dC13het_resp, dC13leaching, &
-                   calc_delta_C14(litterfallC_acc,litterfallC14_acc,dC13litterfall), &
-                   calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
-                   calc_delta_C14(leachingCorg_acc,leachingC14org_acc,dC13leaching)
-               lun = lun + 1
-               ! soilfluxN
-               write(lun,'(20F20.12)') time_d,litterfallN_acc,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, net_min_no3_acc, &
-                                      nitrification_acc,denitrification_acc,emission_noy_acc,emission_n2o_acc,emission_n2_acc,& 
-                                      uptake_nh4_acc_sl,uptake_no3_acc_sl,leaching_nh4_acc,leaching_no3_acc,leachingNorg_acc                    
-               lun=lun+1
-               ! soilfluxP (litterfall is added here compared to the SLM land output)
-               write(lun,'(20F20.12)') time_d, litterfallP_acc, &
-                                       p_deposition_acc, leaching_po4_acc, leachingPorg_acc, net_min_po4_acc, uptake_po4_acc_sl, &
-                                       weathering_po4_acc, occlusion_po4_acc, &
-                                       slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
-               lun = lun + 1
-               
-               !! set acc variables to zero
-               litterfallC_acc               = 0.0_wp
-               het_respC_acc                 = 0.0_wp
-               leachingCorg_acc              = 0.0_wp
-               litterfallC13_acc             = 0.0_wp
-               het_respC13_acc               = 0.0_wp
-               leachingC13org_acc            = 0.0_wp
-               litterfallC14_acc             = 0.0_wp
-               het_respC14_acc               = 0.0_wp
-               leachingC14org_acc            = 0.0_wp
-               n_deposition_acc              = 0.0_wp
-               litterfallN_acc               = 0.0_wp
-               asymb_n_fixation_acc          = 0.0_wp
-               net_min_nh4_acc               = 0.0_wp
-               nitrification_acc             = 0.0_wp
-               denitrification_acc           = 0.0_wp
-               emission_noy_acc              = 0.0_wp
-               emission_n2o_acc              = 0.0_wp
-               emission_n2_acc               = 0.0_wp
-               uptake_nh4_acc_sl             = 0.0_wp
-               leaching_nh4_acc              = 0.0_wp
-               net_min_no3_acc               = 0.0_wp
-               uptake_no3_acc_sl             = 0.0_wp
-               leaching_no3_acc              = 0.0_wp
-               leachingNorg_acc              = 0.0_wp
-               litterfallP_acc               = 0.0_wp
-               leachingPorg_acc              = 0.0_wp
-               p_deposition_acc              = 0.0_wp
-               leaching_po4_acc              = 0.0_wp
-               net_min_po4_acc               = 0.0_wp
-               uptake_po4_acc_sl             = 0.0_wp
-               weathering_po4_acc            = 0.0_wp
-               occlusion_po4_acc             = 0.0_wp
-               slow_sorption_po4_acc         = 0.0_wp
-               fast_adsorption_po4_acc       = 0.0_wp
-               biochem_mineralisation_po4_acc = 0.0_wp
+    END SELECT      ! land/plant/canopy
 
 
-             END IF   ! l_flux_output_interval
-          END IF      ! l_flux_calc_acc_output
-    END SELECT        ! land/plant/canopy & soil
-
-
-    !! land & soil
+    !! land & soil - additional to CASE('land')
     !!  simple_0d and simple_1d and jsm
     !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','soil')
       IF (l_flux_calc_acc_output) THEN
-        ! simple_0d and simple_1d and jsm
-          ! accumulate variables
-          ! for mass balance checks in SB_
-          sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
-                                            SUM(sb_delta_pools%carbon(ipoi,:)*soil_depth_sl(ipoi,:))
-          sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + &
-                                            SUM(sb_delta_pools%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))
-          sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + &
-                                            SUM(sb_delta_pools%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))
-          sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + &
-                                            SUM(sb_delta_pools%carbon13(ipoi,:)*soil_depth_sl(ipoi,:))
-          sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + &
-                                            SUM(sb_delta_pools%carbon14(ipoi,:)*soil_depth_sl(ipoi,:))
-          sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + &
-                                            SUM(sb_delta_pools%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))
-          sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(ipoi)
-          sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(ipoi)
-          sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(ipoi)
-          sb_total_flux_carbon13_acc    = sb_total_flux_carbon13_acc    + total_flux_carbon13(ipoi)
-          sb_total_flux_carbon14_acc    = sb_total_flux_carbon14_acc    + total_flux_carbon14(ipoi)
-          sb_total_flux_nitrogen15_acc  = sb_total_flux_nitrogen15_acc  + total_flux_nitrogen15(ipoi)
+        !! all soil models (simple_0d and simple_1d and jsm)
+        ! accumulate variables
+        ! Carbon
+        litterfallC_acc = litterfallC_acc + (veg_litterfall%leaf%carbon(ipoi) + & 
+                                veg_litterfall%fine_root%carbon(ipoi) + veg_litterfall%coarse_root%carbon(ipoi) + &
+                                veg_litterfall%sap_wood%carbon(ipoi) + veg_litterfall%heart_wood%carbon(ipoi) + &
+                                veg_litterfall%labile%carbon(ipoi) + veg_litterfall%reserve%carbon(ipoi) + &
+                                veg_litterfall%fruit%carbon(ipoi) + veg_litterfall%seed_bed%carbon(ipoi)) * &
+                                1000000.0_wp * dtime_one/dtime
+        litterfallC13_acc = litterfallC13_acc + (veg_litterfall%leaf%carbon13(ipoi) + & 
+                                veg_litterfall%fine_root%carbon13(ipoi) + veg_litterfall%coarse_root%carbon13(ipoi) + &
+                                veg_litterfall%sap_wood%carbon13(ipoi) + veg_litterfall%heart_wood%carbon13(ipoi) + &
+                                veg_litterfall%labile%carbon13(ipoi) + veg_litterfall%reserve%carbon13(ipoi) + &
+                                veg_litterfall%fruit%carbon13(ipoi) + veg_litterfall%seed_bed%carbon13(ipoi)) * &
+                                1000000.0_wp * dtime_one/dtime
+        litterfallC14_acc = litterfallC14_acc + (veg_litterfall%leaf%carbon14(ipoi) + & 
+                                veg_litterfall%fine_root%carbon14(ipoi) + veg_litterfall%coarse_root%carbon14(ipoi) + &
+                                veg_litterfall%sap_wood%carbon14(ipoi) + veg_litterfall%heart_wood%carbon14(ipoi) + &
+                                veg_litterfall%labile%carbon14(ipoi) + veg_litterfall%reserve%carbon14(ipoi) + &
+                                veg_litterfall%fruit%carbon14(ipoi) + veg_litterfall%seed_bed%carbon14(ipoi)) * &
+                                1000000.0_wp * dtime_one/dtime
+        litterfallN_acc = litterfallN_acc + (veg_litterfall%leaf%nitrogen(ipoi) + & 
+                                veg_litterfall%fine_root%nitrogen(ipoi) + veg_litterfall%coarse_root%nitrogen(ipoi) + &
+                                veg_litterfall%sap_wood%nitrogen(ipoi) + veg_litterfall%heart_wood%nitrogen(ipoi) + &
+                                veg_litterfall%labile%nitrogen(ipoi) + veg_litterfall%reserve%nitrogen(ipoi) + &
+                                veg_litterfall%fruit%nitrogen(ipoi) + veg_litterfall%seed_bed%nitrogen(ipoi)) * &
+                                1000000.0_wp * dtime_one/dtime
+        litterfallP_acc = litterfallP_acc + (veg_litterfall%leaf%phosphorus(ipoi) + & 
+                                veg_litterfall%fine_root%phosphorus(ipoi) + veg_litterfall%coarse_root%phosphorus(ipoi) + &
+                                veg_litterfall%sap_wood%phosphorus(ipoi) + veg_litterfall%heart_wood%phosphorus(ipoi) + &
+                                veg_litterfall%labile%phosphorus(ipoi) + veg_litterfall%reserve%phosphorus(ipoi) + &
+                                veg_litterfall%fruit%phosphorus(ipoi) + veg_litterfall%seed_bed%phosphorus(ipoi)) * &
+                                1000000.0_wp * dtime_one/dtime
 
-          ! write output & zero acc variables
-          IF(l_flux_output_interval) THEN
-            ! sb_massBalance
-            write(lun,'(13F24.12)') time_d, &
-                                    sb_delta_pools_carbon_acc, sb_delta_pools_nitrogen_acc, sb_delta_pools_phosphorus_acc, &
-                                    sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
-                                    sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
-                                    sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
-            lun=lun+1
+        het_respC_acc      = het_respC_acc      + SUM(het_respiration(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        het_respC13_acc    = het_respC13_acc    + SUM(het_respiration_c13(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        het_respC14_acc    = het_respC14_acc    + SUM(het_respiration_c14(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        leachingCorg_acc   = leachingCorg_acc   + leaching_dom_carbon(ipoi)   * dtime_one
+        leachingC13org_acc = leachingC13org_acc + leaching_dom_carbon13(ipoi) * dtime_one
+        leachingC14org_acc = leachingC14org_acc + leaching_dom_carbon14(ipoi) * dtime_one
+        ! Nitrogen
+        n_deposition_acc     = n_deposition_acc  + (nhx_deposition(ipoi) + noy_deposition(ipoi)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
+        n_deposition_n15_acc = n_deposition_n15_acc  + (nhx_n15_deposition(ipoi) + noy_n15_deposition(ipoi)) * dtime_one      ! unit: mumol/m2/sec * dtime_one
+        net_min_nh4_acc      = net_min_nh4_acc + SUM(net_mineralisation_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        net_min_no3_acc      = net_min_no3_acc  + SUM(net_mineralisation_no3(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                     
+        plant_uptake_nh4_acc = plant_uptake_nh4_acc + &
+                             SUM(plant_uptake_nh4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one 
+        plant_uptake_no3_acc = plant_uptake_no3_acc + &
+                             SUM(plant_uptake_no3_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        nitrification_acc    = nitrification_acc + & 
+                              SUM((nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + nitrification_n2o(ipoi,:)) * &
+                              soil_depth_sl(ipoi,:)) * dtime_one
+        denitrification_acc  = denitrification_acc + & 
+                              SUM((denitrification_n2(ipoi,:) + denitrification_noy(ipoi,:) + denitrification_n2o(ipoi,:))*&
+                              soil_depth_sl(ipoi,:)) * dtime_one 
+        emission_noy_acc = emission_noy_acc + emission_noy(ipoi) * dtime_one
+        emission_noy_n15_acc = emission_noy_n15_acc + emission_noy_n15(ipoi) * dtime_one
+        emission_n2o_acc = emission_n2o_acc + emission_n2o(ipoi) * dtime_one
+        emission_n2o_n15_acc = emission_n2o_n15_acc + emission_n2o_n15(ipoi) * dtime_one
+        emission_n2_acc  = emission_n2_acc  + emission_n2(ipoi) * dtime_one
+        emission_n2_n15_acc  = emission_n2_n15_acc  + emission_n2_n15(ipoi) * dtime_one
+        leaching_nh4_acc = leaching_nh4_acc + leaching_nh4_solute(ipoi) * dtime_one
+        leaching_nh4_n15_acc = leaching_nh4_n15_acc + leaching_nh4_n15_solute(ipoi) * dtime_one
+        leaching_no3_acc = leaching_no3_acc + leaching_no3_solute(ipoi) * dtime_one
+        leaching_no3_n15_acc = leaching_no3_n15_acc + leaching_no3_n15_solute(ipoi) * dtime_one
+        leachingNorg_acc = leachingNorg_acc + leaching_dom_nitrogen(ipoi) * dtime_one
+        asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)) * dtime_one
+        asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(ipoi,:)*soil_depth_sl(ipoi,:)) * &
+                                    dtime_one
+        ! Phosphorus
+        p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
+        leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
+        leachingPorg_acc       = leachingPorg_acc + leaching_dom_phosphorus(ipoi) * dtime_one
+        net_min_po4_acc        = net_min_po4_acc + &
+                                  SUM(net_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one                
+        plant_uptake_po4_acc   = plant_uptake_po4_acc + &
+                                SUM(plant_uptake_po4_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        weathering_po4_acc     = weathering_po4_acc + &
+                                  SUM(weathering_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        occlusion_po4_acc      = occlusion_po4_acc + &
+                                  SUM(occlusion_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        slow_sorption_po4_acc  = slow_sorption_po4_acc + &
+                                  SUM(slow_sorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        fast_adsorption_po4_acc        = fast_adsorption_po4_acc + &
+                                          SUM(fast_adsorption_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        biochem_mineralisation_po4_acc = biochem_mineralisation_po4_acc + &
+                                        SUM(biochem_mineralisation_po4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
+        ! mass balance checks in SB_
+        sb_delta_pools_carbon_acc     = sb_delta_pools_carbon_acc     + &
+                                          SUM(sb_delta_pools%carbon(ipoi,:)*soil_depth_sl(ipoi,:))
+        sb_delta_pools_nitrogen_acc   = sb_delta_pools_nitrogen_acc   + &
+                                          SUM(sb_delta_pools%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))
+        sb_delta_pools_phosphorus_acc = sb_delta_pools_phosphorus_acc + &
+                                          SUM(sb_delta_pools%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))
+        sb_delta_pools_carbon13_acc   = sb_delta_pools_carbon13_acc   + &
+                                          SUM(sb_delta_pools%carbon13(ipoi,:)*soil_depth_sl(ipoi,:))
+        sb_delta_pools_carbon14_acc   = sb_delta_pools_carbon14_acc   + &
+                                          SUM(sb_delta_pools%carbon14(ipoi,:)*soil_depth_sl(ipoi,:))
+        sb_delta_pools_nitrogen15_acc = sb_delta_pools_nitrogen15_acc + &
+                                          SUM(sb_delta_pools%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))
+        sb_total_flux_carbon_acc      = sb_total_flux_carbon_acc      + total_flux_carbon(ipoi)
+        sb_total_flux_nitrogen_acc    = sb_total_flux_nitrogen_acc    + total_flux_nitrogen(ipoi)
+        sb_total_flux_phosphorus_acc  = sb_total_flux_phosphorus_acc  + total_flux_phosphorus(ipoi)
+        sb_total_flux_carbon13_acc    = sb_total_flux_carbon13_acc    + total_flux_carbon13(ipoi)
+        sb_total_flux_carbon14_acc    = sb_total_flux_carbon14_acc    + total_flux_carbon14(ipoi)
+        sb_total_flux_nitrogen15_acc  = sb_total_flux_nitrogen15_acc  + total_flux_nitrogen15(ipoi)
 
-            !! set acc variables to zero          
-            sb_delta_pools_carbon_acc      = 0.0_wp
-            sb_delta_pools_nitrogen_acc    = 0.0_wp
-            sb_delta_pools_phosphorus_acc  = 0.0_wp
-            sb_delta_pools_carbon13_acc    = 0.0_wp
-            sb_delta_pools_carbon14_acc    = 0.0_wp
-            sb_delta_pools_nitrogen15_acc  = 0.0_wp
-            sb_total_flux_carbon_acc       = 0.0_wp
-            sb_total_flux_nitrogen_acc     = 0.0_wp
-            sb_total_flux_phosphorus_acc   = 0.0_wp
-            sb_total_flux_carbon13_acc     = 0.0_wp
-            sb_total_flux_carbon14_acc     = 0.0_wp
-            sb_total_flux_nitrogen15_acc   = 0.0_wp
-          END IF
+        ! write output & zero acc variables
+        IF(l_flux_output_interval) THEN
+          ! soilfluxCdC13DC14
+          dC13litterfall = calc_delta_C13(litterfallC_acc,litterfallC13_acc)
+          dC13het_resp   = calc_delta_C13(het_respC_acc,het_respC13_acc)
+          dC13leaching   = calc_delta_C13(leachingCorg_acc,leachingC13org_acc)
+          write(lun,'(12F20.12)') time_d, litterfallC_acc, het_respC_acc, leachingCorg_acc, &
+             dC13litterfall, dC13het_resp, dC13leaching, &
+             calc_delta_C14(litterfallC_acc,litterfallC14_acc,dC13litterfall), &
+             calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
+             calc_delta_C14(leachingCorg_acc,leachingC14org_acc,dC13leaching)
+          lun = lun + 1
+          ! soilfluxN
+          write(lun,'(20F20.12)') time_d,litterfallN_acc,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, net_min_no3_acc, &
+                                nitrification_acc,denitrification_acc,emission_noy_acc,emission_n2o_acc,emission_n2_acc,& 
+                                plant_uptake_nh4_acc,plant_uptake_no3_acc,leaching_nh4_acc,leaching_no3_acc,leachingNorg_acc                    
+          lun=lun+1
+          ! soilfluxP
+          write(lun,'(20F20.12)') time_d, litterfallP_acc, p_deposition_acc, leaching_po4_acc, leachingPorg_acc, &
+                                 net_min_po4_acc, plant_uptake_po4_acc, weathering_po4_acc, occlusion_po4_acc, &
+                                 slow_sorption_po4_acc, fast_adsorption_po4_acc, biochem_mineralisation_po4_acc
+          lun = lun + 1 
+          ! soilfluxdN
+          write(lun,'(20F18.8)') time_d, & 
+               calc_delta_N15(n_deposition_acc,n_deposition_n15_acc), & 
+               calc_delta_N15(asymb_n_fixation_acc,asymb_n_fixation_n15_acc), & 
+               calc_delta_N15(emission_noy_acc,emission_noy_n15_acc), &
+               calc_delta_N15(emission_n2o_acc,emission_n2o_n15_acc), &
+               calc_delta_N15(emission_n2_acc,emission_n2_n15_acc), &
+               calc_delta_N15(leaching_nh4_acc,leaching_nh4_n15_acc), & 
+               calc_delta_N15(leaching_no3_acc,leaching_no3_n15_acc)
+          lun=lun+1
+          ! sb_massBalance
+          write(lun,'(13F24.12)') time_d, &
+                                  sb_delta_pools_carbon_acc, sb_delta_pools_nitrogen_acc, sb_delta_pools_phosphorus_acc, &
+                                  sb_delta_pools_carbon13_acc, sb_delta_pools_carbon14_acc, sb_delta_pools_nitrogen15_acc, &
+                                  sb_total_flux_carbon_acc, sb_total_flux_nitrogen_acc, sb_total_flux_phosphorus_acc, &
+                                  sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
+          lun=lun+1
 
+          !! set acc variables to zero      
+          litterfallC_acc                = 0.0_wp
+          het_respC_acc                  = 0.0_wp
+          leachingCorg_acc               = 0.0_wp
+          litterfallC13_acc              = 0.0_wp
+          het_respC13_acc                = 0.0_wp
+          leachingC13org_acc             = 0.0_wp
+          litterfallC14_acc              = 0.0_wp
+          het_respC14_acc                = 0.0_wp
+          leachingC14org_acc             = 0.0_wp
+          nitrification_acc              = 0.0_wp
+          denitrification_acc            = 0.0_wp
+          litterfallN_acc                = 0.0_wp
+          net_min_nh4_acc                = 0.0_wp
+          net_min_no3_acc                = 0.0_wp
+          plant_uptake_nh4_acc           = 0.0_wp
+          plant_uptake_no3_acc           = 0.0_wp
+          leachingNorg_acc               = 0.0_wp
+          emission_noy_acc               = 0.0_wp
+          emission_noy_n15_acc           = 0.0_wp
+          emission_n2o_acc               = 0.0_wp
+          emission_n2o_n15_acc           = 0.0_wp
+          emission_n2_acc                = 0.0_wp
+          emission_n2_n15_acc            = 0.0_wp
+          leaching_nh4_acc               = 0.0_wp
+          leaching_nh4_n15_acc           = 0.0_wp
+          leaching_no3_acc               = 0.0_wp
+          leaching_no3_n15_acc           = 0.0_wp
+          asymb_n_fixation_acc           = 0.0_wp
+          asymb_n_fixation_n15_acc       = 0.0_wp
+          litterfallP_acc                = 0.0_wp
+          leachingPorg_acc               = 0.0_wp
+          p_deposition_acc               = 0.0_wp
+          n_deposition_acc               = 0.0_wp
+          n_deposition_n15_acc           = 0.0_wp
+          leaching_po4_acc               = 0.0_wp
+          net_min_po4_acc                = 0.0_wp
+          plant_uptake_po4_acc           = 0.0_wp
+          weathering_po4_acc             = 0.0_wp
+          occlusion_po4_acc              = 0.0_wp
+          slow_sorption_po4_acc          = 0.0_wp
+          fast_adsorption_po4_acc        = 0.0_wp
+          biochem_mineralisation_po4_acc = 0.0_wp
+          sb_delta_pools_carbon_acc      = 0.0_wp
+          sb_delta_pools_nitrogen_acc    = 0.0_wp
+          sb_delta_pools_phosphorus_acc  = 0.0_wp
+          sb_delta_pools_carbon13_acc    = 0.0_wp
+          sb_delta_pools_carbon14_acc    = 0.0_wp
+          sb_delta_pools_nitrogen15_acc  = 0.0_wp
+          sb_total_flux_carbon_acc       = 0.0_wp
+          sb_total_flux_nitrogen_acc     = 0.0_wp
+          sb_total_flux_phosphorus_acc   = 0.0_wp
+          sb_total_flux_carbon13_acc     = 0.0_wp
+          sb_total_flux_carbon14_acc     = 0.0_wp
+          sb_total_flux_nitrogen15_acc   = 0.0_wp
+        END IF
+
+        !! simple_1d & jsm layer-data
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE('simple_1d','jsm')
           ! accumulate variables
@@ -2714,7 +2537,7 @@ CONTAINS
           IF(l_flux_output_interval) THEN
 
             ! soilfluxC_lay
-            write(lun,'(81F20.10)') time_d, &
+            write(lun,'(101F20.10)') time_d, &
               het_respiration_lay_acc(1:nsoil_sb), & 
               calc_delta_C13(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c13_lay_acc(1:nsoil_sb)), & 
               calc_delta_C14(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c14_lay_acc(1:nsoil_sb), &
@@ -2722,14 +2545,14 @@ CONTAINS
               transport_DOC_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxN_lay
-            write(lun,'(261F20.10)') time_d, &
+            write(lun,'(201F20.10)') time_d, &
               net_mineral_nh4_lay_acc(1:nsoil_sb), plant_uptake_nh4_lay_acc(1:nsoil_sb), microbial_upt_nh4_lay_acc(1:nsoil_sb), &
               myco_uptake_nh4_lay_acc(1:nsoil_sb), asymb_n_fixation_lay_acc(1:nsoil_sb), &
               net_mineral_no3_lay_acc(1:nsoil_sb), plant_uptake_no3_lay_acc(1:nsoil_sb), microbial_upt_no3_lay_acc(1:nsoil_sb), &
               myco_uptake_no3_lay_acc(1:nsoil_sb), transport_DON_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxP_lay
-            write(lun,'(291F20.10)') time_d, &
+            write(lun,'(301F20.10)') time_d, &
               adsorpt_po4_acc(1:nsoil_sb), weath_po4_acc(1:nsoil_sb), &
               ocl_po4_acc(1:nsoil_sb), desorp_po4_acc(1:nsoil_sb), &
               net_min_po4_lay_acc(1:nsoil_sb), biochem_min_po4_acc(1:nsoil_sb), &
