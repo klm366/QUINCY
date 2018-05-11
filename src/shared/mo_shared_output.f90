@@ -516,7 +516,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib                    !< land-cover-type library - parameter across pft's
-    LOGICAL                              :: l_land_plant_output, &    !< write land/plant output T/F
+    LOGICAL                              :: l_land_plant_canopy_out,& !< write land/plant/canopy output T/F
                                             l_soil_output             !< write soil       output T/F
     INTEGER                              :: lun                       ! logical unit number
     INTEGER                              :: icanopy                   ! loop over ncanopy
@@ -703,11 +703,11 @@ CONTAINS
     !< 1.0 test if anything would be written out at this timestep
     !! 
     ! set to FALSE as default
-    l_land_plant_output = .FALSE.
-    l_soil_output       = .FALSE.
+    l_land_plant_canopy_out = .FALSE.
+    l_soil_output           = .FALSE.
     ! test if TRUE
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant')
+      CASE('land','plant','canopy')
         ! special fluxnet simulations; run only if 'special case: fluxnet output' is not active, or active & after spinup
         IF (fluxnet_output_status < 3) THEN 
           ! after spinup, when doing transient simulations
@@ -718,7 +718,7 @@ CONTAINS
             IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
                & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
               ! set TRUE
-              l_land_plant_output = .TRUE.
+              l_land_plant_canopy_out = .TRUE.
             END IF
           END IF
         END IF
@@ -744,7 +744,7 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
         ! output T/F
-        IF (l_land_plant_output) THEN 
+        IF (l_land_plant_canopy_out) THEN 
 
               write(lun,'(13F12.6)') time_d,veg_pool%leaf%carbon(ipoi),&
                 veg_pool%fine_root%carbon(ipoi),veg_pool%sap_wood%carbon(ipoi),&
@@ -762,7 +762,7 @@ CONTAINS
               dC13labile      = calc_delta_C13(veg_pool%labile%carbon(ipoi),veg_pool%labile%carbon13(ipoi))
               dC13reserve     = calc_delta_C13(veg_pool%reserve%carbon(ipoi),veg_pool%reserve%carbon13(ipoi))
               dC13seed_bed    = calc_delta_C13(veg_pool%seed_bed%carbon(ipoi),veg_pool%seed_bed%carbon13(ipoi))
-              lun=lun+1
+              lun=lun+1   ! increase lun by 1 after each write statement
               write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
                 dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
                 calc_delta_C14(veg_pool%leaf%carbon(ipoi),veg_pool%leaf%carbon14(ipoi),dC13leaf),&
@@ -898,8 +898,7 @@ CONTAINS
                                       SUM(n2o_n15(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2_n15(ipoi,:)*soil_depth_sl(ipoi,:))                                        + &     
                                       veg_total_biomass%nitrogen15(ipoi)
- 
-
+              lun=lun+1 
               dC13soluable_litter(ipoi,1)  = calc_delta_C13(SUM(sb_pool%soluable_litter%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
                                               SUM(sb_pool%soluable_litter%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
@@ -918,8 +917,6 @@ CONTAINS
               dC13mycorrhiza(ipoi,1)       = calc_delta_C13(SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
                                               SUM(sb_pool%mycorrhiza%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
-
-              lun=lun+1
               write(lun,'(20F14.6)') time_d, &
                 dC13soluable_litter(ipoi,1), &
                 dC13polymeric_litter(ipoi,1), &
@@ -951,7 +948,6 @@ CONTAINS
                 calc_delta_N15(sb_pool%residue%nitrogen(ipoi,1),sb_pool%residue%nitrogen15(ipoi,1)), &
                 calc_delta_N15(nh4_solute(ipoi,1),nh4_n15_solute(ipoi,1)), &
                 calc_delta_N15(no3_solute(ipoi,1),no3_n15_solute(ipoi,1))
-              
               lun=lun+1
               DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
                 write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
@@ -959,7 +955,7 @@ CONTAINS
                                       fn_pepc_cl(ipoi,icanopy), fn_oth_cl(ipoi,icanopy),leaf_nitrogen_cl(ipoi,icanopy), &
                                       jmax_cl(ipoi,icanopy), vcmax_cl(ipoi,icanopy)
               END DO
-       
+              lun=lun+1
               IF(lctlib%growthform == itree) THEN 
                  IF (veg_pool%sap_wood%carbon(ipoi) > eps8) THEN
                     hlp1 = lai(ipoi)/(veg_pool%sap_wood%carbon(ipoi) / height(ipoi) / lctlib%wood_density)
@@ -997,7 +993,6 @@ CONTAINS
                 ELSE
                 growing_season_float = 0.0_wp
               END IF 
-              lun=lun+1
               write(lun,'(22F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
                 hlp1,l2r,s2c, bcf, &
                 target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
@@ -1006,16 +1001,19 @@ CONTAINS
                 cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
               lun=lun+1
-           END IF  ! write output T/F (l_land_plant_output)
-        CASE ('canopy')
-            DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
-                write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
-                                      fn_rub_cl(ipoi,icanopy), fn_chl_cl(ipoi,icanopy),&
-                                      fn_pepc_cl(ipoi,icanopy), fn_oth_cl(ipoi,icanopy),leaf_nitrogen_cl(ipoi,icanopy), &
-                                      jmax_cl(ipoi,icanopy), vcmax_cl(ipoi,icanopy)
-             END DO
-             
-    END SELECT  ! select land/plant
+           END IF  ! write output T/F (l_land_plant_canopy_out)
+      CASE ('canopy')
+        ! output T/F
+        IF (l_land_plant_canopy_out) THEN         
+          DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
+            write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
+                                  fn_rub_cl(ipoi,icanopy), fn_chl_cl(ipoi,icanopy),&
+                                  fn_pepc_cl(ipoi,icanopy), fn_oth_cl(ipoi,icanopy),leaf_nitrogen_cl(ipoi,icanopy), &
+                                  jmax_cl(ipoi,icanopy), vcmax_cl(ipoi,icanopy)
+          END DO
+          lun=lun+1
+        ENDIF
+    END SELECT  ! select land/plant & canopy
 
 
     !! land & soil
@@ -1023,7 +1021,7 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','soil')
       ! output T/F
-      IF (l_land_plant_output .OR. l_soil_output) THEN 
+      IF (l_land_plant_canopy_out .OR. l_soil_output) THEN 
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE('simple_1d','jsm')
           ! soilpoolCOrg_lay
@@ -1139,7 +1137,7 @@ CONTAINS
           write(lun,'(81F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
-      END IF        ! l_land_plant_output .OR. l_soil_output
+      END IF        ! l_land_plant_canopy_out .OR. l_soil_output
     END SELECT      ! land/soil
 
 
