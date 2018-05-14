@@ -684,6 +684,7 @@ CONTAINS
                             net_mineralisation_nh4(:,:), &
                             net_mineralisation_po4(:,:), &
                             net_mineralisation_nh4_n15(:,:), &
+                            biochem_mineralisation_po4(:,:), &
                             sb_formation )
 
     !> 3.3 formation of metabolic and strucutral litter by woody liter decay and 
@@ -1956,8 +1957,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 3.2 Limit biomineralisation to the actual rate of biomineralisation required to meet microbial and plant demands
     !!      and substract from slow=residue pool 
-    sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
-                                                     biochem_mineralisation_po4(:,:)
+    ! sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
+                                                     ! biochem_mineralisation_po4(:,:)
   
   END SUBROUTINE calc_actual_flux_rates
   
@@ -2228,6 +2229,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                 net_mineralisation_nh4, &
                                 net_mineralisation_po4, &
                                 net_mineralisation_nh4_n15, &
+                                biochem_mineralisation_po4, &
                                 sb_formation  )
  
     USE mo_shared_isotope,      ONLY: calc_fractionation
@@ -2243,13 +2245,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        microbial_uptake_nh4_sl, &          !< microbial NH4 uptake [mol / m3 / timestep]
                                                                        microbial_uptake_nh4_n15_sl, &      !< microbial 15NH4 uptake [mol / m3 / timestep]
                                                                        microbial_uptake_po4_sl             !< microbial PO4 uptake [mol / m3 / timestep]
-    TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                       !< turnover of SOM and litter pools  [mol / m3 / timestep]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
                                                                        het_respiration_c14, &        !< heterotrophic respiration [µmol 14C / m3 / timestep]
                                                                        net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                                        net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
-                                                                       net_mineralisation_nh4_n15    !< net mineralisation of 15NH4 [mol / m3 / timestep]
+                                                                       net_mineralisation_nh4_n15, & !< net mineralisation of 15NH4 [mol / m3 / timestep]
+                                                                       biochem_mineralisation_po4    !< biomineralisation rate [mol / m3 / timestep]
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation                  !< formation of SOM and litter pools  [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
@@ -2361,8 +2364,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%residue%nitrogen(:,:) - &
                                                                 frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
-                                                                frac_fast2slow_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
+                                                                frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:)
+
+    !> 3.1 update the loss of residue phosphorus due to biochem_mineralisation_po4
+    sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
+                                                     biochem_mineralisation_po4(:,:)
 
   END SUBROUTINE calc_SOM_formation  
   

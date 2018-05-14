@@ -530,12 +530,10 @@ CONTAINS
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-    !> 4.2 update of mineral P pools
+    !> 4.2 update of mineral N pools
     !!
     nh4_solute(:,1)      = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
     no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    po4_solute(:,1)      = po4_solute(:,1)     + p_deposition(:)   / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) !µmol P / m3 / s
     nh4_n15_solute(:,1)  = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / & 
                                                 ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) / soil_depth_sl(:,1) * dtime
     no3_n15_solute(:,1)  = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / & 
@@ -543,6 +541,7 @@ CONTAINS
 
     !> 4.3 update of mineral P pools
     !!
+    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) !µmol P / m3 / s
     IF(.NOT.dsl4jsb_Config(SB_)%flag_sb_prescribe_po4)THEN
        IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d" .OR. TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d" ) THEN
             CALL calc_pinorg_dynamics( options, &

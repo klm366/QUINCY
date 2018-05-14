@@ -372,6 +372,9 @@ CONTAINS
             p4str=''
             p5str=''
             p6str=''
+            p7str=''
+            p8str=''
+            p9str=''
             DO isoil = 1,nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -381,11 +384,15 @@ CONTAINS
               WRITE(p1str,'(a)') TRIM(p1str)//' NH4assoc_L'//TRIM(layerstr)
               WRITE(p2str,'(a)') TRIM(p2str)//' NH4solute_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' NO3solute_L'//TRIM(layerstr)
-              WRITE(p4str,'(a)') TRIM(p4str)//' dN15_NH4assoc_L'//TRIM(layerstr)
-              WRITE(p5str,'(a)') TRIM(p5str)//' dN15_NH4solute_L'//TRIM(layerstr)
-              WRITE(p6str,'(a)') TRIM(p6str)//' dN15_NO3solute_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' NOY_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' N2O_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' N2_L'//TRIM(layerstr)
+              WRITE(p7str,'(a)') TRIM(p7str)//' dN15_NH4assoc_L'//TRIM(layerstr)
+              WRITE(p8str,'(a)') TRIM(p8str)//' dN15_NH4solute_L'//TRIM(layerstr)
+              WRITE(p9str,'(a)') TRIM(p9str)//' dN15_NO3solute_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(7a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
+            WRITE(lun,'(10a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str), &
+               TRIM(p7str),TRIM(p8str),TRIM(p9str)
             lun=lun+1
             
             !soilpoolInPOrg_lay
@@ -1049,8 +1056,9 @@ CONTAINS
               sb_pool%residue_assoc%phosphorus(ipoi,:)
           lun=lun+1
           ! soilpoolInNOrg_lay
-          write(lun,'(121F18.6)') time_d, &
+          write(lun,'(181F18.6)') time_d, &
             nh4_assoc(ipoi,:), nh4_solute(ipoi,:),no3_solute(ipoi,:)  , &
+            noy(ipoi,:), n2o(ipoi,:), n2(ipoi,:), &
             calc_delta_N15(nh4_assoc(ipoi,:) ,nh4_n15_assoc(ipoi,:))  , &
             calc_delta_N15(nh4_solute(ipoi,:),nh4_n15_solute(ipoi,:)) , &
             calc_delta_N15(no3_solute(ipoi,:),no3_n15_solute(ipoi,:))
