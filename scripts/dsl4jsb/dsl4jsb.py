@@ -6,16 +6,25 @@
 #  Fortran preprocessor for JSBACH DSL language
 #
 #  Call "dsl4jsb.py -h" for usage.
-#  To test, call "dsl4jsb.py" without options in the source directory (containing "dsl4jsb.py" and "test.f90")
-#    
+#  To test, call "dsl4jsb.py" without options in the source
+#  directory (containing "dsl4jsb.py" and "test.f90")
+#
 #  Nov 10, 2016: Reiner Schnur, MPIM
-#  
+#
 
-import sys, getopt, re, os, fnmatch, io
+import sys
+import getopt
+import re
+import os
+import fnmatch
+import io
+import hashlib
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
-#re_function = re.compile(r'.*(dsl4jsb_(.*?)( |\())+', re.IGNORECASE)
 re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
+
+# Search pattern to find hash value of original file in processed file
+re_hash = re.compile(r'with md5 hash:\s*(\S*)\s*', re.IGNORECASE)
 
 # Table of macros
 #   Each entry is of the form
@@ -23,80 +32,80 @@ re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
 #   (macro name without the "dsl4jsb_" and in lower case)
 #
 macros = {
-    'use_processes' : [re.compile(
-        r'dsl4jsb_Use_processes (.*)',                                       re.IGNORECASE),
+    'use_processes': [re.compile(
+        r'dsl4jsb_Use_processes (.*)', re.IGNORECASE),
         r'USE mo_jsb_process_class, ONLY: \1'],
-    'use_memory' : [re.compile(
-        r'dsl4jsb_Use_memory *\((.*)_ *\)',                                  re.IGNORECASE),
-        r'USE mo_\1_memory_class, ONLY: t_\1_memory'],
-    'def_memory' : [re.compile(
-        r'dsl4jsb_Def_memory *\((.*)_ *\)',                                  re.IGNORECASE),
+    'use_memory':
+        [re.compile(r'dsl4jsb_Use_memory *\((.*)_ *\)', re.IGNORECASE),
+         r'USE mo_\1_memory_class, ONLY: t_\1_memory'],
+    'def_memory': [re.compile(
+        r'dsl4jsb_Def_memory *\((.*)_ *\)', re.IGNORECASE),
         r'TYPE(t_\1_memory), POINTER :: \1__mem'],
-    'get_memory' : [re.compile(
-        r'dsl4jsb_Get_memory *\((.*)_ *\)',                                  re.IGNORECASE),
+    'get_memory': [re.compile(
+        r'dsl4jsb_Get_memory *\((.*)_ *\)', re.IGNORECASE),
         r'SELECT TYPE (mm => tile%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem => mm ; END SELECT'],
-    'memory' : [re.compile(
-        r'dsl4jsb_Memory *\((.*?)_ *\)',                                     re.IGNORECASE),
+    'memory': [re.compile(
+        r'dsl4jsb_Memory *\((.*?)_ *\)', re.IGNORECASE),
         r'\1__mem'],
-    'use_config' : [re.compile(
-        r'dsl4jsb_Use_config *\((.*)_ *\)',                                  re.IGNORECASE),
+    'use_config': [re.compile(
+        r'dsl4jsb_Use_config *\((.*)_ *\)', re.IGNORECASE),
         r'USE mo_\1_config_class, ONLY: t_\1_config'],
-    'def_config' : [re.compile(
-        r'dsl4jsb_Def_config *\((.*)_ *\)',                                  re.IGNORECASE),
+    'def_config': [re.compile(
+        r'dsl4jsb_Def_config *\((.*)_ *\)', re.IGNORECASE),
         r'TYPE(t_\1_config), POINTER :: \1__conf'],
-    'get_config' : [re.compile(
-        r'dsl4jsb_Get_config *\((.*)_ *\)',                                  re.IGNORECASE),
+    'get_config': [re.compile(
+        r'dsl4jsb_Get_config *\((.*)_ *\)', re.IGNORECASE),
         r'SELECT TYPE (cc => model%processes(\1_)%p%config); TYPE IS (t_\1_config) ; \1__conf => cc ; END SELECT'],
-    'config' : [re.compile(
-        r'dsl4jsb_Config *\((.*?)_ *\)',                                     re.IGNORECASE),
+    'config': [re.compile(
+        r'dsl4jsb_Config *\((.*?)_ *\)', re.IGNORECASE),
         r'\1__conf'],
-    'lctlib' : [re.compile(
-        r'dsl4jsb_Lctlib',                                                   re.IGNORECASE),
+    'lctlib': [re.compile(
+        r'dsl4jsb_Lctlib', re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)'],
-    'lctlib_param' : [re.compile(
-        r'dsl4jsb_Lctlib_param *\((.*?)\)',                                  re.IGNORECASE),
+    'lctlib_param': [re.compile(
+        r'dsl4jsb_Lctlib_param *\((.*?)\)', re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)%\1'],
-    'real2d_onchunk' : [re.compile(
-        r'dsl4jsb_Real2D_onChunk',                                           re.IGNORECASE),
+    'real2d_onchunk': [re.compile(
+        r'dsl4jsb_Real2D_onChunk', re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:)'],
-    'real3d_onchunk' : [re.compile(
-        r'dsl4jsb_Real3D_onChunk',                                           re.IGNORECASE),
+    'real3d_onchunk': [re.compile(
+        r'dsl4jsb_Real3D_onChunk', re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
-    'get_var2d_onchunk' : [re.compile(
-        r'dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)',                re.IGNORECASE),
+    'get_var2d_onchunk': [re.compile(
+        r'dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,iblk)'],
-    'get_var3d_onchunk' : [re.compile(
-        r'dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)',                re.IGNORECASE),
+    'get_var3d_onchunk': [re.compile(
+        r'dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],
-    'var2d_onchunk' : [re.compile(
-        r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)',                    re.IGNORECASE),
+    'var2d_onchunk': [re.compile(
+        r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
-    'var3d_onchunk' : [re.compile(
-        r'dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)',                    re.IGNORECASE),
+    'var3d_onchunk': [re.compile(
+        r'dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,:,iblk)'],
-    'real2d_ondomain' : [re.compile(
-        r'dsl4jsb_Real2D_onDomain',                                          re.IGNORECASE),
+    'real2d_ondomain': [re.compile(
+        r'dsl4jsb_Real2D_onDomain', re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
-    'real3d_ondomain' : [re.compile(
-        r'dsl4jsb_Real3D_onDomain',                                          re.IGNORECASE),
+    'real3d_ondomain': [re.compile(
+        r'dsl4jsb_Real3D_onDomain', re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
-    'get_var2d_ondomain' : [re.compile(
-        r'dsl4jsb_Get_var2D_onDomain *\((.*?)_ *, *(.*?) *\)',               re.IGNORECASE),
+    'get_var2d_ondomain': [re.compile(
+        r'dsl4jsb_Get_var2D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:)'],
-    'get_var3d_ondomain' : [re.compile(
-        r'dsl4jsb_Get_var3D_onDomain *\((.*?)_ *, *(.*?) *\)',               re.IGNORECASE),
+    'get_var3d_ondomain': [re.compile(
+        r'dsl4jsb_Get_var3D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:,:)'],
-    'var2d_ondomain' : [re.compile(
-        r'dsl4jsb_var2D_onDomain *\((.*?)_ *, *(.*?) *\)',                   re.IGNORECASE),
+    'var2d_ondomain': [re.compile(
+        r'dsl4jsb_var2D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:)'],
-    'var3d_ondomain' : [re.compile(
-        r'dsl4jsb_var3D_onDomain *\((.*?)_ *, *(.*?) *\)',                   re.IGNORECASE),
+    'var3d_ondomain': [re.compile(
+        r'dsl4jsb_var3D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:,:)'],
-    'var_ptr' : [re.compile(
-        r'dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)',                          re.IGNORECASE),
+    'var_ptr': [re.compile(
+        r'dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr'],
-    'aggregate_onchunk' : [re.compile(
-        r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)',        re.IGNORECASE),
+    'aggregate_onchunk': [re.compile(
+        r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)', re.IGNORECASE),
         r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
     }
 
@@ -113,22 +122,48 @@ help_text = """
         -p, --pp-add=STR  add string STR before .suffix in processed files (pp = pre-processed)
     """
 
+
 def get_input_files(root):
     for dir, subdirs, files in os.walk(root):
         for file in fnmatch.filter(files, '*.f90'):
             if dir == '.':
                 yield(file)
             else:
-                yield os.path.join(dir.replace('./',''), file)
+                yield os.path.join(dir.replace('./', ''), file)
+
 
 def tolower(match):
-    return match.group(1).lower()+'_'
+    return match.group(1).lower() + '_'
+
 
 def process_file(inputfile, outputfile, verbose=False, cwd=None):
+    # Compute hash value of input file
+    hasher = hashlib.md5()
+    with io.open(inputfile, 'rb') as infile:
+        buf = infile.read()
+        hasher.update(buf)
+    # If output file exists, extract hash value of file
+    # this one was generated from
+    hash = ''
+    if outputfile != '' and os.path.isfile(outputfile):
+        with io.open(outputfile, 'r', encoding="utf-8") as outfile:
+            for line in outfile:
+                matches = re_hash.findall(line)
+                if matches:
+                    hash = matches[0]
+                    # print(hash)
+                    break
+    # If both hashes are equal, don't generate new file
+    if hasher.hexdigest() == hash:
+        if verbose:
+            print('File hasn"t changed: ' + os.path.realpath(os.path.abspath(inputfile)))
+        return
+
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
             outfile.write(u'!\n! This file was automatically generated from:\n')
-            outfile.write(u'!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n')
+            outfile.write(u'!         ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
+            outfile.write(u'!    with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
@@ -149,6 +184,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                             print('ERROR in ' + inputfile + ': dsl4jsb macro not found: ' + match.group(1).lower())
                             sys.exit()
                 outfile.write(line)
+
 
 def main(argv):
     inputfile = ''
@@ -195,7 +231,7 @@ def main(argv):
         outputfile = ''
     if inputfile != '' and outputfile == '' and outputdir != '':
         if pp_add:
-            root,ext = os.path.splitext(os.path.basename(inputfile))
+            root, ext = os.path.splitext(os.path.basename(inputfile))
             outputfile = os.path.join(outputdir, root + pp_add + ext)
         else:
             outputfile = os.path.join(outputdir, os.path.basename(inputfile))
@@ -208,7 +244,7 @@ def main(argv):
         for ifile in get_input_files('.'):     # gets input files including (relative to inputdir) directory name
             if keep:
                 if pp_add:
-                    root,ext = os.path.splitext(ifile)
+                    root, ext = os.path.splitext(ifile)
                     ofile = os.path.join(outputdir, root + pp_add + ext)
                 else:
                     ofile = os.path.join(outputdir, ifile)
@@ -217,7 +253,7 @@ def main(argv):
                     os.makedirs(dir)
             else:
                 if pp_add:
-                    root,ext = os.path.splitext(os.path.basename(ifile))
+                    root, ext = os.path.splitext(os.path.basename(ifile))
                     ofile = os.path.join(outputdir, root + pp_add + ext)
                 else:
                     ofile = os.path.join(outputdir, os.path.basename(ifile))
@@ -228,5 +264,6 @@ def main(argv):
 
     return 0
 
+
 if __name__ == '__main__':
-     sys.exit(main(sys.argv[1:]))
+    sys.exit(main(sys.argv[1:]))

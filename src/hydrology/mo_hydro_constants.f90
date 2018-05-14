@@ -17,9 +17,9 @@ MODULE mo_hydro_constants
 
   REAL(wp), PARAMETER ::                  &
     ! Parameters used for snow cover fraction
-    & wsn2frac_eps    = 1.E-12_wp,  &
-    & wsn2frac_sigfac = 0.15_wp,    &
-    & wsn2frac_const  = 0.95_wp,    &    !< Inverse of snow height when snow is considered to completely cover the ground
+    & wsn2fract_eps    = 1.E-12_wp,  &
+    & wsn2fract_sigfac = 0.15_wp,    &
+    & wsn2fract_const  = 0.95_wp,    &    !< Inverse of snow height when snow is considered to completely cover the ground
 
     & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of interception of precipitation as rain
 

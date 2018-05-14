@@ -39,7 +39,7 @@ MODULE mo_a2l_memory_class
       swvis_srf_down     , &
       swnir_srf_down     , &
       swpar_srf_down     , &
-      frac_par_diffuse   , &
+      fract_par_diffuse   , &
       press_srf          , &
       drag_srf           , &
       t_acoef            , &
@@ -185,9 +185,9 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'frac_par_diffuse', mem%frac_par_diffuse,&
+    CALL jsb_add_var( mem, 'fract_par_diffuse', mem%fract_par_diffuse,&
       & hgrid, surface,                                                      &
-      & t_cf('frac_par_diffuse', '', ''),                                    &
+      & t_cf('fract_par_diffuse', '', ''),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

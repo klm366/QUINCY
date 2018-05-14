@@ -14,7 +14,7 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_
+  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -52,12 +52,6 @@ CONTAINS
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
 
-    CASE ('jsbach_lite_tpe_open')
-      CALL init_usecase_lite_tpe_open(model)
-
-    CASE ('jsbach_lite_tpe_closed')
-      CALL init_usecase_lite_tpe_closed(model)
-
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
 
@@ -70,11 +64,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
-
-    grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -83,9 +74,11 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
+#ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
       CALL box_tile%Set_process_action(HD_, ON_TILE_)
     END IF
+#endif
 
       ! Create sub-tiles
       IF (model%config%use_lakes) THEN
@@ -103,9 +96,11 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
@@ -120,7 +115,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     INTEGER :: i
 
@@ -149,7 +143,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_pfts'
 
-    grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -158,9 +151,11 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
 
+#ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
       CALL box_tile%Set_process_action(HD_, ON_TILE_)
     END IF
+#endif
 
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
@@ -176,14 +171,16 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/), &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
@@ -217,8 +214,11 @@ CONTAINS
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
           END IF
+          IF (model%processes(FUEL_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+          END IF
           IF (model%processes(DISTURB_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(DISTURB_, ON_TILE_, AGGREGATE_)
+            CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
 
             DO i=1,npft
@@ -235,25 +235,5 @@ CONTAINS
 
   END SUBROUTINE init_usecase_pfts
   
-  SUBROUTINE init_usecase_lite_tpe_open(model)
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_open'
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CALL init_usecase_lite(model)
-
-  END SUBROUTINE init_usecase_lite_tpe_open
-
-  SUBROUTINE init_usecase_lite_tpe_closed(model)
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_closed'
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CALL init_usecase_lite(model)
-
-  END SUBROUTINE init_usecase_lite_tpe_closed
-
 #endif
 END MODULE mo_jsb_model_usecases

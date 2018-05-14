@@ -16,10 +16,10 @@ MODULE mo_rad_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: &
-    & calc_radiation_surface_net, &
+  PUBLIC ::                        &
+    & calc_radiation_surface_net,  &
     & calc_par, calc_fapar_lai_cl, &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
     & calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
@@ -46,22 +46,22 @@ CONTAINS
     & lw_net         & ! output, optional
     & )
 
-    USE mo_phy_schemes,          ONLY: lwnet_from_lwdown
+    USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
     REAL(wp),  INTENT(in) :: &
-      & swvis_down, &
-      & swnir_down, &
-      & alb_vis,    &
-      & alb_nir,    &
-      & lw_down,    &
+      & swvis_down,          &
+      & swnir_down,          &
+      & alb_vis,             &
+      & alb_nir,             &
+      & lw_down,             &
       & t
 
     REAL(wp),  INTENT(out) :: &
       & rad_net
     REAL(wp),  INTENT(out), OPTIONAL :: &
-      & swvis_net, & ! net shortwave radiation in visible range
-      & swnir_net, & ! net shortwave radiation in near infrared range
-      & sw_net,    &
+      & swvis_net,                      & ! net shortwave radiation in visible range
+      & swnir_net,                      & ! net shortwave radiation in near infrared range
+      & sw_net,                         &
       & lw_net
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
@@ -93,7 +93,7 @@ CONTAINS
      & alb_vis_soil,             & ! in
      & lai,                      & ! in
      & cos_zenith_angle,         & ! in
-     & frac_par_direct,          & ! in
+     & fract_par_direct,         & ! in
      & canopy_bound_lai,         & ! in
      & canopy_bound_lai_delta,   & ! in
      & B4_layer_above,           & ! inout
@@ -121,7 +121,7 @@ CONTAINS
                                   alb_vis_soil,          &
                                   lai,                   &
                                   cos_zenith_angle,      &
-                                  frac_par_direct,       &
+                                  fract_par_direct,      &
                                   canopy_bound_lai,      &
                                   canopy_bound_lai_delta
 
@@ -156,7 +156,7 @@ CONTAINS
                              lai,                    &
                              soil_reflectivity_par,  &
                              cos_zenith_angle,       &
-                             frac_par_direct,        &
+                             fract_par_direct,       &
                              canopy_bound_lai,       &
                              canopy_bound_lai_delta, &
                              B4_layer_above,         & ! <- inout
@@ -176,7 +176,7 @@ CONTAINS
      & lai,                    & ! in
      & soil_reflectivity_par,  & ! in
      & cos_zenith_angle,       & ! in
-     & frac_par_direct,        & ! in
+     & fract_par_direct,       & ! in
      & canopy_bound_lai,       & ! in
      & canopy_bound_lai_delta, & ! in
      & B4_layer_above,         & ! inout
@@ -193,7 +193,7 @@ CONTAINS
      REAL(wp), intent(in)    :: lai,                    & ! Total LAI. (Varies only per grid cell.)
                                 soil_reflectivity_par,  & ! Soil albedo. (Varies only per grid cell.)
                                 cos_zenith_angle,       & ! Cosine of solar zenith angle. (Varies only per grid cell.)
-                                frac_par_direct,        & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
+                                fract_par_direct,       & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
                                                           ! (Varies only per grid cell.)
                                 canopy_bound_lai,       & ! Canopy layer border in units of LAI.
                                                           ! (Varies only for each canopy layer, e.g. (0, 1/3, 2/3, 1).)
@@ -382,23 +382,23 @@ CONTAINS
         ! => F*RPAR = Rd + q1*R0
         ! i.e. calculation takes RPAR=1
         !-----------------------------------------------------------
-        F = 1._wp - frac_par_direct + Q1 * frac_par_direct
+        F = 1._wp - fract_par_direct + Q1 * fract_par_direct
         !-------------------------------------------------------------
         ! B1*RPAR = B1, B2*RPAR = B2, B4*RPAR = R(0) + Rdown(0) - Rup(0)
         !  B1 = + ( eta*R0 - (Rd+q1*R0) * gamma2 )/(gamma1 - gamma2)
         !------------------------------------------------------------
-        B1 = (X2 * frac_par_direct - F * X0) / (X1 - X0)
+        B1 = (X2 * fract_par_direct - F * X0) / (X1 - X0)
         !-----------------------------------------------------------
         !  B2 = - ( eta*R0 - (Rd+q1*R0) * gamma1 )/(gamma1 - gamma2)
         !     = eta*R0/(gamma2-gamma1) + (Rd+q1*R0) / (1-gamma2/gamma1)
         !  Note: the second form is used to avoid compiler-dependent ambiguity in the
         !        result of gamma1/(gamma1-gamma2) if gamma1 = infinity
         !-----------------------------------------------------------
-        B0 = X2 * frac_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
+        B0 = X2 * fract_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
         !-----------------------------------------------------------
         !  R(l)+Rdown-Rup = (1-q1-q2)* R0*EXP(-kl) + (1-p1)* B1*EXP(hl) + (1-p2)* B2*EXP(-hl)
         !----------------------------------------------------------------------------
-        B4 = (1._wp - Q0 - Q1) * frac_par_direct &
+        B4 = (1._wp - Q0 - Q1) * fract_par_direct &
              + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
      ENDIF ! cos_zenith_angle
 
@@ -430,7 +430,7 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kl)+(1-p1)*B1*EXP(hl)+(1-p2)*B2*EXP(-hl)
            !  i.e. X0*RPAR = above
            !----------------------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL0 * frac_par_direct &
+           X0 = (1._wp - Q0 - Q1) * EKL0 * fract_par_direct &
                 + (1._wp - ZP1) * B1 / EHL0 &
                 + (1._wp - ZP0) * B0 * EHL0
            !----------------------------------------------------------------
@@ -455,7 +455,7 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kLAI)+(1-p1)*B1*EXP(hLAI)+(1-p2)*B2*EXP(-hLAI)
            !  i.e. X0*RPAR = above for the lower boundary
            !------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL * frac_par_direct &
+           X0 = (1._wp - Q0 - Q1) * EKL * fract_par_direct &
                 + (1._wp - ZP1) * B1 / EHL &
                 + (1._wp - ZP0) * B0 * EHL          ! these variables do not change with canopy level
            !------------------------------------------------------------------
@@ -484,8 +484,8 @@ CONTAINS
   !---------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE calc_alb_lwtr( &
-    & l_day,       &
-    & alb_lwtr     &
+    & l_day,                               &
+    & alb_lwtr                             &
     & )
 
     ! Use declarations
@@ -580,12 +580,12 @@ CONTAINS
 
     ! Arguments
     LOGICAL,  INTENT(in)    :: &
-      & l_day          
+      & l_day
     REAL(wp), INTENT(in)    :: &
       & t
     REAL(wp), INTENT(inout) :: &
-      & alb_vis, & ! Albedo of canopy in the VIS range without snow cover.
-      & alb_nir    ! Albedo of canopy in the NIR range without snow cover.
+      & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
+      & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
 
     ! ---------------------------
     ! Go
@@ -600,10 +600,10 @@ CONTAINS
        alb_vis = AlbedoGlacierVisMax
        alb_nir = AlbedoGlacierNirMax
     ELSE
-       alb_vis = AlbedoGlacierVisMin + &
+       alb_vis = AlbedoGlacierVisMin +                                  &
             (tmelt - t) * (AlbedoGlacierVisMax - AlbedoGlacierVisMin) / &
             TempAlbedoGlacierMax
-       alb_nir = AlbedoGlacierNirMin + &
+       alb_nir = AlbedoGlacierNirMin +                                  &
             (tmelt - t) * (AlbedoGlacierNirMax - AlbedoGlacierNirMin) / &
              TempAlbedoGlacierMax
     END IF
@@ -619,7 +619,7 @@ CONTAINS
   ! boxC_litter_green_ag and boxC_slow (canopy) of all tiles and builds a whole grid cell average. (This is done in subroutine update_albedo.
   ! Note, the glacier tile implementation of the scheme is arbitary as JSBACH3 could never handle a glacier tile.) Then:
   ! From boxC_slow an albedo reduction may be calculated for the soil (linear or log).
-  ! From Cpool_litter_green_ag the albedo of litter may be calculted (linear).
+  ! From c_litter_green_ag the albedo of litter may be calculted (linear).
   ! Then soil and litter albedos may be summed up according to the litter view fraction.
   ! However, the JSBACH3 scheme is not useable for the new JSBACH4 concept of child tiles. To keep the JSBACH3 concept in JSBACH4
   ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful albedo.
@@ -635,8 +635,8 @@ CONTAINS
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
-    & Cpool_litter_green_ag,     &
-    & Cpool_slow,                &
+    & c_litter_green_ag,     &
+    & c_bg_sum,                &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
     & alb_background,            &
@@ -650,23 +650,22 @@ CONTAINS
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for alb_vis_mineralsoil
 
     ! Arguments
-    LOGICAL,      INTENT(in)    :: l_day
-    LOGICAL,      INTENT(in)    :: use_alb_mineralsoil_const
-    CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
-    LOGICAL,      INTENT(in)    :: use_alb_soil_litter
-
-    REAL(wp),     INTENT(in)    :: Cpool_litter_green_ag, & 
-                                   Cpool_slow,            &
-                                   SpecificLeafArea_C,    &
-                                   AlbedoLitterVIS,       & 
-                                   alb_background
-   
-    REAL(wp),     INTENT(inout) ::                        &
-                                   alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                                                ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
-                                   alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                   alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-                                   alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+    LOGICAL,          INTENT(in)  :: l_day
+    LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
+    CHARACTER(LEN=*), INTENT(in)  :: use_alb_soil_organic_C
+    LOGICAL,          INTENT(in)  :: use_alb_soil_litter
+    REAL(wp),         INTENT(in)  :: &
+      & c_litter_green_ag,  & 
+      & c_bg_sum,           &
+      & SpecificLeafArea_C, &
+      & AlbedoLitterVIS,    & 
+      & alb_background
+    REAL(wp),         INTENT(inout) :: &
+      & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
+                                 ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
+      & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
+      & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+      & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
 
 
     ! Local variables
@@ -711,11 +710,11 @@ CONTAINS
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
-      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(Cpool_slow,Soil_C_min)
-      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(Cpool_slow,Soil_C_min)
+      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_bg_sum,Soil_C_min)
+      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_bg_sum,Soil_C_min)
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.1_wp)
+      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.2_wp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,
@@ -730,7 +729,7 @@ CONTAINS
 
     ! albedo of litter on soil
     IF(use_alb_soil_litter) THEN
-      litter_area = Cpool_litter_green_ag * specificLeafArea_C
+      litter_area = c_litter_green_ag * specificLeafArea_C
       alb_vis_litter = litter_area * AlbedoLitterVIS
 
       IF (litter_area <= EPSILON(1._wp)) THEN
@@ -876,8 +875,8 @@ CONTAINS
     & fract_fpc_max,      & ! in
     & cos_zenith_angle,   & ! in
     & StemArea,           & ! in
-    & sky_view_fract,     & ! out
-    & sky_view_fract_stem & ! out
+    & sky_view_fract,     & ! inout
+    & sky_view_fract_stem & ! inout
     & )
 
     ! Use declarations
@@ -889,9 +888,10 @@ CONTAINS
                              fract_fpc_max,    & ! maximum foliage projected cover
                              cos_zenith_angle, & ! cosinus of zenith angle of incoming radiation
                              StemArea
-    REAL(wp), INTENT(out) :: sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
-                                                 ! (Falling with rising LAI.)
-                             sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
+    REAL(wp), INTENT(inout) :: &
+      & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
+                            ! (Falling with rising LAI.)
+      & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
 
     ! ---------------------------
     ! Go

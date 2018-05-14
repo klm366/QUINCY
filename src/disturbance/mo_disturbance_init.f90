@@ -123,10 +123,10 @@ CONTAINS
 !     ! R: These variables should be 3D as they are tile dependent. However for THIS tile they would be 2D but in the input file they are 3D!
 !     ! R: jedenfalls wurden 3D variablen bisher nirgendwo über einlesen vom File initialisiert!
 !     return_pointer => input_file%Read_3d(         &
-!       & variable_name='Cpool_green',           &
-!       & fill_array = dsl4jsb_var_ptr(DISTURB_,Cpool_green))
-!     dsl4jsb_var3D_onDomain(DISTURB_,Cpool_green) = &
-!       MERGE(dsl4jsb_var3D_onDomain(DISTURB_,Cpool_green), 0._wp, dsl4jsb_var3D_onDomain(DISTURB_,Cpool_green) >= 0._wp)
+!       & variable_name='c_green',           &
+!       & fill_array = dsl4jsb_var_ptr(DISTURB_,c_green))
+!     dsl4jsb_var3D_onDomain(DISTURB_,c_green) = &
+!       MERGE(dsl4jsb_var3D_onDomain(DISTURB_,c_green), 0._wp, dsl4jsb_var3D_onDomain(DISTURB_,c_green) >= 0._wp)
 ! 
 ! 
 !     CALL input_file%Close()

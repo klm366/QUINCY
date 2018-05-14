@@ -13,7 +13,6 @@ MODULE mo_jsb_interface
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_util_string,         ONLY: int2string
-  USE mo_jsb_parallel,        ONLY: Get_omp_thread
 
   USE mo_jsb_control,         ONLY: debug_on, l_timer
   USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
@@ -24,7 +23,7 @@ MODULE mo_jsb_interface
   USE mo_hsm_class,           ONLY: t_Hsm, t_Message, t_State
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
-  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id
+  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id, Get_omp_thread, Is_omp_inside_serial
 
   IMPLICIT NONE
   PRIVATE
@@ -54,7 +53,7 @@ CONTAINS
     & swvis_srf_down,   &
     & swnir_srf_down,   &
     & swpar_srf_down,   &
-    & frac_par_diffuse, &
+    & fract_par_diffuse, &
     & press_srf,        &
     & drag_srf,         &
     & t_acoef,          &
@@ -121,7 +120,7 @@ CONTAINS
       & swvis_srf_down    (:), &
       & swnir_srf_down    (:), &
       & swpar_srf_down    (:), &
-      & frac_par_diffuse  (:), &
+      & fract_par_diffuse  (:), &
       & press_srf         (:), &
       & drag_srf          (:), &
       & t_acoef           (:), &
@@ -232,7 +231,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
-      & frac_par_diffuse   = frac_par_diffuse(:),   &
+      & fract_par_diffuse   = fract_par_diffuse(:),   &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -325,7 +324,7 @@ CONTAINS
 !     & swvis_srf_net,    &
 !     & swnir_srf_net,    &
 !     & swpar_srf_down,   &
-!     & frac_par_diffuse, &
+!     & fract_par_diffuse, &
 !     & press_srf,        &
 !     & drag_srf,         &
 !     & t_acoef,          &
@@ -379,7 +378,7 @@ CONTAINS
 !       & swvis_srf_net     (:), &
 !       & swnir_srf_net     (:), &
 !       & swpar_srf_down    (:), &
-!       & frac_par_diffuse  (:), &
+!       & fract_par_diffuse  (:), &
 !       & press_srf         (:), &
 !       & drag_srf          (:), &
 !       & t_acoef           (:), &
@@ -465,7 +464,7 @@ CONTAINS
 !       & swvis_srf_net      = swvis_srf_net(:),      &
 !       & swnir_srf_net      = swnir_srf_net(:),      &
 !       & swpar_srf_down     = swpar_srf_down(:),     &
-!       & frac_par_diffuse   = frac_par_diffuse(:),   &
+!       & fract_par_diffuse   = fract_par_diffuse(:),   &
 !       & press_srf          = press_srf(:),          &
 !       & drag_srf           = drag_srf(:),           &
 !       & t_acoef            = t_acoef(:),            &
@@ -544,17 +543,70 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id)
  
-    INTEGER :: p_pe
+    USE mo_jsb_time,          ONLY: is_time_experiment_start
+    USE mo_jsb_time_iface,    ONLY: is_time_restart
+    USE mo_carbon_init,       ONLY: carbon_start_cpools
+    USE mo_util,              ONLY: one_of
+    USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
+
+    dsl4jsb_Use_processes CARBON_
+    dsl4jsb_Use_config(CARBON_)
+
+    dsl4jsb_Def_config(CARBON_)
+
+    INTEGER,  INTENT(in) :: model_id
+
+    TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+    INTEGER :: p_pe, no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
 
-    INTEGER,  INTENT(in) ::  model_id
-
-    TYPE(t_jsb_model), POINTER :: model
-
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    no_omp_thread = Get_omp_thread()   ! Should always be 1
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(CARBON_)
+
+    ! Reset all tiles at the beginning of the timestep
+    CALL model%Reset_tiles()
+
+    !-----------------------------------
+    ! Do stuff at beginning of totally new experiment or after restart from existing experiment
+    IF (is_time_experiment_start() .OR. is_time_restart()) THEN
+
+      ! Iterate over tiles
+      tile => model%Get_top_tile()
+      IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+
+      DO WHILE (ASSOCIATED(tile))
+
+        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+          tile => model%Goto_next_tile()
+          CYCLE
+        END IF
+
+        ! Read carbon pools from file
+        IF (dsl4jsb_Config(CARBON_)%read_cpools) THEN
+          IF  (one_of(tile%process_action(CARBON_), &
+            &         (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0 &
+            & ) THEN                                      ! R: cpool file also contains aggregated tiles!
+            CALL carbon_start_cpools(tile)
+          END IF
+        END IF
+
+        tile => model%Goto_next_tile()
+      END DO
+
+    END IF ! start or restart of experiment
+    !
+    !-----------------------------------
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -567,21 +619,24 @@ CONTAINS
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 
-    INTEGER :: p_pe
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
-
     INTEGER, INTENT(in)  :: model_id
     REAL(wp), INTENT(in) :: steplen
 
+    INTEGER :: p_pe
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
 
     INTEGER :: no_omp_thread
 
     no_omp_thread = Get_omp_thread()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
 
     model => Get_model(model_id)
     tile => model%Get_top_tile()

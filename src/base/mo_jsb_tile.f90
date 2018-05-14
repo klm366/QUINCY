@@ -238,7 +238,6 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -263,14 +262,17 @@ CONTAINS
     REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=VARNAME_LEN) :: name
+    CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
+    CHARACTER(len=2)           :: model_id_char
     INTEGER                    :: ilct, i, no_of_children, child_no
-    LOGICAL                    :: l_disturb_active
 
     INTEGER :: isteptype
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
+
+    WRITE(model_id_char, '(I2.2)') this%owner_model_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
@@ -289,20 +291,7 @@ CONTAINS
 
       process_name = Get_process_name(iproc)
 
-      ! R: TBD: workaround until we have something like process_actions=FOR_CHILDS: 
-      !    For disturbance we want to calculate on a parent tile, but the results
-      !    differ for each child tile. Therefore we have to create a own memory 
-      !    on the pfts tiles even when the process_action is now INHERIT on the pfts!
-      l_disturb_active = .FALSE.
-      IF (ASSOCIATED(this%parent_tile)) THEN
-        IF (this%parent_tile%Is_process_active(DISTURB_)) THEN
-          l_disturb_active = .TRUE.
-        END IF
-      END IF
-      IF ( (this%process_action(iproc) == INHERIT_ ) .AND.                          &
-        &  (.NOT. (l_disturb_active .AND. &
-        &          process_name == 'disturb' .AND. this%lcts(1)%lib_id /= 0 ) ) &
-        &  ) THEN
+      IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
         IF (debug_on()) &
@@ -320,7 +309,7 @@ CONTAINS
         END IF
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -351,7 +340,7 @@ CONTAINS
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
@@ -393,7 +382,8 @@ CONTAINS
     END IF
 
     ! Add fraction(s) of this tile to stream
-    CALL jsb_add_var(TRIM(varlist_name), 'fract', tmp_fract,                                 &
+    varlist_name_loc =  TRIM(varlist_name)//'_'//model_id_char
+    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -402,7 +392,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tmp_fract,                         &
+    CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
       &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -411,7 +401,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_old', tmp_fract,                                 &
+    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -420,7 +410,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_max_old', tmp_fract,                         &
+    CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max_old', '',                                                                          &
       &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
@@ -505,7 +495,7 @@ CONTAINS
     ! Loop over lcts of this tile and add variables for fractions for each lct
     DO ilct=1,SIZE(this%lcts)
 
-      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
+      CALL jsb_add_var(varlist_name_loc, 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,             &
         & hgrid, surface,                                                                                         &
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
@@ -524,7 +514,6 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
-    USE mo_jsb_process_class,   ONLY: DISTURB_
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
@@ -544,10 +533,7 @@ CONTAINS
       ! if the current process is not on leafs of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
-        ! R: TBD: workaround until we have something like FOR_CHILDS see comments above
-        IF (.NOT. (this%Is_process_active(DISTURB_) .AND. process_name == 'disturb'  .AND.  this%name(1:3) == 'veg') ) THEN
-            CYCLE
-        END IF
+        CYCLE
       END SELECT
 
       no_of_children = this%Get_no_of_children()

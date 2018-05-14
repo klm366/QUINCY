@@ -37,7 +37,7 @@ MODULE mo_jsb_memory_class
     CHARACTER(len=10)    :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
-    CHARACTER(LEN=50) :: varlist_name
+    CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
     CLASS(t_jsb_param), POINTER :: param => NULL()
     LOGICAL :: in_var_groups = .FALSE.
@@ -165,8 +165,7 @@ CONTAINS
 
   FUNCTION Collect_var_real2d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
 
-    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile:
-                                                          ! tile%mem(iproc)%p; iproc = DISTURB_
+    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile
     INTEGER,                INTENT(in)     :: ics, ice, iblk
     INTEGER,                INTENT(in)     :: no_children ! of the parent tile
     TYPE(t_jsb_var_real2d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
@@ -187,8 +186,7 @@ CONTAINS
 
   FUNCTION Collect_var_real3d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
 
-    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile:
-                                                          ! tile%mem(iproc)%p; iproc = DISTURB_
+    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile
     INTEGER,                INTENT(in)     :: ics, ice, iblk
     INTEGER,                INTENT(in)     :: no_children ! of the parent tile
     TYPE(t_jsb_var_real3d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
