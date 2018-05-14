@@ -1303,10 +1303,14 @@ CONTAINS
       & evapo_pot
     
     ! Snow fraction on canopy
-    fract_snow_can = MERGE(MIN(1._wp, w_snow_can / wsr_max), 0._wp, wsr_max > EPSILON(1._wp))
-
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
-    fract_water = MERGE(MIN(1._wp, w_skin / wsr_max), 0._wp, wsr_max > EPSILON(1._wp))
+    IF (wsr_max > EPSILON(1._wp)) THEN
+      fract_snow_can = MIN(1._wp, w_snow_can / wsr_max)
+      fract_water    = MIN(1._wp, w_skin     / wsr_max)
+    ELSE
+      fract_snow_can = 0._wp
+      fract_water    = 0._wp
+    END IF
 
     ! Snow fraction on soil
     fract_snow_soil = Get_snow_fract_noforest(w_snow_soil, oro_stddev) ! snow on soil below forest
@@ -1373,7 +1377,11 @@ CONTAINS
                qsat_srf_old, &
                evapo_pot
 
-    fract_water = MERGE(MIN(1._wp, w_skin / wsr_max), 0._wp, wsr_max > EPSILON(1._wp))
+    IF (wsr_max > EPSILON(1._wp)) THEN
+      fract_water = MIN(1._wp, w_skin / wsr_max)
+    ELSE
+      fract_water = 0._wp
+    END IF
 
     ! Snow fraction on soil
     fract_snow_soil = Get_snow_fract_noforest(w_snow_soil, oro_stddev) ! snow on soil below forest
