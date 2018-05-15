@@ -562,7 +562,7 @@ CONTAINS
 
     USE mo_util, ONLY: one_of, logical2string, int2string
     USE mo_jsb_parallel, ONLY: Get_omp_thread, Get_omp_no_of_threads
-    USE mo_jsb_control,  ONLY: l_timer, timer_process_task
+    USE mo_jsb_control,  ONLY: timer_on, timer_process_task
     USE mo_timer,        ONLY: timer_start, timer_stop
 
     CLASS(t_jsb_tile),  INTENT(inout) :: this
@@ -583,7 +583,7 @@ CONTAINS
 
     no_omp_thread = Get_omp_thread()
 
-    IF (l_timer .AND. debug_on()) CALL timer_start(timer_process_task(this%owner_model_id))
+    IF (timer_on('detail')) CALL timer_start(timer_process_task(this%owner_model_id))
 
     ! Gfortran crashes on the next line
     ! ALLOCATE(msg, source=msg_in)
@@ -720,7 +720,7 @@ CONTAINS
 
     IF (ASSOCIATED(msg)) DEALLOCATE(msg)
 
-    IF (l_timer .AND. debug_on()) CALL timer_stop(timer_process_task(this%owner_model_id))
+    IF (timer_on('detail')) CALL timer_stop(timer_process_task(this%owner_model_id))
 
   END FUNCTION Process_task_on_tile
 

@@ -14,8 +14,7 @@ MODULE mo_jsb_interface
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_util_string,         ONLY: int2string
 
-  USE mo_jsb_control,         ONLY: debug_on, l_timer
-  USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
+  USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
@@ -198,8 +197,6 @@ CONTAINS
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
 
-    IF (l_timer) CALL timer_start(timer_jsbach)
-
     nc = ice - ics + 1
 
     model => Get_model(model_id)
@@ -306,8 +303,6 @@ CONTAINS
 !!$      &              all_print=.TRUE.)
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
-
-    IF (l_timer) CALL timer_stop(timer_jsbach)
 
   END SUBROUTINE interface_full
 
@@ -430,8 +425,6 @@ CONTAINS
 !         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
 !     END IF
 ! 
-!     CALL timer_start(timer_jsbach)
-! 
 !     nc = ice - ics + 1
 ! 
 !     model => Get_model(model_id)
@@ -514,8 +507,6 @@ CONTAINS
 ! !!$      &              all_print=.TRUE.)
 !     IF (debug_on('basic') .AND. iblk == 1) &
 !       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
-! 
-!     CALL timer_stop(timer_jsbach)
 ! 
 !   END SUBROUTINE interface_standalone
 

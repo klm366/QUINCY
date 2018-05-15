@@ -20,18 +20,18 @@ MODULE mo_jsb_control
 
   PUBLIC :: init_jsb_master_control
   PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
-  PUBLIC :: debug_on
+  PUBLIC :: debug_on, timer_on
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
-  PUBLIC :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, l_timer
+  PUBLIC :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
   PUBLIC :: max_no_of_models
 
   LOGICAL :: is_standalone
   LOGICAL :: restart_jsbach
   CHARACTER(len=99) :: model_base_dir
-  INTEGER :: debug
-  LOGICAL :: l_timer
+  INTEGER :: debug_level
+  INTEGER :: timer_level
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -72,7 +72,7 @@ CONTAINS
 
     CALL init_io(TRIM(master_namelist_filename))
 
-    IF (l_timer) THEN
+    IF (timer_on()) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
           timer_aggregate(i)    = new_timer('jsb:aggregate_'//int2string(i))
@@ -119,8 +119,8 @@ CONTAINS
       is_standalone,           &
       restart_jsbach,          &
       model_base_dir,          &
-      l_timer,                 &
-      debug
+      timer_level,             &
+      debug_level
 
     NAMELIST /jsb_model_nml/   &
       model_id,                &
@@ -133,8 +133,8 @@ CONTAINS
     is_standalone  = .TRUE.
     restart_jsbach = .FALSE.
     model_base_dir = '.'
-    l_timer = .TRUE.
-    debug          = 0
+    timer_level    = 0
+    debug_level    = 0
 
     nml_handler = open_nml(TRIM(namelist_filename))
 
@@ -216,20 +216,47 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: level
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':debug_on'
+
     IF (PRESENT(level)) THEN
       SELECT CASE (TRIM(level))
       CASE ('basic')
-        debug_on = debug >= 1
+        debug_on = debug_level >= 1
       CASE ('detail')
-        debug_on = debug >= 2
+        debug_on = debug_level >= 2
       CASE ('hsm')
-        debug_on = debug >= 3
+        debug_on = debug_level >= 3
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Unknown debug level')
       END SELECT
     ELSE
-      debug_on = debug > 0
+      debug_on = debug_level > 0
     END IF
 
   END FUNCTION debug_on
+
+  LOGICAL FUNCTION timer_on(level)
+
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: level
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':timer_on'
+
+    IF (PRESENT(level)) THEN
+      SELECT CASE (TRIM(level))
+      CASE ('basic')
+        timer_on = timer_level >= 1
+      CASE ('detail')
+        timer_on = timer_level >= 2
+      CASE ('all')
+        timer_on = timer_level >= 3
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Unknown timer level')
+      END SELECT
+    ELSE
+      timer_on = timer_level > 0
+    END IF
+
+  END FUNCTION timer_on
 
 #endif
 END MODULE mo_jsb_control
