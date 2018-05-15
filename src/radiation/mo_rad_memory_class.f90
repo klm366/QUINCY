@@ -90,7 +90,7 @@ MODULE mo_rad_memory_class
       !
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
-      & faPAR,                & ! fraction of PAR absorbed by the canopy
+      & faPAR,                & ! fraction of PAR absorbed by the canopy and per leaf area
       & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
       & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
       & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
@@ -99,7 +99,8 @@ MODULE mo_rad_memory_class
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
       & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
-      & faPAR_cl,             & ! Absorbed PAR per canopy layer [fraction of irradiance]
+      & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
+                                ! As fraction of incoming radiation at the top of the canopy layers (=1).
       & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer. Only for current time step/dtime. [(absorbed photons) / (m^2(leaf area) s)]
       & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
       & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)

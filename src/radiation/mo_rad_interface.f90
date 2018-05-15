@@ -410,6 +410,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_par_diffuse     ! Fraction of diffuse (in contrast to direct) PAR [-]
     dsl4jsb_Real2D_onChunk :: canopy_bound_lai
     dsl4jsb_Real2D_onChunk :: apar_nacc
+    dsl4jsb_Real2D_onChunk :: faPAR
 
     dsl4jsb_Real3D_onChunk :: faPAR_cl              ! Fraction of absorbed PAR per leaf area for each canopy layer
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Absorbed PAR of canopy layer
@@ -469,7 +470,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl_nacc)  ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl_tavg)  ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   apar_nacc)             ! inout
-    
+
+    dsl4jsb_Get_var2D_onChunk(RAD_,   faPAR)                 ! out
+
     ! ---------------------------
     ! Go
     
@@ -526,6 +529,12 @@ CONTAINS
     DO icanopy=1,ncanopy
       apar_nacc(:) = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
     END DO
+
+    ! Create faPAR
+    DO icanopy=1,ncanopy
+      faPAR(:) = faPAR(:) + faPAR_cl(:,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the whole canopy
+    END DO
+
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
 !        ! par and fraction of absorbed PAR
