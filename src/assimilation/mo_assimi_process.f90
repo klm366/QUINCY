@@ -433,10 +433,10 @@ CONTAINS
     REAL(wp), INTENT(out) ::     &
       & CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers):
                                    ! Output only for the water limited case here
-      & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S] and canopy layer
-      & dark_respiration_cl,     & ! Dark respiration per canopy layer
+      & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [ mol (CO2) / (m^2(leaf area) * s) ] and canopy layer
+      & dark_respiration_cl,     & ! Dark respiration per leaf area and per canopy layer
       & carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
-                                   ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
+                                   ! [mol(CO2)/m^2(leaf area)/s]. carbox_rate_max_leaf adapted to canopy layer
                                    ! and actual temperature.
       & e_transport_rate_max_cl, & !
       & carbox_rate_cl,          & !
@@ -743,11 +743,11 @@ CONTAINS
     ! Arguments
     REAL(wp),  INTENT(in) :: &
       & gross_assimilation_ca, & ! Gross primary product (where photorespiration has already  ..
-                              ! .. been accounted for) [mol(CO2)/(m^2 (canopy) s)]
-      & dark_respiration_ca      ! Dark respiration of leaves [mol(CO2)/(m^2 (canopy) s)]
+                              ! .. been accounted for) [mol(CO2)/(m^2 (canopy ground) s)]
+      & dark_respiration_ca      ! Dark respiration of leaves [mol(CO2)/(m^2 (canopy ground) s)]
 
     REAL(wp),  INTENT(out) :: &
-      & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy) s)]
+      & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_pot_rate'
