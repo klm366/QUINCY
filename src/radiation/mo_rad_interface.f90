@@ -367,7 +367,7 @@ CONTAINS
   SUBROUTINE update_radiation_par(tile, options)
 
     ! Use declarations
-    USE mo_rad_process,    ONLY: calc_fapar_lai_cl, calc_par
+    USE mo_rad_process,    ONLY: calc_par
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -487,13 +487,12 @@ CONTAINS
     ! R:  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
     fract_par_direct = 1._wp - fract_par_diffuse
                                                  
-    B4_layer_above = 7777777 ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate first layer
+    B4_layer_above(:) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate first layer
     DO icanopy=1,ncanopy
        ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and lai_cl (leaf area index for each canopy layer)
        canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
 
        CALL calc_par(                 &
-         & dtime,                     & ! in
          & ncanopy,                   & ! in
          & icanopy,                   & ! in
          & use_alb_veg_simple,        & ! in
@@ -504,7 +503,7 @@ CONTAINS
          & fract_par_direct(:),       & ! in
          & canopy_bound_lai(icanopy), & ! in
          & canopy_bound_lai_delta,    & ! in
-         & B4_layer_above,            & ! inout
+         & B4_layer_above(:),         & ! inout
          & par_down_mol(:),           & ! out, used outside for assimilation
          & soil_reflectivity_par(:),  & ! out, R: could also be local as it is not used outside in the moment,
                                         ! however I want it in the model output and thus it has to be updated by returning it
