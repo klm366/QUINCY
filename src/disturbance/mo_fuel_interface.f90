@@ -122,6 +122,7 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(FUEL_)
+    dsl4jsb_Def_memory(PHENO_)
 
     dsl4jsb_Def_config(FUEL_)
 
@@ -135,6 +136,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
     !
     ! Locally allocated vectors
     !
@@ -161,18 +163,20 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(PHENO_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1_ta)   ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction)  ! in
+    dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)       ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)    ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta) ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)       ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)    ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta) ! in
 
     !
     ! ---------------------------
@@ -183,16 +187,17 @@ CONTAINS
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
 
-          CALL calc_fuel_jsbach( &
-            & c_acid_ag1_ta(:),       & ! in
-            & c_water_ag1_ta(:),      & ! in
-            & c_ethanol_ag1_ta(:),    & ! in
-            & c_nonsoluble_ag1_ta(:), & ! in
-            & c_acid_ag2_ta(:),       & ! in
-            & c_water_ag2_ta(:),      & ! in
-            & c_ethanol_ag2_ta(:),    & ! in
-            & c_nonsoluble_ag2_ta(:), & ! in
-            & fuel(:)                      & ! out
+          CALL calc_fuel_jsbach(       &
+            & c_acid_ag1_ta(:),        & ! in
+            & c_water_ag1_ta(:),       & ! in
+            & c_ethanol_ag1_ta(:),     & ! in
+            & c_nonsoluble_ag1_ta(:),  & ! in
+            & c_acid_ag2_ta(:),        & ! in
+            & c_water_ag2_ta(:),       & ! in
+            & c_ethanol_ag2_ta(:),     & ! in
+            & c_nonsoluble_ag2_ta(:),  & ! in
+            & veg_fract_correction(:), & ! in
+            & fuel(:)                  & ! out
             & )
 
         CASE (2) !! Arora & Boer algorithm

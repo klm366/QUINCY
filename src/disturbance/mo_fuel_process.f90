@@ -31,7 +31,8 @@ CONTAINS
     & c_water_ag2,      & ! in
     & c_ethanol_ag2,    & ! in
     & c_nonsoluble_ag2, & ! in
-    & fuel                   & ! out
+    & veg_fract_correction, & ! in
+    & fuel              & ! out
     & )
 
     ! Input Arguments
@@ -43,6 +44,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: c_water_ag2
     REAL(wp), INTENT(in)  :: c_ethanol_ag2
     REAL(wp), INTENT(in)  :: c_nonsoluble_ag2
+    REAL(wp), INTENT(in)  :: veg_fract_correction
 
     ! Output Arguments
     REAL(wp), INTENT(OUT)   :: fuel
@@ -52,10 +54,11 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    fuel =  c_acid_ag1    + c_water_ag1      &
-        & + c_ethanol_ag1 + c_nonsoluble_ag1 & 
-        & + c_acid_ag2    + c_water_ag2      &
-        & + c_ethanol_ag2 + c_nonsoluble_ag2
+    fuel =  ( c_acid_ag1    + c_water_ag1       &
+          & + c_ethanol_ag1 + c_nonsoluble_ag1  &
+          & + c_acid_ag2    + c_water_ag2       &
+          & + c_ethanol_ag2 + c_nonsoluble_ag2) &
+          * veg_fract_correction                  ! because fuel should be relative to potential vegetation area of the PFT
 
   END SUBROUTINE calc_fuel_jsbach
 
