@@ -56,8 +56,8 @@ PROGRAM jsb4_driver
   ! time control and orbit calc
   USE mo_timer,            ONLY: init_timer, timer_start, timer_stop, timer_jsbach
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date, &
-    &                            timer_on
+    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
+  USE mo_jsb_control,      ONLY: timer_on
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
   ! ICON would be:
