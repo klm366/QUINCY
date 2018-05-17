@@ -134,7 +134,8 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca, &
         & hgrid, surface,                                                                                             &
-        & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground)s (mean value)', 'Gross photosynthesis on canopy ground area'), &
+        & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground)s (mean value)', &
+        &      'Gross photosynthesis on canopy ground area'),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                                &
         & output_level=BASIC, &
