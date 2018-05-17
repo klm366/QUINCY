@@ -716,6 +716,7 @@ CONTAINS
     albedo_age_weight         = dsl4jsb_Config(RAD_) %albedo_age_weight
     AlbedoCanopySnow          = dsl4jsb_Config(RAD_) %AlbedoCanopySnow
 
+    c_bg_sum => NULL()
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
       IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Is_process_active(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Carbon process must be active for use_alb_soil_organic_C')
@@ -728,8 +729,6 @@ CONTAINS
         ALLOCATE(c_bg_sum(nc))
         c_bg_sum(:) = 0._wp                           ! dummy
       END IF
-    ELSE
-      c_bg_sum => NULL()
     END IF
 
     ! Set pointers to variables in memory
