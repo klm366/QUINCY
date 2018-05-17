@@ -41,7 +41,7 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_shared_constants,                ONLY: molar_mass_N
-    USE mo_veg_constants,                   ONLY: fresp_growth
+    USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, background_mort_rate_grass
     USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, itree
@@ -63,7 +63,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                                     :: hlp1       ! needs to be Scalar as long as pools are Scalar !
+    REAL(wp), DIMENSION(options%nc)              :: hlp1       !< dummy variable
     REAL(wp)                                     :: ref_lai    !< LAI                                 | for canopy model init
     REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2  | for canopy model init
     INTEGER                                      :: iblk, ics, ice, nc
@@ -271,8 +271,33 @@ CONTAINS
           !> start bareground with vegetation dynamics switched on: cohort scheme
           !! 
           CASE ("cohort")
-            !> @todo  add vegetation dynamics scheme cohort to veg_init
-            !! 
+            background_mort_rate_tree     = 0.0_wp    ! default: 0.01_wp
+            background_mort_rate_grass    = 0.0_wp    ! default: 0.05_wp 
+            dens_ind(:)                   = 1.0_wp
+
+            ! pool%reserve% C N P
+            veg_pool%reserve%carbon(:)     = 1.0_wp
+            veg_pool%reserve%nitrogen(:)   = veg_pool%reserve%carbon(:)    / (1._wp + fresp_growth) / lctlib%cn_leaf
+            veg_pool%reserve%phosphorus(:) = veg_pool%reserve%nitrogen(:)  / lctlib%np_leaf
+            ! pool%reserve%carbon13
+            IF(lctlib%ps_pathway == ic3phot)THEN
+               hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+            ELSE
+               hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+            ENDIF
+            veg_pool%reserve%carbon13(:)   = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:)) * &
+                                             veg_pool%reserve%carbon(:)
+            ! pool%reserve%carbon14
+            IF(lctlib%ps_pathway == ic3phot)THEN
+               hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+            ELSE
+               hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+            ENDIF
+            veg_pool%reserve%carbon14(:)   = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
+                                             veg_pool%reserve%carbon(:)
+            ! pool%reserve%nitrogen15
+            veg_pool%reserve%nitrogen15(:) = veg_pool%reserve%nitrogen(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+
           !> start bareground with vegetation dynamics switched on: population scheme
           !! 
           CASE ("population")
@@ -284,20 +309,20 @@ CONTAINS
 
             ! pool%seed_bed%carbon13
             IF(lctlib%ps_pathway == ic3phot)THEN
-               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
             ELSE
-               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
             ENDIF
             veg_pool%seed_bed%carbon13 = veg_pool%seed_bed%carbon * &
-                                         calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
+                                         calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:))
 
             ! pool%seed_bed%carbon14
             IF(lctlib%ps_pathway == ic3phot)THEN
-               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
             ELSE
-               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
             ENDIF
-            veg_pool%seed_bed%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
+            veg_pool%seed_bed%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
                                          veg_pool%seed_bed%carbon 
 
             veg_pool%seed_bed%nitrogen15  = veg_pool%seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -313,20 +338,20 @@ CONTAINS
 
             ! pool%reserve%carbon13
             IF(lctlib%ps_pathway == ic3phot)THEN
-               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
             ELSE
-               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
             ENDIF
             veg_pool%reserve%carbon13 = veg_pool%reserve%carbon * &
-                                        calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
+                                        calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:))
 
             ! pool%reserve%carbon14
             IF(lctlib%ps_pathway == ic3phot)THEN
-               hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
             ELSE
-               hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+               hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
             ENDIF
-            veg_pool%reserve%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1) * & 
+            veg_pool%reserve%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
                                         veg_pool%reserve%carbon 
 
             veg_pool%reserve%nitrogen15 = veg_pool%reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))

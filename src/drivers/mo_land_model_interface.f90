@@ -316,7 +316,7 @@ CONTAINS
       CALL update_soil_physics    (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
-      CALL update_veg_dynamics    (tile, model%options)
+      CALL update_veg_dynamics    (tile, model%options, l_transient_spinup)
       SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE("simple_0d", "simple_1d")
           CALL update_sb_simple_model (tile, model%options)
@@ -366,7 +366,7 @@ CONTAINS
       CALL update_soil_physics    (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
-      CALL update_veg_dynamics    (tile, model%options)
+      CALL update_veg_dynamics    (tile, model%options, l_transient_spinup)
       CALL update_veg_growth      (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
 

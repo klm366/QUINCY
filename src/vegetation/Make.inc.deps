@@ -76,6 +76,7 @@ mo_veg_dynamics.o: \
   mo_jsb_control.o \
   mo_base_memory.o \
   mo_base_config_class.o \
+  mo_base_constants.o \
   mo_assimi_config_class.o \
   mo_jsb_model_class.o \
   mo_base_constants.o \
@@ -108,6 +109,8 @@ mo_veg_update_pools.o: \
   mo_base_memory.o \
   mo_jsb_model_class.o \
   mo_base_constants.o \
+  mo_assimi_constants.o \
+  mo_atmland_constants.o \
   mo_base_config_class.o \
   mo_assimi_config_class.o \
   mo_pheno_config_class.o \
@@ -124,7 +127,8 @@ mo_veg_update_pools.o: \
   mo_soil_memory_class.o \
   mo_veg_constants.o \
   mo_veg_growth.o \
-  mo_sb_memory_class.o
+  mo_sb_memory_class.o \
+  mo_assimi_update_canopy_fluxes.o
 
 mo_veg_canopy.o: \
   mo_kind.o \

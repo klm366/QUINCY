@@ -42,7 +42,8 @@ canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standa
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
-veg_dynamics_scheme="population" # none population cohort
+veg_dynamics_scheme="population"  # none population cohort
+cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
 
 # soil model options
 soil_depth=5.7                  # meter
@@ -463,7 +464,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
 fi
 
 
-# test number of soil layers against min and max values (5:20)
+## test number of soil layers against min and max values (5:20)
 if [ "$nsoil_layer" -lt 5 ]
  then
   echo " "
@@ -476,6 +477,22 @@ if [ "$nsoil_layer" -lt 5 ]
     echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
     nsoil_layer=20
   fi
+fi
+
+
+## test cohort-harvesting interval, if veg_dynamics_scheme="cohort"
+if [ "$veg_dynamics_scheme" == "cohort" ]
+ then
+   if [ "$cohort_harvest_interval" -lt 20 ] || [ "$cohort_harvest_interval" -gt 140 ]
+    then
+      echo " Note. The cohort-harvesting interval might be set to a value from 20 to 140. You set it to: ""$cohort_harvest_interval""."
+   fi
+   if [ "$cohort_harvest_interval" -lt 1 ]
+    then
+      echo " The cohort-harvesting interval is set to a value smaller than 1."
+      echo " EXIT!"
+      exit 1
+   fi
 fi
 
 
@@ -518,6 +535,7 @@ changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
 changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
+changeNamelistValue cohort_harvest_interval "$cohort_harvest_interval"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_bnf_scheme "$bnf_scheme" 

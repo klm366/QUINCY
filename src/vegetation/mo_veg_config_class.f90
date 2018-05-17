@@ -32,6 +32,7 @@ MODULE mo_veg_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
+    REAL(wp)         :: cohort_harvest_interval    !< interval of harvesting plants [yr], used with veg_dynamics_scheme="cohort"
     CHARACTER(15)    :: bnf_scheme                 !< select scheme to simulate BNF (biological nitrogen fixation)
                                                    !! "none fixed standard optimal resistance unlimited"   
     CHARACTER(15)    :: veg_dynamics_scheme        !< select scheme to calculate within-tile vegetation dynamics + start from bareground
@@ -68,6 +69,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename,   &
                                    bc_filename
     INTEGER                     :: plant_functional_type_id
+    REAL(wp)                    :: cohort_harvest_interval
     CHARACTER(15)               :: bnf_scheme       
     CHARACTER(15)               :: veg_dynamics_scheme
     LOGICAL                     :: flag_optimal_Nleaf
@@ -79,6 +81,7 @@ CONTAINS
       ic_filename,                  &
       bc_filename,                  &
       plant_functional_type_id,     &
+      cohort_harvest_interval,      &
       bnf_scheme,                   & 
       veg_dynamics_scheme,          &
       flag_optimal_Nleaf,           &
@@ -94,6 +97,7 @@ CONTAINS
     bc_filename                    = 'bc_land_phys.nc'
     ic_filename                    = 'ic_land_phys.nc'
     plant_functional_type_id       = 1
+    cohort_harvest_interval        = 80.0_wp
     bnf_scheme                     = "standard"
     veg_dynamics_scheme            = "population"
     flag_optimal_Nleaf             = .FALSE.
@@ -116,19 +120,12 @@ CONTAINS
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
     ENDSELECT
 
-    ! check input for veg_dynamics scheme
-    SELECT CASE (TRIM(veg_dynamics_scheme))
-     CASE ("none","population")
-     CASE DEFAULT
-       WRITE(message_text,'(2a)') 'currently not implemented veg_dynamics_scheme: ',veg_dynamics_scheme
-       CALL finish("mo_veg_config_class:init_veg_config",message_text) 
-    ENDSELECT
-
     ! pass values as read from file
     config%active                        = active
     config%ic_filename                   = ic_filename
     config%bc_filename                   = bc_filename
     config%pft_id                        = plant_functional_type_id
+    config%cohort_harvest_interval       = cohort_harvest_interval
     config%bnf_scheme                    = TRIM(bnf_scheme)
     config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf

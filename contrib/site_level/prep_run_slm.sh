@@ -116,6 +116,7 @@ flag_optimal_Nleaf="F"            # optimal N leaf
 flag_optimal_allocation="F"       # optimal allocation
 # vegetation dynamics options
 veg_dynamics_scheme="population"  # none population cohort
+cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
 flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
@@ -816,6 +817,12 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
     let simulation_length_number=spinupLengthGFDB+simulation_length_number
     let output_start_first_day_year=spinupLengthGFDB+output_start_first_day_year
     let output_end_last_day_year=spinupLengthGFDB+output_end_last_day_year
+    if [ "$veg_dynamics_scheme" == "cohort" ] && [ "$spinupLengthGFDB" -gt 0 ]; then
+      echo " Note: the veg_dynamics_scheme cohort does not work with the static forcing mode + spinup. Sorry."
+      echo " Either set spinupLengthGFDB to zero or use the transient mode for spinup."
+      echo " EXIT!"
+      exit 1
+    fi
   else
     # transient simulations:
     # overwrites the above setting for transient_spinup_years
@@ -930,7 +937,7 @@ if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if r
 fi
 
 
-# test number of soil layers against min and max values (5:20)
+## test number of soil layers against min and max values (5:20)
 if [ "$nsoil_layer" -lt 5 ]
  then
   echo " "
@@ -943,6 +950,28 @@ if [ "$nsoil_layer" -lt 5 ]
     echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
     nsoil_layer=20
   fi
+fi
+
+
+## test cohort-harvesting interval & options related to veg_dynamics_scheme="cohort"
+if [ "$veg_dynamics_scheme" == "cohort" ]
+ then
+   # cohort_harvest_interval range
+   if [ "$cohort_harvest_interval" -lt 20 ] || [ "$cohort_harvest_interval" -gt 140 ]; then
+     echo " Note. The cohort-harvesting interval might be set to a value from 20 to 140. You set it to: ""$cohort_harvest_interval""."
+   fi
+   # cohort_harvest_interval minimum
+   if [ "$cohort_harvest_interval" -lt 1 ]; then
+     echo " The cohort-harvesting interval is set to a value smaller than 1."
+     echo " EXIT!"
+     exit 1
+   fi
+   # stand harvest may be set to F
+   if [ "$flag_stand_harvest" == "T" ]; then
+     echo " The stand harvest may not be enabled when using the veg_dynamics_scheme cohort. Setting flag_stand_harvest to F now."
+     echo " This is because the cohort is harvested automatically at the interval of cohort_harvest_interval."
+     flag_stand_harvest="F"
+   fi
 fi
 
 
@@ -1223,6 +1252,7 @@ changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_bnf_scheme "$bnf_scheme" 
 changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
+changeNamelistValue cohort_harvest_interval "$cohort_harvest_interval"
 if [ $flag_mycorrhiza == T ]
   then
     changeNamelistValue flag_mycorrhiza ".TRUE."

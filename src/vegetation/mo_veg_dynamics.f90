@@ -32,12 +32,13 @@ CONTAINS
   !! a background_mort_rate exists for each trees and grasses, defined as mortality rate per year
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_veg_dynamics(tile, options)
+  SUBROUTINE update_veg_dynamics(tile, options, l_transient_spinup)
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_base_config_class,     ONLY: base_config
+    USE mo_base_constants,        ONLY: one_year, one_day
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_constants,         ONLY: itree
@@ -59,6 +60,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    LOGICAL,                  INTENT(in)    :: l_transient_spinup!< spinup phase of the transient forcing_mode
     ! ---------------------------
     ! 0.2 Local 
     TYPE(t_jsb_model),      POINTER       :: model
@@ -83,9 +85,11 @@ CONTAINS
     ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     ! VEG_
+    dsl4jsb_Logical2D_onChunk   :: l_do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter 
     dsl4jsb_Real2D_onChunk      :: height 
+    dsl4jsb_Real2D_onChunk      :: cohort_age
     dsl4jsb_Real2D_onChunk      :: mortality_rate
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
@@ -120,15 +124,17 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)     ! in
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, l_do_cohort_harvest)    ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)               ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)               ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, cohort_age)             ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)       ! in
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall
@@ -153,6 +159,22 @@ CONTAINS
                                                     dens_ind(:),height(:),diameter(:))
     ENDSELECT
 
+    !> 1.1 Increase age of the cohort [years] & check if cohort harvest is reached
+    !! 
+    !! apply this only after spinup of transient mode has finished
+    !! @todo update_veg_dynamics() move l_transient_spinup into the TYPE t_forcing_options so that it can simply be USEd here \n
+    !!       instead of beeing an argument to this routine
+    IF (.NOT. l_transient_spinup) THEN
+      SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
+        CASE ("cohort")
+          cohort_age(:)          = cohort_age(:) + base_config%dtime / (one_year * one_day)
+          l_do_cohort_harvest(:) = .FALSE.                                                    ! per default it is set to FALSE
+          WHERE (cohort_age(:) > dsl4jsb_Config(VEG_)%cohort_harvest_interval)
+            l_do_cohort_harvest(:) = .TRUE.
+            cohort_age(:)          = 0.0_wp
+          ENDWHERE
+      ENDSELECT
+    ENDIF
 
     !> 2.0 Calculate mortality rate and veg\%litterfall
     !! 
@@ -171,20 +193,22 @@ CONTAINS
 
     !> 2.1 Calculate stand harvest_rate and veg\%litterfall
     !! 
-    IF(base_config%l_do_stand_replacing_harvest)THEN 
-       CALL calc_veg_harvest(options                                     , & ! in
-                             veg_pool                                    , &
-                             veg_litterfall                              , & ! inout
-                             mortality_rate(:)                           )   ! out
+    !! @todo update_veg_dynamics() l_do_cohort_harvest dimension should be used as nc
+    IF (base_config%l_do_stand_replacing_harvest .OR. l_do_cohort_harvest(options%ics)) THEN
+      CALL calc_veg_harvest(options                                     , & ! in
+                            veg_pool                                    , &
+                            veg_litterfall                              , & ! inout
+                            mortality_rate(:)                           )   ! inout
     ENDIF
 
 
     !> 3.0 Calculate establishment_rate and veg\%establishment
     !! 
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
-      CASE ("cohort")
-        !> @ todo add some veg establishment, needed after (frequent) cutting, to cohort scheme in mo_veg_dynamics
-        !! 
+      !CASE ("cohort")
+        !> no establishment in cohort mode, but after cohort harvesting \n 
+        !!  the dens_ind is set to 1.0 and veg_pool%reserve gets some amount of CNP same as during the veg_init \n 
+        !!  in the routine update_veg_pools section 3.0
       CASE ("population")
         IF(.NOT. base_config%l_do_stand_replacing_harvest) THEN 
           CALL calc_veg_establishment(options                         , & ! in
@@ -203,10 +227,11 @@ CONTAINS
 
     !> 4.0 Calculate change in individual density from mortality and establishment
     !! 
-    !! only if no stand harvesting is done
+    !! only if no stand/cohort harvesting is done
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population","cohort")
-      IF(.NOT. base_config%l_do_stand_replacing_harvest) THEN 
+      !! @todo update_veg_dynamics() l_do_cohort_harvest dimension should be used as nc
+      IF(.NOT. base_config%l_do_stand_replacing_harvest .AND. .NOT. l_do_cohort_harvest(options%ics)) THEN 
         IF(lctlib%growthform == itree) THEN
            delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size , & 
                                                    dens_ind(:)      , &
@@ -266,7 +291,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_foliage_projective_cover_tile'
 
 
-    WHERE(lctlib%growthform == itree .AND. dens_ind(:) .GT. eps4)
+    WHERE(lctlib%growthform == itree .AND. dens_ind(:) .GT. eps4 .AND. height(:) .GT. eps4)
       ! crown area derived from diameter following Sitch et al. 2003; eq 4
       crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
       ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by 
@@ -328,7 +353,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)                :: fscal
     REAL(wp), DIMENSION(options%nc)                :: greff_mortality_rate,self_thinning_mortality_rate,bg_mortality_rate 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
-
+    
 
     SELECT CASE (veg_dynamics_scheme)
       CASE ("population","cohort")
@@ -351,7 +376,7 @@ CONTAINS
         !> 1.2 self-thinning related mortality
         !! 
         self_thinning_mortality_rate(:) = MAX(fpc(:) - fpc_max,0.0_wp)
-                 
+
 !!       !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost \n
 !!       !! in mol / m2 LAI / year \n
 !!       !! transformed to a mortality estimate using a Weibull function

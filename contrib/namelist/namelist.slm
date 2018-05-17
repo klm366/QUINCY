@@ -8,6 +8,8 @@
   bnf_scheme="standard"
   veg_dynamics_scheme="population"
   plant_functional_type_id=5
+  ! site specific cohort harvest each x years
+  cohort_harvest_interval=80
 /
 &ASSIMILATION_CTL
   ! options for the assimilation and vegetation-growth

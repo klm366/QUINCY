@@ -35,18 +35,22 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_pools(tile, options)
 
-    USE mo_jsb_class,           ONLY: Get_model
-    USE mo_base_memory,         ONLY: t_slm_tile, t_jsb_task_options
-    USE mo_jsb_model_class,     ONLY: t_jsb_model
-    USE mo_base_constants,      ONLY: dtime, one_day
-    USE mo_base_config_class,   ONLY: base_config
-    USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_shared_constants,    ONLY: lambda_C14, rhoh2o, grav
-    USE mo_shared_isotope,      ONLY: calc_mixing_ratio_N15N14
-    USE mo_rad_constants,       ONLY: rfr_ratio_toc 
-    USE mo_veg_canopy,          ONLY: calc_canopy_layers
-    USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
-    USE mo_veg_constants,       ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy
+    USE mo_jsb_class,                       ONLY: Get_model
+    USE mo_base_memory,                     ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,                 ONLY: t_jsb_model
+    USE mo_base_constants,                  ONLY: dtime, one_day
+    USE mo_base_config_class,               ONLY: base_config
+    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_shared_constants,                ONLY: lambda_C14, rhoh2o, grav
+    USE mo_shared_isotope,                  ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
+    USE mo_rad_constants,                   ONLY: rfr_ratio_toc 
+    USE mo_veg_canopy,                      ONLY: calc_canopy_layers
+    USE mo_veg_growth,                      ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
+    USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth
+    USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
+    USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
+                                                  def_co2_deltaC13, def_co2_deltaC14
+    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -76,6 +80,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: nsoil_sb
+    REAL(wp), DIMENSION(options%nc)       :: hlp1       !< dummy variable
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
@@ -109,6 +114,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! VEG_
+    dsl4jsb_Logical2D_onChunk   :: l_do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
@@ -203,6 +209,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, l_do_cohort_harvest)            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! CASE "plant" & "land": out / other Cases: in
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                       ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                 ! in
@@ -424,38 +431,59 @@ CONTAINS
 
     dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
 
-    ! in case of complete harvest, set all pools to zero (to account for wood extraction, which would
-    ! otherwise leave some wood, and reset the key plant diagnostics
-    IF(base_config%l_do_stand_replacing_harvest) THEN 
-       veg_pool%leaf        = veg_pool%leaf * 0.0_wp
-       veg_pool%fine_root   = veg_pool%fine_root * 0.0_wp
-       veg_pool%coarse_root = veg_pool%coarse_root * 0.0_wp
-       veg_pool%sap_wood    = veg_pool%sap_wood * 0.0_wp
-       veg_pool%heart_wood  = veg_pool%heart_wood * 0.0_wp
-       veg_pool%fruit       = veg_pool%fruit * 0.0_wp
-       veg_pool%labile%carbon(:)     = 0.1_wp 
-       veg_pool%labile%nitrogen(:)   = veg_pool%labile%carbon(:) * & 
-                                       veg_pool%seed_bed%nitrogen(:)/veg_pool%seed_bed%carbon(:)
-       veg_pool%labile%phosphorus(:) = veg_pool%labile%carbon(:) * & 
-                                       veg_pool%seed_bed%phosphorus(:)/veg_pool%seed_bed%carbon(:)
-       veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon(:) * & 
-                                       veg_pool%seed_bed%carbon13(:)/veg_pool%seed_bed%carbon(:)
-       veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon(:) * & 
-                                       veg_pool%seed_bed%carbon14(:)/veg_pool%seed_bed%carbon(:)
-       veg_pool%labile%nitrogen15(:) = veg_pool%labile%carbon(:) * & 
-                                       veg_pool%seed_bed%nitrogen15(:)/veg_pool%seed_bed%carbon(:)
-       veg_pool%reserve     = veg_pool%reserve * 0.0_wp
-       height(:)            = 0.0_wp
-       diameter(:)          = 0.0_wp
-       dens_ind(:)          = 0.1_wp
-       lai(:)               = 0.0_wp
-       mean_leaf_age(:)     = 0.0_wp
-       dphi(:)              = w_soil_root_pot(:) - lctlib%phi_leaf_min 
-       rfr_ratio_boc_tvegdyn_mavg(:) = rfr_ratio_toc 
+    !> 3.0 stand/cohort harvest
+    !!
+    !! in case of complete harvest, set all pools to zero
+    !! (to account for wood extraction, which would otherwise leave some wood, and reset the key plant diagnostics)
+    IF(base_config%l_do_stand_replacing_harvest .OR. l_do_cohort_harvest(options%ics)) THEN 
+      !! difference between cohort & population scheme
+      IF (l_do_cohort_harvest(options%ics)) THEN    ! -> cohort scheme
+        dens_ind(:)                    = 1.0_wp
+        veg_pool%reserve%carbon(:)     = 1.0_wp
+      ELSE ! base_config%l_do_stand_replacing_harvest -> population scheme
+        dens_ind(:)                    = 0.1_wp
+        veg_pool%reserve%carbon(:)     = 0.1_wp
+      ENDIF
+      !! zero
+      veg_pool%leaf                  = veg_pool%leaf        * 0.0_wp
+      veg_pool%fine_root             = veg_pool%fine_root   * 0.0_wp
+      veg_pool%coarse_root           = veg_pool%coarse_root * 0.0_wp
+      veg_pool%sap_wood              = veg_pool%sap_wood    * 0.0_wp
+      veg_pool%heart_wood            = veg_pool%heart_wood  * 0.0_wp
+      veg_pool%fruit                 = veg_pool%fruit       * 0.0_wp
+      veg_pool%labile                = veg_pool%labile      * 0.0_wp
+      height(:)                      = 0.0_wp
+      diameter(:)                    = 0.0_wp
+      lai(:)                         = 0.0_wp
+      mean_leaf_age(:)               = 0.0_wp
+      !! init
+      dphi(:)                        = w_soil_root_pot(:) - lctlib%phi_leaf_min 
+      rfr_ratio_boc_tvegdyn_mavg(:)  = rfr_ratio_toc 
+      ! pool%reserve% C N P
+      veg_pool%reserve%nitrogen(:)   = veg_pool%reserve%carbon(:)    / (1._wp + fresp_growth) / lctlib%cn_leaf
+      veg_pool%reserve%phosphorus(:) = veg_pool%reserve%nitrogen(:)  / lctlib%np_leaf
+      ! pool%reserve%carbon13
+      IF(lctlib%ps_pathway == ic3phot)THEN
+         hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+      ELSE
+         hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+      ENDIF
+      veg_pool%reserve%carbon13(:)   = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:)) * &
+                                       veg_pool%reserve%carbon(:)
+      ! pool%reserve%carbon14
+      IF(lctlib%ps_pathway == ic3phot)THEN
+         hlp1(:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+      ELSE
+         hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+      ENDIF
+      veg_pool%reserve%carbon14(:)   = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
+                                       veg_pool%reserve%carbon(:)
+      ! pool%reserve%nitrogen15
+      veg_pool%reserve%nitrogen15(:) = veg_pool%reserve%nitrogen(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ENDIF
 
 
-    !> 3.0 Given current vegetation pools, update canopy layers 
+    !> 4.0 Given current vegetation pools, update canopy layers 
     !!
     !!
     CALL calc_canopy_layers( &
@@ -489,7 +517,7 @@ CONTAINS
                              fn_chl_cl(:,:)                     , &
                              fn_oth_cl(:,:)                     )
 
-    !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
+    !> 5.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!
     !!
     veg_total_biomass =   veg_pool%leaf        + &     !< elements of leaf
