@@ -420,7 +420,9 @@ CONTAINS
      ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
      ! division is made outside FfaPAR_clL and is still the old l ???
      !------------------------------------------------------------
-        faPAR_cl = faPAR_cl * FSHD
+     IF (cos_zenith_angle .GE. ZenithMinPar) THEN
+       faPAR_cl = faPAR_cl * FSHD
+     END IF
 
     ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
     ! par and fraction of absorbed PAR
