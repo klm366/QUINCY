@@ -206,7 +206,7 @@ return 0                                                         # get return va
 
 # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 
 # 11:awc 12:bd 13:pH 14:taxusda 15:taxnwrb 16:lith_glim 17:LAI 18:Nleaf 19:SLA 20:Height 
-# 21:PlantYear
+# 21:PlantYear 22:soil_p_depth 23:soil_p_labile 24:soil_p_slow 25:soil_p_occluded 26:soil_p_primary 27:qmax_org_fine_particle 
 changeNamelistValue longitude               "$(awk '{print $2}'  <<< "$siteData")"
 changeNamelistValue latitude                "$(awk '{print $3}'  <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
@@ -220,12 +220,12 @@ changeNamelistValue nwrb_taxonomy_class     "$(awk '{print $15}' <<< "$siteData"
 changeNamelistValue lithology_class         "$(awk '{print $16}' <<< "$siteData")"
 changeNamelistValue lai_site_specific       "$(awk '{print $17}' <<< "$siteData")"
 changeNamelistValue stand_replacing_year    "$(awk '{print $21}' <<< "$siteData")"
-# changeNamelistValue soil_p_depth            "$(awk '{print $XX}' <<< "$siteData")"
-# changeNamelistValue soil_p_labile           "$(awk '{print $XX}' <<< "$siteData")"
-# changeNamelistValue soil_p_slow             "$(awk '{print $XX}' <<< "$siteData")"
-# changeNamelistValue soil_p_occluded         "$(awk '{print $XX}' <<< "$siteData")"
-# changeNamelistValue soil_p_primary          "$(awk '{print $XX}' <<< "$siteData")"
-# changeNamelistValue qmax_org_fine_particle  "$(awk '{print $XX}' <<< "$siteData")"
+changeNamelistValue soil_p_depth            "$(awk '{print $22}' <<< "$siteData")"
+changeNamelistValue soil_p_labile           "$(awk '{print $23}' <<< "$siteData")"
+changeNamelistValue soil_p_slow             "$(awk '{print $24}' <<< "$siteData")"
+changeNamelistValue soil_p_occluded         "$(awk '{print $25}' <<< "$siteData")"
+changeNamelistValue soil_p_primary          "$(awk '{print $26}' <<< "$siteData")"
+changeNamelistValue qmax_org_fine_particle  "$(awk '{print $27}' <<< "$siteData")"
 [ $useSiteSpecificAWC == "T" ] && \
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi
 # special fluxnet output #

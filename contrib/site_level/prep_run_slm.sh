@@ -22,7 +22,7 @@ slmModel="land"
 
 ##>> sites <<###########################################################################################
 ## select set of sites: FLUXNET or CRUNCEPv7
-# forcing data and all_site_list.dat for the two set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
+# forcing data and fluxnet/cruncep/face site info *list.dat for the specific set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
 # options: fluxnet cruncep face
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
@@ -758,32 +758,32 @@ else # the default case: $customSiteList == "F"
   ## file names differ across forcingDataSets & forcingModes
   case "$forcingDataSet" in
   "fluxnet")
-    siteListFileName="all_sites_list.dat"
+    siteListFileName="flux_all_sites_1996-2008_list.dat"
     ;;
   "cruncep")
     case "$siteSelection" in
     "all")
       if [ $forcingMode == "static" ]
        then
-        siteListFileName="all_gfdb_sites_1984-2013_list.dat"
+        siteListFileName="crun_all_gfdb_sites_1984-2013_list.dat"
       else
-        siteListFileName="all_gfdb_sites_1901-2015_list.dat"
+        siteListFileName="crun_all_gfdb_sites_1901-2015_list.dat"
       fi
       ;;
     "cue")
       if [ $forcingMode == "static" ]
        then
-        siteListFileName="cue_gfdb_sites_1984-2013_list.dat"
+        siteListFileName="crun_cue_gfdb_sites_1984-2013_list.dat"
       else
-        siteListFileName="cue_gfdb_sites_1901-2015_list.dat"
+        siteListFileName="crun_cue_gfdb_sites_1901-2015_list.dat"
       fi
       ;;
     "spp")
       if [ $forcingMode == "static" ]
        then
-        siteListFileName="spp_sites_1984-2013_list.dat"
+        siteListFileName="crun_spp_sites_1984-2013_list.dat"
       else
-        siteListFileName="spp_sites_1901-2015_list.dat"
+        siteListFileName="crun_spp_sites_1901-2015_list.dat"
       fi
       ;;
     esac
@@ -791,9 +791,9 @@ else # the default case: $customSiteList == "F"
   "face")
     if [ $forcingMode == "static" ]
      then
-      siteListFileName="all_sites_1996-2008_list.dat"
+      siteListFileName="face_sites_1996-2008_list.dat"
     else
-      siteListFileName="all_sites_1901-2015_list.dat"
+      siteListFileName="face_sites_1901-2015_list.dat"
     fi
     ;;
   esac

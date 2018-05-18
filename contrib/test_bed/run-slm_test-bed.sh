@@ -671,21 +671,21 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
   then
     case "$forcingDataSet" in
     "fluxnet")
-      allSiteDatFile="$siteFolder"/all_sites_list.dat
+      allSiteDatFile="$siteFolder"/flux_all_sites_1996-2008_list.dat
       siteNameShort=$(echo "$siteName" | cut -c1-6)             # shortens file name provided, e.g.: CA-Man_1999-2003 -> CA-Man
       ;;
     "cruncep")
-      allSiteDatFile="$siteFolder"/all_gfdb_sites_1984-2013_list.dat
+      allSiteDatFile="$siteFolder"/crun_all_gfdb_sites_1984-2013_list.dat
       siteNameShort=$(echo "$siteName" | cut -c1-3)             # shortens file name provided, e.g.: KAD_1901-2015 -> KAD
       siteNameShort="$siteNameShort""_01"                       # KAD -> KAD_01
       # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
       if [ "$siteNameShort" == "BBR_01" ] || [ "$siteNameShort" == "LUE_01" ]
        then
-        allSiteDatFile="$siteFolder"/spp_sites_1984-2013_list.dat
+        allSiteDatFile="$siteFolder"/crun_spp_sites_1984-2013_list.dat
       fi
       ;;
     "face")
-      allSiteDatFile="$siteFolder"/all_sites_1996-2008_list.dat
+      allSiteDatFile="$siteFolder"/face_sites_1996-2008_list.dat
       siteNameShort=$(echo "$siteName" | cut -c1-6)             # shortens file name provided, e.g.: DK-AMB_1996-2007 -> DK-AMB
       ;;
     esac
@@ -695,7 +695,7 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
     # change namelist values accordingly, column numbers from all_sites_list.dat are:
     # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 
     # 11:awc 12:bd 13:pH 14:taxusda 15:taxnwrb 16:lith_glim 17:LAI 18:Nleaf 19:SLA 20:Height 
-    # 21:PlantYear
+    # 21:PlantYear 22:soil_p_depth 23:soil_p_labile 24:soil_p_slow 25:soil_p_occluded 26:soil_p_primary 27:qmax_org_fine_particle 
     changeNamelistValue longitude               "$(awk '{print $2}'  <<< "$siteData")"
     changeNamelistValue latitude                "$(awk '{print $3}'  <<< "$siteData")"
     pftName="$(awk '{print $4}' <<< "$siteData")"
@@ -708,12 +708,12 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
     changeNamelistValue nwrb_taxonomy_class     "$(awk '{print $15}' <<< "$siteData")"
     changeNamelistValue lithology_class         "$(awk '{print $16}' <<< "$siteData")"
     changeNamelistValue lai_site_specific       "$(awk '{print $17}' <<< "$siteData")"
-    # changeNamelistValue soil_p_depth            "$(awk '{print $XX}' <<< "$siteData")"
-    # changeNamelistValue soil_p_labile           "$(awk '{print $XX}' <<< "$siteData")"
-    # changeNamelistValue soil_p_slow             "$(awk '{print $XX}' <<< "$siteData")"
-    # changeNamelistValue soil_p_occluded         "$(awk '{print $XX}' <<< "$siteData")"
-    # changeNamelistValue soil_p_primary          "$(awk '{print $XX}' <<< "$siteData")"
-    # changeNamelistValue qmax_org_fine_particle  "$(awk '{print $XX}' <<< "$siteData")"
+    changeNamelistValue soil_p_depth            "$(awk '{print $22}' <<< "$siteData")"
+    changeNamelistValue soil_p_labile           "$(awk '{print $23}' <<< "$siteData")"
+    changeNamelistValue soil_p_slow             "$(awk '{print $24}' <<< "$siteData")"
+    changeNamelistValue soil_p_occluded         "$(awk '{print $25}' <<< "$siteData")"
+    changeNamelistValue soil_p_primary          "$(awk '{print $26}' <<< "$siteData")"
+    changeNamelistValue qmax_org_fine_particle  "$(awk '{print $27}' <<< "$siteData")"
     pftID=0
     case "$pftName" in
       TrBE)
