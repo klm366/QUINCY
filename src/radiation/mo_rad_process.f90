@@ -164,13 +164,13 @@ CONTAINS
     lai_cl   = lai * canopy_bound_lai_delta
     lai_cl   = MAX(lai_cl, LaiMin) ! ensure minimum LAI
 
-    IF (cos_zenith_angle < ZenithMinPar) THEN ! do not calculate PAR for zenith angles below ZenithMinPar (0.001)
-      RETURN
-    ELSE
-      IF (icanopy > 1) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
-        B4 = B4_layer_above                 !    with the second level use level above...
-      ENDIF
-    END IF
+    ! IF (cos_zenith_angle < ZenithMinPar) THEN ! do not calculate PAR for zenith angles below ZenithMinPar (0.001)
+    !   RETURN
+    ! ELSE
+    !   IF (icanopy > 1) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+    !     B4 = B4_layer_above                 !    with the second level use level above...
+    !   ENDIF
+    ! END IF
 
     ! Compute "fractional vegetation cover" per grid cell
     ! (not the same as fractional cover in JSBACH!)
@@ -267,6 +267,7 @@ CONTAINS
      ! the old l
      !------------------------------------------------------------------
 
+     IF (cos_zenith_angle .GE. ZenithMinPar) THEN ! do not calculate PAR for zenith angles below ZenithMinPar (0.001)
         !----------------------------------
         !  h = sqrt( 1 - omega )
         !----------------------------------
@@ -344,14 +345,26 @@ CONTAINS
         !-----------------------------------------------------------
         !  R(l)+Rdown-Rup = (1-q1-q2)* R0*EXP(-kl) + (1-p1)* B1*EXP(hl) + (1-p2)* B2*EXP(-hl)
         !----------------------------------------------------------------------------
-        IF (icanopy == 1) B4 =   (1._wp - Q0 - Q1) * fract_par_direct &
-          &                    + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
+        B4 =   (1._wp - Q0 - Q1) * fract_par_direct &
+          &  + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
 
-        IF (icanopy < ncanopy) THEN
+      END IF ! cos_zenith_angle
+
+        ! IF (icanopy < ncanopy) THEN
            !------------------------------------------------------------
            ! Only Layers-1, i.e. except the lower boundary calculation
            !------------------------------------------------------------
+      IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+        B4 = B4_layer_above                  !    with the second level use level above...
+      ENDIF
+
+      IF (cos_zenith_angle .GE. ZenithMinPar) THEN  ! do not calculate PAR for zenith angles below ZenithMinPar
+        IF (icanopy < ncanopy) THEN
            !----------------------------------------------------------------------------
+           ! p2=1/p1
+           !----------------------------------------------------------------------------
+           ZP0 = 1._wp / ZP1
+          !----------------------------------------------------------------------------
            ! EXP(-k*l/fc)
            ! with l=LAI*canopy_bound_lai, i.e. l is element of [0,LAI], i.e. 0,LAI/3,2LAI/3,LAI
            !----------------------------------------------------------------------------
@@ -401,6 +414,7 @@ CONTAINS
            faPAR_cl = B4_layer_above - X0
            !B4_layer_above = X0
         ENDIF ! icanopy
+     ENDIF  ! cos_zenith_angle
 
      !------------------------------------------------------------
      ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
