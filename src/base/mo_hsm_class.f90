@@ -81,6 +81,7 @@ MODULE mo_hsm_class
     PROCEDURE :: Has_siblings       => Has_siblings_state
     PROCEDURE :: Is_first_child     => Is_first_child_state
     PROCEDURE :: Is_last_child      => Is_last_child_state
+    PROCEDURE :: Reset_all          => Reset_all_state
     PROCEDURE :: Print_state
     PROCEDURE :: Is_equal           => Is_equal_state
     GENERIC   :: OPERATOR(==)       => Is_equal
@@ -122,7 +123,8 @@ MODULE mo_hsm_class
     PROCEDURE :: Get_next          => Get_next_state_hsm
     PROCEDURE :: Get_state         => Get_state_hsm
     PROCEDURE :: Start_state       => Start_state_hsm
-    PROCEDURE :: Reset             => Reset_hsm
+    PROCEDURE :: Reset_state       => Reset_state_hsm
+    PROCEDURE :: Reset_all         => Reset_all_hsm
     PROCEDURE :: Register_action   => Register_action_hsm
     PROCEDURE :: Get_action        => Get_action_hsm
     PROCEDURE :: Print_actions     => Print_actions_hsm
@@ -402,6 +404,32 @@ CONTAINS
 
   END FUNCTION
 
+  ! Resets %visited(:) to .FALSE. for state and all states below
+  ! So, calling this on the top state resets all states
+  RECURSIVE SUBROUTINE Reset_all_state(this)
+
+    CLASS(t_State), INTENT(inout) :: this
+
+    CLASS(t_State), POINTER :: current
+    INTEGER :: nthreads
+
+#ifdef _OPENMP
+    nthreads = omp_get_max_threads()
+#else
+    nthreads = 1
+#endif
+
+    this%visited(1:nthreads) = .FALSE.
+
+    IF (this%Has_children()) THEN
+      CALL this%first_child%Reset_all()
+    END IF
+    IF (ASSOCIATED(this%next_sibling)) THEN
+      CALL this%next_sibling%Reset_all()
+    END IF
+
+  END SUBROUTINE Reset_all_state
+
   SUBROUTINE Print_state(this)
 
     CLASS(t_State), INTENT(in) :: this
@@ -598,7 +626,7 @@ CONTAINS
 
   END FUNCTION Get_current_hsm
 
-  SUBROUTINE Reset_hsm(this)
+  SUBROUTINE Reset_state_hsm(this)
 
     CLASS(t_hsm), INTENT(inout) :: this
 
@@ -613,7 +641,29 @@ CONTAINS
     this%current(no_omp_thread)%p => this%top
     this%top%visited(no_omp_thread) = .FALSE.
 
-  END SUBROUTINE Reset_hsm
+  END SUBROUTINE Reset_state_hsm
+
+  ! Resets %visited(:) to .FALSE. and sets hsm%current to top state for all tiles and all OMP threasds
+  SUBROUTINE Reset_all_hsm(this)
+
+    CLASS(t_hsm), INTENT(inout) :: this
+
+    CLASS(t_State), POINTER :: current
+    INTEGER :: nthreads, i
+
+#ifdef _OPENMP
+    nthreads = omp_get_max_threads()
+#else
+    nthreads = 1
+#endif
+
+    CALL this%top%Reset_all()
+
+    DO i=1,nthreads
+      this%current(i)%p => this%top
+    END DO
+
+  END SUBROUTINE Reset_all_hsm
 
   ! Get next state in pre-order traversal
   FUNCTION Get_next_state_hsm(this) RESULT(return_ptr)

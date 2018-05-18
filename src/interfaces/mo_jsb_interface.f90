@@ -13,10 +13,8 @@ MODULE mo_jsb_interface
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_util_string,         ONLY: int2string
-  USE mo_jsb_parallel,        ONLY: Get_omp_thread
 
-  USE mo_jsb_control,         ONLY: debug_on, l_timer
-  USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
+  USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
@@ -24,7 +22,7 @@ MODULE mo_jsb_interface
   USE mo_hsm_class,           ONLY: t_Hsm, t_Message, t_State
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
-  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id
+  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id, Get_omp_thread, Is_omp_inside_serial
 
   IMPLICIT NONE
   PRIVATE
@@ -54,7 +52,7 @@ CONTAINS
     & swvis_srf_down,   &
     & swnir_srf_down,   &
     & swpar_srf_down,   &
-    & frac_par_diffuse, &
+    & fract_par_diffuse, &
     & press_srf,        &
     & drag_srf,         &
     & t_acoef,          &
@@ -84,16 +82,16 @@ CONTAINS
     & alb_nir_dif,      &
     & CO2_flux,         &
     ! For lakes (optional):
-    & drag_wtr, drag_ice,                                    & !< in
-    & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,    & !< in
-    & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,    & !< in
-    & t_lwtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr, & !< out
-    & albedo_lwtr,                                           & !< out
-    & t_lice, evapo_ice, latent_hflx_ice, sensible_hflx_ice, & !< out
-    & albedo_lice,                                           & !< out
-    & ice_fract_lake,                                        & !< out
+    & drag_wtr, drag_ice,                                               & !< in
+    & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
+    & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
+    & t_lwtr, qsat_lwtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr, & !< out
+    & albedo_lwtr,                                                      & !< out
+    & t_lice, qsat_lice, evapo_ice, latent_hflx_ice, sensible_hflx_ice, & !< out
+    & albedo_lice,                                                      & !< out
+    & ice_fract_lake,                                                   & !< out
     ! For standalone jsbach
-    & evapopot                                               & !< out; optional
+    & evapopot                                                          & !< out; optional
     & )
 
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
@@ -121,7 +119,7 @@ CONTAINS
       & swvis_srf_down    (:), &
       & swnir_srf_down    (:), &
       & swpar_srf_down    (:), &
-      & frac_par_diffuse  (:), &
+      & fract_par_diffuse  (:), &
       & press_srf         (:), &
       & drag_srf          (:), &
       & t_acoef           (:), &
@@ -166,11 +164,13 @@ CONTAINS
     ! For lakes:
     REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_lwtr            (:), &
+      & qsat_lwtr         (:), &
       & evapo_wtr         (:), &
       & latent_hflx_wtr   (:), &
       & sensible_hflx_wtr (:), &
       & albedo_lwtr       (:), &
       & t_lice            (:), &
+      & qsat_lice         (:), &
       & evapo_ice         (:), &
       & latent_hflx_ice   (:), &
       & sensible_hflx_ice (:), &
@@ -196,8 +196,6 @@ CONTAINS
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
-
-    IF (l_timer) CALL timer_start(timer_jsbach)
 
     nc = ice - ics + 1
 
@@ -230,7 +228,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
-      & frac_par_diffuse   = frac_par_diffuse(:),   &
+      & fract_par_diffuse   = fract_par_diffuse(:),   &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -284,10 +282,12 @@ CONTAINS
       & alb_nir_dif        = alb_nir_dif(:),     &
       & CO2_flux           = CO2_flux(:),        &
       & t_lwtr             = t_lwtr,             &
+      & qsat_lwtr          = qsat_lwtr,          &
       & evapo_wtr          = evapo_wtr,          &
       & latent_hflx_wtr    = latent_hflx_wtr,    &
       & sensible_hflx_wtr  = sensible_hflx_wtr,  &
       & t_lice             = t_lice,             &
+      & qsat_lice          = qsat_lice,          &
       & evapo_ice          = evapo_ice,          &
       & latent_hflx_ice    = latent_hflx_ice,    &
       & sensible_hflx_ice  = sensible_hflx_ice,  &
@@ -304,8 +304,6 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
-    IF (l_timer) CALL timer_stop(timer_jsbach)
-
   END SUBROUTINE interface_full
 
 !   SUBROUTINE interface_standalone( &
@@ -321,7 +319,7 @@ CONTAINS
 !     & swvis_srf_net,    &
 !     & swnir_srf_net,    &
 !     & swpar_srf_down,   &
-!     & frac_par_diffuse, &
+!     & fract_par_diffuse, &
 !     & press_srf,        &
 !     & drag_srf,         &
 !     & t_acoef,          &
@@ -375,7 +373,7 @@ CONTAINS
 !       & swvis_srf_net     (:), &
 !       & swnir_srf_net     (:), &
 !       & swpar_srf_down    (:), &
-!       & frac_par_diffuse  (:), &
+!       & fract_par_diffuse  (:), &
 !       & press_srf         (:), &
 !       & drag_srf          (:), &
 !       & t_acoef           (:), &
@@ -427,8 +425,6 @@ CONTAINS
 !         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
 !     END IF
 ! 
-!     CALL timer_start(timer_jsbach)
-! 
 !     nc = ice - ics + 1
 ! 
 !     model => Get_model(model_id)
@@ -461,7 +457,7 @@ CONTAINS
 !       & swvis_srf_net      = swvis_srf_net(:),      &
 !       & swnir_srf_net      = swnir_srf_net(:),      &
 !       & swpar_srf_down     = swpar_srf_down(:),     &
-!       & frac_par_diffuse   = frac_par_diffuse(:),   &
+!       & fract_par_diffuse   = fract_par_diffuse(:),   &
 !       & press_srf          = press_srf(:),          &
 !       & drag_srf           = drag_srf(:),           &
 !       & t_acoef            = t_acoef(:),            &
@@ -512,8 +508,6 @@ CONTAINS
 !     IF (debug_on('basic') .AND. iblk == 1) &
 !       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 ! 
-!     CALL timer_stop(timer_jsbach)
-! 
 !   END SUBROUTINE interface_standalone
 
   SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
@@ -540,17 +534,38 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id)
  
-    INTEGER :: p_pe
+    USE mo_jsb_time,          ONLY: is_time_experiment_start
+    USE mo_jsb_time_iface,    ONLY: is_time_restart
+    USE mo_util,              ONLY: one_of
+    USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
+
+    dsl4jsb_Use_processes CARBON_
+    dsl4jsb_Use_config(CARBON_)
+
+    dsl4jsb_Def_config(CARBON_)
+
+    INTEGER,  INTENT(in) :: model_id
+
+    TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+    INTEGER :: p_pe, no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
 
-    INTEGER,  INTENT(in) ::  model_id
-
-    TYPE(t_jsb_model), POINTER :: model
-
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    no_omp_thread = Get_omp_thread()   ! Should always be 1
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(CARBON_)
+
+    ! Reset all tiles at the beginning of the timestep
+    CALL model%Reset_tiles()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -563,21 +578,24 @@ CONTAINS
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 
-    INTEGER :: p_pe
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
-
     INTEGER, INTENT(in)  :: model_id
     REAL(wp), INTENT(in) :: steplen
 
+    INTEGER :: p_pe
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
 
     INTEGER :: no_omp_thread
 
     no_omp_thread = Get_omp_thread()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
 
     model => Get_model(model_id)
     tile => model%Get_top_tile()

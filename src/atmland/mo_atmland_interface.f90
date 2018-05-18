@@ -50,7 +50,7 @@ CONTAINS
     & swvis_srf_down,         &
     & swnir_srf_down,         &
     & swpar_srf_down,         &
-    & frac_par_diffuse,       &
+    & fract_par_diffuse,       &
     & press_srf,              &
     & drag_srf,               &
     & t_acoef,                &
@@ -79,7 +79,7 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in) ::                                            &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:),          &
       & lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), swpar_srf_down(:), &
-      & frac_par_diffuse(:), press_srf(:), drag_srf(:),                          &
+      & fract_par_diffuse(:), press_srf(:), drag_srf(:),                          &
       & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
       & pch(:), cos_zenith_angle(:),                                             &
       & CO2_air(:),                                                              &
@@ -113,7 +113,7 @@ CONTAINS
     IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
     IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
     IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
-    IF (PRESENT(frac_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,frac_par_diffuse)  = frac_par_diffuse  (:)
+    IF (PRESENT(fract_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)  = fract_par_diffuse  (:)
     IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
     IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
     IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
@@ -152,7 +152,7 @@ CONTAINS
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
     & CO2_flux,                                                                      &
-    & t_lwtr, t_lice,                                                                &
+    & t_lwtr, t_lice, qsat_lwtr, qsat_lice,                                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
     & ice_fract_lake,                                                                &
@@ -166,7 +166,7 @@ CONTAINS
       & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
-      & t_lwtr(:), t_lice(:),                                                        &
+      & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:),                            &
       & evapo_wtr(:), latent_hflx_wtr(:), sensible_hflx_wtr(:),                      &
       & evapo_ice(:), latent_hflx_ice(:), sensible_hflx_ice(:),                      &
       & ice_fract_lake(:),                                                           &
@@ -212,8 +212,16 @@ CONTAINS
       END DO
       fact_lake(:) = tile%lcts(i)%fract(ics:ice,iblk)
       fact_land(:) = 1._wp - fact_lake(:)
-      fact_lake(:) = MERGE(1._wp / fact_lake(:), 1._wp, fact_lake(:) > 0._wp)
-      fact_land(:) = MERGE(1._wp / fact_land(:), 1._wp, fact_land(:) > 0._wp) 
+      WHERE (fact_lake(:) > 0._wp)
+        fact_lake(:) = 1._wp / fact_lake(:)
+      ELSE WHERE
+        fact_lake(:) = 1._wp
+      END WHERE
+      WHERE (fact_land(:) > 0._wp)
+        fact_land(:) = 1._wp / fact_land(:)
+      ELSE WHERE
+        fact_land(:) = 1._wp
+      END WHERE
 
       IF (PRESENT(t_srf))         t_srf(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_filt)
       IF (PRESENT(t_eff_srf))     t_eff_srf(:)        =                dsl4jsb_var2D_onChunk(SEB_,   t_eff)
@@ -222,7 +230,7 @@ CONTAINS
       IF (PRESENT(fact_q_air))    fact_q_air(:)       =                dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
       IF (PRESENT(fact_qsat_srf)) fact_qsat_srf(:)    =                dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
       IF (PRESENT(evapopot))      evapopot(:)         =                dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_lnd)
+      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))   latent_hflx(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx)) sensible_hflx(:)    = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
       IF (PRESENT(grnd_hflx))     grnd_hflx(:)        =                dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and
@@ -237,9 +245,9 @@ CONTAINS
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
                                   CO2_flux(:)         = fact_land(:) *                              &
-          &                             (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                             (   dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)       &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)  &
+          &                               + dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta) &
           &                             )
         ELSE
                                   CO2_flux(:)         = 0._wp
@@ -248,6 +256,8 @@ CONTAINS
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lwtr)
       IF (PRESENT(t_lice))            t_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lice)
+      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr)
+      IF (PRESENT(qsat_lice))         qsat_lice(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
       IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_wtr)
       IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_wtr)
       IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_wtr)
@@ -267,7 +277,7 @@ CONTAINS
       IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
       IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
       IF (PRESENT(evapopot))        evapopot(:)         = dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapo_lnd)
+      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
       IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and
@@ -282,9 +292,9 @@ CONTAINS
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
                                   CO2_flux(:)           =                                             &
-          &                               (   dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_npp_ta)       &
-          &                                 + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_soilresp_ta)  &
-          &                                 + dsl4jsb_var2D_onChunk(CARBON_,CO2_flx2atm_herbivory_ta) &
+          &                               (   dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)       &
+          &                                 + dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)  &
+          &                                 + dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta) &
           &                               )
         ELSE
                                     CO2_flux(:)         = 0._wp
@@ -293,6 +303,8 @@ CONTAINS
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(t_lice))            t_lice(:)            = 0._wp                                   ! Temporary
+      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         = 0._wp
+      IF (PRESENT(qsat_lice))         qsat_lice(:)         = 0._wp
       IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = 0._wp
       IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = 0._wp
       IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = 0._wp

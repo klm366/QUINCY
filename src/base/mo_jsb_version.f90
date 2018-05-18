@@ -29,7 +29,7 @@ MODULE mo_jsb_version
 
   PUBLIC :: jsbach_version, jsbach_init_version, jsbach_label_run
 
-  CHARACTER(len=  4), PARAMETER :: jsbach_version = '4.10p4' !< JSBACH version number
+  CHARACTER(len=  4), PARAMETER :: jsbach_version = '4.20p4' !< JSBACH version number
 
   CHARACTER(len=256) :: executable                         !< Name of executable
   CHARACTER(len= 80) :: label(4)                           !< Space for storing model information

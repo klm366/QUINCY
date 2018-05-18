@@ -42,7 +42,7 @@ ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 
 #ggrids="T63"    # for testing
 
 
-remap_scheme=con
+remap_scheme=ycon
 declare -A source_res_dict
 source_res_dict[0]=05 #vg T31
 source_res_dict[1]=05 #vg T31
@@ -77,9 +77,10 @@ oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
 coupled=false    # land sea mask for coupled experiment?
-coupled_grid_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/ATMOOCEANINP_pre04_OceWithCoast_158km_editSLOHH2017_G.nc
+coupled_grid_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/ATMOOCEANINP_pre04_OceWithCoast_158km_editSLOHH2017_G.cdo172.nc
 coupled_lsf_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/lsf.remapycon.pre04_158km_editSLOHH2017_G.nc
-hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04/Land/hd_para_icon_r2b4_pre04_vs1_5.nc
+# Set hd_file to empty if there's no hd_file for this setup available, yet.
+hd_file=/pool/data/ICON/coupled_input_temp/aloy_pre04.ff/hd_para_icon_r2b4_pre04_ff_vs1_7.nc
 
 debug=false             # true/false
 debug_remap_scheme=nn
@@ -103,13 +104,14 @@ set +u
 module unload cdo nco netcdf nag
 case `hostname` in
   mlogin*|mistralpp*)
-    module load cdo/1.8.2-magicsxx-gcc48
-    module load nco/4.5.0-gcc48
+    module load cdo/1.9.2-magicsxx-intel18
+    module load nco/4.6.7-gcc48
     module load netcdf_c/4.3.2-gcc48
     module load nag/6.0.1064
     ;;
    *)
-    module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
+    #module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
+    module load cdo/1.9.2-gccsys
     module load nco/4.5.2
     module load netcdf
     module load nag
@@ -139,13 +141,13 @@ function generate_gauss_data {
   esac
 
   if [[ ${jsb4icon} == true ]]; then
-      echam_fractional=false #vg true
+      echam_fractional=true
   else
       echam_fractional=false
   fi
 
   [[ -d initial_tarfiles ]] && rm -rf initial_tarfiles
-  svn -r 9124 checkout https://svn.zmaw.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
+  svn -r 9124 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
   cd initial_tarfiles
   
   export interactive_ctrl=1                    # 1: swich off interactive mode
@@ -188,17 +190,11 @@ function generate_land_sea_mask {
     echo "Generating land sea mask ..."
     if [[ ${coupled} == "true" ]]
     then
-        if [[ ${bisection} -ne 4 ]] || [[ "${old_r2b4_amip}" != "true" ]]
-        then
-            echo "Generation of files for coupled experiments currently only supported for r2b4"
-            exit
-        else
-            ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
-        fi
+        ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
     else
         if [[ "${old_r2b4_amip}" != "true" ]]; then
             # Note: blend out some grid boxes which are land in FR_LAND_TOPO
-            ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -selvar,FR_LAND_TOPO  \
+            ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
                    ${extpar_file} ${grid_name}_notsea.nc
         else
             ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
@@ -667,7 +663,8 @@ function debug_file {
   if [[ ${jsb4icon} == "true" ]]
   then
     local file=$1
-    local target_res=${source_res_dict[${bisection}]}
+    #local target_res=${source_res_dict[${bisection}]}
+    local target_res=t255
     local debug_weights=wgt${debug_remap_scheme}_${grid_name}_to_${target_res}.nc
 
     if [[ ${debug} == "true" ]]
@@ -831,7 +828,11 @@ do
     ${cpmv} ${grid_name}_bc_land_sso_$year.nc  ${output_dir}/bc_land_sso_$year.nc
     ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_$year.nc
 
-    [[ ${coupled} == "true" ]] && cp -p ${hd_file} ${output_dir}/bc_land_hd.nc
+    if [[ ${coupled} == "true" ]] && [[ ${hd_file}x != 'x' ]]
+    then
+      cp -p ${hd_file} ${output_dir}/bc_land_hd.nc
+    fi
+
   fi
 
 done

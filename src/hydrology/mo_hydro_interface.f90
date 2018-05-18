@@ -184,10 +184,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_hydrology::return_ptr)
-
-    return_ptr%name = 'surface_hydrology'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_hydrology
   
@@ -203,10 +200,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_soil_properties::return_ptr)
-
-    return_ptr%name = 'soil_properties'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='soil_properties', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_properties
   
@@ -222,10 +216,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_soil_hydrology::return_ptr)
-
-    return_ptr%name = 'soil_hydrology'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='soil_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_hydrology
   
@@ -241,10 +232,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_unstressed', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_unstressed
   
@@ -260,10 +248,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_stressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_stressed'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_stressed', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_stressed
   
@@ -279,10 +264,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_evaporation::return_ptr)
-
-    return_ptr%name = 'evaporation'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='evaporation', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_evaporation
   
@@ -298,10 +280,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_snow_and_ice_hydrology::return_ptr)
-
-    return_ptr%name = 'snow_ice_hydrology'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='snow_ice_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snow_and_ice_hydrology
   
@@ -317,10 +296,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_snow_and_skin_fraction::return_ptr)
-
-    return_ptr%name = 'snow_and_skin_fraction'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='snow_and_skin_fraction', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snow_and_skin_fraction
 
@@ -336,10 +312,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_water_balance::return_ptr)
-
-    return_ptr%name = 'water_balance'
-    return_ptr%process_id = HYDRO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='water_balance', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_water_balance
   
@@ -408,16 +381,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: w_snow_can
     dsl4jsb_Real2D_onChunk :: evapotrans_soil
-    dsl4jsb_Real2D_onChunk :: evap_skin
-    dsl4jsb_Real2D_onChunk :: evap_deficit
+    dsl4jsb_Real2D_onChunk :: evapo_skin
+    dsl4jsb_Real2D_onChunk :: evapo_deficit
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: hcap_grnd
     dsl4jsb_Real2D_onChunk :: hcap_grnd_old
-    dsl4jsb_Real2D_onChunk :: evapotranspiration
+    dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: trans
     dsl4jsb_Real2D_onChunk :: evapopot
-    dsl4jsb_Real2D_onChunk :: evap_snow
+    dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: runoff
@@ -474,9 +447,6 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
 
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
-
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(A2L_)
@@ -490,17 +460,17 @@ CONTAINS
       ! fluxes and snow/ice budgets are already computed in the lake model.
       dsl4jsb_Get_var2D_onChunk(A2L_,   rain)               ! in
       dsl4jsb_Get_var2D_onChunk(A2L_,   snow)               ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotranspiration) ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans) ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)             ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, evap_snow)          ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)          ! out
 
-      runoff  (:) = rain(:) + snow(:) + evapotranspiration(:)
+      runoff  (:) = rain(:) + snow(:) + evapotrans(:)
       drainage(:) = 0._wp
       w_snow(:) = 0._wp
-      evap_snow(:) = evapopot(:)
+      evapo_snow(:) = evapopot(:)
 
       RETURN
     END IF
@@ -523,9 +493,9 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil_old)! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotranspiration) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)      ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evap_snow)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)   ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)        ! out
@@ -547,8 +517,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evap_skin)     ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evap_deficit)  ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)     ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)  ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_overflow) ! inout
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   w_snow_can)    ! inout
@@ -587,7 +557,7 @@ CONTAINS
         & t_unfilt(:),                & !< in
         & fract_snow(:),              & !< in
         & hcap_grnd(:),               & !< in
-        & evapotranspiration(:),      & !< in
+        & evapotrans(:), & !< in
         & evapopot(:),                & !< in
         & rain(:),                    & !< in
         & snow(:),                    & !< in
@@ -599,7 +569,7 @@ CONTAINS
         & )
       drainage(:) = 0._wp
       w_snow_soil(:) = 0._wp
-      evap_snow(:) = evapopot(:)
+      evapo_snow(:) = evapopot(:)
       IF (model%config%l_compat401) THEN
         snow_soil_dens(:) = 330._wp
       ELSE
@@ -623,7 +593,7 @@ CONTAINS
         & fract_snow(:),              & !< in
         & fract_water(:),             & !< in
         & hcap_grnd(:),               & !< in
-        & evapotranspiration(:),      & !< in
+        & evapotrans(:), & !< in
         & evapopot(:),                & !< in
         & trans_tmp(:),               & !< in
         & rain(:),                    & !< in
@@ -636,10 +606,10 @@ CONTAINS
         & snow_accum(:),              & !< out
         & snowmelt(:),                & !< out
         & evapotrans_soil(:),         & !< out
-        & evap_skin(:),               & !< out
-        & evap_snow(:),               & !< out
+        & evapo_skin(:),               & !< out
+        & evapo_snow(:),               & !< out
         & water_excess(:),            & !< out
-        & evap_deficit(:)             & !< out
+        & evapo_deficit(:)             & !< out
         & )
 
       IF (model%config%l_compat401) THEN
@@ -708,10 +678,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_accum,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evap_skin,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evap_snow,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_excess,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evap_deficit,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 
@@ -917,6 +887,9 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
+    LOGICAL  :: ltpe_open
+    LOGICAL  :: ltpe_closed
+
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
     INTEGER  :: nsoil
@@ -949,6 +922,11 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
+    ltpe_open = .FALSE.
+    ltpe_closed = .FALSE.
+    IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
+    IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
+
 !!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
 !!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
@@ -971,6 +949,7 @@ CONTAINS
       & soil_w%dz(:), &
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
+      & ltpe_closed, ltpe_open,                             &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &
@@ -993,6 +972,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_ice_sl          ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &
@@ -1380,11 +1360,11 @@ CONTAINS
       & fact_qsat_trans_srf, &
       & fact_q_air, &
       & fract_lice, &
-      & evapo_lnd, &
+      & evapotrans_lnd, &
       & evapo_wtr, &
       & evapo_ice, &
       & evapopot,       &
-      & evapotranspiration, &
+      & evapotrans, &
       & trans
 
     ! Locally allocated vectors
@@ -1423,7 +1403,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)           ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans) ! out
 
     IF (tile%contains_lake) THEN
 
@@ -1441,7 +1421,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)          ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_ice)          ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot)           ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotranspiration) ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotrans) ! out
 
       q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
 
@@ -1456,7 +1436,7 @@ CONTAINS
       evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
 
       evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
-      evapotranspiration(:) = evapopot(:)
+      evapotrans(:) = evapopot(:)
 
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
 
@@ -1468,7 +1448,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_trans_srf) ! in
 
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_lnd)           ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
       END IF
@@ -1482,8 +1462,8 @@ CONTAINS
                               & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
       qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
 
-      evapo_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
-      evapotranspiration(:) = evapo_lnd(:)
+      evapotrans_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
+      evapotrans(:) = evapotrans_lnd(:)
       evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
       IF (tile%contains_vegetation) THEN
         trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
@@ -1533,10 +1513,10 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotranspiration, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_lnd,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,          weighted_by_fract)
 
@@ -1852,7 +1832,7 @@ CONTAINS
       & snow, &
       & runoff, &
       & drainage, &
-      & evapotranspiration, &
+      & evapotrans, &
       & w_skin, &
       & w_snow, &
       & water_flux, &    ! [m3 s-1]
@@ -1905,14 +1885,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)              ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow)              ! in
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_flux)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_content)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
-    water_flux(:) = rain(:) + snow(:) + evapotranspiration(:) - runoff(:) - drainage(:)
+    water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
     water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN

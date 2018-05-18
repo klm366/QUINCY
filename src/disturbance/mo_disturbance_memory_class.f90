@@ -29,18 +29,15 @@ MODULE mo_disturb_memory_class
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
 
-   TYPE(t_jsb_var_real2d) ::   &
-      burned_frac,             & ! burned fraction of tile
-      damaged_frac,            & ! windbreak fraction of tile
-      fuel,                    & ! R: Normalerweise wäre dies eine lokale Variable, weil sie nur für das veg Tile berechnet wird 
-                                 ! und nur für Feuer benötigt wird. Aber sie wird 1. nach dem Zeitschritt wieder verwendet und
-                                 ! sollte 2. im Output sein, da sie nicht nur technisch wichtig ist!
-      q_rel_air_climbuf,       & ! Relative humiditiy of lowest air layer smoothed in time.
-      q_rel_air_climbuf_yDay,  & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
-                                 ! This is only needed for cbalone forcing!
-      prev_day_max_wind_10m,   & ! for windbreak
-      max_wind_10m,            & ! for windbreak
-      max_wind_10m_act           ! for windbreak
+  TYPE(t_jsb_var_real2d) ::   &
+    burned_fract,             & ! burned fraction of tile
+    damaged_fract,            & ! windbreak fraction of tile
+    q_rel_air_climbuf,        & ! Relative humiditiy of lowest air layer smoothed in time.
+    q_rel_air_climbuf_yday,   & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
+                                ! This is only needed for cbalone forcing!
+    prev_day_max_wind_10m,    & ! for windbreak
+    max_wind_10m,             & ! for windbreak
+    max_wind_10m_act            ! for windbreak
 
   CONTAINS
     PROCEDURE :: Init => Init_disturb_memory
@@ -79,45 +76,38 @@ CONTAINS
     surface => Get_vgrid('surface')
     !canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%burned_frac%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%burned_fract%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'burned_frac', mem%burned_frac,                              &
+      CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                            &
         & hgrid, surface,                                                                 &
-        & t_cf('burned_frac', 'frac', 'Fraction of tile that is burned.'),                &
+        & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
         & prefix, suffix,                                                                 &
         & output_level=BASIC,                                                             &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'damaged_frac', mem%damaged_frac,                            &
-        & hgrid, surface,                                                                 &
-        & t_cf('damaged_frac', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-        & prefix, suffix,                                                                 &
-        & output_level=BASIC,                                                             &
+      CALL jsb_add_var( mem, 'damaged_fract', mem%damaged_fract,                           &
+        & hgrid, surface,                                                                  &
+        & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+        & prefix, suffix,                                                                  &
+        & output_level=BASIC,                                                              &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'fuel', mem%fuel,                                               &
-        & hgrid, surface,                                                                    &
-        & t_cf('fuel', 'mol(C)/m^2', 'Amount of carbon fuel for burned area calculations.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & output_level=BASIC,                                                             &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-      CALL jsb_add_var( mem, 'q_rel_air_climbuf', mem%q_rel_air_climbuf,                                &
+      CALL jsb_add_var( mem, 'q_air_clim', mem%q_rel_air_climbuf,                                       &
         & hgrid, surface,                                                                               &
         & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JSBACH3; lrestart=true only necessary if we restart within a day
 
-      CALL jsb_add_var( mem, 'q_rel_air_climbuf_yDay', mem%q_rel_air_climbuf_yDay,                        &
+      CALL jsb_add_var( mem, 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                               &
         & hgrid, surface,                                                                                 &
-        & t_cf('q_rel_air_climbuf_yDay', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
+        & t_cf('q_rel_air_climbuf_yday', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
                                                  & at the end of the last day.'),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                                                 &
+        & output_level=BASIC,                                                                             &
         & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,    &
@@ -132,7 +122,7 @@ CONTAINS
         & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp ) 
+        & lrestart=.TRUE., initval_r=0.0_wp ) 
 
       CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,              &
         & hgrid, surface,                                                           &
@@ -142,7 +132,6 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp ) 
 
     END IF
-
 
   END SUBROUTINE Init_disturb_memory
 

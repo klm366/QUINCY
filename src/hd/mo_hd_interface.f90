@@ -72,12 +72,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_hd_local_outflow::return_ptr)
-
-    return_ptr%name = 'hd_local_outflow'
-    return_ptr%process_id = HD_
-    return_ptr%owner_model_id = model_id
-    ! !!$    return_ptr%Integrate => update_radiation_surface
-    ! !!$    return_ptr%Aggregate => aggregate_radiation_surface
+    CALL return_ptr%Construct(name='hd_local_outflow', process_id=HD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_hd_local_outflow
 
@@ -203,6 +198,12 @@ CONTAINS
       !
       ! unit conversion: [kg m-2 s-1] -> [m3/s]
       discharge(:) = tile_fract(:) * (runoff(:) + drainage(:)) * area(:) / rhoh2o
+
+    CASE ('zero')
+      !
+      ! even more dummy: set discharge to zero
+      !
+      discharge(:) = 0._wp
 
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
@@ -462,6 +463,10 @@ CONTAINS
         discharge_ocean(:,:) = 0._wp
       END WHERE
       discharge(:,:) = 0._wp
+
+    CASE ('zero')
+
+      discharge_ocean(:,:) = 0._wp
 
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)

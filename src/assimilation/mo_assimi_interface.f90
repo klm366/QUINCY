@@ -103,10 +103,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_assimilation_scaling_factors::return_ptr)
-
-    return_ptr%name = 'assimilation_scaling_factors'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='assimilation_scaling_factors', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation_scaling_factors
 
@@ -122,10 +119,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_unstressed', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_unstressed
 
@@ -141,10 +135,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_assimilation::return_ptr)
-
-    return_ptr%name = 'assimilation'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='assimilation', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation
 
@@ -520,7 +511,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
 
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction  ! factor to convert from tile to canopy area
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction  ! factor to convert from tile to canopy area
     dsl4jsb_Real2D_onChunk :: gross_assimilation_ca
     dsl4jsb_Real2D_onChunk :: gross_assimilation
     dsl4jsb_Real2D_onChunk :: dark_respiration_ca
@@ -577,7 +568,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)             ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)     ! in
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)    ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_over_time)   ! inout
@@ -647,8 +638,8 @@ CONTAINS
     !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
     !END DO
 
-    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy area
-    gross_assimilation(:) = gross_assimilation_ca(:) * veg_frac_correction(:) ! convert from canopy area to tile box area
+    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy ground area
+    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) ! convert from canopy area to tile box area
 
     ! Same for dark_respiration_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
@@ -658,7 +649,7 @@ CONTAINS
     !END DO
 
     dark_respiration_ca(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
-    dark_respiration(:) =  dark_respiration_ca(:)  * veg_frac_correction(:) ! convert from canopy area to tile box area
+    dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) ! convert from canopy area to tile box area
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca, dark_respiration_ca, NPP_pot_rate_ca)
 
@@ -706,8 +697,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_over_time,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_ca,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration_ca,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_pot_rate_ca,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, CO2_conc_leaf_cl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_cl,           weighted_by_fract)
