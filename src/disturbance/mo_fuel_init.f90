@@ -87,6 +87,9 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(FUEL_)
+    dsl4jsb_Get_config(DISTURB_)
+
     ! Get fuel memory of the tile
     dsl4jsb_Get_memory(FUEL_)
 
@@ -94,10 +97,32 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Setting fuel boundary conditions for tile '//TRIM(tile%name))
 
+    SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
+      CASE (FIRE_NONE)
+        ! By definition nothing to do
+      CASE (FIRE_JSB3)
+        ! Needs nothing
+      CASE (FIRE_SPITFIRE)
 #ifdef HAVE_MOFFLEDAC
-      CALL InputOptAdd(var_name='population_density'//TRIM(tile%name),file_name='population_density.nc', &
-                  var_file_name='population_density',dt_update_unit='1m',valid_time='ACTUAL',reads_per=1)
+        IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+        IF (LEN_TRIM(dsl4jsb_Config(DISTURB_)%fire_spitfire_master_tile) == 0) THEN ! Should now be obsolete...
+          CALL InputOptAdd(var_name='fuel_population_density_'//TRIM(tile%name), &
+            file_name=TRIM(GetKeyedString('pop_dens',TRIM(dsl4jsb_Config(DISTURB_)%bc_filename))), &
+            var_file_name='population_density',dt_update_unit='1m',valid_time='ACTUAL',reads_per=1,lstep_by_step='on')
+          CALL InputOptAdd(var_name='fuel_lightning_frq_'//TRIM(tile%name), &
+            file_name=TRIM(GetKeyedString('lightning',TRIM(dsl4jsb_Config(DISTURB_)%bc_filename))), &
+            var_file_name='HRMC_COM_FR',dt_update_unit='1d',valid_time='MIDPOINT',action_cycle='all',reads_per=1)
+          CALL InputOptAdd(var_name='fuel_lightning_c2g_'//TRIM(tile%name),var_file_name='c2g', &
+            file_name=TRIM(GetKeyedString('lightning',TRIM(dsl4jsb_Config(DISTURB_)%bc_filename))), &
+            dt_update_unit='2d',valid_time='MIDPOINT',action_cycle='all',def_val=-1._wp,action_var_miss='warn',reads_per=1)
+          ! StW: Would make sense to make a_nd time dependent too, but for now we only have a static field
+          CALL InputOptAdd(var_name='fuel_a_nd_'//TRIM(tile%name),var_file_name='a_nd', &
+            file_name=TRIM(GetKeyedString('a_nd',TRIM(dsl4jsb_Config(DISTURB_)%bc_filename))), &
+            dt_update=0,valid_time='MIDPOINT',action_cycle='all',def_val=1._wp,action_var_miss='warn')
+          dsl4jsb_Config(DISTURB_)%fire_spitfire_master_tile = TRIM(tile%name)
+        ENDIF
 #endif
+    END SELECT
 
   END SUBROUTINE fuel_init_bc
 
