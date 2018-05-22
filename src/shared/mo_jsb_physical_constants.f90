@@ -27,7 +27,11 @@ MODULE mo_jsb_physical_constants
 
   REAL(wp), PARAMETER :: &
     molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air
-    molarMassCO2    = amco2 * 1.e-3_wp    ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
+    molarMassCO2    = amco2 * 1.e-3_wp, & ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
+    molarMassC      = 12.01e-3_wp         ! 12.01e-3_wp. Mass [kg] per amount of substance [mol] of C
+
+  REAL(wp), PARAMETER :: &
+    ratio_C_2_biomass    = 0.5_wp         ! Ratio of mass of carbon to total biomass
 
 #endif
 END MODULE mo_jsb_physical_constants
