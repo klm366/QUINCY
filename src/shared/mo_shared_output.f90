@@ -172,17 +172,21 @@ CONTAINS
          fname = 'soilpooldC13DC14dN15'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
          fname = 'veg_diagnostics'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-      CASE ('canopy')
-         fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-
     END SELECT
+
+
+    !! land & plant & canopy
+    !! 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+    END SELECT
+    
 
     !! land & soil
     !! detailed data per layer only for simple_1d and jsm
@@ -306,16 +310,21 @@ CONTAINS
                            ' WodLitterDC14 FastDC14 SlowDC14 MycDC14',&
                            ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
-         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
+         WRITE(lun,'(2a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp', & 
+                           ' growing_season cost_nup cost_bnf unit_transp transp'
          lun=lun+1
-         WRITE(lun,'(2a)') &
-         & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
-         & 'growing_season cost_nup cost_bnf unit_transp transp'
-         lun=lun+1
-      CASE ('canopy')
-         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
-
     END SELECT
+
+
+    !! land & plant & canopy
+    !! 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        ! veg_canopy
+        WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
+        lun=lun+1
+    END SELECT
+
 
     !! land & soil
     !! detailed data per layer only for simple_1d and jsm
@@ -747,6 +756,7 @@ CONTAINS
     !< 2.0  output
     !! 
     !! land/plant
+    !! land/plant/canopy
     !! land/soil
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
@@ -956,13 +966,7 @@ CONTAINS
                 calc_delta_N15(nh4_solute(ipoi,1),nh4_n15_solute(ipoi,1)), &
                 calc_delta_N15(no3_solute(ipoi,1),no3_n15_solute(ipoi,1))
               lun=lun+1
-              DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
-                write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
-                                      fn_rub_cl(ipoi,icanopy), fn_chl_cl(ipoi,icanopy),&
-                                      fn_pepc_cl(ipoi,icanopy), fn_oth_cl(ipoi,icanopy),leaf_nitrogen_cl(ipoi,icanopy), &
-                                      jmax_cl(ipoi,icanopy), vcmax_cl(ipoi,icanopy)
-              END DO
-              lun=lun+1
+
               IF(lctlib%growthform == itree) THEN 
                  IF (veg_pool%sap_wood%carbon(ipoi) > eps8) THEN
                     hlp1 = lai(ipoi)/(veg_pool%sap_wood%carbon(ipoi) / height(ipoi) / lctlib%wood_density)
@@ -1009,9 +1013,16 @@ CONTAINS
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
               lun=lun+1
            END IF  ! write output T/F (l_land_plant_canopy_out)
-      CASE ('canopy')
+    END SELECT  ! select land/plant & canopy
+
+
+    !! land & plant & canopy
+    !! 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
         ! output T/F
-        IF (l_land_plant_canopy_out) THEN         
+        IF (l_land_plant_canopy_out) THEN 
+          ! veg_canopy 
           DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
             write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
                                   fn_rub_cl(ipoi,icanopy), fn_chl_cl(ipoi,icanopy),&
