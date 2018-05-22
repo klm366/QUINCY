@@ -148,7 +148,7 @@ CONTAINS
       CASE (FIRE_JSB3)
         CALL Init_disturb_fire_jsb3_config(config,nml_handler,lburn_pasture)
       CASE (FIRE_SPITFIRE)
-!        CALL Init_disturb_fire_spitfire_config(config,nml_handler,lburn_pasture)
+        CALL Init_disturb_fire_spitfire_config(config,nml_handler,lburn_pasture)
     END SELECT
     
     CALL close_nml(nml_handler)

@@ -380,10 +380,9 @@ CONTAINS
         CALL fuel_init(tile)
       END IF
 
-      ! R: in the moment we do not need any initialization for disturbance:
-      !IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-      !  CALL disturb_init(tile)
-      !END IF
+      IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL disturb_init(tile)
+      END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
