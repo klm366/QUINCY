@@ -14,7 +14,7 @@ MODULE mo_fuel_init
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
-
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
@@ -54,9 +54,6 @@ CONTAINS
     dsl4jsb_Def_memory(FUEL_)
     dsl4jsb_Get_memory(FUEL_)
 
-    ! No initialization needed at this time
-    RETURN
-
     CALL fuel_init_ic(tile)
 
     CALL fuel_init_bc(tile)
@@ -67,16 +64,19 @@ CONTAINS
 
   SUBROUTINE fuel_init_bc(tile)
 
+    USE mo_disturbance_constants, ONLY: FIRE_NONE, FIRE_JSB3, FIRE_SPITFIRE
 #ifdef HAVE_MOFFLEDAC
-    USE mo_input, ONLY: InputOptAdd
+    USE mo_input_strings, ONLY: GetKeyedString
+    USE mo_input,         ONLY: InputOptAdd, moffledac
 #endif
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
+    dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(DISTURB_)
+
     TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_memory(FUEL_)
 
@@ -95,7 +95,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
 
-    CALL message(TRIM(routine), 'Setting fuel boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting fuel boundary conditions for tile '//TRIM(tile%name))
 
     SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
       CASE (FIRE_NONE)
@@ -155,9 +155,9 @@ CONTAINS
 
     ! Initialize physical state
     !
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(FUEL_)%ic_filename), model%grid_id)
+!    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(FUEL_)%ic_filename), model%grid_id)
 
-    CALL input_file%Close()
+!    CALL input_file%Close()
 
   END SUBROUTINE fuel_init_ic
 
