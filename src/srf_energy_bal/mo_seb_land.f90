@@ -54,6 +54,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: get_asselin_coef, is_newday, timeStep_in_days, time_steps_per_day
+    USE mo_jsb_time_iface,         ONLY: get_time_dt
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -74,6 +75,9 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: rain
+    dsl4jsb_Real2D_onChunk :: snow
+    dsl4jsb_Real2D_onChunk :: wind_10m
     dsl4jsb_Real2D_onChunk :: day_temp_min
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
@@ -84,6 +88,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
     dsl4jsb_Real2D_onChunk :: N_pseudo_soil_temp
     dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
+    dsl4jsb_Real2D_onChunk :: day_precip_sum
+    dsl4jsb_Real2D_onChunk :: day_wind10_sum
+    dsl4jsb_Real2D_onChunk :: day_soil_tl_moist_sum
+    dsl4jsb_Real2D_onChunk :: previous_day_precip
+    dsl4jsb_Real2D_onChunk :: previous_day_wind10_mean
+    dsl4jsb_Real2D_onChunk :: previous_day_soil_tl_moist_mean
     
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: t_old
@@ -107,6 +117,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
     dsl4jsb_Real3D_onChunk :: w_ice_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
@@ -127,7 +138,9 @@ CONTAINS
       heat_tcoef,       & !< Heat transfer coefficient (rho*C_h*|v|)
       t_star,           &
       liquid_max,       &
-      t_air_in_Celcius  
+      t_air_in_Celcius, &
+      precip,           &
+      soil_tl_moist
       
     LOGICAL, DIMENSION(options%nc) :: &
       is_glacier, &
@@ -166,6 +179,9 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   rain)           ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   snow)           ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_10m)       ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN
@@ -174,12 +190,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN
     
-    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_min)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_max)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_min)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_max)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean)          ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)                    ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_min)                    ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_max)                    ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   day_precip_sum)                  ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   day_wind10_sum)                  ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   day_soil_tl_moist_sum)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_min)           ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_max)           ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_precip)             ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_wind10_mean)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_soil_tl_moist_mean) ! OUT
     
     dsl4jsb_Get_var2D_onChunk(SEB_,   N_pseudo_soil_temp)     ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   F_pseudo_soil_temp)     ! IN
@@ -202,6 +224,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sat_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
@@ -223,19 +246,30 @@ CONTAINS
     END IF
 
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
-    ! necessary for the phenology process
-    t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
-    ! Sum up of the previous day temperatures
-    CALL calc_previous_day_variables(is_newday(),               & ! Input
-                                     t_air_in_Celcius(:),       & ! Input
-                                     !dtime,                     & ! Input
-                                     time_steps_per_day(),      & ! Input
-                                     previous_day_temp_mean(:), & ! InOut (for summer- and evergreen)
-                                     day_temp_sum(:),           & ! InOut
-                                     previous_day_temp_min(:),  & ! InOut (for crop)
-                                     day_temp_min(:),           & ! InOut
-                                     previous_day_temp_max(:),  & ! InOut (for crop)
-                                     day_temp_max(:) )            ! InOut
+    ! necessary for the phenology process and Spitfire
+    t_air_in_Celcius =  t_air - tmelt                 ! convert Kelvin in Celcius
+    precip           = (rain  + snow) * get_time_dt() ! Total precipitation over time step
+    soil_tl_moist    = MERGE(w_soil_sl(:,1)/w_soil_sat_sl(:,1),0._wp,w_soil_sat_sl(:,1) > 0._wp) ! Soil moisture in top layer
+    ! Sum up of the previous day temperatures and precipitation
+    CALL calc_previous_day_variables(is_newday(),                        & ! Input
+                                     t_air_in_Celcius(:),                & ! Input
+                                     precip(:),                             & ! Input
+                                     wind_10m(:),                        & ! Input
+                                     soil_tl_moist,                      & ! Input
+                                     !dtime,                              & ! Input
+                                     time_steps_per_day(),               & ! Input
+                                     previous_day_temp_mean(:),          & ! InOut (for summer- and evergreen)
+                                     day_temp_sum(:),                    & ! InOut
+                                     previous_day_temp_min(:),           & ! InOut (for crop)
+                                     day_temp_min(:),                    & ! InOut
+                                     previous_day_temp_max(:),           & ! InOut (for crop)
+                                     day_temp_max(:),                    & ! InOut
+                                     previous_day_precip(:),             & ! InOut
+                                     day_precip_sum(:),                  & ! InOut
+                                     previous_day_wind10_mean(:),        & ! InOut
+                                     day_wind10_sum(:),                  & ! InOut
+                                     previous_day_soil_tl_moist_mean(:), & ! InOut
+                                     day_soil_tl_moist_sum(:) )            ! InOut
 
     ! Update of pseudo-soil temperature for each time step
     CALL calc_pseudo_soil_temp(t_air_in_Celcius(:)  , & ! Input
@@ -572,18 +606,27 @@ CONTAINS
   END SUBROUTINE update_surface_fluxes_land
 
 
-    ! Updates the mean day temperature ("previous_day_temp_mean(:)") from air temperature and the mean day NPP-rate
+    ! Prepares quantities needed from the previous day (mean, min, max of quantities) [StW: mean day NPP-rate?!]
   ! (field previous_day_NPP(:,:)
-  ELEMENTAL SUBROUTINE calc_previous_day_variables(is_newday,              & ! Input
-                                                   t_air_in_Celcius,       & ! Input
-                                                   !dtime,                  & ! Input
-                                                   time_steps_per_day,     & ! Input
-                                                   previous_day_temp_mean, & ! InOut
-                                                   day_temp_sum,           & ! InOut
-                                                   previous_day_temp_min,  & ! InOut
-                                                   day_temp_min,           & ! InOut
-                                                   previous_day_temp_max,  & ! InOut
-                                                   day_temp_max )            ! InOut
+  ELEMENTAL SUBROUTINE calc_previous_day_variables(is_newday,                       & ! Input
+                                                   t_air_in_Celcius,                & ! Input
+                                                   precip,                          & ! Input
+                                                   wind10,                          & ! Input
+                                                   soil_tl_moist,                   & ! Input
+                                                   !dtime,                           & ! Input
+                                                   time_steps_per_day,              & ! Input
+                                                   previous_day_temp_mean,          & ! InOut
+                                                   day_temp_sum,                    & ! InOut
+                                                   previous_day_temp_min,           & ! InOut
+                                                   day_temp_min,                    & ! InOut
+                                                   previous_day_temp_max,           & ! InOut
+                                                   day_temp_max,                    & ! InOut
+                                                   previous_day_precip,             & ! InOut
+                                                   day_precip_sum,                  & ! InOut
+                                                   previous_day_wind10_mean,        & ! InOut
+                                                   day_wind10_sum,                  & ! InOut
+                                                   previous_day_soil_tl_moist_mean, & ! InOut
+                                                   day_soil_tl_moist_sum )            ! InOut
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
@@ -592,19 +635,27 @@ CONTAINS
     !  ARGUMENTS
     LOGICAL,   intent(in)    :: is_newday
 
-    REAL(wp),  intent(in)    :: t_air_in_Celcius!,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
+    REAL(wp),  intent(in)    :: t_air_in_Celcius,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
+                                precip,            & ! total precipitation in time step
+                                wind10,            & ! 10-m wind speed
+                                soil_tl_moist !,     & ! Top layer soil moisture
                                 !dtime
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
-    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! "in" because if it is not calculated new, it should remain
-                                previous_day_temp_min,  & ! as before. Without "in" it would be NaN in the output.
-                                previous_day_temp_max
+    REAL(wp),  intent(inout) :: previous_day_temp_mean,         & ! "in" because if it is not calculated new, it should remain
+                                previous_day_temp_min,          & ! as before. Without "in" it would be NaN in the output.
+                                previous_day_temp_max,          &
+                                previous_day_precip,            &
+                                previous_day_wind10_mean,       &
+                                previous_day_soil_tl_moist_mean
 
     REAL(wp),  intent(inout) :: day_temp_sum,           &
                                 day_temp_min,           &
-                                day_temp_max
-
+                                day_temp_max,           &
+                                day_precip_sum,         &
+                                day_wind10_sum,         &
+                                day_soil_tl_moist_sum
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
@@ -618,8 +669,8 @@ CONTAINS
     ! Note that updating is done globally at the same time step, i.e. for different longitudes the updating happens at different
     ! local times.
 
-    IF(is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
-                        ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()
+    IF(is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature and precipitation of previous day
+                        ! and reinitialize day_temp_sum, day_temp_min, day_temp_max, day_precip_sum
        previous_day_temp_mean = day_temp_sum/time_steps_per_day
        day_temp_sum = t_air_in_Celcius
 
@@ -629,11 +680,28 @@ CONTAINS
        previous_day_temp_max = day_temp_max
        day_temp_max = t_air_in_Celcius
 
+       previous_day_precip = day_precip_sum
+       day_precip_sum = precip
+
+       previous_day_wind10_mean = day_wind10_sum/time_steps_per_day
+       day_wind10_sum = wind10
+
+       previous_day_soil_tl_moist_mean = day_soil_tl_moist_sum/time_steps_per_day
+       day_soil_tl_moist_sum = soil_tl_moist
+
     ELSE  ! day has not changed
+
        day_temp_sum = day_temp_sum  + t_air_in_Celcius
 
        IF (day_temp_min > t_air_in_Celcius)   day_temp_min = t_air_in_Celcius
        IF (day_temp_max < t_air_in_Celcius)   day_temp_max = t_air_in_Celcius
+
+       day_precip_sum = day_precip_sum + precip
+
+       day_wind10_sum = day_wind10_sum + wind10
+
+       day_soil_tl_moist_sum = day_soil_tl_moist_sum + soil_tl_moist
+
     END IF
 
   END SUBROUTINE calc_previous_day_variables

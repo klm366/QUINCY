@@ -70,12 +70,24 @@ MODULE mo_seb_memory_class
       & pseudo_soil_temp,       & ! Pseudo-soil-temperature [Celsius]: a weighted running mean of the land ...
                                   ! surface temperature, to simulate soil temperature. Updated every time step ..
                                   ! by the subroutine "pseudo_soil_temp()". (stream)
+      & previous_day_precip,    & ! total precipitation [mm] of of previous day, because not known for   ..
+                                  ! current day; updated at the beginning of each new day (stream)
+      & previous_day_wind10_mean, & ! mean day 10-m wind [m/s] of of previous day, because not known for   ..
+                                  ! current day; updated at the beginning of each new day (stream)
+      & previous_day_soil_tl_moist_mean, & ! mean day top layer soil moisture [] of of previous day, because not known for ..
+                                  ! current day; updated at the beginning of each new day (stream)
       & day_temp_sum,           & ! sum of air temperatures since midnight (needed to compute mean air
                                   ! temperature) [Celsius * 1] (stream)
       & day_temp_min,           & ! minimum of air temperatures since midnight (needed to compute growing
                                   ! degree days GDD) [Celsius * 1] (stream)
       & day_temp_max,           & ! maximum of air temperatures since midnight (needed to compute growing
                                   ! degree days GDD) [Celsius * 1] (stream)
+      & day_precip_sum,         & ! sum of total precipitation since midnight (needed to compute previous
+                                  ! day preciptitation) [mm * 1] (stream)
+      & day_wind10_sum,         & ! sum of 10-m wind since midnight (needed to compute previous
+                                  ! day 10-m wind) [m/s * 1] (stream)
+      & day_soil_tl_moist_sum,  & ! sum of top layer soil moisture since midnight (needed to compute previous
+                                  ! day preciptitation) [*1] (stream)
       & N_pseudo_soil_temp,     & ! Normalization for computing the pseudo soil temperature
       & F_pseudo_soil_temp        ! exponential factor used for updating the pseudo soil temperature
     !
@@ -328,6 +340,49 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &        
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      ! StW: Next six are presently only needed for Spitfire - could eventually be only optionally allocated
+      CALL jsb_add_var( mem, 'previous_day_precip', mem%previous_day_precip,     &
+        & hgrid, surface,                                                        &
+        & t_cf('previous_day_precip', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem,'day_precip_sum', mem%day_precip_sum,                &
+        & hgrid, surface,                                                        &
+        & t_cf('day_precip_sum', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+
+      CALL jsb_add_var( mem,'day_wind10_sum', mem%day_wind10_sum,                &
+        & hgrid, surface,                                                        &
+        & t_cf('day_wind10_sum', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+
+      CALL jsb_add_var( mem,'previous_day_wind10_mean', mem%previous_day_wind10_mean, &
+        & hgrid, surface,                                                             &
+        & t_cf('previous_day_wind10_mean', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
+        & prefix, suffix,                                                             &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+
+      CALL jsb_add_var( mem,'day_soil_tl_moist_sum', mem%day_soil_tl_moist_sum,  &
+        & hgrid, surface,                                                        &
+        & t_cf('day_soil_tl_moist_sum', '', ''),                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+
+      CALL jsb_add_var( mem,'previous_day_soil_tl_moist_mean', mem%previous_day_soil_tl_moist_mean, &
+        & hgrid, surface,                                                                           &
+        & t_cf('previous_day_soil_tl_moist_mean', '', ''),                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
+        & prefix, suffix,                                                                           &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
     END IF
 
