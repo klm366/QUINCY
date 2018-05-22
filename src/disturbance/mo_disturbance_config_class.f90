@@ -53,16 +53,18 @@ MODULE mo_disturb_config_class
                          fire_spitfire_wind_max,          & ! Maximum effective windspeed
                          fire_spitfire_wind_slope,        & ! Determines the reduction of high windspeed
                          fire_spitfire_flaming2total,     & ! Factor to calculate total burning time from flaming phase duration
-                         fire_spitfire_frac_green_active, & ! Fraction of leaves on woody types acting as fuel
+                         fire_spitfire_fract_green_active,& ! Fraction of leaves on woody types acting as fuel
                          fire_spitfire_const_ignitions,   & ! Set ignitions to this constant (-1 = no, default -1)
-                         fire_spitfire_const_frac_fire,   & ! Set burned_frac to this constant (-1 = no, default -1)
-                         fire_spitfire_frac_N_2_atm         ! Fraction of burned Nitrogen entering the atmos (rest SMINN)
+                         fire_spitfire_const_fract_fire,  & ! Set burned_frac to this constant (-1 = no, default -1)
+                         fire_spitfire_fract_N_2_atm        ! Fraction of burned Nitrogen entering the atmos (rest SMINN)
     LOGICAL           :: fire_spitfire_llight_ground,     & ! File contains cloud to ground flashes only?
                          fire_spitfire_lwind_speed_limit, & ! Wind speed use for fire spreading is limited?
                          fire_spitfire_read_fuel_frac,    & ! Read fractions of fuel from file during initialization
                          fire_spitfire_lduration_popd,    & ! Fire duration depends on population density
                          fire_spitfire_lmortalityEQ1,     & ! Set mortality to 1 in all cases (default: .false.)
                          fire_spitfire_ldiag                ! Produce additional output (StW: General disturbance parameter?)
+    ! Saved settings for fire-spitfire (not namelist controlled)
+    CHARACTER(len=16) :: fire_spitfire_master_tile          ! At which tile is auxillary data stored?
 
     CONTAINS
       PROCEDURE :: Init => Init_disturb_config
@@ -267,10 +269,10 @@ CONTAINS
     REAL(wp) :: flaming2total
     REAL(wp) :: SurfArea2Vol(3)
     REAL(wp) :: moisture_scaling
-    REAL(wp) :: frac_green_active
+    REAL(wp) :: fract_green_active
     REAL(wp) :: const_ignitions
-    REAL(wp) :: const_frac_fire
-    REAL(wp) :: frac_N_2_atm
+    REAL(wp) :: const_fract_fire
+    REAL(wp) :: fract_N_2_atm
     LOGICAL  :: llight_ground
     LOGICAL  :: read_fuel_frac
     LOGICAL  :: lduration_popd
@@ -293,9 +295,9 @@ CONTAINS
       flaming2total,                         &
       lmortalityEQ1,                         &
       const_ignitions,                       &
-      const_frac_fire,                       &
-      frac_green_active,                     &
-      frac_N_2_atm,                          &
+      const_fract_fire,                      &
+      fract_green_active,                    &
+      fract_N_2_atm,                         &
       ldiag
 
     INTEGER :: nml_unit, istat
@@ -311,18 +313,19 @@ CONTAINS
     wind_slope        =     1.5_wp
     moisture_scaling  = 30000.0_wp
     flaming2total     = 5.0_wp
-    frac_N_2_atm      = 0.5_wp
+    fract_N_2_atm     = 0.5_wp
     llight_ground     = .FALSE.
     lwind_speed_limit = .TRUE.
     lduration_popd    = .TRUE.
-    frac_green_active = 0.3_wp
+    fract_green_active= 0.3_wp
     lmortalityEQ1     = .FALSE.
     const_ignitions   = -1.0_wp
-    const_frac_fire   = -1.0_wp
+    const_fract_fire  = -1.0_wp
     ldiag             = .FALSE.
     IF (LEN_TRIM(lburn_pasture)==0) THEN
       config%lburn_pasture = .TRUE.
     ENDIF
+    config%fire_spitfire_master_tile = ''
 
     ! Read namelist
     nml_unit = position_nml('jsb_disturb_fire_spitfire_nml', nml_handler, STATUS=istat)
@@ -339,10 +342,10 @@ CONTAINS
     config%fire_spitfire_flaming2total     = flaming2total
     config%fire_spitfire_SurfArea2Vol(:)   = SurfArea2Vol(:)
     config%fire_spitfire_moisture_scaling  = moisture_scaling
-    config%fire_spitfire_frac_green_active = frac_green_active
+    config%fire_spitfire_fract_green_active= fract_green_active
     config%fire_spitfire_const_ignitions   = const_ignitions
-    config%fire_spitfire_const_frac_fire   = const_frac_fire
-    config%fire_spitfire_frac_N_2_atm      = frac_N_2_atm
+    config%fire_spitfire_const_fract_fire  = const_fract_fire
+    config%fire_spitfire_fract_N_2_atm     = fract_N_2_atm
     config%fire_spitfire_llight_ground     = llight_ground
     config%fire_spitfire_read_fuel_frac    = read_fuel_frac
     config%fire_spitfire_lwind_speed_limit = lwind_speed_limit
