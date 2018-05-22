@@ -121,7 +121,13 @@ CONTAINS
   !!
   SUBROUTINE update_natural_disturbances(tile, options)
 
-    USE mo_disturb_process,       ONLY: burned_fractt_jsb3, broken_woody_fract_jsb3, get_relative_humidity_air
+    USE mo_disturb_process,       ONLY: burned_fractt_jsb3, broken_woody_fract_jsb3, get_relative_humidity_air, &
+                                        calc_fire_spitfire_fuel, calc_fire_spitfire_fuel_moist,                 &
+                                        calc_fire_spitfire_fire_danger_index, calc_fire_spitfire_fire_geometry, &
+                                        calc_fire_spitfire_fire_density, calc_vegetation_height,                &
+                                        calc_fire_spitfire_fire_intensity, calc_fire_spitfire_fuel_consumption, &
+                                        calc_fire_spitfire_fire_mortality, calc_fire_spitfire_pool_consumption, &
+                                        fire_spitfire_relocate_carbon
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
@@ -169,6 +175,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_wind_10m
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay
+    ! For Spitfire
+    dsl4jsb_Real2D_onChunk :: previous_day_wind10_mean
+    dsl4jsb_Real2D_onChunk :: previous_day_soil_tl_moist_mean
+    dsl4jsb_Real2D_onChunk :: population_density
+    dsl4jsb_Real2D_onChunk :: lightning_frq
+    dsl4jsb_Real2D_onChunk :: human_ignitions
 
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: damaged_fract
@@ -232,11 +244,72 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_humus_1_ta
     dsl4jsb_Real2D_onChunk :: c_humus_2_ta
     dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm_ta
-
+    ! Spitfire variables
+    dsl4jsb_Real2D_onChunk :: burned_fract_diag
+    dsl4jsb_Real2D_onChunk :: fract_1hr_wood
+    dsl4jsb_Real2D_onChunk :: fract_10hr_wood
+    dsl4jsb_Real2D_onChunk :: fract_100hr_wood
+    dsl4jsb_Real2D_onChunk :: fract_1000hr_wood
+    dsl4jsb_Real2D_onChunk :: fuel_1hr
+    dsl4jsb_Real2D_onChunk :: fuel_10hr
+    dsl4jsb_Real2D_onChunk :: fuel_100hr
+    dsl4jsb_Real2D_onChunk :: fuel_1000hr
+    dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
+    dsl4jsb_Real2D_onChunk :: NI_acc
+    dsl4jsb_Real2D_onChunk :: IR
+    dsl4jsb_Real2D_onChunk :: ROS
+    dsl4jsb_Real2D_onChunk :: FDI
+    dsl4jsb_Real2D_onChunk :: fire_area
+    dsl4jsb_Real2D_onChunk :: fire_duration
+    dsl4jsb_Real2D_onChunk :: fire_density
+    dsl4jsb_Real2D_onChunk :: CombustCompleteness_lg
+    dsl4jsb_Real2D_onChunk :: CombustCompleteness_1hr
+    dsl4jsb_Real2D_onChunk :: CombustCompleteness_10hr
+    dsl4jsb_Real2D_onChunk :: CombustCompleteness_100hr
+    dsl4jsb_Real2D_onChunk :: CombustCompleteness_1000hr
+    dsl4jsb_Real2D_onChunk :: vegetation_height
+    dsl4jsb_Real2D_onChunk :: fire_intensity
+    dsl4jsb_Real2D_onChunk :: postfire_mortality
+    dsl4jsb_Real2D_onChunk :: burned_c_litter_wood_ag
+    dsl4jsb_Real2D_onChunk :: burned_c_litter_green_ag
+    dsl4jsb_Real2D_onChunk :: burned_c_green
+    dsl4jsb_Real2D_onChunk :: burned_c_reserve
+    dsl4jsb_Real2D_onChunk :: burned_c_wood
+    dsl4jsb_Real2D_onChunk :: burned_acid_ag1
+    dsl4jsb_Real2D_onChunk :: burned_water_ag1
+    dsl4jsb_Real2D_onChunk :: burned_ethanol_ag1
+    dsl4jsb_Real2D_onChunk :: burned_nonsoluble_ag1
+    dsl4jsb_Real2D_onChunk :: burned_acid_ag2
+    dsl4jsb_Real2D_onChunk :: burned_water_ag2
+    dsl4jsb_Real2D_onChunk :: burned_ethanol_ag2
+    dsl4jsb_Real2D_onChunk :: burned_nonsoluble_ag2
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & q_rel_air
+       q_rel_air,          &
+       ! These are for Spitfire only
+       c_green_g,          &
+       livegrass,          &
+       Fuel1To100hr,       &
+       net_fuel,           &
+       char_net_fuel,      &
+       fuel_SurfArea2Vol,  &
+       ratio_live_fuel,    &
+       ratio_dead_fuel,    &
+       char_dens_fuel_avg, &
+       char_alpha_fuel,    &
+       char_moistfact,     &
+       leaf_moisture,      &
+       RelFuelMoist,       &
+       gamma,              &
+!       FireArea,           &
+       wood_fract,         &
+       grass_fract,        &
+       fuel_consum,        &
+       fuel_consum1000perAreaBurned, &
+       mortality_crownkill,&
+       mortality_camb,     &
+       scorch_height
 
     LOGICAL  :: pft_mask    ! True for pfts to which the disturbance should be applied.
     REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
@@ -272,6 +345,7 @@ CONTAINS
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! in
+    dsl4jsb_Get_var2D_onChunk(FUEL_,      NI_acc)                   ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       q_air)                    ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       press_srf)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       wind_10m)                 ! in
@@ -398,7 +472,246 @@ CONTAINS
               & )
 
           CASE (FIRE_SPITFIRE)
-            CALL finish(TRIM(routine),'Thonicke spitfire not implemented yet.')
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_fract_diag)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fuel)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fuel_1hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fuel_10hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fuel_100hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fuel_1000hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fract_1hr_wood)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fract_10hr_wood)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fract_100hr_wood)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fract_1000hr_wood)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,FDI)           ! Should be a variable on the veg-tile
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,ROS)           ! Should be a variable on the veg-tile
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,IR )           ! Should be a variable on the veg-tile
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fire_area)     ! Should be a variable on the veg-tile
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fire_duration) ! Should be a variable on the veg-tile
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fire_density)  ! Should be a variable on the veg-tile?
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,CombustCompleteness_lg)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,CombustCompleteness_1hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,CombustCompleteness_10hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,CombustCompleteness_100hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,CombustCompleteness_1000hr)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,vegetation_height)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,fire_intensity)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,postfire_mortality)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_c_litter_wood_ag)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_c_litter_green_ag)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_c_green)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_c_reserve)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_c_wood)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_acid_ag1)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_water_ag1)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_ethanol_ag1)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_nonsoluble_ag1)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_acid_ag2)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_water_ag2)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_ethanol_ag2)
+            dsl4jsb_Get_var2D_onChunk(DISTURB_,burned_nonsoluble_ag2)
+            dsl4jsb_Get_var2D_onChunk(CARBON_, fract_litter_wood_new)
+            dsl4jsb_Get_var2D_onChunk(SEB_,    previous_day_soil_tl_moist_mean)
+            dsl4jsb_Get_var2D_onChunk(SEB_,    previous_day_wind10_mean)
+            dsl4jsb_Get_var2D_onChunk(FUEL_,   NI_acc)
+            dsl4jsb_Get_var2D_onChunk(FUEL_,   population_density)
+            dsl4jsb_Get_var2D_onChunk(FUEL_,   lightning_frq)
+            dsl4jsb_Get_var2D_onChunk(FUEL_,   human_ignitions)
+            ! StW: VERY temporary version
+            IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN
+              wood_fract (:) = 1._wp
+              grass_fract(:) = 0._wp
+            ELSE
+              wood_fract (:) = 0._wp
+              grass_fract(:) = 1._wp
+            ENDIF
+            CALL calc_vegetation_height( dsl4jsb_Lctlib_param(woody_PFT), &
+                                         veg_fract_correction(:),         & ! in
+                                         c_green(:),                      & ! in
+                                         c_reserve(:),                    & ! in
+                                         c_woods(:),                      & ! in
+                                         vegetation_height(:) )
+            CALL calc_fire_spitfire_fuel(nc,                              &
+                                         dsl4jsb_Lctlib_param(woody_PFT), &
+                                         dsl4jsb_Lctlib_param(C4Flag),    &
+                                         dsl4jsb_Lctlib_param(fuel_dens), &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_fract_green_active, &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_SurfArea2Vol,      &
+                                         veg_fract_correction(:),         & ! in
+                                         c_green(:),                      & ! in
+                                         c_woods(:),                      & ! in
+                                         c_reserve(:),                    & ! in
+                                         c_acid_ag1(:),                   & ! in
+                                         c_water_ag1(:),                  & ! in
+                                         c_ethanol_ag1(:),                & ! in
+                                         c_nonsoluble_ag1(:),             & ! in
+                                         c_acid_ag2(:),                   & ! in
+                                         c_water_ag2(:),                  & ! in
+                                         c_ethanol_ag2(:),                & ! in
+                                         c_nonsoluble_ag2(:),             & ! in
+                                         fract_litter_wood_new(:),        & ! in
+                                         fract_1hr_wood(:),               & ! inout
+                                         fract_10hr_wood(:),              & ! inout
+                                         fract_100hr_wood(:),             & ! inout
+                                         fract_1000hr_wood(:),            & ! inout
+                                         fuel(:),                         & ! out
+                                         fuel_1hr(:),                     & ! out
+                                         fuel_10hr(:),                    & ! out
+                                         fuel_100hr(:),                   & ! out
+                                         fuel_1000hr(:),                  & ! out
+                                         c_green_g(:),                    & ! out
+                                         livegrass(:),                    & ! out
+                                         Fuel1To100hr(:),                 & ! out
+                                         net_fuel(:),                     & ! out
+                                         char_net_fuel(:),                & ! out
+                                         fuel_SurfArea2Vol(:),            & ! out
+                                         ratio_live_fuel(:),              & ! out
+                                         ratio_dead_fuel(:),              & ! out
+                                         char_dens_fuel_avg(:) )            ! out
+             CALL calc_fire_spitfire_fuel_moist(nc,                              &
+                                         .FALSE.,                                &
+                                         dsl4jsb_Lctlib_param(moist_extinction), &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_moisture_scaling, &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_SurfArea2Vol,     &
+                                         fuel(:),                                & ! in
+                                         fuel_1hr(:),                            & ! in
+                                         fuel_10hr(:),                           & ! in
+                                         fuel_100hr(:),                          & ! in
+                                         Fuel1To100hr(:),                        & ! in
+                                         ratio_live_fuel(:),                     & ! in
+                                         ratio_dead_fuel(:),                     & ! in
+                                         previous_day_soil_tl_moist_mean(:),     & ! in
+                                         NI_acc(:),                              & ! in
+                                         char_moistfact(:),                      & ! out
+                                         leaf_moisture(:),                       & ! out
+                                         char_alpha_fuel(:),                     & ! out
+                                         RelFuelMoist(:) )                         ! out
+             CALL calc_fire_spitfire_fire_danger_index(      &
+                                         Fuel1To100hr(:),    & ! in
+                                         char_moistfact(:),  & ! in
+                                         char_alpha_fuel(:), & ! in
+                                         NI_acc(:),          & ! in
+                                         FDI(:) )              ! out
+             CALL calc_fire_spitfire_fire_geometry(nc,                           &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_lduration_popd,    &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_lwind_speed_limit, &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_wind_max,          &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_wind_slope,        &
+                                         previous_day_wind10_mean(:),            & ! in
+                                         population_density(:),                  & ! in
+                                         fuel_SurfArea2Vol(:),                   & ! in
+                                         RelFuelMoist(:),                        & ! in
+                                         net_fuel(:),                            & ! in
+                                         char_dens_fuel_avg(:),                  & ! in
+                                         char_net_fuel(:),                       & ! in
+                                         char_moistfact(:),                      & ! in
+                                         wood_fract(:),                          & ! in
+                                         grass_fract(:),                         & ! in
+                                         FDI(:),                                 & ! in
+                                         gamma(:),                               & ! out
+                                         IR(:),                                  & ! out
+                                         ROS(:),                                 & ! out
+                                         fire_duration(:),                        & ! out
+                                         fire_area(:) )                             ! out
+             IF (dsl4jsb_Config(DISTURB_)%fire_spitfire_const_fract_fire < 0._wp) THEN
+               CALL calc_fire_spitfire_fire_density(               &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_ign_para,        &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_human_para,      &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_const_ignitions, &
+                                         human_ignitions(:),     & ! in
+                                         lightning_frq(:),       & ! in
+                                         net_fuel(:) > 0.001_wp, & ! in
+                                         FDI(:),                 & ! in
+                                         fire_density(:) )
+               burned_fract(:) = fire_density(:) * fire_area(:)
+             ELSE
+               burned_fract(:) = dsl4jsb_Config(DISTURB_)%fire_spitfire_const_fract_fire
+             ENDIF
+             CALL calc_fire_spitfire_fuel_consumption(                     &
+                                         NI_acc(:),                        & ! in
+                                         burned_fract(:),                  & ! in
+                                         fuel_1hr   (:),                   & ! in
+                                         fuel_10hr  (:),                   & ! in
+                                         fuel_100hr (:),                   & ! in
+                                         fuel_1000hr(:),                   & ! in
+                                         fuel_1hr   (:),                   & ! in, StW: Should be veg tile version
+                                         RelFuelMoist(:),                  & ! in
+                                         leaf_moisture(:),                 & ! in
+                                         livegrass(:),                     & ! in
+                                         char_moistfact(:),                & ! in
+                                         fuel_consum(:),                   & ! out
+                                         fuel_consum1000perAreaBurned(:),  & ! out
+                                         CombustCompleteness_lg      (:),  & ! out
+                                         CombustCompleteness_1hr     (:),  & ! out
+                                         CombustCompleteness_10hr    (:),  & ! out
+                                         CombustCompleteness_100hr   (:),  & ! out
+                                         CombustCompleteness_1000hr  (:) )   ! out
+             CALL calc_fire_spitfire_fire_intensity(burned_fract(:), &
+                                         fuel_consum(:),             &
+                                         ROS(:),                     &
+                                         fire_intensity(:) )
+             ! Exclude too small fires
+             IF (dsl4jsb_Config(DISTURB_)%fire_spitfire_const_fract_fire < 0._wp) THEN
+               WHERE (fire_intensity(:) < 50._wp)
+                 burned_fract  (:) = 0._wp
+                 fire_intensity(:) = 0._wp
+                 fire_density  (:) = 0._wp
+                 fuel_consum   (:) = 0._wp
+               ENDWHERE
+             ENDIF
+             CALL calc_fire_spitfire_fire_mortality(nc,                                        &
+                                         dsl4jsb_Lctlib_param(woody_PFT),                      &
+                                         dsl4jsb_Lctlib_param(crown_length),                   &
+                                         dsl4jsb_Lctlib_param(bark_par1),                      &
+                                         dsl4jsb_Lctlib_param(bark_par2),                      &
+                                         dsl4jsb_Lctlib_param(RCK),                            &
+                                         dsl4jsb_Lctlib_param(mort_prob),                      &
+                                         dsl4jsb_Lctlib_param(flame_length_f),                 &
+                                         dsl4jsb_Config(DISTURB_)%fire_spitfire_flaming2total, &
+                                         fire_intensity(:),                                    &
+                                         fuel_consum(:),                                       &
+                                         gamma(:),                                             &
+                                         vegetation_height(:),                                 &
+                                         mortality_crownkill(:),                               &
+                                         mortality_camb(:),                                    &
+                                         scorch_height(:),                                     &
+                                         postfire_mortality(:) )
+             IF (dsl4jsb_Config(DISTURB_)%fire_spitfire_lmortalityEQ1) THEN
+               postfire_mortality(:) = 1._wp
+             ENDIF
+             CALL calc_fire_spitfire_pool_consumption(SPREAD(dsl4jsb_Lctlib_param(woody_PFT),1,nc),              &
+                                         SPREAD(dsl4jsb_Config(DISTURB_)%fire_spitfire_fract_green_active,1,nc), &
+                                         burned_fract              (:), &
+                                         CombustCompleteness_lg    (:), &
+                                         CombustCompleteness_1hr   (:), &
+                                         CombustCompleteness_10hr  (:), &
+                                         CombustCompleteness_100hr (:), &
+                                         CombustCompleteness_1000hr(:), &
+                                         c_green                   (:), &
+                                         c_acid_ag1                (:), &
+                                         c_water_ag1               (:), &
+                                         c_ethanol_ag1             (:), &
+                                         c_nonsoluble_ag1          (:), &
+                                         c_acid_ag2                (:), &
+                                         c_water_ag2               (:), &
+                                         c_ethanol_ag2             (:), &
+                                         c_nonsoluble_ag2          (:), &
+                                         fract_1hr_wood            (:), &
+                                         fract_10hr_wood           (:), &
+                                         fract_100hr_wood          (:), &
+                                         fract_1000hr_wood         (:), &
+                                         burned_c_litter_wood_ag   (:), &
+                                         burned_c_litter_green_ag  (:), &
+                                         burned_c_green            (:), &
+                                         burned_acid_ag1           (:), &
+                                         burned_water_ag1          (:), &
+                                         burned_ethanol_ag1        (:), &
+                                         burned_nonsoluble_ag1     (:), &
+                                         burned_acid_ag2           (:), &
+                                         burned_water_ag2          (:), &
+                                         burned_ethanol_ag2        (:), &
+                                         burned_nonsoluble_ag2     (:) )
+              burned_fract_diag(:) = burned_fract(:)
+              burned_fract     (:) = burned_fract(:) * postfire_mortality(:)
           CASE DEFAULT
             CALL finish(TRIM(routine),'Unknown fire algorithm')
         END SELECT
@@ -500,10 +813,44 @@ CONTAINS
               & c_nonsoluble_bg2(:),                      & ! inout
               & c_humus_1(:),                             & ! inout
               & c_humus_2(:),                             & ! inout
-              & cflux_fire_all_2_atm                      & ! out
+              & cflux_fire_all_2_atm(:)                   & ! out
               & )
           CASE (FIRE_SPITFIRE)
-            CALL finish(TRIM(routine),'Thonicke spitfire not implemented yet.')
+            CALL fire_spitfire_relocate_carbon(nc, &
+                                         dsl4jsb_Lctlib_param(woody_PFT), &
+                                         dsl4jsb_Lctlib_param(NaturalVegFlag), &
+                                         dsl4jsb_Lctlib_param(LeafLit_coef(1:5)),  & ! in
+                                         dsl4jsb_Lctlib_param(WoodLit_coef(1:5)),  & ! in
+                                         veg_fract_correction(:), & ! in
+                                         burned_fract(:),             & ! in
+                                         postfire_mortality(:), & ! in
+                                         mortality_crownkill(:), & ! in
+                                         c_green(:), c_woods(:), c_reserve(:),                 &
+                                         c_acid_ag1(:),          &
+                                         c_water_ag1(:),         &
+                                         c_ethanol_ag1(:),       &
+                                         c_nonsoluble_ag1(:),    &
+                                         c_acid_ag2(:),               &
+                                         c_water_ag2(:),              &
+                                         c_ethanol_ag2(:),            &
+                                         c_nonsoluble_ag2(:),         &
+                                         c_acid_bg1(:),          &
+                                         c_water_bg1(:),         &
+                                         c_ethanol_bg1(:),       &
+                                         c_nonsoluble_bg1(:),    &
+                                         c_humus_1(:),           &
+                                         c_acid_bg2(:),               &
+                                         c_water_bg2(:),              &
+                                         c_ethanol_bg2(:),            &
+                                         c_nonsoluble_bg2(:),         &
+                                         c_humus_2(:),                &
+                                         fract_1hr_wood(:), fract_10hr_wood(:), fract_100hr_wood(:), fract_1000hr_wood(:), &
+                                         burned_c_green(:), burned_c_reserve(:), burned_c_wood(:),         &
+                                         burned_c_litter_green_ag(:), burned_c_litter_wood_ag(:),       &
+                                         cflux_dist_greenreserve_2_soil(:),        & ! inout
+                                         cflux_dist_woods_2_soil(:),               & ! inout
+                                         cflux_fire_all_2_atm(:)                   & ! out
+                                         )
           CASE DEFAULT
             CALL finish(TRIM(routine),'Unknown fire algorithm')
         END SELECT

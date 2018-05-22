@@ -32,21 +32,59 @@ MODULE mo_disturb_memory_class
 
   PUBLIC :: t_disturb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
 
-  TYPE(t_jsb_var_real2d) ::   &
-    burned_fract,             & ! burned fraction of tile
-    damaged_fract,            & ! windbreak fraction of tile
-    q_rel_air_climbuf,        & ! Relative humiditiy of lowest air layer smoothed in time.
-    q_rel_air_climbuf_yday,   & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
-                                ! This is only needed for cbalone forcing!
-    prev_day_max_wind_10m,    & ! for windbreak
-    max_wind_10m,             & ! for windbreak
-    max_wind_10m_act            ! for windbreak
-
+  TYPE(t_jsb_var_real2d) ::     &
+    burned_fract,               & ! burned fraction of tile
+    damaged_fract,              & ! windbreak fraction of tile
+    ! Climbuf variables
+    q_rel_air_climbuf,          & ! Relative humiditiy of lowest air layer smoothed in time.
+    q_rel_air_climbuf_yday,     & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
+                                  ! This is only needed for cbalone forcing!
+    prev_day_max_wind_10m,      & ! for windbreak
+    max_wind_10m,               & ! for windbreak
+    max_wind_10m_act,           & ! for windbreak
+    ! Spitfire variables (of which many should be on the veg tile and others both on veg and pft tiles)
+    burned_fract_diag,          & ! burned fraction of tile excluding burned areas with surviving vegetation
+    fract_1hr_wood,             &
+    fract_10hr_wood,            &
+    fract_100hr_wood,           &
+    fract_1000hr_wood,          &
+    fuel,                       &
+    fuel_1hr,                   & ! Veg + pft?
+    fuel_10hr,                  & ! Veg + pft?
+    fuel_100hr,                 & ! Veg + pft?
+    fuel_1000hr,                & ! Veg + pft?
+    FDI,                        & ! Veg
+    IR,                         & ! Veg
+    ROS,                        & ! Veg
+    fire_area,                  & ! Veg
+    fire_duration,              & ! Veg
+    fire_density,               & ! Veg?
+    CombustCompleteness_lg,     &
+    CombustCompleteness_1hr,    &
+    CombustCompleteness_10hr,   &
+    CombustCompleteness_100hr,  &
+    CombustCompleteness_1000hr, &
+    vegetation_height,          &
+    fire_intensity,             &
+    postfire_mortality,         &
+    burned_c_litter_green_ag,   &
+    burned_c_litter_wood_ag,    &
+    burned_c_green,             &
+    burned_c_reserve,           &
+    burned_c_wood,              &
+    burned_acid_ag1,            &
+    burned_water_ag1,           &
+    burned_ethanol_ag1,         &
+    burned_nonsoluble_ag1,      &
+    burned_acid_ag2,            &
+    burned_water_ag2,           &
+    burned_ethanol_ag2,         &
+    burned_nonsoluble_ag2
   CONTAINS
     PROCEDURE :: Init => Init_disturb_memory
   END TYPE t_disturb_memory
@@ -150,6 +188,228 @@ CONTAINS
         CASE (FIRE_JSB3)
           ! JSB3-JSBACH-fire does not need any further variables
         CASE (FIRE_SPITFIRE)
+          CALL jsb_add_var( mem, 'burned_fract_diag', mem%burned_fract_diag,     &
+            & hgrid, surface,                                                    &
+            & t_cf('burned_fract_diag', '-', 'fraction burned excluding area of surviving vegetation'),&
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fract_1hr_wood', mem%fract_1hr_wood,           &
+            & hgrid, surface,                                                    &
+            & t_cf('fract_1hr_wood', '-', 'fraction of wood of fuel class 1hr.'),&
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fract_10hr_wood', mem%fract_10hr_wood,            &
+            & hgrid, surface,                                                       &
+            & t_cf('fract_10hr_wood', '-', 'fraction of wood of fuel class 10hr.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fract_100hr_wood', mem%fract_100hr_wood,            &
+            & hgrid, surface,                                                         &
+            & t_cf('fract_100hr_wood', '-', 'fraction of wood of fuel class 100hr.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+            & prefix, suffix,                                                         &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fract_1000hr_wood', mem%fract_1000hr_wood,            &
+            & hgrid, surface,                                                           &
+            & t_cf('fract_1000hr_wood', '-', 'fraction of wood of fuel class 1000hr.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+            & prefix, suffix,                                                           &
+            & lrestart=.FALSE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem, 'fuel', mem%fuel,                               &
+            & hgrid, surface,                                                    &
+            & t_cf('fuel', 'mol m^-2', 'carbon in pft tile fuel.'),              &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fuel_1hr', mem%fuel_1hr,                       &
+            & hgrid, surface,                                                    &
+            & t_cf('fuel_1hr', 'mol m^-2', 'carbon in fuel class 1hr.'),         &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fuel_10hr', mem%fuel_10hr,                     &
+            & hgrid, surface,                                                    &
+            & t_cf('fuel_10hr', 'mol m^-2', 'carbon in fuel class 10hr.'),       &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fuel_100hr', mem%fuel_100hr,                   &
+            & hgrid, surface,                                                    &
+            & t_cf('fuel_100hr', 'mol m^-2', 'carbon in fuel class 100hr.'),     &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fuel_1000hr', mem%fuel_1000hr,                 &
+            & hgrid, surface,                                                    &
+            & t_cf('fuel_1000hr', 'mol m^-2', 'carbon in fuel class 1000hr.'),   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'FDI', mem%FDI,                                 &
+            & hgrid, surface,                                                    &
+            & t_cf('FDI', '-', 'Fire danger index.'),                            &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'IR', mem%IR,                                   &
+            & hgrid, surface,                                                    &
+            & t_cf('IR', 'kJ m^-2 min^-1', 'Fire reaction intensity.'),          &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'ROS', mem%ROS,                                 &
+            & hgrid, surface,                                                    &
+            & t_cf('ROS', 'm min^-1','Fire rate of spread.'),                    &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fire_area', mem%fire_area,                     &
+            & hgrid, surface,                                                    &
+            & t_cf('fire_area', 'm^2','Size of a single fire.'),                 &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fire_duration', mem%fire_duration,             &
+            & hgrid, surface,                                                    &
+            & t_cf('fire_duration', 'min','Duration of a fire.'),                &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fire_density', mem%fire_density,               &
+            & hgrid, surface,                                                    &
+            & t_cf('fire_density', 'm^-2','Number of fires per area.'),          &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'CombustCompleteness_lg', mem%CombustCompleteness_lg,           &
+            & hgrid, surface,                                                                    &
+            & t_cf('CombustCompleteness_lg', '-','Combustion completeness of living grass'),     &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+            & prefix, suffix,                                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'CombustCompleteness_1hr', mem%CombustCompleteness_1hr,         &
+            & hgrid, surface,                                                                    &
+            & t_cf('CombustCompleteness_1hr', '-','Combustion completeness of 1hr fuels'),       &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+            & prefix, suffix,                                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'CombustCompleteness_10hr', mem%CombustCompleteness_10hr,       &
+            & hgrid, surface,                                                                    &
+            & t_cf('CombustCompleteness_10hr', '-','Combustion completeness of 10hr fuels'),     &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+            & prefix, suffix,                                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'CombustCompleteness_100hr', mem%CombustCompleteness_100hr,     &
+            & hgrid, surface,                                                                    &
+            & t_cf('CombustCompleteness_100hr', '-','Combustion completeness of 100hr fuels'),   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+            & prefix, suffix,                                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'CombustCompleteness_1000hr', mem%CombustCompleteness_1000hr,   &
+            & hgrid, surface,                                                                    &
+            & t_cf('CombustCompleteness_1000hr', '-','Combustion completeness of 1000hr fuels'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+            & prefix, suffix,                                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'vegetation_height', mem%vegetation_height,        &
+            & hgrid, surface,                                                       &
+            & t_cf('vegetation_height', 'm','Characteristic height of vegetation'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'fire_intensity', mem%fire_intensity,           &
+            & hgrid, surface,                                                    &
+            & t_cf('fire_intensity', 'kW m^-1','Energy release by fires'),       &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'postfire_mortality', mem%postfire_mortality,   &
+            & hgrid, surface,                                                    &
+            & t_cf('postfire_mortality', '','Fraction of BA vegetation killed'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_c_litter_green_ag', mem%burned_c_litter_green_ag, &
+            & hgrid, surface,                                                              &
+            & t_cf('burned_c_litter_green_ag', 'mol m^-2','burned litter green carbon'),   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+            & prefix, suffix,                                                              &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_c_litter_wood_ag', mem%burned_c_litter_wood_ag, &
+            & hgrid, surface,                                                            &
+            & t_cf('burned_c_litter_wood_ag', 'mol m^-2','burned litter wood carbon'),   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+            & prefix, suffix,                                                            &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_c_green', mem%burned_c_green,              &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_c_green', 'mol m^-2','burned green carbon'),             &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_c_reserve', mem%burned_c_reserve,       &
+            & hgrid, surface,                                                    &
+            & t_cf('burned_c_reserve', 'mol m^-2','burned reserve carbon'),      &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_c_wood', mem%burned_c_wood,             &
+            & hgrid, surface,                                                    &
+            & t_cf('burned_c_wood', 'mol m^-2','burned_wood carbon'),            &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_acid_ag1', mem%burned_acid_ag1,            &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_acid_ag1', 'mol m^-2','burned acid_ag1 carbon'),         &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_water_ag1', mem%burned_water_ag1,          &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_water_ag1', 'mol m^-2','burned water_ag1 carbon'),       &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_ethanol_ag1', mem%burned_ethanol_ag1,      &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_ethanol_ag1', 'mol m^-2','burned ethanol_ag1 carbon'),   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_nonsoluble_ag1', mem%burned_nonsoluble_ag1,    &
+            & hgrid, surface,                                                           &
+            & t_cf('burned_nonsoluble_ag1', 'mol m^-2','burned nonsoluble_ag1 carbon'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+            & prefix, suffix,                                                           &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_acid_ag2', mem%burned_acid_ag2,            &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_acid_ag2', 'mol m^-2','burned acid_ag2 carbon'),         &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_water_ag2', mem%burned_water_ag2,          &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_water_ag2', 'mol m^-2','burned water_ag2 carbon'),       &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_ethanol_ag2', mem%burned_ethanol_ag2,      &
+            & hgrid, surface,                                                       &
+            & t_cf('burned_ethanol_ag2', 'mol m^-2','burned ethanol_ag2 carbon'),   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+            & prefix, suffix,                                                       &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+          CALL jsb_add_var( mem, 'burned_nonsoluble_ag2', mem%burned_nonsoluble_ag2,    &
+            & hgrid, surface,                                                           &
+            & t_cf('burned_nonsoluble_ag2', 'mol m^-2','burned nonsoluble_ag2 carbon'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+            & prefix, suffix,                                                           &
+            & lrestart=.FALSE., initval_r=0.0_wp )
       END SELECT
 
     END IF
