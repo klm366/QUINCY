@@ -124,10 +124,10 @@ MODULE mo_carbon_memory_class
       !
       cflux_dist_greenreserve_2_soil,  & ! R: should be later renamed to C_2_GreenLitterPools
       cflux_dist_woods_2_soil,   & ! R: should be later renamed to C_2_WoodLitterPools
-      cflux_fire_all_2_atm                ! R: should be later renamed to C_2_atmos
-                                    ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
+      cflux_fire_all_2_atm,      & ! R: should be later renamed to C_2_atmos
+                                   ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool 
+      fract_litter_wood_new        ! new fraction in above ground wood litter pool
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
@@ -719,12 +719,12 @@ CONTAINS
         & prefix, suffix,                                                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-!       CALL jsb_add_var( mem, 'fract_litter_wood_new', mem%fract_litter_wood_new,                     &
-!         & hgrid, surface,                                                                          &
-!         & t_cf('fract_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
-!         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-!         & prefix, suffix,                                                                          &
-!         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+       CALL jsb_add_var( mem, 'fract_litter_wood_new', mem%fract_litter_wood_new,                     &
+         & hgrid, surface,                                                                          &
+         & t_cf('fract_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+         & prefix, suffix,                                                                          &
+         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c2greenlitterpools', mem%cflux_dist_greenreserve_2_soil,                           &
         & hgrid, surface,                                                                                          &

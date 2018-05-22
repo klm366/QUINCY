@@ -331,7 +331,7 @@ CONTAINS
 
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
+    dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
     !
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI 
@@ -487,7 +487,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )           ! out
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,  fract_litter_wood_new )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  fract_litter_wood_new )
     !
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
@@ -629,7 +629,7 @@ CONTAINS
         &  cflux_herb_2_atm,                                  & ! out
         &  NPP_act_yDayMean,                                  & ! out
         !
-        !&  fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
+        &  fract_litter_wood_new = fract_litter_wood_new,             & ! inout, optional. Only for spitfire
         !
         ! variables only needed with yasso:
         ! R: Note, in the moment the procedure is only used with Yasso.

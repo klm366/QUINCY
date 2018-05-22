@@ -72,7 +72,7 @@ CONTAINS
     & cflux_herb_2_atm,           & ! out
     & NPP_act_yDayMean,           & ! out
     !
-    ! & fract_litter_wood_new,      & ! inout, optional; R: only for spitfire
+    & fract_litter_wood_new,      & ! inout, optional; R: only for spitfire
     ! &  Yasso variables
     & temp2_30d,                  & ! in, optional, necessary with yasso
     & precip_30d,                 & ! in, optional, necessary with yasso
@@ -174,7 +174,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: NPP_act_yDayMean       ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
-    !real(wp),optional,intent(inout) :: fract_litter_wood_new   ! new fraction in above ground wood litter pool  
+    REAL(WP), OPTIONAL, INTENT(INOUT) :: fract_litter_wood_new  ! new fraction in above ground wood litter pool
 
     ! Meteorology for Yasso
     REAL(wp), OPTIONAL, INTENT(in)    :: temp2_30d              ! 30 day mean temperature
@@ -250,7 +250,7 @@ CONTAINS
     !CBAL REAL(wp) :: Cflx_slow_2_atmos
     REAL(wp) :: Cflx_faeces_2_LG, Cflx_faeces_2_atm
     ! R: only for spitfire
-    !REAL(wp) :: litter_wood_new, litter_wood_total
+    REAL(wp) :: litter_wood_new, litter_wood_total
 
     ! local variables for Yasso
     REAL(wp), DIMENSION(18) :: Yasso_io_pools
@@ -324,9 +324,9 @@ CONTAINS
     ! redFact_Nlimitation      = 1.0_wp
 
     ! R: only for spitfire:
-    !IF (PRESENT(fract_litter_wood_new)) THEN
-    !   litter_wood_new = 0.0_wp
-    !END IF
+    IF (PRESENT(fract_litter_wood_new)) THEN
+       litter_wood_new = 0.0_wp
+    END IF
 
     ! Preparations
     !-------------------------------------------
@@ -465,7 +465,7 @@ CONTAINS
     c_litter_wood_ag = c_litter_wood_ag      &              !! .. is put partly into the above ground woody litter pool
          + fract_wood_aboveGround*C_2_litter_woodPool
     ! R: only for spitfire
-    ! if (present(fract_litter_wood_new))     litter_wood_new = fract_wood_aboveGround * C_2_litter_woodPool  
+    IF (PRESENT(fract_litter_wood_new)) litter_wood_new = fract_wood_aboveGround * C_2_litter_woodPool
     c_litter_wood_bg = c_litter_wood_bg &                    !! .. and the rest into the below ground woody litter pool
          + (1.0_wp-fract_wood_aboveGround)*C_2_litter_woodPool
     c_woods = c_woods -  C_2_litter_woodPool                 !! .. and then all is substracted from the wood pool.
@@ -762,18 +762,14 @@ CONTAINS
 
     ! R: only for spitfire:
     ! fraction of new wood litter, assume old and new litter are respired in the same way, respiration does not change the fraction
-    !        if (present(fract_litter_wood_new)) then
-    !           if (with_yasso) then
-    ! litter_wood_total = c_water_ag2 + c_acid_ag2 + c_ethanol_ag2 + c_nonsoluble_ag2
-    !           else
-    !             litter_wood_total = c_litter_wood_ag
-    !           endif
-    !           if ((litter_wood_total >  EPSILON(1._wp)) .AND. (litter_wood_new < litter_wood_total)) then
-    !              fract_litter_wood_new = litter_wood_new / litter_wood_total
-    !           else
-    !              fract_litter_wood_new = 1._wp    ! fract_litter_wood_new=1 means fuel fractions will be reset to original values
-    !           endif
-    !        endif
+    IF (PRESENT(fract_litter_wood_new)) THEN
+      litter_wood_total = c_water_ag2 + c_acid_ag2 + c_ethanol_ag2 + c_nonsoluble_ag2
+      IF ((litter_wood_total >  EPSILON(1._wp)) .AND. (litter_wood_new < litter_wood_total)) THEN
+         fract_litter_wood_new = litter_wood_new / litter_wood_total
+      ELSE
+         fract_litter_wood_new = 1._wp    ! fract_litter_wood_new=1 means fuel fractions will be reset to original values
+      ENDIF
+    ENDIF
 
   END SUBROUTINE calc_Cpools
 
