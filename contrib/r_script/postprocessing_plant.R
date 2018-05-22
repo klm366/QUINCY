@@ -21,9 +21,11 @@ flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*","_",tstep_pool,"*.t
 flist_pool = c(flist_pool,Sys.glob(paste0("ecopool*","_",tstep_pool,"*.txt")))  
 # get flux output files  
 flist_flux = Sys.glob(paste0("vegflux*","_",tstep_pool,"*.txt"))
+# get other output files
+flist_other = Sys.glob(paste0("atm_forcing","_",tstep_flux,"*.txt"))
 
 #create overall file list
-flist=c(flist_pool,flist_flux)
+flist=c(flist_pool,flist_flux,flist_other)
 nplot=length(flist)
 
 # plot data

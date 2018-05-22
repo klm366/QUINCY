@@ -20,9 +20,11 @@ tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 
 # get flux output files  
 flist_flux = Sys.glob(paste0("vegflux*","_",tstep_flux,"*.txt")) 
+# get other output files
+flist_other = Sys.glob(paste0("atm_forcing","_",tstep_flux,"*.txt"))
 
 #create overall file list
-flist=c(flist_flux) #(flist_pool,flist_flux)
+flist=c(flist_flux,flist_other)
 nplot=length(flist)
 
 # plot data

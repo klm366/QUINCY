@@ -31,9 +31,9 @@ MODULE mo_shared_output
   !! 
   !! output interval for pools and fluxes
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp), SAVE :: output_interval_pool   ! equals 'dtime/one_day' or is a mulitple of it
-  REAL(wp), SAVE :: output_interval_flux   ! equals 'dtime/one_day' or is a mulitple of it
-  INTEGER, PRIVATE :: ipoi = 1             ! the chunk in ics:ice of which data will be written to file; per default = 1
+  REAL(wp), SAVE, PRIVATE   :: output_interval_pool   ! interval as proportion of one day or number of days ('dtime/one_day' or is a mulitple of it)
+  REAL(wp), SAVE, PRIVATE   :: output_interval_flux   ! interval as proportion of one day or number of days ('dtime/one_day' or is a mulitple of it)
+  INTEGER, PRIVATE          :: ipoi = 1               ! the point in ics:ice of which data will be written to file; per default = 1
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
@@ -42,9 +42,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> the input interval string is transformed into a number, which is used for timely model output
   !! 
-  !! applied for pools and flux output
+  !! valid for pool output, but applied for pools and flux output
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_output_time_interval() RESULT(interval_number)
+  FUNCTION calc_output_time_interval_pool() RESULT(interval_number)
 
     USE mo_base_constants,          ONLY: one_day, dtime
     USE mo_base_config_class,       ONLY: base_config
@@ -67,7 +67,7 @@ CONTAINS
       CASE('yearly')
         interval_number = 365.0_wp
     END SELECT
-  END FUNCTION calc_output_time_interval
+  END FUNCTION calc_output_time_interval_pool
 
 
   !-----------------------------------------------------------------------------------------------------!
@@ -130,7 +130,7 @@ CONTAINS
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
-    output_interval_pool = calc_output_time_interval()
+    output_interval_pool = calc_output_time_interval_pool()
 
 
     !> 2.1 define open() statements for file output
@@ -1234,7 +1234,7 @@ CONTAINS
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
-    output_interval_flux = calc_output_time_interval()
+    output_interval_flux = calc_output_time_interval_pool()
 
 
     !> 2.0 define open() statements for file output
@@ -1243,6 +1243,7 @@ CONTAINS
     lun = 100 + 30    ! -> max of 30 files for pool output
 
     !! land
+    !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')  ! for "land & soil" see below
         ! mycofluxCNP
@@ -1251,7 +1252,9 @@ CONTAINS
         lun=lun+1
     END SELECT
 
-    !! land/plant & canopy  (land/soil below)
+
+    !! land/plant & canopy
+    !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
         fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
@@ -1287,7 +1290,18 @@ CONTAINS
         lun=lun+1
     END SELECT
 
-    !! land & soil - additional to CASE('land')
+
+    !! land/plant/canopy
+    !! 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        fname = 'atm_forcing'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+    END SELECT
+
+
+    !! land/soil
     !!  simple_0d and simple_1d and jsm
     !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
@@ -1373,7 +1387,9 @@ CONTAINS
         lun=lun+1
     END SELECT
 
-    !! land/plant & canopy  (land/soil below)
+
+    !! land/plant & canopy
+    !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxC
@@ -1388,6 +1404,7 @@ CONTAINS
         ! vegfluxP
         WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP'
         lun=lun+1
+        ! vegfluxH2O
         WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
@@ -1405,8 +1422,19 @@ CONTAINS
         lun=lun+1
     END SELECT
 
+
+    !! land/plant/canopy
+    !! 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        ! atm_forcing
+        WRITE(lun,'(2a)') 'Time sum_Precip mean_AirTemperature mean_Wind mean_SWdown mean_LWdown mean_VPD', &
+                          ' atm_CO2 atm_d13CO2 atm_d14CO2'
+        lun=lun+1
+    END SELECT
+
     
-    !! land & soil - additional to CASE('land')
+    !! land/soil
     !!  simple_0d and simple_1d and jsm
     !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
@@ -1551,6 +1579,8 @@ CONTAINS
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
     USE mo_soil_config_class,     ONLY: max_soil_layers
+    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
+    USE mo_atmland_constants,     ONLY: eps_vpd
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
@@ -1581,12 +1611,12 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
-    INTEGER                               :: lun                ! locical unit number
-    REAL(wp)                              :: dC13gpp,dC13rg,dC13rm,hlp1,dC13litterfall,dC13het_resp,dC13leaching
     ! local accumulation variables
-    REAL(wp), SAVE                        :: gpp_acc   = 0.0_wp ! Note: gpp_acc is initialized only the first time the subroutine is called. 
-                                                                ! On subsequent calls the old value of gpp_acc is retained.
-                                                                ! To avoid confusion the SAVE attribute is added, even though this is redundant.
+      ! Note: the *_acc variables are initialized only the first time the subroutine is called. 
+      ! On subsequent calls the old value of *_acc is retained.
+      ! To improve code readability the SAVE attribute is added, even though this is redundant.
+    REAL(wp), SAVE                        :: ndat_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: gpp_acc             = 0.0_wp
     REAL(wp), SAVE                        :: growth_resp_acc     = 0.0_wp
     REAL(wp), SAVE                        :: maint_resp_acc      = 0.0_wp   
     REAL(wp), SAVE                        :: n_transform_resp_acc = 0.0_wp   
@@ -1631,7 +1661,6 @@ CONTAINS
     REAL(wp), SAVE                        :: qg_acc              = 0.0_wp
     REAL(wp), SAVE                        :: albedo_acc          = 0.0_wp
     REAL(wp), SAVE                        :: appfd_acc           = 0.0_wp
-    INTEGER,  SAVE                        :: ndat_acc            = 0 
     ! soil - local accumulation variables (partly also used for land output)
     REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
@@ -1688,8 +1717,17 @@ CONTAINS
     REAL(wp), SAVE                        :: myco_export_c13_acc           = 0.0_wp
     REAL(wp), SAVE                        :: myco_export_c14_acc           = 0.0_wp
     REAL(wp), SAVE                        :: myco_export_n15_acc           = 0.0_wp
+    ! atmospheric forcing   (note: 'precip_acc' is already calculated for vegfluxH2O output)
+    REAL(wp), SAVE                        :: t_air_acc                     = 0.0_wp
+    REAL(wp), SAVE                        :: wind_air_acc                  = 0.0_wp
+    REAL(wp), SAVE                        :: swvis_srf_down_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: lw_srf_down_acc               = 0.0_wp
+    REAL(wp), SAVE                        :: vpd_acc                       = 0.0_wp
+    REAL(wp), SAVE                        :: co2_mixing_ratio_acc          = 0.0_wp
+    REAL(wp), SAVE                        :: co2_mixing_ratio_C13_acc      = 0.0_wp
+    REAL(wp), SAVE                        :: co2_mixing_ratio_C14_acc      = 0.0_wp
     ! variables with accumulated information per soil layer
-    ! hardcoded max soil layer number (20)
+    ! hardcoded Dimension, using max soil layer number of 20 (which actually is the max soil layer number)
     REAL(wp), DIMENSION(max_soil_layers), SAVE :: &
                                              ! C
                                              het_respiration_lay_acc = 0.0_wp       , &
@@ -1723,9 +1761,13 @@ CONTAINS
                                              trans_occluded_po4_acc = 0.0_wp    , &
                                              trans_primary_po4_acc = 0.0_wp     , &
                                              transport_DOP_lay_acc = 0.0_wp
+    INTEGER                               :: lun                        !< locical unit number
+    REAL(wp)                              :: hlp1
+    REAL(wp)                              :: dC13gpp, dC13rg, dC13rm, dC13litterfall, dC13het_resp, dC13leaching
+    REAL(wp)                              :: dC13atm
     LOGICAL                               :: l_flux_calc_acc_output, &  !< do variable accumulation and enable output
                                              l_flux_output_interval     !< do output at this timestep and set accumulation variables to zero
-    REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0    
+    REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0, but might get modified below
     INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
     ! ---------------------------
@@ -1750,6 +1792,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: p_deposition
     dsl4jsb_Real2D_onChunk      :: rain 
     dsl4jsb_Real2D_onChunk      :: snow
+    dsl4jsb_Real2D_onChunk      :: t_air
+    dsl4jsb_Real2D_onChunk      :: wind_air
+    dsl4jsb_Real2D_onChunk      :: swvis_srf_down
+    dsl4jsb_Real2D_onChunk      :: lw_srf_down
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
+    dsl4jsb_Real2D_onChunk      :: press_srf
+    dsl4jsb_Real2D_onChunk      :: q_air
     ! L2A_
     dsl4jsb_Real2D_onChunk      :: albedo
     dsl4jsb_Real2D_onChunk      :: net_radiation
@@ -1885,7 +1936,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
-    dsl4jsb_Get_var2D_onChunk(A2L_, snow) 
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
     dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
@@ -2041,11 +2101,11 @@ CONTAINS
     END IF
     ! accumulate fluxes across the timesteps of one interval:
     ! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
-    ! for any interval larger timestep multiply by dtime
+    ! for any interval larger timestep multiply by dtime_one
     IF(output_interval_flux < 1.0_wp) THEN
-      dtime_one = 1.0_wp                 ! interval = timestep
+      dtime_one = 1.0_wp                 ! interval = one timestep
     ELSE
-      dtime_one = dtime / 1000000.0_wp   ! interval > timestep
+      dtime_one = dtime / 1000000.0_wp   ! interval > one timestep
     END IF
 
 
@@ -2065,6 +2125,8 @@ CONTAINS
            !! accumulate fluxes across the timesteps of one interval
            !! 
            IF(l_flux_calc_acc_output) THEN
+             ! timestep counter for averaging
+             ndat_acc             = ndat_acc              + 1.0_wp
              ! Vegetation
              gpp_acc              = gpp_acc               + gross_assimilation(ipoi)        * dtime_one
              growth_resp_acc      = growth_resp_acc       + growth_respiration(ipoi)        * dtime_one
@@ -2095,7 +2157,7 @@ CONTAINS
                                                                                        recycling_heart_wood_p(ipoi)) * &
                                                                                                 dtime_one *1000000._wp/dtime
              res_use_p_acc        = res_use_p_acc         + veg_reserve_use%phosphorus(ipoi)  * dtime_one *1000000._wp/dtime
-             IF(output_interval_flux < 1.0_wp) THEN
+             IF(output_interval_flux < 1.0_wp) THEN  ! if interval == timestep (output_interval_flux is smaller 1.0 only for timestep interval)
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))  
                 interception_acc = interception_acc  + interception(ipoi)       
                 evaporation_acc  = evaporation_acc   + evaporation(ipoi)       
@@ -2119,7 +2181,6 @@ CONTAINS
              qle_acc          = qle_acc           - latent_heat_flx(ipoi)            * dtime_one               
              qg_acc           = qg_acc            - ground_heat_flx(ipoi)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(ipoi)                      * dtime_one               
-             ndat_acc         = ndat_acc          + 1 
              ! Mycorrhiza
              myco_export_c_acc   = myco_export_c_acc    + SUM(sb_mycorrhiza_export%carbon(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
@@ -2133,18 +2194,30 @@ CONTAINS
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
              myco_export_n15_acc = myco_export_n15_acc  + SUM(sb_mycorrhiza_export%nitrogen15(ipoi,:) * &
                                                           soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             ! atmospheric forcing (A2L_)
+             t_air_acc                = t_air_acc                + t_air(ipoi)
+             wind_air_acc             = wind_air_acc             + wind_air(ipoi)
+             swvis_srf_down_acc       = swvis_srf_down_acc       + swvis_srf_down(ipoi)
+             lw_srf_down_acc          = lw_srf_down_acc          + lw_srf_down(ipoi)
+             vpd_acc                  = vpd_acc + (( calc_spec_humidity_sat(t_air(ipoi),press_srf(ipoi)) - q_air(ipoi) ) / &
+                                                     eps_vpd * press_srf(ipoi) / 1000.0_wp)
+             co2_mixing_ratio_acc     = co2_mixing_ratio_acc     + co2_mixing_ratio(ipoi)
+             co2_mixing_ratio_C13_acc = co2_mixing_ratio_C13_acc + co2_mixing_ratio_C13(ipoi)
+             co2_mixing_ratio_C14_acc = co2_mixing_ratio_C14_acc + co2_mixing_ratio_C14(ipoi)
 
-             !> 1.2 write fluxes and set to zero
+
+             !> 1.2 write fluxes and set to zero when output interval is reached
              !!
              IF(l_flux_output_interval) THEN
 
-               IF(ndat_acc > 1) THEN
-                 gc_acc = gc_acc / ndat_acc
-                 ga_acc = ga_acc / ndat_acc
+               IF(ndat_acc > 1.0_wp) THEN
+                 gc_acc     = gc_acc / ndat_acc
+                 ga_acc     = ga_acc / ndat_acc
                  albedo_acc = albedo_acc / ndat_acc
                ENDIF
        
-               ! land
+               !! land
+               !! 
                SELECT CASE(TRIM(base_config%slm_model_name))  ! cases: land & land/plant & canopy
                  CASE('land')
                    ! mycofluxCNP
@@ -2154,9 +2227,10 @@ CONTAINS
                    lun=lun+1
                END SELECT
 
-               ! land/plant & canopy & soil
+               !! land/plant & canopy
+               !! 
                SELECT CASE(TRIM(base_config%slm_model_name))
-                 CASE('land','plant') ! additional to CASE('land')
+                 CASE('land','plant')
                    ! vegfluxC
                    write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                           n_transform_resp_acc,n_fixation_resp_acc         , & 
@@ -2182,6 +2256,7 @@ CONTAINS
                    ! vegfluxP
                    write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                    lun=lun+1
+                   ! vegfluxH2O
                    write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, & 
                                           transpiration_acc, runoff_acc, drainage_acc, gc_acc, ga_acc
                    lun=lun+1
@@ -2207,6 +2282,7 @@ CONTAINS
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
+                   ! vegfluxH2O
                    write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
                                           drainage_acc, gc_acc, ga_acc
                    lun=lun+1
@@ -2220,7 +2296,33 @@ CONTAINS
                    lun=lun+1
                END SELECT ! land/plant & canopy
 
-               !! set acc variables zero
+
+               !! land & plant & canopy
+               !! 
+               SELECT CASE(TRIM(base_config%slm_model_name))
+                 CASE('land','plant','canopy')
+                   ! atm_forcing
+                   IF(ndat_acc > 1.0_wp) THEN
+                     t_air_acc                = t_air_acc                / ndat_acc
+                     wind_air_acc             = wind_air_acc             / ndat_acc
+                     swvis_srf_down_acc       = swvis_srf_down_acc       / ndat_acc
+                     lw_srf_down_acc          = lw_srf_down_acc          / ndat_acc
+                     vpd_acc                  = vpd_acc                  / ndat_acc
+                     co2_mixing_ratio_acc     = co2_mixing_ratio_acc     / ndat_acc
+                     co2_mixing_ratio_C13_acc = co2_mixing_ratio_C13_acc / ndat_acc
+                     co2_mixing_ratio_C14_acc = co2_mixing_ratio_C14_acc / ndat_acc
+                   ENDIF
+                   dC13atm = calc_delta_C13(co2_mixing_ratio_acc, co2_mixing_ratio_C13_acc) 
+                   write(lun,'(10F20.8)') time_d, precip_acc, t_air_acc, wind_air_acc, swvis_srf_down_acc, lw_srf_down_acc, &
+                                          vpd_acc, co2_mixing_ratio_acc, dC13atm, &
+                                          calc_delta_C14(co2_mixing_ratio_acc, co2_mixing_ratio_C14_acc, dC13atm)
+                   lun=lun+1
+               END SELECT  ! select land/plant & canopy
+
+
+               !! set all acc variables zero
+               !! 
+               ndat_acc                   = 0.0_wp
                gpp_acc                    = 0.0_wp
                growth_resp_acc            = 0.0_wp
                maint_resp_acc             = 0.0_wp
@@ -2257,7 +2359,6 @@ CONTAINS
                qg_acc                     = 0.0_wp
                albedo_acc                 = 0.0_wp
                appfd_acc                  = 0.0_wp
-               ndat_acc                   = 0        ! INTEGER 
                uptake_no3_acc             = 0.0_wp
                uptake_no3_n15_acc         = 0.0_wp
                uptake_nh4_acc             = 0.0_wp
@@ -2268,13 +2369,22 @@ CONTAINS
                myco_export_c13_acc        = 0.0_wp
                myco_export_c14_acc        = 0.0_wp
                myco_export_n15_acc        = 0.0_wp
+               ! atmospheric forcing (precip_acc is already considered above, see vegfluxH2O)
+               t_air_acc                  = 0.0_wp
+               wind_air_acc               = 0.0_wp
+               swvis_srf_down_acc         = 0.0_wp
+               lw_srf_down_acc            = 0.0_wp
+               vpd_acc                    = 0.0_wp
+               co2_mixing_ratio_acc       = 0.0_wp
+               co2_mixing_ratio_C13_acc   = 0.0_wp
+               co2_mixing_ratio_C14_acc   = 0.0_wp
              END IF ! l_flux_output_interval
            END IF   ! l_flux_calc_acc_output
         END IF      ! on/off switch specific to 'special case: fluxnet output'
     END SELECT      ! land/plant/canopy
 
 
-    !! land & soil - additional to CASE('land')
+    !! land/soil
     !!  simple_0d and simple_1d and jsm
     !!  layer-data for simple_1d and jsm
     SELECT CASE(TRIM(base_config%slm_model_name))
