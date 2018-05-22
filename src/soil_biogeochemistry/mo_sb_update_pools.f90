@@ -112,6 +112,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: leaching_no3_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
     dsl4jsb_Real2D_onChunk :: leaching_po4_solute
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
+    dsl4jsb_Real2D_onChunk :: leaching_dom_phosphorus
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon13
+    dsl4jsb_Real2D_onChunk :: leaching_dom_carbon14
+    dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
     dsl4jsb_Real2D_onChunk :: emission_nh3
     dsl4jsb_Real2D_onChunk :: emission_nh3_n15
     dsl4jsb_Real2D_onChunk :: emission_noy
@@ -255,6 +261,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)         ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen)       ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_phosphorus)     ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! in
@@ -697,7 +709,8 @@ CONTAINS
       veg_litterfall%fruit%carbon     + veg_litterfall%seed_bed%carbon    + &
       veg_exudation%carbon                                                    - &
       SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:), DIM=2)  - &
-      SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
+      (leaching_dom_carbon(:)                                            + &
+      SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
     total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen    + &
       veg_litterfall%fine_root%nitrogen + veg_litterfall%coarse_root%nitrogen + &
       veg_litterfall%sap_wood%nitrogen  + veg_litterfall%heart_wood%nitrogen  + &
@@ -707,7 +720,7 @@ CONTAINS
       (nhx_deposition(:) + noy_deposition(:)) * dtime/1.e6_wp                 + & 
       veg_exudation%nitrogen                                                  - &
       SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2)     - &
-      (leaching_nh4_solute(:) + leaching_no3_solute(:)                        + &
+      (leaching_nh4_solute(:) + leaching_no3_solute(:) + leaching_dom_nitrogen(:) + &
        emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)   + &
        SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)              + &
        SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                       
@@ -719,7 +732,7 @@ CONTAINS
       p_deposition(:) * dtime/1.e6_wp                                             + &
       veg_exudation%phosphorus                                                    - &
       SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:), DIM=2)       - &
-      (leaching_po4_solute(:)                                                     + &
+      (leaching_po4_solute(:) + leaching_dom_phosphorus(:)                        + &
        SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
     total_flux_carbon13(:) =                  veg_litterfall%leaf%carbon13        + &
       veg_litterfall%fine_root%carbon13 + veg_litterfall%coarse_root%carbon13 + &
@@ -728,7 +741,8 @@ CONTAINS
       veg_litterfall%fruit%carbon13     + veg_litterfall%seed_bed%carbon13    + &
       veg_exudation%carbon13                                                      - &
       SUM(sb_mycorrhiza_export%carbon13(:,:) * soil_depth_sl(:,:), DIM=2)    - &
-      SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
+      (leaching_dom_carbon13(:)                                              + &
+      SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
     total_flux_carbon14(:) =                  veg_litterfall%leaf%carbon14        + &
       veg_litterfall%fine_root%carbon14 + veg_litterfall%coarse_root%carbon14 + &
       veg_litterfall%sap_wood%carbon14  + veg_litterfall%heart_wood%carbon14  + &
@@ -736,7 +750,8 @@ CONTAINS
       veg_litterfall%fruit%carbon14     + veg_litterfall%seed_bed%carbon14    + &
       veg_exudation%carbon14                                                      - &
       SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:), DIM=2)    - &
-      SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2) * dtime/1.e6_wp
+      (leaching_dom_carbon14(:)                                              + &
+      SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
     total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15      + &
       veg_litterfall%fine_root%nitrogen15 + veg_litterfall%coarse_root%nitrogen15   + &
       veg_litterfall%sap_wood%nitrogen15  + veg_litterfall%heart_wood%nitrogen15    + &
@@ -749,7 +764,7 @@ CONTAINS
       SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:), DIM=2)         - &
       (leaching_nh4_n15_solute(:) + leaching_no3_n15_solute(:)                      + &
        emission_nh3_n15(:) + emission_noy_n15(:) + emission_n2o_n15(:)              + & 
-       emission_n2_n15(:)                                                           + &
+       emission_n2_n15(:) + leaching_dom_nitrogen15(:)                              + &
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                + &
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
