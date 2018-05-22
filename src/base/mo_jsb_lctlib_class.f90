@@ -109,7 +109,8 @@ MODULE mo_jsb_lctlib_class
                 phi_leaf_min          , &
                 k_root                , &
                 k_sapwood             , &
-                c0_allom
+                c0_allom              , &
+                fstore_target
 
 ! Soil
     REAL(wp) :: k_root_dist
@@ -385,6 +386,8 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%k_sapwood
           CASE ('c0_allom')
             READ(line(pos:length),*) lctlib(1:nlct)%c0_allom
+          CASE ('fstore_target')
+            READ(line(pos:length),*) lctlib(1:nlct)%fstore_target
 
           CASE ('k_root_dist')
             READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist

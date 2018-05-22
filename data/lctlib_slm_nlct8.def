@@ -92,8 +92,7 @@ cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14
 np_leaf 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36
         
 #k0_fn_struc: fraction of leaf N not used for photosynthesis (Friend 1997)        
-# temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5        
-# 0.67 0.67 0.67 0.67 0.83 0.83 0.67 0.67        
+# temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5               
 k0_fn_struc 0.75 0.70 0.63 0.63 0.83 0.79 0.3 0.3
         
 #fn_oth_min: minimum fraction of non-photosynthetic leaf N. Calculated using range of leaf N values from GLOPNET        
@@ -257,12 +256,15 @@ phi_leaf_min -1.0 -1.0 -1.0 -1.0 -1.0 -1.0 -0.75 -0.75
 k_root 2.3 2.3 2.3 4.3 2.3 2.3 2.3 2.3
         
 #k_sapwood: sapwood hydraulic conductance (10^3 m2 s-1 MPa-1)        
-# converted internally to m2 s-1 Mpa-1
+# converted internally to m2 s-1 MPa-1
 k_sapwood 3.0 3.0 3.0 3.0 1.3 1.3 0.0 0.0
         
 #c0_allom: hydraulic trade-off parameter for fine root growth        
 # Note: 0.0 is just a placeholder see Read_lctlib() for calculation of actual values        
 c0_allom 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+        
+#fstore_target: the fraction of annual leaf+fine_root biomass production that is the target for the size of the long-term reserve pool        
+fstore_target 1.0 1.2 1.0 1.0 0.5 1.0 1.0 1.0
         
 #        
 # Soil        

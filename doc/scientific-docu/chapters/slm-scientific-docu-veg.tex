@@ -97,7 +97,9 @@ The net exchange of between the labile and reserve pool is calculated as
 \end{align}
 \end{subequations}
 
-with the notable extension that $\Phi^{X}_{reserve}$, i.e. the built up of reserves, is reduced to zero if the labile pool becomes less than a quarter of its target value. To support leaf and fine-root growth at the beginning of the growing season, $\Delta S_X$ is further modified by the phenological pull ($\Phi^{X}_{phen}$) during the growing season
+with the notable extension that $\Phi^{C}_{reserve}$, i.e. the built up of carbon reserves, is reduced if the labile pool falls to low relative to its target, taken as a $\Phi^{C}_{maint}$ larger than $k_{phi,interact}$. Conversely, for N and P, the built up of labile nutrient from reserves ($\Phi^{X}_{maint}$) is reduced, if the reserve pool falls too low, taken as a $\Phi^{X}_{storage}$ larger than $k_{phi,interact}$. 
+
+To support leaf and fine-root growth at the beginning of the growing season, $\Delta S_X$ is further modified by the phenological pull ($\Phi^{X}_{phen}$) during the growing season.
 
 \begin{subequations}
 \begin{align}
@@ -108,10 +110,12 @@ with the notable extension that $\Phi^{X}_{reserve}$, i.e. the built up of reser
 
 is only applied to the carbon pool, as the other elements follow with little delay through the maintenance pull. 
 
-Should the labile carbon pools exceed its target size strongly due to a lack of nutrients to support growth, this provides a signal to the photosynthesis routine to downacclimate the activity of Rubisco and the electron-transport chain, by reducing $n1$ and $n2$ in eq. \ref{eq:jmax} and \ref{eq:vcmax}, respectively, by a factor $\beta_{sinklim}^{ps}$, defined as 
+Should the labile carbon pools exceed its target size strongly, or should the N and P concentration fall strongly due to a lack of nutrients to support growth, this provides a signal to the photosynthesis routine to downacclimate the activity of Rubisco and the electron-transport chain, by reducing $n1$ and $n2$ in eq. \ref{eq:jmax} and \ref{eq:vcmax}, respectively, by a factor $\beta_{sinklim}^{ps}$, defined as 
 
 \begin{equation}\label{eq:beta_sinklim_ps}
-\beta_{sinklim}^{ps} = e^{-(\lambda_{sinklim}^{ps} \times \frac{C_{labile}}{C^{target}_{labile}})^{k_{sinklim}^{ps}}}
+\beta_{sinklim}^{ps} = MIN(e^{-(\lambda_{sinklim}^{ps} \times \frac{C_{labile}}{C^{target}_{labile}})^{k_{sinklim}^{ps}}}, 
+                           \frac{\frac{N_{labile}}{C_{labile}}}{\frac{N^{target}_{labile}}{k_{cnp,sinklim} \times C^{target}_{labile}}}, 
+                           \frac{\frac{P_{labile}}{N_{labile}}}{\frac{P^{target}_{labile}}{k_{cnp,sinklim} \times N^{target}_{labile}}}) 
 \end{equation}
 
 \subsection{Allocation (\texttt{mo\_veg\_growth:calc\_allocation\_fractions})}\label{sec:Allocation}

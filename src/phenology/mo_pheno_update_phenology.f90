@@ -89,6 +89,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: gpp_tlabile_mavg
     dsl4jsb_Real2D_onChunk      :: maint_respiration_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tlabile_mavg
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -125,6 +127,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)        ! inout
 
 
 
@@ -146,6 +150,8 @@ CONTAINS
                         gpp_tlabile_mavg(:)                , &
                         maint_respiration_tlabile_mavg(:)  , &
                         growing_season(:)                  , &  ! inout
+                        growth_req_n_tlabile_mavg(:)       , &
+                        growth_req_p_tlabile_mavg(:)       , &
                         nd_dormance(:)                     , &
                         gdd(:)                             )
 
@@ -171,6 +177,8 @@ CONTAINS
                                       gpp_tlabile_mavg                , &
                                       maint_respiration_tlabile_mavg  , &
                                       growing_season                  , &
+                                      growth_req_n_tlabile_mavg       , &
+                                      growth_req_p_tlabile_mavg       , &
                                       nd_dormance                     , &
                                       gdd )
 
@@ -194,8 +202,10 @@ CONTAINS
                                                    gpp_tlabile_mavg                , & !< moving average gpp over tlabile
                                                    maint_respiration_tlabile_mavg      !< moving average maintenance respiration over tlabile
     LOGICAL,                      INTENT(inout) :: growing_season                      !< growing season Yes/No
-    REAL(wp),                     INTENT(inout) :: nd_dormance                     , & !< ..
-                                                   gdd                                 !< ..
+    REAL(wp),                     INTENT(inout) :: growth_req_n_tlabile_mavg       , & !< moles N required for a unit of C growth to determine labile pool size
+                                                   growth_req_p_tlabile_mavg       , & !< moles P required for a unit of N growth to determine labile pool size
+                                                   nd_dormance                     , & !< number of days in dormancy since last growing season
+                                                   gdd                                 !< growing degree days 
     ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: hlp1                                      ! helper variable for tmp values
@@ -214,18 +224,27 @@ CONTAINS
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) & 
+            IF(beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) THEN 
                   growing_season = .TRUE.
+                  growth_req_n_tlabile_mavg = 1._wp / lctlib%cn_leaf
+                  growth_req_p_tlabile_mavg = 1._wp / lctlib%np_leaf
+            ENDIF
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
             hlp1 = lctlib%gdd_req_max * exp( - lctlib%k_gdd_dormance * nd_dormance ) 
-            IF(gdd > hlp1) & 
+            IF(gdd > hlp1) THEN 
                   growing_season = .TRUE.
+                  growth_req_n_tlabile_mavg = 1._wp / lctlib%cn_leaf
+                  growth_req_p_tlabile_mavg = 1._wp / lctlib%np_leaf
+            ENDIF
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
             hlp1 = lctlib%gdd_req_max * exp( - lctlib%k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1 .AND. &
-               beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) & 
+               beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush)THEN 
                   growing_season = .TRUE.
+                  growth_req_n_tlabile_mavg = 1._wp / lctlib%cn_leaf
+                  growth_req_p_tlabile_mavg = 1._wp / lctlib%np_leaf
+            ENDIF
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
        SELECT CASE (lctlib%phenology_type)

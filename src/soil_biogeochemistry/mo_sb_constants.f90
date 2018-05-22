@@ -366,7 +366,7 @@ CONTAINS
     ! simple leaching
     fleach_nh4 = 0.1_wp
     fleach_po4 = 0.001_wp
-    soil_n_threshold_bnf = 0.0357_wp 
+    soil_n_threshold_bnf = 0.05_wp 
 
     ! All values from Robinson 2001, TREE
     eta_mic_uptake_nh4     = 17._wp
