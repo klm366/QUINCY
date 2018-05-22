@@ -742,7 +742,7 @@ CONTAINS
        IF(.NOT. exists_upper_tlim) &
             CALL finish('init_lctlib','No data for UPPER_TLIM found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_fract_wood_2_onSite) &
-            CALL finish('init_lctlib','No data for FRAC_WOOD_2_ONSITE found in '//TRIM(lctlib_file_name))
+            CALL finish('init_lctlib','No data for FRACT_WOOD_2_ONSITE found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_fract_wood_2_paper) &
             CALL finish('init_lctlib','No data for FRACT_WOOD_2_PAPER found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_fract_wood_2_construction) &

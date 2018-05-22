@@ -58,8 +58,6 @@ CONTAINS
 
     CALL fuel_init_bc(tile)
 
-
-
   END SUBROUTINE fuel_init
 
   SUBROUTINE fuel_init_bc(tile)
@@ -70,8 +68,6 @@ CONTAINS
     USE mo_input,         ONLY: InputOptAdd, moffledac
 #endif
 
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(FUEL_)
