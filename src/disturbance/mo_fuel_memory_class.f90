@@ -20,6 +20,9 @@ MODULE mo_fuel_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,                  ONLY: input_var_list, InputVarGetRef
+#endif
 
   ! Use of processes in this module
   dsl4jsb_Use_processes FUEL_
@@ -34,18 +37,26 @@ MODULE mo_fuel_memory_class
 
   PUBLIC :: t_fuel_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 5
+  INTEGER, PARAMETER :: max_no_of_vars = 10
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_fuel_memory
 
-   TYPE(t_jsb_var_real2d) ::   &
+    TYPE(t_jsb_var_real2d) ::  &
       fuel,                    & ! R: Normalerweise wäre dies eine lokale Variable, weil sie nur für das veg Tile berechnet wird 
                                  ! und nur für Feuer benötigt wird. Aber sie wird 1. nach dem Zeitschritt wieder verwendet und
                                  ! sollte 2. im Output sein, da sie nicht nur technisch wichtig ist!
       population_density,      & ! Population density (not defined on pft-level)
       lightning_frq,           & ! lightning_frq
-      a_nd                       ! Human propensity of igniting a fire
+      lightning_c2g,           & ! fraction of lightnings from cloud to ground (if available)
+      a_nd,                    & ! Human propensity of igniting a fire
+      NI_acc,                  & ! Accumulated Nesterov index
+      human_ignitions            ! Calculated number of human ignitions
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_var_list), POINTER :: &
+      var_Light => NULL(),     & ! MofFlEDAc reference to lightning data
+      var_c2g   => NULL()        ! MofFlEDAc reference to cloud to ground conversion data
+#endif
   CONTAINS
     PROCEDURE :: Init => Init_fuel_memory
   END TYPE t_fuel_memory
@@ -97,7 +108,7 @@ CONTAINS
         & t_cf('fuel', 'mol(C)/m^2', 'Amount of carbon fuel for burned area calculations.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
-        & output_level=BASIC,                                                             &
+        & output_level=BASIC,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
@@ -106,13 +117,57 @@ CONTAINS
         CASE (FIRE_JSB3)
           ! JSB3-JSBACH-fire does not need any further variables
         CASE (FIRE_SPITFIRE)
-          CALL jsb_add_var( mem, 'population_density', mem%population_density,                                               &
+
+          CALL jsb_add_var( mem, 'population_density', mem%population_density,        &
             & hgrid, surface,                                                         &
             & t_cf('population_density', 'm^-2', 'Population density for Spitfire.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
             & prefix, suffix,                                                         &
             & output_level=BASIC,                                                     &
             & lrestart=.FALSE., initval_r=0.0_wp )
+
+          CALL jsb_add_var( mem, 'lightning_frq', mem%lightning_frq,                          &
+            & hgrid, surface,                                                                 &
+            & t_cf('lightning_frq', 'km^-2 day^-1', 'Frequency of lightnings for Spitfire.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+            & prefix, suffix,                                                                 &
+            & output_level=BASIC,                                                             &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+
+          CALL jsb_add_var( mem, 'lightning_c2g', mem%lightning_c2g,                         &
+            & hgrid, surface,                                                                &
+            & t_cf('lightning_c2g', '', 'Fraction cloud to groun lightnings for Spitfire.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+            & prefix, suffix,                                                                &
+            & output_level=BASIC,                                                            &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+
+          CALL jsb_add_var( mem, 'a_nd', mem%a_nd,                               &
+            & hgrid, surface,                                                    &
+            & t_cf('a_nd', 'm^-2', 'Propensity for humans to ignite fires.'),    &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & output_level=BASIC,                                                &
+            & lrestart=.FALSE., initval_r=0.0_wp )
+
+          mem%var_Light => InputVarGetRef(prefix//'_lightning_frq_'//suffix)
+          mem%var_c2g   => InputVarGetRef(prefix//'_lightning_c2g_'//suffix)
+
+          CALL jsb_add_var( mem, 'NI_acc', mem%NI_acc,                           &
+            & hgrid, surface,                                                    &
+            & t_cf('NI_acc', 'K^2','Accumulated Nesterov index.'),               &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & output_level=FULL,                                                 &
+            & lrestart=.TRUE., initval_r=0.0_wp )
+
+          CALL jsb_add_var( mem, 'human_ignitions', mem%human_ignitions,         &
+            & hgrid, surface,                                                    &
+            & t_cf('human_ignitions', '#','Human ignitions.'),                   &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & output_level=FULL,                                                 &
+            & lrestart=.TRUE., initval_r=0.0_wp )
 
       END SELECT
 

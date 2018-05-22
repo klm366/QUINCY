@@ -28,15 +28,17 @@ MODULE mo_fuel_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FUEL_, CARBON_, PHENO_
+  dsl4jsb_Use_processes FUEL_, CARBON_, PHENO_, DISTURB_, SEB_
 
   ! Use of process configurations
   dsl4jsb_Use_config(FUEL_)
+  dsl4jsb_Use_config(DISTURB_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -106,10 +108,11 @@ CONTAINS
   !!
   SUBROUTINE update_fuel(tile, options)
 
-    USE mo_fuel_process,   ONLY: calc_fuel_jsb3
+    USE mo_fuel_process,   ONLY: calc_fuel_jsb3, calc_c2g_lightning, calc_nesterov, calc_human_ignition
     USE mo_jsb_time,       ONLY: is_newday
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
     USE mo_fuel_constants, ONLY: FUEL_JSB3, FUEL_SPITFIRE
+    USE mo_jsb_grid,       ONLY: Get_grid
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -117,6 +120,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
+    TYPE(t_jsb_grid),  POINTER                :: grid
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -125,8 +129,10 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(FUEL_)
+    dsl4jsb_Def_memory(SEB_)
 
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(DISTURB_)
 
     dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
     !
@@ -138,6 +144,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
+
+    ! spitfire variables
+    dsl4jsb_Real2D_onChunk :: population_density
+    dsl4jsb_Real2D_onChunk :: a_nd
+    dsl4jsb_Real2D_onChunk :: lightning_frq
+    dsl4jsb_Real2D_onChunk :: lightning_c2g
+    dsl4jsb_Real2D_onChunk :: NI_acc
+    dsl4jsb_Real2D_onChunk :: previous_day_precip
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_min
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_max
+    dsl4jsb_Real2D_onChunk :: human_ignitions
     !
     ! Locally allocated vectors
     !
@@ -160,10 +177,12 @@ CONTAINS
 
     ! Get process configurations
     dsl4jsb_Get_config(FUEL_)
+    dsl4jsb_Get_config(DISTURB_)
 
     ! Get process memories
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(SEB_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! out
@@ -199,7 +218,24 @@ CONTAINS
             & )
 
         CASE (FUEL_SPITFIRE)
-          CALL finish(TRIM(routine),'Thornicke/spitfire fuel algorithm not implemented yet.')
+          ! StW: Presently Spitfire fuel is calculated in the DISTURB_ process for each tile individually
+          !      Here only auxillary data for the Spitfire model are prepared
+          grid => Get_grid(model%grid_id)
+          dsl4jsb_Get_var2D_onChunk(FUEL_,population_density)
+          dsl4jsb_Get_var2D_onChunk(FUEL_,a_nd)
+          dsl4jsb_Get_var2D_onChunk(FUEL_,lightning_frq)
+          dsl4jsb_Get_var2D_onChunk(FUEL_,lightning_c2g)
+          dsl4jsb_Get_var2D_onChunk(FUEL_,NI_acc)
+          dsl4jsb_Get_var2D_onChunk(SEB_, previous_day_precip)
+          dsl4jsb_Get_var2D_onChunk(SEB_, previous_day_temp_min)
+          dsl4jsb_Get_var2D_onChunk(SEB_, previous_day_temp_max)
+          dsl4jsb_Get_var2D_onChunk(FUEL_,human_ignitions)
+          CALL calc_c2g_lightning(dsl4jsb_memory(FUEL_)%var_Light,dsl4jsb_memory(FUEL_)%var_c2g, &
+                                  dsl4jsb_Config(DISTURB_)%fire_spitfire_llight_ground,          &
+                                  lightning_frq(:), lightning_c2g(:),grid%lat(:,iblk))
+          CALL calc_human_ignition(population_density(:),a_nd(:),human_ignitions(:))
+          CALL calc_nesterov(NI_acc(:),previous_day_precip(:),previous_day_temp_min(:),previous_day_temp_max(:))
+          fuel(:) = 0._wp
         CASE DEFAULT
           CALL finish(TRIM(routine),'Unknown fuel algorithm')
       END SELECT
