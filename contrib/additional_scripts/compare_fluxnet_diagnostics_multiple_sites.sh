@@ -10,13 +10,15 @@
 ## provide the location of baseline & new/testing simulation folders
 ## the sites in the new/testing simulation folder can be a subset of the sites in the baseline folder
 ## you can set baselineExpFolder="default" to use /Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/fluxnet_diagnostics_default
+##   which points always to the latest usecase 80 simulations
+## 
 ## note: no trailing "/" but simply "/path/exp_ID" e.g. "/path/exp_fluxnet_test01"
-baselineExpFolder="default"
-newSimulationExpFolder="/Net/Groups/BGI/scratch/jengel/slm/exp_r998_fluxdiagn02"
+baselineExpFolder="/Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/exp_80_baseline_fluxnet_r1130"
+newSimulationExpFolder="/Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/exp_80_baseline_fluxnet_r1185"
 
 ## modify the location of the all_sites_list.dat if necessary (e.g. when working with a local copy)
 ## default: allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/all_sites_list.dat"
-allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/all_sites_list.dat"
+allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1996-2008_list.dat"
 
 
 
@@ -80,3 +82,8 @@ done
 sync
 echo " "
 echo " all sites completed"
+echo " "
+
+chmod g+w -R /Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/*
+echo " and also set group write-rights to the folders within  work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/ "
+echo " "
