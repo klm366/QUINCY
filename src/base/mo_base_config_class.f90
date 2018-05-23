@@ -26,7 +26,7 @@ MODULE mo_base_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_base_config
-    ! BASE_CTL
+    !! BASE_CTL
     REAL(wp)          :: dtime                             !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
     CHARACTER(len=20) :: slm_model_name
     CHARACTER(8)      :: output_interval_pool, &
@@ -41,11 +41,14 @@ MODULE mo_base_config_class
     LOGICAL           :: flag_climate_forcing_one_year
     LOGICAL           :: flag_stand_harvest
     INTEGER           :: stand_replacing_year
-    ! GRID_CTL
+    !! GRID_CTL
     REAL(wp)          :: lat, lon                           !< latitude longitude currently stored in mo_base_memory:t_slm_grid
     
-    ! other parameters than namelist parameters
+    !! other parameters than namelist parameters
     LOGICAL           :: l_do_stand_replacing_harvest
+    LOGICAL           :: l_transient_forcing_mode, &        !< set to TRUE if forcing_options%forcing_mode == transient
+                         l_transient_spinup, &              !< TRUE for forcing_mode=='transient' and model spinup, otherwise FALSE
+                         l_transient_spinup_rewind_forcing  !< TRUE at the timestep after one transient spinup period has finished (e.g. after 1930 for 1901-1930)
   CONTAINS
     PROCEDURE :: Init => Init_base_config
   END Type t_base_config

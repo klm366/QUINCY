@@ -35,7 +35,6 @@ CONTAINS
                                   l_forcing, &           ! forcing on/off
                                   time_day, time_year, &
                                   timestep_prop_day  , &
-                                  l_transient_spinup , &
                                   !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -138,7 +137,6 @@ CONTAINS
     REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
     INTEGER,INTENT(in)                  :: time_year         !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
     REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
-    LOGICAL,INTENT(in)                  :: l_transient_spinup!< spinup phase of the transient forcing_mode
     REAL(wp),INTENT(in)           :: &               !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
@@ -276,22 +274,7 @@ CONTAINS
     END IF
 
 
-    !> 2.0 check stand harvest year (if this functionality is enabled: base_config\%flag_stand_harvest)
-    !! 
-    !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
-    IF (base_config%flag_stand_harvest .AND. .NOT. l_transient_spinup) THEN
-      IF (base_config%l_do_stand_replacing_harvest) THEN
-        base_config%l_do_stand_replacing_harvest = .FALSE.    ! per default this flag is FALSE
-      END IF
-      IF (forcing_options%forcing_year .EQ. base_config%stand_replacing_year .AND. &
-          forcing_options%forcing_doy  .EQ. 1                                .AND. &
-          forcing_options%forcing_hour .LT. eps4                                    ) THEN
-        base_config%l_do_stand_replacing_harvest = .TRUE.     ! TRUE only for this specific timestep, per default this flag is FALSE
-      END IF
-    END IF
-
-
-    !> 3.0 Run the tasks defined for the specific SLM model
+    !> 2.0 Run the tasks defined for the specific SLM model
     !! 
     !! land plant soil canopy \n 
     !! test_canopy is a species case and runs for only one timestep
@@ -302,10 +285,10 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_assimi_fluxes(tile,model%options)! mo_assimi_util
-      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
-      CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
-      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
+      CALL reset_assimi_fluxes    (tile,model%options)! mo_assimi_util
+      CALL reset_veg_fluxes       (tile, model%options)  ! mo_veg_util
+      CALL reset_sb_fluxes        (tile, model%options)   ! mo_sb_util
+      CALL reset_soil_fluxes      (tile, model%options) ! mo_soil_util
 
       !! run Tasks
       !!
@@ -316,7 +299,7 @@ CONTAINS
       CALL update_soil_physics    (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
-      CALL update_veg_dynamics    (tile, model%options, l_transient_spinup)
+      CALL update_veg_dynamics    (tile, model%options)
       SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
         CASE("simple_0d", "simple_1d")
           CALL update_sb_simple_model (tile, model%options)
@@ -335,18 +318,18 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_pool(tile, model%options, time_day, time_year)
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !!
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
       !! output litterfall and soilphysics: usually this would be output at each timstep
       !!
       !!
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year, l_transient_spinup)
+        CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
 
     CASE('plant')
@@ -366,7 +349,7 @@ CONTAINS
       CALL update_soil_physics    (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
-      CALL update_veg_dynamics    (tile, model%options, l_transient_spinup)
+      CALL update_veg_dynamics    (tile, model%options)
       CALL update_veg_growth      (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
 
@@ -378,18 +361,18 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_pool(tile, model%options, time_day, time_year)
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !!
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
       !! output litterfall and soilphysics: usually this would be output at each timstep
       !!
       !!
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year, l_transient_spinup)
+        CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
 
     CASE('soil')
@@ -417,12 +400,12 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_pool(tile, model%options, time_day, time_year)
 
       !! output flux: write output in certain intervals, see mo_shared_output
       !!
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
@@ -451,12 +434,12 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !!
-      CALL write_output_pool(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_pool(tile, model%options, time_day, time_year)
       
       !! output flux: write output in certain intervals, see mo_shared_output
       !! ! only some flux files are written, see CASE statements in shared_output
       !!
-      CALL write_output_flux(tile, model%options, time_day, time_year, l_transient_spinup)
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
     CASE('test_canopy')
     !! test_canopy --------------------------------------------------------------------------------
@@ -467,7 +450,7 @@ CONTAINS
     END SELECT  ! select SLM model !
 
 
-    !> 4.0 pass atmland variables from l2a memory back to the driver
+    !> 3.0 pass atmland variables from l2a memory back to the driver
     !! 
     !! 
     IF (l_forcing) THEN       ! l_forcing is true if update_a2l() is called (depends on the SLM model selected)

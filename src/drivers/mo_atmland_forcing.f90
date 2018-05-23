@@ -44,7 +44,6 @@ CONTAINS
                               iblk               , &  ! in
                               nsoil_sb           , &  ! in
                               time               , &  ! in
-                              l_transient_spinup_rewind_forcing, & ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
                                   rain               , &  ! out
@@ -112,7 +111,6 @@ CONTAINS
     TYPE(t_slm_tile)  , INTENT(inout) :: tile                           !< one tile
     INTEGER           , INTENT(in)    :: ics, ice, nc, iblk, nsoil_sb   !< info on block, chunk and soil layer number
     REAL(wp)          , INTENT(in)    :: time                           !< current time (not timestep !)
-    LOGICAL           , INTENT(in)    :: l_transient_spinup_rewind_forcing
     REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
@@ -336,7 +334,7 @@ CONTAINS
 
     ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
     ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
-    IF(l_transient_spinup_rewind_forcing) THEN
+    IF(base_config%l_transient_spinup_rewind_forcing) THEN
       stat = -1
     END IF
 
@@ -466,7 +464,7 @@ CONTAINS
 
     ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
     ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
-    IF(l_transient_spinup_rewind_forcing) THEN
+    IF(base_config%l_transient_spinup_rewind_forcing) THEN
       stat = -1
     END IF
 
@@ -507,7 +505,7 @@ CONTAINS
 
     ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
     ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
-    IF(l_transient_spinup_rewind_forcing) THEN
+    IF(base_config%l_transient_spinup_rewind_forcing) THEN
       stat = -1
     END IF
 

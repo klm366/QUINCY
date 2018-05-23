@@ -45,9 +45,6 @@ PROGRAM land_model_driver
   !! Local variables
   !! 
   LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
-  LOGICAL       :: l_transient_forcing_mode, &        ! set to TRUE if forcing_options%forcing_mode == transient
-                   l_transient_spinup, &              ! TRUE for forcing_mode=='transient' and model spinup, otherwise FALSE
-                   l_transient_spinup_rewind_forcing  ! TRUE at the timestep after one transient spinup period has finished (e.g. after 1930 for 1901-1930)
   INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
   INTEGER       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
   INTEGER       :: nsoil_sb             !< necessary for open_pool_output_files() & init_output_writing_pool()
@@ -227,16 +224,16 @@ PROGRAM land_model_driver
   !! settings for the transient forcing_mode
   !! 
   ! init with default values
-  l_transient_forcing_mode          = .FALSE.
-  l_transient_spinup                = .FALSE.
-  l_transient_spinup_rewind_forcing = .FALSE.
+  base_config%l_transient_forcing_mode          = .FALSE.
+  base_config%l_transient_spinup                = .FALSE.
+  base_config%l_transient_spinup_rewind_forcing = .FALSE.
   itimestep                         = 1         ! default start of time loop
   transient_spinup_itimestep_period = 0  
   ! set simulation values
   IF ( TRIM(forcing_options%forcing_mode) == "transient" ) THEN
     ! set logicals to TRUE
-    l_transient_forcing_mode  = .TRUE.
-    l_transient_spinup        = .TRUE.  ! transient forcing_mode always starts with a spinup
+    base_config%l_transient_forcing_mode  = .TRUE.
+    base_config%l_transient_spinup        = .TRUE.  ! transient forcing_mode always starts with a spinup
     ! number of spinup timesteps
     itimestep = itimestep - forcing_options%transient_spinup_timesteps_all
     ! init spinup period counter
@@ -270,22 +267,22 @@ PROGRAM land_model_driver
     !! 4.2 control variables for transient forcing_mode
     !! 
     !! 
-    IF (l_transient_forcing_mode) THEN
-      l_transient_spinup_rewind_forcing = .FALSE.
+    IF (base_config%l_transient_forcing_mode) THEN
+      base_config%l_transient_spinup_rewind_forcing = .FALSE.
       ! control spinup
-      IF (l_transient_spinup) THEN
+      IF (base_config%l_transient_spinup) THEN
         transient_spinup_itimestep_period = transient_spinup_itimestep_period + 1
         ! if one spinup period has finished
         IF (transient_spinup_itimestep_period .GT. forcing_options%transient_spinup_timesteps_repeat) THEN
-          transient_spinup_itimestep_period = 1
-          l_transient_spinup_rewind_forcing = .TRUE.
+          transient_spinup_itimestep_period             = 1
+          base_config%l_transient_spinup_rewind_forcing = .TRUE.
         END IF
         ! if complete spinup has ended and the simulation should start
         IF (itimestep .EQ. 1) THEN
-          l_transient_spinup_rewind_forcing = .TRUE.
-          l_transient_spinup                = .FALSE.   ! do not enter the "control spinup" IF statement anymore
-          time_day                          = 0.0_wp    ! equals 1.0 after one day has passed (i.e. start with zero)
-          time_year                         = 1         ! the 1st year of a simulation == 1 (not zero)
+          base_config%l_transient_spinup_rewind_forcing = .TRUE.
+          base_config%l_transient_spinup                = .FALSE.   ! do not enter the "control spinup" IF statement anymore
+          time_day                                      = 0.0_wp    ! equals 1.0 after one day has passed (i.e. start with zero)
+          time_year                                     = 1         ! the 1st year of a simulation == 1 (not zero)
         END IF
       END IF
     END IF
@@ -303,7 +300,6 @@ PROGRAM land_model_driver
                             iblk    , &
                             nsoil_sb, &
                             time_day, & 
-                            l_transient_spinup_rewind_forcing, &
                                   !! forcing (read from file and passed to a2l memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
                                   t_air                   = t_air(:)              , &
@@ -354,8 +350,9 @@ PROGRAM land_model_driver
     !! 
     CALL land_model_interface(tile, &
                               l_forcing, &
-                              time_day, time_year, timestep_prop_day, &
-                              l_transient_spinup, &
+                              time_day, &
+                              time_year, &
+                              timestep_prop_day, &
                                   !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &

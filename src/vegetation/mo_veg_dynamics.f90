@@ -32,7 +32,7 @@ CONTAINS
   !! a background_mort_rate exists for each trees and grasses, defined as mortality rate per year
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_veg_dynamics(tile, options, l_transient_spinup)
+  SUBROUTINE update_veg_dynamics(tile, options)
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_class,             ONLY: Get_model
@@ -41,6 +41,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: one_year, one_day
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_veg_constants,         ONLY: itree
 
     ! Use of process configurations (t_PROC_config)
@@ -60,14 +61,13 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
-    LOGICAL,                  INTENT(in)    :: l_transient_spinup!< spinup phase of the transient forcing_mode
     ! ---------------------------
     ! 0.2 Local 
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    REAL(wp), DIMENSION(options%nc)       :: fpc        !< current foliage projective cover
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
-    REAL(wp), DIMENSION(options%nc)       :: fpc        !< current foliage projective cover
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -159,12 +159,24 @@ CONTAINS
                                                     dens_ind(:),height(:),diameter(:))
     ENDSELECT
 
-    !> 1.1 Increase age of the cohort [years] & check if cohort harvest is reached
+
+    !> 1.1 check stand harvest year (if this functionality is enabled: base_config\%flag_stand_harvest)
+    !! 
+    !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
+    IF (base_config%flag_stand_harvest .AND. .NOT. base_config%l_transient_spinup) THEN
+      base_config%l_do_stand_replacing_harvest = .FALSE.                                      ! per default this flag is FALSE
+      IF (forcing_options%forcing_year .EQ. base_config%stand_replacing_year .AND. &
+          forcing_options%forcing_doy  .EQ. 1                                .AND. &
+          forcing_options%forcing_hour .LT. eps4                                    ) THEN
+        base_config%l_do_stand_replacing_harvest = .TRUE.     ! TRUE only for this specific timestep, per default this flag is FALSE
+      END IF
+    END IF
+
+
+    !> 1.2 Increase age of the cohort [years] & check if cohort harvest is reached
     !! 
     !! apply this only after spinup of transient mode has finished
-    !! @todo update_veg_dynamics() move l_transient_spinup into the TYPE t_forcing_options so that it can simply be USEd here \n
-    !!       instead of beeing an argument to this routine
-    IF (.NOT. l_transient_spinup) THEN
+    IF (.NOT. base_config%l_transient_spinup) THEN
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
         CASE ("cohort")
           cohort_age(:)          = cohort_age(:) + base_config%dtime / (one_year * one_day)
@@ -175,6 +187,7 @@ CONTAINS
           ENDWHERE
       ENDSELECT
     ENDIF
+
 
     !> 2.0 Calculate mortality rate and veg\%litterfall
     !! 

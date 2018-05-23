@@ -497,10 +497,11 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_pool(tile, options, time_d, time_y, l_transient_spinup)
+  SUBROUTINE write_output_pool(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
@@ -527,7 +528,6 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in) :: options     !< model options
     REAL(wp), INTENT(in)                 :: time_d      !< time in days
     INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
-    LOGICAL,  INTENT(in)                 :: l_transient_spinup
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
@@ -728,7 +728,7 @@ CONTAINS
         IF (fluxnet_output_status < 3) THEN 
           ! after spinup, when doing transient simulations
           ! output start & end
-          IF(.NOT. l_transient_spinup .AND. &
+          IF(.NOT. base_config%l_transient_spinup .AND. &
              & time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
             ! matching output_interval
             IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
@@ -741,7 +741,7 @@ CONTAINS
       CASE('soil')
         ! after spinup, when doing transient simulations
         ! output start & end
-        IF(.NOT. l_transient_spinup .AND. &
+        IF(.NOT. base_config%l_transient_spinup .AND. &
            & time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
           ! matching output_interval
           IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
@@ -1569,12 +1569,13 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_flux(tile, options, time_d, time_y, l_transient_spinup)
+  SUBROUTINE write_output_flux(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_base_config_class,     ONLY: base_config
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
@@ -1606,7 +1607,6 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)    :: options        !< model options
     REAL(wp),                 INTENT(in)    :: time_d         !< time in days
     INTEGER,                  INTENT(in)    :: time_y         !< time in years; the 1st year of a simulation == year 1 (not zero)
-    LOGICAL,                  INTENT(in)    :: l_transient_spinup
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
@@ -2079,7 +2079,7 @@ CONTAINS
     !! test if TRUE
     ! after spinup, when doing transient simulations
     ! output start & end
-    IF(.NOT. l_transient_spinup .AND. &
+    IF(.NOT. base_config%l_transient_spinup .AND. &
        & time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
       ! set TRUE
       l_flux_calc_acc_output = .TRUE.
@@ -2889,10 +2889,11 @@ CONTAINS
   !!  litterfall data and SB rate modifiers 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_soil_forcing(tile, options, time_d, time_y, l_transient_spinup)
+  SUBROUTINE write_soil_forcing(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
@@ -2911,7 +2912,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     REAL(wp),                   INTENT(in)        :: time_d       !< time in days
     INTEGER,                    INTENT(in)        :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
-    LOGICAL,                    INTENT(in)        :: l_transient_spinup
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
@@ -2993,7 +2993,7 @@ CONTAINS
     !> 1.0 check output start & end, and write litterfall and soilphysics if appropriate
     !! 
     !! identical output period as pools & fluxes
-    IF(.NOT. l_transient_spinup .AND. &
+    IF(.NOT. base_config%l_transient_spinup .AND. &
        time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 + 60
