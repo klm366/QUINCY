@@ -207,6 +207,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: cover_frac_pot
 
+    dsl4jsb_Real2D_onChunk :: carbon_2_atmos_ta
+
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
@@ -289,7 +291,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_1)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_2)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_atmos)           ! inout
+
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_frac_pot)           ! in
+
+    ! for the conservation test 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_atmos_ta)        ! in
+
 
     ! ---------------------------
     ! Go
@@ -336,16 +343,15 @@ CONTAINS
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
             ENDIF
 
-!TODO-JN-COHORTS: comment back in
-            ! CALL burned_frac_jsbach( &
-            !   & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
-            !   & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
-            !   & fire_minimum,                & ! in
-            !   & fire_tau,                    & ! in
-            !   & q_rel_air_climbuf(:),        & ! in
-            !   & fuel(:),                     & ! in
-            !   & burned_frac(:)               & ! out
-            !   & )
+            CALL burned_frac_jsbach( &
+              & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
+              & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
+              & fire_minimum,                & ! in
+              & fire_tau,                    & ! in
+              & q_rel_air_climbuf(:),        & ! in
+              & fuel(:),                     & ! in
+              & burned_frac(:)               & ! out
+              & )
 
           CASE (2) !! Arora & Boer algorithm
             CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
@@ -491,7 +497,7 @@ CONTAINS
                 & YCpool_nonsoluble_bg2(:),      & ! inout
                 & YCpool_humus_1(:),             & ! inout
                 & YCpool_humus_2(:),             & ! inout
-                & carbon_2_atmos(:)              & ! out
+                & carbon_2_atmos(:)              & ! inout
                 & )
 
               CALL update_per_tile_vars(tile, options, &
@@ -508,9 +514,9 @@ CONTAINS
                 & carbon_2_GreenLitterPools = carbon_2_GreenLitterPools(:), &
                 & carbon_2_WoodLitterPools = carbon_2_WoodLitterPools(:), carbon_2_atmos = carbon_2_atmos(:))
 
-              ! negate carbon_2_atmos -- its a flux away from the land and therefore previously negative
+              ! negate carbon_2_atmos_ta -- its a flux away from the land and therefore previously negative
               CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
-                & -carbon_2_atmos(:), cconservation_fire(:))
+                & -carbon_2_atmos_ta(:), cconservation_fire(:))
 
             CASE (2) !! Arora & Boer algorithm
               CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')

@@ -21,10 +21,12 @@ MODULE mo_fage_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FAGE_
+  dsl4jsb_Use_processes FAGE_, DISTURB_
 
   ! Use process configurations
   dsl4jsb_Use_config(FAGE_)
+  dsl4jsb_Use_config(DISTURB_)
+  
 
   IMPLICIT NONE
   PRIVATE
@@ -38,7 +40,9 @@ MODULE mo_fage_memory_class
       & mean_age                    ! Mean age of child cohorts
     TYPE(t_jsb_var_real3d) :: &
       & fract_per_age,        &     ! Area fraction having a certain age - age = index third dim
-      & cohort_max_age              ! maximum age of the child cohorts 
+      & cohort_max_age,       &     ! maximum age of the child cohorts 
+      & disturbed_area              ! If run with disturbances: disturbed area 
+                                    ! -> TODO-JN: this only makes sense with fixed cohort boundaries!? 
   CONTAINS
     PROCEDURE :: Init => Init_fage_memory
   END TYPE t_fage_memory
@@ -113,6 +117,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
+
+      IF (model%processes(DISTURB_)%p%config%active) THEN
+
+        CALL jsb_add_var( mem, 'disturbed_area', mem%disturbed_area,             &
+          & hgrid, cohort_grid,                                                  &
+          & t_cf('disturbed_area', 'y', ''),                                     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput = .TRUE., initval_r=0.0_wp )
+
+      ENDIF
+
 
     END IF
 

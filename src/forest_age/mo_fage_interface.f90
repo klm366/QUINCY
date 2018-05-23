@@ -388,9 +388,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real3D_onChunk :: cohort_max_age
+    dsl4jsb_Real3D_onChunk :: disturbed_area
 
     CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild
-    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, disturbedArea, helper1, helper2
+    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, helper1, helper2
 
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
@@ -417,6 +418,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
     dsl4jsb_Get_var3D_onChunk(FAGE_, cohort_max_age)
+    dsl4jsb_Get_var3D_onChunk(FAGE_, disturbed_area)
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
     max_age = dsl4jsb_Config(FAGE_)%max_age
@@ -448,20 +450,33 @@ CONTAINS
         burned_frac => disturb__mem%burned_frac%ptr(ics:ice,iblk)
         damaged_frac => disturb__mem%damaged_frac%ptr(ics:ice,iblk)
 
-!print *, i, burned_frac(:)
+!TODO: über ta, ra und densities denken  
 
-        !TODO-JN-COHORTS - think about absolute vs relative fracts
+        !***********************************************
+        !*** care for fire damage
+        !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged? 
+        burnedArea(:) = burned_frac(:) * source_fract(:)
 
-!TODO: for fire -- ah, vielleicht zeitlich erst feuer, weil so in dist? obwohl is arbitrary, oder?!
-! ++ auch da über ta, ra und densities denken  
-! ++ generalisieren?
-! ++ fire calculation is switched off currently in disturbances! 
+        ! a) changes in area
+        ! reduce current tiles delta fraction  
+        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - burnedArea(:)
+        ! and add it to the first childs delta
+        firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
+
+        ! b) carbon consequences 
+        CALL update_delta_carbon_rp_upon_disturbance( &
+          currentChild, firstChild, l_sourceisfirstChild, options, burnedArea(:), source_fract(:), FIRE)
+
+        ! c) TODO-JN-COHORTS what else to shift? 
+
+
+        !***********************************************
+        !*** care for wind damage -     TODO-JN: check: work with max area to prevent numerical issues!?
 
         !TODO-JN: ich glaube nicht, dass ich das brauche -- wieder rausnehmen, denn sonnst müsste ich:
                       !TODO: if only > something than feed back into damaged frac!  mit aggregate und allem!
-        !*** care for wind damage -     TODO-JN: check: work with max area to prevent numerical issues!?
         helper2(:) = 0._wp
-        helper1(:) = damaged_frac(:) * source_fract(:)
+        helper1(:) = damaged_frac(:) * (source_fract(:) - burnedArea(:))
         damagedArea(:) = MERGE(helper1, helper2, helper1>=1.e-10_wp) !TODO-JN make it a constant
 !        damagedArea(:) = damaged_frac(:) * source_fract(:)
 
@@ -480,28 +495,14 @@ CONTAINS
           ! c) TODO-JN-COHORTS what else to shift? 
         ENDIF
 
-        !*** care for fire damage
-        !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged? 
-        burnedArea(:) = burned_frac(:) * (source_fract(:) - damagedArea(:))
-
-        ! a) changes in area
-        ! reduce current tiles delta fraction  
-        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - burnedArea(:)
-        ! and add it to the first childs delta
-        firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
-
-        ! b) carbon consequences 
-        !TODO-JN
-
-        ! c) TODO-JN-COHORTS what else to shift? 
 
         ! update the area per age tracking vector regarding this child and the first child
         IF (i .GT. 1) THEN ! area moved within the first cohort requires no update (it stays between year 0 and 1)
-          disturbedArea(:) = damagedArea(:) + burnedArea(:)
-          IF(ANY(disturbedArea(:) .GT. 0._wp)) THEN
+          disturbed_area(:,i) = damagedArea(:) + burnedArea(:)
+          IF(ANY(disturbed_area(:,i) .GT. 0._wp)) THEN
             IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
               CALL update_frac_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
-                & i, disturbedArea(:), cohort_max_age(:,:), fract_per_age(:,:))
+                & i, disturbed_area(:,i), cohort_max_age(:,:), fract_per_age(:,:))
             ELSE
               CALL finish(TRIM(routine), 'Currently only "static" implemented as forest ageing scheme')
             ENDIF
