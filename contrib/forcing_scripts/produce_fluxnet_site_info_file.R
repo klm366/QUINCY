@@ -56,6 +56,7 @@ for (s in 1:length(site_list)) {
   fid <- nc_open(paste0(ipath,site_list[s],".",allsitestartyear[s],"-",allsiteendyear[s],".metforcing.nc"))
     lon_orig[s]<-ncvar_get(fid,"x")
     lat_orig[s]<-ncvar_get(fid,"y")
+  nc_close(fid)
 }
 
 ## get more site information and save into vector
