@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_veg_respiration,         ONLY: temperature_response_respiration
+    USE mo_veg_respiration,         ONLY: temperature_response_respiration, calc_maintenance_respiration 
     USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
 
     ! Use of process configurations (t_PROC_config)
@@ -74,7 +74,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: dheight, target_labile_pool_carbon, target_labile_pool_nitrogen, target_labile_pool_phosphorus, &
-                                             target_reserve_pool_carbon, target_reserve_pool_nitrogen, target_reserve_pool_phosphorus    
+                                             target_reserve_pool_carbon, target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
     INTEGER                               :: nsoil_sb
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
@@ -124,6 +124,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: plant_uptake_po4_sl
     ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    dsl4jsb_Real2D_onChunk      :: t_soil_root
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -139,6 +140,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: t_soil_root_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
@@ -289,6 +291,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_po4_sl)                 ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)                 ! in
+    dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)                       ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
@@ -304,6 +307,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)                       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root_tacclim_mavg)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)                  !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)                    !   inout
@@ -425,9 +429,18 @@ CONTAINS
     !! 
     kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), growing_season(:))
 
-    !> 1.1 update N-specific maintenance respiration rate and nutrient demand scalars  
+    !> 1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and 
+    !!     update N-specific maintenance respiration rate 
     !!
+    maint_respiration_pot(:) = calc_maintenance_respiration(t_air(:), t_air_tacclim_mavg(:), & 
+                                                            t_soil_root(:), t_soil_root_tacclim_mavg(:), &  
+                                                            veg_pool%sap_wood%nitrogen(:)     , & 
+                                                            veg_pool%fine_root%nitrogen(:)    , &
+                                                            veg_pool%coarse_root%nitrogen(:)) + & 
+                               maint_respiration_leaf(:) 
     fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
+
+    !> 1,2 calculate utrient demand scalars
 
     CALL calc_nutrient_demand_scalar(lctlib%cn_leaf                 , &
                                      lctlib%np_leaf                 , &
@@ -438,7 +451,7 @@ CONTAINS
                                      f_n_demand(:)                  , &
                                      f_p_demand(:)                  )
 
-    !> 1.2 calculate actual nutrient uptake and N fixation, as well as associated respiration
+    !> 1.3 calculate actual nutrient uptake and N fixation, as well as associated respiration
     !!
     CALL calc_actual_nutrient_uptake_rate(options, & 
                                           lctlib, &
@@ -719,14 +732,13 @@ CONTAINS
     !! 
     CALL calc_partitioning(options                          , & ! in
                            TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
-                           t_air(:)                         , &
-                           t_air_tacclim_mavg(:)            , &
                            kstar_labile(:)                  , &
+                           maint_respiration_pot(:)         , &
                            maint_respiration_leaf(:)        , &
                            growth_req_p(:)                  , &
                            growth_req_n(:)                  , &
                            veg_falloc                       , &
-                           veg_pool                         , &
+                           veg_pool%labile                  , &
                            n_processing_respiration(:)      , & ! inout
                            maint_respiration_c13(:)         , &
                            maint_respiration_c14(:)         , &
@@ -736,7 +748,6 @@ CONTAINS
                            n_processing_respiration_c14(:)  , &
                            veg_growth                       , &
                            veg_exudation                    , &
-                           maint_respiration_pot(:)         , & ! out
                            maint_respiration(:)             , & ! out
                            growth_respiration(:)  )             ! out
 
@@ -2367,20 +2378,20 @@ CONTAINS
   !! Note on veg_growth: it was an explicit decision making all veg_growth\%POOLs INTENT(inout) 
   !!       but overwrite veg_growth%labile (making it essentially INTENT(in)), see Ticket #162 and r504
   !! 
-  !! Input: veg
+  !! Input: labile pool size and current turnover rate, N demand for respiration, & 
+  !!        N & P requirements for growth, allocation fractions
   !! 
-  !! output: growth of tissue types, maintenance respiration and growth respiration 
+  !! output: growth of tissue types, maintenance, growth and N processing respiration, exudation 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning( options                       , &
                                 veg_bnf_scheme                , &
-                                t_air                         , &  
-                                t_air_tacclim_mavg            , &
                                 kstar_labile                  , &
+                                maint_respiration_pot         , &
                                 maint_respiration_leaf        , &
                                 growth_req_p                  , &
                                 growth_req_n                  , &
                                 veg_falloc                    , &
-                                veg_pool                      , &
+                                veg_pool_labile               , &
                                 n_processing_respiration      , &
                                 maint_respiration_c13         , &
                                 maint_respiration_c14         , &
@@ -2390,12 +2401,10 @@ CONTAINS
                                 n_processing_respiration_c14  , &
                                 veg_growth                    , &
                                 veg_exudation                 , &
-                                maint_respiration_pot         , &
                                 maint_respiration             , &
                                 growth_respiration  )  
 
     USE mo_base_memory,           ONLY: t_jsb_task_options
-    USE mo_veg_respiration,       ONLY: calc_maintenance_respiration
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
@@ -2403,14 +2412,13 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),     INTENT(in)    :: options                          !< model options
     CHARACTER(len=*),             INTENT(in)    :: veg_bnf_scheme                   !< from veg config 
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: t_air                        , & !< air temperature
-                                                   t_air_tacclim_mavg           , & !< .. 
-                                                   kstar_labile                 , & !< potential labile pool turnover (1/day) 
+    REAL(wp), DIMENSION(:),       INTENT(in)    :: kstar_labile                 , & !< potential labile pool turnover (1/day) 
+                                                   maint_respiration_pot        , & !< potential (demand-based) plant maintenance respiration
                                                    maint_respiration_leaf       , & !< foliar maintenance respiration
                                                    growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                    growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
-    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_falloc                   , & !< fractional allocation to pools
-                                                   veg_pool                         !< pools of the plant 
+    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_falloc                       !< fractional allocation to pools
+    TYPE(t_veg_element_a),        INTENT(in)    :: veg_pool_labile                  !< labile pool size of the plant 
     REAL(wp), DIMENSION(:),       INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                    maint_respiration_c13        , & !< maintenance respiration
                                                    maint_respiration_c14        , & !< maintenance respiration
@@ -2420,35 +2428,22 @@ CONTAINS
                                                    n_processing_respiration_c14     !< respiration associated with N processing
     TYPE(t_veg_pool_a),           INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
     TYPE(t_veg_element_a),        INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: maint_respiration_pot        , & !< potential maintenance respiration
-                                                   maint_respiration            , & !< maintenance respiration
-                                                   growth_respiration               !< growth respiration
+    REAL(wp), DIMENSION(:),       INTENT(out)   :: maint_respiration            , & !< maintenance respiration (µmol C / m2 / s)
+                                                   growth_respiration               !< growth respiration (µmol C / m2 / s)
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc)             :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
 
 
-    !> 1.0 Determine C use for maintenance 
+    !> 1.0 Determine C use for maintenance (µmol C / m2 / s)
     !! 
     !! based on tissue N and Temperature, constrained by default turnover of the labile pool
     !! to avoid that maitenance respiration consumes all C in times of low GPP 
-
-    ! potential rate of maintenance respiration (µmol C / m2 / s)
-    maint_respiration_pot(:) = calc_maintenance_respiration(                    &
-                                     &      t_air(:)                          , &  ! t_stem
-                                     &      t_air(:)                          , &  ! t_root
-                                     &      t_air_tacclim_mavg(:)             , &  ! average temperature for acclimation (K) 
-                                     &      veg_pool%sap_wood%nitrogen(:)     , & 
-                                     &      veg_pool%fine_root%nitrogen(:)    , &
-                                     &      veg_pool%coarse_root%nitrogen(:))   & 
-                                     & + maint_respiration_leaf(:)
-    ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 
-    ! support leaf respiration, but not more than the current labile pool turnover
-    maint_respiration(:) = MAX(maint_respiration_leaf(:)                                                     , & 
-                                      &   MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon(:) * 1.e6_wp, &
-                                      &       maint_respiration_pot(:))                                        &
-                                      &   )
+    !! constrained to support leaf respiration, but not more than the current labile pool turnover
+    maint_respiration(:) = MAX(maint_respiration_leaf(:)                                          , & 
+                               MIN(1.0_wp/tau_labile/one_day * veg_pool_labile%carbon(:) * 1.e6_wp, &
+                                   maint_respiration_pot(:))) 
 
     !> 2.0 Determine C, N, P use for growth
     !!
@@ -2456,7 +2451,7 @@ CONTAINS
     !! is determined from the labile turnover minus the carbon used for maintenance, i
     !! accounting for the fraction of growth respiration required to achieve this growth, to ensure that
     !! growth does not empty the labile pool
-    veg_growth%labile%carbon(:) = (veg_pool%labile%carbon(:) * kstar_labile(:) / one_day - &
+    veg_growth%labile%carbon(:) = (veg_pool_labile%carbon(:) * kstar_labile(:) / one_day - &
                                     &  (maint_respiration(:) + n_processing_respiration(:)) / 1.e6_wp ) * & 
                                     &   dtime /  (1._wp + fresp_growth)
 
@@ -2469,9 +2464,9 @@ CONTAINS
     !! The use of knut_labile allows plants to draw down the C:N:P of the labile pool, which will cause 
     !! a) an increased uptake per unit root mass and b) an increased cause 
     veg_growth%labile%nitrogen(:)   = MIN(growth_req_n(:) * veg_growth%labile%carbon(:), & 
-                                          veg_pool%labile%nitrogen(:) * knut_labile * kstar_labile(:) * dtime/one_day) 
+                                          veg_pool_labile%nitrogen(:) * knut_labile * kstar_labile(:) * dtime/one_day) 
     veg_growth%labile%phosphorus(:) = MIN(growth_req_p(:) * veg_growth%labile%nitrogen(:), & 
-                                          veg_pool%labile%phosphorus(:) * knut_labile * knut_labile * kstar_labile(:) * dtime/one_day) 
+                                          veg_pool_labile%phosphorus(:) * knut_labile * knut_labile * kstar_labile(:) * dtime/one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
     WHERE(growth_req_p(:) > eps8)
       hlp1(:) = veg_growth%labile%phosphorus(:) / growth_req_p(:)
@@ -2491,30 +2486,30 @@ CONTAINS
 
     !> 3.0 Adjust exudation rate to available carbon (mol C / m2 / timestep)
     veg_exudation%carbon(:) = MIN(veg_exudation%carbon(:), MAX(0.0_wp, & 
-                                  0.2_wp * veg_pool%labile%carbon(:) - veg_growth%labile%carbon(:) - &
+                                  0.2_wp * veg_pool_labile%carbon(:) - veg_growth%labile%carbon(:) - &
                                   (growth_respiration(:) + maint_respiration(:) + n_processing_respiration(:)) * dtime / 1.e6_wp)) 
 
     !> 4.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
-    WHERE(veg_pool%labile%carbon(:) > eps8)
+    WHERE(veg_pool_labile%carbon(:) > eps8)
        ! growth (in mol C / m2 / timestep)
-       veg_growth%labile%carbon13(:)   = veg_growth%labile%carbon(:)  * veg_pool%labile%carbon13(:) / veg_pool%labile%carbon(:)
-       veg_growth%labile%carbon14(:)   = veg_growth%labile%carbon(:)  * veg_pool%labile%carbon14(:) / veg_pool%labile%carbon(:)
+       veg_growth%labile%carbon13(:)   = veg_growth%labile%carbon(:)  * veg_pool_labile%carbon13(:) / veg_pool_labile%carbon(:)
+       veg_growth%labile%carbon14(:)   = veg_growth%labile%carbon(:)  * veg_pool_labile%carbon14(:) / veg_pool_labile%carbon(:)
        ! exudation (in mol C / m2 / timestep)
-       veg_exudation%carbon13(:)       = veg_exudation%carbon(:)      * veg_pool%labile%carbon13(:) / veg_pool%labile%carbon(:)
-       veg_exudation%carbon14(:)       = veg_exudation%carbon(:)      * veg_pool%labile%carbon14(:) / veg_pool%labile%carbon(:)
+       veg_exudation%carbon13(:)       = veg_exudation%carbon(:)      * veg_pool_labile%carbon13(:) / veg_pool_labile%carbon(:)
+       veg_exudation%carbon14(:)       = veg_exudation%carbon(:)      * veg_pool_labile%carbon14(:) / veg_pool_labile%carbon(:)
        ! respiration (in µmol C / m2 / s)
-       maint_respiration_c13(:)        = maint_respiration(:)         * veg_pool%labile%carbon13(:) / veg_pool%labile%carbon(:)
-       maint_respiration_c14(:)        = maint_respiration(:)         * veg_pool%labile%carbon14(:) / veg_pool%labile%carbon(:)
-       growth_respiration_c13(:)       = growth_respiration(:)        * veg_pool%labile%carbon13(:) / veg_pool%labile%carbon(:)
-       growth_respiration_c14(:)       = growth_respiration(:)        * veg_pool%labile%carbon14(:) / veg_pool%labile%carbon(:)
-       n_processing_respiration_c13(:) = n_processing_respiration(:)  * veg_pool%labile%carbon13(:) / veg_pool%labile%carbon(:) 
-       n_processing_respiration_c14(:) = n_processing_respiration(:)  * veg_pool%labile%carbon14(:) / veg_pool%labile%carbon(:) 
+       maint_respiration_c13(:)        = maint_respiration(:)         * veg_pool_labile%carbon13(:) / veg_pool_labile%carbon(:)
+       maint_respiration_c14(:)        = maint_respiration(:)         * veg_pool_labile%carbon14(:) / veg_pool_labile%carbon(:)
+       growth_respiration_c13(:)       = growth_respiration(:)        * veg_pool_labile%carbon13(:) / veg_pool_labile%carbon(:)
+       growth_respiration_c14(:)       = growth_respiration(:)        * veg_pool_labile%carbon14(:) / veg_pool_labile%carbon(:)
+       n_processing_respiration_c13(:) = n_processing_respiration(:)  * veg_pool_labile%carbon13(:) / veg_pool_labile%carbon(:) 
+       n_processing_respiration_c14(:) = n_processing_respiration(:)  * veg_pool_labile%carbon14(:) / veg_pool_labile%carbon(:) 
     END WHERE
 
-    WHERE(veg_pool%labile%nitrogen(:) > eps8)
+    WHERE(veg_pool_labile%nitrogen(:) > eps8)
       ! growth (in mol  / m2 / timestep)
-      veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:) / veg_pool%labile%nitrogen(:)
+      veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen(:) * veg_pool_labile%nitrogen15(:) / veg_pool_labile%nitrogen(:)
     END WHERE
 
     !> 5.0 partition growth to tissue types

@@ -57,7 +57,8 @@ MODULE mo_soil_memory_class
                                     w_skin,           & !< Water content in skin reservoir                                          [m]
                                     w_soil_root,      & !< Water content in root zone of the soil                                   [m]
                                     w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
-                                    w_soil_root_pwp     !< Water content at permanent wilting point in root zone of the soil        [m]
+                                    w_soil_root_pwp,  & !< Water content at permanent wilting point in root zone of the soil        [m]
+                                    t_soil_root         !< Temperature of fine roots in the soil                                    [K]
 
     TYPE(t_jsb_var_real3d)          :: &
                                     percolation_sl,   & !< fraction of mass transferred to below layer                              [fraction/s]
@@ -286,6 +287,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'w_soil_root_pwp', mem%w_soil_root_pwp, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 't_soil_root', mem%t_soil_root, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

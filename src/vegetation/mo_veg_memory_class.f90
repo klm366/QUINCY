@@ -381,7 +381,8 @@ MODULE mo_veg_memory_class
                                     lai_tvegdyn_mavg                    !< lai at vegdynamics timescale
     ! 1.9 memory of variables for respiration accclimation 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_tacclim_mavg                  !< average temperature for respiration acclimation
+                                    t_air_tacclim_mavg             , &  !< average air temperature for respiration acclimation
+                                    t_soil_root_tacclim_mavg            !< average root temperature for respiration acclimation
     ! 1.10 memory of certain variables, temperature, ...
     TYPE(t_jsb_var_real2d)          :: &   
                                     t_air_week_mavg                , &  !< avrg air temperature across 7 days
@@ -2233,6 +2234,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 't_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 't_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

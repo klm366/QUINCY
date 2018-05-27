@@ -25,7 +25,8 @@ MODULE mo_veg_constants
       ! San Diego, CA, USA: Academic Press; 1996.
       ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
       ! such that the applied rates a comparable at 15-20°C
-      fmaint_rate_base   ,     & !< N-specific maintenance respiration rate (µmol CO2 / mmol N / s) 
+      fmaint_rate_base   ,     & !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
+      fmaint_rate_wood   ,     & !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
       t_maint_k1    ,     & !< Coefficient in the equation for temperature sensitivity of foliar respiration
       t_maint_k2  ,     &  !< Coefficient in the equation for temperature sensitivity of foliar respiration
@@ -187,6 +188,7 @@ CONTAINS
   ! Respiration parameters
       fresp_growth      = 0.25_wp
       fmaint_rate_base  = 1._wp 
+      fmaint_rate_wood  = fmaint_rate_base * 0.25_wp
       t_maint_k1        = 308.56_wp  
       t_maint_k2        = 56.02_wp 
       t_maint_k3        = 227.13_wp 

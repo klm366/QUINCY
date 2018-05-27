@@ -61,7 +61,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
+    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb, isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_physics'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -101,6 +101,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: root_depth
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk                :: w_soil_root_fc
+    dsl4jsb_Real2D_onChunk                :: t_soil_root
     dsl4jsb_Real2D_onChunk                :: transpiration
     dsl4jsb_Real2D_onChunk                :: w_skin
     dsl4jsb_Real2D_onChunk                :: w_soil_root
@@ -192,6 +193,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)     ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_skin)              ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)         ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, interception)        ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)         ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)              ! out
@@ -226,9 +228,13 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-    
+
+    !> 1.0 Diagnose surface relative humidity for energy budget calculations
+    !!
     rel_hum(:) = MIN(1.0_wp, (w_soil_sl(:,1) - w_soil_pwp_sl(:,1)) / (w_soil_fc_sl(:,1) - w_soil_pwp_sl(:,1)))
 
+    !> 2.0 Calculate surface energy budget
+    !!
     CALL calc_surface_energy_balance(options, lctlib, &
                                      sw_srf_net(:),lw_srf_down(:), & 
                                      t_air(:),t_acoef(:),t_bcoef(:), & 
@@ -242,6 +248,8 @@ CONTAINS
                                      sensible_heat_flx(:),latent_heat_flx(:),ground_heat_flx(:), & 
                                      net_radiation(:),t_soil_sl(:,:))
 
+    !> 3.0 Calculate soil hydrology processes
+    !!
     CALL calc_soil_hydrology(options, lctlib, &
                              dsl4jsb_Config(SOIL_)%soil_depth_water(:), & 
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
@@ -251,6 +259,13 @@ CONTAINS
                              w_skin(:),w_soil_root(:),w_soil_root_theta(:),w_soil_root_pot(:), &
                              runoff(:),drainage(:),drainage_fraction(:), &
                              w_soil_sl(:,:),w_soil_pot_sl(:,:),drainage_sl(:,:),percolation_sl(:,:))
+
+    !> 4.0 diagnose root temperature
+    !!
+    t_soil_root(:) = 0.0_wp
+    DO isoil = 1,options%nsoil_sb
+       t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
+    ENDDO
 
   END SUBROUTINE update_soil_physics
 

@@ -540,6 +540,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: t_soil_root_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: net_growth_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: lai_tvegdyn_mavg
@@ -599,6 +600,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg      ! SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
     dsl4jsb_Real2D_onChunk      :: transpiration                    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: t_soil_root 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -693,6 +695,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root_tacclim_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)
@@ -754,6 +757,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)
     ! Get process memory pool structures
 #define Get_veg_pool
 #include "slm_pools_a_incl.f90"
@@ -962,7 +966,8 @@ CONTAINS
     !! t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !! this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration
     IF (dsl4jsb_Config(ASSIMI_)%flag_t_resp_acclimation) THEN
-      t_air_tacclim_mavg(:)  = calc_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
+      t_air_tacclim_mavg(:)       = calc_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
+      t_soil_root_tacclim_mavg(:) = calc_mavg(t_soil_root_tacclim_mavg(:), t_soil_root(:), mavg_period_tacclim)
     END IF
     
     !> 1.10 averages with a weekly, monthly timescale

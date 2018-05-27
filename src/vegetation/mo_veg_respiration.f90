@@ -22,9 +22,11 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculate temperature response of maintenance respiration 
-  !! following the temperature function of Lloyd and Taylor, 1996, Functional Ecology
+  !! following the temperature function of Lloyd and Taylor, 1996, Functional Ecology, but 
+  !! assuming that the base rate of respiration acclimates to growth temperature according to 
+  !! Atkin et al, XXXX New Phytologist 
   !!
-  !! Input: temperature 
+  !! Input: temperature, growth temperature 
   !!
   !! Output: temperature rate modifier
   !-----------------------------------------------------------------------------------------------------
@@ -66,22 +68,24 @@ CONTAINS
   !!
   !! Output: maintenance respiration 
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_maintenance_respiration( t_stem                , &
+  PURE ELEMENTAL FUNCTION calc_maintenance_respiration( t_wood                , &
+                                                        t_wood_mavg           , &
                                                         t_root                , &
-                                                        temp_mavg             , &
+                                                        t_root_mavg           , &
                                                         sap_wood_nitrogen     , & 
                                                         fine_root_nitrogen    , &
                                                         coarse_root_nitrogen)   & 
                                                         RESULT(maint_respiration)
 
-    USE mo_veg_constants, ONLY: fmaint_rate_base
+    USE mo_veg_constants, ONLY: fmaint_rate_base, fmaint_rate_wood
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: t_stem                   !< temperature of the stem (K) 
+    REAL(wp), INTENT(in) :: t_wood                   !< temperature of the stem (K) 
+    REAL(wp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K) 
     REAL(wp), INTENT(in) :: t_root                   !< temperature of the roots (K)
-    REAL(wp), INTENT(in) :: temp_mavg                !< average temperature for acclimation (K) 
+    REAL(wp), INTENT(in) :: t_root_mavg              !< average temperature for acclimation (K) 
     REAL(wp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
@@ -91,9 +95,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
 
 
-    maint_respiration = temperature_response_respiration(t_stem, temp_mavg) * & 
-                        fmaint_rate_base * sap_wood_nitrogen + &
-                        temperature_response_respiration(t_root, temp_mavg) * & 
+    maint_respiration = temperature_response_respiration(t_wood, t_wood_mavg) * & 
+                        fmaint_rate_wood * sap_wood_nitrogen + &
+                        temperature_response_respiration(t_root, t_root_mavg) * & 
                         fmaint_rate_base * ( coarse_root_nitrogen + fine_root_nitrogen ) 
      
   END FUNCTION calc_maintenance_respiration

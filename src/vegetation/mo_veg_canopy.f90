@@ -70,7 +70,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_assimi_constants
     USE mo_veg_constants
-
+    USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P
 
     IMPLICIT NONE
     ! ---------------------------
@@ -115,6 +115,7 @@ CONTAINS
     REAL(wp)                        :: f_pepc                                        ! fraction of N in PEP Carboxylase
     LOGICAL                         :: optimise_n_fractions
     INTEGER                         :: icanopy, ichunk                               ! looping over ncanopy and options%nc
+    REAL(wp),DIMENSION(options%nc,ncanopy)  :: hlp1,hlp2,hlp3,hlp4
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -241,6 +242,24 @@ CONTAINS
                       (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
            ! fraction of Rubisco is determined as the remainder
            fn_rub_cl(:,:) = 1._wp - fn_oth_cl(:,:) - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:)
+
+           ! convert mmol N / m2 to mg N / g DW
+           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / ((molar_mass_C / lctlib%sla)/0.48_wp)
+           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib%np_leaf * molar_mass_P / ((molar_mass_C / lctlib%sla)/0.48_wp)
+           !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
+           ! implied Vmax and Jmax in nmol / g DW / s
+           !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
+           !hlp2(:,:) = exp(5.49435_wp + 0.37345_wp*log10(hlp4(:,:)) + 0.41435_wp*log10(hlp3(:,:)))
+           ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | µmol / m2 / s
+           !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
+           !                      exp(X) = vmax2n * frub * leaf_n
+           !                      frub = exp(X) / leaf_n / vmax2n         
+           !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / & 
+           !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._wp / (molar_mass_C / lctlib%sla / 0.48_wp))
+           !fn_et_cl(:,:) = exp(5.49435_wp + 0.37345_wp*log(hlp4(:,:)) + 0.41435_wp*log(hlp3(:,:))) / 4.0_wp / &
+           !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._wp / (molar_mass_C / lctlib%sla / 0.48_wp))
+           !fn_oth_cl(:,:) = 1.0_wp - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:) - fn_rub_cl(:,:)
+
         ELSEWHERE ! canopy layers without leaves
            leaf_nitrogen_cl(:,:)   = 0.0_wp
            fn_oth_cl(:,:)  = 1.0_wp
@@ -249,7 +268,7 @@ CONTAINS
            fn_rub_cl(:,:)  = 0.0_wp
            fn_pepc_cl(:,:) = 0.0_wp
         ENDWHERE
-        
+
         ! for canopy layer > 1
         DO icanopy = 2,ncanopy
            WHERE(lai_cl(:,icanopy) > eps8)

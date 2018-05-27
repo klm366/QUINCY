@@ -140,6 +140,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: net_growth_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: lai_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: t_soil_root_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
@@ -233,6 +234,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root_tacclim_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
@@ -468,6 +470,7 @@ CONTAINS
     net_growth_tvegdyn_mavg(:)        = 5.0_wp
     lai_tvegdyn_mavg(:)               = 0.1_wp
     t_air_tacclim_mavg(:)             = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
+    t_soil_root_tacclim_mavg(:)       = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
     t_air_week_mavg(:)                = 283.15_wp
     t_air_month_mavg(:)               = 283.15_wp
     t_jmax_opt_mavg(:)                = 17.0_wp
