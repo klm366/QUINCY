@@ -442,7 +442,7 @@ fi
 ## define site info file (full path)
 case "$forcingDataSet" in
 "fluxnet")
-  allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux_all_sites_1996-2008_list.dat
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux_all_sites_1995-2006_list.dat
   ;;
 "cruncep")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_all_gfdb_sites_1984-2013_list.dat

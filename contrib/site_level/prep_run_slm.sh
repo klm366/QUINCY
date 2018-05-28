@@ -754,7 +754,7 @@ else # the default case: $customSiteList == "F"
   "fluxnet")
     if [ $forcingMode == "static" ]
      then
-      siteListFileName="flux_all_sites_1996-2008_list.dat"
+      siteListFileName="flux_all_sites_1995-2006_list.dat"
     else 
       siteListFileName="flux_all_sites_1901-2006_list.dat"
     fi
