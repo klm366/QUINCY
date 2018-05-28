@@ -76,16 +76,8 @@ paramSensitivitySiteNumber=2
 ##>> default usecases <<################################################################################
 ## set the according 'usecase number' here (e.g. usecase="20")
 ## or run: prep_run_slm.sh -u 'usecase number' (e.g. prep_run_slm.sh -u 20 )
+## see contrib/usecases/ for available usecases
 usecase=""
-
-# 01 generate_soil_forcing_def
-# 20 land_300yr_fluxnet_all_def
-# 21 land_300yr_cruncep_cue_def
-# 22 land_300yr_cruncep_spp_def
-# 30 land_500yr_FACE_def
-# 80 baseline_fluxnet_def
-# 81 baseline_gfdb_cue_def
-# 82 baseline_fluxnet_npre_def
 
 
 ##>> namelist.slm options <<############################################################################
