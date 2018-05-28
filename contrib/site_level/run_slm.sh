@@ -38,11 +38,14 @@ siteDataFoldForcing=$(sed -n 2p "$simFoldDefaultFiles""config.txt")   # folder a
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 forcingDataSet=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
 forcingModeFileID=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
-specialFluxnetOutput=$(sed -n 6p "$simFoldDefaultFiles""config.txt")  # T/F
+specialFluxnetOutput=$(sed -n 6p "$simFoldDefaultFiles""config.txt")                                  # T/F
 siteDataObsFold=$(sed -n 7p "$simFoldDefaultFiles""config.txt")
-useSiteSpecificAWC=$(sed -n 8p "$simFoldDefaultFiles""config.txt")    # T/F
-doParamSensitivitySim=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')  # T/F
- # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 8 but necessary only for the cleanup_slm_hpc_run.sh
+useSiteSpecificAWC=$(sed -n 8p "$simFoldDefaultFiles""config.txt")                                    # T/F
+doParamSensitivitySim=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')              # T/F
+# info: $compareSimCRUNCEPvsGFDB T/F is saved at line 10 but not needed here; only for the cleanup_slm_hpc_run.sh
+fluxnetTransientSim=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')               # T/F
+transient_simulation_start_year=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $2}')   # year at which transient simulation starts (default 1901)
+
 
 ## model forcing - define input file-names as expected by the model (see mo_atmland_forcing.f90)
 forceSoilLitterFile="soil_forcing_litterfall.dat"
@@ -226,16 +229,29 @@ changeNamelistValue soil_p_slow             "$(awk '{print $24}' <<< "$siteData"
 changeNamelistValue soil_p_occluded         "$(awk '{print $25}' <<< "$siteData")"
 changeNamelistValue soil_p_primary          "$(awk '{print $26}' <<< "$siteData")"
 changeNamelistValue qmax_org_fine_particle  "$(awk '{print $27}' <<< "$siteData")"
-[ $useSiteSpecificAWC == "T" ] && \
-   changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi
+# use site-specific AWC #
+if [ $useSiteSpecificAWC == "T" ]; then
+   changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")" 
+fi
 # special fluxnet output #
-if [ $specialFluxnetOutput == "T" ]
-  then
+if [ $specialFluxnetOutput == "T" ]; then
     year1=$(awk '{print $5}' <<< "$siteData")
+    # quickfix ! 
+    if [ $fluxnetTransientSim == "T" ]; then
+      year1=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $5}')
+    fi
     year2=$(awk '{print $6}' <<< "$siteData")
     forcingPeriodLength=$(($year2-$year1+1))
     changeNamelistValue fluxnet_output_length "$forcingPeriodLength"
 fi
+# transient simulations with fluxnet sites #
+if [ $fluxnetTransientSim == "T" ]; then
+  lastDataYearSiteSpecific="$(awk '{print $6}' <<< "$siteData")"
+  simulationLengthSiteSpecific=$((lastDataYearSiteSpecific - transient_simulation_start_year + 1))
+  changeNamelistValue simulation_length_number "$simulationLengthSiteSpecific"
+  changeNamelistValue output_end_last_day_year "$simulationLengthSiteSpecific"
+fi
+
 
 ## manipulate the param.list if parameter sensitivity simulations should be done ##
 if [ $doParamSensitivitySim == "T" ]; then

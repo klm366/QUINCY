@@ -43,12 +43,12 @@ customSiteListFileName=""
 # note: this option must be empty (i.e., singleSiteName="" ) to run multiple sites
 # Site-ID must be consistent with the forcingDataSet option above
 # get the Site-ID from the 1st column of the particular "site list .dat"
-# examples: [FLUX] "DE-Hai" "ZA-Kru" [CRUN] "BHS_01" "ILO_05" [FACE] "DK-AMB" "OR-ELE"
+# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"
 singleSiteName=""
 
 
 ##>> special runs <<####################################################################################
-##(1) run Fluxnet simulations with data output at each timestep for the last complete forcing period at the end of the "simulation_length_number" you specify below
+##(1) run Fluxnet simulations with data output at each timestep for the last complete forcing period before the end of the "simulation_length_number" you specify below
 # T (True) or F (False) [large caps]
 # when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
 # scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
@@ -671,26 +671,28 @@ esac
 
 
 ## SLM model forcing: land/plant/canopy/soil 
+metForcingDir="new_met_forcing/"
+soilForcingDirBase="soil_forcing_sl"
 case "$slmModel" in
 "land")
-  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  siteDataFoldForcing="$siteDataFold""$metForcingDir"
   ;;
 "plant")
-  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  siteDataFoldForcing="$siteDataFold""$metForcingDir"
   ;;
 "canopy")
-  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  siteDataFoldForcing="$siteDataFold""$metForcingDir"
   ;;
 "soil")
   if [ $nsoil_layer -eq 5 ]
     then
-      siteDataFoldForcing="$siteDataFold""soil_forcing_sl5/"
+      siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""5/"
   elif [ $nsoil_layer -eq 9 ]
     then
-      siteDataFoldForcing="$siteDataFold""soil_forcing_sl9/"
+      siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""9/"
   elif [ $nsoil_layer -eq 15 ]
     then
-      siteDataFoldForcing="$siteDataFold""soil_forcing_sl15/"
+      siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""15/"
   else
     echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
     echo "EXIT!"
@@ -758,7 +760,12 @@ else # the default case: $customSiteList == "F"
   ## file names differ across forcingDataSets & forcingModes
   case "$forcingDataSet" in
   "fluxnet")
-    siteListFileName="flux_all_sites_1996-2008_list.dat"
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="flux_all_sites_1996-2008_list.dat"
+    else 
+      siteListFileName="flux_all_sites_1901-2006_list.dat"
+    fi
     ;;
   "cruncep")
     case "$siteSelection" in
@@ -843,15 +850,12 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
     if [ $forcingMode == "static" ]
      then
       echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years after the spin-up (static forcing mode)."
-    else
-      let startYearTransOut=transient_spinup_start_year+output_end_last_day_year-1
-      echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years starting in year ""$startYearTransOut"" (transient forcing mode)."
     fi
   fi
 fi
 
 
-## evaluate options for the forcingMode == transient
+## evaluate options for the forcingMode == transient ##
 #  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB simulation settings if compareSimCRUNCEPvsGFDB == "T"
 if [ $forcingMode == "transient" ]
  then
@@ -859,24 +863,30 @@ if [ $forcingMode == "transient" ]
    echo " You set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
    echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
 
+   # spinup length
    if [ $transient_spinup_years -lt 1 ]
     then
      echo " Ohh, you set the spinup time to a value less than 1 year, which is not recommended. Re-setting it to 1 now."
      transient_spinup_years=1
    fi
+   if [ $transient_spinup_years -lt 50 ]
+    then
+     echo " Warning: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
+   fi
+   # starting year 
    if [ $transient_spinup_start_year != "1901" ]
     then
-     echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not possible. Sorry."
-     echo " Only the default value (1901) is working. Setting transient_spinup_start_year=1901."
+     echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not supported. Sorry."
+     echo " Setting transient_spinup_start_year=1901."
      transient_spinup_start_year=1901
    fi
    if [ $transient_simulation_start_year != "1901" ]
     then
-     echo " You set the transient_simulation_start_year to ""$transient_simulation_start_year"", which is currently not possible. Sorry."
-     echo " Only the default value (1901) is working. Setting transient_simulation_start_year=1901."
+     echo " You set the transient_simulation_start_year to ""$transient_simulation_start_year"", which is currently not supported. Sorry."
+     echo " Setting transient_simulation_start_year=1901."
      transient_simulation_start_year=1901
    fi
-   # test calc length of forcing period used for spinup
+   # length of forcing period repeatedly used for spinup
    transient_test_spinup_forcing_period=$((transient_spinup_end_year - transient_spinup_start_year + 1))
    if [ $transient_test_spinup_forcing_period -lt 6 ] || [ $transient_test_spinup_forcing_period -gt 49 ]
     then
@@ -885,18 +895,9 @@ if [ $forcingMode == "transient" ]
      transient_spinup_end_year=$((transient_spinup_start_year + 29))
      echo " The new (automagically corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
    fi
-   if [ $transient_spinup_years -lt 50 ]
-    then
-     echo " Warning: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
-   fi
-   if [ $forcingDataSet == "fluxnet" ]
-    then
-     echo " Please note: the transient forcingMode works best with CRUNCEPv7 and FACE sites, but might produce questionable results with FLUXNET2 sites."
-     echo "  You selected FLUXNET2 sites. This is just a warning, none of your options will be changed."
-   fi
- else  
- # if [ $forcingMode == "static" ]
- # set transient* parameters to default values
+# forcingMode == "static"
+else  
+  # set transient* parameters to default values, to avoid potentially quirky values here, but do not want do do checking either
   transient_spinup_start_year=1901
   transient_spinup_end_year=1930
   transient_spinup_years=500
@@ -904,11 +905,37 @@ if [ $forcingMode == "transient" ]
 fi
 
 
-## an additional identifier (ID) for static and transient forcing files -> passed to (via config file) and used in run_slm.sh
-forcingModeFileID="0"
+## transient forcing and cruncep vs gfdb
+if [ $compareSimCRUNCEPvsGFDB == "T" ] &&  [ $forcingMode == "transient" ]; then
+  let startYearTransOut=transient_simulation_start_year+output_start_first_day_year-1
+  echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years starting in year ""$startYearTransOut"" (transient forcing mode)."  
+fi  
+  
+
+## transient forcing and fluxnet simulation
+# note: actual simulation length 1901 to x varies with the site, because teh available site data does start at diff years and has different lengths
+# this is dealt with in run_slm.sh
+if [ $forcingDataSet == "fluxnet" ] &&  [ $forcingMode == "transient" ]; then
+  echo " You started a transient simulation with fluxnet data."
+  echo " Note: the simulation (starting in 1901 after the spinup) ends with the last year of data available for the particular site."
+  echo " Hence, the actual simulation length may vary with the fluxnet sites."
+  echo " You set the simulation length to: ""$simulation_length_number"" starting in 1901. This may change for most sites."
+  fluxnetTransientSim="T"
+else 
+  fluxnetTransientSim="F"
+fi
+
+
+## an identifier (additional to siteName) for static and transient forcing files -> passed to run_slm.sh (via config file) ##
+forcingModeFileID=""
 case "$forcingDataSet" in
 "fluxnet")
-  forcingModeFileID="_"
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_s_"
+  else
+    forcingModeFileID="_t_"
+  fi
   ;;
 "cruncep")
   if [ $forcingMode == "static" ]
@@ -995,7 +1022,8 @@ if [ $specialFluxnetOutput == "T" ]
         exit 1
       else
         echo " "
-        echo " You just started simulations to generate FLUXNET diagnostics using the last full forcing period after ""$simulation_length_number"" years."
+        echo " You just started simulations to generate FLUXNET diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
+        # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
         #if $singleSiteName is not empty
         if [ ! -z "$singleSiteName" ]
          then
@@ -1169,26 +1197,27 @@ fi
 
 ## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
 # /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/config.txt
-echo "$siteList"                                    >  "$simFoldDefaultFiles""config.txt"
-echo "$siteDataFoldForcing"                         >> "$simFoldDefaultFiles""config.txt"
-echo "$slmModel"                                    >> "$simFoldDefaultFiles""config.txt"
-echo "$forcingDataSet"                              >> "$simFoldDefaultFiles""config.txt"
-echo "$forcingModeFileID"                           >> "$simFoldDefaultFiles""config.txt"
-echo "$specialFluxnetOutput"                        >> "$simFoldDefaultFiles""config.txt"
-echo "$siteDataObsFold"                             >> "$simFoldDefaultFiles""config.txt"
-echo "$useSiteSpecificAWC"                          >> "$simFoldDefaultFiles""config.txt"
-echo "$paramSensitivitySim"" ""$simParamSensiFiles" >> "$simFoldDefaultFiles""config.txt"
-echo "$compareSimCRUNCEPvsGFDB"                     >> "$simFoldDefaultFiles""config.txt"
-#echo "$"                          >> "$simFoldDefaultFiles""config.txt"
-#echo "$"                          >> "$simFoldDefaultFiles""config.txt"
+echo "$siteList"                                                  >  "$simFoldDefaultFiles""config.txt"   # 1
+echo "$siteDataFoldForcing"                                       >> "$simFoldDefaultFiles""config.txt"
+echo "$slmModel"                                                  >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingDataSet"                                            >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingModeFileID"                                         >> "$simFoldDefaultFiles""config.txt"   # 5
+echo "$specialFluxnetOutput"                                      >> "$simFoldDefaultFiles""config.txt"
+echo "$siteDataObsFold"                                           >> "$simFoldDefaultFiles""config.txt"
+echo "$useSiteSpecificAWC"                                        >> "$simFoldDefaultFiles""config.txt"
+echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
+echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
+echo "$fluxnetTransientSim"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
+#echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
+#echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
 
 # pass extra info about parameter sensitivity simulations to folder
 if [ $paramSensitivitySim == "T" ]; then
-  echo "$paramSensitivitySiteNumber"                  >  "$simFoldParamSensiFiles""param_config.txt"
-  echo "$slmParamListDefaultFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
-  echo "$slmParamTableFilename"                       >>  "$simFoldParamSensiFiles""param_config.txt"
-  #echo "$"                  >>  "$simFoldParamSensiFiles""param_config.txt"
-  #echo "$"                  >>  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$paramSensitivitySiteNumber"            >  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamListDefaultFilename"           >>  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamTableFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
+  #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
+  #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
 fi
 
 ## copy namelist binary R-Scripts to simulation folder: /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ ##
