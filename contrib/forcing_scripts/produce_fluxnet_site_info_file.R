@@ -342,10 +342,9 @@ colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'Qmax_org_fp')
 
 # 1995-2006  (the length of the available forcing data varies across fluxnet sites, but lies within 1995-2006)
-write.table(siteinfo,file=paste0("flux_all_sites_1996-2008_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("flux_all_sites_1995-2006_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
 siteinfo[,5]<-1901
-siteinfo[,6]<-2006
-# 1901-2006
+# 1901-... end year same as above
 write.table(siteinfo,file=paste0("flux_all_sites_1901-2006_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
 
 
