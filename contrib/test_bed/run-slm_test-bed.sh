@@ -6,7 +6,7 @@
 ## HowTo: specify the below simulation options as suitable for you
 ## Tip:   some of the below simulation options can be provided as argument to this script, for more information type: ./run-slm_test-bed.sh -h 
 ## 
-## Note:  the namelist option 'set_parameter_values_from_file' is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
+#########
 
 ########################################################################################################
 ####### namelist options you might want to change ######################################################
@@ -74,16 +74,18 @@ plant_functional_type_id=5      # 1 - 8
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 forcingDataSet="fluxnet"        # options: fluxnet cruncep face none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
-siteName="DE-Hai_2000-2006"     # provide filename (without the trailing '.dat') of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET2/ or CRUNCEPv7/ or FACE/ 
-                                # e.g. [FLUX] DE-Hai_2000-2006, AT-Neu_2002-2005 [CRUN] HOW_1984-2013, KAN_1984-2013 [FACE] DK-AMB_1996-2007, OR-AMB_1998-2008
+siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
+                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
 latitude=50.0                   # float !
 
+
 ########################################################################################################
 ####### do NOT change any below this line unless you know what you are doing! ##########################
 ########################################################################################################
+
 
 
 ## change into the directory where this script is located; thus, you can start this script from anywhere ##
@@ -100,7 +102,7 @@ if [ ! -z "${argOpt_o// }" ]  # the search term is available yes / no  [-z test 
   flag_optimal_allocation="F"
 fi
 # getopts
-while getopts ":p:m:s:y:o:b:z:h" opt; do
+while getopts ":p:m:i:f:s:y:o:b:z:h" opt; do
   case "$opt" in
   "p")
     echo "   plant_functional_type_id=""$OPTARG"
@@ -112,6 +114,30 @@ while getopts ":p:m:s:y:o:b:z:h" opt; do
     echo "   slmModel=""$OPTARG"
     slmModel="$OPTARG"
     ;;
+  "i")
+    echo "   siteName=""$OPTARG"
+    siteName="$OPTARG"
+    ;;
+  "f")
+    case "$OPTARG" in
+    "fl")
+      echo "   forcingDataSet=fluxnet"
+      forcingDataSet="fluxnet"
+      ;;
+    "cr")
+      echo "   forcingDataSet=cruncep"
+      forcingDataSet="cruncep"
+      ;;
+    "fa")
+      echo "   forcingDataSet=face"
+      forcingDataSet="face"
+      ;;
+    "no")
+      echo "   forcingDataSet=none"
+      forcingDataSet="none"
+      ;;
+    esac
+    ;;    
   "s")
     case "$OPTARG" in
     "s0d")
@@ -225,6 +251,15 @@ while getopts ":p:m:s:y:o:b:z:h" opt; do
     echo " -m set slmModel"
     echo "    Arguments to -m:"
     echo "       land plant soil canopy"
+    echo " -i set siteName, i.e., siteID"
+    echo "    Arguments to -i:"
+    echo "       a valid siteName, such as, [FLUX] DE-Hai ZA-Kru  [CRUN] BHS_01 ILO_05  [FACE] DK-AMB OR-ELE"
+    echo " -f set the forcingDataSet"
+    echo "    Arguments to -f:"
+    echo "       fl: FLUXNET"
+    echo "       cr: CRUNCEPv7"
+    echo "       fa: FACE sites"
+    echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
     echo "       s0d: simple_0d"
@@ -341,106 +376,167 @@ validateUserConfigValues "$sb_adsorp_scheme" "$validateSb_adsorp_scheme" "sb_ads
 
 
 ## definition of some basic variables
-# model forcing - input files for the model
+siteDataDirBase="/Net/Groups/BGI/data/Model/SLM1/input/point/"
+metForcingDir="new_met_forcing/"
+soilForcingDirBase="soil_forcing_sl"
 forceSoilLitterFile="soil_forcing_litterfall.dat"
 forceSoilPhysicFile="soil_forcing_soilphysics.dat"
 forceLandMetFile="climate.dat"
 
-## test if forcing data exist in testbed/ or in the fluxnet/cruncep site-list-folder [if model is not test_canopy] ##
-if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for all models but test_canopy
+
+## set folder for the site data-set
+case "$forcingDataSet" in
+"fluxnet")
+  siteDataSet="FLUXNET2/"
+  ;;
+"cruncep")
+  siteDataSet="CRUNCEPv7/"
+  ;;
+"face")
+  siteDataSet="FACE/"
+  if [ $slmModel == "soil" ]
+    then
+      echo " Sorry, no soil_forcing_slX for FACE sites yet."
+      echo " EXIT!"
+      exit 1
+  fi
+  ;;
+esac
+
+
+## test number of soil levels and set dirname for soil_forcing files
+if [ $slmModel == "soil" ]
   then
-    if [ "$forcingDataSet" == "none" ]  # if forcing data are neither Fluxnet nor Cruncep dataset
-    then  # local forcing file
-      if [ $slmModel == "soil" ]
-        then
-          echo -e '\n' "  Info: you set forcingDataSet to 'none' using the test_bed/soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat files."
-          echo "   No site specific parameter values are available in this mode, and the option setPFTAutomatically is used with 'no'."
-          if [ ! -e ./"$forceSoilLitterFile" ] # if file not exists
-            then
-              echo "EXIT!  the test_bed/""$forceSoilLitterFile"" does not exist, but the option forcingDataSet is set to none !"
-              exit
-          fi
-          if [ ! -e ./"$forceSoilPhysicFile" ] # if file not exists
-            then
-              echo "EXIT!  the test_bed/""$forceSoilPhysicFile"" does not exist, but the option forcingDataSet is set to none !"
-              exit
-          fi
-        else # land plant canopy
-          echo -e '\n' "  Info: you set forcingDataSet to 'none' using the test_bed/climate.dat."
-          echo "   No site specific parameter values are available in this mode, and the option setPFTAutomatically is used with 'no'."
-          echo "   PFT is set to: ""$plant_functional_type_id"
-          if [ ! -e ./"$forceLandMetFile" ] # if file not exists
-            then
-              echo "EXIT!  the test_bed/""$forceLandMetFile"" does not exist, but the option forcingDataSet is set to none !"
-              exit
-          fi
-      fi 
-      setPFTAutomatically="no"
-    else  # fluxnet/cruncep forcing file
-      case "$forcingDataSet" in
-      "fluxnet")
-        siteDataSetFull="FLUXNET2"
-        ;;
-      "cruncep")
-        siteDataSetFull="CRUNCEPv7"
-        ;;
-      "face")
-        siteDataSetFull="FACE"
-        if [ $slmModel == "soil" ]
+    # test number of soil layers against min and max values (5:20)
+    if [ "$nsoil_layer" -lt 5 ]
+     then
+      echo " "
+      echo " You aim at using ""$nsoil_layer"" soil layers, where the minimum number is 5. nsoil_layer is now set to 5"
+      nsoil_layer=5
+     else
+      if [ "$nsoil_layer" -gt 20 ]
+       then
+        echo " "
+        echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
+        nsoil_layer=20
+      fi
+    fi
+    # soil forcing directory
+    if [ $nsoil_layer -eq 5 ]
+      then
+        soilForcingDir="$soilForcingDirBase""5/"
+    elif [ $nsoil_layer -eq 9 ]
+      then
+        soilForcingDir="$soilForcingDirBase""9/"
+    elif [ $nsoil_layer -eq 15 ]
+      then
+        soilForcingDir="$soilForcingDirBase""15/"
+    else
+      echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
+      echo "EXIT!"
+      exit 1
+    fi
+fi 
+
+
+## define site info file (full path)
+case "$forcingDataSet" in
+"fluxnet")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux_all_sites_1996-2008_list.dat
+  ;;
+"cruncep")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_all_gfdb_sites_1984-2013_list.dat
+  # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
+  if [ "$siteName" == "BBR_01" ] || [ "$siteName" == "LUE_01" ]
+   then
+    allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_spp_sites_1984-2013_list.dat
+  fi
+  ;;
+"face")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"face_sites_1996-2008_list.dat
+  ;;
+esac
+
+
+## test if siteName exists in site info files
+if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "cruncep" ] || [ "$forcingDataSet" == "face" ]
+ then 
+  # validate if $singleSiteName is not empty
+  if [ ! -z "$siteName" ]
+   then
+    allSites=$(cat "$allSiteInfoFile" | awk '{print $1}')
+    validateUserConfigValues "$siteName" "$allSites" "siteName"
+  fi
+fi
+
+
+## get an identifier for the met_forcing file name for static forcing
+#  i.e. the met_forcing file for the specific site (not the full file name but an string long enough to identify the file correctly)
+case "$forcingDataSet" in
+"fluxnet")
+  siteNameStatMetForc="$siteName""_s_"                # e.g.: DE-Hai  ->  DE-Hai_s_*.dat  ->  DE-Hai_s_2000-2006.dat  -> climate.dat
+  ;;
+"cruncep")
+  crunSiteNameShort=$(echo "$siteName" | cut -c1-3)   # shortens file name provided, e.g.: BHS_01 ->  BHS  (cruncep met_forcing is not sub-site specific)
+  siteNameStatMetForc="$crunSiteNameShort""_1984"
+  ;;
+"face")
+  siteNameStatMetForc="$siteName""_199"
+  ;;
+esac
+
+
+## test_canopy model and forcingDataSet none ##
+if [ $slmModel != "test_canopy" ] 
+ then
+  # no site data-set
+  if [ "$forcingDataSet" == "none" ]  # if forcing data are neither Fluxnet nor Cruncep dataset
+  then  # local forcing file
+    # SLM soil / land plant canopy
+    if [ $slmModel == "soil" ]
+      then
+        echo -e '\n' "  Info: you set forcingDataSet to 'none' using the test_bed/soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat files."
+        echo "   No site specific parameter values are available in this mode, and the option setPFTAutomatically is used with 'no'."
+        if [ ! -e ./"$forceSoilLitterFile" ] # if file not exists
           then
-            echo " Sorry, no soil_forcing files for FACE sites yet."
-            echo " EXIT!"
-            exit 1
+            echo "EXIT!  the test_bed/""$forceSoilLitterFile"" does not exist, but the option forcingDataSet is set to none !"
+            exit
         fi
-        ;;
-      esac
-
-      # soil / met forcing
-      if [ $slmModel == "soil" ]
+        if [ ! -e ./"$forceSoilPhysicFile" ] # if file not exists
+          then
+            echo "EXIT!  the test_bed/""$forceSoilPhysicFile"" does not exist, but the option forcingDataSet is set to none !"
+            exit
+        fi
+    
+    else # land plant canopy
+      echo -e '\n' "  Info: you set forcingDataSet to 'none' using the test_bed/climate.dat."
+      echo "   No site specific parameter values are available in this mode, and the option setPFTAutomatically is used with 'no'."
+      echo "   PFT is set to: ""$plant_functional_type_id"
+      if [ ! -e ./"$forceLandMetFile" ] # if file not exists
         then
-          #forcing="soil_forcing"
-          if [ $nsoil_layer -eq 5 ]
-            then
-              forcing="soil_forcing_sl5"
-          elif [ $nsoil_layer -eq 9 ]
-            then
-              forcing="soil_forcing_sl9"
-          elif [ $nsoil_layer -eq 15 ]
-            then
-              forcing="soil_forcing_sl15"
-          else
-            echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
-            echo "EXIT!"
-            exit 1
-          fi
-        else # land plant canopy
-          forcing="met_forcing"
-      fi 
-
-      siteFolderBasic="/Net/Groups/BGI/data/Model/SLM1/input/point/"
-      siteFolder="$siteFolderBasic""$siteDataSetFull"
-      siteFolderForcing="$siteFolder""/""$forcing"
-      if ! ls -la $siteFolderForcing | grep $siteName > /dev/null  # if forcing file not found
-        then
-          echo "EXIT! The site ""$siteName"" you selected for forcing input does not exist in the forcingDataSet folder !"
+          echo "EXIT!  the test_bed/""$forceLandMetFile"" does not exist, but the option forcingDataSet is set to none !"
           exit
       fi
-  fi  # ["$forcingDataSet" == "none"]
-else  # in case: $slmModel == "test_canopy"
-  setPFTAutomatically="no"
-fi    # [$slmModel != "test_canopy"]
+    fi 
+    setPFTAutomatically="no"   # for forcingDataSet = none
+  fi  # end: forcingDataSet == "none"
+else  
+  setPFTAutomatically="no"   # for test_canopy model
+fi
 
 
 ## create folder, and copy some files there ##
 # postprocessing R scripts
 # namelist
 # lctlib_slm_nlct8.def
-# forcing (climate/ soil)
 mkdir -p ./"$slmModel"
 rm -rf   ./"$slmModel"/*  # delete all in this folder if the folder existed before
 cp ../r_script/postprocessing_"$slmModel".R   ./"$slmModel"
 cp ../namelist/namelist.slm                   ./"$slmModel"
 cp ../../data/lctlib_slm_nlct8.def            ./"$slmModel"
+
+
+## copy forcing file(s)
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
   then
     if [ "$forcingDataSet" == "none" ]
@@ -455,28 +551,12 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
       else # $forcingDataSet == fluxnet / cruncep / face
         if [ $slmModel == "soil" ]
           then
-            cp "$siteFolderForcing"/"$siteName"_lit.dat ./"$slmModel"/"$forceSoilLitterFile"
-            cp "$siteFolderForcing"/"$siteName"_sph.dat ./"$slmModel"/"$forceSoilPhysicFile"
+            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteName"*_lit.dat  ./"$slmModel"/"$forceSoilLitterFile"
+            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteName"*_sph.dat  ./"$slmModel"/"$forceSoilPhysicFile"
           else # land plant canopy
-            cp "$siteFolderForcing"/"$siteName".dat     ./"$slmModel"/"$forceLandMetFile"
+            cp "$siteDataDirBase""$siteDataSet""$metForcingDir""$siteNameStatMetForc"*.dat  ./"$slmModel"/"$forceLandMetFile"
         fi 
     fi
-fi
-
-
-## test number of soil layers against min and max values (5:20)
-if [ "$nsoil_layer" -lt 5 ]
- then
-  echo " "
-  echo " You aim at using ""$nsoil_layer"" soil layers, where the minimum number is 5. nsoil_layer is now set to 5"
-  nsoil_layer=5
- else
-  if [ "$nsoil_layer" -gt 20 ]
-   then
-    echo " "
-    echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
-    nsoil_layer=20
-  fi
 fi
 
 
@@ -666,32 +746,11 @@ changeNamelistValue nsoil_energy "$nsoil_layer"
 changeNamelistValue nsoil_water "$nsoil_layer"
 changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
 
-# forcingDataSet (not for test_canopy)
+## set site-specific information (not for test_canopy)
 if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
   then
-    case "$forcingDataSet" in
-    "fluxnet")
-      allSiteDatFile="$siteFolder"/flux_all_sites_1996-2008_list.dat
-      siteNameShort=$(echo "$siteName" | cut -c1-6)             # shortens file name provided, e.g.: CA-Man_1999-2003 -> CA-Man
-      ;;
-    "cruncep")
-      allSiteDatFile="$siteFolder"/crun_all_gfdb_sites_1984-2013_list.dat
-      siteNameShort=$(echo "$siteName" | cut -c1-3)             # shortens file name provided, e.g.: KAD_1901-2015 -> KAD
-      siteNameShort="$siteNameShort""_01"                       # KAD -> KAD_01
-      # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
-      if [ "$siteNameShort" == "BBR_01" ] || [ "$siteNameShort" == "LUE_01" ]
-       then
-        allSiteDatFile="$siteFolder"/crun_spp_sites_1984-2013_list.dat
-      fi
-      ;;
-    "face")
-      allSiteDatFile="$siteFolder"/face_sites_1996-2008_list.dat
-      siteNameShort=$(echo "$siteName" | cut -c1-6)             # shortens file name provided, e.g.: DK-AMB_1996-2007 -> DK-AMB
-      ;;
-    esac
-
     # get data of the particular site
-    siteData=$(grep "$siteNameShort" "$allSiteDatFile")
+    siteData=$(grep "$siteName" "$allSiteInfoFile")
     # change namelist values accordingly, column numbers from all_sites_list.dat are:
     # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 
     # 11:awc 12:bd 13:pH 14:taxusda 15:taxnwrb 16:lith_glim 17:LAI 18:Nleaf 19:SLA 20:Height 
