@@ -144,10 +144,9 @@ MODULE mo_pheno_constants
   END TYPE t_crop_param
 !  PUBLIC :: t_crop_param
 
-  TYPE t_forestRegrowth_param          ! Parameters only required in case of l_forestRegrowth = true
+  TYPE t_forestRegrowth_param          ! Parameters only required in case of l_forestRegrowth = true -- TODO-JN discuss with KIM
      REAL(wp)            ::                           &
-                           kgCperMol = 0.012011,      & ! TODO-JN: this constant might be available somewhere else, too?!
-                           m2toha = 10000.,           & ! TODO-JN: this is also a more general constant -> move to somewhere else?
+                           m2toha = 10000.,           & ! TODO-JN: this is a more general constant -> move to somewhere else?
                            kgCtokg = 2.,              & ! TODO-JN: same
                            min_c   = 1.,              & ! JN: minimum C in wood and veg biomass for the maxLAI calculation
                            min_zero = 1.e-8,          & ! TODO-JN: describe

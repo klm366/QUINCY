@@ -1589,9 +1589,8 @@ CONTAINS
 
     !TODO-JN: probably needs to be adapted with absolute areas
 
-    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
-    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
-    ! IF prev_fract + delta_fract .EQ. 0._wp org_Cpool is not touched
+    ! TODO-JN: if smallest possible fraction 1e-10 is re-introduced 
+    !          then the following need to be reworked
 
     IF( prev_fract + delta_fract .GT. 0._wp) THEN
       org_Cpool = ((org_Cpool * prev_fract * veg_frac_correction) + delta_Cpool) &

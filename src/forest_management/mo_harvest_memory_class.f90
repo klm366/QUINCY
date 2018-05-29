@@ -19,6 +19,8 @@ MODULE mo_harv_memory_class
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
+  dsl4jsb_Use_processes FAGE_
+
   IMPLICIT NONE
   PRIVATE
 
@@ -86,14 +88,17 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
-      !TODO-JN: since it only works on the pft level - exclude if FAGE not active!
-      CALL jsb_add_var( mem, 'cconservation_harvest', mem%cconservation_harvest,              &
-        & hgrid, surface,                                                           &
-        & t_cf('cconservation_harvest', 'mol(C) m-2(canopy)', &
-          & 'Test for c conservation on relocation for harvest.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+      IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
+        ! C conservation on the tile can only be tested for harvest, 
+        !    if the harvested area stays on the tile, i.e. if fage is not active
+        CALL jsb_add_var( mem, 'cconservation_harvest', mem%cconservation_harvest,    &
+          & hgrid, surface,                                                           &
+          & t_cf('cconservation_harvest', 'mol(C) m-2(canopy)', &
+            & 'Test for c conservation on relocation for harvest.'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+          & prefix, suffix,                                                           &
+          & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+      END IF
 
     END IF
 

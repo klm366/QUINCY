@@ -405,7 +405,7 @@ CONTAINS
         CYCLE
       END IF
 
-!TODO-JN-COHORTS: check this!
+!TODO-JN: l_fixed_fractions = .FALSE.!
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.FALSE., &

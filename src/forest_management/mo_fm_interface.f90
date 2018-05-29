@@ -1,6 +1,9 @@
 !>
-!! @brief Contains the interfaces to the fm process 
-!! - TODO: if this really should run on box it probably will all not be required -- but might run on veg later?
+!! @brief forest management (FM) tasks 
+!!        - currently only dummy to have a process whose memory is filled in the jsbalone driver
+!!
+!! - TODO-JN-COHORTS: if this really should run on box it probably will all not be required 
+!!   depends on the reading -- but might also run on veg later?
 !!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg

@@ -896,18 +896,16 @@ MODULE mo_pheno_process
                                           & prev_veg_c_at_max_green,        & ! <- InOut
                                           & annual_veg_c_inc,               & ! <- InOut
                                           & biennial_avg_veg_c_inc,         & ! <- InOut
-                                          & quinquennial_avg_veg_c_inc,     & ! <- InOut
                                           & decennial_avg_veg_c_inc,        & ! <- InOut
                                           & number_of_individuals,          & ! <- InOut
                                           & biomass_per_individual,         & ! <- InOut
-                                          & leafC_per_individual,           & ! <- InOut
-                                          & leafC,                          & ! <- InOut
                                           & veg_frac_correction,            & ! <- InOut
                                           & maxLAI_allom )                    ! <- inout
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_pheno_constants, ONLY: PhenoParam
+    USE mo_pheno_constants,  ONLY: PhenoParam
+    USE mo_carbon_constants, ONLY: molarMassC_kg
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
@@ -923,32 +921,28 @@ MODULE mo_pheno_process
                               & prev_veg_c_at_max_green,        & 
                               & annual_veg_c_inc,               &
                               & biennial_avg_veg_c_inc,         & 
-                              & quinquennial_avg_veg_c_inc,     & 
                               & decennial_avg_veg_c_inc,        & 
                               & number_of_individuals,          & 
                               & biomass_per_individual,         & 
-                              & leafC_per_individual,           & 
-                              & leafC,                          &
                               & veg_frac_correction,            &
                               & maxLAI_allom
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES     TODO_JN -> KN select those from above which are only required internally
-    REAL(wp) :: kgPerHa
+    REAL(wp) :: kgPerHa, &
+          & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
+          & leafC                         ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
 
     !-----------------------------------------------------------------------
     ! CONTENT
-    kgPerHa = PhenoParam%FR%kgCtokg * PhenoParam%FR%kgCperMol * PhenoParam%FR%m2toha
+    kgPerHa = PhenoParam%FR%kgCtokg * molarMassC_kg * PhenoParam%FR%m2toha
 
     ! calculate the (avg multi-) annual increment 
     annual_veg_c_inc = veg_carbon_at_max_green - prev_veg_c_at_max_green
     biennial_avg_veg_c_inc = biennial_avg_veg_c_inc - (biennial_avg_veg_c_inc / 2.0) + (annual_veg_c_inc / 2.0)
-    quinquennial_avg_veg_c_inc &
-      & = quinquennial_avg_veg_c_inc - (quinquennial_avg_veg_c_inc / 5.0) + (annual_veg_c_inc / 5.0)
     decennial_avg_veg_c_inc &
       & = decennial_avg_veg_c_inc - (decennial_avg_veg_c_inc / 10.0) + (annual_veg_c_inc / 10.0)
 
-    !TODO-JN: discuss with Kim, if EPSILON(1.0_wp) would be sufficient for the test
     !For numerical reasons funct_allometry%FOM_alloc_vegetation_carbon_at_max_green_pool cannot be zero. 
     !We also want to set max_LAI to the minimum value after harvest, 
     !    ie. when cbalance%Cpool_woods(kidx0:kidx1,itile)=zero.

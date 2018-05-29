@@ -68,7 +68,6 @@ MODULE mo_pheno_memory_class
                                       ! at previous day, because not known for current day; updated at ..
                                       ! the beginning of each new day (stream)
 
-!TODO-JN -> TODO-KN after testing several of these can get local variables instead of output vars!? 
                                       !! JN: variables required when l_forestRegrowth = true, i.e. when the 
                                       !      maxLAI is derived from biomass via allometric relationships
       & prev_veg_c_at_max_green,    & ! Last periods total vegetation carbon [mol(C) m-2(canopy)] 
@@ -77,14 +76,11 @@ MODULE mo_pheno_memory_class
                                       ! calculated ar the time of the green pool maximum --> only changes ones a year!
       & biennial_avg_veg_c_inc,     & ! avg increment in total vegetation carbon [mol(C) m-2(canopy)] 
                                       ! over the last two years calculated at the time of the green pool maximum
-      & quinquennial_avg_veg_c_inc, & ! avg increment in total vegetation carbon [mol(C) m-2(canopy)] 
-                                      ! over the last five years calculated at the time of the green pool maximum
       & decennial_avg_veg_c_inc,    & ! avg increment in total vegetation carbon [mol(C) m-2(canopy)] 
                                       ! over the last ten years calculated at the time of the green pool maximum
       & number_of_individuals,      & ! Number of individuals in last calculation [trees ha-1]
       & biomass_per_individual,     & ! Biomass per individual according to allometric relationships [kg/tree]
-      & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
-      & leafC,                      & ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
+
       & cconservation_allom,        & ! Tester for c conservation upon rescaling due to changed max lai 
       & maxLAI_allom,               & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]: 
                                       ! Current max LAI according to allometric relationships --> only changes ones a year!
@@ -103,7 +99,7 @@ MODULE mo_pheno_memory_class
                                       ! growing period (autumn to spring) and negative during summer. (stream)
       & chill_days_SG,              & ! Number of chill days --- needed for the phenology of summer- and
       & chill_days_EG,              & ! evergreens (stream)
-      & veg_frac_correction,        & ! Factor representing clumpyness of vegetation (for each tile type).
+      & veg_frac_correction           ! Factor representing clumpyness of vegetation (for each tile type).
                                       ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                       ! canopy area = veg_frac_correction * tile area.
                                       ! var (tile area) = veg_frac_correction * var(canopy area).
@@ -113,8 +109,6 @@ MODULE mo_pheno_memory_class
                                       ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
                                       !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                       ! var (tile area) = veg_frac_correction * var(canopy area)  * fract_fpc_max.
-      & delta_veg_frac_correction,  &
-      & delta_lai
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
@@ -215,25 +209,6 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.TRUE.,                                                  &
         & loutput = .TRUE.,initval_r=0.0_wp )
-
-
-      !TODO-JN-COHORTS: only required if FAGE is active (and l_forestRegrowth)
-      CALL jsb_add_var( mem, 'delta_veg_frac_correction', mem%delta_veg_frac_correction, &
-        & hgrid, surface,                                                    &
-        & t_cf('delta_veg_frac_correction', '', 'Change in correction factor upon ageing') , &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.TRUE.,                                                  &
-        & loutput = .FALSE.,initval_r=0.0_wp )
-      
-      CALL jsb_add_var( mem, 'delta_lai', mem%delta_lai, &
-        & hgrid, surface,                                                    &
-        & t_cf('delta_lai', '', 'Change in lai upon ageing') , &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.TRUE.,                                                  &
-        & loutput = .FALSE.,initval_r=0.0_wp )
-
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
@@ -342,10 +317,9 @@ CONTAINS
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
-!TODO-JN: nochmal Reiner ansprechen, hier gibt es ja jetzt einen Haufen von Variablen, die 
+!TODO-JN-COHORT: nochmal Reiner ansprechen, hier gibt es ja jetzt einen Haufen von Variablen, die 
 !         nur für pft1-4 interessant wären und für die anderen nicht -> doch als eigenen prozess???
-! hmmm, KN fragen, welche davon überhaupt als nicht lokale gebraucht werden... die meisten können 
-! vermutlich lokal bzw loutput = .FALSE. sein! 
+
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
             & hgrid, surface,                                                    &
@@ -365,25 +339,13 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'leafC_per_ind', mem%leafC_per_individual, &
-            & hgrid, surface,                                                    &
-            & t_cf('leafC_per_individual', 'kg/tree', 'Leaf C per individual according to allometric relationships'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'leafC', mem%leafC, &
-            & hgrid, surface,                                                    &
-            & t_cf('leafC', 'mol(C) m-2(canopy)', 'Leaf C according to allometric relationships'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
           CALL jsb_add_var( mem,'prev_max_green_veg_c', mem%prev_veg_c_at_max_green, &
             & hgrid, surface,                                                    &
             & t_cf('prev_veg_c_at_max_green', 'mol(C) m-2(canopy)', 'Last periods total vegetation carbon'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'annual_veg_c_inc', mem%annual_veg_c_inc, &
             & hgrid, surface,                                                    &
             & t_cf('annual_veg_c_inc', 'mol(C) m-2(canopy)', 'annual increment in total vegetation carbon'), &
@@ -393,12 +355,6 @@ CONTAINS
           CALL jsb_add_var( mem,'biennial_mi_veg_c', mem%biennial_avg_veg_c_inc, &
             & hgrid, surface,                                                    &
             & t_cf('biennial_avg_veg_c_inc', 'mol(C) m-2(canopy)', 'biennial increment in total vegetation carbon'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'quinquennial_mi_veg_c', mem%quinquennial_avg_veg_c_inc, &
-            & hgrid, surface,                                                    &
-            & t_cf('quinquennial_avg_veg_c_inc', 'mol(C) m-2(canopy)', 'quinquennial increment in total vegetation carbon'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)

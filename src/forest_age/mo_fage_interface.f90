@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the forest-age processes
+!! @brief Forest-age (fage) tasks -- tasks dealing with cohorts 
 !!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg
@@ -258,7 +258,7 @@ CONTAINS
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=sink_fract(:))
 
         ! a) identify delta fraction for shifts from one to the next cohort
-        !TODO-JN needs to be adapted when working with absolute areas
+        !TODO-JN-COHORTS needs to be adapted when working with absolute areas
 
         !TODO-JN-COHORTS: cohort_max_age would only be required with this dimension
         !                 if there would be dynamic changes individual per grid cell, 
@@ -277,8 +277,10 @@ CONTAINS
         CALL update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
           & prevChild, currentChild, options, fract_source_max_age(:), source_fract(:))
 
-        ! c) correct veg_frac_correction - required for correct recalculation the carbon pools  
-        !     -> particularly max_green_veg_c for subsequent maxLAI calculation!
+        ! c) correct veg_frac_correction and lai
+
+        ! ------ veg_frac_correction needs to be averaged because it is required for correct recalculation of the carbon pools  
+        !     -> particularly of max_green_veg_c for subsequent maxLAI calculation!
         SELECT TYPE (mm => prevChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
         SELECT TYPE (mm => currentChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__sink => mm ; END SELECT
         veg_frac_correction_source => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! in
@@ -288,17 +290,19 @@ CONTAINS
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
           & veg_frac_correction_source(:), veg_frac_correction_sink(:)) 
 
+        ! ++ when the veg_frac_correction changes cpools always need to be rescaled 
         IF(ANY(old_veg_frac_correction_sink(:) .NE. veg_frac_correction_sink(:))) THEN
           CALL rescale_carbon_upon_reference_area_change(currentChild, options, &
             & old_veg_frac_correction_sink(:), veg_frac_correction_sink(:))
         ENDIF
 
-        ! TODO-JN: hm, do this also has to be weighted with the new veg_frac_corr? If so it also would need to be
-        ! rescaled each time the veg_frac_correction changes!?! - Kim and I currently (28.03.18) interprete LAI as per tile
+        ! ------ also the lai needs to be weighted upon area change involved with ageing 
+        !        this is not done as for the cpools, because currently (28.03.18) KN and JN interprete LAI as per tile
+        !        --> NOTE: if not per tile but per canopy it also would need to be rescaled 
+        !                  each time the veg_frac_correction changes and could thus be treated the same as the cpools
         lai_source => pheno__mem__source%lai%ptr(ics:ice,iblk)  ! in
         lai_sink => pheno__mem__sink%lai%ptr(ics:ice,iblk)      ! inout
-        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
-          & lai_source(:), lai_sink(:)) 
+        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), lai_source(:), lai_sink(:)) 
 
         ! d) TODO-JN-COHORTS what else to shift? 
 
@@ -391,7 +395,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: disturbed_area
 
     CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild
-    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea, helper1, helper2
+    REAL(wp), DIMENSION(options%nc)        :: source_fract, damagedArea, burnedArea
 
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
@@ -450,11 +454,10 @@ CONTAINS
         burned_frac => disturb__mem%burned_frac%ptr(ics:ice,iblk)
         damaged_frac => disturb__mem%damaged_frac%ptr(ics:ice,iblk)
 
-!TODO: über ta, ra und densities denken  
+!TODO-JN-COHORTS: über ta, ra und densities denken  
 
         !***********************************************
         !*** care for fire damage
-        !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged? 
         burnedArea(:) = burned_frac(:) * source_fract(:)
 
         ! a) changes in area
@@ -471,14 +474,9 @@ CONTAINS
 
 
         !***********************************************
-        !*** care for wind damage -     TODO-JN: check: work with max area to prevent numerical issues!?
-
-        !TODO-JN: ich glaube nicht, dass ich das brauche -- wieder rausnehmen, denn sonnst müsste ich:
-                      !TODO: if only > something than feed back into damaged frac!  mit aggregate und allem!
-        helper2(:) = 0._wp
-        helper1(:) = damaged_frac(:) * (source_fract(:) - burnedArea(:))
-        damagedArea(:) = MERGE(helper1, helper2, helper1>=1.e-10_wp) !TODO-JN make it a constant
-!        damagedArea(:) = damaged_frac(:) * source_fract(:)
+        !*** care for wind damage
+        !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged?  
+        damagedArea(:) = damaged_frac(:) * source_fract(:)
 
         ! wind damage only depends on the forcing and there is a chance that no area is damaged
         IF(ANY(damagedArea(:) .GT. 0._wp)) THEN
@@ -646,12 +644,15 @@ CONTAINS
       IF(ANY(area_to_harvest(:) .GT. 0._wp)) THEN
         tile%l_delta_area_change(ics:ice, iblk) = .TRUE.
 
-        !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
-        !Assertion: TODO - fehler wenn youngest not empty!
-        l_sourceisfirstChild = .FALSE.
-
         firstChild => tile%Get_first_child_tile()
         currentChild => tile%Get_first_child_tile()
+
+        !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
+        l_sourceisfirstChild = .FALSE.
+        !Assert that youngest cohort is empty 
+        CALL firstChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+        IF (ANY(source_fract(:) .NE. 0._wp)) &
+              & CALL finish(TRIM(routine), 'Violation of assertion: area of youngest cohortv expected to be zero.')
 
         ! Area changes upon clearcut only have carbon density consequences for the first child
         !  (All other children will only have area changes, but keep their densities)
@@ -662,7 +663,7 @@ CONTAINS
           ! to this tiles area - i.e. not per cohort, thus it does not have to be multiplied with cohort fractions
           stillToHarvest(:) = area_to_harvest(:)
 
-          ! TODO: Identify cohort with oldest available trees for any calculated gridcell?
+          ! TODO-JN-COHORTS: Identify cohort with oldest available trees for any calculated gridcell
           oldestCohort = ncohorts
 
           ! Iterate over the children until currentChild points to that cohort

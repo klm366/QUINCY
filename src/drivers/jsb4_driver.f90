@@ -25,6 +25,7 @@ PROGRAM jsb4_driver
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_, CARBON_, FM_
+  dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -94,6 +95,7 @@ PROGRAM jsb4_driver
   TYPE(t_jsb_model), POINTER :: model
   CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
+  dsl4jsb_Def_memory(CARBON_)
   dsl4jsb_Def_memory(SEB_)
   dsl4jsb_Def_memory(TURB_)
   dsl4jsb_Def_memory(HYDRO_)
@@ -140,7 +142,6 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: s_srf(:)
   REAL(wp), ALLOCATABLE :: evapotrans(:)
   REAL(wp), ALLOCATABLE :: evapopot(:)
-
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
@@ -153,7 +154,9 @@ PROGRAM jsb4_driver
 
   REAL(wp), ALLOCATABLE :: CO2_flux(:,:)
 
+  !! only required for conservation tests
   REAL(wp), ALLOCATABLE :: old_c_state_sum(:,:), cconservation(:,:)
+  REAL(wp), ALLOCATABLE :: CO2_flux_yday(:,:)
 
   !! only required for FM - temporal solution 
   REAL(wp), ALLOCATABLE :: harvest_from_files(:,:,:)
@@ -285,6 +288,8 @@ PROGRAM jsb4_driver
   old_c_state_sum = 0._wp
   CO2_flux = 0._wp
   ALLOCATE(cconservation(nproma, nblks))
+  ALLOCATE(CO2_flux_yday(nproma, nblks))
+  CO2_flux_yday = 0.0_wp
 
   IF (.NOT. read_interface_vars) THEN
     CALL init_forcing(model_id)
@@ -320,15 +325,14 @@ PROGRAM jsb4_driver
   ics = 1
   ice = nproma
 
-!TODO-JN: habe ich das getestet?
   IF(jsbach_is_restarted()) THEN
 
     CALL IO_read_streams
-
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
-    dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
+      CALL model%Set_options(iblk=iblk)
       t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
       fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
       fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
@@ -392,48 +396,44 @@ PROGRAM jsb4_driver
 
       ! TODO-JN: for forest management test, before there is a better way available: 
       IF(tile%Is_process_active(FM_)) THEN
-!TODO: oje, ich muss davon 4 verschiedene machen!
-! ist deshalb auch in der site die gleich, ne, oder? denn ich hab ja auch die input daten verglichen!?!
-!        IF(is_newyear() .AND. my_process_is_stdio()) THEN
-!          DO pft = 1,4
-            write (harvest_area_input1%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 1, "_"
-            harvest_area_input1%expectedUnit = ""
-            harvest_area_input1%ocean_value = 0._wp
-            harvest_area_input1%frequency = ANNUAL_
-            NULLIFY(harvest_area_input1%timevalues)
-            harvest_area_input1%variable_name = "harvest"
-            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input1, read_harvest(:,:))
-            harvest_from_files(:,1,:) = read_harvest(:,:)
+        ! harvest is read annually, therefore each file needs an own permanent structure keeping track of reading 
 
-            write (harvest_area_input2%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 2, "_"
-            harvest_area_input2%expectedUnit = ""
-            harvest_area_input2%ocean_value = 0._wp
-            harvest_area_input2%frequency = ANNUAL_
-            NULLIFY(harvest_area_input2%timevalues)
-            harvest_area_input2%variable_name = "harvest"
-            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input2, read_harvest(:,:))
-            harvest_from_files(:,2,:) = read_harvest(:,:)
+        write (harvest_area_input1%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 1, "_"
+        harvest_area_input1%expectedUnit = ""
+        harvest_area_input1%ocean_value = 0._wp
+        harvest_area_input1%frequency = ANNUAL_
+        NULLIFY(harvest_area_input1%timevalues)
+        harvest_area_input1%variable_name = "harvest"
+        CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input1, read_harvest(:,:))
+        harvest_from_files(:,1,:) = read_harvest(:,:)
 
-            write (harvest_area_input3%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 3, "_"
-            harvest_area_input3%expectedUnit = ""
-            harvest_area_input3%ocean_value = 0._wp
-            harvest_area_input3%frequency = ANNUAL_
-            NULLIFY(harvest_area_input3%timevalues)
-            harvest_area_input3%variable_name = "harvest"
-            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input3, read_harvest(:,:))
-            harvest_from_files(:,3,:) = read_harvest(:,:)
+        write (harvest_area_input2%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 2, "_"
+        harvest_area_input2%expectedUnit = ""
+        harvest_area_input2%ocean_value = 0._wp
+        harvest_area_input2%frequency = ANNUAL_
+        NULLIFY(harvest_area_input2%timevalues)
+        harvest_area_input2%variable_name = "harvest"
+        CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input2, read_harvest(:,:))
+        harvest_from_files(:,2,:) = read_harvest(:,:)
 
-            write (harvest_area_input4%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 4, "_"
-            harvest_area_input4%expectedUnit = ""
-            harvest_area_input4%ocean_value = 0._wp
-            harvest_area_input4%frequency = ANNUAL_
-            NULLIFY(harvest_area_input4%timevalues)
-            harvest_area_input4%variable_name = "harvest"
-            CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input4, read_harvest(:,:))
-            harvest_from_files(:,4,:) = read_harvest(:,:)
+        write (harvest_area_input3%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 3, "_"
+        harvest_area_input3%expectedUnit = ""
+        harvest_area_input3%ocean_value = 0._wp
+        harvest_area_input3%frequency = ANNUAL_
+        NULLIFY(harvest_area_input3%timevalues)
+        harvest_area_input3%variable_name = "harvest"
+        CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input3, read_harvest(:,:))
+        harvest_from_files(:,3,:) = read_harvest(:,:)
 
-!          ENDDO
-!        ENDIF
+        write (harvest_area_input4%file_name_prefix, "(A12,I1,A1)") "harvest_pft0", 4, "_"
+        harvest_area_input4%expectedUnit = ""
+        harvest_area_input4%ocean_value = 0._wp
+        harvest_area_input4%frequency = ANNUAL_
+        NULLIFY(harvest_area_input4%timevalues)
+        harvest_area_input4%variable_name = "harvest"
+        CALL get_data_and_update_field(nblks, ics, ice, model_id, harvest_area_input4, read_harvest(:,:))
+        harvest_from_files(:,4,:) = read_harvest(:,:)
+
         DO iblk = 1, nblks
           dsl4jsb_var3D_onChunk(FM_, to_harvest) = harvest_from_files(:,:,iblk)
         ENDDO
@@ -446,10 +446,12 @@ PROGRAM jsb4_driver
 
       IF(is_newday()) THEN
 
-        IF (model%processes(CARBON_)%p%config%active) THEN
+        IF (model%processes(CARBON_)%p%config%active) THEN 
+          dsl4jsb_Get_memory(CARBON_)
+          CO2_flux_yday(:,iblk) = dsl4jsb_var2D_onChunk(CARBON_, CO2_flx2atm_npp_yday_ta) &
+            & + dsl4jsb_var2D_onChunk(CARBON_, CO2_flx2atm_soilresp_ta) + dsl4jsb_var2D_onChunk(CARBON_, CO2_flx2atm_herbivory_ta)
           CALL check_carbon_conservation_for_operation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
-            & - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
-
+            & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
           IF(.NOT. jsbach_is_restarted()) THEN
             !TODO-JN: where to put this cconservation test? 
             !IF (iblk .EQ. 1) THEN
@@ -457,10 +459,10 @@ PROGRAM jsb4_driver
               print *, '----------------'
               print *, 'iblk: ', iblk
               print *, 'current sum: ', old_c_state_sum(:,iblk)
-              print *, 'flux: ', - CO2_flux(:,iblk)/molarMassCO2_kg * sec_per_day
+              print *, 'flux: ', - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day
               print *, 'error: ', cconservation(:,iblk)
             ENDIF
-                      CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
+            CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
             !IF (iblk .EQ. 1) THEN
             IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
               print *, '***********************'
@@ -483,7 +485,6 @@ PROGRAM jsb4_driver
           ENDIF
         ENDIF
       ENDIF
-      
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN
@@ -498,7 +499,6 @@ PROGRAM jsb4_driver
           & swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
       ENDIF
-
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
         & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), frac_par_diffuse(:,iblk), &
@@ -509,12 +509,12 @@ PROGRAM jsb4_driver
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:,iblk), evapopot=evapopot(:))
-
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
         ! To ensure restart identity, the daily evap_act_sum and evap_pot_sum would need to be calculated in jsbach!
         ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
-        evap_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
+        evap_act2pot_proc(:,iblk) &
+          & = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
 !        evap_act_sum_proc(:,iblk) = evap_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
 !        evap_pot_sum_proc(:,iblk) = evap_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF

@@ -274,8 +274,6 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
-    dsl4jsb_Real2D_onChunk :: leafC_per_individual
-    dsl4jsb_Real2D_onChunk :: leafC
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
     dsl4jsb_Real2D_onChunk :: veg_frac_correction
 
@@ -284,7 +282,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: prev_veg_c_at_max_green
     dsl4jsb_Real2D_onChunk :: annual_veg_c_inc
     dsl4jsb_Real2D_onChunk :: biennial_avg_veg_c_inc
-    dsl4jsb_Real2D_onChunk :: quinquennial_avg_veg_c_inc
     dsl4jsb_Real2D_onChunk :: decennial_avg_veg_c_inc
 
     ! Local variables
@@ -325,8 +322,7 @@ CONTAINS
     !first_call_phenology_this_day  => model%processes(PHENO_)%config%first_call_phenology_this_day(ics:ice,iblk)
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
-      !ASSERTION: l_forestRegrowth can only run when the CARBON process is active
-      ! TODO-JN: ask Reiner where this should be tested for - can/how already in config? 
+      !ASSERTION: l_forestRegrowth only possible when the CARBON process is active
       IF ( .NOT. tile%Is_process_active(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Forest regrowth can only be switched on when the CARBON process is active, too')
       ENDIF
@@ -341,8 +337,6 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)      ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC_per_individual)    ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    leafC)                   ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)     ! inout
 
@@ -351,7 +345,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    prev_veg_c_at_max_green)     ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    annual_veg_c_inc)            ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biennial_avg_veg_c_inc)      ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    quinquennial_avg_veg_c_inc)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    decennial_avg_veg_c_inc)     ! inout
     END IF
 
@@ -448,12 +441,9 @@ CONTAINS
           & prev_veg_c_at_max_green(:),               & ! <- InOut
           & annual_veg_c_inc(:),                      & ! <- InOut
           & biennial_avg_veg_c_inc(:),                & ! <- InOut
-          & quinquennial_avg_veg_c_inc(:),            & ! <- InOut
           & decennial_avg_veg_c_inc(:),               & ! <- InOut
           & number_of_individuals(:),                 & ! <- InOut
           & biomass_per_individual(:),                & ! <- InOut
-          & leafC_per_individual(:),                  & ! <- InOut
-          & leafC(:),                                 & ! <- InOut
           & veg_frac_correction(:),                   & ! <- InOut
           & maxLAI_allom(:)                           & ! <- InOut
           & )
@@ -729,11 +719,10 @@ CONTAINS
       IF (is_newyear()) THEN
         dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
-!TODO-JN: erstens brauche ich die nicht, zweitens ist es falsch wegen ta vs per canopy!
-!        dsl4jsb_Aggregate_onChunk(PHENO_, biennial_avg_veg_c_inc,    weighted_by_fract)
-!        dsl4jsb_Aggregate_onChunk(PHENO_, decennial_avg_veg_c_inc,    weighted_by_fract)
+
         !NOTE: despite changes, no aggregation of cpools necessary:
-        ! PHENO changes Cpools once a year, but only densities, not per tile (ta) values
+        ! with l_forestRegrowth PHENO changes Cpools only once a year at the beginning of a timestep,
+        ! and other processes (NPP alloc of carbon) aggregate them 
       ENDIF
     ENDIF
 

@@ -66,7 +66,8 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
 
-    !TODO-JN: this is a temporary solution - when replacing reading with e.g. Stiigs solution, here an own grid should be defined if still required 
+    !TODO-JN: this is a temporary solution - because our application only needs input for the 4 forest pfts
+    ! -- when replacing reading with e.g. Stiigs solution, here an own grid should be defined if still required 
     soil_depth_water   => Get_vgrid('soil_depth_water')
 
     IF (.NOT. ASSOCIATED(mem%to_harvest%ptr)) THEN

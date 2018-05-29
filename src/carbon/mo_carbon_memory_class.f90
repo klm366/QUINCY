@@ -17,7 +17,6 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE
-  USE mo_jsb_process_class,      ONLY: FAGE_
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
@@ -199,7 +198,7 @@ MODULE mo_carbon_memory_class
       CO2_flx2atm_herbivory_ta,      & !  .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
                                        ! .. (positive for emission to atmosphere,
                                        ! ..  negative for absorption by biosphere)
-      CO2_flx2atm_npp_test_ta          ! CO2 flux due to NPP, only needed for conservation test. 
+      CO2_flx2atm_npp_yday_ta          ! day CO2 flux from actual NPP, required for C conservation test
 
     ! Changes in state variables resulting due to area changes of the currently operating process 
     ! TODO-JN-COHORTS needs to be adapted for absolute fractions: currently in [mol(C)/m^2(parent)]
@@ -1093,12 +1092,13 @@ CONTAINS
         & output_level=BASIC,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-!       CALL jsb_add_var( mem, 'CO2_flx2atm_npp_test_ta', mem%CO2_flx2atm_npp_test_ta,                                           &
-!         & hgrid, surface,                                                                                                      &
-!         & t_cf('CO2_flx2atm_npp_test_ta', 'mol(C) m-2 s-1', 'CO2 flux due to NPP, only needed for conservation test'), &
-!         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                   &
-!         & prefix, suffix,                                                                                                      &
-!         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      CALL jsb_add_var( mem, 'co2_l2a_npp_yday_ta', mem%CO2_flx2atm_npp_yday_ta,                                       &
+        & hgrid, surface,                                                                                              &
+        & t_cf('CO2_flx2atm_npp_yday_ta', 'kg(CO2) m-2 s-1', 'Net daily CO2 flux, only needed for conservation test.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
+        & prefix, suffix,                                                                                              &
+        & output_level=BASIC,                                                                                &
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
         & hgrid, surface,                                                           &

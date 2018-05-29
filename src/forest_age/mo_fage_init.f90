@@ -181,7 +181,7 @@ CONTAINS
 !    ptr_2D(:,:) = tile%fract(:,:)
 
 !----------------------------------------------------------------------------------------
-!TODO-JN folgendes wäre nur im absolute Flächen Fall nötig gewesen, aber den haben wir ja noch gar nicht!
+!TODO-JN would only be required when working with absolute areas?
 !    ALLOCATE(ptr_2D(grid%nproma, grid%nblks))
 !    CALL tile%Get_fraction(fract=ptr_2D(:,:))
 !    dsl4jsb_var_ptr(FAGE_, fract_per_age) (:,1,:) = ptr_2D(:,:) !TODO-JN check: arrays seem to not be 0 based?!

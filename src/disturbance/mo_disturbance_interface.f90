@@ -260,8 +260,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_frac)              ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_frac)             ! out
 
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)       ! out
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)       ! out
+    IF (.NOT. tile%Is_process_active(FAGE_)) THEN
+      dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)       ! out
+      dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)       ! out
+    END IF 
 
     !
     dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_green)              ! inout
@@ -630,8 +632,10 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_atmos_ta,            weighted_by_fract)
 
-       dsl4jsb_Aggregate_onChunk(DISTURB_,  cconservation_wind,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(DISTURB_,  cconservation_fire,            weighted_by_fract)
+       IF (.NOT. tile%Is_process_active(FAGE_)) THEN
+         dsl4jsb_Aggregate_onChunk(DISTURB_,  cconservation_wind,            weighted_by_fract)
+         dsl4jsb_Aggregate_onChunk(DISTURB_,  cconservation_fire,            weighted_by_fract)
+       ENDIF
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

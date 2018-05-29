@@ -45,7 +45,7 @@ CONTAINS
     dsl4jsb_Def_memory(FM_)
     dsl4jsb_Get_memory(FM_)
 
-    ! No initialization needed at this time
+    ! No initialization needed at this time -- dummy 
     RETURN
 
     CALL fm_init_ic(tile)
@@ -110,13 +110,6 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(FM_)) RETURN
 
     CALL message(TRIM(routine), 'Setting fm initial conditions for tile '//TRIM(tile%name))
-
-    ! Initialize physical state
-    !
-    ! JN: currently nothing to do   
-!    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(FM_)%ic_filename), model%grid_id)
-
-!    CALL input_file%Close()
 
   END SUBROUTINE fm_init_ic
 

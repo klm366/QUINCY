@@ -6,7 +6,9 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-05)
-!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; Cohorts + moving carbon between them
+!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age classes
+!!      ++ routines to check carbon conservation 
+!!      ++ task to apply c consequences of area changes among forest age classes 
 !!
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
@@ -52,8 +54,8 @@ MODULE mo_carbon_interface
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                                                       &
                & update_per_tile_vars,                                                     &
-               & update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift,              &
-               & update_delta_carbon_rp_upon_disturbance,                                     &
+               & update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift,           &
+               & update_delta_carbon_rp_upon_disturbance,                                  &
                & update_carbon_states_with_delta_carbon,                                   &
                & rescale_carbon_upon_reference_area_change, calculate_current_c_state_sum, &
                & check_carbon_conservation_for_operation
@@ -288,6 +290,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  Cflux_herbivory        !
     dsl4jsb_Real2D_onChunk ::  Cflux_herbivory_LG     !
     dsl4jsb_Real2D_onChunk ::  Cflux_herbivory_2_atm  !
+
+    dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_npp_yday_ta  ! day CO2 flux from actual NPP, required for cconservation test 
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_npp_ta       ! grid cell averages of net CO2 fluxes between
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_soilresp_ta  ! .. biosphere (due to NPP, soil respiration and
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_herbivory_ta ! .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)] 
@@ -399,6 +403,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_LG  )       ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  Cflux_herbivory_2_atm )     ! inout
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_npp_yday_ta )    ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_npp_ta )         ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_soilresp_ta )    ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_herbivory_ta )   ! out
@@ -423,6 +428,7 @@ CONTAINS
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
     ! Initializations
+    CO2_flx2atm_npp_yday_ta  = 0._wp
     CO2_flx2atm_npp_ta       = 0._wp
     CO2_flx2atm_soilresp_ta  = 0._wp
     CO2_flx2atm_herbivory_ta = 0._wp
@@ -644,15 +650,10 @@ CONTAINS
    !-------------------------------------------------------------------
    ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
-!@todo: why? if this is done like this, C is not conserved?!?
-!   CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
-!              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
-!                   * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
-!                       - (NPP_pot_yDayMean-NPP_act_yDayMean)) ) ! corrected with yesterdays actual NPP defizit
-!---> why not using NPP_act_yDayMean? - ask TR
    CO2_flx2atm_npp_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
               (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
-                   * (NPP_act_yDayMean)) 
+                   * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
+                       - (NPP_pot_yDayMean-NPP_act_yDayMean)))  ! corrected with yesterdays actual NPP defizit
 
    CO2_flx2atm_soilresp_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
               (- veg_frac_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
@@ -661,6 +662,10 @@ CONTAINS
    CO2_flx2atm_herbivory_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
               (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * Cflux_herbivory_2_atm )                    ! .. herbivory
+
+   CO2_flx2atm_npp_yday_ta = molarMassCO2_kg *                & ! C conservarion test in jsb standalone driver 
+              (- veg_frac_correction * fract_fpc_max          & ! cannot deal with diurnal cycle of NPP, 
+                   * (NPP_act_yDayMean))                        ! therefore here additionaly the day mean
 
 
    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -748,10 +753,11 @@ CONTAINS
    ! dsl4jsb_Aggregate_onChunk(CARBON_, Cflux_herbivory_LG_ta, weighted_by_fract)
    ! dsl4jsb_Aggregate_onChunk(CARBON_, Cflux_herbivory_2_atm_ta, weighted_by_fract)
    ! dsl4jsb_Aggregate_onChunk(CARBON_, frac_litter_wood_new_ta,  weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(CARBON_, CO2_flx2atm_npp_yday_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, CO2_flx2atm_npp_ta,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, CO2_flx2atm_soilresp_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, CO2_flx2atm_herbivory_ta, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, CO2_flx2atm_npp_test_ta,  weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(CARBON_, cconservation_calcCpools, weighted_by_fract)
 
@@ -765,7 +771,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Task "update_apply_cohort_changes" applies area and c changes to cohorts (using previously filled delta variables) 
-  !! - TODO-JN area change should probably be a task of another process
+  !! - TODO-JN-COHORTS area change should probably be a task of another process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -790,8 +796,6 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-!TODO-JN: other test required?
-! -> maybe leaf and forest? or parent FAGE_ active?!
     IF (.NOT. ASSOCIATED(tile%parent_tile)) RETURN
     IF (.NOT. tile%parent_tile%Is_process_active(FAGE_)) RETURN
     IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) RETURN
@@ -807,7 +811,7 @@ CONTAINS
       ENDIF
 
       ! c) update area fractions 
-      ! TODO-JN: maybe make it a function in mo_jsb_tile_class: update_fraction?
+      ! TODO-JN-COHORTS: maybe make it a function in mo_jsb_tile_class: update_fraction?
       ! Or make it an own task in a more suited process?
       CALL tile%Get_fraction(ics, ice, iblk, fract=source_fract(:))
       CALL tile%Set_fraction(ics, ice, iblk, fract=source_fract(:) + tile%delta_fract(ics:ice, iblk))
@@ -876,7 +880,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_WoodLitterPools_ta,  weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_atmos_ta,            weighted_by_fract)
 
-      !TODO-JN: other aggregations required?
+      !TODO-JN-COHORTS: other aggregations required?
     ENDIF
 
     !NOTE: despite changes, currently no aggregation of fractions because:
@@ -1051,7 +1055,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     dsl4jsb_Def_config(PHENO_)
 
-    !TODO-JN: new dsl4jsb allowing to pass tile name on dsl4jsb_Def_memory(CARBON_)
+    !TODO-JN-COHORTS: new dsl4jsb allowing to pass tile name on dsl4jsb_Def_memory(CARBON_)
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
     TYPE(t_carbon_memory), POINTER :: carbon__mem__sink
 
@@ -1174,10 +1178,10 @@ CONTAINS
         ENDIF
       ENDDO
     ENDIF
-    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
-    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
+    ! TODO-JN-COHORTS: if smallest possible fraction 1e-10 will be re-introduced:  
+    !    then the following should not happen and other Assertions and MAX statements will be required!
 
-    !TODO-JN: introduce dsl4jsb with tile name -- dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )
+    !TODO-JN-COHORTS: introduce dsl4jsb with tile name -- dsl4jsb_Get_var2D_onChunk(CARBON_,  Cpool_green )
     Cpool_green => carbon__mem__source%Cpool_green%ptr(ics:ice,iblk)  ! inout
     Cpool_woods => carbon__mem__source%Cpool_woods%ptr(ics:ice,iblk)  ! inout
     Cpool_reserve => carbon__mem__source%Cpool_reserve%ptr(ics:ice,iblk)  ! inout
@@ -1359,7 +1363,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(CARBON_)
 
-    !TODO-JN: new dsl4jsb -- dsl4jsb_Def_memory(CARBON_)
+    !TODO-JN-COHORTS: new dsl4jsb -- dsl4jsb_Def_memory(CARBON_)
     TYPE(t_carbon_memory), POINTER :: carbon__mem__source
     TYPE(t_carbon_memory), POINTER :: carbon__mem__sink
 
@@ -1433,8 +1437,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sink
 
 
-    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
-    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
+    ! TODO-JN-COHORTS: if the smallest possible fraction 1e-10 is re-introduced 
+    ! then the following should not happen and other Assertions and MAX statements will be required!
 
     model => Get_model(source_tile%owner_model_id)
 
@@ -1627,7 +1631,7 @@ CONTAINS
     helper(:) = 1._wp
 
     IF((distKind .EQ. WIND) .OR. (distKind .EQ. CLEARCUT)) THEN
-      !TODO-JN: currently this is used for harvest, too: change as soon as there'll be product pools!
+      !TODO-JN-COHORTS: currently this is used for harvest, too: change as soon as there'll be product pools!
 
       ! Redistribute the carbon among the pools according to wind damage
       CALL relocate_carbon_damage( helper(:), & ! in
@@ -1657,12 +1661,6 @@ CONTAINS
         & delta_YCpool_humus_1_rp_sink(:),             & ! inout
         & delta_YCpool_humus_2_rp_sink(:)              & ! inout
         & )
-
-      IF (distKind .EQ. CLEARCUT) THEN
-        !TODO: huch? currently they do go there!?! + anyway I have to check if I treat green and wood litter pools correctly  
-        delta_carbon_2_GreenLitterPools_rp_sink = 0._wp
-        delta_carbon_2_WoodLitterPools_rp_sink = 0._wp
-      ENDIF
 
     ELSEIF (distKind .EQ. FIRE) THEN 
 
@@ -2152,8 +2150,8 @@ CONTAINS
       ENDDO
     ENDIF
 
-    ! TODO-JN: do they still need smallest possible fraction 1e-10? 
-    ! (Then the following should not happen and other Assertions and MAX statements will be required!)
+    ! TODO-JN-COHORTS: if the smallest possible fraction 1e-10 is re-introduced
+    !      then the following should not happen and other Assertions and MAX statements will be required!)
 
     CALL update_state_reset_delta(Cpool_green(:), delta_Cpool_green_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
@@ -2202,14 +2200,13 @@ CONTAINS
     CALL update_state_reset_delta(YCpool_humus_2(:), delta_YCpool_humus_2_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
 
-    ! TODO-JN: Only required if with disturbances
+    ! Following three are only required if with disturbances or harvest, however, they are always defined anyway 
     CALL update_state_reset_delta(carbon_2_GreenLitterPools(:), delta_carbon_2_GreenLitterPools_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
     CALL update_state_reset_delta(carbon_2_WoodLitterPools(:), delta_carbon_2_WoodLitterPools_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
     CALL update_state_reset_delta(carbon_2_atmos(:), delta_carbon_2_atmos_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
-
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL update_state_reset_delta(current_max_green(:), delta_current_max_green_rp(:), delta_fract(:), &
@@ -2318,7 +2315,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2_ta)            ! in
 
-    !TODO-JN: could be done in mo_carbon_process
+    !TODO-JN-COHORTS: could be done in mo_carbon_process
     current_c_state_sum = Cpool_green_ta + Cpool_woods_ta + Cpool_reserve_ta + Cpool_crop_harvest_ta + &
         & YCpool_acid_ag1_ta + YCpool_water_ag1_ta + YCpool_ethanol_ag1_ta + YCpool_nonsoluble_ag1_ta + &
         & YCpool_acid_ag2_ta + YCpool_water_ag2_ta + YCpool_ethanol_ag2_ta + YCpool_nonsoluble_ag2_ta + &
@@ -2357,7 +2354,7 @@ CONTAINS
     INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_state_sum(tile, options, Cconserve)
-    !TODO-JN: could be done in mo_carbon_process
+    !TODO-JN-COHORTS: could be done in mo_carbon_process
     Cconserve = Cconserve - old_c_state_sum - cflux
 
   END SUBROUTINE check_carbon_conservation_for_operation

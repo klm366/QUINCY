@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the harv process 
+!! @brief harvest (harv) tasks 
 !!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg
@@ -250,7 +250,7 @@ CONTAINS
           !          CALL tile%Get_fraction(ics, ice, iblk, fract=this_fract(:))
           !          harvested_area(:)=MIN(area_to_harvest(:), this_fract(:)) 
           !-> in relocate_carbon_damage it is the area relative to this pft 
-          !   and here area_to_harvest is already relatoive to the pft!  
+          !   and here area_to_harvest is already relative to the pft!  
           harvested_area(:)=area_to_harvest(:)
 
           dummy1(:) = 0._wp
