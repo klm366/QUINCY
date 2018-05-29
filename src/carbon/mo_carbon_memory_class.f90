@@ -202,7 +202,7 @@ MODULE mo_carbon_memory_class
 
     ! Changes in state variables resulting due to area changes of the currently operating process 
     ! TODO-JN-COHORTS needs to be adapted for absolute fractions: currently in [mol(C)/m^2(parent)]
-    ! TODO-JN currently only required for forests - but they do not have an lct_id
+    ! TODO-JN currently only required for forests - but they do not have an lct_id, so memory is also created for others
     TYPE(t_jsb_var_real2d) ::              &
       delta_Cpool_green_rp,                & 
       delta_Cpool_woods_rp,                & 
@@ -1137,22 +1137,20 @@ CONTAINS
             & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
         ENDIF
 
-
-!TODO-JN-COHORTS: does not need to go to the output (loutput = .FALSE.) -- only now for testing
 !TODO-JN-COHORTS: change unit when absolute areas are implemented
 ! ++ think about "fract_fpc_max"!
         CALL jsb_add_var( mem, 'delta_cpool_green_rp', mem%delta_Cpool_green_rp, hgrid, surface, &
           & t_cf('delta_Cpool_green_rp', 'mol(C) m-2(parent))', 'Change in Cpool_green.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+          & prefix, suffix, loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp )
         CALL jsb_add_var( mem, 'delta_cpool_woods_rp', mem%delta_Cpool_woods_rp, hgrid, surface, &
           & t_cf('delta_Cpool_woods_rp', 'mol(C) m-2(parent))', 'Change in Cpool_woods.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+          & prefix, suffix, loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp )
         CALL jsb_add_var( mem, 'delta_cpool_reserve_rp', mem%delta_Cpool_reserve_rp, hgrid, surface, &
           & t_cf('delta_Cpool_reserve_rp', 'mol(C) m-2(parent))', 'Change in Cpool_reserve.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+          & prefix, suffix, loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp )
 
         CALL jsb_add_var( mem, 'delta_cpool_crop_harvest_rp', mem%delta_Cpool_crop_harvest_rp, hgrid, surface, &
           & t_cf('delta_Cpool_crop_harvest_rp', 'mol(C) m-2(parent))', 'Change in Cpool_crop_harvest.'),         &

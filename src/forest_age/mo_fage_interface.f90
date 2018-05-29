@@ -366,6 +366,10 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Task "nat_disturb_cohort_changes" calculates the required changes upon natural disturbances
+  !! 
+  !! Note: it is only possible to conduct fire and wind damage in one task, because in jsb upon distrbances 
+  !!       only the c pool distribution delivered to the target cohort (first cohort) is influenced, 
+  !!       but not the densities of the source cohort 
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -454,8 +458,6 @@ CONTAINS
         burned_frac => disturb__mem%burned_frac%ptr(ics:ice,iblk)
         damaged_frac => disturb__mem%damaged_frac%ptr(ics:ice,iblk)
 
-!TODO-JN-COHORTS: über ta, ra und densities denken  
-
         !***********************************************
         !*** care for fire damage
         burnedArea(:) = burned_frac(:) * source_fract(:)
@@ -474,9 +476,8 @@ CONTAINS
 
 
         !***********************************************
-        !*** care for wind damage
-        !TODO-JN-COHORTS - ? reduce the available area by what has already been damaged?  
-        damagedArea(:) = damaged_frac(:) * source_fract(:)
+        !*** care for wind damage 
+        damagedArea(:) = damaged_frac(:) * (source_fract(:) - burnedArea(:))
 
         ! wind damage only depends on the forcing and there is a chance that no area is damaged
         IF(ANY(damagedArea(:) .GT. 0._wp)) THEN
