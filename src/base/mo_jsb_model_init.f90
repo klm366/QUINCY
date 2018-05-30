@@ -296,8 +296,8 @@ CONTAINS
         CALL finish('land_model_driver-init_routine','Simulation is too short for fluxnet output of one full forcing period')
       END IF
 
-      ! calc timestep when fluxnet output starts
-      fluxnet_output_start  = fluxnet_output_length * FLOOR((ntimestep / fluxnet_output_length ) - 1.0_wp)
+      ! calc timestep when fluxnet output starts (get the before last full output period that starts within ntimestep)
+      fluxnet_output_start  = fluxnet_output_length * FLOOR( (REAL(ntimestep) / REAL(fluxnet_output_length)) -1.0_wp ) 
       ! calc timestep when fluxnet output stops
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
 

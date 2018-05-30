@@ -219,6 +219,7 @@ PROGRAM land_model_driver
       ntimestep = 1
   END SELECT
 
+
   !! 3.0 -----------------------------------------------------------------------------------------------
   !! 
   !! settings for the transient forcing_mode
@@ -227,7 +228,7 @@ PROGRAM land_model_driver
   base_config%l_transient_forcing_mode          = .FALSE.
   base_config%l_transient_spinup                = .FALSE.
   base_config%l_transient_spinup_rewind_forcing = .FALSE.
-  itimestep                         = 1         ! default start of time loop
+  itimestep                         = 0         ! default start of time loop
   transient_spinup_itimestep_period = 0  
   ! set simulation values
   IF ( TRIM(forcing_options%forcing_mode) == "transient" ) THEN
@@ -239,7 +240,6 @@ PROGRAM land_model_driver
     ! init spinup period counter
     transient_spinup_itimestep_period = 0
   END IF
-
 
 
   !! 4.0 -----------------------------------------------------------------------------------------------
@@ -256,6 +256,7 @@ PROGRAM land_model_driver
     !! Note: \n 
     !!  for each timestep the model simulates what happens during the period:
     !!  time_day (end of prevous timestep)  -->  time_day  + timestep_prop_day
+    !!  time_day is initialized with 0.0
     !! 
     time_day  = time_day  + timestep_prop_day         ! time in days
     IF(time_day > one_year) THEN
@@ -264,7 +265,12 @@ PROGRAM land_model_driver
     END IF
 
 
-    !! 4.2 control variables for transient forcing_mode
+    !! 4.2 advance timestep of this loop
+    !! init itimestep with 0, the timestep 1 means running from 0 to 1, equally to time_day (sec 4.1)
+    itimestep = itimestep + 1   ! increment DO loop counter
+
+
+    !! 4.3 control variables for transient forcing_mode
     !! 
     !! 
     IF (base_config%l_transient_forcing_mode) THEN
@@ -280,15 +286,15 @@ PROGRAM land_model_driver
         ! if complete spinup has ended and the simulation should start
         IF (itimestep .EQ. 1) THEN
           base_config%l_transient_spinup_rewind_forcing = .TRUE.
-          base_config%l_transient_spinup                = .FALSE.   ! do not enter the "control spinup" IF statement anymore
-          time_day                                      = 0.0_wp    ! equals 1.0 after one day has passed (i.e. start with zero)
-          time_year                                     = 1         ! the 1st year of a simulation == 1 (not zero)
+          base_config%l_transient_spinup                = .FALSE.           ! do not enter the "control spinup" IF statement anymore
+          time_day                                      = timestep_prop_day ! equals 1.0 at the last simulated timestep of the day
+          time_year                                     = 1                 ! the 1st year of a simulation == 1 (not zero)
         END IF
       END IF
     END IF
     
     
-    !! 4.3 set orbital parameters and update time-variant forcing
+    !! 4.4 set orbital parameters and update time-variant forcing
     !! 
     !! l_forcing is set in init_slm() depending on the specific SLM model
     !! 
@@ -346,7 +352,7 @@ PROGRAM land_model_driver
     END IF
 
     
-    !! 4.4 land model interface
+    !! 4.5 land model interface
     !! 
     CALL land_model_interface(tile, &
                               l_forcing, &
@@ -420,7 +426,7 @@ PROGRAM land_model_driver
                                   !! l2a memory - end
                                 &  ) ! land_model_interface()
 
-    !! 4.5 special case: fluxnet output
+    !! 4.6 special case: fluxnet output
     !! 
     IF(base_config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
@@ -438,7 +444,6 @@ PROGRAM land_model_driver
       END IF
     END IF
 
-    itimestep = itimestep + 1   ! increment DO loop counter
   END DO  ! end time loop 
 
 
