@@ -855,6 +855,12 @@ if [ $forcingMode == "transient" ]
    echo " You set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
    echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
 
+   # soil model
+   if [ "$slmModel" == "soil" ]; then
+    echo " There is no transient mode for the soil model, please select the static forcing mode."
+    echo " EXIT!"
+    exit 1
+   fi
    # spinup length
    if [ $transient_spinup_years -lt 1 ]
     then
@@ -919,12 +925,15 @@ fi
 
 
 ## an identifier (additional to siteName) for static and transient forcing files -> passed to run_slm.sh (via config file) ##
-forcingModeFileID=""
 case "$forcingDataSet" in
 "fluxnet")
   if [ $forcingMode == "static" ]
    then
     forcingModeFileID="_s_"
+    # for the soil model the forcing file indentifier is different, as here only static (1 yr) forcing is available
+    if [ "$slmModel" == "soil" ]; then
+     forcingModeFileID="_"
+    fi
   else
     forcingModeFileID="_t_"
   fi
