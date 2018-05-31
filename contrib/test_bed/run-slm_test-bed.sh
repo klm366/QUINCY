@@ -378,7 +378,7 @@ validateUserConfigValues "$sb_adsorp_scheme" "$validateSb_adsorp_scheme" "sb_ads
 ## definition of some basic variables
 siteDataDirBase="/Net/Groups/BGI/data/Model/SLM1/input/point/"
 metForcingDir="new_met_forcing/"
-soilForcingDirBase="soil_forcing_sl"
+soilForcingDirBase="new_soil_forcing_sl"
 forceSoilLitterFile="soil_forcing_litterfall.dat"
 forceSoilPhysicFile="soil_forcing_soilphysics.dat"
 forceLandMetFile="climate.dat"

@@ -7,8 +7,7 @@
 ##
 
 
-# CRUNCEPv7 forcing  mode (see prep_run_slm)
-# options: static tansient
+# set manually: forcing  mode with options: static tansient (see prep_run_slm)
 forcingMode="static"
 
 
@@ -44,7 +43,9 @@ fi
 currDate=$(date +%F)
 
 
-## loop over potential numbers of soil layers present: 5 9 15
+#####################################################################
+## loop over potential numbers of soil layers present: 5 9 15      ##
+#####################################################################
 for sl in 5 9 15
  do
   echo " "
@@ -52,7 +53,9 @@ for sl in 5 9 15
   echo " "
 
 ## set the soil_forcing folder for the particular sl number at the server where the soil_forcing files are stored
-soilForce="soil_forcing_sl""$sl""/"
+#  create this folder in case it is not present
+soilForce="new_soil_forcing_sl""$sl""/"
+mkdir -p "$pathServerF""$soilForce"
 
 ## set the experimentalID folder names in the user scratch/slm/ folder containing the simulation results
 expNameF="exp_create_soil_forc_fluxnet_sl""$sl"
@@ -60,9 +63,13 @@ expNameCC="exp_create_soil_forc_cruncep_cue_sl""$sl"
 expNameCS="exp_create_soil_forc_cruncep_spp_sl""$sl"
 
 
-## delete old and copy new soil_forcing files ##
+#################################################
+## delete old and copy new soil_forcing files  ##
+#################################################
 
-## Fluxnet ##
+#############################
+## Fluxnet                 ##
+#############################
 if [ -d "$pathSourceBase""$expNameF" ] # if folder is present, i.e., new soil_forcing files were created
  then
 
@@ -95,7 +102,9 @@ if [ -d "$pathSourceBase""$expNameF" ] # if folder is present, i.e., new soil_fo
 fi     # if new soil_forcing was created
 
 
-## Cruncep CUE
+#############################
+## Cruncep CUE             ##
+#############################
 if [ -d "$pathSourceBase""$expNameCC" ] # if folder is present, i.e., new soil_forcing files were created
  then
 
@@ -137,7 +146,9 @@ if [ -d "$pathSourceBase""$expNameCC" ] # if folder is present, i.e., new soil_f
 fi     # if new soil_forcing was created
 
 
-## Cruncep SPP
+#############################
+## Cruncep SPP             ##
+#############################
 if [ -d "$pathSourceBase""$expNameCS" ] # if folder is present, i.e., new soil_forcing files were created
  then
 

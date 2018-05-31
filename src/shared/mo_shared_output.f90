@@ -7,7 +7,12 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-14)
 !! Second version by Jan Engel (20170630): remove ALLOCATE (only one tile is used), and init *_acc VAR and pools within its routines
-!!
+!! 
+!! @par Three Main Sections
+!! section I Pools 
+!! section II Fluxes 
+!! section III Soil forcing
+!! 
 MODULE mo_shared_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
@@ -72,7 +77,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !! Pools                                                                                             !!
+  !! section I Pools                                                                                   !!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !-----------------------------------------------------------------------------------------------------!
 
@@ -1175,7 +1180,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !! Fluxes                                                                                            !!
+  !! section II Fluxes                                                                                 !!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !-----------------------------------------------------------------------------------------------------!
 
@@ -2753,7 +2758,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !! Soil forcing                                                                                      !!
+  !! section III Soil forcing                                                                          !!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !-----------------------------------------------------------------------------------------------------!
 
@@ -2861,12 +2866,11 @@ CONTAINS
       WRITE(p3str,'(a)') TRIM(p3str)//' PercolationSoil_L'//TRIM(layerstr)
       WRITE(p4str,'(a)') TRIM(p4str)//' RootFractionSoil_L'//TRIM(layerstr)
     END DO
-    WRITE(lun,'(9a)') 'Time ', &
+    WRITE(lun,'(8a)') 'Time ', &
                       TRIM(p1str), TRIM(p2str), TRIM(p3str), TRIM(p4str), &
-                      ' VegPoolFineRootCarbon ', &
-                      'nhx_deposition noy_deposition ', &
-                      'nhx_dn15_deposition noy_dn15_deposition ', &
-                      'p_deposition '
+                      ' VegPoolFineRootCarbon', &
+                      ' nhx_deposition noy_deposition nhx_dn15_deposition noy_dn15_deposition p_deposition', &
+                      ' demandUptakeN demandUptakeP'
     lun=lun+1
     ! veglitterfall
     WRITE(lun,'(10a)')  'Time ', &
@@ -2938,7 +2942,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition 
     dsl4jsb_Real2D_onChunk      :: noy_n15_deposition 
     dsl4jsb_Real2D_onChunk      :: p_deposition 
-    ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
+    ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! SOIL_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
@@ -2971,6 +2978,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,  noy_n15_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_,  p_deposition)
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_,  demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_,  demand_uptake_p_tuptake_mavg)
     dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
@@ -2998,19 +3007,22 @@ CONTAINS
 
       lun = 100 + 60
       ! soilphysics
-      write(lun,'(87F18.8)') time_d                             , &
-                              ! variables with one values per soil layer (max of 20 soil layers)
-                              t_soil_sl(ipoi,:)                 , &
-                              w_soil_sl(ipoi,:)                 , &
-                              percolation_sl(ipoi,:)            , &
-                              root_fraction_sl(ipoi,:)          , &
+      write(lun,'(90F18.8)') time_d                                                         , &
+                              ! variables with one value per soil layer (20 sl max)
+                              t_soil_sl(ipoi,:)                                             , &
+                              w_soil_sl(ipoi,:)                                             , &
+                              percolation_sl(ipoi,:)                                        , &
+                              root_fraction_sl(ipoi,:)                                      , &
                               ! variables with one value only
                               veg_pool%fine_root%carbon(ipoi)                               , &
                               nhx_deposition(ipoi)                                          , &
                               noy_deposition(ipoi)                                          , &
                               calc_delta_N15(nhx_deposition(ipoi),nhx_n15_deposition(ipoi)) , &
                               calc_delta_N15(noy_deposition(ipoi),noy_n15_deposition(ipoi)) , &
-                              p_deposition(ipoi)
+                              p_deposition(ipoi)                                            , &
+                              demand_uptake_n_tuptake_mavg(ipoi)                            , &
+                              demand_uptake_p_tuptake_mavg(ipoi) 
+                              
       lun=lun+1
 
       !> convert 13C and 14C in delta notation

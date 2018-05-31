@@ -664,7 +664,7 @@ esac
 
 ## SLM model forcing: land/plant/canopy/soil 
 metForcingDir="new_met_forcing/"
-soilForcingDirBase="soil_forcing_sl"
+soilForcingDirBase="new_soil_forcing_sl"
 case "$slmModel" in
 "land")
   siteDataFoldForcing="$siteDataFold""$metForcingDir"
