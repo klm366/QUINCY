@@ -498,7 +498,6 @@ CONTAINS
                                            sb_pool, &
                                            sb_loss )
 
-
     !> 2.5 Loss pathways for the dynamic loss calculation scheme 
     !!
     IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')THEN
@@ -2256,9 +2255,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation                  !< formation of SOM and litter pools  [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2
     CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_SOM_formation'
-
     
     !> 1.0 formation of fast SOM from litter 
     !! 
@@ -2284,11 +2282,17 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                         frac_litter2fast_som * & 
                                                         (sb_loss%soluable_litter%carbon14(:,:) + &  
                                                          sb_loss%polymeric_litter%carbon14(:,:))
+    ! calculate 15N mineralised during litter decay, remainder enters fast pool
+    hlp1(:,:) = (1.0_wp - microbial_nue) * sb_loss%soluable_litter%nitrogen(:,:) * & 
+                calc_fractionation(sb_loss%soluable_litter%nitrogen(:,:), &
+                                   sb_loss%soluable_litter%nitrogen15(:,:),eta_ammonification)
+    hlp2(:,:) = (1.0_wp - microbial_nue) * sb_loss%polymeric_litter%nitrogen(:,:) * & 
+                calc_fractionation(sb_loss%polymeric_litter%nitrogen(:,:), &
+                                   sb_loss%polymeric_litter%nitrogen15(:,:),eta_ammonification)
     sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + & 
-                                                          microbial_nue * &
-                                                          (sb_loss%soluable_litter%nitrogen15(:,:) + &  
-                                                           sb_loss%polymeric_litter%nitrogen15(:,:)) + &
-                                                           microbial_uptake_nh4_n15_sl(:,:) 
+                                                          sb_loss%soluable_litter%nitrogen15(:,:)  - hlp1(:,:) + &  
+                                                          sb_loss%polymeric_litter%nitrogen15(:,:) - hlp2(:,:) + &
+                                                          microbial_uptake_nh4_n15_sl(:,:) 
 
     het_respiration(:,:)     = het_respiration(:,:) + (1._wp - frac_litter2fast_som) * & 
                                                       (sb_loss%soluable_litter%carbon(:,:) + &  
@@ -2307,11 +2311,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 (1.0_wp - microbial_pue) * &
                                                                 (sb_loss%soluable_litter%phosphorus(:,:) + &  
                                                                  sb_loss%polymeric_litter%phosphorus(:,:))
-    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) - microbial_uptake_nh4_n15_sl(:,:) + & 
-                                                                (1.0_wp - microbial_nue) * &
-                                                                (sb_loss%soluable_litter%nitrogen15(:,:) + &  
-                                                                 sb_loss%polymeric_litter%nitrogen15(:,:))
-
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) - microbial_uptake_nh4_n15_sl(:,:) + hlp1(:,:) + hlp2(:,:)
 
     !> 2.0 formation of slow SOM (=residue pool) from fast SOM decay
     !! 
@@ -2325,11 +2325,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                               frac_fast2slow_som * sb_loss%microbial%carbon13(:,:)
     sb_formation%residue%carbon14(:,:)   = sb_formation%residue%carbon14(:,:) + & 
                                               frac_fast2slow_som * sb_loss%microbial%carbon14(:,:)
-    hlp1(:,:) = (sb_loss%microbial%nitrogen(:,:) - frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)) * & 
-                calc_fractionation(sb_loss%microbial%nitrogen(:,:), &
-                                   sb_loss%microbial%nitrogen15(:,:),eta_ammonification)
-    sb_formation%residue%nitrogen15(:,:) = sb_formation%residue%nitrogen15(:,:) + &
-                                             sb_loss%microbial%nitrogen15(:,:) - hlp1(:,:) 
+    ! store formation of slow 15N for later use 
+    hlp1(:,:) = frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:) * & 
+                calc_fractionation(sb_loss%microbial%nitrogen(:,:),sb_loss%microbial%nitrogen15(:,:),0.0_wp)
+    sb_formation%residue%nitrogen15(:,:) = sb_formation%residue%nitrogen15(:,:) + hlp1(:,:) 
 
     het_respiration(:,:)     = het_respiration(:,:)     + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon(:,:)
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon13(:,:)
@@ -2338,7 +2337,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%microbial%phosphorus(:,:) - &
                                                                 frac_fast2slow_som / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
-    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:) 
+    ! store net mineralisation of 15N for later use
+    hlp2(:,:) = (sb_loss%microbial%nitrogen(:,:) - frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)) * & 
+                calc_fractionation(sb_loss%microbial%nitrogen(:,:), &
+                                   sb_loss%microbial%nitrogen15(:,:),eta_ammonification)
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp2(:,:)
+
+    ! adjust fast 15N loss rate to account for discrimination during ammonification
+    sb_loss%microbial%nitrogen15(:,:) = sb_loss%microbial%nitrogen15(:,:) - & 
+                                        (sb_loss%microbial%nitrogen15(:,:) - hlp1(:,:) - hlp2(:,:))
 
     !> 3.0 formation of fast SOM (=microbial pool) from slow SOM decay 
     !! 
@@ -2352,11 +2359,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                 frac_slow2fast_som * sb_loss%residue%carbon13(:,:)
     sb_formation%microbial%carbon14(:,:) = sb_formation%microbial%carbon14(:,:) + & 
                                                 frac_slow2fast_som * sb_loss%residue%carbon14(:,:)
-    hlp1(:,:) = (sb_loss%residue%nitrogen(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)) * & 
-                calc_fractionation(sb_loss%residue%nitrogen(:,:), &
-                                   sb_loss%residue%nitrogen15(:,:),eta_ammonification)
-    sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + &
-                                                sb_loss%residue%nitrogen15(:,:) - hlp1(:,:) 
+    ! store formation of fast 15N for later use 
+    hlp1(:,:) = frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:) * & 
+                calc_fractionation(sb_loss%residue%nitrogen(:,:),sb_loss%residue%nitrogen15(:,:),0.0_wp)
+    sb_formation%microbial%nitrogen15(:,:) = sb_formation%microbial%nitrogen15(:,:) + hlp1(:,:) 
 
     het_respiration(:,:)      = het_respiration(:,:)     + (1._wp - frac_slow2fast_som) * sb_loss%residue%carbon(:,:)
     het_respiration_c13(:,:)  = het_respiration_c13(:,:) + (1._wp - frac_slow2fast_som) * sb_loss%residue%carbon13(:,:)
@@ -2365,7 +2371,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
                                                                 frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:)
-    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp1(:,:)
+    ! store net mineralisation of 15N for later use
+    hlp2(:,:) = (sb_loss%residue%nitrogen(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)) * & 
+                calc_fractionation(sb_loss%residue%nitrogen(:,:), &
+                                   sb_loss%residue%nitrogen15(:,:),eta_ammonification)
+    net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp2(:,:)
+
+    ! adjust slow 15N loss rate to account for discrimination during ammonification
+    sb_loss%residue%nitrogen15(:,:) = sb_loss%residue%nitrogen15(:,:) - & 
+                                      (sb_loss%residue%nitrogen15(:,:) - hlp1(:,:) - hlp2(:,:))
 
     !> 3.1 update the loss of residue phosphorus due to biochem_mineralisation_po4
     sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
