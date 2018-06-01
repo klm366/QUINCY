@@ -99,6 +99,9 @@ MODULE mo_assimi_constants
       k1_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
       kfn_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
 
+  REAL(wp), SAVE :: &     
+      soa_min_temp  ,   &  !< min Temperature [°C] used to calculate spring recovery period for coniferous forests
+      soa_max_temp         !< max Temperature [°C] used to calculate spring recovery period for coniferous forests
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
@@ -178,6 +181,9 @@ CONTAINS
       k1_fn_chl_C3  = 3.6_wp
       k1_fn_chl_C4  = 4.4_wp
       kfn_chl       = 0.7_wp
+
+      soa_min_temp  = -5.0_wp
+      soa_max_temp  = 5.0_wp
 
   END SUBROUTINE init_assimi_constants
 

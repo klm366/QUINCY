@@ -715,11 +715,14 @@ CONTAINS
   !
   !-------------------------------------------------------------------------------------------------------
   !> Calculate spring recovery period for coniferous forests
-  !    Based on Mäkelä et al., 2004 
+  !! 
+  !! Based on Mäkelä et al., 2004  \n
+  !! returns beta_soa with a value [0.01,1.0]
   !-------------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
 
     USE mo_pheno_constants,            ONLY: ievergreen
+    USE mo_assimi_constants,           ONLY: soa_min_temp, soa_max_temp
 
     IMPLICIT NONE
     ! ---------------------------
@@ -729,16 +732,11 @@ CONTAINS
     REAL(wp)              :: beta_soa         !< beta value of soa
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: min_temp 
-    REAL(wp) :: max_temp 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_soa'
 
 
-    min_temp = -5.0_wp
-    max_temp = 5.0_wp
-
     IF (phenology_type == ievergreen) THEN
-      beta_soa = (soa_tsoa_mavg - min_temp) / (-min_temp + max_temp)
+      beta_soa = (soa_tsoa_mavg - soa_min_temp) / (-1.0_wp * soa_min_temp + soa_max_temp)
       beta_soa = MIN ( MAX(beta_soa,0.01_wp), 1.0_wp)
     ELSE
       beta_soa = 1.0_wp
