@@ -329,8 +329,11 @@ CONTAINS
 
         IF(optimise_n_fractions) THEN
           DO icanopy = 1,ncanopy
-            CALL optimise_canopy_n_fractions(options                      , &
-                                               lctlib                     , &
+            CALL optimise_canopy_n_fractions(  lctlib%gmin                , & ! lctlib
+                                               lctlib%g0                  , &
+                                               lctlib%g1                  , &
+                                               lctlib%t_jmax_omega        , &
+                                               lctlib%ps_pathway          , & ! lctlib
                                                lai_cl(:,icanopy)          , & ! in
                                                leaf_nitrogen_cl(:,icanopy), &
                                                ppfd_sunlit_cl(:,icanopy)  , &
@@ -366,8 +369,12 @@ CONTAINS
   !! Calculates carbon assimilation (an_cl) by varying fractions in either directions and determines
   !! fractions that give maximum assimilation
   !-------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE optimise_canopy_n_fractions(options    , &
-                                    lctlib                    , &
+  ELEMENTAL SUBROUTINE optimise_canopy_n_fractions( &
+                                    gmin                      , &   ! lctlib
+                                    g0                        , &
+                                    g1                        , &
+                                    t_jmax_omega              , &
+                                    ps_pathway                , &
                                     lai_cl                    , &
                                     leaf_nitrogen_cl          , &
                                     ppfd_sunlit_cl            , &
@@ -390,16 +397,17 @@ CONTAINS
                                     fn_et_cl                  , &
                                     fn_pepc_cl)
 
-    USE mo_base_memory,         ONLY: t_jsb_task_options
-    USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
-    USE mo_base_constants,      ONLY: dtime,one_day
+    USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_veg_constants,       ONLY: delta_n_fraction
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options), INTENT(in)    :: options                !< model options
-    TYPE(t_lctlib_element),   INTENT(in)    :: lctlib                 !< land-cover-type library - parameters for one pft
+    REAL(wp),                 INTENT(IN)    :: gmin            , &    !< land-cover-type library parameter
+                                               g0              , &    !< land-cover-type library parameter
+                                               g1              , &    !< land-cover-type library parameter
+                                               t_jmax_omega           !< land-cover-type library parameter
+    INTEGER,                  INTENT(IN)    :: ps_pathway             !< land-cover-type library parameter
     REAL(wp),                 INTENT(in)    :: lai_cl
     REAL(wp),                 INTENT(in)    :: leaf_nitrogen_cl, &    !< total canopy N content
                                              & ppfd_sunlit_cl,   &    !< Photosynthetically Active Photon Flux Density
@@ -453,8 +461,11 @@ CONTAINS
        fn_pepc_cl  = fn_pepc0_cl
 
       ! calculate photosynthesis with previous fractions
-      CALL calc_photosynthesis(  options                       , &
-                                 lctlib                        , &
+      CALL calc_photosynthesis(  gmin                          , &  ! lctlib
+                                 g0                            , &
+                                 g1                            , &
+                                 t_jmax_omega                  , &
+                                 ps_pathway                    , &  ! lctlib
                                  t_air                         , &  ! in
                                  press_srf                     , &
                                  co2_mixing_ratio              , &
@@ -489,16 +500,19 @@ CONTAINS
        fn_chl_cl = MIN(fn_chl0_cl * (1.0_wp + delta_n_fraction*dtime/one_day), 1.0_wp)
 
        ! optimal N fraction assuming Aj=Av=Apepc
-       CALL calc_coordination_n_fractions(lctlib, fn_chl_cl,m_rub,m_et,m_pepc, &
+       CALL calc_coordination_n_fractions(ps_pathway, &
+                                          fn_chl_cl,m_rub,m_et,m_pepc, &
                                           fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
 
        ! check if changing fraction to optimal values is possible in one timestep
-       CALL calc_update_n_fractions(lctlib, delta_n_fraction*dtime/one_day,fn_chl_cl,&
-                                     fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
-                                     fn_rub_cl,fn_et_cl,fn_pepc_cl)
+       CALL calc_update_n_fractions(ps_pathway, &
+                                    delta_n_fraction*dtime/one_day, &
+                                    fn_chl_cl,fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
+                                    fn_rub_cl,fn_et_cl,fn_pepc_cl)
 
        ! re-calculate photosynthesis
-       CALL calc_photosynthesis(options, lctlib, &
+       CALL calc_photosynthesis( &
+                 gmin, g0, g1, t_jmax_omega, ps_pathway, &
                  t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                  ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
                  beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -519,15 +533,18 @@ CONTAINS
           fn_pepc_cl = fn_pepc0_cl
 
           ! optimal N fraction assuming Aj=Av=Apepc
-          CALL calc_coordination_n_fractions(lctlib, fn_chl_cl,m_rub,m_et,m_pepc, &
+          CALL calc_coordination_n_fractions(ps_pathway, &
+                                             fn_chl_cl,m_rub,m_et,m_pepc, &
                                              fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
           ! check if changing fraction to optimal values is possible in one timestep
-          CALL calc_update_n_fractions(lctlib, delta_n_fraction*dtime/one_day,fn_chl_cl,&
-                                        fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
-                                        fn_rub_cl,fn_et_cl,fn_pepc_cl)
+          CALL calc_update_n_fractions(ps_pathway, & 
+                                       delta_n_fraction*dtime/one_day, &
+                                       fn_chl_cl,fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
+                                       fn_rub_cl,fn_et_cl,fn_pepc_cl)
 
           ! re-calculate photosynthesis
-          CALL calc_photosynthesis(options, lctlib, &
+          CALL calc_photosynthesis( &
+                   gmin, g0, g1, t_jmax_omega, ps_pathway, &
                    t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                    ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
                    beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -546,12 +563,14 @@ CONTAINS
              fn_pepc_cl = fn_pepc0_cl
 
              ! optimal N fraction assuming Aj=Av=Apepc
-             CALL calc_coordination_n_fractions(lctlib, fn_chl_cl,m_rub,m_et,m_pepc, &
+             CALL calc_coordination_n_fractions(ps_pathway, &
+                                                fn_chl_cl,m_rub,m_et,m_pepc, &
                                                 fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
              ! check if changing fraction to optimal values is possible in one timestep
-             CALL calc_update_n_fractions(lctlib, delta_n_fraction*dtime/one_day,fn_chl_cl,&
-                                           fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
-                                           fn_rub_cl,fn_et_cl,fn_pepc_cl)
+             CALL calc_update_n_fractions(ps_pathway, & 
+                                          delta_n_fraction*dtime/one_day, &
+                                          fn_chl_cl,fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
+                                          fn_rub_cl,fn_et_cl,fn_pepc_cl)
 
           ENDIF ! IF (an_cl < an0_cl) after re-calculating photosynthesis
       ENDIF     ! IF (an_cl < an0_cl)
@@ -566,30 +585,31 @@ CONTAINS
 
   END SUBROUTINE optimise_canopy_n_fractions
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to optimise_canopy_n_fractions
   !
   ! --------------------------------------------------------------------------------------------------
   !> Subroutine to calculate fractions of rubisco, electron transport and PepC assuming them to
   !! be coordinated (Aj=Av=Apepc)
-  !@todo: veg_canopy:calc_coordination_n_fractions: unsafe division by m_et/m_pepc
+  !! 
+  !! @todo: veg_canopy:calc_coordination_n_fractions: unsafe division by m_et/m_pepc
   !-------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_coordination_n_fractions(lctlib, &
-                                                     fn_chl_cl, &
-                                                     m_rub, &
-                                                     m_et, &
-                                                     m_pepc, &
-                                                     fn_rub_opt_cl, &
-                                                     fn_et_opt_cl, &
+  ELEMENTAL SUBROUTINE calc_coordination_n_fractions(ps_pathway     , &  ! lctlib
+                                                     fn_chl_cl      , &
+                                                     m_rub          , &
+                                                     m_et           , &
+                                                     m_pepc         , &
+                                                     fn_rub_opt_cl  , &
+                                                     fn_et_opt_cl   , &
                                                      fn_pepc_opt_cl)
 
     USE mo_assimi_constants,            ONLY: ic4phot
-    USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in) :: lctlib              !< land-cover-type library - parameters for one pft
+    INTEGER,  INTENT(IN)              :: ps_pathway          !< land-cover-type library parameter
     REAL(wp), INTENT(in)              :: fn_chl_cl           !< fraction of N in chlorophyll
     REAL(wp), INTENT(in)              :: m_rub               !< N-specific rate constant for Rubisco
     REAL(wp), INTENT(in)              :: m_et                !< N-specific rate constant for ET
@@ -597,9 +617,11 @@ CONTAINS
     REAL(wp), INTENT(out)             :: fn_rub_opt_cl  , &  !< optimal fraction of N in Rubisco
                                          fn_et_opt_cl   , &  !< optimal fraction of N in ET
                                          fn_pepc_opt_cl      !< optimal fraction of N in PepC (C4-only)
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)                    :: hlp1, hlp2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_coordination_n_fractions'
+
 
 
     ! optimal N fraction assuming Aj=Av=Apepc
@@ -616,7 +638,7 @@ CONTAINS
       hlp2 = m_et
     END IF
     ! C4 / C3 plant
-    IF (lctlib%ps_pathway == ic4phot) THEN
+    IF (ps_pathway == ic4phot) THEN
        ! fraction in Rubisco
        fn_rub_opt_cl = (1._wp - fn_chl_cl)/(1._wp + m_rub/hlp2 + m_rub/hlp1)
        ! fraction in electron transport
@@ -637,40 +659,52 @@ CONTAINS
 
   END SUBROUTINE calc_coordination_n_fractions
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to optimise_canopy_n_fractions
   !
   ! --------------------------------------------------------------------------------------------------
-  !> Subroutine to update N fractions towards their optimal values in the limit of the
-  !! impose maximum rate of change
+  !> Subroutine to update N fractions towards their optimal values in the limit of the 
+  !! imposed maximum rate of change
   !-------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_update_n_fractions(lctlib, delta_n_fraction,fn_chl_cl, &
-                                                fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
-                                                fn_rub_cl,fn_et_cl,fn_pepc_cl)
+  ELEMENTAL SUBROUTINE calc_update_n_fractions(ps_pathway         , &  ! lctlib
+                                               delta_n_fraction   , &  ! in
+                                               fn_chl_cl          , &
+                                               fn_rub_opt_cl      , &
+                                               fn_et_opt_cl       , &
+                                               fn_pepc_opt_cl     , &
+                                               fn_rub_cl          , &  ! inout
+                                               fn_et_cl           , &
+                                               fn_pepc_cl)
 
+    USE mo_kind,                        ONLY: eps8
     USE mo_assimi_constants,            ONLY: ic4phot
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in) :: lctlib              !< land-cover-type library - parameters for one pft
-    REAL(wp), INTENT(in) :: delta_n_fraction, &  !< maximum fractional change in this time-step
-     &     fn_chl_cl,      &                     !< fraction of N in chlorophyll
-     &     fn_rub_opt_cl,  &                     !< optimal fraction of N in Rubisco
-     &     fn_et_opt_cl,   &                     !< optimal fraction of N in ET
-     &     fn_pepc_opt_cl                        !< optimal fraction of N in PepC (C4-only)
-    REAL(wp), INTENT(inout) :: fn_rub_cl, &      !< updated fraction of N in Rubisco
-     &     fn_et_cl,       &                     !< updated fraction of N in ET
-     &     fn_pepc_cl                            !< updated fraction of N in PepC (C4-only)
+    INTEGER,    INTENT(in)          :: ps_pathway             !< land-cover-type library parameter
+    REAL(wp),   INTENT(in)          :: delta_n_fraction , &   !< maximum fractional change in this time-step
+                                       fn_chl_cl        , &   !< fraction of N in chlorophyll
+                                       fn_rub_opt_cl    , &   !< optimal fraction of N in Rubisco
+                                       fn_et_opt_cl     , &   !< optimal fraction of N in ET
+                                       fn_pepc_opt_cl         !< optimal fraction of N in PepC (C4-only)
+    REAL(wp),   INTENT(inout)       :: fn_rub_cl        , &   !< updated fraction of N in Rubisco
+                                       fn_et_cl         , &   !< updated fraction of N in ET
+                                       fn_pepc_cl             !< updated fraction of N in PepC (C4-only)
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)  :: hlp1, hlp2, hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_update_n_fractions'
 
+
+    ! 0.9 init local var
     hlp1 = ABS(fn_rub_opt_cl-fn_rub_cl) / fn_rub_cl
     hlp2 = ABS(fn_et_opt_cl-fn_et_cl) / fn_et_cl
 
+
     ! only C4 plant have pepc, avoid dividing by zero for C3
-    IF(lctlib%ps_pathway == ic4phot) THEN
+    IF(ps_pathway == ic4phot) THEN
        hlp3 = ABS(fn_pepc_opt_cl-fn_pepc_cl)/ fn_pepc_cl
     ELSE
        hlp3 = 0.0_wp
@@ -688,24 +722,25 @@ CONTAINS
     ELSEIF (fn_rub_cl < fn_rub_opt_cl) THEN
        fn_rub_cl = MIN(fn_rub_cl * (1.0_wp+delta_n_fraction), fn_rub_opt_cl)
        IF (fn_pepc_cl < fn_pepc_opt_cl) THEN
-          fn_pepc_cl = MAX(fn_pepc_cl * (1.0_wp+delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MAX(fn_pepc_cl * (1.0_wp+delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ELSE
-          fn_pepc_cl = MIN(fn_pepc_cl * (1.0_wp-delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MIN(fn_pepc_cl * (1.0_wp-delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ENDIF
     ELSE
        fn_rub_cl = MIN(fn_rub_cl * (1.0_wp-delta_n_fraction), fn_rub_opt_cl)
        IF (fn_pepc_cl < fn_pepc_opt_cl) THEN
-          fn_pepc_cl = MAX(fn_pepc_cl * (1.0_wp+delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MAX(fn_pepc_cl * (1.0_wp+delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ELSE
-          fn_pepc_cl = MIN(fn_pepc_cl * (1.0_wp-delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MIN(fn_pepc_cl * (1.0_wp-delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ENDIF
     ENDIF
 
   END SUBROUTINE calc_update_n_fractions
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
@@ -887,8 +922,11 @@ CONTAINS
     net_assimilation_new(:)  = 0.0_wp
     canopy_cond_new(:)       = 0.0_wp
     DO icanopy = 1,ncanopy
-      CALL calc_photosynthesis(options                              , &
-                                    lctlib                          , &
+      CALL calc_photosynthesis(     lctlib%gmin                     , & ! lctlib
+                                    lctlib%g0                       , &
+                                    lctlib%g1                       , &
+                                    lctlib%t_jmax_omega             , &
+                                    lctlib%ps_pathway               , &
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
@@ -944,6 +982,7 @@ CONTAINS
     END WHERE
 
    END SUBROUTINE calc_marginal_canopy_flux_increment
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
@@ -1066,13 +1105,13 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
 
-    !> 0.9
+    !> 0.9 init local var
     !! 
     loc_ppfd_sunlit_cl(:,:)   = ppfd_sunlit_tcnl_mavg_cl(:,:)
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_tcnl_mavg_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_tcnl_mavg_cl(:,:)
 
-        SELECT CASE (lctlib%phenology_type)
+    SELECT CASE (lctlib%phenology_type)
       CASE (ievergreen)
          ! general case: labile pool concentrations are important for uptake
          ns_carbon     = labile_carbon
@@ -1084,6 +1123,8 @@ CONTAINS
          ns_carbon     = (labile_carbon     + reserve_carbon)
          ns_nitrogen   = (labile_nitrogen   + reserve_nitrogen)
     END SELECT
+
+
 
     !> 1.0 ...
     !!
@@ -1140,8 +1181,12 @@ CONTAINS
 
         ! calculate photosynthesis for each layer
         DO icanopy =1, ncanopy
-          CALL calc_photosynthesis( options                          , &
-                       lctlib                                        , &
+          CALL calc_photosynthesis( &
+                       lctlib%gmin                                   , & ! lctlib
+                       lctlib%g0                                     , &
+                       lctlib%g1                                     , &
+                       lctlib%t_jmax_omega                           , &
+                       lctlib%ps_pathway                             , &
                        t_air_tcnl_mavg(ichunk)                       , &  ! in
                        press_srf_tcnl_mavg(ichunk)                   , &
                        co2_mixing_ratio_tcnl_mavg(ichunk)            , &
@@ -1188,4 +1233,5 @@ CONTAINS
   END DO  ! ichunk=1,options%nc
 
   END SUBROUTINE calc_dir_optimal_cn_leaf
+  
 END MODULE mo_veg_canopy

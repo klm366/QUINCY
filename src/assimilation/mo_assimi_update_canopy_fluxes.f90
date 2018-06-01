@@ -232,8 +232,11 @@ CONTAINS
     !> 2.0 calculate photosynthesis per layer
     !!
     DO icanopy = 1,dsl4jsb_Config(ASSIMI_)%ncanopy
-      CALL calc_photosynthesis(options                                 , &
-                                 lctlib                                , &
+      CALL calc_photosynthesis(  lctlib%gmin                           , & ! lctlib
+                                 lctlib%g0                             , &
+                                 lctlib%g1                             , &
+                                 lctlib%t_jmax_omega                   , &
+                                 lctlib%ps_pathway                     , &
                                  t_air(:)                              , & ! in
                                  press_srf(:)                          , &
                                  co2_mixing_ratio(:)                   , &
@@ -329,8 +332,11 @@ CONTAINS
   !! according to Friend & Kiang 2005, J Climate \n
   !! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_photosynthesis( options             , & 
-                                            lctlib              , &
+  ELEMENTAL SUBROUTINE calc_photosynthesis( gmin                , &   ! lctlib
+                                            g0                  , &
+                                            g1                  , &
+                                            t_jmax_omega        , &
+                                            ps_pathway          , &
                                             temp                , &   ! in
                                             press_srf           , &
                                             co2_mixing_ratio    , &
@@ -360,9 +366,6 @@ CONTAINS
                                             m_et                , &
                                             m_pepc)
 
-
-  USE mo_base_memory,         ONLY: t_jsb_task_options
-  USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element  
   USE mo_veg_constants,       ONLY: fmaint_rate_base  
   USE mo_shared_constants,    ONLY: r_gas, Tzero
   USE mo_assimi_constants,    ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
@@ -373,8 +376,11 @@ CONTAINS
   IMPLICIT NONE
   ! ---------------------------
   ! 0.1 InOut
-  TYPE(t_jsb_task_options), INTENT(in) :: options                 !< model options
-  TYPE(t_lctlib_element),   INTENT(in) :: lctlib                  !< land-cover-type library - parameter across pft's
+  REAL(wp),                 INTENT(IN) :: gmin            , &     !< land-cover-type library parameter
+                                          g0              , &     !< land-cover-type library parameter
+                                          g1              , &     !< land-cover-type library parameter
+                                          t_jmax_omega            !< land-cover-type library parameter
+  INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
   REAL(wp),                 INTENT(IN) :: temp                    !< temperature used for photosynthesis calculation (K)
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
@@ -440,7 +446,7 @@ CONTAINS
     IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
       ag_cl    = 0.0_wp
       an_cl    = ag_cl - maint_resp_cl
-      gs_cl    = MAX(lctlib%gmin,lctlib%g0 + lctlib%g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
+      gs_cl    = MAX(gmin,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf
       ci_cl    = co2_mixing_ratio * ppm2Pa
       m_et   = 0.0_wp
       m_rub  = 0.0_wp
@@ -457,13 +463,13 @@ CONTAINS
       pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa
 
       !> N specific rate of electron transport rate
-      n1  = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/lctlib%t_jmax_omega)**2.0_wp)) * beta_soil_ps * beta_sinklim_ps * beta_soa
+      n1  = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2.0_wp)) * beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> N specific rate of Rubisco turnover
       n2  = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> Initial guess of leaf internal CO2 concentration
-      SELECT CASE (lctlib%ps_pathway)
+      SELECT CASE (ps_pathway)
         CASE (ic3phot)
           ci_cl = co2_mixing_ratio * CiCa_default_C3 * ppm2Pa
         CASE (ic4phot)
@@ -478,7 +484,7 @@ CONTAINS
       !> @par DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
       DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
 
-        SELECT CASE (lctlib%ps_pathway)
+        SELECT CASE (ps_pathway)
         CASE (ic3phot)
           !> ci sensitivity of Electron-transport limited photosynthesis
           m1 = ci_cl/(ci_cl + 2.0_wp * pcp)
@@ -584,10 +590,10 @@ CONTAINS
         an_cl = ag_cl - maint_resp_cl
 
         !> calculate canopy conductance (m/s) following Ball & Berry
-        gs_cl = MAX(lctlib%gmin, lctlib%g0 + lctlib%g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * &
+        gs_cl = MAX(gmin, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * &
               rtck / press_srf
         !> calculate canopy conductance (m/s) following Medlyn et al. 2011
-        !! gs_cl = MAX(lctlib%g0, 1.6_wp * ( 1._wp + lctlib%g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf
+        !! gs_cl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf
 
         !> New internal CO2 from balance of supply and demand
         !!
@@ -607,7 +613,7 @@ CONTAINS
           it    = ps_it_max + 1   ! ps_it_max is of TYPE REAL; it is of TYPE INTEGER
           ci_cl = pcp
         ENDIF
-!        IF( gs_cl <= lctlib%g0 * rtck / press_srf .OR. ci_cl <= pcp ) THEN
+!        IF( gs_cl <= g0 * rtck / press_srf .OR. ci_cl <= pcp ) THEN
 !          last_call = .TRUE.
 !          ci_cl     = pcp
 !        ENDIF

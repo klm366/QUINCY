@@ -139,8 +139,16 @@ CONTAINS
 
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !! 
-    CALL calc_phenology(options                            , &
-                        lctlib                             , &
+    CALL calc_phenology(lctlib%phenology_type              , &  ! lctlib
+                        lctlib%beta_soil_flush             , &
+                        lctlib%cn_leaf                     , &
+                        lctlib%np_leaf                     , &
+                        lctlib%gdd_req_max                 , &
+                        lctlib%gdd_t_air_threshold         , &
+                        lctlib%k_gdd_dormance              , &
+                        lctlib%beta_soil_senescence        , &
+                        lctlib%t_air_senescence            , &
+                        lctlib%min_leaf_age                , &  ! lctlib
                         t_air(:)                           , &  ! in
                         beta_soil_gs_tphen_mavg(:)         , &
                         t_air_tphen_mavg(:)                , &
@@ -166,8 +174,16 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_phenology(options                         , &
-                                      lctlib                          , &
+  ELEMENTAL SUBROUTINE calc_phenology(phenology_type                  , &  ! lctlib
+                                      beta_soil_flush                 , &
+                                      cn_leaf                         , &
+                                      np_leaf                         , &
+                                      gdd_req_max                     , &
+                                      gdd_t_air_threshold             , &
+                                      k_gdd_dormance                  , &
+                                      beta_soil_senescence            , &
+                                      t_air_senescence                , &
+                                      min_leaf_age                    , &  ! lctlib
                                       t_air                           , &
                                       beta_soil_gs_tphen_mavg         , &
                                       t_air_tphen_mavg                , &
@@ -182,8 +198,6 @@ CONTAINS
                                       nd_dormance                     , &
                                       gdd )
 
-    USE mo_base_memory,             ONLY: t_jsb_task_options
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
@@ -191,8 +205,16 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),     INTENT(in)    :: options                             !< model options
-    TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                              !< land-cover-type library - parameter across pft's
+    INTEGER,                      INTENT(in)    :: phenology_type                      !< land-cover-type library parameter
+    REAL(wp),                     INTENT(in)    :: beta_soil_flush                 , & !< land-cover-type library parameter
+                                                   cn_leaf                         , & !< land-cover-type library parameter
+                                                   np_leaf                         , & !< land-cover-type library parameter
+                                                   gdd_req_max                     , & !< land-cover-type library parameter
+                                                   gdd_t_air_threshold             , & !< land-cover-type library parameter
+                                                   k_gdd_dormance                  , & !< land-cover-type library parameter
+                                                   beta_soil_senescence            , & !< land-cover-type library parameter
+                                                   t_air_senescence                , & !< land-cover-type library parameter
+                                                   min_leaf_age                        !< land-cover-type library parameter
     REAL(wp),                     INTENT(in)    :: t_air                           , & !< air temp
                                                    beta_soil_gs_tphen_mavg         , & !< soil ..
                                                    t_air_tphen_mavg                , & !< moving average air temperature over ...
@@ -221,58 +243,58 @@ CONTAINS
     !> 1.0 check growing season has started or ended
     !! 
     IF(.NOT.growing_season) THEN ! If not in growing season, check whether growing season has started
-       SELECT CASE (lctlib%phenology_type)
+       SELECT CASE (phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) THEN 
+            IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN 
                   growing_season = .TRUE.
-                  growth_req_n_tlabile_mavg = 1._wp / lctlib%cn_leaf
-                  growth_req_p_tlabile_mavg = 1._wp / lctlib%np_leaf
+                  growth_req_n_tlabile_mavg = 1._wp / cn_leaf
+                  growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
-            hlp1 = lctlib%gdd_req_max * exp( - lctlib%k_gdd_dormance * nd_dormance ) 
+            hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1) THEN 
                   growing_season = .TRUE.
-                  growth_req_n_tlabile_mavg = 1._wp / lctlib%cn_leaf
-                  growth_req_p_tlabile_mavg = 1._wp / lctlib%np_leaf
+                  growth_req_n_tlabile_mavg = 1._wp / cn_leaf
+                  growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            hlp1 = lctlib%gdd_req_max * exp( - lctlib%k_gdd_dormance * nd_dormance ) 
+            hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1 .AND. &
-               beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush)THEN 
+               beta_soil_gs_tphen_mavg > beta_soil_flush)THEN 
                   growing_season = .TRUE.
-                  growth_req_n_tlabile_mavg = 1._wp / lctlib%cn_leaf
-                  growth_req_p_tlabile_mavg = 1._wp / lctlib%np_leaf
+                  growth_req_n_tlabile_mavg = 1._wp / cn_leaf
+                  growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
-       SELECT CASE (lctlib%phenology_type)
+       SELECT CASE (phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
-            IF(beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .AND. & 
-               mean_leaf_age > lctlib%min_leaf_age ) & 
+            IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. & 
+               mean_leaf_age > min_leaf_age ) & 
                   growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
             ! leaves have been out a given number of days
             IF(t_air_week_mavg < t_air_month_mavg .AND. &
-               t_air_tphen_mavg < lctlib%t_air_senescence .AND. & 
-               mean_leaf_age > lctlib%min_leaf_age) & 
+               t_air_tphen_mavg < t_air_senescence .AND. & 
+               mean_leaf_age > min_leaf_age) & 
                   growing_season = .FALSE.
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
-            IF((t_air_tphen_mavg < lctlib%t_air_senescence .OR. & 
-                beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .OR. &
+            IF((t_air_tphen_mavg < t_air_senescence .OR. & 
+                beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
                 gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. &
-                mean_leaf_age > lctlib%min_leaf_age) &
+                mean_leaf_age > min_leaf_age) &
                   growing_season = .FALSE.
        END SELECT
     ENDIF   
 
     !> 2.1 gdd counter
     !! 
-    IF(t_air > lctlib%gdd_t_air_threshold) THEN
-       gdd = gdd + ((t_air - lctlib%gdd_t_air_threshold) * dtime/one_day)
+    IF(t_air > gdd_t_air_threshold) THEN
+       gdd = gdd + ((t_air - gdd_t_air_threshold) * dtime/one_day)
     ENDIF
     IF(t_air_tphen_mavg < Tzero) gdd = 0.0_wp
 
