@@ -7,16 +7,17 @@
 #
 
 
-## provide the location of baseline & new/testing simulation results
+## provide the location of previous/baseline & new/testing simulation results
 ## note: no trailing "/" but simply "/path/siteName" e.g. "/path/DE-Hai"
 baselineSiteFolder="/Net/Groups/BGI/scratch/jengel/slm/exp_r998_fluxdiagn01/DE-Hai"
 newSimulationSiteFolder="/Net/Groups/BGI/scratch/jengel/slm/exp_r998_fluxdiagn02/DE-Hai"
 
 ## modify the location of the all_sites_list.dat if necessary (e.g. when working with a local copy)
-## default: allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/all_sites_list.dat"
-##
 ## or empty the path to  allSiteList=""  and provide start and last year of fluxnet data for this site manually
-allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/all_sites_list.dat"
+## 
+## default: allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat"
+allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat"
+#allSiteList=""
 startYear=2000    # only used if allSiteList=""
 lastYear=2006     # only used if allSiteList=""
 
