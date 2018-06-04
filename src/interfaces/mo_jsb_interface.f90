@@ -14,7 +14,8 @@ MODULE mo_jsb_interface
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_util_string,         ONLY: int2string
 
-  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, jsbach_runs_standalone
+  USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
@@ -189,6 +190,10 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    ! If timers in host model are switched off but we want timers in jsbach, switch on the top level timer for jsbach.
+    ! Otherwise, this timer has already been started in the host model or standalone driver.
+    IF (.NOT. jsbach_runs_standalone() .AND. .NOT. l_timer_host .AND. timer_on()) CALL timer_start(timer_jsbach)
+
     no_omp_thread = Get_omp_thread()
 
     IF (write_interface_vars) THEN
@@ -303,6 +308,8 @@ CONTAINS
 !!$      &              all_print=.TRUE.)
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
+
+    IF (.NOT. jsbach_runs_standalone() .AND. .NOT. l_timer_host .AND. timer_on()) CALL timer_stop(timer_jsbach)
 
   END SUBROUTINE interface_full
 

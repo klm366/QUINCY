@@ -15,12 +15,14 @@ MODULE mo_jsb_control
   USE mo_util,      ONLY: int2string
   USE mo_timer,     ONLY: new_timer
 
+  USE mo_jsb_time_iface, ONLY: l_timer_host !< timers on in host model?
+
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: init_jsb_master_control
   PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
-  PUBLIC :: debug_on, timer_on
+  PUBLIC :: debug_on, timer_on, l_timer_host
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
@@ -87,6 +89,7 @@ CONTAINS
         timer_process_msg(1) = new_timer('jsb:process_msg')
       END IF
     END IF
+    IF (jsbach_runs_standalone()) l_timer_host = .TRUE. !< Would be uninitialized otherwise; value doesn't matter
 
   END SUBROUTINE init_jsb_master_control
 
