@@ -543,15 +543,16 @@ CONTAINS
                                         reserve_carbon_tcnl_mavg(:)      , &
                                         reserve_nitrogen_tcnl_mavg(:)    , &
                                         labile_carbon_tcnl_mavg(:)       , &
-                                        labile_nitrogen_tcnl_mavg(:)      , &
-                                        leaf_cn_direction(:)              )
+                                        labile_nitrogen_tcnl_mavg(:)     , &
+                                        leaf_cn_direction(:)             )
     END IF ! dsl4jsb_Config(VEG_)%flag_optimal_Nleaf
 
-    CALL calc_stoichiometry_changes(lctlib                                    , & ! in
-                                      dsl4jsb_Config(VEG_)%flag_optimal_Nleaf , &
-                                      growing_season(:)           , &
-                                      leaf_cn_direction(:)        , &
-                                      target_np_leaf(:)           , &
+    CALL calc_stoichiometry_changes(  lctlib%growthform                       , &   ! lctlib
+                                      lctlib%cn_leaf                          , &   ! lctlib
+                                      dsl4jsb_Config(VEG_)%flag_optimal_Nleaf , & ! in
+                                      growing_season(:)                       , &
+                                      leaf_cn_direction(:)                    , &
+                                      target_np_leaf(:)                       , &
                                       target_cn_leaf(:)           , & ! inout
                                       target_cn_fine_root(:)      , & ! out
                                       target_cn_coarse_root(:)    , &
@@ -605,7 +606,18 @@ CONTAINS
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(lctlib                                        , &  ! in
+    CALL calc_allometry(lctlib%phenology_type                         , &  ! lctlib
+                        lctlib%growthform                             , &
+                        lctlib%allom_k1                               , &
+                        lctlib%allom_k2                               , &
+                        lctlib%sla                                    , &
+                        lctlib%wood_density                           , &
+                        lctlib%tau_leaf                               , &
+                        lctlib%tau_fine_root                          , &
+                        lctlib%k_latosa                               , &
+                        lctlib%k_root                                 , &
+                        lctlib%k_rtos                                 , &
+                        lctlib%c0_allom                               , &  ! lctlib
                         dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                         TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)         , &
                         height(:)                        , &
@@ -1256,8 +1268,9 @@ CONTAINS
   !! Includes optimal CN ratio calculation \n
   !! output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_stoichiometry_changes(lctlib                  , &   ! in
-                                                  flag_optimal_Nleaf      , &
+  ELEMENTAL SUBROUTINE calc_stoichiometry_changes(growthform              , &   ! lctlib
+                                                  cn_leaf                 , &   ! lctlib
+                                                  flag_optimal_Nleaf      , &   ! in
                                                   growing_season          , &
                                                   leaf_cn_direction       , &
                                                   target_np_leaf          , &
@@ -1271,14 +1284,14 @@ CONTAINS
                                                   target_np_sap_wood      , &
                                                   target_np_fruit  )         
 
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants          ! e.g. delta_n_leaf
 
-
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),   INTENT(in)    :: lctlib                    !< land-cover-type library - parameter across pft's
+    INTEGER,                  INTENT(in)    :: growthform                !< land-cover-type library parameter
+    REAL(wp),                 INTENT(in)    :: cn_leaf                   !< land-cover-type library parameter
     LOGICAL,                  INTENT(in)    :: flag_optimal_Nleaf        !< from veg config
     LOGICAL,                  INTENT(in)    :: growing_season            !< 
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
@@ -1292,6 +1305,7 @@ CONTAINS
                                                target_np_coarse_root , & !< coarse root target N:P
                                                target_np_sap_wood    , & !< sap wood target N:P
                                                target_np_fruit           !< fruit target N:P
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_stoichiometry_changes'
 
@@ -1302,26 +1316,26 @@ CONTAINS
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
     !ELSE
-    !  target_cn_leaf = lctlib%cn_leaf
+    !  target_cn_leaf = cn_leaf
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
     !!
-    target_cn_fine_root = lctlib%cn_leaf / root2leaf_cn
-    SELECT CASE(lctlib%growthform)
+    target_cn_fine_root = cn_leaf / root2leaf_cn
+    SELECT CASE(growthform)
       CASE (itree) ! trees
-         target_cn_coarse_root  = lctlib%cn_leaf / wood2leaf_cn
-         target_cn_sap_wood     = lctlib%cn_leaf / wood2leaf_cn 
+         target_cn_coarse_root  = cn_leaf / wood2leaf_cn
+         target_cn_sap_wood     = cn_leaf / wood2leaf_cn 
       CASE (igrass) ! grasses 
-         target_cn_coarse_root  = lctlib%cn_leaf / root2leaf_cn
-         target_cn_sap_wood     = lctlib%cn_leaf / root2leaf_cn 
+         target_cn_coarse_root  = cn_leaf / root2leaf_cn
+         target_cn_sap_wood     = cn_leaf / root2leaf_cn 
     END SELECT
-    target_cn_fruit = lctlib%cn_leaf / root2leaf_cn
+    target_cn_fruit = cn_leaf / root2leaf_cn
 
     !> 3.0 determine N:P of other plant tissues
     !!
     target_np_fine_root = target_np_leaf / root2leaf_np
-    SELECT CASE(lctlib%growthform)
+    SELECT CASE(growthform)
       CASE (itree) ! trees
          target_np_coarse_root  = target_np_leaf / wood2leaf_np
          target_np_sap_wood     = target_np_leaf / wood2leaf_np
@@ -1347,7 +1361,18 @@ CONTAINS
   !!
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_allometry(lctlib                         , &
+  PURE ELEMENTAL SUBROUTINE calc_allometry( phenology_type                , &  ! lctlib
+                                            growthform                    , &
+                                            allom_k1                      , &
+                                            allom_k2                      , &
+                                            sla                           , &
+                                            wood_density                  , &
+                                            tau_leaf                      , &
+                                            tau_fine_root                 , &
+                                            k_latosa                      , &
+                                            k_root                        , &
+                                            k_rtos                        , &
+                                            c0_allom                      , &  ! lctlib
                                             flag_optimal_allocation       , &
                                             bnf_scheme                    , &
                                             height                        , &
@@ -1377,7 +1402,6 @@ CONTAINS
                                             k1_opt                        , &
                                             k2_opt )                    
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: pi
     USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass
@@ -1386,48 +1410,60 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in) :: lctlib                   !< land-cover-type library - parameters for one pft
-    LOGICAL,               INTENT(in) :: flag_optimal_allocation  !< from veg config
-    CHARACTER(len=*),      INTENT(in) :: bnf_scheme       !< from veg config
-    REAL(wp), INTENT(in)  :: height                       !< height (m)
-    REAL(wp), INTENT(in)  :: veg_pool_sap_wood_carbon     !< woody biomass of an individual tree (mol C/m2)
-    REAL(wp), INTENT(in)  :: veg_pool_heart_wood_carbon   !< woody biomass of an individual tree (mol C/m2)
-    REAL(wp), INTENT(in)  :: dens_ind                     !< density of populations (number of indivuduals /m2) 
-    REAl(wp), INTENT(in)  :: labile_carbon                !< labile carbon (mol C/m2) 
-    REAL(wp), INTENT(in)  :: labile_nitrogen              !< labile nitrogen (mol N/m2)
-    REAL(wp), INTENT(in)  :: labile_phosphorus            !< labile phosphorus (mol P/m2)
-    REAL(wp), INTENT(in)  :: reserve_carbon               !< reserve carbon (mol C)
-    REAL(wp), INTENT(in)  :: reserve_nitrogen             !< reserve nitrogen (mol N)
-    REAL(wp), INTENT(in)  :: reserve_phosphorus           !< reserve phosphorus (mol P)
-    REAL(wp), INTENT(in)  :: growth_cn                    !< C:N of whole plant growth increment
-    REAL(wp), INTENT(in)  :: growth_cp                    !< C:P of whole plant growth increment
-    REAL(wp), INTENT(in)  :: npp                          !< current average NPP (µmol C m-2 s-1)
-    REAL(wp), INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (µmol C m-2 s-1 mol-1 leaf C)
-    REAL(wp), INTENT(in)  :: transpiration                !< average transpiration flux (kg m-2 s-1)
-    REAL(wp), INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (kg m-1 s-2 mol-1 leaf C)
-    REAL(wp), INTENT(in)  :: n_fixation                   !< N fixation (µmol N m-2 s-1)
-    REAL(wp), INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (µmol N m-2 s-1 mol-1 root C)
-    REAL(wp), INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (µmol P m-2 s-1 mol-1 root C)
-    REAL(wp), INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa) 
-    REAL(wp), INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
-    REAL(wp), INTENT(out) :: dheight                      !< change in height (m) resulting from a small change in woody biomass
-    REAL(wp), INTENT(out) :: leaf2sapwood_mass_ratio      !< leaf to sapwood mass ratio 
-    REAL(wp), INTENT(out) :: leaf2root_mass_ratio         !< leaf to root mass ratio
-    REAL(wp), INTENT(out) :: k1_opt                       !< coefficient in optimized leaf:root ratio
-    REAL(wp), INTENT(out) :: k2_opt                       !< coefficient in optimized leaf:root ratio
+    INTEGER,               INTENT(in)  :: phenology_type         , &   !< land-cover-type library parameter
+                                          growthform                   !< land-cover-type library parameter
+    REAL(wp),              INTENT(in)  :: allom_k1               , &   !< land-cover-type library parameter
+                                          allom_k2               , &   !< land-cover-type library parameter
+                                          sla                    , &   !< land-cover-type library parameter
+                                          wood_density           , &   !< land-cover-type library parameter
+                                          tau_leaf               , &   !< land-cover-type library parameter
+                                          tau_fine_root          , &   !< land-cover-type library parameter
+                                          k_latosa               , &   !< land-cover-type library parameter
+                                          k_root                 , &   !< land-cover-type library parameter
+                                          k_rtos                 , &   !< land-cover-type library parameter
+                                          c0_allom                     !< land-cover-type library parameter
+    LOGICAL,               INTENT(in)  :: flag_optimal_allocation      !< from veg config
+    CHARACTER(len=*),      INTENT(in)  :: bnf_scheme                   !< from veg config
+    REAL(wp),              INTENT(in)  :: height                       !< height (m)
+    REAL(wp),              INTENT(in)  :: veg_pool_sap_wood_carbon     !< woody biomass of an individual tree (mol C/m2)
+    REAL(wp),              INTENT(in)  :: veg_pool_heart_wood_carbon   !< woody biomass of an individual tree (mol C/m2)
+    REAL(wp),              INTENT(in)  :: dens_ind                     !< density of populations (number of indivuduals /m2) 
+    REAl(wp),              INTENT(in)  :: labile_carbon                !< labile carbon (mol C/m2) 
+    REAL(wp),              INTENT(in)  :: labile_nitrogen              !< labile nitrogen (mol N/m2)
+    REAL(wp),              INTENT(in)  :: labile_phosphorus            !< labile phosphorus (mol P/m2)
+    REAL(wp),              INTENT(in)  :: reserve_carbon               !< reserve carbon (mol C)
+    REAL(wp),              INTENT(in)  :: reserve_nitrogen             !< reserve nitrogen (mol N)
+    REAL(wp),              INTENT(in)  :: reserve_phosphorus           !< reserve phosphorus (mol P)
+    REAL(wp),              INTENT(in)  :: growth_cn                    !< C:N of whole plant growth increment
+    REAL(wp),              INTENT(in)  :: growth_cp                    !< C:P of whole plant growth increment
+    REAL(wp),              INTENT(in)  :: npp                          !< current average NPP (µmol C m-2 s-1)
+    REAL(wp),              INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (µmol C m-2 s-1 mol-1 leaf C)
+    REAL(wp),              INTENT(in)  :: transpiration                !< average transpiration flux (kg m-2 s-1)
+    REAL(wp),              INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (kg m-1 s-2 mol-1 leaf C)
+    REAL(wp),              INTENT(in)  :: n_fixation                   !< N fixation (µmol N m-2 s-1)
+    REAL(wp),              INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (µmol N m-2 s-1 mol-1 root C)
+    REAL(wp),              INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (µmol P m-2 s-1 mol-1 root C)
+    REAL(wp),              INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa) 
+    REAL(wp),              INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
+    REAL(wp),              INTENT(out) :: dheight                      !< change in height (m) resulting from a small change in woody biomass
+    REAL(wp),              INTENT(out) :: leaf2sapwood_mass_ratio      !< leaf to sapwood mass ratio 
+    REAL(wp),              INTENT(out) :: leaf2root_mass_ratio         !< leaf to root mass ratio
+    REAL(wp),              INTENT(out) :: k1_opt                       !< coefficient in optimized leaf:root ratio
+    REAL(wp),              INTENT(out) :: k2_opt                       !< coefficient in optimized leaf:root ratio
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: diameter2                     ! diameter (m) resulting from a infitisemal small increase in woody biomas 
     REAL(wp)             :: k1_opt_w  , &
                             k2_opt_w
     REAL(wp)             :: k1_opt_n  , &
-         k1_opt_p
-    REAL(wp)                    :: ns_carbon,ns_nitrogen,ns_phosphorus
+                            k1_opt_p
+    REAL(wp)             :: ns_carbon,ns_nitrogen,ns_phosphorus
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
+
 
     
 !@todo: if this works well, then the ns_X and the reserve_pool_X should be removed from this routine as they would be obsolete
-    !SELECT CASE (lctlib%phenology_type)
+    !SELECT CASE (phenology_type)
     !  CASE (ievergreen)
          ! general case: labile pool concentrations are important for uptake
          ns_carbon     = labile_carbon
@@ -1444,7 +1480,7 @@ CONTAINS
 
     !> 1.0 case growthform
     !! 
-    SELECT CASE (lctlib%growthform)
+    SELECT CASE (growthform)
       !> 1.1 trees
       !! 
       CASE (itree)
@@ -1453,11 +1489,13 @@ CONTAINS
         !   height = allom_k1 * diameter ^ allom_k2
         IF(dens_ind > eps8) THEN
            ! Calculate change of height given a small change in woody biomass
-           diameter2 = calc_diameter_from_woody_biomass(lctlib,                         & 
-                                                        veg_pool_sap_wood_carbon+eps4,  & 
-                                                        veg_pool_heart_wood_carbon,     &
+           diameter2 = calc_diameter_from_woody_biomass(allom_k1                      , &  ! lctlib
+                                                        allom_k2                      , &
+                                                        wood_density                  , &  ! lctlib
+                                                        veg_pool_sap_wood_carbon+eps4 , & 
+                                                        veg_pool_heart_wood_carbon    , &
                                                         dens_ind)
-           dheight   = calc_height_from_diameter(lctlib,diameter2) - height
+           dheight   = calc_height_from_diameter(allom_k1, allom_k2, diameter2) - height
         ELSE 
            dheight   = 0.0_wp
         ENDIF
@@ -1466,7 +1504,7 @@ CONTAINS
         ! leaf area = k_latosa * sap_wood area
         ! => Cl * sla = k * Cs / wood_density / height
         ! => Cl = k_latosa / sla / wood_density / height * Cs = leaf2sapwood_mass_ratio * Cs / height
-        leaf2sapwood_mass_ratio = lctlib%k_latosa / lctlib%sla / lctlib%wood_density
+        leaf2sapwood_mass_ratio = k_latosa / sla / wood_density
 
         IF (flag_optimal_allocation) THEN
            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
@@ -1476,52 +1514,52 @@ CONTAINS
            !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
            SELECT CASE (bnf_scheme)
            CASE("optimal")
-              k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
+              k1_opt_n = (npp * tau_leaf * one_year * one_day + &
                    (ns_carbon - &
                    (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                   MAX((unit_uptake_n + n_fixation) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
-              k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
+                   MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+              k1_opt_p = (npp * tau_leaf * one_year * one_day + &
                    (ns_carbon - &
                    (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                   MAX(unit_uptake_p * growth_cp *lctlib%tau_fine_root*one_year*one_day,eps8)
+                   MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
               IF ( k1_opt_n >= k1_opt_p) THEN 
                  ! if N is more limiting than P
                  k1_opt = k1_opt_n 
-                k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX((unit_uptake_n+n_fixation) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
+                k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX((unit_uptake_n+n_fixation) * growth_cn*tau_fine_root*one_year*one_day, eps8)
               ELSE
                  k1_opt = k1_opt_p 
-                 k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*lctlib%tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
               ENDIF
            CASE DEFAULT 
-              k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
+              k1_opt_n = (npp*tau_leaf*one_year*one_day +&
                    (ns_carbon - &
                    (ns_nitrogen) * growth_cn) * 1.e6_wp - &
-                   n_fixation * growth_cn*lctlib%tau_fine_root*one_year*one_day) / & 
-                   MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
+                   n_fixation * growth_cn*tau_fine_root*one_year*one_day) / & 
+                   MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
                
-              k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
+              k1_opt_p = (npp*tau_leaf*one_year*one_day +&
                    (ns_carbon - &
                    (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                   MAX(unit_uptake_p * growth_cp * lctlib%tau_fine_root*one_year*one_day, eps8)
+                   MAX(unit_uptake_p * growth_cp * tau_fine_root*one_year*one_day, eps8)
               IF ( k1_opt_n >= k1_opt_p) THEN 
                  ! if N is more limiting than P
                  k1_opt = k1_opt_n 
-                 k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX(unit_uptake_n * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_n * growth_cn*tau_fine_root*one_year*one_day, eps8)
               ELSE
                  k1_opt = k1_opt_p 
-                 k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*lctlib%tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
               ENDIF
            END SELECT
 
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS
            IF (height>0.5_wp) THEN
-              k1_opt_w = transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
-              k2_opt_w = unit_transpiration/ rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi)
+              k1_opt_w = transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
+              k2_opt_w = unit_transpiration/ rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
            ELSE
               ! all resistance is in the root for small trees
-              k1_opt_w = transpiration / rhoh2o * (1._wp) / (lctlib%k_root * dphi) 
-              k2_opt_w = unit_transpiration/ rhoh2o * (1._wp) / (lctlib%k_root * dphi)
+              k1_opt_w = transpiration / rhoh2o * (1._wp) / (k_root * dphi) 
+              k2_opt_w = unit_transpiration/ rhoh2o * (1._wp) / (k_root * dphi)
            ENDIF
              
            ! Compare root increments for a hypothetical unit of leaf growth 
@@ -1539,7 +1577,7 @@ CONTAINS
            ! let Cs = Cl / leaf2sapwood_mass_ratio * height
            ! => Cl = Cr * leaf2sapwood_mass_ratio * k_rtos = Cl = Cr * leaf2root_mass_ratio 
            ! ad 2: nitrogen/phosphorus sensitivity still needed
-           leaf2root_mass_ratio = lctlib%k_rtos * leaf2sapwood_mass_ratio
+           leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio
         ENDIF 
       !> 1.1 grass
       !! 
@@ -1550,47 +1588,47 @@ CONTAINS
          IF (flag_optimal_allocation) THEN
             SELECT CASE (bnf_scheme)
               CASE("optimal")
-                 k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
+                 k1_opt_n = (npp*tau_leaf*one_year*one_day +&
                       (ns_carbon - &
                       (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                      MAX((unit_uptake_n + n_fixation) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
-                 k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
+                      MAX((unit_uptake_n + n_fixation) * growth_cn*tau_fine_root*one_year*one_day, eps8)
+                 k1_opt_p = (npp*tau_leaf*one_year*one_day +&
                       (ns_carbon - &
                       (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                      MAX(unit_uptake_p * growth_cp *lctlib%tau_fine_root*one_year*one_day,eps8)
+                      MAX(unit_uptake_p * growth_cp *tau_fine_root*one_year*one_day,eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
                     k1_opt = k1_opt_n 
-                    k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX((unit_uptake_n+n_fixation) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX((unit_uptake_n+n_fixation) * growth_cn*tau_fine_root*one_year*one_day, eps8)
                  ELSE
                     k1_opt = k1_opt_p 
-                    k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*lctlib%tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
                  ENDIF
               CASE DEFAULT 
-                 k1_opt_n = (npp*lctlib%tau_leaf*one_year*one_day +&
+                 k1_opt_n = (npp*tau_leaf*one_year*one_day +&
                       (ns_carbon - &
                       (ns_nitrogen) * growth_cn) * 1.e6_wp - &
-                      n_fixation * growth_cn*lctlib%tau_fine_root*one_year*one_day) / & 
-                      MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
+                      n_fixation * growth_cn*tau_fine_root*one_year*one_day) / & 
+                      MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
                   
-                 k1_opt_p = (npp*lctlib%tau_leaf*one_year*one_day +&
+                 k1_opt_p = (npp*tau_leaf*one_year*one_day +&
                       (ns_carbon - &
                       (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                      MAX(unit_uptake_p * growth_cp * lctlib%tau_fine_root*one_year*one_day, eps8)
+                      MAX(unit_uptake_p * growth_cp * tau_fine_root*one_year*one_day, eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
                     k1_opt = k1_opt_n 
-                    k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX(unit_uptake_n * growth_cn*lctlib%tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_n * growth_cn*tau_fine_root*one_year*one_day, eps8)
                  ELSE
                     k1_opt = k1_opt_p 
-                    k2_opt = (unit_npp*lctlib%tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*lctlib%tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
                  ENDIF
            END SELECT
 
             !> water based optimality, following Magnani 2000 
           
-           k1_opt_w = transpiration / (lctlib%k_root * dphi) 
-           k2_opt_w = unit_transpiration / (lctlib%k_root * dphi) 
+           k1_opt_w = transpiration / (k_root * dphi) 
+           k2_opt_w = unit_transpiration / (k_root * dphi) 
 
            ! Compare root increments for a hypothetical unit of leaf growth 
            IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
@@ -1600,7 +1638,7 @@ CONTAINS
            ENDIF 
 
          ELSE      
-            leaf2root_mass_ratio = sm2lm_grass * lctlib%k_rtos 
+            leaf2root_mass_ratio = sm2lm_grass * k_rtos 
          ENDIF
 
     ENDSELECT
@@ -1619,43 +1657,46 @@ CONTAINS
   !!  
   !! output: target size of leaf area index 
   !----------------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_target_lai(lctlib_growthform        , &    
-                                     lctlib_sla               , &
-                                     lctlib_k_latosa          , &  
-                                     lctlib_wood_density      , &
+  ELEMENTAL FUNCTION calc_target_lai(growthform               , &  ! lctlib
+                                     sla                      , &
+                                     k_latosa                 , &  
+                                     wood_density             , &  ! lctlib
                                      leaf2root_mass_ratio     , &
                                      height                   , & 
                                      veg_pool_fine_root_carbon, &
                                      veg_pool_sap_wood_carbon)    RESULT (target_lai)
 
-    USE mo_veg_constants, ONLY: min_lai, igrass, itree
+    USE mo_veg_constants,           ONLY: min_lai, igrass, itree
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    INTEGER,  INTENT(in) :: lctlib_growthform                   !< plant's growth form
-    REAL(wp), INTENT(in) :: lctlib_sla, &                       !< specific leaf area (m2 / mol C)
-                            lctlib_k_latosa, &                  !< leaf to sapwood area ratio
-                            lctlib_wood_density, &              !< wood density (mol C / m3)
-                            leaf2root_mass_ratio, &             !< leaf to fine root mass ratio
-                            height, &                           !< height (m)
-                            veg_pool_fine_root_carbon, &        !< fine root mass (mol C / m2)
+    INTEGER,  INTENT(in) :: growthform                          !< plant's growth form
+    REAL(wp), INTENT(in) :: sla                       , &       !< specific leaf area (m2 / mol C)
+                            k_latosa                  , &       !< leaf to sapwood area ratio
+                            wood_density                        !< wood density (mol C / m3)
+    REAL(wp), INTENT(in) :: leaf2root_mass_ratio      , &       !< leaf to fine root mass ratio
+                            height                    , &       !< height (m)
+                            veg_pool_fine_root_carbon , &       !< fine root mass (mol C / m2)
                             veg_pool_sap_wood_carbon            !< sap wood mass (mol C / m2
     REAL(wp)             :: target_lai 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_target_lai'
 
-    SELECT CASE(lctlib_growthform)
+
+    SELECT CASE(growthform)
       CASE (itree)
         IF (height > eps8) THEN
           ! full leaf area implied by current sapwood area
-          target_lai = MAX(veg_pool_sap_wood_carbon * lctlib_k_latosa / lctlib_wood_density / height, min_lai)
+          target_lai = MAX(veg_pool_sap_wood_carbon * k_latosa / wood_density / height, min_lai)
         ELSE
           target_lai = min_lai
         END IF
  
       CASE (igrass)
           ! full leaf area implied by current fine_root mass and leaf to root ratio 
-          target_lai = MAX(veg_pool_fine_root_carbon * leaf2root_mass_ratio * lctlib_sla, min_lai)
+          target_lai = MAX(veg_pool_fine_root_carbon * leaf2root_mass_ratio * sla, min_lai)
 
     END SELECT
 
@@ -1779,6 +1820,7 @@ CONTAINS
 
   END SUBROUTINE calc_target_labile_reserve_pool_size
 
+
   !----------------------------------------------------------------------------------------------------------
   ! 4.2 Sub Task of update_veg_growth
   ! 
@@ -1846,6 +1888,7 @@ CONTAINS
                                                      phi_phenology_base            , & ! helper variable for using for all elements
                                                      hlp1                              ! helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_reserve_useage'
+
 
     !> 1.0 carbon reserve flow
     !! 
@@ -1998,8 +2041,8 @@ CONTAINS
     veg_reserve_use%phosphorus(:) = ((phi_maintenance(:)+phi_phenology(:)) * veg_pool_reserve%phosphorus(:) - & 
                                      phi_storage(:) * veg_pool_labile%phosphorus(:)) / tau_labile / one_day * dtime
 
-
   END SUBROUTINE calc_reserve_useage
+
 
   !----------------------------------------------------------------------------------------------------------
   ! 4.3 Sub Task of update_veg_growth
@@ -2021,9 +2064,10 @@ CONTAINS
                                               target_labile_pool_nitrogen, &
                                               target_labile_pool_phosphorus) RESULT(beta_sinklim_ps)
 
-    USE mo_veg_constants, ONLY: beta_sinklim_ps_min, k_sinklim_ps, lambda_sinklim_ps, k_cnp_sinklim_ps
+    USE mo_veg_constants,                 ONLY: beta_sinklim_ps_min, k_sinklim_ps, lambda_sinklim_ps, k_cnp_sinklim_ps
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: veg_pool_labile_carbon, &
                             veg_pool_labile_nitrogen, &
@@ -2031,10 +2075,12 @@ CONTAINS
                             target_labile_pool_carbon, & 
                             target_labile_pool_nitrogen, &
                             target_labile_pool_phosphorus
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: hlp1,hlp2 
     REAL(wp)             :: beta_sinklim_ps
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_sinklimitation'
+
 
     !> 1.0 Sink limitation due to labile C accumulation
     !!
@@ -2059,6 +2105,7 @@ CONTAINS
     ENDIF
 
   END FUNCTION calc_beta_sinklimitation
+
 
   !-----------------------------------------------------------------------------------------------------
   ! 5.0 Sub Task of update_veg_growth
@@ -2545,29 +2592,33 @@ CONTAINS
   !!   all woody biomass forms a cylinder: diameter = SQRT(4 * wood volume / height / pi) \n
   !!   height = allom_k1 * diameter ^ allom_k2
   !----------------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_diameter_from_woody_biomass( lctlib            , &
+  PURE ELEMENTAL FUNCTION calc_diameter_from_woody_biomass( allom_k1          , &  ! lctlib
+                                                            allom_k2          , &
+                                                            wood_density      , &  ! lctlib
                                                             sap_wood_carbon   , &
                                                             heart_wood_carbon , &
                                                             dens_ind)           &
                                                             RESULT(diameter)
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: pi
 
     IMPLICIT NONE
-
-    !0.1 InOut
-    TYPE(t_lctlib_element), INTENT(in)  :: lctlib                  !< land-cover-type library - parameters for one pft
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp),               INTENT(in)  :: allom_k1         , &    !< land-cover-type library parameter
+                                           allom_k2         , &    !< land-cover-type library parameter
+                                           wood_density            !< land-cover-type library parameter
     REAL(wp),               INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C/m2)
     REAL(wp),               INTENT(in)  :: heart_wood_carbon       !< woody biomass of an individual tree (mol C/m2)
     REAL(wp),               INTENT(in)  :: dens_ind                !< density of populations (#indivuduals /m2) 
     REAL(wp)                            :: diameter                !< diameter of an individual (m2)
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_diameter_from_woody_biomass'
 
 
     diameter = ( ( sap_wood_carbon + heart_wood_carbon ) / dens_ind / & 
-               (lctlib%wood_density * pi/4._wp * lctlib%allom_k1)) ** (1._wp/(2._wp + lctlib%allom_k2))
+               (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
 
   END FUNCTION calc_diameter_from_woody_biomass
 
@@ -2583,22 +2634,23 @@ CONTAINS
   !! height = allom_k1 * diameter ^ allom_k2
   !! min_height < height
   !----------------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_height_from_diameter(lctlib, diameter) RESULT(height)
+  PURE ELEMENTAL FUNCTION calc_height_from_diameter(allom_k1, allom_k2, diameter) RESULT(height)
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_constants,           ONLY: min_height
 
     IMPLICIT NONE
-
-    !0.1 InOut
-    TYPE(t_lctlib_element), INTENT(in)  :: lctlib      !< land-cover-type library - parameters for one pft
-    REAL(wp),               INTENT(in)  :: diameter    !< diameter of an individual (m2) 
-    REAL(wp)                            :: height      !< height of an individual (m)
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp),               INTENT(in)  :: allom_k1 , & !< land-cover-type library parameter
+                                           allom_k2 , & !< land-cover-type library parameter
+                                           diameter     !< diameter of an individual (m2) 
+    REAL(wp)                            :: height       !< height of an individual (m)
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_height_from_diameter'
 
 
-    height = MAX(min_height,lctlib%allom_k1 * (diameter ** lctlib%allom_k2))
+    height = MAX(min_height,allom_k1 * (diameter ** allom_k2))
 
   END FUNCTION calc_height_from_diameter
 

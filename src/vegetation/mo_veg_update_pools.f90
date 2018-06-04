@@ -416,11 +416,13 @@ CONTAINS
     lai(:)      = veg_pool%leaf%carbon(:) * lctlib%sla
     dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
     WHERE(dens_ind(:) > 0.0_wp .AND. lctlib%growthform == itree)
-       diameter(:)  = calc_diameter_from_woody_biomass(lctlib                        , &
+       diameter(:)  = calc_diameter_from_woody_biomass(lctlib%allom_k1               , &
+                                                       lctlib%allom_k2               , &
+                                                       lctlib%wood_density           , &
                                                        veg_pool%sap_wood%carbon(:)   , &
                                                        veg_pool%heart_wood%carbon(:) , &
                                                        dens_ind(:))
-       height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
+       height(:)    = calc_height_from_diameter(lctlib%allom_k1, lctlib%allom_k2, diameter(:)) 
     END WHERE
 
     WHERE(veg_pool%leaf%carbon(:) > eps8)
