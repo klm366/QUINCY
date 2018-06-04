@@ -791,68 +791,67 @@ CONTAINS
     USE mo_rad_constants,         ONLY: rad2ppfd, kbl0_vis
     USE mo_assimi_constants,      ONLY: ic3phot, ic4phot
 
-
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),       INTENT(in) :: options                !< model options
-    TYPE(t_lctlib_element),         INTENT(in) :: lctlib                 !< land-cover-type library - parameters for one pft
-    INTEGER,                        INTENT(in) :: ncanopy                !< number of canopy layers
-    LOGICAL,                        INTENT(in) :: flag_optimal_Nfraction !< on/off optimise leaf internal N allocation
-    REAL(wp),DIMENSION(ncanopy),    INTENT(in) :: canopy_layer_depth     !< depth of each single canopy layer
-    REAL(wp),DIMENSION(:),          INTENT(in) :: t_air            , &   !< air temperature (K)
-                                                  press_srf        , &   !< air pressure (Pa)
-                                                  q_air            , &   !< air specific humidity (--)
-                                                  co2_mixing_ratio , &   !< co2 mixing ratio (ppm)
-                                                  ga               , &   !< air temperature (K)
-                                                  net_assimilation , &   !< net assimilation rate (µmol CO2 / m2 / s)
-                                                  canopy_cond      , &   !< canopy conductance (m/s)
-                                                  beta_air         , &   !< air humidity limiting factor for photosynthesis
-                                                  beta_soa         , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis
-                                                  beta_soil_ps     , &   !< soil moisture limiting factor for photosynthesis
-                                                  beta_soil_gs           !< soil moisture limiting factor for canopy conductance
-    REAL(wp),DIMENSION(:),          INTENT(in) :: veg_pool_leaf_carbon    , & !< ..
-                                                  veg_pool_leaf_nitrogen  , & !< ..
-                                                  lai                     , & !< lai
-                                                  beta_sinklim_ps         , & !< ..
-                                                  t_air_tacclim_mavg      , & !< ..
-                                                  t_jmax_opt_mavg             !< ..
+    TYPE(t_jsb_task_options),               INTENT(in) :: options                       !< model options
+    TYPE(t_lctlib_element),                 INTENT(in) :: lctlib                        !< land-cover-type library - parameters for one pft
+    INTEGER,                                INTENT(in) :: ncanopy                       !< number of canopy layers
+    LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: canopy_layer_depth            !< depth of each single canopy layer
+    REAL(wp),DIMENSION(options%nc),         INTENT(in) :: t_air                   , &   !< air temperature (K)
+                                                          press_srf               , &   !< air pressure (Pa)
+                                                          q_air                   , &   !< air specific humidity (--)
+                                                          co2_mixing_ratio        , &   !< co2 mixing ratio (ppm)
+                                                          ga                      , &   !< air temperature (K)
+                                                          net_assimilation        , &   !< net assimilation rate (µmol CO2 / m2 / s)
+                                                          canopy_cond             , &   !< canopy conductance (m/s)
+                                                          beta_air                , &   !< air humidity limiting factor for photosynthesis
+                                                          beta_soa                , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis
+                                                          beta_soil_ps            , &   !< soil moisture limiting factor for photosynthesis
+                                                          beta_soil_gs                  !< soil moisture limiting factor for canopy conductance
+    REAL(wp),DIMENSION(options%nc),         INTENT(in) :: veg_pool_leaf_carbon    , &   !< ..
+                                                          veg_pool_leaf_nitrogen  , &   !< ..
+                                                          lai                     , &   !< lai
+                                                          beta_sinklim_ps         , &   !< ..
+                                                          t_air_tacclim_mavg      , &   !< ..
+                                                          t_jmax_opt_mavg               !< ..
     REAL(wp),DIMENSION(options%nc,ncanopy), INTENT(in) :: &
-                                                  fn_chl_cl          , & !< ..
-                                                  fn_et_cl           , & !< ..
-                                                  fn_rub_cl          , & !< ..
-                                                  fn_pepc_cl         , & !< ..
-                                                  fn_oth_cl          , & !< ..
-                                                  fleaf_sunlit_cl    , & !< ..
-                                                  ppfd_sunlit_cl     , & !< ..
-                                                  ppfd_shaded_cl         !< ..
-    REAl(wp),DIMENSION(:),          INTENT(in) :: swpar_srf_down     , &
-                                                  swpar_fdiffuse
-    REAL(wp),DIMENSION(:),          INTENT(out):: unit_npp           , & !< unit change of NPP per ??
-                                                  unit_transpiration     !< unit change of NPP per ??
+                                                          fn_chl_cl               , &   !< ..
+                                                          fn_et_cl                , &   !< ..
+                                                          fn_rub_cl               , &   !< ..
+                                                          fn_pepc_cl              , &   !< ..
+                                                          fn_oth_cl               , &   !< ..
+                                                          fleaf_sunlit_cl         , &   !< ..
+                                                          ppfd_sunlit_cl          , &   !< ..
+                                                          ppfd_shaded_cl                !< ..
+    REAl(wp),DIMENSION(options%nc),         INTENT(in) :: swpar_srf_down          , &   !< ..
+                                                          swpar_fdiffuse                !< ..
+    REAL(wp),DIMENSION(options%nc),         INTENT(out):: unit_npp                , &   !< unit change of NPP per ??
+                                                          unit_transpiration            !< unit change of NPP per ??
     ! ---------------------------
     ! 0.2 Local
     REAL(wp),DIMENSION(options%nc)                     :: leaf_nitrogen_new
-    REAL(wp),DIMENSION(options%nc)             :: lai_new
-    REAL(wp),DIMENSION(options%nc)             :: net_assimilation_new
-    REAL(wp),DIMENSION(options%nc)             :: canopy_cond_new
-    REAL(wp),DIMENSION(options%nc,ncanopy)     :: lai_new_cl           , &
-                                                  cumm_lai_new_cl      , &
-                                                  loc_ppfd_sunlit_cl   , &
-                                                  loc_ppfd_shaded_cl   , &
-                                                  loc_fleaf_sunlit_cl  , &
-                                                  fn_oth_new_cl        , &
-                                                  leaf_nitrogen_new_cl , &
-                                                  fn_chl_new_cl        , &
-                                                  fn_et_new_cl         , &
-                                                  fn_rub_new_cl        , &
-                                                  fn_pepc_new_cl
-    REAL(wp),DIMENSION(options%nc)             :: ag_cl                , &  ! here _cl means value per canopy layer
-                                                  an_cl                , &
-                                                  r_cl                 , &
-                                                  gs_cl                , &
-                                                  q_sat                , &
-                                                  hlp1
+    REAL(wp),DIMENSION(options%nc)                     :: lai_new
+    REAL(wp),DIMENSION(options%nc)                     :: net_assimilation_new
+    REAL(wp),DIMENSION(options%nc)                     :: canopy_cond_new
+    REAL(wp),DIMENSION(options%nc,ncanopy)             :: lai_new_cl           , &
+                                                          cumm_lai_new_cl      , &
+                                                          loc_ppfd_sunlit_cl   , &
+                                                          loc_ppfd_shaded_cl   , &
+                                                          loc_fleaf_sunlit_cl  , &
+                                                          fn_oth_new_cl        , &
+                                                          leaf_nitrogen_new_cl , &
+                                                          fn_chl_new_cl        , &
+                                                          fn_et_new_cl         , &
+                                                          fn_rub_new_cl        , &
+                                                          fn_pepc_new_cl
+    REAL(wp),DIMENSION(options%nc)                     :: ag_cl                , &  ! here _cl means value per canopy layer
+                                                          an_cl                , &
+                                                          r_cl                 , &
+                                                          gs_cl                , &
+                                                          q_sat                , &
+                                                          hlp1
     INTEGER                                    :: icanopy                    ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
@@ -957,7 +956,7 @@ CONTAINS
                                     hlp1(:)                         )
 
       net_assimilation_new(:) = net_assimilation_new(:) + an_cl(:) * lai_new_cl(:,icanopy)
-      canopy_cond_new(:) = canopy_cond_new(:) + gs_cl(:) * lai_new_cl(:,icanopy)
+      canopy_cond_new(:)      = canopy_cond_new(:) + gs_cl(:) * lai_new_cl(:,icanopy)
     ENDDO
 
     !> 3.0 Calculate change in canopy fluxes from altered LAI

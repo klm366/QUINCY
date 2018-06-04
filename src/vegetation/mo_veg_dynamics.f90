@@ -364,7 +364,9 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)                :: boc_cbalance               !< C balance at bottom of canopy
     REAL(wp), DIMENSION(options%nc)                :: greff                      !< long-term growth efficiency
     REAL(wp), DIMENSION(options%nc)                :: fscal
-    REAL(wp), DIMENSION(options%nc)                :: greff_mortality_rate,self_thinning_mortality_rate,bg_mortality_rate 
+    REAL(wp), DIMENSION(options%nc)                :: greff_mortality_rate, &
+                                                      self_thinning_mortality_rate, &
+                                                      bg_mortality_rate 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
     
 
@@ -446,6 +448,7 @@ CONTAINS
 
   END SUBROUTINE calc_veg_mortality
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
   ! 
@@ -467,19 +470,20 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),     INTENT(in)    :: options                  !< model options
-    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_pool                 !< vegetation pool
-    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_litterfall           !< vegetation litterfall
-    REAL(wp), DIMENSION(:),       INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
+    TYPE(t_jsb_task_options),         INTENT(in)    :: options                  !< model options
+    TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool                 !< vegetation pool
+    TYPE(t_veg_pool_a),               INTENT(inout) :: veg_litterfall           !< vegetation litterfall
+    REAL(wp), DIMENSION(options%nc),  INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)             :: rest_mortality_rate 
-    REAL(wp)                                    :: export_rate
+    REAL(wp), DIMENSION(options%nc)                 :: rest_mortality_rate 
+    REAL(wp)                                        :: export_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_harvest'
+
 
     !> 1.0 calculate rest mortality to achieve stand-replacing harvest
     !!
-    rest_mortality_rate(:) = 1._wp - mortality_rate(:)
+    rest_mortality_rate(:)      = 1._wp - mortality_rate(:)
 
     veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * rest_mortality_rate(:)
     veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * rest_mortality_rate(:)
@@ -490,9 +494,10 @@ CONTAINS
     veg_litterfall%reserve      = veg_litterfall%reserve      + veg_pool%reserve      * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
     veg_litterfall%fruit        = veg_litterfall%fruit        + veg_pool%fruit        * rest_mortality_rate(:)
 
-    mortality_rate(:) = 1.0_wp
+    mortality_rate(:)           = 1.0_wp
 
   END SUBROUTINE calc_veg_harvest
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
@@ -525,26 +530,27 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),       INTENT(in)    :: options            !< model options
-    TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
-    INTEGER,                        INTENT(in)    :: ncanopy            !< number of canopy layer
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
-    LOGICAL , DIMENSION(:),         INTENT(in)    :: growing_season     !< growing season 
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: fpc 
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg !< red-farred ratio at the bottom of the canopy 
-    TYPE(t_veg_element_a),          INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
-    TYPE(t_veg_element_a),          INTENT(inout) :: veg_establishment  !< vegetation establishment
+    TYPE(t_jsb_task_options),         INTENT(in)    :: options                      !< model options
+    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    INTEGER,                          INTENT(in)    :: ncanopy                      !< number of canopy layer
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum] 
+    LOGICAL , DIMENSION(options%nc),  INTENT(in)    :: growing_season               !< growing season 
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: fpc                          !<  ...
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy 
+    TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_seed_bed            !< seed_bed in vegetation pool
+    TYPE(t_veg_element_a),            INTENT(inout) :: veg_establishment            !< vegetation establishment
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)               :: establishment_rate , &
-                                                     tc                 , &
-                                                     rfr_ratio          , &
-                                                     flim_light         , &
-                                                     flim_moist         , &
-                                                     flim_temp
-    INTEGER                                       :: icanopy
+    REAL(wp), DIMENSION(options%nc)                 :: establishment_rate , &
+                                                       tc                 , &
+                                                       rfr_ratio          , &
+                                                       flim_light         , &
+                                                       flim_moist         , &
+                                                       flim_temp
+    INTEGER                                         :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
+
 
     !> 1.0 establishment rate
     !!

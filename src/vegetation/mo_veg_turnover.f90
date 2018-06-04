@@ -217,24 +217,24 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options                                !< model options
-    REAL(wp), DIMENSION(:),     INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
-                                                 target_np_fine_root               , &  !< target N:P of fine_roots 
-                                                 target_cn_leaf                    , &  !< ..
-                                                 target_np_leaf                         !< ..
-    LOGICAL , DIMENSION(:),     INTENT(in)    :: growing_season                         !< whether the plant is in the growing season
-    TYPE(t_veg_pool_a),         INTENT(in)    :: veg_pool
-    REAL(wp), DIMENSION(:),     INTENT(inout) :: recycling_leaf_n                  , & 
-                                                 recycling_fine_root_n             , & 
-                                                 recycling_leaf_p                  , & 
-                                                 recycling_fine_root_p             , & 
-                                                 recycling_leaf_n15                , & 
-                                                 recycling_fine_root_n15
+    TYPE(t_jsb_task_options),         INTENT(in)    :: options                                !< model options
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
+                                                       target_np_fine_root               , &  !< target N:P of fine_roots 
+                                                       target_cn_leaf                    , &  !< ..
+                                                       target_np_leaf                         !< ..
+    LOGICAL , DIMENSION(options%nc),  INTENT(in)    :: growing_season                         !< whether the plant is in the growing season
+    TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool
+    REAL(wp), DIMENSION(options%nc),  INTENT(inout) :: recycling_leaf_n                  , & 
+                                                       recycling_fine_root_n             , & 
+                                                       recycling_leaf_p                  , & 
+                                                       recycling_fine_root_p             , & 
+                                                       recycling_leaf_n15                , & 
+                                                       recycling_fine_root_n15
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)   :: hlp1                     ! helper variable
-    REAL(wp), DIMENSION(options%nc)   :: recycling_leaf, &        ! more helpers1
-                                         recycling_fine_root      ! more helpers2
+    REAL(wp), DIMENSION(options%nc)                 :: hlp1                     ! helper variable
+    REAL(wp), DIMENSION(options%nc)                 :: recycling_leaf, &        ! more helpers1
+                                                       recycling_fine_root      ! more helpers2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_recycling'
 
 

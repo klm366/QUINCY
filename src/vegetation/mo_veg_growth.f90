@@ -962,52 +962,54 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),     INTENT(in)    :: options                  !< model options
-    TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                   !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*),             INTENT(in)    :: bnf_scheme               !< from veg config 
-    CHARACTER(len=*),             INTENT(in)    :: sb_model_scheme          !< from sb config
-    LOGICAL,                      INTENT(in)    :: flag_mycorrhiza          !< from sb config
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: kstar_labile             !< meristem turnover rate  
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: t_air                    !< air temperature (K) !! should be soil temperature!
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: fine_root_carbon         !< fine root carbon (mol C / m2)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: fine_root_nitrogen       !< fine root nitrogen (mol N / m2)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: labile_carbon            !< labile pool carbon (mol C / m2)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: labile_nitrogen          !< labile pool nitrogen (mol N / m2)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: labile_phosphorus        !< labile pool phosphorus (mol P / m2)
-    REAL(wp), DIMENSION(:,:),     INTENT(in)    :: mycorrhiza_carbon        !< mycorrhiza biomass (mol C /m3)
-    REAL(wp), DIMENSION(:,:),     INTENT(in)    :: nh4_solute               !< soil solution ammonium (mol N /m3)
-    REAL(wp), DIMENSION(:,:),     INTENT(in)    :: no3_solute               !< soil solution nitrate (mol N /m3)
-    REAL(wp), DIMENSION(:,:),     INTENT(in)    :: soil_depth_sl            !< depth of soil layers (m)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: growth_req_n_tlabile_mavg    !< time-averaged growth requirement for N 
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: demand_uptake_n_tuptake_mavg !< time-averaged N demand scalar (unitless) 
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: demand_uptake_p_tuptake_mavg !< time-averaged P demand scalar (unitless)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: fmaint_rate_troot_mavg   !< time-averaged N-speficic root maintentance respiration rate (µmol C/mol N / s)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: unit_npp_troot_mavg      !< time-averaged increase of NPP with increased leaf C investment (mol C/mol C)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: unit_uptake_n_troot_mavg !< time-averaged increase of root N uptake with increased root C inventment (mol N / mol C)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: cost_n_fixation_tuptake_mavg !< time-averaged C costs for N fixation (mol C / mol N)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: unit_uptake_n_pot        !< potential N uptake per unit root mass (mu mol N / mol C / s)
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: unit_uptake_p_pot        !< potential P uptake per unit root mass (mu mol P / mol C / s)
-    REAL(wp), DIMENSION(:,:),     INTENT(inout) :: plant_uptake_nh4_sl      !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(:,:),     INTENT(inout) :: plant_uptake_nh4_n15_sl  !< plant NH4-N15 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(:,:),     INTENT(inout) :: plant_uptake_no3_sl      !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(:,:),     INTENT(inout) :: plant_uptake_no3_n15_sl  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
-    REAL(wp), DIMENSION(:,:),     INTENT(inout) :: plant_uptake_po4_sl      !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
-    TYPE(t_sb_element_a),         INTENT(inout) :: sb_mycorrhiza_export     !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_nh4               !< total plant NH4 uptake (mu mol N / m2 / s)  
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_nh4_n15           !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_no3               !< total plant NO3 uptake (mu mol N / m2 / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_no3_n15           !< total plant NO3-N15 uptake (mu mol N / m2 / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: uptake_po4               !< total plant PO4 uptake (mu mol N / m2 / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: n_fixation               !< symbiontic N fixation (mu mol N / m2 / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: unit_uptake_n_act        !< N uptake per unit root mass (mu mol N / mol C / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: unit_uptake_p_act        !< P uptake per unit root mass (mu mol P / mol C / s)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: cost_n_uptake_root       !< C costs for N uptake by roots (mol C / mol N)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: cost_n_fixation          !< C costs for N fixation (mol C / mol N)
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: n_transform_respiration  !< respiration associated with N transformation (mu mol C / m2 / s)     
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: n_fixation_respiration   !< respiration associated with N fixation (mu mol C / m2 / s)     
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: n_processing_respiration !< respiration associated with N transformation and fixation (mu mol C / m2 / s)  
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: exudation_carbon         !< C investment into mycorrhizal fungi (mol C / m2 / timestep) 
-    ! ---------------------------
+    TYPE(t_jsb_task_options),             INTENT(in)    :: options                      !< model options
+    TYPE(t_lctlib_element),               INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*),                     INTENT(in)    :: bnf_scheme                   !< from veg config 
+    CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme              !< from sb config
+    LOGICAL,                              INTENT(in)    :: flag_mycorrhiza              !< from sb config
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: kstar_labile                 !< meristem turnover rate  
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: t_air                        !< air temperature (K) !! should be soil temperature!
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: fine_root_carbon             !< fine root carbon (mol C / m2)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: fine_root_nitrogen           !< fine root nitrogen (mol N / m2)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: labile_carbon                !< labile pool carbon (mol C / m2)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: labile_nitrogen              !< labile pool nitrogen (mol N / m2)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: labile_phosphorus            !< labile pool phosphorus (mol P / m2)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), &
+                                          INTENT(in)    :: mycorrhiza_carbon  , &       !< mycorrhiza biomass (mol C /m3)
+                                                           nh4_solute         , &       !< soil solution ammonium (mol N /m3)
+                                                           no3_solute         , &       !< soil solution nitrate (mol N /m3)
+                                                           soil_depth_sl                !< depth of soil layers (m)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: growth_req_n_tlabile_mavg    !< time-averaged growth requirement for N 
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: demand_uptake_n_tuptake_mavg !< time-averaged N demand scalar (unitless) 
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: demand_uptake_p_tuptake_mavg !< time-averaged P demand scalar (unitless)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: fmaint_rate_troot_mavg       !< time-averaged N-speficic root maintentance respiration rate (µmol C/mol N / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: unit_npp_troot_mavg          !< time-averaged increase of NPP with increased leaf C investment (mol C/mol C)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: unit_uptake_n_troot_mavg     !< time-averaged increase of root N uptake with increased root C inventment (mol N / mol C)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: cost_n_fixation_tuptake_mavg !< time-averaged C costs for N fixation (mol C / mol N)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: unit_uptake_n_pot            !< potential N uptake per unit root mass (mu mol N / mol C / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(in)    :: unit_uptake_p_pot            !< potential P uptake per unit root mass (mu mol P / mol C / s)
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), &
+                                          INTENT(inout) :: plant_uptake_nh4_sl     , &  !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
+                                                           plant_uptake_nh4_n15_sl , &  !< plant NH4-N15 uptake per soil layer (mu mol N / m3 / s)
+                                                           plant_uptake_no3_sl     , &  !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
+                                                           plant_uptake_no3_n15_sl , &  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
+                                                           plant_uptake_po4_sl          !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
+    TYPE(t_sb_element_a),                 INTENT(inout) :: sb_mycorrhiza_export         !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: uptake_nh4                   !< total plant NH4 uptake (mu mol N / m2 / s)  
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: uptake_nh4_n15               !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: uptake_no3                   !< total plant NO3 uptake (mu mol N / m2 / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: uptake_no3_n15               !< total plant NO3-N15 uptake (mu mol N / m2 / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: uptake_po4                   !< total plant PO4 uptake (mu mol N / m2 / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: n_fixation                   !< symbiontic N fixation (mu mol N / m2 / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: unit_uptake_n_act            !< N uptake per unit root mass (mu mol N / mol C / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: unit_uptake_p_act            !< P uptake per unit root mass (mu mol P / mol C / s)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: cost_n_uptake_root           !< C costs for N uptake by roots (mol C / mol N)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: cost_n_fixation              !< C costs for N fixation (mol C / mol N)
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: n_transform_respiration      !< respiration associated with N transformation (mu mol C / m2 / s)     
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: n_fixation_respiration       !< respiration associated with N fixation (mu mol C / m2 / s)     
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: n_processing_respiration     !< respiration associated with N transformation and fixation (mu mol C / m2 / s)  
+    REAL(wp), DIMENSION(options%nc),      INTENT(out)   :: exudation_carbon             !< C investment into mycorrhizal fungi (mol C / m2 / timestep) 
+    ! --------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: dcost, &          ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
                                        n_demand, &       ! N demand of plants (mu mol N /m2 / s) 
@@ -1864,29 +1866,29 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),      INTENT(in)     :: options                           !< model options    
-    TYPE(t_lctlib_element),        INTENT(in)     :: lctlib                            !< land-cover-type library - parameters for one pft
-    LOGICAL , DIMENSION(:),        INTENT(in)     :: growing_season                    !< does the plant intend to grow?
-    REAL(wp), DIMENSION(:),        INTENT(in)     :: kstar_labile                  , & !< potential labile pool turnover (1/day) 
-                                                     target_labile_pool_carbon     , & ! desirable size (mol C/m2) of the labile pool
-                                                     target_labile_pool_nitrogen   , & ! desirable size (mol N/m2) of the labile pool
-                                                     target_labile_pool_phosphorus , & ! desirable size (mol P/m2) of the labile pool
-                                                     target_reserve_pool_carbon    , & ! desirable size (mol C/m2) of the reserve pool
-                                                     target_reserve_pool_nitrogen  , & ! desirable size (mol N/m2) of the reserve pool
-                                                     target_reserve_pool_phosphorus, & ! desirable size (mol P/m2) of the reserve pool
-                                                     target_lai                    , & !< target LAI 
-                                                     lai                               !< current LAI 
-    TYPE(t_veg_element_a),         INTENT(in)     :: veg_pool_labile                   !< the plant's labile pool size
-    TYPE(t_veg_element_a),         INTENT(in)     :: veg_pool_reserve                  !< the plant's reserve pool size
-    TYPE(t_veg_element_a),         INTENT(inout)  :: veg_reserve_use                   !< current resource use rate (mol/time step)
-                                                                                       !!  (+ve: net flux to labile / -ve: net flux to reserve)
+    TYPE(t_jsb_task_options),         INTENT(in)    :: options                           !< model options    
+    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                            !< land-cover-type library - parameters for one pft
+    LOGICAL , DIMENSION(options%nc),  INTENT(in)    :: growing_season                    !< does the plant intend to grow?
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: kstar_labile                  , & !< potential labile pool turnover (1/day) 
+                                                       target_labile_pool_carbon     , & ! desirable size (mol C/m2) of the labile pool
+                                                       target_labile_pool_nitrogen   , & ! desirable size (mol N/m2) of the labile pool
+                                                       target_labile_pool_phosphorus , & ! desirable size (mol P/m2) of the labile pool
+                                                       target_reserve_pool_carbon    , & ! desirable size (mol C/m2) of the reserve pool
+                                                       target_reserve_pool_nitrogen  , & ! desirable size (mol N/m2) of the reserve pool
+                                                       target_reserve_pool_phosphorus, & ! desirable size (mol P/m2) of the reserve pool
+                                                       target_lai                    , & !< target LAI 
+                                                       lai                               !< current LAI 
+    TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_labile                   !< the plant's labile pool size
+    TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_reserve                  !< the plant's reserve pool size
+    TYPE(t_veg_element_a),            INTENT(inout) :: veg_reserve_use                   !< current resource use rate (mol/time step)
+                                                                                         !!  (+ve: net flux to labile / -ve: net flux to reserve)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)               :: phi_phenology                 , & ! relative pull from reserve due to phenology
-                                                     phi_maintenance               , & ! relative pull from reserve due to maintenance resp. 
-                                                     phi_storage                   , & ! relative pull from labile due to low reserve
-                                                     phi_phenology_base            , & ! helper variable for using for all elements
-                                                     hlp1                              ! helper variable
+    REAL(wp), DIMENSION(options%nc)                 :: phi_phenology                 , & ! relative pull from reserve due to phenology
+                                                       phi_maintenance               , & ! relative pull from reserve due to maintenance resp. 
+                                                       phi_storage                   , & ! relative pull from labile due to low reserve
+                                                       phi_phenology_base            , & ! helper variable for using for all elements
+                                                       hlp1                              ! helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_reserve_useage'
 
 
@@ -2161,35 +2163,35 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),     INTENT(in)    :: options                    !< model options
-    TYPE(t_lctlib_element),       INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
-    LOGICAL,                      INTENT(in)    :: flag_optimal_allocation    !< from veg config
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: dheight                 ,& !< derivative of height per unit sapwood mass change 
-                                                   kstar_labile            ,& !< potential labile pool turnover rate (1/day) without stoichiometric limit
-                                                   leaf_carbon             ,& !< carbon in leaves (mol/individual)
-                                                   sap_wood_carbon         ,& !< carbon in sap wood (mol/individual)
-                                                   coarse_root_carbon      ,& !< carbon in heart wood (mol/individual)
-                                                   root_carbon             ,& !< carbon in roots (mol/individual) 
-                                                   labile_carbon           ,& !< carbon in labile pool (mol/individual) 
-                                                   height                  ,& !< plant height  
-                                                   leaf2sapwood_mass_ratio ,& !< leaf to shoot mass ratio
-                                                   leaf2root_mass_ratio    ,& !< leaf to root mass ratio
-                                                   k1_opt                  ,& !< coefficient for optimal leaf:root ratio
-                                                   k2_opt                  ,& !< coefficient for optimal leaf:root ratio
-                                                   target_cn_leaf          ,& !< target C:N ratio for tissue type 
-                                                   target_cn_fine_root     ,& !< target C:N ratio for tissue type 
-                                                   target_cn_coarse_root   ,& !< target C:N ratio for tissue type 
-                                                   target_cn_sap_wood      ,& !< target C:N ratio for tissue type 
-                                                   target_cn_fruit         ,& !< target C:N ratio for tissue type 
-                                                   target_np_leaf          ,& !< target N:P ratio for tissue type 
-                                                   target_np_fine_root     ,& !< target N:P ratio for tissue type 
-                                                   target_np_coarse_root   ,& !< target N:P ratio for tissue type 
-                                                   target_np_sap_wood      ,& !< target N:P ratio for tissue type 
-                                                   target_np_fruit         ,& !< target N:P ratio for tissue type 
-                                                   veg_reserve_use_carbon     !< current reserve usage (mol C / m2 / timestep)
-    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_falloc                 !< allocation coefficients 
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: growth_req_n            ,& !< N requirement for unit growth in C and N
-                                                   growth_req_p               !< P requirement for unit growth in C and N
+    TYPE(t_jsb_task_options),         INTENT(in)    :: options                    !< model options
+    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
+    LOGICAL,                          INTENT(in)    :: flag_optimal_allocation    !< from veg config
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: dheight                 ,& !< derivative of height per unit sapwood mass change 
+                                                       kstar_labile            ,& !< potential labile pool turnover rate (1/day) without stoichiometric limit
+                                                       leaf_carbon             ,& !< carbon in leaves (mol/individual)
+                                                       sap_wood_carbon         ,& !< carbon in sap wood (mol/individual)
+                                                       coarse_root_carbon      ,& !< carbon in heart wood (mol/individual)
+                                                       root_carbon             ,& !< carbon in roots (mol/individual) 
+                                                       labile_carbon           ,& !< carbon in labile pool (mol/individual) 
+                                                       height                  ,& !< plant height  
+                                                       leaf2sapwood_mass_ratio ,& !< leaf to shoot mass ratio
+                                                       leaf2root_mass_ratio    ,& !< leaf to root mass ratio
+                                                       k1_opt                  ,& !< coefficient for optimal leaf:root ratio
+                                                       k2_opt                  ,& !< coefficient for optimal leaf:root ratio
+                                                       target_cn_leaf          ,& !< target C:N ratio for tissue type 
+                                                       target_cn_fine_root     ,& !< target C:N ratio for tissue type 
+                                                       target_cn_coarse_root   ,& !< target C:N ratio for tissue type 
+                                                       target_cn_sap_wood      ,& !< target C:N ratio for tissue type 
+                                                       target_cn_fruit         ,& !< target C:N ratio for tissue type 
+                                                       target_np_leaf          ,& !< target N:P ratio for tissue type 
+                                                       target_np_fine_root     ,& !< target N:P ratio for tissue type 
+                                                       target_np_coarse_root   ,& !< target N:P ratio for tissue type 
+                                                       target_np_sap_wood      ,& !< target N:P ratio for tissue type 
+                                                       target_np_fruit         ,& !< target N:P ratio for tissue type 
+                                                       veg_reserve_use_carbon     !< current reserve usage (mol C / m2 / timestep)
+    TYPE(t_veg_pool_a),               INTENT(inout) :: veg_falloc                 !< allocation coefficients 
+    REAL(wp), DIMENSION(options%nc),  INTENT(out)   :: growth_req_n            ,& !< N requirement for unit growth in C and N
+                                                       growth_req_p               !< P requirement for unit growth in C and N
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc)             :: b_inc,                   & ! total and compartment-wise carbon increment (mol/dtime)
@@ -2457,29 +2459,29 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),     INTENT(in)    :: options                          !< model options
-    CHARACTER(len=*),             INTENT(in)    :: veg_bnf_scheme                   !< from veg config 
-    REAL(wp), DIMENSION(:),       INTENT(in)    :: kstar_labile                 , & !< potential labile pool turnover (1/day) 
-                                                   maint_respiration_pot        , & !< potential (demand-based) plant maintenance respiration
-                                                   maint_respiration_leaf       , & !< foliar maintenance respiration
-                                                   growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
-                                                   growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
-    TYPE(t_veg_pool_a),           INTENT(in)    :: veg_falloc                       !< fractional allocation to pools
-    TYPE(t_veg_element_a),        INTENT(in)    :: veg_pool_labile                  !< labile pool size of the plant 
-    REAL(wp), DIMENSION(:),       INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
-                                                   maint_respiration_c13        , & !< maintenance respiration
-                                                   maint_respiration_c14        , & !< maintenance respiration
-                                                   growth_respiration_c13       , & !< growth respiration
-                                                   growth_respiration_c14       , & !< growth respiration
-                                                   n_processing_respiration_c13 , & !< respiration associated with N processing
-                                                   n_processing_respiration_c14     !< respiration associated with N processing
-    TYPE(t_veg_pool_a),           INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
-    TYPE(t_veg_element_a),        INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
-    REAL(wp), DIMENSION(:),       INTENT(out)   :: maint_respiration            , & !< maintenance respiration (µmol C / m2 / s)
-                                                   growth_respiration               !< growth respiration (µmol C / m2 / s)
+    TYPE(t_jsb_task_options),         INTENT(in)    :: options                          !< model options
+    CHARACTER(len=*),                 INTENT(in)    :: veg_bnf_scheme                   !< from veg config 
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: kstar_labile                 , & !< potential labile pool turnover (1/day) 
+                                                       maint_respiration_pot        , & !< potential (demand-based) plant maintenance respiration
+                                                       maint_respiration_leaf       , & !< foliar maintenance respiration
+                                                       growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
+                                                       growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
+    TYPE(t_veg_pool_a),               INTENT(in)    :: veg_falloc                       !< fractional allocation to pools
+    TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_labile                  !< labile pool size of the plant 
+    REAL(wp), DIMENSION(options%nc),  INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
+                                                       maint_respiration_c13        , & !< maintenance respiration
+                                                       maint_respiration_c14        , & !< maintenance respiration
+                                                       growth_respiration_c13       , & !< growth respiration
+                                                       growth_respiration_c14       , & !< growth respiration
+                                                       n_processing_respiration_c13 , & !< respiration associated with N processing
+                                                       n_processing_respiration_c14     !< respiration associated with N processing
+    TYPE(t_veg_pool_a),               INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
+    TYPE(t_veg_element_a),            INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
+    REAL(wp), DIMENSION(options%nc),  INTENT(out)   :: maint_respiration            , & !< maintenance respiration (µmol C / m2 / s)
+                                                       growth_respiration               !< growth respiration (µmol C / m2 / s)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)             :: hlp1
+    REAL(wp), DIMENSION(options%nc)                 :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
 
 
