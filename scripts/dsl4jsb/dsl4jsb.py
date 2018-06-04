@@ -32,9 +32,15 @@ macros = {
     'def_memory' : [re.compile(
         r'dsl4jsb_Def_memory *\((.*)_ *\)',                                  re.IGNORECASE),
         r'TYPE(t_\1_memory), POINTER :: \1__mem'],
+    'def_memory_tile' : [re.compile(
+        r'dsl4jsb_Def_memory_tile *\((.*?)_ *, *(.*?) *\)',                  re.IGNORECASE),
+        r'TYPE(t_\1_memory), POINTER :: \1__mem__\2'],
     'get_memory' : [re.compile(
         r'dsl4jsb_Get_memory *\((.*)_ *\)',                                  re.IGNORECASE),
-        r'SELECT TYPE (mm => tile%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem => mm ; END SELECT'],
+        r'SELECT TYPE (mm => tile%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem => mm ; END SELECT'],    
+    'get_memory_tile' : [re.compile(
+        r'dsl4jsb_Get_memory_tile *\((.*?)_ *, *(.*?) *\)',                  re.IGNORECASE),
+        r'SELECT TYPE (mm => \2%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem__\2 => mm ; END SELECT'],
     'memory' : [re.compile(
         r'dsl4jsb_Memory *\((.*?)_ *\)',                                     re.IGNORECASE),
         r'\1__mem'],
@@ -65,6 +71,12 @@ macros = {
     'get_var2d_onchunk' : [re.compile(
         r'dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)',                re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,iblk)'],
+    'get_var2d_onchunk_tile' : [re.compile(
+        r'dsl4jsb_Get_var2D_onChunk_tile *\((.*?)_ *, *(.*?) *, *(.*?) *\)',      re.IGNORECASE),
+        r'\2 => \1__mem__\3%\2%ptr(ics:ice,iblk)'],        
+    'get_var2d_onchunk_tile_name' : [re.compile(
+        r'dsl4jsb_Get_var2D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)',      re.IGNORECASE),
+        r'\2_\3 => \1__mem__\3%\2%ptr(ics:ice,iblk)'],    
     'get_var3d_onchunk' : [re.compile(
         r'dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)',                re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],

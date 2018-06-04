@@ -176,14 +176,14 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
-    TYPE(t_pheno_memory), POINTER :: pheno__mem__source
-    TYPE(t_pheno_memory), POINTER :: pheno__mem__sink
+    dsl4jsb_Def_memory_tile(PHENO_, prevChild)
+    dsl4jsb_Def_memory_tile(PHENO_, currentChild)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction_source
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction_sink
-    dsl4jsb_Real2D_onChunk :: lai_source
-    dsl4jsb_Real2D_onChunk :: lai_sink
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction_prevChild
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction_currentChild
+    dsl4jsb_Real2D_onChunk :: lai_prevChild
+    dsl4jsb_Real2D_onChunk :: lai_currentChild
 
 
     dsl4jsb_Real2D_onChunk :: mean_age
@@ -281,28 +281,30 @@ CONTAINS
 
         ! ------ veg_frac_correction needs to be averaged because it is required for correct recalculation of the carbon pools  
         !     -> particularly of max_green_veg_c for subsequent maxLAI calculation!
-        SELECT TYPE (mm => prevChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__source => mm ; END SELECT
-        SELECT TYPE (mm => currentChild%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno__mem__sink => mm ; END SELECT
-        veg_frac_correction_source => pheno__mem__source%veg_frac_correction%ptr(ics:ice,iblk)  ! in
-        veg_frac_correction_sink => pheno__mem__sink%veg_frac_correction%ptr(ics:ice,iblk)      ! inout
+        dsl4jsb_Get_memory_tile(PHENO_, prevChild)
+        dsl4jsb_Get_memory_tile(PHENO_, currentChild)
 
-        old_veg_frac_correction_sink(:) = veg_frac_correction_sink(:)
+        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_frac_correction, prevChild)
+        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_frac_correction, currentChild)
+
+        old_veg_frac_correction_sink(:) = veg_frac_correction_currentChild(:)
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
-          & veg_frac_correction_source(:), veg_frac_correction_sink(:)) 
+          & veg_frac_correction_prevChild(:), veg_frac_correction_currentChild(:)) 
 
         ! ++ when the veg_frac_correction changes cpools always need to be rescaled 
-        IF(ANY(old_veg_frac_correction_sink(:) .NE. veg_frac_correction_sink(:))) THEN
+        IF(ANY(old_veg_frac_correction_sink(:) .NE. veg_frac_correction_currentChild(:))) THEN
           CALL rescale_carbon_upon_reference_area_change(currentChild, options, &
-            & old_veg_frac_correction_sink(:), veg_frac_correction_sink(:))
+            & old_veg_frac_correction_sink(:), veg_frac_correction_currentChild(:))
         ENDIF
 
         ! ------ also the lai needs to be weighted upon area change involved with ageing 
         !        this is not done as for the cpools, because currently (28.03.18) KN and JN interprete LAI as per tile
         !        --> NOTE: if not per tile but per canopy it also would need to be rescaled 
         !                  each time the veg_frac_correction changes and could thus be treated the same as the cpools
-        lai_source => pheno__mem__source%lai%ptr(ics:ice,iblk)  ! in
-        lai_sink => pheno__mem__sink%lai%ptr(ics:ice,iblk)      ! inout
-        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), lai_source(:), lai_sink(:)) 
+        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, prevChild)
+        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, currentChild)
+
+        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), lai_prevChild(:), lai_currentChild(:)) 
 
         ! d) TODO-JN-COHORTS what else to shift? 
 
@@ -387,7 +389,7 @@ CONTAINS
 
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
-    dsl4jsb_Def_memory(DISTURB_)
+    dsl4jsb_Def_memory_tile(DISTURB_, currentChild)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: burned_frac
@@ -454,9 +456,9 @@ CONTAINS
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
 
         !get current child tiles disturbed areas!
-        SELECT TYPE (mm => currentChild%mem(disturb_)%p); TYPE IS (t_disturb_memory); disturb__mem => mm ; END SELECT
-        burned_frac => disturb__mem%burned_frac%ptr(ics:ice,iblk)
-        damaged_frac => disturb__mem%damaged_frac%ptr(ics:ice,iblk)
+        dsl4jsb_Get_memory_tile(DISTURB_, currentChild)
+        dsl4jsb_Get_var2d_onChunk_tile(DISTURB_, burned_frac, currentChild)
+        dsl4jsb_Get_var2d_onChunk_tile(DISTURB_, damaged_frac, currentChild)
 
         !***********************************************
         !*** care for fire damage
