@@ -16,28 +16,28 @@ MODULE mo_veg_constants
 
 
   ! Respiration parameters
-  REAL(wp), SAVE :: &      ! In Fortran 2003 and Fortran 2008, a maximum of 255 continuation lines are allowed
+  REAL(wp), SAVE :: & 
       ! growth respiration per unit new biomass
-      fresp_growth  ,     & !< growth respiration per unit new biomass 
+      fresp_growth      , &   !< growth respiration per unit new biomass 
       ! N-specific foliar maintenance respiration rate (µmol CO2 / mol N / s)
       ! Taken from Sprugel et al. Respiration from the organ level to the stand. 
       ! In: Smith WK, Hinckley, T.M., editor. Physiological Ecology of Coniferous Forests.
       ! San Diego, CA, USA: Academic Press; 1996.
       ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
       ! such that the applied rates a comparable at 15-20°C
-      fmaint_rate_base   ,     & !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
-      fmaint_rate_wood   ,     & !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
+      fmaint_rate_base  , &   !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
+      fmaint_rate_wood  , &   !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
-      t_maint_k1    ,     & !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k2  ,     &  !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k3  , &      !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      f_resp_acclim ,   &    !< respiration temperature acclimation factor 
-      t_acclim_zero        !< base temperature for respiration acclimation 
+      t_maint_k1        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k2        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k3        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      f_resp_acclim     , &   !< respiration temperature acclimation factor 
+      t_acclim_zero           !< base temperature for respiration acclimation 
 
   ! Labile pool parameters 
   REAL(wp), SAVE :: &
       ! default turnover time of the labile carbo-hydrates (in days)
-      tau_labile,           &  !< default turnover time of the labile carbo-hydrates (in days)
+      tau_labile,           & !< default turnover time of the labile carbo-hydrates (in days)
       ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
       ! tuned to reduce growth between 5°C to zero at 0°C
       lambda_labile_temp,   & !< lambda in temperature response function of labile pool 
@@ -80,82 +80,74 @@ MODULE mo_veg_constants
 
   ! Parameters concerning N uptake calculations
   REAL(wp), SAVE :: &
-      kappa_f_demand_nc,    & !< fraction of maximum labile nitrogen concentration at which uptake is reduced to 50% 
-      kappa_f_demand_pn,    & !< fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50% 
-      k_f_demand,           & !< k in nutrient uptake response funktion to labile nutrient concentration
+      kappa_f_demand_nc    , & !< fraction of maximum labile nitrogen concentration at which uptake is reduced to 50% 
+      kappa_f_demand_pn    , & !< fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50% 
+      k_f_demand           , & !< k in nutrient uptake response funktion to labile nutrient concentration
       cost_n_fixation_max  , & !< maximum cost of N fixation at low / high temperatures (mol C / mol N)
       cost_n_fixation_min  , & !< mimumum cost of N fixation at 25°C (mol C / mol N)
-      ! factors in temperature response function of nitrogenase activity
-      k1_temp_bnf          , &
+      k1_temp_bnf          , & !< k1 .. k4 factors in temperature response function of nitrogenase activity
       k2_temp_bnf          , &
       k3_temp_bnf          , &
       k4_temp_bnf          , &
-      ! N transformation costs of converting NH4 to organic N  (mol C / mol N)
-      transform_cost_nh4   , &
-      ! N transformation costs of converting NO3 to organic N (mol C / mol N)
-      transform_cost_no3   , &
-      ! N transformation costs of converting organic N to organic N (mol C / mol N)
-      transform_cost_org   , &
-      ! fractions of NO3 and NH4 uptake based on transformation costs
-      f_nacq_no3           , &
+      transform_cost_nh4   , & !< N transformation costs of converting NH4 to organic N  (mol C / mol N)
+      transform_cost_no3   , & !< N transformation costs of converting NO3 to organic N (mol C / mol N)
+      transform_cost_org   , & !< N transformation costs of converting organic N to organic N (mol C / mol N)
+      f_nacq_no3           , & !< fractions of NO3 and NH4 uptake based on transformation costs
       f_nacq_nh4           , &
-      ! maximum rate of N fixation (µmol N / mol C fine root / s )
-      vmax_bnf             , & 
-      ! half_saturating cost of the response of N fixation (mol C / mol N) 
-      k_bnf                , &
-      ! factor for BNF response in resistance approach (mol C / mol N)
-      offset_bnf           , &
-      eta_nfixation           !< fractionation of N15 due to N fixation (per mill)
+      vmax_bnf             , & !< maximum rate of N fixation (µmol N / mol C fine root / s )
+      k_bnf                , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
+      offset_bnf           , & !< factor for BNF response in resistance approach (mol C / mol N)
+      eta_nfixation            !< fractionation of N15 due to N fixation (per mill), parameter value from Robinson, Tree 2001
 
   ! parameters used for phenology calculations
   REAL(wp), SAVE :: & 
-      min_lai  ,                 & !< minimum LAI beyond which all leaves are shed
-      target_lai_max  ,          & !< maximum LAI target for reserve use calculations 
-      max_leaf_shedding_rate ,   & !< maximum rate of leaf shedding (1/days) 
-      k_leafon_canopy              !< scaling coefficient for leaf on in CANOPY-only model 
+      min_lai                , & !< minimum LAI beyond which all leaves are shed
+      target_lai_max         , & !< maximum LAI target for reserve use calculations 
+      max_leaf_shedding_rate , & !< maximum rate of leaf shedding (1/days) 
+      k_leafon_canopy            !< scaling coefficient for leaf on in CANOPY-only model 
 
   ! vegetation dynamics
   REAL(wp), SAVE :: & 
-      background_mort_rate_tree  ,     &  !< background mortality rate for trees in static mortality case (1/year)
-      background_mort_rate_grass  ,     & !< background mortality rate for grass in static mortality case (1/year)
-      lambda_mort_light   ,     & !< parameter in the Weibull function controlling self-thinning mortality 
-      k_mort_light         ,     & !< parameter in the Weibull function controlling self-thinning mortality 
-      lambda_est_temp      ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
-      k_est_temp           ,     & !< parameter in the Weibull function controlling temperature-limited establishment 
-      lambda_est_moist     ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
-      k_est_moist          ,     & !< parameter in the Weibull function controlling moisture-limited establishment 
-      wood_extraction_rate ,     & !< fraction of wood removed from site after harvesting
-      min_greff            ,     & !< minimum growth efficiency (mol C / m2 (LAI) / yr)
-      k1_mort_greff        ,     & !< asymptotic growth efficiency mortality rate (1/yr)
-      k2_mort_greff        ,     & !< scaling coefficient 
-      k3_mort_greff        ,     & !< scaling coefficient in growth efficiency mortality below minimum growth efficiency
-      max_crown_area       ,     & !< maximum crown area (m2)
-      min_diameter         ,     & !< minimum diameter for crown area calculation (m)
-      k_crown_area         ,     & !< scaling parameter in crownarea to diameter relationship
-      k_rp                 ,     & !< scaling exponent in crownarea to diameter relationship
-      fpc_max                      !< maximum foliage projective cover
+      background_mort_rate_tree   , & !< background mortality rate for trees in static mortality case (1/year)
+      background_mort_rate_grass  , & !< background mortality rate for grass in static mortality case (1/year)
+      lambda_mort_light           , & !< parameter in the Weibull function controlling self-thinning mortality 
+      k_mort_light                , & !< parameter in the Weibull function controlling self-thinning mortality 
+      lambda_est_temp             , & !< parameter in the Weibull function controlling temperature-limited establishment 
+      k_est_temp                  , & !< parameter in the Weibull function controlling temperature-limited establishment 
+      lambda_est_moist            , & !< parameter in the Weibull function controlling moisture-limited establishment 
+      k_est_moist                 , & !< parameter in the Weibull function controlling moisture-limited establishment 
+      wood_extraction_rate        , & !< fraction of wood removed from site after harvesting
+      min_greff                   , & !< minimum growth efficiency (mol C / m2 (LAI) / yr)
+      k1_mort_greff               , & !< asymptotic growth efficiency mortality rate (1/yr)
+      k2_mort_greff               , & !< scaling coefficient 
+      k3_mort_greff               , & !< scaling coefficient in growth efficiency mortality below minimum growth efficiency
+      max_crown_area              , & !< maximum crown area (m2)
+      min_diameter                , & !< minimum diameter for crown area calculation (m)
+      k_crown_area                , & !< scaling parameter in crownarea to diameter relationship
+      k_rp                        , & !< scaling exponent in crownarea to diameter relationship
+      fpc_max                         !< maximum foliage projective cover
 
   ! other
   REAL(wp), SAVE :: & 
       ! carbon content of leaves per dry matter
-      carbon_per_dryweight_leaf   ,     &   !< carbon mass per unit dry weight of leaves (gC / g DW) 
+      carbon_per_dryweight_leaf   , & !< carbon mass per unit dry weight of leaves (gC / g DW) 
       ! minimum permissable height of an individual
-      min_height  ,     & !< minimum permissable height of an individual
+      min_height                  , & !< minimum permissable height of an individual
       ! stem mass to leaf mass ratio of grasses
-      sm2lm_grass  ,     & !< stem mass to leaf mass ratio of grasses
+      sm2lm_grass                 , & !< stem mass to leaf mass ratio of grasses
       ! Parameters controlling fruit allocation in: exp(-(lambda * reserve_use+offset)^k) 
-      lambda_fruit_alloc  ,     & !< parameter in the Weibull function controlling fruit growth
-      k4_fruit_alloc  ,     & !< parameter in the Weibull function controlling fruit growth
-      k3_fruit_alloc   ,     &  !< parameter in the Weibull function controlling fruit growth; ~µmol C / m2 / s
+      lambda_fruit_alloc          , & !< parameter in the Weibull function controlling fruit growth
+      k4_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth
+      k3_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth; ~µmol C / m2 / s
       ! minimum fraction of allocation going to fruit (flowers etc.)
-      k1_fruit_alloc            !< minimum fraction of allocation going to fruit (flowers etc.)
+      k1_fruit_alloc                  !< minimum fraction of allocation going to fruit (flowers etc.)
 
   ! parameters for changes in canopy N fractions
   REAL(wp), SAVE :: &     
       ! maximum change in photosynthetic N fractions
-      delta_n_fraction  ,     & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
+      delta_n_fraction    , & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
       ! maximum change in CN ratio of canopy
-      delta_n_leaf      !< maximum fractional change for optimal adjsutment of canopy N allocation
+      delta_n_leaf            !< maximum fractional change for optimal adjsutment of canopy N allocation
 
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
@@ -246,7 +238,7 @@ CONTAINS
       vmax_bnf            = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
       k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
       offset_bnf          = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
-      eta_nfixation       = 3.0_wp ! Robinson, Tree 2001       
+      eta_nfixation       = 3.0_wp  ! Robinson, Tree 2001
 
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp
@@ -257,22 +249,22 @@ CONTAINS
   ! vegetation dynamics
       background_mort_rate_tree   = 0.01_wp 
       background_mort_rate_grass  = 0.05_wp 
-      lambda_mort_light  = 0.15_wp 
-      k_mort_light       = 4.0_wp  
-      lambda_est_temp    = 0.075_wp  
-      k_est_temp         = 4.0_wp  
-      lambda_est_moist   = 10._wp  
-      k_est_moist        = 2.0_wp  
-      wood_extraction_rate = 0.8_wp
-      k1_mort_greff      = 0.05_wp 
-      k2_mort_greff      = 0.3_wp 
-      k3_mort_greff      = 25.0_wp 
-      min_greff          = 1.0_wp    ! mol C / LAI / year
-      max_crown_area     = 15._wp
-      min_diameter       = 0.01_wp
-      k_crown_area       = 100._wp
-      k_rp               = 1.6_wp
-      fpc_max            = 0.95_wp
+      lambda_mort_light           = 0.15_wp 
+      k_mort_light                = 4.0_wp  
+      lambda_est_temp             = 0.075_wp  
+      k_est_temp                  = 4.0_wp  
+      lambda_est_moist            = 10._wp  
+      k_est_moist                 = 2.0_wp  
+      wood_extraction_rate        = 0.8_wp
+      k1_mort_greff               = 0.05_wp 
+      k2_mort_greff               = 0.3_wp 
+      k3_mort_greff               = 25.0_wp 
+      min_greff                   = 1.0_wp    ! mol C / LAI / year
+      max_crown_area              = 15._wp
+      min_diameter                = 0.01_wp
+      k_crown_area                = 100._wp
+      k_rp                        = 1.6_wp
+      fpc_max                     = 0.95_wp
 
   ! other
       carbon_per_dryweight_leaf   = 0.48_wp  
@@ -288,8 +280,8 @@ CONTAINS
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?
-      delta_n_fraction  = 0.048_wp ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
-      delta_n_leaf      = 0.048_wp  ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)   
+      delta_n_fraction            = 0.048_wp  ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
+      delta_n_leaf                = 0.048_wp  ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)   
 
   END SUBROUTINE init_veg_constants
 
