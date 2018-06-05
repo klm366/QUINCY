@@ -26,7 +26,7 @@ MODULE mo_jsb_control
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
-  PUBLIC :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
   PUBLIC :: max_no_of_models
 
   LOGICAL :: is_standalone
@@ -47,7 +47,7 @@ MODULE mo_jsb_control
   INTEGER :: no_of_models = 0
   TYPE(t_jsb_model_nml) :: jsb_models_nml(max_no_of_models)
 
-  INTEGER, DIMENSION(max_no_of_models) :: timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+  INTEGER, DIMENSION(max_no_of_models) :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
 
   CHARACTER(len=filename_max) :: master_namelist_filename = 'jsbach_master.namelist'
 
@@ -74,6 +74,16 @@ CONTAINS
 
     CALL init_io(TRIM(master_namelist_filename))
 
+    IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
+    IF (timer_on() .OR. l_timer_host) THEN
+      IF (no_of_models > 1) THEN
+        DO i=1,no_of_models
+          timer_jsbach(i) = new_timer('jsbach_'//int2string(i))
+        END DO
+      ELSE
+        timer_jsbach(1) = new_timer('jsbach')
+      END IF
+    END IF
     IF (timer_on()) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
@@ -89,7 +99,6 @@ CONTAINS
         timer_process_msg(1) = new_timer('jsb:process_msg')
       END IF
     END IF
-    IF (jsbach_runs_standalone()) l_timer_host = .TRUE. !< Would be uninitialized otherwise; value doesn't matter
 
   END SUBROUTINE init_jsb_master_control
 
