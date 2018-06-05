@@ -59,25 +59,26 @@ specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
-sb_model_scheme="simple_0d"
-sb_nloss_scheme="dynamic"
-n_deposition_scheme="dynamic"
-p_deposition_scheme="dynamic"
 
-bnf_scheme="standard"
-flag_mycorrhiza="F"
+sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+sb_nloss_scheme="dynamic"       # none fixed dynamic
+flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
+flag_sb_prescribe_no3="F"       # set no3solute to a constant value
+flag_sb_prescribe_po4="T"       # set po4solute to a constant value
 
-flag_t_resp_acclimation="T"
-flag_t_jmax_acclimation="T"
-flag_optimal_Nfraction="F"
-ncanopy=10 
-canopy_layer_scheme="fapar"
-flag_optimal_Nleaf="F"
-flag_optimal_allocation="F"
-veg_dynamics_scheme="population"
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
+flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
 
-flag_read_dC13="T"    # 
-flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
+flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
+flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
+flag_optimal_Nfraction="F"      # optimal N fraction
+ncanopy=10                      # number of canopy layers
+canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+
+flag_optimal_Nleaf="F"            # optimal N leaf
+flag_optimal_allocation="F"       # optimal allocation
+veg_dynamics_scheme="population"  # none population cohort
+flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 simulation_length_number=${spinupLengthSoilForcing}
 # the soil forcing is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
@@ -91,5 +92,9 @@ flag_oneYearForcing="F"
 soil_awc_prescribe=300.0
 useSiteSpecificAWC="T"
 soil_theta_prescribe=1.0
+n_deposition_scheme="dynamic"
+p_deposition_scheme="dynamic"
+flag_read_dC13="T" 
+flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
 
 queue="io_perform"
