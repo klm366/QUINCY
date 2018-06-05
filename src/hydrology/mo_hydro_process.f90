@@ -17,7 +17,7 @@ MODULE mo_hydro_process
   PRIVATE
 
   PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology, &
-    & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare, &
+    & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
     & get_canopy_conductance, get_water_stress_factor
 
   INTERFACE get_canopy_conductance
@@ -99,16 +99,16 @@ CONTAINS
     !
     !  local variables
     !
-    REAL(wp) :: &
+    REAL(wp) ::               &
       & rain_in_m,            & !< amount of rainfall within time step [m] 
       & new_snow,             & !< amount of snowfall within time step [m]
       & snow_soil_old,        & !< amount of snow prior to update [m]
       & evapotrans_in_m,      & !< amount of evapotranspiration within time step [m]
       & evapotrans_soil_in_m, & !< amount of evapotranspiration from soil (w/o snow and skin) within time step [m]
-      & evapo_soil_in_m,       & !< amount of ground evaporation within time step [m]
-      & evapo_skin_in_m,       & !< amount of evaporation from skin reservoir within time step [m]
+      & evapo_soil_in_m,      & !< amount of ground evaporation within time step [m]
+      & evapo_skin_in_m,      & !< amount of evaporation from skin reservoir within time step [m]
       & trans_in_m,           & !< amount of transpiration within time step [m]
-      & evapo_snow_in_m,       & !< amount of sublimation from snow within time step [m]
+      & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
       & snow_melt_can,        & !< snow melt from canopy [m]
       & snow_melt_pot_in_m,   & !< potential amount of snow melt [m]
       & new_snow_canopy,      & !< amount of snowfall on canopy within time step [m]
@@ -117,8 +117,8 @@ CONTAINS
       & snow_blown,           & !< amount of snow blown from canopy to the ground
       & canopy_pre_snow,      & !< snow depth on the canopy prior to its update
       & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
-      & evapo_snow_pot_in_m,   & !< potential snow evaporation
-      & evapo_skin_pot_in_m,   & !< potential evaporation from wet surface (skin reservoir)
+      & evapo_snow_pot_in_m,  & !< potential snow evaporation
+      & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
       & rain_to_skinres,      & ! amount of rain going into the skin reservoir
       & skinres_pre_rain        ! amount of water in the skin reservoir prior to the update [m]
 
@@ -289,20 +289,20 @@ CONTAINS
   !! @param [out]    glacier_runoff        glacier runoff (rain+snow/ice melt, no calving) [kg m-2 s-1]
   !! @param [out]    pme_glacier           precipitation minus sublimation on glacier [kg m-2 s-1]
   !
-  PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_glacier (   &
-    & lstart, delta_time,                                         &
-    & t_srf_unfilt,                                               &
-    & sfract_srf, hcap_grnd,     &
-    & evapotrans, evapopot, rain, snow,                           &
-    & glacier_depth, q_snocpymlt,                                 &
-    & glacier_melt, glacier_runoff,                               &
+  PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_glacier ( &
+    & lstart, delta_time,                                    &
+    & t_srf_unfilt,                                          &
+    & sfract_srf, hcap_grnd,                                 &
+    & evapotrans, evapopot, rain, snow,                      &
+    & glacier_depth, q_snocpymlt,                            &
+    & glacier_melt, glacier_runoff,                          &
     & pme_glacier)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
 
     LOGICAL,  INTENT(in) :: lstart
-    REAL(wp), INTENT(in) :: &
+    REAL(wp), INTENT(in) ::       &
       & delta_time, t_srf_unfilt, &
       & sfract_srf, hcap_grnd, evapotrans, evapopot, rain, snow
     REAL(wp), INTENT(inout) :: &
@@ -312,15 +312,15 @@ CONTAINS
     !
     !  local variables
     !
-    REAL(wp) :: &
+    REAL(wp) ::              &
       & rain_in_m,           & !< amount of rainfall within time step [m] 
       & new_snow,            & !< amount of snowfall within time step [m]
       & evapotrans_in_m,     & !< amount of evapotranspiration within time step [m]
-      & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
+      & evapo_snow_in_m,     & !< amount of sublimation from snow within time step [m]
       & snow_melt_pot_in_m,  & !< potential amount of snow melt [m]
       & new_snow_soil,       & !< amount of snowfall to soil within time step [m]
       & exp_t, exp_w,        & !< exponents needed for unloading of snow due to temperature / wind
-      & evapo_snow_pot_in_m,  & !< potential snow evaporation
+      & evapo_snow_pot_in_m, & !< potential snow evaporation
       & pme_glacier_in_m,    & !< P-E in m
       & glacier_runoff_in_m, & !< Runoff in m
       & glacier_melt_in_m      !< Snow/ice melt in m
@@ -409,16 +409,16 @@ CONTAINS
   ! @param [out]     runoff             Runoff 
   ! @param [out]     drainage           Drainage
   !
-  SUBROUTINE calc_soil_hydrology( &
+  SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
-    & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                   &
-    & soil_depth_l, root_depth_l, fract_org_l,                                                                     &
-    & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,    &
-    & sfract_srf, wfract_srf, ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans,           &
+    & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
+    & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
+    & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
+    & sfract_srf, wfract_srf, ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans,         &
     ! inout
-    & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                       &
+    & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
     ! out
-    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                              &
+    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                            &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -434,9 +434,9 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     REAL(wp), INTENT(in), DIMENSION(nidx, nsoil) :: &
-      & soil_depth_l, root_depth_l, fract_org_l, &
+      & soil_depth_l, root_depth_l, fract_org_l,    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
-    REAL(wp), INTENT(in), DIMENSION(nidx) :: &
+    REAL(wp), INTENT(in), DIMENSION(nidx) ::                                       &
       & sfract_srf, wfract_srf, ws_max_mineral, oro_stddev, t_soil, water_to_soil, &
       & evapotrans_soil, trans
     REAL(wp), INTENT(inout), DIMENSION(nidx) :: &
@@ -449,19 +449,19 @@ CONTAINS
       & wsat_l, field_cap_l, p_wilt_l
 
     ! Local variables
-    REAL(wp) ::    &   
+    REAL(wp) ::                       &
       !< variables for infiltration calculation
-      & sigma_0,              & !< minimum value
-      & sigma_max,            & !< resolution-dependent maximum
-      & steepness,            & !< sub-grid scale steepness of the orography
+      & sigma_0,                      & !< minimum value
+      & sigma_max,                    & !< resolution-dependent maximum
+      & steepness,                    & !< sub-grid scale steepness of the orography
       & zbws, zb1, zbm, zconw1, zvol, &
       ! Other variables
-      & evapo_soil_in_m(nidx), & !< evaporation from the soil (without transpiration) [m]
-      & trans_in_m(nidx),     & !< transpiration within time step [m]
-      & ws_rel,               & !< relative soil moisture (0: wilting point, 1: field capacity)
+      & evapo_soil_in_m(nidx),        & !< evaporation from the soil (without transpiration) [m]
+      & trans_in_m(nidx),             & !< transpiration within time step [m]
+      & ws_rel,                       & !< relative soil moisture (0: wilting point, 1: field capacity)
       & infilt(nidx)            !< infiltration [m]
 
-    REAL(wp) :: &
+    REAL(wp) ::              &
       & ws_max(nidx),        & ! water holding capacity of the soil [m]
       & ws_crit(nidx),       & ! soil moisture above which drainage strongly increases
       & ws_min_drain(nidx),  & ! minimum soil moisture for drainage
@@ -597,7 +597,7 @@ CONTAINS
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, dsoil,      &
+  SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, dsoil,              &
        wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
        drainage, pore_size_index_l, p_wilt_l, dz, soil_ice, w_soil_overflow, ltpe_closed, ltpe_open)
 
@@ -610,25 +610,25 @@ CONTAINS
     !  Programming and development: Stefan Hagemann (MPI-M)
     !----------------------------------------------------------------------------------------------
 
-    INTEGER,  INTENT(IN)            :: nidx                    ! vector length
-    INTEGER,  INTENT(IN)            :: nsoil                   ! number of soil layers
-    REAL(wp), INTENT(IN)            :: delta_time              ! model time step legth [s]
-    INTEGER,  INTENT(IN)            :: ilog                    !
-    INTEGER,  INTENT(IN)            :: jllog                   !
-    REAL(wp), INTENT(IN)            :: dsoil(nidx, nsoil)      ! soil depth until bedrock within each layer [m]
-    REAL(wp), INTENT(IN)            :: wsat_l(nidx,nsoil)      ! Maximum storage in each soil layer (porosity) [m]
-    REAL(wp), INTENT(IN)            :: field_cap_l(nidx,nsoil) ! field capacity of the soil layer [m]
+    INTEGER,  INTENT(IN)            :: nidx                       ! vector length
+    INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
+    REAL(wp), INTENT(IN)            :: delta_time                 ! model time step legth [s]
+    INTEGER,  INTENT(IN)            :: ilog                       !
+    INTEGER,  INTENT(IN)            :: jllog                      !
+    REAL(wp), INTENT(IN)            :: dsoil(nidx, nsoil)         ! soil depth until bedrock within each layer [m]
+    REAL(wp), INTENT(IN)            :: wsat_l(nidx,nsoil)         ! Maximum storage in each soil layer (porosity) [m]
+    REAL(wp), INTENT(IN)            :: field_cap_l(nidx,nsoil)    ! field capacity of the soil layer [m]
     REAL(wp), INTENT(IN)            :: hyd_cond_sat_l(nidx,nsoil) ! hydraulic conductivity of saturated soil [m/s]
     REAL(wp), INTENT(IN)            :: vol_porosity_l(nidx,nsoil) ! volumetric soil porosity [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_l(nidx,nsoil)       ! exponent B in Clapp and Hornberger
     REAL(wp), INTENT(IN)            :: matrix_pot_l(nidx,nsoil)   ! matrix potential [m]
     REAL(wp), INTENT(IN)            :: pore_size_index_l(nidx,nsoil) ! soil pore size distribution index used in Van Genuchten
-    REAL(wp), INTENT(IN)            :: p_wilt_l(nidx,nsoil )   ! wilting point of the soil layer
-    REAL(wp), INTENT(IN)            :: dz(nsoil)               ! vertical depth of each soil layer
-    REAL(wp), INTENT(INOUT)         :: ws_l(nidx, nsoil)       ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: drainage(nidx)          ! amount of drainage within timestep [m]
+    REAL(wp), INTENT(IN)            :: p_wilt_l(nidx,nsoil )      ! wilting point of the soil layer
+    REAL(wp), INTENT(IN)            :: dz(nsoil)                  ! vertical depth of each soil layer
+    REAL(wp), INTENT(INOUT)         :: ws_l(nidx, nsoil)          ! soil moisture of each layer [m]
+    REAL(wp), INTENT(INOUT)         :: drainage(nidx)             ! amount of drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: w_soil_overflow(nidx)
-    REAL(wp), INTENT(IN), OPTIONAL  :: soil_ice(nidx, nsoil)   ! amount of ice in the soil [m]
+    REAL(wp), INTENT(IN), OPTIONAL  :: soil_ice(nidx, nsoil)      ! amount of ice in the soil [m]
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
@@ -1259,22 +1259,22 @@ CONTAINS
     fract_snow_lice = TANH(w_snow_lice * 100._wp)
 
   END SUBROUTINE calc_wskin_fractions_lice
-      
+
   ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
-    & dtime,          & ! in
-    & steplen,        & ! in
-    & wsr_max,        & ! in
-    & oro_stddev,     & ! in
-    & t_srf_old,      & ! in
-    & press_srf,      & ! in
-    & drag_srf,       & ! in
-    & q_air,          & ! in
-    & w_skin,         & ! in
-    & w_snow_soil,    & ! in
-    & w_snow_can,     & ! in
-    & fract_snow_can, & ! inout
-    & fract_water    ,    & ! out
-    & fract_snow_soil     & ! out
+    & dtime,                                     & ! in
+    & steplen,                                   & ! in
+    & wsr_max,                                   & ! in
+    & oro_stddev,                                & ! in
+    & t_srf_old,                                 & ! in
+    & press_srf,                                 & ! in
+    & drag_srf,                                  & ! in
+    & q_air,                                     & ! in
+    & w_skin,                                    & ! in
+    & w_snow_soil,                               & ! in
+    & w_snow_can,                                & ! in
+    & fract_snow_can,                            & ! inout
+    & fract_water    ,                           & ! out
+    & fract_snow_soil                            & ! out
     & )
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
@@ -1301,7 +1301,7 @@ CONTAINS
     REAL(wp) ::       &
       & qsat_srf_old, &
       & evapo_pot
-    
+
     ! Snow fraction on canopy
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
     IF (wsr_max > EPSILON(1._wp)) THEN
@@ -1317,11 +1317,11 @@ CONTAINS
     fract_snow_soil = MERGE(fract_snow_can, fract_snow_soil, &
                                fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
 
-    
+
     ! Potential evaporation using old values of air and surface humidity
     qsat_srf_old = qsat(t_srf_old, press_srf)
     evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen) * (q_air - qsat_srf_old)  ! Positive upwards
-    
+
     ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy; same for skin reservoir
     IF (fract_snow_soil > 0._wp) THEN
@@ -1339,18 +1339,18 @@ CONTAINS
   END SUBROUTINE calc_wskin_fractions_veg
 
   ELEMENTAL SUBROUTINE calc_wskin_fractions_bare( &
-    & dtime,          & ! in
-    & steplen,        & ! in
-    & wsr_max,        & ! in
-    & oro_stddev,     & ! in
-    & t_srf,          & ! in
-    & press_srf,      & ! in
-    & drag_srf,       & ! in
-    & q_air,          & ! in
-    & w_skin,         & ! in
-    & w_snow_soil,    & ! in
-    & fract_water,    & ! out
-    & fract_snow_soil    & ! out
+    & dtime,                                      & ! in
+    & steplen,                                    & ! in
+    & wsr_max,                                    & ! in
+    & oro_stddev,                                 & ! in
+    & t_srf,                                      & ! in
+    & press_srf,                                  & ! in
+    & drag_srf,                                   & ! in
+    & q_air,                                      & ! in
+    & w_skin,                                     & ! in
+    & w_snow_soil,                                & ! in
+    & fract_water,                                & ! out
+    & fract_snow_soil                             & ! out
     & )
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
@@ -1368,8 +1368,8 @@ CONTAINS
                                 w_skin,        &
                                 w_snow_soil
 
-    REAL(wp),  INTENT(out)   ::                  &
-                               fract_water,      &
+    REAL(wp),  INTENT(out)   ::                &
+                               fract_water,    &
                                fract_snow_soil
 
     REAL(wp) ::              &

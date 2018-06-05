@@ -635,7 +635,7 @@ CONTAINS
     ! Go
 
     IF (.NOT. l_day) RETURN
-    
+
     ! use constant mineral soil albedos?
     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
        alb_vis_mineralsoil = AlbedoSoilConstVis
@@ -763,7 +763,7 @@ CONTAINS
     alb_nir_snow_temp = 0.0_wp
     alb_vis_snow      = 0.0_wp
     alb_nir_snow      = 0.0_wp
-    
+
     ! ---------------------------
     ! Go
 
@@ -904,7 +904,7 @@ CONTAINS
       & alb_vis_nostems, & ! albedo vis of surface without considering the snow cover
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
-      
+
     ! ---------------------------
     ! Go
 

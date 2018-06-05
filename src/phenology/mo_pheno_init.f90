@@ -113,8 +113,8 @@ CONTAINS
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE.
     IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='forest_fract',            &
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='forest_fract',  &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
@@ -125,8 +125,8 @@ CONTAINS
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='veg_ratio_max',           &
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='veg_ratio_max', &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
 
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &

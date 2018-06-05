@@ -250,11 +250,11 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
         CALL calc_assimilation_scaling_factors( &
-          & declination,                 & ! input
-          & canopy_bound_lai(i-1),       & ! input
-          & lai(:),                      & ! input
-          & lat(:),                      & ! input
-          & assimi_scaling_fact_cl(:,i)  & ! output
+          & declination,                        & ! input
+          & canopy_bound_lai(i-1),              & ! input
+          & lai(:),                             & ! input
+          & lat(:),                             & ! input
+          & assimi_scaling_fact_cl(:,i)         & ! output
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
@@ -524,9 +524,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: carbox_rate_max_cl     ! Output. Maximum carboxylation rate of canopy layer (=VCmax)
                                                          ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
                                                          ! and actual temperature.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output.
-    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output.
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output
+    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]

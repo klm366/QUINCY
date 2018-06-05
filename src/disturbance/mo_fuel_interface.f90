@@ -126,7 +126,7 @@ CONTAINS
 
     dsl4jsb_Def_config(FUEL_)
 
-    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
+    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which fire is based
     !
     dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
     dsl4jsb_Real2D_onChunk :: c_water_ag1_ta

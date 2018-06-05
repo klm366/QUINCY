@@ -89,7 +89,7 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)
 
     INTEGER :: iradiation
-    REAL(wp), POINTER :: &
+    REAL(wp), POINTER ::         &
       & return_pointer  (:,  :), & !< temporary pointer
       & return_pointer3d(:,:,:)
     REAL(WP) :: &
@@ -120,7 +120,7 @@ CONTAINS
     ! TBD: adapt names of variables in input files to names in memory
 
     ! background albedo (without snow or canopy)
-    return_pointer => input_file%Read_2d(         &
+    return_pointer => input_file%Read_2d( &
       & variable_name='albedo',           &
       & fill_array = dsl4jsb_var_ptr(RAD_,alb_background))
     dsl4jsb_var2D_onDomain(RAD_,alb_background) = &
@@ -143,14 +143,14 @@ CONTAINS
 
     ! soil albedo
     IF (tile%contains_soil) THEN
-      return_pointer => input_file%Read_2d(         &
-        & variable_name='albedo_soil_vis',             &
+      return_pointer => input_file%Read_2d( &
+        & variable_name='albedo_soil_vis',  &
         & fill_array = dsl4jsb_var_ptr(RAD_, alb_vis_soil))
       dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil) = &
         MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_vis_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_vis_soil) >= 0._wp)
 
-      return_pointer => input_file%Read_2d(         &
-        & variable_name='albedo_soil_nir',          &
+      return_pointer => input_file%Read_2d( &
+        & variable_name='albedo_soil_nir',  &
         & fill_array = dsl4jsb_var_ptr(RAD_, alb_nir_soil))
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil) = &
         MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil) >= 0._wp)
@@ -158,8 +158,8 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
       ! Get canopy albedo
-      return_pointer => input_file%Read_2d(         &
-        & variable_name='albedo_veg_vis',           &
+      return_pointer => input_file%Read_2d( &
+        & variable_name='albedo_veg_vis',   &
         & fill_array = dsl4jsb_var_ptr(RAD_, alb_vis_can))
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
         dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = &
@@ -167,8 +167,8 @@ CONTAINS
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
       END IF
-      return_pointer => input_file%Read_2d(         &
-        & variable_name='albedo_veg_nir',           &
+      return_pointer => input_file%Read_2d( &
+        & variable_name='albedo_veg_nir',   &
         & fill_array = dsl4jsb_var_ptr(RAD_, alb_nir_can))
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = &
@@ -191,7 +191,7 @@ CONTAINS
       ! Weight between age and temperature impact on snow albedo for snow on canopy
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
-    
+
     END IF
 
     CALL input_file%Close()
