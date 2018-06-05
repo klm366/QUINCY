@@ -688,7 +688,8 @@ CONTAINS
             ! Determine area to be harvested from this cohort
             harvestFromThisCohort = 0._wp
             CALL update_frac_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
-              & max_age, ncohorts, i, cohort_max_age(:,:), fract_per_age(:,:), harvestFromThisCohort(:), stillToHarvest(:))
+              & max_age, cohort_max_age(:,i), cohort_max_age(:,i-1), fract_per_age(:,:), &
+              & harvestFromThisCohort(:), stillToHarvest(:))
              
             harvested_area(:) = harvested_area(:) + harvestFromThisCohort(:)
 

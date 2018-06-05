@@ -165,8 +165,9 @@ MODULE mo_fage_process
 
   !TODO-JN: make faster?
   SUBROUTINE update_frac_per_age_and_determine_area_to_harvest_from_cohort( &
-                    harvest_kind, nidx, nage, ncohorts, iThisCohort, &   !in
-                    cohort_max_age,                                  &   !in
+                    harvest_kind, nidx, nage, &   !in
+                    this_cohort_max_age,                             &   !in
+                    prev_cohort_max_age,                             &   !in
                     fract_per_age,                                   &   !inout
                     harvested_area,                                  &   !inout
                     to_be_harvested_area                             &   !inout
@@ -176,9 +177,9 @@ MODULE mo_fage_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    INTEGER,  INTENT(in)    ::  harvest_kind, nidx, nage, ncohorts, iThisCohort
+    INTEGER,  INTENT(in)    ::  harvest_kind, nidx, nage
     REAL(wp), INTENT(inout), DIMENSION(nidx) :: harvested_area, to_be_harvested_area
-    REAL(wp), INTENT(inout), DIMENSION(nidx, ncohorts) :: cohort_max_age
+    REAL(wp), INTENT(inout), DIMENSION(nidx) :: this_cohort_max_age, prev_cohort_max_age
     REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age
 
     !-----------------------------------------------------------------------
@@ -188,12 +189,11 @@ MODULE mo_fage_process
 
     !-----------------------------------------------------------------------
     ! CONTENT
-    IF(iThisCohort .EQ. 1) RETURN !area is only distributed to the first child - not from
 
     ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
     DO j=1,nidx
-      thisMinAge = int(cohort_max_age(j,iThisCohort-1)+1)
-      thisMaxAge = int(cohort_max_age(j,iThisCohort))
+      thisMinAge = int(prev_cohort_max_age(j)+1)
+      thisMaxAge = int(this_cohort_max_age(j))
 
       IF (harvest_kind .EQ. HARVEST_OLDEST_TREES) THEN
         DO k=thisMaxAge,thisMinAge,-1
