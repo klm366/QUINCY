@@ -1,5 +1,5 @@
 !>
-!! @brief Forest-age (fage) tasks -- tasks dealing with cohorts 
+!! @brief Forest-age (fage) tasks -- tasks dealing with age cohorts 
 !!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg
@@ -57,26 +57,26 @@ MODULE mo_fage_interface
     PROCEDURE Create_task_calculate_ageing 
   END INTERFACE   tsk_calculate_ageing
 
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_nat_disturb_cohort_changes
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_nat_dist_age_cohorts
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_nat_disturb_cohort_changes    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_nat_disturb_cohort_changes !< Aggregates computed task variables
-  END TYPE   tsk_nat_disturb_cohort_changes
+    PROCEDURE, NOPASS :: Integrate => update_nat_dist_age_cohorts    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_nat_dist_age_cohorts !< Aggregates computed task variables
+  END TYPE   tsk_nat_dist_age_cohorts
 
-  INTERFACE   tsk_nat_disturb_cohort_changes
-    PROCEDURE Create_task_nat_disturb_cohort_changes 
-  END INTERFACE   tsk_nat_disturb_cohort_changes
+  INTERFACE   tsk_nat_dist_age_cohorts
+    PROCEDURE Create_task_nat_dist_age_cohorts 
+  END INTERFACE   tsk_nat_dist_age_cohorts
 
 
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_harvest_cohort_changes
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_harvest_age_cohorts
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_harvest_cohort_changes    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_harvest_cohort_changes !< Aggregates computed task variables
-  END TYPE   tsk_harvest_cohort_changes
+    PROCEDURE, NOPASS :: Integrate => update_harvest_age_cohorts    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_harvest_age_cohorts !< Aggregates computed task variables
+  END TYPE   tsk_harvest_age_cohorts
 
-  INTERFACE   tsk_harvest_cohort_changes
-    PROCEDURE Create_task_harvest_cohort_changes 
-  END INTERFACE   tsk_harvest_cohort_changes
+  INTERFACE   tsk_harvest_age_cohorts
+    PROCEDURE Create_task_harvest_age_cohorts 
+  END INTERFACE   tsk_harvest_age_cohorts
 
 CONTAINS
   ! ================================================================================================================================
@@ -100,41 +100,41 @@ CONTAINS
 
   END FUNCTION Create_task_calculate_ageing
 
-  !> Constructor for nat_disturb_cohort_changes task
+  !> Constructor for nat_dist_age_cohorts task
   !!
   !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "nat_disturb_cohort_changes"
+  !! @return        return_ptr   Instance of process task "nat_dist_age_cohorts"
   !!
-  FUNCTION Create_task_nat_disturb_cohort_changes(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_nat_dist_age_cohorts(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_nat_disturb_cohort_changes::return_ptr)
+    ALLOCATE(tsk_nat_dist_age_cohorts::return_ptr)
 
-    return_ptr%name = 'nat_disturb_cohort_changes'
+    return_ptr%name = 'nat_dist_age_cohorts'
     return_ptr%process_id = FAGE_
     return_ptr%owner_model_id = model_id
 
-  END FUNCTION Create_task_nat_disturb_cohort_changes
+  END FUNCTION Create_task_nat_dist_age_cohorts
   
-  !> Constructor for harvest_cohort_changes task
+  !> Constructor for harvest_age_cohorts task
   !!
   !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "harvest_cohort_changes"
+  !! @return        return_ptr   Instance of process task "harvest_age_cohorts"
   !!
-  FUNCTION Create_task_harvest_cohort_changes(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_harvest_age_cohorts(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_harvest_cohort_changes::return_ptr)
+    ALLOCATE(tsk_harvest_age_cohorts::return_ptr)
 
-    return_ptr%name = 'harvest_cohort_changes'
+    return_ptr%name = 'harvest_age_cohorts'
     return_ptr%process_id = FAGE_
     return_ptr%owner_model_id = model_id
 
-  END FUNCTION Create_task_harvest_cohort_changes
+  END FUNCTION Create_task_harvest_age_cohorts
 
 
   ! =======================================================================================================
@@ -149,8 +149,8 @@ CONTAINS
     INTEGER,                 INTENT(in) :: model_id
 
     CALL this%Register_task(tsk_calculate_ageing(model_id))
-    CALL this%Register_task(tsk_nat_disturb_cohort_changes(model_id))
-    CALL this%Register_task(tsk_harvest_cohort_changes(model_id))
+    CALL this%Register_task(tsk_nat_dist_age_cohorts(model_id))
+    CALL this%Register_task(tsk_harvest_age_cohorts(model_id))
 
   END SUBROUTINE Register_fage_tasks
 
@@ -249,15 +249,15 @@ CONTAINS
       IF(.NOT. currentChild%Is_last_child()) &
         & CALL finish(TRIM(routine), 'Violation of assertion: expected last child after iterating over ncohorts')
 
-      !----- care for shifts among cohort boundaries
-      ! only iterate until 2 - youngest cohort can not get area from below
+      !----- care for shifts among age cohort boundaries
+      ! only iterate until 2 - youngest age cohort can not get area from below
       DO i=ncohorts,2,-1
         !TODO-JN-COHORTS maybe work with a getter?
         prevChild => currentChild%Get_prev_sibling_tile()
         CALL prevChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=sink_fract(:))
 
-        ! a) identify delta fraction for shifts from one to the next cohort
+        ! a) identify delta fraction for shifts from one to the next age cohort
         !TODO-JN-COHORTS needs to be adapted when working with absolute areas
 
         !TODO-JN-COHORTS: cohort_max_age would only be required with this dimension
@@ -273,7 +273,7 @@ CONTAINS
         ! and add them to the current childs delta 
         currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) + fract_source_max_age(:)
 
-        ! b) accordingly move carbon from one cohort to the next cohorts delta
+        ! b) accordingly move carbon from one age cohort to the next age cohorts delta
         CALL update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
           & prevChild, currentChild, options, fract_source_max_age(:), source_fract(:))
 
@@ -367,16 +367,16 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Task "nat_disturb_cohort_changes" calculates the required changes upon natural disturbances
+  !! @brief Task "nat_dist_age_cohorts" calculates the required changes upon natural disturbances
   !! 
   !! Note: it is only possible to conduct fire and wind damage in one task, because in jsb upon distrbances 
-  !!       only the c pool distribution delivered to the target cohort (first cohort) is influenced, 
-  !!       but not the densities of the source cohort 
+  !!       only the c pool distribution delivered to the target age cohort (first age cohort) is influenced, 
+  !!       but not the densities of the source age cohort 
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   ! 
-  SUBROUTINE update_nat_disturb_cohort_changes(tile, options)
+  SUBROUTINE update_nat_dist_age_cohorts(tile, options)
 
     USE mo_jsb_time,             ONLY: is_newday
     USE mo_fage_util,            ONLY: get_mean_age
@@ -406,7 +406,7 @@ CONTAINS
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_nat_disturb_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_nat_dist_age_cohorts'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -498,7 +498,7 @@ CONTAINS
 
 
         ! update the area per age tracking vector regarding this child and the first child
-        IF (i .GT. 1) THEN ! area moved within the first cohort requires no update (it stays between year 0 and 1)
+        IF (i .GT. 1) THEN ! area moved within the first age cohort requires no update (it stays between year 0 and 1)
           disturbed_area(:,i) = damagedArea(:) + burnedArea(:)
           IF(ANY(disturbed_area(:,i) .GT. 0._wp)) THEN
             IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
@@ -524,10 +524,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_nat_disturb_cohort_changes
+  END SUBROUTINE update_nat_dist_age_cohorts
 
  
-  SUBROUTINE aggregate_nat_disturb_cohort_changes(tile, options)
+  SUBROUTINE aggregate_nat_dist_age_cohorts(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -539,7 +539,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_nat_disturb_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_nat_dist_age_cohorts'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -565,18 +565,18 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_nat_disturb_cohort_changes
+  END SUBROUTINE aggregate_nat_dist_age_cohorts
 
 
   ! ================================================================================================================================
   !>
-  !! @brief Task "harvest_cohort_changes" calculates the required changes upon clearcut harvest 
+  !! @brief Task "harvest_age_cohorts" calculates the required changes upon clearcut harvest 
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   ! 
-  ! NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
-  SUBROUTINE update_harvest_cohort_changes(tile, options)
+  ! NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest age cohort is empty 
+  SUBROUTINE update_harvest_age_cohorts(tile, options)
 
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_fage_util,            ONLY: get_mean_age
@@ -603,12 +603,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: cohort_max_age
 
     CLASS(t_jsb_tile_abstract), POINTER    :: firstChild, currentChild
-    REAL(wp), DIMENSION(options%nc)        :: source_fract, stillToHarvest, harvestFromThisCohort
+    REAL(wp), DIMENSION(options%nc)        :: source_fract, stillToHarvest, harvestFromThisAgeCohort
 
-    INTEGER  :: i, oldestCohort, ncohorts, max_age, iblk, ics, ice, nc
+    INTEGER  :: i, oldestAgeCohort, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_harvest_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_harvest_age_cohorts'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -650,27 +650,27 @@ CONTAINS
         firstChild => tile%Get_first_child_tile()
         currentChild => tile%Get_first_child_tile()
 
-        !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest cohort is empty 
+        !NOTE: Here its ASSUMED that the task runs after ageing, therefore youngest age cohort is empty 
         l_sourceisfirstChild = .FALSE.
         !Assert that youngest cohort is empty 
         CALL firstChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
         IF (ANY(source_fract(:) .NE. 0._wp)) &
-              & CALL finish(TRIM(routine), 'Violation of assertion: area of youngest cohortv expected to be zero.')
+              & CALL finish(TRIM(routine), 'Violation of assertion: area of youngest age cohort expected to be zero.')
 
         ! Area changes upon clearcut only have carbon density consequences for the first child
         !  (All other children will only have area changes, but keep their densities)
         firstChild%l_update_c(ics:ice, iblk) = .TRUE.
 
         IF (dsl4jsb_Config(HARV_)%harv_kind .EQ. HARVEST_OLDEST_TREES) THEN
-          ! as opposed to damaged_frac in update_nat_disturb_cohort_changes area_to_harvest is already with respect
-          ! to this tiles area - i.e. not per cohort, thus it does not have to be multiplied with cohort fractions
+          ! as opposed to damaged_frac in update_nat_dist_age_cohorts area_to_harvest is already with respect
+          ! to this tiles area - i.e. not per age cohort, thus it does not have to be multiplied with age cohort fractions
           stillToHarvest(:) = area_to_harvest(:)
 
-          ! TODO-JN-COHORTS: Identify cohort with oldest available trees for any calculated gridcell
-          oldestCohort = ncohorts
+          ! TODO-JN-COHORTS: Identify age cohort with oldest available trees for any calculated gridcell
+          oldestAgeCohort = ncohorts
 
-          ! Iterate over the children until currentChild points to that cohort
-          DO i=1,oldestCohort-1
+          ! Iterate over the children until currentChild points to that age cohort
+          DO i=1,oldestAgeCohort-1
             !Assertion that current its not already the last
             IF(currentChild%Is_last_child()) &
               & CALL finish(TRIM(routine), 'Violation of assertion: unexpected last child.')
@@ -679,29 +679,29 @@ CONTAINS
             currentChild%l_update_c(ics:ice, iblk) = .FALSE.
           ENDDO
 
-          ! then iterate backwards until either all demanded area is fulfilled or the second lowest cohort is reached
-          DO i=oldestCohort,2,-1
+          ! then iterate backwards until either all demanded area is fulfilled or the second lowest age cohort is reached
+          DO i=oldestAgeCohort,2,-1
             ! Area changes upon clearcut only have carbon density consequences for the first child
             !  (All other children will only have area changes, but keep their densities)
             currentChild%l_update_c(ics:ice, iblk) = .FALSE.
 
-            ! Determine area to be harvested from this cohort
-            harvestFromThisCohort = 0._wp
+            ! Determine area to be harvested from this age cohort
+            harvestFromThisAgeCohort = 0._wp
             CALL update_frac_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
               & max_age, cohort_max_age(:,i), cohort_max_age(:,i-1), fract_per_age(:,:), &
-              & harvestFromThisCohort(:), stillToHarvest(:))
+              & harvestFromThisAgeCohort(:), stillToHarvest(:))
              
-            harvested_area(:) = harvested_area(:) + harvestFromThisCohort(:)
+            harvested_area(:) = harvested_area(:) + harvestFromThisAgeCohort(:)
 
             ! reduce current tiles delta fraction  
-            currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisCohort(:)
+            currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisAgeCohort(:)
             ! and add it to the first childs delta
-            firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisCohort(:)
+            firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisAgeCohort(:)
 
             ! b) carbon consequences 
             CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
             CALL update_delta_carbon_rp_upon_disturbance( &
-              currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisCohort(:), source_fract(:), CLEARCUT)
+              currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisAgeCohort(:), source_fract(:), CLEARCUT)
 
             ! c) TODO-JN-COHORTS what else to shift? 
 
@@ -720,10 +720,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_harvest_cohort_changes
+  END SUBROUTINE update_harvest_age_cohorts
 
  
-  SUBROUTINE aggregate_harvest_cohort_changes(tile, options)
+  SUBROUTINE aggregate_harvest_age_cohorts(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -736,7 +736,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_harvest_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_harvest_age_cohorts'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -764,7 +764,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_harvest_cohort_changes
+  END SUBROUTINE aggregate_harvest_age_cohorts
 
 #endif
 END MODULE mo_fage_interface

@@ -388,13 +388,14 @@ CONTAINS
 
       IF ( tile%parent_tile%Is_process_active(FAGE_) ) THEN
         ! In this case the carbon cannot be relocated immediately
-        ! because disturbances now create new cohorts
+        ! because disturbances now move area to the first age cohort 
+        ! (i.e. disturbances during one year contribute to a new age cohort)
 
         !@todo: maybe for a more general concept it could be considered to always do it like this
         !       i.e. only calculate the damage here and then apply it later maybe in a carbon task?
 
         IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
-          & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of damaged and burned carbon.')
+          & TRIM(tile%name)//' - Run with AGE COHORTS: Delayed relocation of damaged and burned carbon.')
       ELSE
 
         !Else relocate carbon as previously implemented

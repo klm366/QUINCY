@@ -72,22 +72,22 @@ CONTAINS
     max_age = dsl4jsb_Config(FAGE_)%max_age
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
 
-    ! set/initialise cohort bounds 
+    ! set/initialise age cohort bounds 
     ! - important: start with one ---> DO NOT CHANGE!  
-    ! -- first cohort needs to always only contain the first year!
+    ! -- first age cohort needs to always only contain the first year!
     dsl4jsb_var3D_onDomain(FAGE_, cohort_max_age) = 1._wp 
 
-    !TODO-JN if there is no dynamic merging of cohorts, the cohort_max_age vector could be
+    !TODO-JN if there is no dynamic merging of age cohorts, the cohort_max_age vector could be
     !        much more simple and set in the confic_class, etc
-    IF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-equal' ) THEN
-      ! Equal intervals distributed equally over all but the first cohort
+    IF (dsl4jsb_Config(FAGE_)%age_cohort_scheme == 'static-equal' ) THEN
+      ! Equal intervals distributed equally over all but the first age cohort
       age_interval = int((max_age-1) / (ncohorts-1))
       DO i=1,ncohorts-1
         dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
           & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + age_interval
       END DO
-    ELSEIF (dsl4jsb_Config(FAGE_)%cohort_scheme == 'static-shorterYoung' ) THEN
-      ! Equal intervals distributed unequally such that younger cohorts have shorter steps
+    ELSEIF (dsl4jsb_Config(FAGE_)%age_cohort_scheme == 'static-shorterYoung' ) THEN
+      ! Equal intervals distributed unequally such that younger age cohorts have shorter steps
       ! (1, 1+n, 1+n+2*n, 1+n+2*n+3*n, ...)
       age_interval = 0
       DO i=1,ncohorts-1
@@ -107,15 +107,15 @@ CONTAINS
 !print *, dsl4jsb_var_ptr(FAGE_, cohort_max_age)
 !ENDIF
 
-    !Last cohort is not really restricted to a max age, but set to max_age for compliance with the fract_per_age field
+    !Last age cohort is not really restricted to a max age, but set to max_age for compliance with the fract_per_age field
     dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,ncohorts,:) = max_age
 
     !Assertion: 
     IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,1,:) .NE. 1._wp)) THEN
-      CALL finish(TRIM(routine), 'Assertion: lowest cohort always needs to have max_age of 1!')
+      CALL finish(TRIM(routine), 'Assertion: lowest age cohort always needs to have max_age of 1!')
     ENDIF
     IF(ANY(dsl4jsb_var_ptr(FAGE_, cohort_max_age)(:,:,:) .GT. max_age)) THEN
-      CALL finish(TRIM(routine), 'Assertion: no cohort should have a max age larger than the total max_age!')
+      CALL finish(TRIM(routine), 'Assertion: no age cohort should have a max age larger than the total max_age!')
     ENDIF
 
     !TODO-JN other bcs?? Also from files?
@@ -170,7 +170,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(FAGE_, fract_per_age)
 
     !TODO-JN-COHORTS: for now all fracts to youngest age, later initialise from file
-    !TODO-JN-COHORTS: needs to comply with the fractions in the cohorts!  
+    !TODO-JN-COHORTS: needs to comply with the fractions in the age cohorts!  
     !   --- cross check with call in mo...usecase: "fract_varname='allFirst'"! 
     ! ++ what happens on restart?
     ! ++ what when absolute area introduced?

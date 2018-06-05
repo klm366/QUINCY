@@ -6,9 +6,9 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-05)
-!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age classes
+!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age cohorts
 !!      ++ routines to check carbon conservation 
-!!      ++ task to apply c consequences of area changes among forest age classes 
+!!      ++ task to apply c consequences of area changes among forest age cohorts 
 !!
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
@@ -74,15 +74,15 @@ MODULE mo_carbon_interface
     PROCEDURE Create_task_C_NPP_pot_allocation        !< Constructor function for task
   END INTERFACE   tsk_C_NPP_pot_allocation
 
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_apply_cohort_changes
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_apply_age_cohort_changes
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_apply_cohort_changes    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_apply_cohort_changes !< Aggregates computed task variables
-  END TYPE   tsk_apply_cohort_changes
+    PROCEDURE, NOPASS :: Integrate => update_apply_age_cohort_changes    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_apply_age_cohort_changes !< Aggregates computed task variables
+  END TYPE   tsk_apply_age_cohort_changes
 
-  INTERFACE   tsk_apply_cohort_changes
-    PROCEDURE Create_task_apply_cohort_changes 
-  END INTERFACE   tsk_apply_cohort_changes
+  INTERFACE   tsk_apply_age_cohort_changes
+    PROCEDURE Create_task_apply_age_cohort_changes 
+  END INTERFACE   tsk_apply_age_cohort_changes
 
 CONTAINS
 
@@ -108,23 +108,23 @@ CONTAINS
 
   END FUNCTION Create_task_C_NPP_pot_allocation
   
-  !> Constructor for apply_cohort_changes task
+  !> Constructor for apply_age_cohort_changes task
   !!
   !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "apply_cohort_changes"
+  !! @return        return_ptr   Instance of process task "apply_age_cohort_changes"
   !!
-  FUNCTION Create_task_apply_cohort_changes(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_apply_age_cohort_changes(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_apply_cohort_changes::return_ptr)
+    ALLOCATE(tsk_apply_age_cohort_changes::return_ptr)
 
-    return_ptr%name = 'apply_cohort_changes'
+    return_ptr%name = 'apply_age_cohort_changes'
     return_ptr%process_id = CARBON_
     return_ptr%owner_model_id = model_id
 
-  END FUNCTION Create_task_apply_cohort_changes
+  END FUNCTION Create_task_apply_age_cohort_changes
 
   ! =======================================================================================================
   !> Register tasks for carbon process
@@ -138,7 +138,7 @@ CONTAINS
     INTEGER,                 INTENT(in) :: model_id
 
     CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
-    CALL this%Register_task(tsk_apply_cohort_changes(model_id))
+    CALL this%Register_task(tsk_apply_age_cohort_changes(model_id))
 
   END SUBROUTINE Register_carbon_tasks
 
@@ -770,13 +770,13 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Task "update_apply_cohort_changes" applies area and c changes to cohorts (using previously filled delta variables) 
+  !! @brief Task "update_apply_age_cohort_changes" applies area and c changes to the age cohorts (using delta variables) 
   !! - TODO-JN-COHORTS area change should probably be a task of another process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   ! 
-  SUBROUTINE update_apply_cohort_changes(tile, options)
+  SUBROUTINE update_apply_age_cohort_changes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -786,7 +786,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_age_cohort_changes'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -822,9 +822,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_apply_cohort_changes
+  END SUBROUTINE update_apply_age_cohort_changes
 
-  SUBROUTINE aggregate_apply_cohort_changes(tile, options)
+  SUBROUTINE aggregate_apply_age_cohort_changes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -835,7 +835,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_apply_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_apply_age_cohort_changes'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -888,7 +888,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_apply_cohort_changes
+  END SUBROUTINE aggregate_apply_age_cohort_changes
 
 
 
@@ -1327,7 +1327,7 @@ CONTAINS
   !>
   !! @brief updates delta of carbon state variables upon disturbance (including clear-cuts!)
   !!        -> source densities stay the same
-  !!        -> sink (first cohort) gets fraction of source litter/soil 
+  !!        -> sink (first age cohort) gets fraction of source litter/soil 
   !!            + fraction of green/reserve/wood are also distributed into litter/soil
   !!            + in case of fire some of the litter pools are redistributed
   !!
@@ -1547,7 +1547,7 @@ CONTAINS
         & d_nonsoluble_ag2_new(:), delta_fract(:), veg_frac_correction(:))
     ELSEIF (.NOT. l_sourceisfirstChild) THEN
       ! For other disturbances above ground litter is only redistributed 
-      ! However, for the first child the damaged area stays within the first cohort and so do the ag litter pools
+      ! However, for the first child the damaged area stays within the first age cohort and so do the ag litter pools
       CALL update_delta_carbon_rp(YCpool_acid_ag1(:), helper(:), &
         & delta_YCpool_acid_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
       CALL update_delta_carbon_rp(YCpool_water_ag1(:), helper(:), &
@@ -1569,7 +1569,7 @@ CONTAINS
 
     IF (.NOT. l_sourceisfirstChild) THEN
       ! As opposed to the ag litter, the bg litter/soil is not changed by fire, thus here it is always the case that 
-      ! if the first child is the source, the damaged area stays within the first cohort and so do the bg soil/litter pools
+      ! when the first child is the source, the damaged area stays within the first age cohort and same for bg soil/litter pools
       CALL update_delta_carbon_rp(Cpool_crop_harvest(:), helper(:), &
         delta_Cpool_crop_harvest_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
 

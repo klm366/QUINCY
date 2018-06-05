@@ -297,17 +297,17 @@ CONTAINS
     !Aging happens once at the beginning of each year at the start of a timestep. 
     IF (model%processes(FAGE_)%p%config%active) THEN
        CALL model%Queue_task(FAGE_, "calculate_ageing")
-       CALL model%Queue_task(CARBON_, "apply_cohort_changes")
+       CALL model%Queue_task(CARBON_, "apply_age_cohort_changes")
     END IF
 
     !Forest Management happens once at the beginning of each year at the start of a timestep - after ageing 
-    !NOTE: In harvest cohort changes its ASSUMED that the task runs after ageing, and thus that the youngest cohort is empty! 
+    !NOTE: harvest_age_cohorts ASSUMES that it runs after calculate_ageing, and thus that the youngest age cohort is empty! 
     IF (model%processes(FM_)%p%config%active) THEN
       CALL model%Queue_task(FM_,     "forest_management")
       CALL model%Queue_task(HARV_,   "forest_harvest")
       IF (model%processes(FAGE_)%p%config%active) THEN
-        CALL model%Queue_task(FAGE_,   "harvest_cohort_changes")
-        CALL model%Queue_task(CARBON_, "apply_cohort_changes")
+        CALL model%Queue_task(FAGE_,   "harvest_age_cohorts")
+        CALL model%Queue_task(CARBON_, "apply_age_cohort_changes")
       ENDIF
     ENDIF
 
@@ -361,11 +361,11 @@ CONTAINS
     IF (model%processes(DISTURB_)%p%config%active) THEN
       CALL model%Queue_task(DISTURB_, "natural_disturbances")
 
-      ! in case that forest age is switched on and we are working with cohorts,
-      ! disturbances need to be handled on the cohort parent!
+      ! in case that forest age is switched on, i.e. working with age cohorts,
+      ! disturbances need to be handled on the parent of the age cohorts!
       IF (model%processes(FAGE_)%p%config%active) THEN
-         CALL model%Queue_task(FAGE_, "nat_disturb_cohort_changes")
-         CALL model%Queue_task(CARBON_, "apply_cohort_changes")
+         CALL model%Queue_task(FAGE_, "nat_dist_age_cohorts")
+         CALL model%Queue_task(CARBON_, "apply_age_cohort_changes")
       END IF
     END IF
 

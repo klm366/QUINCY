@@ -1582,7 +1582,7 @@ CONTAINS
     real(wp),intent(inout) ::  org_Cpool, delta_Cpool
 
     ! as in JSBACH3 calculations are done no matter if there is any area or not
-    ! with cohorts we require the densities to be zero if there is no area -- potential conflict  
+    ! with age cohorts we require the densities to be zero if there is no area -- potential conflict  
     IF ( prev_fract .EQ. 0._wp) THEN
         org_Cpool = 0._wp
     ENDIF

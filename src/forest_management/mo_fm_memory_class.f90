@@ -55,7 +55,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid          ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: soil_depth_water    ! Vertical grid
-!    TYPE(t_jsb_vgrid), POINTER :: cohort_grid    ! Vertical grid
+!    TYPE(t_jsb_vgrid), POINTER :: age_cohorts_grid    ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fm_memory'
@@ -73,7 +73,7 @@ CONTAINS
     IF (.NOT. ASSOCIATED(mem%to_harvest%ptr)) THEN
 
       CALL jsb_add_var( mem, 'to_harvest', mem%to_harvest,                   &
-!        & hgrid, cohort_grid,                                                                    &
+!        & hgrid, age_cohorts_grid,                                                                    &
         & hgrid, soil_depth_water, &
         & t_cf('to_harvest', '', 'Whatever to Harvest.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &

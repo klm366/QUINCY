@@ -24,8 +24,8 @@ MODULE mo_fage_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_fage_config
     INTEGER                   :: max_age                        ! Maximum age tracked  
-    INTEGER                   :: ncohorts                       ! number of cohorts
-    CHARACTER(len=20)         :: cohort_scheme
+    INTEGER                   :: ncohorts                       ! number of age cohorts
+    CHARACTER(len=20)         :: age_cohort_scheme
     CHARACTER(len=20)         :: disturbance_distribution_scheme
   CONTAINS
     PROCEDURE             :: Init => Init_fage_config
@@ -59,7 +59,7 @@ CONTAINS
       & bc_filename,                &
       & max_age
 
-!TODO-JN: namelist char selecting different cohort schemes "cohort_scheme"
+!TODO-JN: namelist char selecting different age cohort schemes "age_cohort_scheme"
 !  (e.g. static-equal, static-shorterYoung, dynamic-biomass, dynamic-MaxLai, ...)
 !TODO-JN: namelist char for disturbance_distribution_scheme?
 
@@ -68,7 +68,7 @@ CONTAINS
     INTEGER :: i
     REAL(wp) :: cohorts_grid_levels(ncohorts)
     REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
-    TYPE(t_jsb_vgrid), POINTER :: forest_age, cohort_grid
+    TYPE(t_jsb_vgrid), POINTER :: forest_age, age_cohorts_grid
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fage_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting fage configuration')
@@ -90,14 +90,14 @@ CONTAINS
     config%max_age             = max_age
 
     config%ncohorts            = ncohorts
-    config%cohort_scheme       = TRIM("static-equal")
+    config%age_cohort_scheme   = TRIM("static-equal")
 
     config%disturbance_distribution_scheme = TRIM("equal")
 
     ALLOCATE(fage_grid_levels(max_age))
 
     !Assertion: 
-    IF ( max_age .LT. ncohorts) CALL finish(TRIM(routine), 'Assertion: number of cohorts needs to be less or equal to max age!')
+    IF ( max_age .LT. ncohorts) CALL finish(TRIM(routine), 'Assertion: number of age cohorts needs to be <= max age!')
 
 !TODO-JN-COHORTS assert ncohorts < X 
 
@@ -106,12 +106,12 @@ CONTAINS
     IF (.NOT. active) RETURN
 
     ! vertical grid with cohort dimension
-    cohort_grid  => new_vgrid('cohort_grid', ZAXIS_GENERIC, ncohorts, &
+    age_cohorts_grid  => new_vgrid('age_cohorts_grid', ZAXIS_GENERIC, ncohorts, &
       & levels  = (/ (REAL(i,kind=wp),i=1,ncohorts) /), &
       & lbounds = (/ (REAL(i,kind=wp),i=1,ncohorts) /), &
       & ubounds = (/ (REAL(i,kind=wp),i=1,ncohorts) /), &
       & units='')
-    CALL register_vgrid(cohort_grid)
+    CALL register_vgrid(age_cohorts_grid)
 
     ! vertical grid with tracked age dimension 
     fage_grid_levels(1:max_age) = (/ (REAL(i,kind=wp),i=1,max_age) /)
@@ -127,7 +127,7 @@ CONTAINS
     CALL register_vgrid(forest_age)
 
     CALL message(TRIM(routine), 'Tracked forest ages [y]: '//TRIM(int2string(max_age)))
-    CALL message(TRIM(routine), 'Run with n cohorts: '//TRIM(int2string(ncohorts)))
+    CALL message(TRIM(routine), 'Run with n age cohorts: '//TRIM(int2string(ncohorts)))
 
 
     DEALLOCATE(fage_grid_levels)

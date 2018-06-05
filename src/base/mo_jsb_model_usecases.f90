@@ -59,8 +59,8 @@ CONTAINS
     CASE ('jsbach_lite_tpe_closed')
       CALL init_usecase_lite_tpe_closed(model)
 
-    CASE ('jsbach_cohorts')
-      CALL init_usecase_cohorts(model)
+    CASE ('jsbach_age_cohorts')
+      CALL init_usecase_age_cohorts(model)
 
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
@@ -281,7 +281,7 @@ CONTAINS
   END SUBROUTINE init_usecase_lite_tpe_closed
 
   
-  SUBROUTINE init_usecase_cohorts(model)
+  SUBROUTINE init_usecase_age_cohorts(model)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -316,7 +316,7 @@ CONTAINS
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_cohorts'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_age_cohorts'
 
     grid => Get_grid(model%grid_id)
 
@@ -381,16 +381,16 @@ CONTAINS
 
             ! TODO-JN: decide on ForestFlag vs is_Woody! (model%lctlib(pft_ids(i))%WOODY_PFT)
             IF (model%lctlib(pft_ids(i))%ForestFlag) THEN 
-              ! FAGE is the process that organises the cohorts. 
-              ! There is no sense in running cohorts without FAGE and vice versa! 
+              ! FAGE is the process that organises the age cohorts. 
+              ! There is no sense in running age cohorts without FAGE and vice versa! 
               IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
-                CALL finish(TRIM(routine), "There is no sense in running cohorts without FAGE and vice versa!")
+                CALL finish(TRIM(routine), "There is no sense in running age cohorts without FAGE and vice versa!")
               END IF
               IF (.NOT. model%processes(CARBON_)%p%config%active) THEN
-                CALL finish(TRIM(routine), "Current cohorts implementation assumes CARBON process to be active!")
+                CALL finish(TRIM(routine), "Current forest age cohort implementation assumes CARBON process to be active!")
               END IF
               IF (.NOT. model%processes(PHENO_)%p%config%active) THEN
-                CALL finish(TRIM(routine), "Current cohorts implementation assumes PHENO process to be active!")
+                CALL finish(TRIM(routine), "Current forest age cohort implementation assumes PHENO process to be active!")
               END IF
 
               CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
@@ -421,7 +421,7 @@ CONTAINS
     NULLIFY(veg_tile)
     NULLIFY(pft_tile)
 
-  END SUBROUTINE init_usecase_cohorts
+  END SUBROUTINE init_usecase_age_cohorts
 
 
 #endif

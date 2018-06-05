@@ -88,7 +88,7 @@ CONTAINS
                     post_suf=post_suf, rest_suf=rest_suf, init_suf=init_suf, &
                     lpost=loutput, lpout=loutput, lrerun=lrestart            &
                    )
-    !TODO-JN: hardcoded FALSE for now due to problems with too many outputvariables with cohorts
+    !TODO-JN: hardcoded FALSE for now due to problems with output size when using forest age cohorts
     ! - i.e. required vars need to be set to true! (+ see namelist selector in jsb3 sitelevel)
     CALL default_stream_setting(this_list, table=table_loc, lpost=.FALSE., lrerun=lrestart)
 #endif

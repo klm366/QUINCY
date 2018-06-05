@@ -233,12 +233,12 @@ CONTAINS
 
         IF ( tile%Is_process_active(FAGE_) ) THEN
           ! In this case the carbon cannot be relocated immediately
-          ! because harvest now create new cohorts
+          ! because harvest now adds area to the first age cohort (controbutes to a 'new' cohort)
 
           !@todo: maybe for a more general concept it could be considered to always do it like this
           !       i.e. only calculate the damage here and then apply it later maybe in a carbon task?
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
-            & TRIM(tile%name)//' - Run with COHORTS: Delayed relocation of harvested carbon.')
+            & TRIM(tile%name)//' - Run with AGE COHORTS: Delayed relocation of harvested carbon.')
 
         ELSE
           CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))

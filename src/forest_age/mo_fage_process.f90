@@ -69,7 +69,7 @@ MODULE mo_fage_process
 
   !TODO-JN: make faster?
   SUBROUTINE correct_and_synchronise_fracts( &
-                    nidx, nage, ncohorts, iThisCohort,     &   !in
+                    nidx, nage, ncohorts, iThisAgeCohort,  &   !in
                     pftid, cohort_max_age,                 &   !in
                     fract_per_age,                         &   !inout
                     fract                                  &   !inout
@@ -77,7 +77,7 @@ MODULE mo_fage_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    INTEGER,  INTENT(in)    ::  nidx, nage, ncohorts, iThisCohort, pftid
+    INTEGER,  INTENT(in)    ::  nidx, nage, ncohorts, iThisAgeCohort, pftid
     REAL(wp), INTENT(inout), DIMENSION(nidx, ncohorts) :: cohort_max_age
     REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age
     REAL(wp), INTENT(inout), DIMENSION(nidx) :: fract
@@ -90,17 +90,17 @@ MODULE mo_fage_process
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
+    ! TODO-JN-COHORTS: could be much simpler, if age cohort boundaries will not be dynamic
     DO j=1,nidx
 
-      IF (iThisCohort .GT. 1) THEN
-        thisMinAge = int(cohort_max_age(j,iThisCohort-1)+1)
-        thisMaxAge = int(cohort_max_age(j,iThisCohort))
+      IF (iThisAgeCohort .GT. 1) THEN
+        thisMinAge = int(cohort_max_age(j,iThisAgeCohort-1)+1)
+        thisMaxAge = int(cohort_max_age(j,iThisAgeCohort))
         thisAreaSum = SUM(fract_per_age(j,thisMinAge:thisMaxAge))
 
         IF(thisAreaSum - fract(j) .GT. 1.e-14_wp) THEN !TODO-JN make 1.e-14_wp a constant somewhere
           WRITE (message_text,*) ' fract (', fract(j), &
-             & ') and fage sum (', thisAreaSum , ') missmatch for cohort ', iThisCohort, &
+             & ') and fage sum (', thisAreaSum , ') missmatch for age cohort ', iThisAgeCohort, &
              & '-- pft ', pftid
           CALL finish ('correct_and_synchronise_fracts', message_text)
         ENDIF
@@ -115,7 +115,7 @@ MODULE mo_fage_process
 
   !TODO-JN: make faster?
   SUBROUTINE update_frac_per_age_equally_upon_disturbance( &
-                    nidx, nage, ncohorts, iThisCohort,     &   !in
+                    nidx, nage, ncohorts, iThisAgeCohort,  &   !in
                     disturbed_area,                        &   !in
                     cohort_max_age,                        &   !in
                     fract_per_age                          &   !inout
@@ -123,7 +123,7 @@ MODULE mo_fage_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    INTEGER,  INTENT(in)    ::  nidx, nage, ncohorts, iThisCohort
+    INTEGER,  INTENT(in)    ::  nidx, nage, ncohorts, iThisAgeCohort
     REAL(wp), INTENT(inout), DIMENSION(nidx) :: disturbed_area
     REAL(wp), INTENT(inout), DIMENSION(nidx, ncohorts) :: cohort_max_age
     REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age
@@ -135,13 +135,13 @@ MODULE mo_fage_process
 
     !-----------------------------------------------------------------------
     ! CONTENT
-    IF(iThisCohort .EQ. 1) RETURN !area is only distributed to the first child - not from
+    IF(iThisAgeCohort .EQ. 1) RETURN !area is only distributed to the first child - not from
 
-    ! damaged area is assigned to zero age and taken evenly from all ages in this cohort
-    ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
+    ! damaged area is assigned to zero age and taken evenly from all ages in this age cohort
+    ! TODO-JN-COHORTS: could be much simpler, if age cohort boundaries will not be dynamic
     DO j=1,nidx
-      thisMinAge = int(cohort_max_age(j,iThisCohort-1)+1)
-      thisMaxAge = int(cohort_max_age(j,iThisCohort))
+      thisMinAge = int(cohort_max_age(j,iThisAgeCohort-1)+1)
+      thisMaxAge = int(cohort_max_age(j,iThisAgeCohort))
 
       thisAreaSum = SUM(fract_per_age(j,thisMinAge:thisMaxAge))
 
@@ -149,7 +149,7 @@ MODULE mo_fage_process
         !Assertion: sum of available area needs to be larger than disturbed area
         IF(disturbed_area(j) .GT. thisAreaSum) THEN
           WRITE (message_text,*) 'more area disturbed (', disturbed_area(j), &
-            & ') than available (', thisAreaSum , ') at cohort ', iThisCohort
+            & ') than available (', thisAreaSum , ') at age cohort ', iThisAgeCohort
           CALL finish ('update_frac_per_age_equally_upon_disturbance', message_text)
         ENDIF
 
@@ -190,7 +190,7 @@ MODULE mo_fage_process
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    ! TODO-JN-COHORTS: could be much simpler, if cohort boundaries will not be dynamic
+    ! TODO-JN-COHORTS: could be much simpler, if age cohort boundaries will not be dynamic
     DO j=1,nidx
       thisMinAge = int(prev_cohort_max_age(j)+1)
       thisMaxAge = int(this_cohort_max_age(j))
