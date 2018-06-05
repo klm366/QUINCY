@@ -75,7 +75,7 @@ plant_functional_type_id=5      # 1 - 8
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 forcingDataSet="fluxnet"        # options: fluxnet cruncep face none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
-                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"
+                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "HAI_01" "ILO_05" "NAU_02"  [FACE] "DK-AMB" "OR-ELE"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -445,7 +445,7 @@ case "$forcingDataSet" in
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux_all_sites_1995-2006_list.dat
   ;;
 "cruncep")
-  allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_all_gfdb_sites_1984-2013_list.dat
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_cue_gfdb_sites_1984-2013_list.dat
   # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
   if [ "$siteName" == "BBR_01" ] || [ "$siteName" == "LUE_01" ]
    then
@@ -458,12 +458,18 @@ case "$forcingDataSet" in
 esac
 
 
-## test if siteName exists in site info files
+## test if siteName exists in site info file
 if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "cruncep" ] || [ "$forcingDataSet" == "face" ]
  then 
   # validate if $singleSiteName is not empty
   if [ ! -z "$siteName" ]
    then
+    # note for cruncep site limitation
+    if [ $slmModel == "soil" ] && [ "$forcingDataSet" == "cruncep" ]; then
+      echo -e '\n'"  Your are using SLM soil for a cruncep site."
+      echo    "  Note, soil forcing is available only for cue and spp sites."
+    fi
+    # actual test
     allSites=$(cat "$allSiteInfoFile" | awk '{print $1}')
     validateUserConfigValues "$siteName" "$allSites" "siteName"
   fi
@@ -539,6 +545,7 @@ cp ../../data/lctlib_slm_nlct8.def            ./"$slmModel"
 ## copy forcing file(s)
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
   then
+    # forcingDataSet == none (local forcing file needed)
     if [ "$forcingDataSet" == "none" ]
       then
         if [ $slmModel == "soil" ]
@@ -548,11 +555,19 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
           else # land plant canopy
             cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
         fi 
-      else # $forcingDataSet == fluxnet / cruncep / face
+      # forcingDataSet == fluxnet / cruncep / face
+      else 
         if [ $slmModel == "soil" ]
           then
-            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteName"*_lit.dat  ./"$slmModel"/"$forceSoilLitterFile"
-            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteName"*_sph.dat  ./"$slmModel"/"$forceSoilPhysicFile"
+            # use a shorter site name for cruncep forcing 
+            if [ "$forcingDataSet" == "cruncep" ]; then
+              siteNameSoilForceID=$(echo "$siteName" | cut -c1-3)   # e.g. ILO_05 -> ILO
+            else # fluxnet / face
+              siteNameSoilForceID="$siteName"
+            fi
+            # copy files
+            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteNameSoilForceID"*_lit.dat  ./"$slmModel"/"$forceSoilLitterFile"
+            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteNameSoilForceID"*_sph.dat  ./"$slmModel"/"$forceSoilPhysicFile"
           else # land plant canopy
             cp "$siteDataDirBase""$siteDataSet""$metForcingDir""$siteNameStatMetForc"*.dat  ./"$slmModel"/"$forceLandMetFile"
         fi 
@@ -819,8 +834,13 @@ fi
 
 
 ## confirmation of finishing this script & starting SLM ##
-echo " Nice idea !" #OK"
-echo " Let's go with SLM ""$slmModel" #Starting SLM Simulation: ""$slmModel"
+echo " Nice idea !" 
+if [ "$forcingDataSet" == "none" ]; then
+  # siteName variable not valid, so give different feedback compared to using a forcing data set
+  echo " Let's go with SLM ""$slmModel"" for an unknown site, using the local forcing file." 
+else
+  echo " Let's go with SLM ""$slmModel"" for the site: ""$siteName" 
+fi
 echo -n "  ...  "
 
 ## run the SLM binary (always compiled as land.x) ##
