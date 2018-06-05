@@ -17,8 +17,8 @@
 ## note: no trailing "/" but simply "/path/exp_ID" e.g. "/path/exp_fluxnet_test01"
 ##
 #baselineExpFolder="default"
-baselineExpFolder="/Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/exp_80_baseline_fluxnet_npdep_r1208"
-newSimulationExpFolder="/Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/exp_80_baseline_fluxnet_npdep_rxxxx"
+baselineExpFolder="/Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/exp_81_baseline_fluxnet_stdBNF_r1xxx"
+newSimulationExpFolder="/Net/Groups/BGI/work_2/QUINCY/SLM/ReferenceRuns/FLUXNET/exp_81_baseline_fluxnet_stdBNF_r1xxx"
 
 ## modify the location of the all_sites_list.dat if necessary (e.g. when working with a local copy)
 ## default: allSiteList="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat"

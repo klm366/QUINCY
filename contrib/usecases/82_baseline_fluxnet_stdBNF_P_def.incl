@@ -1,13 +1,14 @@
-# default SLM usecase: 83_baseline_fluxnet_def.incl
+# default SLM usecase: 82_baseline_fluxnet_stdBNF_P_def.incl
 # 
 # fluxnet simulations for the SLM baseline manuscript
 #  sites:   all fluxnet sites
 #  runtime: 500 yr spinup + transient simulation
 #  output:  fluxnet comparision figures (from: timestep output for the last complete forcing period at the simulation end, after spinup)
-#
+#           note, simulation length after spinup (1901 to ...) differs across sites
+# 
 
 
-experimentalID="83_baseline_fluxnet"
+experimentalID="82_baseline_fluxnet_stdBNF_P"
 slmModel="land"
 
 forcingDataSet="fluxnet"
@@ -15,10 +16,10 @@ forcingMode="transient"
 customSiteList="F"
 customSiteListFileName=""
 singleSiteName=""
-
+paramSensitivitySim="F"
 
 specialFluxnetOutput="T"
-
+compareSimCRUNCEPvsGFDB="F"
 
 
 ##>> namelist.slm options <<############################################################################
@@ -28,14 +29,11 @@ sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm
 sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
-flag_sb_prescribe_po4="T"       # set po4solute to a constant value
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
 
 # BNF & Mycorrhiza
-bnf_scheme="standard"           # none fixed standard optimal resistance
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
-flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
-flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
-flag_myco_priming="F"           # present mycorrhiza enhance decomposition of residual pool (priming)
 
 # canopy model options
 flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
@@ -45,15 +43,16 @@ ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
 # plant growth model options
-flag_optimal_Nleaf="F"          # optimal N leaf
-flag_optimal_allocation="F"     # optimal allocation
+flag_optimal_Nleaf="F"            # optimal N leaf
+flag_optimal_allocation="F"       # optimal allocation
 # vegetation dynamics options
-veg_dynamics_scheme="population"
-flag_stand_harvest="F"          # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
+veg_dynamics_scheme="population"  # none population cohort
+cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
+flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
-soil_depth=9.5                  # meters
-nsoil_layer=15                   # number of soil layers (default: 5 | min: 5 | max: 20)
+soil_depth=9.5                    # meters
+nsoil_layer=15                    # number of soil layers (default: 5 | min: 5 | max: 20)
 
 # simulation length & output
 simulation_length_number=115     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
@@ -69,11 +68,12 @@ transient_spinup_years=500            # default 500; overall years of spinup rep
 transient_simulation_start_year=1901  # default 1901; simulation start with forcing at this year and ends after simulation_length_number
 
 # forcing input
+flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 useSiteSpecificAWC="T"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0        # float !
 flag_read_dC13="T"              # either use forcing dC13 or the prescribed default value
 flag_read_dC14="T"              # either use forcing dC14 or the prescribed default value
-n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
-p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
+n_deposition_scheme="dynamic"   # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="dynamic"   # options: none constant dynamic (p_srf_down)
 
 queue="io_perform"              # io_perform selects only the new INTEL3 nodes: lshosts
