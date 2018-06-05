@@ -56,6 +56,7 @@ for sl in 5 9 15
 #  create this folder in case it is not present
 soilForce="new_soil_forcing_sl""$sl""/"
 mkdir -p "$pathServerF""$soilForce"
+mkdir -p "$pathServerC""$soilForce"
 
 ## set the experimentalID folder names in the user scratch/slm/ folder containing the simulation results
 expNameF="exp_create_soil_forc_fluxnet_sl""$sl"
@@ -73,7 +74,7 @@ expNameCS="exp_create_soil_forc_cruncep_spp_sl""$sl"
 if [ -d "$pathSourceBase""$expNameF" ] # if folder is present, i.e., new soil_forcing files were created
  then
 
-  echo " Removing old Fluxnet soil_forcing"
+  echo " Removing old Fluxnet soil_forcing from: ""$pathServerF""$soilForce"
   rm -f "$pathServerF""$soilForce"*lit.dat
   rm -f "$pathServerF""$soilForce"*sph.dat
   sync && sleep 0.5
@@ -109,8 +110,8 @@ if [ -d "$pathSourceBase""$expNameCC" ] # if folder is present, i.e., new soil_f
  then
 
   echo " "
-  echo " Removing old cruncep CUE soil_forcing files, and "
-  echo " Copying cruncep CUE soil_forcing from :""$pathSourceBase""$expNameCC"
+  echo " Removing old cruncep CUE soil_forcing files from: ""$pathServerC""$soilForce"
+  echo " and copy cruncep CUE soil_forcing from :""$pathSourceBase""$expNameCC"
   for site in $(ls -d "$pathSourceBase""$expNameCC"/*/)
    do
 
@@ -153,8 +154,8 @@ if [ -d "$pathSourceBase""$expNameCS" ] # if folder is present, i.e., new soil_f
  then
 
   echo " "
-  echo " Removing old cruncep SPP soil_forcing files, and "
-  echo " Copying cruncep SPP soil_forcing from :""$pathSourceBase""$expNameCS"
+  echo " Removing old cruncep CUE soil_forcing files from: ""$pathServerC""$soilForce"
+  echo " and copy cruncep SPP soil_forcing from :""$pathSourceBase""$expNameCS"
   for site in $(ls -d "$pathSourceBase""$expNameCS"/*/)
    do
 
