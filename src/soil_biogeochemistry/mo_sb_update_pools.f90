@@ -91,6 +91,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: p_deposition
     ! VEG_
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    dsl4jsb_Real2D_onChunk :: f_n_demand
+    dsl4jsb_Real2D_onChunk :: f_p_demand
     ! SOIL
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
@@ -240,6 +242,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)            ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,      f_n_demand)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,      f_p_demand)                  ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
@@ -386,6 +390,17 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
+    !> 0.8 correct the plant uptake of nh4, no3 and po4 for soil model 
+    IF (TRIM(base_config%slm_model_name)=='soil') THEN
+        DO i = 1,nc
+          plant_uptake_nh4_sl(i,:)     = plant_uptake_nh4_sl(i,:)     * f_n_demand(i)
+          plant_uptake_nh4_n15_sl(i,:) = plant_uptake_nh4_n15_sl(i,:) * f_n_demand(i)
+          plant_uptake_no3_sl(i,:)     = plant_uptake_no3_sl(i,:)     * f_n_demand(i)
+          plant_uptake_no3_n15_sl(i,:) = plant_uptake_no3_n15_sl(i,:) * f_n_demand(i)
+          plant_uptake_po4_sl(i,:)     = plant_uptake_po4_sl(i,:)     * f_p_demand(i)
+        ENDDO
+    ENDIF
 
     !> 0.9 infrastructure for mass balance checks
     !!
