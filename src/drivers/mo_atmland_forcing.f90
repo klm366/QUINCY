@@ -635,7 +635,7 @@ CONTAINS
       nhx_n15_deposition(:) = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(noy_dn15_deposition_r))
       p_deposition(:)       = p_deposition_r
       f_n_demand(:)         = f_n_demand_r
-      f_n_demand(:)         = f_p_demand_r
+      f_p_demand(:)         = f_p_demand_r
 
     END SELECT  ! land plant canopy vs soil
 
