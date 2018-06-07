@@ -185,7 +185,7 @@ CONTAINS
         & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                   &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
