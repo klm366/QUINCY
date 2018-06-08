@@ -63,10 +63,10 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
     ! ---------------------------
     ! 0.2 Local 
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc)       :: fpc        !< current foliage projective cover
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),      POINTER         :: model
+    TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
+    REAL(wp), DIMENSION(options%nc)         :: fpc              !< current foliage projective cover
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -155,8 +155,8 @@ CONTAINS
     !! 
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       CASE ("population","cohort")
-        fpc(:) = calc_foliage_projective_cover_tile(options,lctlib,veg_pool%sap_wood%carbon(:), & 
-                                                    dens_ind(:),height(:),diameter(:))
+        fpc(:) = calc_foliage_projective_cover_tile(options, lctlib, veg_pool%sap_wood%carbon(:), & 
+                                                    dens_ind(:), height(:), diameter(:))
     ENDSELECT
 
 
@@ -165,10 +165,11 @@ CONTAINS
     !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
     IF (base_config%flag_stand_harvest .AND. .NOT. base_config%l_transient_spinup) THEN
       base_config%l_do_stand_replacing_harvest = .FALSE.                                      ! per default this flag is FALSE
+      ! set stand_harvest to TRUE for the 1st timestep of the stand_replacing_year only
       IF (forcing_options%forcing_year .EQ. base_config%stand_replacing_year .AND. &
           forcing_options%forcing_doy  .EQ. 1                                .AND. &
           forcing_options%forcing_hour .LT. eps4                                    ) THEN
-        base_config%l_do_stand_replacing_harvest = .TRUE.     ! TRUE only for this specific timestep, per default this flag is FALSE
+        base_config%l_do_stand_replacing_harvest = .TRUE. 
       END IF
     END IF
 
@@ -246,9 +247,9 @@ CONTAINS
       !! @todo update_veg_dynamics() l_do_cohort_harvest dimension should be used as nc
       IF(.NOT. base_config%l_do_stand_replacing_harvest .AND. .NOT. l_do_cohort_harvest(options%ics)) THEN 
         IF(lctlib%growthform == itree) THEN
-           delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size , & 
-                                                   dens_ind(:)      , &
-                                                   mortality_rate(:), &
+           delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size           , & 
+                                                   dens_ind(:)                , &
+                                                   mortality_rate(:)          , &
                                                    veg_establishment%carbon(:)) 
         ELSE 
            delta_dens_ind(:) = 0.0_wp
@@ -285,7 +286,7 @@ CONTAINS
 
     USE mo_base_memory,           ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_constants,         ONLY: max_crown_area,min_diameter,k_crown_area,k_rp,itree
+    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, itree
 
     IMPLICIT NONE
     ! ---------------------------
@@ -309,10 +310,10 @@ CONTAINS
       crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
       ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by 
       ! its crown area 
-      lai_ind(:) = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib%wood_density / height(:) * lctlib%k_latosa / & 
-                  crown_area(:)
+      lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib%wood_density / height(:) * lctlib%k_latosa / & 
+                      crown_area(:)
       ! foliage projective cover is then the product of density and individual crown area
-      fpc(:) = crown_area(:) * dens_ind(:) * (1._wp - exp(-0.5_wp * lai_ind(:)))
+      fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - exp(-0.5_wp * lai_ind(:)))
     ELSEWHERE
       lai_ind(:) = 0.0_wp 
       fpc(:)     = 0.0_wp
@@ -340,9 +341,10 @@ CONTAINS
                                 veg_litterfall            , &
                                 mortality_rate )
 
-    USE mo_base_constants
+    USE mo_base_constants,        ONLY: one_day, one_year, dtime
     USE mo_base_memory,           ONLY: t_jsb_task_options
-    USE mo_veg_constants
+    USE mo_veg_constants,         ONLY: min_greff, k1_mort_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
+                                        itree, igrass, background_mort_rate_tree, background_mort_rate_grass
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     dsl4slm_Use_memory_a_veg
 
@@ -370,6 +372,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
     
 
+    !> differ between veg_dynamics_schemes
+    !! population/cohort & none
+    !! 
     SELECT CASE (veg_dynamics_scheme)
       CASE ("population","cohort")
         !> 1.0 mortality related to growth efficiency mortality 
@@ -462,7 +467,6 @@ CONTAINS
                               veg_litterfall            , &
                               mortality_rate)
 
-    USE mo_base_constants
     USE mo_base_memory,           ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: wood_extraction_rate
     dsl4slm_Use_memory_a_veg
@@ -507,23 +511,22 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_establishment(options             , &
-                                    lctlib              , &
-                                    ncanopy             , &
-                                    w_soil_root_theta   , &
-                                    growing_season      , &
-                                    t_air_week_mavg     , &
-                                    fpc, & 
-                                    rfr_ratio_boc_tvegdyn_mavg , &
-                                    veg_pool_seed_bed   , &
-                                    veg_establishment )
+  SUBROUTINE calc_veg_establishment(options                     , &
+                                    lctlib                      , &
+                                    ncanopy                     , &
+                                    w_soil_root_theta           , &
+                                    growing_season              , &
+                                    t_air_week_mavg             , &
+                                    fpc                         , & 
+                                    rfr_ratio_boc_tvegdyn_mavg  , &
+                                    veg_pool_seed_bed           , &
+                                    veg_establishment           )
 
-
-    USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_base_memory,           ONLY: t_jsb_task_options
-    USE mo_rad_constants,         ONLY: rfr_ratio_toc 
-    USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_base_constants,        ONLY: dtime, one_day, one_year
+    USE mo_rad_constants,         ONLY: rfr_ratio_toc 
+    USE mo_veg_constants,         ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
     USE mo_shared_constants,      ONLY: Tzero
     dsl4slm_Use_memory_a_veg
 
@@ -593,7 +596,7 @@ CONTAINS
   !> calculate change in tree density 
   !!
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_delta_dens_ind(lctlib_seed_size         , &
+  PURE ELEMENTAL FUNCTION calc_delta_dens_ind(seed_size                , & ! lctlib
                                               dens_ind                 , &
                                               mortality_rate           , &
                                               veg_establishment_carbon)  &
@@ -602,7 +605,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: lctlib_seed_size         , & !< seed size to convert C into individuals
+    REAL(wp), INTENT(in) :: seed_size                , & !< seed size to convert C into individuals, lctlib parameter
                             dens_ind                 , & !< current individuum density (#/m2) 
                             mortality_rate           , & !< mortality per timestep
                             veg_establishment_carbon     !< vegetation establishment measured in C
@@ -611,7 +614,8 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_density_individuals'
 
-    delta_dens_ind = (veg_establishment_carbon / lctlib_seed_size) - (mortality_rate * dens_ind)
+
+    delta_dens_ind = (veg_establishment_carbon / seed_size) - (mortality_rate * dens_ind)
 
   END FUNCTION calc_delta_dens_ind
 

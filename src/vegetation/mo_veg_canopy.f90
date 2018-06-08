@@ -761,22 +761,22 @@ CONTAINS
   !> Subroutine to calculate change in net photosynthesis and transpiration with small change in LAI
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_marginal_canopy_flux_increment( options               , &
-                                                  lctlib                , &
-                                                  ncanopy               , &
-                                                  flag_optimal_Nfraction, &
-                                                  canopy_layer_depth    , &
-                                                  t_air             , &
-                                                  press_srf         , &
-                                                  q_air             , &
-                                                  co2_mixing_ratio  , &
-                                                  ga                , &
-                                                  net_assimilation  , &
-                                                  canopy_cond       , &
-                                                  beta_air          , &
-                                                  beta_soa          , &
-                                                  beta_soil_ps      , &
-                                                  beta_soil_gs      , &
+  SUBROUTINE calc_marginal_canopy_flux_increment( options                 , &
+                                                  lctlib                  , &
+                                                  ncanopy                 , &
+                                                  flag_optimal_Nfraction  , &
+                                                  canopy_layer_depth      , &
+                                                  t_air                   , &
+                                                  press_srf               , &
+                                                  q_air                   , &
+                                                  co2_mixing_ratio        , &
+                                                  ga                      , &
+                                                  net_assimilation        , &
+                                                  canopy_cond             , &
+                                                  beta_air                , &
+                                                  beta_soa                , &
+                                                  beta_soil_ps            , &
+                                                  beta_soil_gs            , &
                                                   veg_pool_leaf_carbon    , & 
                                                   veg_pool_leaf_nitrogen  , & 
                                                   lai                     , &
@@ -787,7 +787,7 @@ CONTAINS
                                                   fn_et_cl                , &
                                                   fn_rub_cl               , &
                                                   fn_pepc_cl              , &
-                                                  fn_oth_cl                , &
+                                                  fn_oth_cl               , &
                                                   fleaf_sunlit_cl         , &
                                                   ppfd_sunlit_cl          , &
                                                   ppfd_shaded_cl          , &
@@ -1038,8 +1038,8 @@ CONTAINS
                                         reserve_carbon                , &
                                         reserve_nitrogen              , &
                                         labile_carbon                 , &
-                                        labile_nitrogen               , &
-                                        leaf_cn_direction             )
+                                        labile_nitrogen               , & ! in
+                                        leaf_cn_direction             )   ! inout
 
     USE mo_base_memory,           ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
