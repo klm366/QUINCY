@@ -1337,6 +1337,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     ! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
     nitrification_no3(:,:)   = vmax_nitrification * rtm_nitrification_act(:,:) * rmm_nitrification_act(:,:) * & 
+                               sb_pool_microbial_carbon(:,:) / &
+                               ( km_denitrification_c_act(:,:) + sb_pool_microbial_carbon(:,:))  * &
                                (1._wp - anaerobic_volume_fraction_act(:,:)) * nh4_solute(:,:) * dtime/1.e6_wp 
 
     ! potential denitrification rate from NO3 to N2 [mol/m3/timestep]

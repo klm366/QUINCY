@@ -156,7 +156,7 @@ MODULE mo_sb_constants
       k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
       vmax_nitrification, &      !< maximum nitrification rate [µmol mol-1 s-1] 
       vmax_denitrification, &    !< maximum denitrification rate [µmol mol-1 s-1]
-      km_denitrification_c, &    !< half-saturation constant for carbon-limited denitrification [mol C m-3]
+      km_denitrification_c, &    !< half-saturation constant for carbon-limited (de-)nitrification [mol C m-3]
       km_denitrification_no3, &  !< half-saturation constant for nitrate-limited denitrifcation [mol N m-3]
       f_nit_noy, &               !< fraction of nitrification lost as NOy [--]
       f_nit_n2o, &               !< fraction of nitrification lost as N2O [--]
@@ -354,7 +354,7 @@ CONTAINS
     ea_denitrification     = 47000._wp      ! Xu-Ri & Prentice, 2008, to fit their function
     vmax_nitrification     = 0.4_wp / one_day * 1.e6_wp       ! Xu-Ri & Prentice, 2008, 10% / day at 20°C
     vmax_denitrification   = 0.1_wp / one_day * 1.e6_wp       ! Xu-Ri & Prentice, 2008, 10% / day
-    km_denitrification_c   = 0.017 * 1000.0_wp / molar_mass_C ! Xu-Ri & Prentice, 2008   
+    km_denitrification_c   = 20.0_wp 
     km_denitrification_no3 = 0.083 * 1000.0_wp / molar_mass_N ! Xu-Ri & Prentice, 2008
     f_denit_noy            = 0.002          ! Xu-Ri & Prentice, 2008
     f_denit_n2o            = 0.02           ! Xu-Ri & Prentice, 2008
