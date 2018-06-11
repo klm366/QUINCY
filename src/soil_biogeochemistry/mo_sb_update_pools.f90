@@ -72,9 +72,12 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
-    INTEGER                               :: i, isoil
+    INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: nsoil_sb
+    INTEGER                               :: isoil
+!!
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon, p_deposition_sl, hlp1
+!!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -393,12 +396,12 @@ CONTAINS
 
     !> 0.8 correct the plant uptake of nh4, no3 and po4 for soil model 
     IF (TRIM(base_config%slm_model_name)=='soil') THEN
-        DO i = 1,nc
-          plant_uptake_nh4_sl(i,:)     = plant_uptake_nh4_sl(i,:)     * f_n_demand(i)
-          plant_uptake_nh4_n15_sl(i,:) = plant_uptake_nh4_n15_sl(i,:) * f_n_demand(i)
-          plant_uptake_no3_sl(i,:)     = plant_uptake_no3_sl(i,:)     * f_n_demand(i)
-          plant_uptake_no3_n15_sl(i,:) = plant_uptake_no3_n15_sl(i,:) * f_n_demand(i)
-          plant_uptake_po4_sl(i,:)     = plant_uptake_po4_sl(i,:)     * f_p_demand(i)
+        DO isoil = 1,options%nsoil_sb
+          plant_uptake_nh4_sl(:,isoil)     = plant_uptake_nh4_sl(:,isoil)     * f_n_demand(:)
+          plant_uptake_nh4_n15_sl(:,isoil) = plant_uptake_nh4_n15_sl(:,isoil) * f_n_demand(:)
+          plant_uptake_no3_sl(:,isoil)     = plant_uptake_no3_sl(:,isoil)     * f_n_demand(:)
+          plant_uptake_no3_n15_sl(:,isoil) = plant_uptake_no3_n15_sl(:,isoil) * f_n_demand(:)
+          plant_uptake_po4_sl(:,isoil)     = plant_uptake_po4_sl(:,isoil)     * f_p_demand(:)
         ENDDO
     ENDIF
 
@@ -557,7 +560,7 @@ CONTAINS
     !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
     !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
 
-    !> 4.2 update of mineral N pools
+    !> 4.2 atmospheric deposition
     !!
     nh4_solute(:,1)      = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
     no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
@@ -628,6 +631,9 @@ CONTAINS
     !!
     bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
     bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
+    !DO isoil = 1,nsoil_sb
+    !   hlp1(:,isoil) = 0.9_wp * exp(-0.9_wp * SUM(soil_depth_sl(:,1:isoil),DIM=2)) + 0.1_wp
+    !ENDDO
     qmax_org = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,0._wp,qmax_org_min_sl)
     qmax_po4 = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_om_sl,qmax_po4_min_sl)
     km_adsorpt_po4_sl = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl, &
