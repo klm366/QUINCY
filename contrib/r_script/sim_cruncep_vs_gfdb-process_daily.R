@@ -52,7 +52,9 @@ for (s in 1:nsite) {
    cc13c14_soilflux <- read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
    n_soilflux       <- read.table(paste(dirnames[[s]],'output/','soilfluxN_daily.txt',sep=''),header=T)  
    p_soilflux       <- read.table(paste(dirnames[[s]],'output/','soilfluxP_daily.txt',sep=''),header=T)  
- 
+   atm_forcing      <- read.table(paste(dirnames[[s]],'output/','atm_forcing_daily.txt',sep=''),header=T) 
+   h2oflux          <- read.table(paste(dirnames[[s]],'output/','vegfluxH2O_daily.txt',sep=''),header=T)  
+
    ntime            <- dim(cpool)[1]
    ncpoolvar        <- dim(cpool)[2]-1
    ncfluxvar        <- dim(cflux)[2]-1
@@ -62,6 +64,8 @@ for (s in 1:nsite) {
    ncsoilfluxvar    <- dim(cc13c14_soilflux)[2]-1
    nnsoilfluxvar    <- dim(n_soilflux)[2]-1
    npsoilfluxvar    <- dim(p_soilflux)[2]-1
+   natmforcingvar   <- dim(atm_forcing)[2]-1
+   nh2ofluxvar      <- dim(h2oflux)[2]-1
    nyear            <- as.integer(round(ntime/365,0))
    yearidx          <- numeric(ntime)  # creates a vector of length ntime
    years            <- numeric(nyear)  # creates a vector of length nyear
@@ -159,12 +163,12 @@ for (s in 1:nsite) {
    #soil water
    if(s==1) { 
       soilwater_mean<-array(NA,c(nsite,2))
-      colnames(soilwater_mean)<-c('SoilMoisture','SoilWaterPotential')
+      colnames(soilwater_mean)<-c('RootZoneSoilMoisture','RootZoneSoilWaterPotential')
       soilwater_std<-soilwater_mean
    }
-   var_idx<-which(colnames(h2opool)=='SoilMoisture'|colnames(h2opool)=='SoilWaterPotential')
+   var_idx<-which(colnames(h2opool)=='RootZoneSoilMoisture'|colnames(h2opool)=='RootZoneSoilWaterPotential')
    for (var in var_idx) {
-     if(colnames(h2opool)[var]=='SoilMoisture') {hlp1<-aggregate(h2opool[,var],list(yearidx),mean)/aggregate(h2opool[,var],list(yearidx),max)} 
+     if(colnames(h2opool)[var]=='RootZoneSoilMoisture') {hlp1<-aggregate(h2opool[,var],list(yearidx),mean)/aggregate(h2opool[,var],list(yearidx),max)} 
      else {hlp1<-aggregate(h2opool[,var],list(yearidx),min)} 
      soilwater_mean[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
      soilwater_std[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
@@ -230,13 +234,39 @@ for (s in 1:nsite) {
      p_soilflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
      p_soilflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
+
+   # atmospheric forcing 
+   if(s==1) { 
+      atm_forcing_mean<-array(NA,c(nsite,natmforcingvar))
+      colnames(atm_forcing_mean)<-colnames(atm_forcing)[1+1:natmforcingvar]
+      atm_forcing_std<-atm_forcing_mean
+   }
+   for (var in 1:natmforcingvar) {
+     hlp1<-aggregate(atm_forcing[,var+1],list(yearidx),mean) 
+     atm_forcing_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     atm_forcing_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
+   }
+
+   # h2o fluxes 
+   if(s==1) { 
+      h2oflux_mean<-array(NA,c(nsite,nh2ofluxvar))
+      colnames(h2oflux_mean)<-colnames(h2oflux)[1+1:nh2ofluxvar]
+      h2oflux_std<-h2oflux_mean
+   }
+   for (var in 1:nh2ofluxvar) {
+     hlp1<-aggregate(h2oflux[,var+1],list(yearidx),sum) 
+     h2oflux_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     h2oflux_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
+   }
 }   
 
 # mean values:         slm_site_mean.csv
 out_mean<-cbind(site_str,cpool_mean,diag_mean,stoch_mean,cflux_mean,nflux_mean,pflux_mean,isotope_mean,
-                soilwater_mean,cnp_soilpool_mean,cc13c14_soilflux_mean,n_soilflux_mean,n_soilflux_mean)
+                soilwater_mean,cnp_soilpool_mean,cc13c14_soilflux_mean,n_soilflux_mean,n_soilflux_mean, 
+                atm_forcing_mean,h2oflux_mean)
 write.csv(out_mean,file='slm_site_mean.csv',quote=F)
 # standard deviation:  slm_site_sd.csv
 out_std<-cbind(site_str,cpool_std,diag_std,stoch_std,cflux_std,nflux_std,pflux_std,isotope_std,
-               soilwater_std,cnp_soilpool_std,cc13c14_soilflux_std,n_soilflux_std,p_soilflux_std)
+               soilwater_std,cnp_soilpool_std,cc13c14_soilflux_std,n_soilflux_std,p_soilflux_std, 
+               atm_forcing_std,h2oflux_std)
 write.csv(out_std,file='slm_site_sd.csv',quote=F)

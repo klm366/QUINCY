@@ -47,6 +47,7 @@ MODULE mo_soil_memory_class
     ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
     TYPE(t_jsb_var_real2d)          :: &
                                     interception,     & !< surface interception evaporation  [kg / m2 / s]
+                                    pet,              & !< potential evaporation  [kg / m2 / s]
                                     evaporation,      & !< surface evaporation  [kg / m2 / s]
                                     runoff,           & !< surface runoff  [kg / m2 / s]
                                     drainage,         & !< drainage        [kg / m2 / s]
@@ -207,6 +208,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'interception', mem%interception, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'pet', mem%pet, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

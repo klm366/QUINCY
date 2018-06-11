@@ -1410,7 +1410,7 @@ CONTAINS
         WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP'
         lun=lun+1
         ! vegfluxH2O
-        WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
+        WRITE(lun,'(a)') 'Time Precip PET Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
@@ -1653,6 +1653,7 @@ CONTAINS
     REAL(wp), SAVE                        :: evaporation_acc     = 0.0_wp 
     REAL(wp), SAVE                        :: transpiration_acc   = 0.0_wp 
     REAL(wp), SAVE                        :: interception_acc    = 0.0_wp 
+    REAL(wp), SAVE                        :: pet_acc             = 0.0_wp 
     REAL(wp), SAVE                        :: runoff_acc          = 0.0_wp 
     REAL(wp), SAVE                        :: drainage_acc        = 0.0_wp 
     REAL(wp), SAVE                        :: gc_acc              = 0.0_wp
@@ -1850,6 +1851,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: interception 
+    dsl4jsb_Real2D_onChunk      :: pet 
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk      :: total_flux_carbon
     dsl4jsb_Real2D_onChunk      :: total_flux_nitrogen
@@ -1965,6 +1967,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)
     dsl4jsb_Get_var2D_onChunk(SOIL_, interception)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, pet)
     dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
@@ -2165,6 +2168,7 @@ CONTAINS
              IF(output_interval_flux < 1.0_wp) THEN  ! if interval == timestep (output_interval_flux is smaller 1.0 only for timestep interval)
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))  
                 interception_acc = interception_acc  + interception(ipoi)       
+                pet_acc          = pet_acc           + pet(ipoi)       
                 evaporation_acc  = evaporation_acc   + evaporation(ipoi)       
                 transpiration_acc= transpiration_acc + transpiration(ipoi)      
                 runoff_acc       = runoff_acc        + runoff(ipoi)              
@@ -2172,6 +2176,7 @@ CONTAINS
              ELSE
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))          * dtime
                 interception_acc = interception_acc  + interception(ipoi)                 * dtime 
+                pet_acc          = pet_acc           + pet(ipoi)                          * dtime 
                 evaporation_acc  = evaporation_acc   + evaporation(ipoi)                  * dtime
                 transpiration_acc= transpiration_acc + transpiration(ipoi)                * dtime
                 runoff_acc       = runoff_acc        + runoff(ipoi)                       * dtime
@@ -2262,7 +2267,7 @@ CONTAINS
                    write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
                    lun=lun+1
                    ! vegfluxH2O
-                   write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, & 
+                   write(lun,'(12F18.8)') time_d, precip_acc, pet_acc, evaporation_acc, interception_acc, & 
                                           transpiration_acc, runoff_acc, drainage_acc, gc_acc, ga_acc
                    lun=lun+1
                    IF(ppfd_acc>eps8) THEN
@@ -2288,7 +2293,7 @@ CONTAINS
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
                    ! vegfluxH2O
-                   write(lun,'(12F18.8)') time_d, precip_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
+                   write(lun,'(12F18.8)') time_d, precip_acc, pet_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
                                           drainage_acc, gc_acc, ga_acc
                    lun=lun+1
                    IF(ppfd_acc>eps8) THEN
@@ -2352,6 +2357,7 @@ CONTAINS
                precip_acc                 = 0.0_wp
                evaporation_acc            = 0.0_wp
                interception_acc           = 0.0_wp
+               pet_acc                    = 0.0_wp
                transpiration_acc          = 0.0_wp
                drainage_acc               = 0.0_wp
                runoff_acc                 = 0.0_wp

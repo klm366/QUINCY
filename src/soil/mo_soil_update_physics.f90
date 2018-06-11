@@ -108,6 +108,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pot
     dsl4jsb_Real2D_onChunk                :: interception 
+    dsl4jsb_Real2D_onChunk                :: pet 
     dsl4jsb_Real2D_onChunk                :: evaporation 
     dsl4jsb_Real2D_onChunk                :: runoff
     dsl4jsb_Real2D_onChunk                :: drainage
@@ -194,6 +195,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_skin)              ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)         ! inout
     dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SOIL_, pet)                 ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, interception)        ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)         ! out
     dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)              ! out
@@ -244,7 +246,7 @@ CONTAINS
                                      soil_depth_sl(:,:),heat_capa_sl(:,:),therm_cond_sl(:,:),bulk_dens_sl(:,:), &
                                      ga(:),drag_srf(:),pch(:), & 
                                      ground_heat_flx_old(:),zril_old(:),t_srf_old(:), & 
-                                     evaporation(:),interception(:),transpiration(:), & 
+                                     pet(:),evaporation(:),interception(:),transpiration(:), & 
                                      sensible_heat_flx(:),latent_heat_flx(:),ground_heat_flx(:), & 
                                      net_radiation(:),t_soil_sl(:,:))
 
@@ -288,7 +290,7 @@ CONTAINS
                                          soil_depth_sl,heat_capa_sl,therm_cond_sl,bulk_dens_sl, &
                                          ga,drag_srf,pch, & 
                                          ground_heat_flx_old,zril_old,t_srf_old, & 
-                                         evaporation,interception,transpiration, & 
+                                         pet,evaporation,interception,transpiration, & 
                                          sensible_heat_flx,latent_heat_flx,ground_heat_flx,net_radiation,t_soil_sl)
 
     USE mo_base_memory,               ONLY: t_jsb_task_options
@@ -332,6 +334,7 @@ CONTAINS
                                                                        ga, &                  !< aerodynamic conductance [m/s] 
                                                                        drag_srf, &            !< surface drag coefficient (JSBACH-style!)
                                                                        pch, &                 !< heat exchange parameter (JSBACH-style!)
+                                                                       pet, &                 !< potential evaporation rate [kg / m2 /s]
                                                                        evaporation, &         !< evaporation rate [kg / m2 /s]
                                                                        interception, &        !< interception loss rate [kg / m2 /s]
                                                                        transpiration, &       !< transpiration rate [kg / m2 /s]
@@ -450,7 +453,11 @@ CONTAINS
       ELSEWHERE
          interception(:) = 0.0_wp
       ENDWHERE
-  
+ 
+      !> 2.45 diagnose potential evaporation (kg / m2 / s)
+      pet(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
+               (q_sat_srf(:) - q_air(:)) / ( 1._wp / (0.082_wp * heat_tcoef(:) * wind_air(:)))
+ 
       !> 2.5 calculate latent heat flux (W m-2), negative here for JSBACH flux convention 
       !!
       latent_heat_flx(:)    = - LatentHeatVaporization * (evaporation(:) + transpiration(:) + interception(:))
