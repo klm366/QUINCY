@@ -17,7 +17,7 @@ MODULE mo_veg_growth
   USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
   USE mo_base_memory,           ONLY: t_jsb_task_options
-  USE mo_veg_constants
+
 
   IMPLICIT NONE
   PRIVATE
@@ -45,6 +45,7 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_respiration,         ONLY: temperature_response_respiration, calc_maintenance_respiration 
     USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
+    USE mo_veg_constants,           ONLY: fmaint_rate_base
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
@@ -71,14 +72,15 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc)       :: dheight, target_labile_pool_carbon, target_labile_pool_nitrogen, target_labile_pool_phosphorus, &
-                                             target_reserve_pool_carbon, target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
-    INTEGER                               :: nsoil_sb
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),      POINTER         :: model            !< model 
+    TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
+    REAL(wp), DIMENSION(options%nc)         :: dheight, target_labile_pool_carbon, target_labile_pool_nitrogen, &
+                                               target_labile_pool_phosphorus, target_reserve_pool_carbon, &
+                                               target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
+    REAL(wp), DIMENSION(options%nc)         :: hlp1
+    INTEGER                                 :: nsoil_sb
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
-    REAL(wp), DIMENSION(options%nc)       :: hlp1
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -122,9 +124,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_po4_sl
-    ! SOIL_
+    ! SOIL_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk      :: t_soil_root
+    ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -432,16 +435,16 @@ CONTAINS
     !> 1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and 
     !!     update N-specific maintenance respiration rate 
     !!
-    maint_respiration_pot(:) = calc_maintenance_respiration(t_air(:), t_air_tacclim_mavg(:), & 
-                                                            t_soil_root(:), t_soil_root_tacclim_mavg(:), &  
-                                                            veg_pool%sap_wood%nitrogen(:)     , & 
-                                                            veg_pool%fine_root%nitrogen(:)    , &
-                                                            veg_pool%coarse_root%nitrogen(:)) + & 
+    maint_respiration_pot(:) = calc_maintenance_respiration(t_air(:), t_air_tacclim_mavg(:)             , & 
+                                                            t_soil_root(:), t_soil_root_tacclim_mavg(:) , &  
+                                                            veg_pool%sap_wood%nitrogen(:)               , & 
+                                                            veg_pool%fine_root%nitrogen(:)              , &
+                                                            veg_pool%coarse_root%nitrogen(:)            ) + & 
                                maint_respiration_leaf(:) 
     fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
 
-    !> 1,2 calculate utrient demand scalars
-
+    !> 1.2 calculate utrient demand scalars
+    !! 
     CALL calc_nutrient_demand_scalar(lctlib%cn_leaf                 , &
                                      lctlib%np_leaf                 , &
                                      leaf2root_troot_mavg(:)        , &
@@ -499,6 +502,7 @@ CONTAINS
                                           n_processing_respiration(:), &
                                           veg_exudation%carbon(:))
 
+
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
     !! in this function it is looped over chunks with two IF staments:  \n
@@ -507,102 +511,101 @@ CONTAINS
     !!   IF(veg_pool_leaf_nitrogen(ichunk) > eps4)THEN
     !! 
     IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) THEN
-      CALL calc_dir_optimal_cn_leaf( &
-                                        options                                        , & ! in
+      CALL calc_dir_optimal_cn_leaf(    options                                        , & ! in
                                         lctlib                                         , &
                                         dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                                        growing_season(:)                , &
-                                        veg_pool%leaf%carbon(:)          , &  
-                                        veg_pool%leaf%nitrogen(:)        , & 
-                                        lai(:)                           , &
-                                        t_jmax_opt_mavg(:)               , &
-                                        target_cn_leaf(:)                , &
-                                        t_air_tacclim_mavg(:)            , &
-                                        t_air_tcnl_mavg(:)               , &
-                                        ga_tcnl_mavg(:)                  , &
-                                        press_srf_tcnl_mavg(:)           , &
-                                        co2_mixing_ratio_tcnl_mavg(:)    , &
-                                        beta_sinklim_ps_tcnl_mavg(:)     , &
-                                        beta_air_tcnl_mavg(:)            , &
-                                        beta_soa(:)                      , &
-                                        beta_soil_ps_tcnl_mavg(:)        , &
-                                        beta_soil_gs_tcnl_mavg(:)        , &
-                                        fn_chl_cl(:,:)                   , &
-                                        fn_et_cl(:,:)                    , &
-                                        fn_rub_cl(:,:)                   , &
-                                        fn_pepc_cl(:,:)                  , &
-                                        fn_oth_cl(:,:)                   , &
-                                        fleaf_sunlit_tcnl_mavg_cl(:,:)   , &
-                                        ppfd_sunlit_tcnl_mavg_cl(:,:)    , &
-                                        ppfd_shaded_tcnl_mavg_cl(:,:)    , &
-                                        uptake_n_tcnl_mavg(:)            , &
-                                        growth_cn_tcnl_mavg(:)           , &
-                                        npp_tcnl_mavg(:)                 , &
-                                        reserve_carbon_tcnl_mavg(:)      , &
-                                        reserve_nitrogen_tcnl_mavg(:)    , &
-                                        labile_carbon_tcnl_mavg(:)       , &
-                                        labile_nitrogen_tcnl_mavg(:)     , &
-                                        leaf_cn_direction(:)             )
+                                        growing_season(:)                              , &
+                                        veg_pool%leaf%carbon(:)                        , &  
+                                        veg_pool%leaf%nitrogen(:)                      , & 
+                                        lai(:)                                         , &
+                                        t_jmax_opt_mavg(:)                             , &
+                                        target_cn_leaf(:)                              , &
+                                        t_air_tacclim_mavg(:)                          , &
+                                        t_air_tcnl_mavg(:)                             , &
+                                        ga_tcnl_mavg(:)                                , &
+                                        press_srf_tcnl_mavg(:)                         , &
+                                        co2_mixing_ratio_tcnl_mavg(:)                  , &
+                                        beta_sinklim_ps_tcnl_mavg(:)                   , &
+                                        beta_air_tcnl_mavg(:)                          , &
+                                        beta_soa(:)                                    , &
+                                        beta_soil_ps_tcnl_mavg(:)                      , &
+                                        beta_soil_gs_tcnl_mavg(:)                      , &
+                                        fn_chl_cl(:,:)                                 , &
+                                        fn_et_cl(:,:)                                  , &
+                                        fn_rub_cl(:,:)                                 , &
+                                        fn_pepc_cl(:,:)                                , &
+                                        fn_oth_cl(:,:)                                 , &
+                                        fleaf_sunlit_tcnl_mavg_cl(:,:)                 , &
+                                        ppfd_sunlit_tcnl_mavg_cl(:,:)                  , &
+                                        ppfd_shaded_tcnl_mavg_cl(:,:)                  , &
+                                        uptake_n_tcnl_mavg(:)                          , &
+                                        growth_cn_tcnl_mavg(:)                         , &
+                                        npp_tcnl_mavg(:)                               , &
+                                        reserve_carbon_tcnl_mavg(:)                    , &
+                                        reserve_nitrogen_tcnl_mavg(:)                  , &
+                                        labile_carbon_tcnl_mavg(:)                     , &
+                                        labile_nitrogen_tcnl_mavg(:)                   , & ! in
+                                        leaf_cn_direction(:)                           )   ! inout
     END IF ! dsl4jsb_Config(VEG_)%flag_optimal_Nleaf
 
-    CALL calc_stoichiometry_changes(  lctlib%growthform                       , &   ! lctlib
-                                      lctlib%cn_leaf                          , &   ! lctlib
+    CALL calc_stoichiometry_changes(  lctlib%growthform                       , & ! lctlib
+                                      lctlib%cn_leaf                          , & ! lctlib
                                       dsl4jsb_Config(VEG_)%flag_optimal_Nleaf , & ! in
                                       growing_season(:)                       , &
                                       leaf_cn_direction(:)                    , &
                                       target_np_leaf(:)                       , &
-                                      target_cn_leaf(:)           , & ! inout
-                                      target_cn_fine_root(:)      , & ! out
-                                      target_cn_coarse_root(:)    , &
-                                      target_cn_sap_wood(:)       , &
-                                      target_cn_fruit(:)          , &
-                                      target_np_fine_root(:)      , &
-                                      target_np_coarse_root(:)    , &
-                                      target_np_sap_wood(:)       , &
-                                      target_np_fruit(:)          )
+                                      target_cn_leaf(:)                       , & ! inout
+                                      target_cn_fine_root(:)                  , & ! out
+                                      target_cn_coarse_root(:)                , &
+                                      target_cn_sap_wood(:)                   , &
+                                      target_cn_fruit(:)                      , &
+                                      target_np_fine_root(:)                  , &
+                                      target_np_coarse_root(:)                , &
+                                      target_np_sap_wood(:)                   , &
+                                      target_np_fruit(:)                      )
+
 
     !> 3.0 calculate current allometry 
     !! 
     !! 
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
-    CALL calc_marginal_canopy_flux_increment( &
-                                              options                                         , & ! in
+    CALL calc_marginal_canopy_flux_increment( options                                         , & ! in
                                               lctlib                                          , &
                                               dsl4jsb_Config(ASSIMI_)%ncanopy                 , &
                                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction  , &
                                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)   , &
-                                              t_air(:)                    , &
-                                              press_srf(:)                , &
-                                              q_air(:)                    , &
-                                              co2_mixing_ratio(:)         , &
-                                              ga(:)                       , & 
-                                              net_assimilation(:)         , & 
-                                              canopy_cond(:)              , & 
-                                              beta_air(:)                 , &
-                                              beta_soa(:)                 , & 
-                                              beta_soil_ps(:)             , & 
-                                              beta_soil_gs(:)             , & 
-                                              veg_pool%leaf%carbon(:)     , &  
-                                              veg_pool%leaf%nitrogen(:)   , &
-                                              lai(:)                      , &
-                                              beta_sinklim_ps(:)          , &
-                                              t_air_tacclim_mavg(:)       , &
-                                              t_jmax_opt_mavg(:)          , &
-                                              fn_chl_cl(:,:)              , &
-                                              fn_et_cl(:,:)               , &
-                                              fn_rub_cl(:,:)              , &
-                                              fn_pepc_cl(:,:)             , &
-                                              fn_oth_cl(:,:)              , &
-                                              fleaf_sunlit_cl(:,:)        , &
-                                              ppfd_sunlit_cl(:,:)         , &
-                                              ppfd_shaded_cl(:,:)         , &
-                                              swpar_srf_down(:)           , &
-                                              swpar_fdiffuse(:)           , &
-                                              unit_npp(:)                 , & ! out
-                                              unit_transpiration(:)       )   
+                                              t_air(:)                                        , &
+                                              press_srf(:)                                    , &
+                                              q_air(:)                                        , &
+                                              co2_mixing_ratio(:)                             , &
+                                              ga(:)                                           , & 
+                                              net_assimilation(:)                             , & 
+                                              canopy_cond(:)                                  , & 
+                                              beta_air(:)                                     , &
+                                              beta_soa(:)                                     , & 
+                                              beta_soil_ps(:)                                 , & 
+                                              beta_soil_gs(:)                                 , & 
+                                              veg_pool%leaf%carbon(:)                         , &  
+                                              veg_pool%leaf%nitrogen(:)                       , &
+                                              lai(:)                                          , &
+                                              beta_sinklim_ps(:)                              , &
+                                              t_air_tacclim_mavg(:)                           , &
+                                              t_jmax_opt_mavg(:)                              , &
+                                              fn_chl_cl(:,:)                                  , &
+                                              fn_et_cl(:,:)                                   , &
+                                              fn_rub_cl(:,:)                                  , &
+                                              fn_pepc_cl(:,:)                                 , &
+                                              fn_oth_cl(:,:)                                  , &
+                                              fleaf_sunlit_cl(:,:)                            , &
+                                              ppfd_sunlit_cl(:,:)                             , &
+                                              ppfd_shaded_cl(:,:)                             , &
+                                              swpar_srf_down(:)                               , &
+                                              swpar_fdiffuse(:)                               , & ! in
+                                              unit_npp(:)                                     , & ! out
+                                              unit_transpiration(:)                           )   ! out 
     
     !> 3.2 calculate allometry    
     !!
@@ -620,32 +623,33 @@ CONTAINS
                         lctlib%c0_allom                               , &  ! lctlib
                         dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
                         TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)         , &
-                        height(:)                        , &
-                        veg_pool%sap_wood%carbon(:)      , &
-                        veg_pool%heart_wood%carbon(:)    , &
-                        dens_ind(:)                      , & 
-                        labile_carbon_talloc_mavg(:)     , &
-                        labile_nitrogen_talloc_mavg(:)   , & 
-                        labile_phosphorus_talloc_mavg(:) , &
-                        reserve_carbon_talloc_mavg(:)    , &
-                        reserve_nitrogen_talloc_mavg(:)  , &
-                        reserve_phosphorus_talloc_mavg(:), &
-                        growth_cn_talloc_mavg(:)         , &
-                        growth_cp_talloc_mavg(:)         , & 
-                        npp_talloc_mavg(:)               , &
-                        unit_npp_talloc_mavg(:)          , &
-                        transpiration_talloc_mavg(:)     , &
-                        unit_transpiration_talloc_mavg(:), &
-                        n_fixation_talloc_mavg(:)        , &
-                        unit_uptake_n_talloc_mavg(:)     , &
-                        unit_uptake_p_talloc_mavg(:)     , &
-                        dphi_talloc_mavg(:)              , &
-                        kstar_labile(:)                  , &
-                        dheight(:)                       , &  ! out
-                        leaf2sapwood_mass_ratio(:)       , & 
-                        leaf2root_mass_ratio(:)          , &
-                        k1_opt(:)                        , &
-                        k2_opt(:)                        )
+                        height(:)                                     , &
+                        veg_pool%sap_wood%carbon(:)                   , &
+                        veg_pool%heart_wood%carbon(:)                 , &
+                        dens_ind(:)                                   , & 
+                        labile_carbon_talloc_mavg(:)                  , &
+                        labile_nitrogen_talloc_mavg(:)                , & 
+                        labile_phosphorus_talloc_mavg(:)              , &
+                        reserve_carbon_talloc_mavg(:)                 , &
+                        reserve_nitrogen_talloc_mavg(:)               , &
+                        reserve_phosphorus_talloc_mavg(:)             , &
+                        growth_cn_talloc_mavg(:)                      , &
+                        growth_cp_talloc_mavg(:)                      , & 
+                        npp_talloc_mavg(:)                            , &
+                        unit_npp_talloc_mavg(:)                       , &
+                        transpiration_talloc_mavg(:)                  , &
+                        unit_transpiration_talloc_mavg(:)             , &
+                        n_fixation_talloc_mavg(:)                     , &
+                        unit_uptake_n_talloc_mavg(:)                  , &
+                        unit_uptake_p_talloc_mavg(:)                  , &
+                        dphi_talloc_mavg(:)                           , &
+                        kstar_labile(:)                               , &
+                        dheight(:)                                    , &  ! out
+                        leaf2sapwood_mass_ratio(:)                    , & 
+                        leaf2root_mass_ratio(:)                       , &
+                        k1_opt(:)                                     , &
+                        k2_opt(:)                                     )
+
     
     !> 4.0 calculate reserve & labile pool dynamics
     !! 
@@ -712,56 +716,56 @@ CONTAINS
     CALL calc_allocation_fraction(options                                       , & ! in
                                   lctlib                                        , & 
                                   dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
-                                  dheight(:)                      , &
-                                  kstar_labile(:)                 , &
-                                  veg_pool%leaf%carbon(:)         , &
-                                  veg_pool%sap_wood%carbon(:)     , &
-                                  veg_pool%coarse_root%carbon(:)  , &
-                                  veg_pool%fine_root%carbon(:)    , &
-                                  veg_pool%labile%carbon(:)       , &
-                                  height(:)                       , &
-                                  leaf2sapwood_mass_ratio(:)      , &
-                                  leaf2root_mass_ratio(:)         , & 
-                                  k1_opt(:)                       , &
-                                  k2_opt(:)                       , &
-                                  target_cn_leaf(:)               , &
-                                  target_cn_fine_root(:)          , &
-                                  target_cn_coarse_root(:)        , &
-                                  target_cn_sap_wood(:)           , &
-                                  target_cn_fruit(:)              , &
-                                  target_np_leaf(:)               , &
-                                  target_np_fine_root(:)          , &
-                                  target_np_coarse_root(:)        , &
-                                  target_np_sap_wood(:)           , &
-                                  target_np_fruit(:)              , &
-                                  veg_reserve_use%carbon(:)       , & 
-                                  veg_falloc                      , & ! inout
-                                  growth_req_n(:)                 , & ! out
-                                  growth_req_p(:)                 )   ! out
+                                  dheight(:)                                    , &
+                                  kstar_labile(:)                               , &
+                                  veg_pool%leaf%carbon(:)                       , &
+                                  veg_pool%sap_wood%carbon(:)                   , &
+                                  veg_pool%coarse_root%carbon(:)                , &
+                                  veg_pool%fine_root%carbon(:)                  , &
+                                  veg_pool%labile%carbon(:)                     , &
+                                  height(:)                                     , &
+                                  leaf2sapwood_mass_ratio(:)                    , &
+                                  leaf2root_mass_ratio(:)                       , & 
+                                  k1_opt(:)                                     , &
+                                  k2_opt(:)                                     , &
+                                  target_cn_leaf(:)                             , &
+                                  target_cn_fine_root(:)                        , &
+                                  target_cn_coarse_root(:)                      , &
+                                  target_cn_sap_wood(:)                         , &
+                                  target_cn_fruit(:)                            , &
+                                  target_np_leaf(:)                             , &
+                                  target_np_fine_root(:)                        , &
+                                  target_np_coarse_root(:)                      , &
+                                  target_np_sap_wood(:)                         , &
+                                  target_np_fruit(:)                            , &
+                                  veg_reserve_use%carbon(:)                     , & 
+                                  veg_falloc                                    , & ! inout
+                                  growth_req_n(:)                               , & ! out
+                                  growth_req_p(:)                               )   ! out
 
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
     !! 
-    CALL calc_partitioning(options                          , & ! in
-                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
-                           kstar_labile(:)                  , &
-                           maint_respiration_pot(:)         , &
-                           maint_respiration_leaf(:)        , &
-                           growth_req_p(:)                  , &
-                           growth_req_n(:)                  , &
-                           veg_falloc                       , &
-                           veg_pool%labile                  , &
-                           n_processing_respiration(:)      , & ! inout
-                           maint_respiration_c13(:)         , &
-                           maint_respiration_c14(:)         , &
-                           growth_respiration_c13(:)        , &
-                           growth_respiration_c14(:)        , &
-                           n_processing_respiration_c13(:)  , &
-                           n_processing_respiration_c14(:)  , &
-                           veg_growth                       , &
-                           veg_exudation                    , &
-                           maint_respiration(:)             , & ! out
-                           growth_respiration(:)  )             ! out
+    CALL calc_partitioning(options                                , & ! in
+                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)  , &
+                           kstar_labile(:)                        , &
+                           maint_respiration_pot(:)               , &
+                           maint_respiration_leaf(:)              , &
+                           growth_req_p(:)                        , &
+                           growth_req_n(:)                        , &
+                           veg_falloc                             , &
+                           veg_pool%labile                        , &
+                           n_processing_respiration(:)            , & ! inout
+                           maint_respiration_c13(:)               , &
+                           maint_respiration_c14(:)               , &
+                           growth_respiration_c13(:)              , &
+                           growth_respiration_c14(:)              , &
+                           n_processing_respiration_c13(:)        , &
+                           n_processing_respiration_c14(:)        , &
+                           veg_growth                             , &
+                           veg_exudation                          , &
+                           maint_respiration(:)                   , & ! out
+                           growth_respiration(:)                  )   ! out
 
 ! Pass back values to process memory
 #define Passback_veg_pool
@@ -796,6 +800,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,growing_season) RESULT(kstar_labile)
 
+    USE mo_kind,              ONLY: wp   
     USE mo_shared_constants,  ONLY: Tzero
     USE mo_veg_constants,     ONLY: lambda_labile_temp  , &
                                     lambda_labile_theta , &
@@ -803,15 +808,18 @@ CONTAINS
                                     k_labile_theta      , &
                                     tau_labile
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K) 
     REAL(wp),   INTENT(in)    :: w_soil_root_theta      !< soil moisture scalar (fraction of available water holding capacity) 
     LOGICAL,    INTENT(in)    :: growing_season         !< is the plant growing? 
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                :: ftemp                  ! temperature limit on cell construction rate
-    REAL(wp)                :: fmoist                 ! moisture limit on cell construction rate
+    REAL(wp)                  :: ftemp                  ! temperature limit on cell construction rate
+    REAL(wp)                  :: fmoist                 ! moisture limit on cell construction rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_meristem_activity'
+
   
     IF(t_air > Tzero) THEN 
         ftemp = 1.0_wp - exp(-(lambda_labile_temp * (t_air - Tzero))**k_labile_temp)
@@ -845,10 +853,12 @@ CONTAINS
                                                    f_n_demand, &
                                                    f_p_demand)
 
-    USE mo_veg_constants, ONLY: kappa_f_demand_nc, kappa_f_demand_pn, k_f_demand, root2leaf_cn, root2leaf_np
+    USE mo_kind,                        ONLY: wp, eps8
+    USE mo_veg_constants,               ONLY: kappa_f_demand_nc, kappa_f_demand_pn, k_f_demand, &
+                                              root2leaf_cn, root2leaf_np, fresp_growth
 
     IMPLICIT NONE
-    
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp),               INTENT(in)  :: lctlib_cn_leaf            !< PFT-specific foliar C:N (mol/mol) 
     REAL(wp),               INTENT(in)  :: lctlib_np_leaf            !< PFT-specific foliar N:P (mol/mol)
@@ -858,26 +868,30 @@ CONTAINS
     REAL(wp),               INTENT(in)  :: labile_phosphorus         !< labile pool phosphorus (mol P / m2)
     REAL(wp),               INTENT(out) :: f_n_demand                !< root N uptake demand scalar (unitless)
     REAL(wp),               INTENT(out) :: f_p_demand                !< root P uptake demand scalar (unitless)
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                    :: nc_max,pn_max,hlp1
+    REAL(wp)                    :: nc_max, pn_max, hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_demand_scalar'
 
 
     !> 1.0 calculate reference level of N and P in labile pool that would induce zero uptake 
     !! The highest useful level corresponds to the C:N:P expected for leaves and fine root, 
     !! given the average root-lifetime ratio of leaf to root mass
-    !! and the lctlib levels of leaf and fine root C:N:P
-    !! I.e CN = CN_leaf,pft * (1 + 1 / leaf2root_mass) / (1 + cn_root2leaf / leaf2root_mass)
+    !! and the lctlib levels of leaf and fine root C:N:P \n
+    !! i.e. CN = CN_leaf,pft * (1 + 1 / leaf2root_mass) / (1 + cn_root2leaf / leaf2root_mass) \n
     !! Since growth respiration takes some of the C away from growth, this is accounted in the C:N:P ratio
     nc_max = 1._wp / (lctlib_cn_leaf * & 
-                      ((1._wp + 1._wp / leaf2root_mass_ratio) / (1._wp + root2leaf_cn / leaf2root_mass_ratio ) * (1._wp + fresp_growth)))
+                      ((1._wp + 1._wp / leaf2root_mass_ratio) / &
+                       (1._wp + root2leaf_cn / leaf2root_mass_ratio ) * (1._wp + fresp_growth)))
     pn_max = 1._wp / (lctlib_np_leaf / & 
-                      ((1._wp + root2leaf_cn / leaf2root_mass_ratio) / (1._wp + root2leaf_cn * root2leaf_np / leaf2root_mass_ratio ))) 
+                      ((1._wp + root2leaf_cn / leaf2root_mass_ratio) / &
+                       (1._wp + root2leaf_cn * root2leaf_np / leaf2root_mass_ratio ))) 
 
-    !> 1.1 N demand, lambda_f_demand_nc acconts for the range of C:N at which uptake becomes reduces
+    !> 1.1 N demand 
     !!
+    !! lambda_f_demand_nc acconts for the range of C:N at which uptake becomes reduces
     IF(labile_carbon > eps8) THEN
-      hlp1 = MAX(nc_max - labile_nitrogen / labile_carbon,0.0_wp)/MAX(nc_max * (1._wp - kappa_f_demand_nc),eps8)
+      hlp1       = MAX(nc_max - labile_nitrogen / labile_carbon,0.0_wp) / MAX(nc_max * (1._wp - kappa_f_demand_nc),eps8)
       f_n_demand = 1._wp - exp(-hlp1 ** k_f_demand)
     ELSE
       f_n_demand = 1.0_wp
@@ -886,13 +900,14 @@ CONTAINS
     !> 1.2 P demand
     !!
     IF(labile_nitrogen > eps8) THEN
-      hlp1 = MAX(pn_max - labile_phosphorus / labile_nitrogen,0.0)/MAX(pn_max * (1._wp - kappa_f_demand_pn),eps8)
+      hlp1       = MAX(pn_max - labile_phosphorus / labile_nitrogen,0.0_wp) / MAX(pn_max * (1._wp - kappa_f_demand_pn),eps8)
       f_p_demand = 1._wp - exp(-hlp1 ** k_f_demand)
     ELSE
-       f_p_demand = 1.0_wp
+      f_p_demand = 1.0_wp
     ENDIF
 
   END SUBROUTINE calc_nutrient_demand_scalar
+
 
   !----------------------------------------------------------------------------------------------------------
   ! 1.1 Sub Task of update_veg_growth
@@ -949,6 +964,7 @@ CONTAINS
                                               n_processing_respiration, &
                                               exudation_carbon)
                        
+    USE mo_kind,                    ONLY: wp, eps8
     USE mo_base_config_class,       ONLY: base_config
     USE mo_base_memory,             ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
@@ -956,7 +972,7 @@ CONTAINS
     USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
-                                          k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf
+                                          k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf, tau_labile
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
@@ -1046,7 +1062,7 @@ CONTAINS
                                           0.0_wp)  / soil_depth_sl(:,1)
        plant_uptake_nh4_n15_sl(:,1) = plant_uptake_nh4_sl(:,1) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
        plant_uptake_no3_n15_sl(:,1) = plant_uptake_no3_sl(:,1) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-   ENDIF
+    ENDIF
 
     !> 1.2 integrate root uptake over soil layers
     !!
@@ -1072,6 +1088,7 @@ CONTAINS
     END SELECT
     uptake_po4(:) = demand_uptake_p_tuptake_mavg(:) * uptake_po4_pot(:)
 
+
     !> 2.0 C costs for N acquisition
     !!
     !> 2.1 C costs for (inorganic) N uptake, based on Rastetter (2001) and Meyerholt (2016, OPT)
@@ -1088,8 +1105,8 @@ CONTAINS
     ELSEWHERE
       fresp_maint(:) = 0.0_wp
     END WHERE
-    gain_n(:) = unit_uptake_n_troot_mavg(:) / (1._wp + fresp_growth+fresp_maint(:)) !+ uptake_norg / veg_exudation%carbon
-    !! ToDo!! Idea for coupling BNF and Mycos... Somewhere in the future
+    gain_n(:) = unit_uptake_n_troot_mavg(:) / (1._wp + fresp_growth + fresp_maint(:)) ! + uptake_norg / veg_exudation%carbon
+    !! @todo !! Idea for coupling BNF and Mycos... Somewhere in the future
  
     ! transformation costs depend on NH4 and NO3 uptake rates   
     WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8)
@@ -1105,19 +1122,20 @@ CONTAINS
       cost_n_uptake_root(:) = gain_c(:) / gain_n(:) + &
                               (hlp1(:) * transform_cost_nh4 + hlp2(:) * transform_cost_no3)
     ELSEWHERE
-        cost_n_uptake_root(:) = 1000._wp ! an arbitrarily large value !
+      cost_n_uptake_root(:) = 1000._wp ! an arbitrarily large value !
     END WHERE
                        
     !> 2.2 C costs for BNF
     !! Temperature function based on Houlton (2008)
-    hlp1(:) = k1_temp_bnf * exp(k2_temp_bnf + k3_temp_bnf * (t_air(:) - Tzero) * &
-                           (1.0_wp-(t_air(:)-Tzero)/k4_temp_bnf))
-    cost_n_fixation(:) = (cost_n_fixation_max-(cost_n_fixation_max-cost_n_fixation_min)*hlp1(:)) 
+    hlp1(:)            = k1_temp_bnf * &
+                         exp(k2_temp_bnf + k3_temp_bnf * (t_air(:) - Tzero) * (1.0_wp - (t_air(:) - Tzero) / k4_temp_bnf))
+    cost_n_fixation(:) = (cost_n_fixation_max - (cost_n_fixation_max - cost_n_fixation_min) * hlp1(:)) 
 
 
     !> 3.0 N fixation
     !!
     SELECT CASE (bnf_scheme)
+      
       !> 3.1 Case 1: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
@@ -1131,27 +1149,28 @@ CONTAINS
       !> 3.2 Case 2: Ohm's law analogy 
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
-         ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
-!SZ: why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
-         n_demand(:)   = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
-                          labile_carbon(:) / tau_labile / one_day * 1.e6_wp
-         f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), &
-                             0.0_wp)
-         f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
-         n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
+        ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
+!SZ: @todo mo_veg_growth.f90 why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
+        n_demand(:)   = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
+                       labile_carbon(:) / tau_labile / one_day * 1.e6_wp
+        f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), &
+                           0.0_wp)
+        f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
+        n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
 
-         WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8 .AND. (f_nacq_nup(:) * n_demand(:)) < (uptake_nh4(:) + uptake_no3(:)))
-           scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
-           uptake_nh4(:) = uptake_nh4(:) * scal(:)
-           uptake_no3(:) = uptake_no3(:) * scal(:)
-         END WHERE
+        WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8 .AND. (f_nacq_nup(:) * n_demand(:)) < (uptake_nh4(:) + uptake_no3(:)))
+         scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
+         uptake_nh4(:) = uptake_nh4(:) * scal(:)
+         uptake_no3(:) = uptake_no3(:) * scal(:)
+        END WHERE
 
       !> 3.3 Case 3: Give enough N to maintain N requirement in the labile pool 
       CASE("unlimited")
-          ! N fixation in umol / m2 / s
-          n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:), 0.0_wp) / & 
-                           dtime * 1000000.0_wp
+        ! N fixation in µmol N / m2 / s
+        n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:), 0.0_wp) / & 
+                        dtime * 1000000.0_wp
     ENDSELECT 
+
 
     !> 4.0 Determine C use for Root Exudates
     !! 
@@ -1159,31 +1178,31 @@ CONTAINS
        f_exudate(:) = 0.5_wp   
        hlp1(:)      = SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2) 
        WHERE(hlp1(:) > eps8) 
-          f_exudate(:) = MIN(f_exudate(:), &
-                             hlp1(:) / (hlp1(:) + (uptake_nh4(:) + uptake_no3(:)) * dtime / 1.e6_wp )) ! Mycofon
+         f_exudate(:) = MIN(f_exudate(:), &
+                            hlp1(:) / (hlp1(:) + (uptake_nh4(:) + uptake_no3(:)) * dtime / 1.e6_wp )) ! Mycofon
        ENDWHERE 
 
-!! Shorter for trunk!!!
+!! @todo Shorter for trunk!!!
        ! mol/m3 * m -> mol/m2
        ! mol/m2 * g/mol -> g/m2
        ! g/m2 / g/kg -> kg/m2
        ! kg/m2 / m -> kg/m3
        ! kg/m3 / kg/m3 -> 1 = kg/kg
        IF(sb_model_scheme == 'simple_0d')THEN
-          hlp1(:) = (nh4_solute(:,1)+no3_solute(:,1)) * soil_depth_sl(:,1) * & 
+         hlp1(:) = (nh4_solute(:,1) + no3_solute(:,1)) * soil_depth_sl(:,1) * & 
                      molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
        ELSE
-          hlp1(:) = SUM((nh4_solute(:,:) + no3_solute(:,:)) * soil_depth_sl(:,:), DIM=2) * & 
-                        molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
+         hlp1(:) = SUM((nh4_solute(:,:) + no3_solute(:,:)) * soil_depth_sl(:,:), DIM=2) * & 
+                       molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
        ENDIF
        f_exudate_max(:) = 0.2_wp
        
-       WHERE (hlp1(:) > 0.01_wp) !Threshold for soil N -> Mycofon...
+       WHERE (hlp1(:) > 0.01_wp) !Threshold for soil N -> Mycofon   @todo make this threshold a constant ?
          f_exudate_max(:) = MIN(0.2_wp, &
                                 1.0_wp -(1.0_wp -exp((-50.0_wp * hlp1(:))**3.0_wp)))
        ENDWHERE
 
-       f_myc_opt(:) = 0.3_wp ! mycofon; needs to be flexible?!
+       f_myc_opt(:) = 0.3_wp ! @todo  mycofon; needs to be flexible?!   
        ! exudation rate (mol / m2 / timestep)
        exudation_carbon(:) = &
           MAX(0.0_wp, & 
@@ -1202,29 +1221,30 @@ CONTAINS
        END DO
     ENDIF ! flag_mycorrhiza
 
+
     !> 4.0 Determine C use for N uptake, and constrain this to available carbon
     !!
     IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'resistance' .OR. bnf_scheme == 'standard') THEN
-       hlp1(:) = uptake_nh4(:) * transform_cost_nh4 + & 
-                 uptake_no3(:) * transform_cost_no3 + & 
-                 n_fixation(:) * cost_n_fixation(:)
-       ! adjust N uptake to possible C expenditure
-       hlp2(:) = MIN(1.0_wp/tau_labile/one_day * labile_carbon(:) * 1.e6_wp, hlp1(:))
-       WHERE(hlp1(:) > eps8 .AND. hlp1(:) > hlp2(:))
-          scal(:)       = hlp2(:) / hlp1(:) 
-          uptake_nh4(:) = uptake_nh4(:) * scal(:)
-          uptake_no3(:) = uptake_no3(:) * scal(:)
-          n_fixation(:) = n_fixation(:) * scal(:) 
-       ENDWHERE
-       n_transform_respiration(:)  = uptake_nh4(:) * transform_cost_nh4 + uptake_no3(:) * transform_cost_no3
-       n_fixation_respiration(:)   = n_fixation(:) * cost_n_fixation(:)
-       n_processing_respiration(:) = n_fixation_respiration(:) + n_transform_respiration(:)
+      hlp1(:) = uptake_nh4(:) * transform_cost_nh4 + & 
+                uptake_no3(:) * transform_cost_no3 + & 
+                n_fixation(:) * cost_n_fixation(:)
+      ! adjust N uptake to possible C expenditure
+      hlp2(:) = MIN(1.0_wp / tau_labile / one_day * labile_carbon(:) * 1.e6_wp, hlp1(:))
+      WHERE(hlp1(:) > eps8 .AND. hlp1(:) > hlp2(:))
+        scal(:)       = hlp2(:) / hlp1(:) 
+        uptake_nh4(:) = uptake_nh4(:) * scal(:)
+        uptake_no3(:) = uptake_no3(:) * scal(:)
+        n_fixation(:) = n_fixation(:) * scal(:) 
+      ENDWHERE
+      n_transform_respiration(:)  = uptake_nh4(:) * transform_cost_nh4 + uptake_no3(:) * transform_cost_no3
+      n_fixation_respiration(:)   = n_fixation(:) * cost_n_fixation(:)
+      n_processing_respiration(:) = n_fixation_respiration(:) + n_transform_respiration(:)
     ENDIF
   
+
     !> 5.0 update diagnostics and soil related variables, as well as N15 fluxes
     !!
-
-    !> 5.1 Calculate actual N and P uptake per unit fine root carbon (mu mol {N/P} / mol C / s)
+    !> 5.1 Calculate actual N and P uptake per unit fine root carbon (µmol {N/P} / mol C / s)
     !!
     WHERE(fine_root_carbon(:) > eps8)
       unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / fine_root_carbon(:)
@@ -1237,17 +1257,17 @@ CONTAINS
     !> 5.2 apply actual uptake rates to soil layers
     !!
     DO isoil = 1,nsoil_sb
-       WHERE(uptake_nh4_pot(:) > eps8 .AND. uptake_nh4_pot(:) > uptake_nh4(:))
-          plant_uptake_nh4_sl(:,isoil)      = plant_uptake_nh4_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:) 
-          plant_uptake_nh4_n15_sl(:,isoil)  = plant_uptake_nh4_n15_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:) 
-       ENDWHERE
-       WHERE(uptake_no3_pot(:) > eps8 .AND. uptake_no3_pot(:) > uptake_no3(:))
-          plant_uptake_no3_sl(:,isoil)      = plant_uptake_no3_sl(:,isoil) * uptake_no3(:) / uptake_no3_pot(:) 
-          plant_uptake_no3_n15_sl(:,isoil)  = plant_uptake_no3_n15_sl(:,isoil) * uptake_no3(:) / uptake_no3_pot(:) 
-       ENDWHERE
-       WHERE(uptake_po4_pot(:) > eps8 .AND. uptake_po4_pot(:) > uptake_po4(:))
-          plant_uptake_po4_sl(:,isoil)      = plant_uptake_po4_sl(:,isoil) * uptake_po4(:) / uptake_po4_pot(:) 
-       ENDWHERE
+      WHERE(uptake_nh4_pot(:) > eps8 .AND. uptake_nh4_pot(:) > uptake_nh4(:))
+        plant_uptake_nh4_sl(:,isoil)      = plant_uptake_nh4_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:) 
+        plant_uptake_nh4_n15_sl(:,isoil)  = plant_uptake_nh4_n15_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:) 
+      ENDWHERE
+      WHERE(uptake_no3_pot(:) > eps8 .AND. uptake_no3_pot(:) > uptake_no3(:))
+        plant_uptake_no3_sl(:,isoil)      = plant_uptake_no3_sl(:,isoil) * uptake_no3(:) / uptake_no3_pot(:) 
+        plant_uptake_no3_n15_sl(:,isoil)  = plant_uptake_no3_n15_sl(:,isoil) * uptake_no3(:) / uptake_no3_pot(:) 
+      ENDWHERE
+      WHERE(uptake_po4_pot(:) > eps8 .AND. uptake_po4_pot(:) > uptake_po4(:))
+        plant_uptake_po4_sl(:,isoil)      = plant_uptake_po4_sl(:,isoil) * uptake_po4(:) / uptake_po4_pot(:) 
+      ENDWHERE
     END DO
 
     !> 5.3 calculate actual total plant N15 uptake
@@ -1255,11 +1275,12 @@ CONTAINS
     uptake_nh4_n15(:) = 0.0_wp
     uptake_no3_n15(:) = 0.0_wp 
     DO isoil = 1,nsoil_sb
-       uptake_nh4_n15(:) = uptake_nh4_n15(:) + plant_uptake_nh4_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
-       uptake_no3_n15(:) = uptake_no3_n15(:) + plant_uptake_no3_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
+      uptake_nh4_n15(:) = uptake_nh4_n15(:) + plant_uptake_nh4_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
+      uptake_no3_n15(:) = uptake_no3_n15(:) + plant_uptake_no3_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
     ENDDO
  
   END SUBROUTINE calc_actual_nutrient_uptake_rate
+
 
   !-----------------------------------------------------------------------------------------------------
   ! 2.0 Sub Task of update_veg_growth
@@ -1516,52 +1537,50 @@ CONTAINS
            !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
            SELECT CASE (bnf_scheme)
            CASE("optimal")
-              k1_opt_n = (npp * tau_leaf * one_year * one_day + &
-                   (ns_carbon - &
-                   (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                   MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-              k1_opt_p = (npp * tau_leaf * one_year * one_day + &
-                   (ns_carbon - &
-                   (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                   MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+              k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                         MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+              k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                         MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
               IF ( k1_opt_n >= k1_opt_p) THEN 
                  ! if N is more limiting than P
                  k1_opt = k1_opt_n 
-                k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX((unit_uptake_n+n_fixation) * growth_cn*tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                          MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
               ELSE
                  k1_opt = k1_opt_p 
-                 k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                          MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
               ENDIF
            CASE DEFAULT 
-              k1_opt_n = (npp*tau_leaf*one_year*one_day +&
-                   (ns_carbon - &
-                   (ns_nitrogen) * growth_cn) * 1.e6_wp - &
-                   n_fixation * growth_cn*tau_fine_root*one_year*one_day) / & 
-                   MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
+              k1_opt_n = (npp*tau_leaf*one_year*one_day + &
+                          (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
+                          n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
+                         MAX( MAX(unit_uptake_n, 0.05_wp) * growth_cn * tau_fine_root * one_year * one_day, eps8)
                
-              k1_opt_p = (npp*tau_leaf*one_year*one_day +&
-                   (ns_carbon - &
-                   (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                   MAX(unit_uptake_p * growth_cp * tau_fine_root*one_year*one_day, eps8)
+              k1_opt_p = (npp*tau_leaf*one_year*one_day + &
+                          (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                         MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
               IF ( k1_opt_n >= k1_opt_p) THEN 
                  ! if N is more limiting than P
                  k1_opt = k1_opt_n 
-                 k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_n * growth_cn*tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                          MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
               ELSE
                  k1_opt = k1_opt_p 
-                 k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
+                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                          MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
               ENDIF
            END SELECT
 
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS
-           IF (height>0.5_wp) THEN
-              k1_opt_w = transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
-              k2_opt_w = unit_transpiration/ rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
+           IF (height > 0.5_wp) THEN
+              k1_opt_w = transpiration      / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
+              k2_opt_w = unit_transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
            ELSE
               ! all resistance is in the root for small trees
-              k1_opt_w = transpiration / rhoh2o * (1._wp) / (k_root * dphi) 
-              k2_opt_w = unit_transpiration/ rhoh2o * (1._wp) / (k_root * dphi)
+              k1_opt_w = transpiration      / rhoh2o * (1._wp) / (k_root * dphi) 
+              k2_opt_w = unit_transpiration / rhoh2o * (1._wp) / (k_root * dphi)
            ENDIF
              
            ! Compare root increments for a hypothetical unit of leaf growth 
@@ -1590,46 +1609,41 @@ CONTAINS
          IF (flag_optimal_allocation) THEN
             SELECT CASE (bnf_scheme)
               CASE("optimal")
-                 k1_opt_n = (npp*tau_leaf*one_year*one_day +&
-                      (ns_carbon - &
-                      (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                      MAX((unit_uptake_n + n_fixation) * growth_cn*tau_fine_root*one_year*one_day, eps8)
-                 k1_opt_p = (npp*tau_leaf*one_year*one_day +&
-                      (ns_carbon - &
-                      (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                      MAX(unit_uptake_p * growth_cp *tau_fine_root*one_year*one_day,eps8)
+                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                            MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
                     k1_opt = k1_opt_n 
-                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX((unit_uptake_n+n_fixation) * growth_cn*tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                             MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
                  ELSE
                     k1_opt = k1_opt_p 
-                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                             MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  ENDIF
               CASE DEFAULT 
-                 k1_opt_n = (npp*tau_leaf*one_year*one_day +&
-                      (ns_carbon - &
-                      (ns_nitrogen) * growth_cn) * 1.e6_wp - &
-                      n_fixation * growth_cn*tau_fine_root*one_year*one_day) / & 
-                      MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
-                  
-                 k1_opt_p = (npp*tau_leaf*one_year*one_day +&
-                      (ns_carbon - &
-                      (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                      MAX(unit_uptake_p * growth_cp * tau_fine_root*one_year*one_day, eps8)
+                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
+                             n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
+                            MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
+                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
                     k1_opt = k1_opt_n 
-                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_n * growth_cn*tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                             MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
                  ELSE
                     k1_opt = k1_opt_p 
-                    k2_opt = (unit_npp*tau_leaf*one_year*one_day)/MAX(unit_uptake_p * growth_cp*tau_fine_root*one_year*one_day, eps8)
+                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                             MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  ENDIF
            END SELECT
 
             !> water based optimality, following Magnani 2000 
           
-           k1_opt_w = transpiration / (k_root * dphi) 
+           k1_opt_w = transpiration      / (k_root * dphi) 
            k2_opt_w = unit_transpiration / (k_root * dphi) 
 
            ! Compare root increments for a hypothetical unit of leaf growth 
@@ -1646,6 +1660,7 @@ CONTAINS
     ENDSELECT
 
   END SUBROUTINE calc_allometry 
+
 
   !----------------------------------------------------------------------------------------------------------
   ! 4.1 Sub Task of update_veg_growth
@@ -1742,11 +1757,13 @@ CONTAINS
                                                   target_reserve_pool_nitrogen  , & 
                                                   target_reserve_pool_phosphorus )  
 
+
+    USE mo_base_constants,        ONLY: one_day
     USE mo_base_memory,           ONLY: t_jsb_task_options
-    dsl4slm_Use_memory_a_veg
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, &
                                         fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1777,6 +1794,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)  :: reserve_pool_carbon_max                      , & ! physical limit of the reserve pool (mol C/m2) 
                                         hlp1                                             ! helper variable
     CHARACTER(len=*), PARAMETER      :: routine = TRIM(modname)//':calc_target_labile_reserve_pool_size'
+
     
     !> 1.0 target size of labile pool
     !! 
@@ -1789,25 +1807,45 @@ CONTAINS
     ELSEWHERE 
        target_labile_pool_carbon(:)  = MAX( gpp_mavg(:) , maint_respiration_mavg(:) ) * one_day / 1.e6_wp * tau_labile
     ENDWHERE
+    ! The above code is not correct as no mask can be created from 'lctlib%growthform==igrass'
+    !   it should rather be an IF() statement, also, because this function works at only one tile and so at only one PFT
+    ! The above code (introduced with r1145 in the reserve_dynamics branch) does:
+    !   a) for grasses: create a mask according to the 'veg_pool_leaf_carbon(:) < eps8'
+    !   b) for trees (i.e. not grasses): runs the code of the ELSEWHERE for all points independent of 'veg_pool_leaf_carbon(:) < eps8'
+    ! The code could be:
+    ! IF (lctlib%growthform==igrass) THEN
+    !   WHERE(veg_pool_leaf_carbon(:) < eps8)
+    !    target_labile_pool_carbon(:)  = 0.1_wp * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile 
+    !   ENDWHERE
+    ! ELSE
+    !   WHERE (veg_pool_leaf_carbon(:) < eps8)  ! oder '(veg_pool_leaf_carbon(:) > eps8)' ?
+    !    target_labile_pool_carbon(:)  = MAX( gpp_mavg(:) , maint_respiration_mavg(:) ) * one_day / 1.e6_wp * tau_labile
+    !   ENDWHERE
+    ! ENDIF
     !! 
     !! for N and P this corresponds to the current growth C:N:P in the target labile pool 
     target_labile_pool_nitrogen(:)   = target_labile_pool_carbon(:)    * growth_req_n_mavg(:)
     target_labile_pool_phosphorus(:) = target_labile_pool_nitrogen(:)  * growth_req_p_mavg(:)
+
 
     !> 2.0 target size reserve pool
     !!
     !! For the reserve pool, this is the C:N:P needed to regrow one year worth of folige and roots,
     !! accounting for losses to respiration and the nutrients currently required to grow these
     !!
-    target_reserve_pool_carbon(:) = lctlib%fstore_target * target_lai(:) / lctlib%sla * & 
-           ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) + &
-             1._wp/leaf2root_mass_ratio_mavg(:)/lctlib%tau_fine_root ) * (1._wp + fresp_growth)
-    target_reserve_pool_nitrogen(:) = lctlib%fstore_target * target_lai / lctlib%sla * & 
-           ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) * (1._wp - resorp_fract_leaf) / target_cn_leaf(:) + & 
-             1._wp/leaf2root_mass_ratio_mavg(:) / lctlib%tau_fine_root / target_cn_fine_root(:)) 
+    target_reserve_pool_carbon(:)     = lctlib%fstore_target * target_lai(:) / lctlib%sla * & 
+                                        ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) + &
+                                         1._wp/leaf2root_mass_ratio_mavg(:)/lctlib%tau_fine_root ) * &
+                                        (1._wp + fresp_growth)
+    target_reserve_pool_nitrogen(:)   = lctlib%fstore_target * target_lai / lctlib%sla * & 
+                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) * (1._wp - resorp_fract_leaf) / &
+                                         target_cn_leaf(:) + 1._wp/leaf2root_mass_ratio_mavg(:) / &
+                                         lctlib%tau_fine_root / target_cn_fine_root(:))
     target_reserve_pool_phosphorus(:) = lctlib%fstore_target * target_lai(:) / lctlib%sla * & 
-           ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) * (1._wp - resorp_fract_leaf) / target_cn_leaf(:) / target_np_leaf(:) + & 
-             1._wp/leaf2root_mass_ratio_mavg(:)/lctlib%tau_fine_root / target_cn_fine_root(:) / target_np_fine_root(:))  
+                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) * (1._wp - resorp_fract_leaf) / &
+                                         target_cn_leaf(:) / target_np_leaf(:) + & 
+                                         1._wp / leaf2root_mass_ratio_mavg(:)/ lctlib%tau_fine_root / &
+                                         target_cn_fine_root(:) / target_np_fine_root(:))
 
     !> 2.1 limit target size of the reserve pool to the size of the storage organs
     !!
@@ -1815,9 +1853,9 @@ CONTAINS
                                  fstore_fine_root_max * veg_pool_fine_root_carbon(:) + & 
                                  fstore_sap_wood_max  * veg_pool_sap_wood_carbon(:) 
 
-    hlp1(:) = MIN(1.0_wp,reserve_pool_carbon_max(:)/target_reserve_pool_carbon(:))
-    target_reserve_pool_carbon(:) = target_reserve_pool_carbon(:) * hlp1(:)
-    target_reserve_pool_nitrogen(:) = target_reserve_pool_nitrogen(:) * hlp1(:)
+    hlp1(:)                           = MIN(1.0_wp, reserve_pool_carbon_max(:) / target_reserve_pool_carbon(:))
+    target_reserve_pool_carbon(:)     = target_reserve_pool_carbon(:)     * hlp1(:)
+    target_reserve_pool_nitrogen(:)   = target_reserve_pool_nitrogen(:)   * hlp1(:)
     target_reserve_pool_phosphorus(:) = target_reserve_pool_phosphorus(:) * hlp1(:)
 
   END SUBROUTINE calc_target_labile_reserve_pool_size
@@ -1852,8 +1890,9 @@ CONTAINS
                                   veg_pool_reserve              , &
                                   veg_reserve_use               ) 
 
+    USE mo_kind,                  ONLY: wp, eps8
+    USE mo_base_constants,        ONLY: one_day, dtime
     USE mo_base_memory,           ONLY: t_jsb_task_options
-    dsl4slm_Use_memory_a_veg
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, &
                                         lambda_phiphen,  k_phiphen, &
@@ -1862,6 +1901,7 @@ CONTAINS
                                         lambda_phistore, k_phistore, &
                                         k_phi_interact, &
                                         min_lai, target_lai_max
+    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1910,7 +1950,7 @@ CONTAINS
     ! Save value for use for N and P calculations
     phi_phenology_base(:) = phi_phenology(:)
 
-    hlp1(:) = MAX(0.0_wp, veg_pool_labile%carbon(:))
+    hlp1(:) = MAX(0.0_wp, veg_pool_labile%carbon(:))    ! for safety, catch potential negative values
     WHERE(target_labile_pool_carbon(:) > eps8 .AND. hlp1(:) < target_labile_pool_carbon(:))
       phi_maintenance(:) = exp(-(lambda_phimaint * hlp1(:) / target_labile_pool_carbon(:))**k_phimaint) & 
                            - exp(-(lambda_phimaint)**k_phimaint)
@@ -1918,7 +1958,7 @@ CONTAINS
       phi_maintenance(:) = 0._wp
     END WHERE
 
-    hlp1(:) = MAX(0.0_wp, veg_pool_reserve%carbon(:))
+    hlp1(:) = MAX(0.0_wp, veg_pool_reserve%carbon(:))   ! for safety, catch potential negative values
     WHERE(target_reserve_pool_carbon(:) > eps8 .AND. hlp1(:) < target_reserve_pool_carbon(:))
       phi_storage(:) = exp(-(lambda_phistore * hlp1(:) / target_reserve_pool_carbon(:))**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
@@ -1934,9 +1974,9 @@ CONTAINS
     !> 1.1 convert phi to turnover times (1/timestep)
     !! 
     !! taking account that flushing can only happen if the meristem is active
-    phi_phenology(:)    = phi_phenology(:) * kstar_labile(:) / one_day * dtime
-    phi_maintenance(:)  = phi_maintenance(:) / tau_labile / one_day * dtime
-    phi_storage(:)      = phi_storage(:) / tau_labile / one_day * dtime
+    phi_phenology(:)    = phi_phenology(:)    * kstar_labile(:) / one_day * dtime
+    phi_maintenance(:)  = phi_maintenance(:)  / tau_labile      / one_day * dtime
+    phi_storage(:)      = phi_storage(:)      / tau_labile      / one_day * dtime
 
     veg_reserve_use%carbon(:)   = ((phi_phenology(:) + phi_maintenance(:)) * veg_pool_reserve%carbon(:)   - & 
                                     phi_storage(:)   * veg_pool_labile%carbon(:)) 
@@ -1945,12 +1985,13 @@ CONTAINS
     veg_reserve_use%carbon14(:) = ((phi_phenology(:) + phi_maintenance(:)) * veg_pool_reserve%carbon14(:) - & 
                                     phi_storage(:)   * veg_pool_labile%carbon14(:)) 
 
+
     !> 2.0 net transfer of N from labile to reserve
     !!
     !> 2.1 supply of reserve N to labile pool during growing season 
     !!
     phi_phenology(:) = phi_phenology_base(:)
-    hlp1(:) = MAX(0.0_wp, veg_pool_labile%nitrogen(:))
+    hlp1(:)          = MAX(0.0_wp, veg_pool_labile%nitrogen(:))        ! for safety, catch potential negative values
     WHERE(target_labile_pool_nitrogen(:) > eps8    .AND. & 
           hlp1(:) < target_labile_pool_nitrogen(:) .AND. & 
           growing_season(:))
@@ -1978,7 +2019,7 @@ CONTAINS
     !> 2.3 Limit push from labile to reserve to maximum storage capacity, and account for preference of bud-burst over storage
     !!
     phi_storage(:) = phi_storage(:) * ( 1.0_wp - phi_phenology(:)) 
-    hlp1(:) = veg_pool_reserve%nitrogen(:) + phi_storage(:) * veg_pool_labile%nitrogen(:) / tau_labile / one_day * dtime
+    hlp1(:)        = veg_pool_reserve%nitrogen(:) + phi_storage(:) * veg_pool_labile%nitrogen(:) / tau_labile / one_day * dtime
     WHERE(veg_pool_labile%nitrogen(:) > eps8 .AND. hlp1(:) > target_reserve_pool_nitrogen(:))
        phi_storage(:) = MAX(0.0_wp,(target_reserve_pool_nitrogen(:) - veg_pool_reserve%nitrogen(:))) / &
                             (veg_pool_labile%nitrogen(:) / tau_labile / one_day * dtime)
@@ -1995,12 +2036,13 @@ CONTAINS
     veg_reserve_use%nitrogen15(:)  = ((phi_maintenance(:) + phi_phenology(:)) * veg_pool_reserve%nitrogen15(:) - & 
                                       phi_storage(:) * veg_pool_labile%nitrogen15(:)) / tau_labile / one_day * dtime
 
+
     !> 3.0 net transfer of P from labile to reserve
     !! 
     !> 3.1 supply of reserve P to labile pool during growing season 
     !!
     phi_phenology(:) = phi_phenology_base(:)
-    hlp1(:) = MAX(0.0_wp, veg_pool_labile%phosphorus(:))
+    hlp1(:)          = MAX(0.0_wp, veg_pool_labile%phosphorus(:))      ! for safety, catch potential negative values
     WHERE(target_labile_pool_phosphorus(:) > eps8    .AND. & 
           hlp1(:) < target_labile_pool_phosphorus(:) .AND. & 
           growing_season(:))
@@ -2010,9 +2052,9 @@ CONTAINS
       phi_maintenance(:) = 0._wp
     END WHERE
 
-    !> 3.2 build-up of reserve P (composed of a pull of N to the reserve and a push from the labile to avoid
-    !!     too strong accumulation of P in the labile)
-    !!
+    !> 3.2 build-up of reserve P 
+    !! 
+    !! (composed of a pull of N to the reserve and a push from the labile to avoid too strong accumulation of P in the labile)
     WHERE(target_reserve_pool_phosphorus(:) > eps8 .AND. veg_pool_reserve%phosphorus(:) < target_reserve_pool_phosphorus(:))
       phi_storage(:) = exp(-(lambda_phistore * veg_pool_reserve%phosphorus(:) / target_reserve_pool_phosphorus(:))**k_phistore) & 
                        - exp(-(lambda_phistore)**k_phistore)
@@ -2021,14 +2063,14 @@ CONTAINS
     END WHERE
     WHERE(target_labile_pool_phosphorus(:) > eps8 .AND. veg_pool_labile%phosphorus(:) > target_labile_pool_phosphorus(:))
       phi_storage(:) = MAX(phi_storage(:), &
-                           MIN((veg_pool_labile%phosphorus(:) - target_labile_pool_phosphorus(:)) / target_labile_pool_phosphorus(:), &
-                               1.0_wp)) 
+                           MIN((veg_pool_labile%phosphorus(:) - target_labile_pool_phosphorus(:)) / &
+                               target_labile_pool_phosphorus(:), 1.0_wp)) 
     END WHERE
 
     !> 3.3 Limit push from labile to reserve to maximum storage capacity, and account for preference of bud-burst over storage
     !!
     phi_storage(:) = phi_storage(:) * ( 1.0_wp - phi_phenology(:)) 
-    hlp1(:) = veg_pool_reserve%phosphorus(:) + phi_storage(:) * veg_pool_labile%phosphorus(:) / tau_labile / one_day * dtime
+    hlp1(:)        = veg_pool_reserve%phosphorus(:) + phi_storage(:) * veg_pool_labile%phosphorus(:) / tau_labile / one_day * dtime
     WHERE(veg_pool_labile%phosphorus(:) > eps8 .AND. hlp1(:) > target_reserve_pool_phosphorus(:))
       phi_storage(:) = MAX(0.0_wp,(target_reserve_pool_phosphorus(:) - veg_pool_reserve%phosphorus(:))) / &
                            (veg_pool_labile%phosphorus(:) / tau_labile / one_day * dtime)
@@ -2066,6 +2108,7 @@ CONTAINS
                                               target_labile_pool_nitrogen, &
                                               target_labile_pool_phosphorus) RESULT(beta_sinklim_ps)
 
+    USE mo_kind,                          ONLY: wp, eps8  
     USE mo_veg_constants,                 ONLY: beta_sinklim_ps_min, k_sinklim_ps, lambda_sinklim_ps, k_cnp_sinklim_ps
 
     IMPLICIT NONE
@@ -2079,7 +2122,7 @@ CONTAINS
                             target_labile_pool_phosphorus
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)             :: hlp1,hlp2 
+    REAL(wp)             :: hlp1, hlp2 
     REAL(wp)             :: beta_sinklim_ps
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_sinklimitation'
 
@@ -2087,7 +2130,7 @@ CONTAINS
     !> 1.0 Sink limitation due to labile C accumulation
     !!
     IF(target_labile_pool_carbon > eps8 .AND. veg_pool_labile_carbon > target_labile_pool_carbon)THEN
-        hlp1 = (veg_pool_labile_carbon - target_labile_pool_carbon) / target_labile_pool_carbon
+        hlp1            = (veg_pool_labile_carbon - target_labile_pool_carbon) / target_labile_pool_carbon
         beta_sinklim_ps = beta_sinklim_ps_min + (1._wp - beta_sinklim_ps_min) * &
                              exp(-(lambda_sinklim_ps * hlp1)**k_sinklim_ps)
     ELSE 
@@ -2155,6 +2198,7 @@ CONTAINS
                                       growth_req_p )       
 
     USE mo_base_memory,             ONLY: t_jsb_task_options
+    USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_constants,           ONLY: itree, igrass, &
                                           lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
@@ -2211,11 +2255,11 @@ CONTAINS
     !! 
 
     ! SZ: uncomment this to revert to fixed constant allocation
-    ! veg_falloc%leaf%carbon = 0.3_wp
-    ! veg_falloc%fine_root%carbon = 0.3_wp
+    ! veg_falloc%leaf%carbon        = 0.3_wp
+    ! veg_falloc%fine_root%carbon   = 0.3_wp
     ! veg_falloc%coarse_root%carbon = 0.1_wp
-    ! veg_falloc%sap_wood%carbon = 0.2_wp
-    ! veg_falloc%fruit%carbon = 0.1_wp 
+    ! veg_falloc%sap_wood%carbon    = 0.2_wp
+    ! veg_falloc%fruit%carbon       = 0.1_wp 
 
     ! 
     ! seed for allocation coefficients is the potential growth rate per time step.
@@ -2233,7 +2277,7 @@ CONTAINS
     !!
     !! 
     SELECT CASE(lctlib%growthform)
-      !> 1.2 trees
+      !> 1.2.1 trees
       !!
       CASE (itree)
         ! carbon increment
@@ -2248,24 +2292,27 @@ CONTAINS
             !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
             b_inc(:) = 0.2_wp * dtime / one_day 
 
-            !> 1.2a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
+            !> 1.2.1a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
             !! 
-            leaf_carbon_inc(:) = MAX((b_inc(:) - k1_opt + root_carbon(:) + wood_carbon(:) - dheight(:)/leaf2wood_mass_ratio(:) * &
-                                      (b_inc(:)-k1_opt + root_carbon(:)) - height(:)/leaf2wood_mass_ratio(:)*leaf_carbon(:)) / &
-                                      (1.0_wp + k2_opt + dheight(:)/leaf2wood_mass_ratio(:) * &
-                                      (b_inc(:) - (1.0_wp + k2_opt) * leaf_carbon(:) - k1_opt + root_carbon(:)) + &
-                                      height(:)/leaf2wood_mass_ratio(:)), 0.0_wp)
+            leaf_carbon_inc(:) = MAX((b_inc(:) - k1_opt(:) + root_carbon(:) + wood_carbon(:) - dheight(:) / &
+                                      leaf2wood_mass_ratio(:) * (b_inc(:)-k1_opt(:) + root_carbon(:)) - height(:) / &
+                                      leaf2wood_mass_ratio(:)*leaf_carbon(:)) / &
+                                     (1.0_wp + k2_opt(:) + dheight(:) / leaf2wood_mass_ratio(:) * &
+                                      (b_inc(:) - (1.0_wp + k2_opt(:)) * leaf_carbon(:) - k1_opt(:) + root_carbon(:)) + &
+                                      height(:)/leaf2wood_mass_ratio(:)), &
+                                     0.0_wp)
             sap_wood_carbon_inc(:) = MAX((( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
                                           height(:) - sap_wood_carbon(:)) / & 
-                                          (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
-                                          dheight(:) ), 0.0_wp)        
+                                         (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / &
+                                          leaf2sapwood_mass_ratio(:) * dheight(:) ), &
+                                         0.0_wp)        
             WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
-              coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * lctlib%k_crtos & 
-                                          - coarse_root_carbon(:), 0.0_wp)
-              root_carbon_inc(:) = MAX(k1_opt + k2_opt * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
+              coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
+                                              lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
+              root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
             ELSEWHERE
-              leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt + root_carbon(:))/(1.0_wp+k2_opt), 0.0_wp)
-              root_carbon_inc(:)        = MAX(k1_opt + k2_opt * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
+              leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt(:) + root_carbon(:)) / (1.0_wp + k2_opt(:)), 0.0_wp)
+              root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
               sap_wood_carbon_inc(:)    = 0.0_wp
               coarse_root_carbon_inc(:) = 0.0_wp
             END WHERE
@@ -2276,54 +2323,64 @@ CONTAINS
             !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
             b_inc(:) = 0.2_wp * dtime / one_day 
 
-            !> 1.2b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
+            !> 1.2.1b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
             !! simulataneously with the height-to-diameter relationship 
-            leaf_carbon_inc(:) = MAX(( b_inc(:) + leaf_carbon(:) * dheight(:) / leaf2wood_mass_ratio(:) * & 
-                        ( leaf_carbon(:) / leaf2root_mass_ratio(:) - b_inc(:) - root_carbon(:) ) + &
-                        wood_carbon(:) + root_carbon(:) - & 
-                        leaf_carbon(:) * (height(:) / leaf2wood_mass_ratio(:) + 1.0_wp / leaf2root_mass_ratio(:) )) / & 
-                        (1.0_wp + ( b_inc(:) - (1.0_wp + 2.0_wp/leaf2root_mass_ratio(:)) * leaf_carbon(:) + root_carbon(:) ) & 
-                        * dheight(:) / leaf2wood_mass_ratio(:) + height(:) / leaf2wood_mass_ratio(:) + &
-                        1._wp / leaf2root_mass_ratio(:) ), & 
-                        0.0_wp) 
+            leaf_carbon_inc(:)     = MAX((b_inc(:) + leaf_carbon(:) * dheight(:) / leaf2wood_mass_ratio(:) * & 
+                                          (leaf_carbon(:) / leaf2root_mass_ratio(:) - b_inc(:) - root_carbon(:) ) + &
+                                          wood_carbon(:) + root_carbon(:) - leaf_carbon(:) * &
+                                          (height(:) / leaf2wood_mass_ratio(:) + 1.0_wp / leaf2root_mass_ratio(:))) / & 
+                                         (1.0_wp + ( b_inc(:) - (1.0_wp + 2.0_wp / leaf2root_mass_ratio(:)) * &
+                                          leaf_carbon(:) + root_carbon(:)) * dheight(:) / &
+                                          leaf2wood_mass_ratio(:) + height(:) / &
+                                          leaf2wood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:) ), & 
+                                         0.0_wp) 
 
             sap_wood_carbon_inc(:) = MAX((( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
-                                        height(:) - sap_wood_carbon(:)) / & 
-                                        (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
-                                        dheight(:) ), 0.0_wp)          
+                                          height(:) - sap_wood_carbon(:)) / & 
+                                         (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
+                                          dheight(:) ), &
+                                         0.0_wp)          
             WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
               coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
-                                               lctlib%k_crtos - coarse_root_carbon, 0.0_wp)
-              root_carbon_inc(:)        = MAX(( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2root_mass_ratio - root_carbon, 0.0_wp)
+                                              lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
+              root_carbon_inc(:)        = MAX((leaf_carbon(:) + leaf_carbon_inc(:)) / &
+                                              leaf2root_mass_ratio(:) - root_carbon(:), 0.0_wp)
             ELSEWHERE ! special case of no wood growth (phenology etc.): redistribute available carbon 
-              leaf_carbon_inc(:)  = MAX(( b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio + root_carbon(:) ) / & 
-                                        (1.0_wp + 1._wp/ leaf2root_mass_ratio),0.0_wp)
-              root_carbon_inc(:)  = MAX(0.0_wp,MIN(b_inc(:) - leaf_carbon_inc(:), & 
-                                        ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2root_mass_ratio(:) - root_carbon(:)))
+              leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + root_carbon(:)) / & 
+                                              (1.0_wp + 1._wp / leaf2root_mass_ratio(:)), 0.0_wp)
+              root_carbon_inc(:)        = MAX(0.0_wp, &
+                                              MIN(b_inc(:) - leaf_carbon_inc(:), & 
+                                                  (leaf_carbon_inc(:) + leaf_carbon(:)) / &
+                                                  leaf2root_mass_ratio(:) - root_carbon(:)))
               sap_wood_carbon_inc(:)    = 0.0_wp
               coarse_root_carbon_inc(:) = 0.0_wp
             END WHERE
           END WHERE
         ENDIF ! flag_optimal_allocation
-      !> 1.2 grass
+
+      !> 1.2.2 grass
       !!
       CASE(igrass)
          IF (flag_optimal_allocation) THEN
-            leaf_carbon_inc(:) = MAX((b_inc(:) - k1_opt - leaf_carbon(:)/leaf2sapwood_mass_ratio(:) + root_carbon(:) + &
-                                  sap_wood_carbon(:)) / (1.0_wp + k2_opt + 1.0_wp/leaf2sapwood_mass_ratio(:)), 0.0_wp)
-            root_carbon_inc(:) = MAX(k1_opt + k2_opt * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
+            leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt(:) - leaf_carbon(:) / &
+                                             leaf2sapwood_mass_ratio(:) + root_carbon(:) + sap_wood_carbon(:)) / &
+                                            (1.0_wp + k2_opt(:) + 1.0_wp / leaf2sapwood_mass_ratio(:)), 0.0_wp)
+            root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
             sap_wood_carbon_inc(:)    = ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:)
             coarse_root_carbon_inc(:) = 0.0_wp
          ELSE
-            leaf_carbon_inc(:) = MAX( ( b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + &
-                                     sap_wood_carbon(:) + root_carbon(:) ) / & 
-                                     (1.0_wp + 1._wp / leaf2sapwood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:) ) , 0.0_wp) 
-            root_carbon_inc(:) = MAX(MIN( b_inc(:), ( leaf_carbon(:) + leaf_carbon_inc(:) ) / &
-                                     leaf2root_mass_ratio(:) - root_carbon(:)), 0.0_wp)
+            leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + &
+                                             sap_wood_carbon(:) + root_carbon(:)) / & 
+                                            (1.0_wp + 1._wp / leaf2sapwood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:)), &
+                                            0.0_wp) 
+            root_carbon_inc(:)        = MAX(MIN(b_inc(:), ( leaf_carbon(:) + leaf_carbon_inc(:)) / &
+                                                leaf2root_mass_ratio(:) - root_carbon(:)), &
+                                            0.0_wp)
             sap_wood_carbon_inc(:)    = ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:)
             coarse_root_carbon_inc(:) = 0.0_wp
          ENDIF
-      !> 1.2 default - write and finish
+
+      !> 1.2.3 default - write and exit
       !!
       CASE DEFAULT
        !! Write statement
@@ -2338,17 +2395,17 @@ CONTAINS
     WHERE(b_inc(:) > eps8)
        all_inc(:) = leaf_carbon_inc(:) + sap_wood_carbon_inc(:) + root_carbon_inc(:) + coarse_root_carbon_inc(:)
        WHERE(all_inc(:) > eps8)
-          veg_falloc%leaf%carbon(:)        = (1._wp - veg_falloc%fruit%carbon(:) ) * leaf_carbon_inc(:) / all_inc(:)
-          veg_falloc%fine_root%carbon(:)   = (1._wp - veg_falloc%fruit%carbon(:) ) * root_carbon_inc(:) / all_inc(:)
+          veg_falloc%leaf%carbon(:)        = (1._wp - veg_falloc%fruit%carbon(:) ) * leaf_carbon_inc(:)        / all_inc(:)
+          veg_falloc%fine_root%carbon(:)   = (1._wp - veg_falloc%fruit%carbon(:) ) * root_carbon_inc(:)        / all_inc(:)
           veg_falloc%coarse_root%carbon(:) = (1._wp - veg_falloc%fruit%carbon(:) ) * coarse_root_carbon_inc(:) / all_inc(:)
-          veg_falloc%sap_wood%carbon(:)    = (1._wp - veg_falloc%fruit%carbon(:) ) * sap_wood_carbon_inc(:)/ all_inc(:)
+          veg_falloc%sap_wood%carbon(:)    = (1._wp - veg_falloc%fruit%carbon(:) ) * sap_wood_carbon_inc(:)    / all_inc(:)
        END WHERE
     END WHERE
 
+
+    !> 2.0 Allocation factors for N, derived from the target C:N ratios and the C partitioning coefficients
+    !!  
     WHERE(b_inc(:) > eps8)
-       !> 2.0 Allocation factors for N, derived from the target C:N ratios and the C partitioning coefficients
-       !!  
- 
        !> 2.1 N required to sustain a unit of C growth
        !!
        growth_req_n(:) = veg_falloc%leaf%carbon(:)        / target_cn_leaf        + & 
@@ -2366,6 +2423,7 @@ CONTAINS
           veg_falloc%sap_wood%nitrogen(:)    = veg_falloc%sap_wood%carbon(:)    / target_cn_sap_wood    / growth_req_n(:)
           veg_falloc%fruit%nitrogen(:)       = veg_falloc%fruit%carbon(:)       / target_cn_fruit       / growth_req_n(:)
        END WHERE
+
 
        !> 3.0 Allocation factors for P, derived from the target N:P ratios and the N partitioning coefficients
        !! 
@@ -2385,6 +2443,7 @@ CONTAINS
           veg_falloc%sap_wood%phosphorus(:)    = veg_falloc%sap_wood%nitrogen(:)    / target_np_sap_wood    / growth_req_p(:)
           veg_falloc%fruit%phosphorus(:)       = veg_falloc%fruit%nitrogen(:)       / target_np_fruit       / growth_req_p(:)
        END WHERE
+
    
        !> 4.0 Allocation factors for isotopes follow the main isotope 
        !! 
@@ -2453,7 +2512,10 @@ CONTAINS
                                 maint_respiration             , &
                                 growth_respiration  )  
 
+    USE mo_kind,                  ONLY: wp, eps8
+    USE mo_base_constants,        ONLY: one_day, dtime
     USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_veg_constants,         ONLY: knut_labile, tau_labile, fresp_growth
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
@@ -2490,9 +2552,10 @@ CONTAINS
     !! based on tissue N and Temperature, constrained by default turnover of the labile pool
     !! to avoid that maitenance respiration consumes all C in times of low GPP 
     !! constrained to support leaf respiration, but not more than the current labile pool turnover
-    maint_respiration(:) = MAX(maint_respiration_leaf(:)                                          , & 
-                               MIN(1.0_wp/tau_labile/one_day * veg_pool_labile%carbon(:) * 1.e6_wp, &
+    maint_respiration(:) = MAX(maint_respiration_leaf(:), & 
+                               MIN(1.0_wp / tau_labile / one_day * veg_pool_labile%carbon(:) * 1.e6_wp, &
                                    maint_respiration_pot(:))) 
+
 
     !> 2.0 Determine C, N, P use for growth
     !!
@@ -2501,21 +2564,24 @@ CONTAINS
     !! accounting for the fraction of growth respiration required to achieve this growth, to ensure that
     !! growth does not empty the labile pool
     veg_growth%labile%carbon(:) = (veg_pool_labile%carbon(:) * kstar_labile(:) / one_day - &
-                                    &  (maint_respiration(:) + n_processing_respiration(:)) / 1.e6_wp ) * & 
-                                    &   dtime /  (1._wp + fresp_growth)
+                                   (maint_respiration(:) + n_processing_respiration(:)) / 1.e6_wp ) * & 
+                                  dtime /  (1._wp + fresp_growth)
 
     WHERE(veg_growth%labile%carbon(:) < eps8) 
       veg_growth%labile%carbon(:) = 0.0_wp
     END WHERE
+
     !> 2.2 Elemental limitation of growth by N & P (mol [N|P] / m2 / timestep)
     !! is determined by the minimum turnover of the labile N and P pools and the stoichiometric growth requirement
     !! given the potential growth rate of C
     !! The use of knut_labile allows plants to draw down the C:N:P of the labile pool, which will cause 
     !! a) an increased uptake per unit root mass and b) an increased cause 
     veg_growth%labile%nitrogen(:)   = MIN(growth_req_n(:) * veg_growth%labile%carbon(:), & 
-                                          veg_pool_labile%nitrogen(:) * knut_labile * kstar_labile(:) * dtime/one_day) 
+                                          veg_pool_labile%nitrogen(:) * knut_labile * kstar_labile(:) * &
+                                          dtime / one_day) 
     veg_growth%labile%phosphorus(:) = MIN(growth_req_p(:) * veg_growth%labile%nitrogen(:), & 
-                                          veg_pool_labile%phosphorus(:) * knut_labile * knut_labile * kstar_labile(:) * dtime/one_day) 
+                                          veg_pool_labile%phosphorus(:) * knut_labile * knut_labile * kstar_labile(:) * &
+                                          dtime / one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
     WHERE(growth_req_p(:) > eps8)
       hlp1(:) = veg_growth%labile%phosphorus(:) / growth_req_p(:)
@@ -2531,12 +2597,16 @@ CONTAINS
       END WHERE
     END WHERE  
     ! Diagnose growth respiration (µmol C / m2 / s)
-    growth_respiration(:) = fresp_growth * veg_growth%labile%carbon(:) * 1.e6_wp / dtime
+    growth_respiration(:)   = fresp_growth * veg_growth%labile%carbon(:) * 1.e6_wp / dtime
+
 
     !> 3.0 Adjust exudation rate to available carbon (mol C / m2 / timestep)
-    veg_exudation%carbon(:) = MIN(veg_exudation%carbon(:), MAX(0.0_wp, & 
-                                  0.2_wp * veg_pool_labile%carbon(:) - veg_growth%labile%carbon(:) - &
-                                  (growth_respiration(:) + maint_respiration(:) + n_processing_respiration(:)) * dtime / 1.e6_wp)) 
+    veg_exudation%carbon(:) = MIN(veg_exudation%carbon(:), &
+                                  MAX(0.0_wp, & 
+                                      0.2_wp * veg_pool_labile%carbon(:) - veg_growth%labile%carbon(:) - &
+                                      (growth_respiration(:) + maint_respiration(:) + n_processing_respiration(:)) * &
+                                      dtime / 1.e6_wp))
+
 
     !> 4.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
@@ -2560,6 +2630,7 @@ CONTAINS
       ! growth (in mol  / m2 / timestep)
       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen(:) * veg_pool_labile%nitrogen15(:) / veg_pool_labile%nitrogen(:)
     END WHERE
+
 
     !> 5.0 partition growth to tissue types
     !! 
