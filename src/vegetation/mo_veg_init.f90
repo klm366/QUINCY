@@ -303,11 +303,11 @@ CONTAINS
           !> start bareground with vegetation dynamics switched on: population scheme
           !! 
           CASE ("population")
-            veg_pool%seed_bed%carbon      = lctlib%seed_size * 10.0_wp
-            dens_ind(:)                   = 0.0_wp
+            veg_pool%seed_bed%carbon(:)      = lctlib%seed_size * 10.0_wp
+            dens_ind(:)                      = 0.0_wp
 
-            veg_pool%seed_bed%nitrogen    = veg_pool%seed_bed%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-            veg_pool%seed_bed%phosphorus  = veg_pool%seed_bed%nitrogen  / lctlib%np_leaf
+            veg_pool%seed_bed%nitrogen(:)    = veg_pool%seed_bed%carbon(:)    / (1._wp + fresp_growth) / lctlib%cn_leaf
+            veg_pool%seed_bed%phosphorus(:)  = veg_pool%seed_bed%nitrogen(:)  / lctlib%np_leaf
 
             ! pool%seed_bed%carbon13
             IF(lctlib%ps_pathway == ic3phot)THEN
@@ -315,8 +315,8 @@ CONTAINS
             ELSE
                hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
             ENDIF
-            veg_pool%seed_bed%carbon13 = veg_pool%seed_bed%carbon * &
-                                         calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:))
+            veg_pool%seed_bed%carbon13(:) = veg_pool%seed_bed%carbon(:) * &
+                                            calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:))
 
             ! pool%seed_bed%carbon14
             IF(lctlib%ps_pathway == ic3phot)THEN
@@ -324,19 +324,19 @@ CONTAINS
             ELSE
                hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
             ENDIF
-            veg_pool%seed_bed%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
-                                         veg_pool%seed_bed%carbon 
+            veg_pool%seed_bed%carbon14(:)    = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
+                                               veg_pool%seed_bed%carbon(:) 
 
-            veg_pool%seed_bed%nitrogen15  = veg_pool%seed_bed%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+            veg_pool%seed_bed%nitrogen15(:)  = veg_pool%seed_bed%nitrogen(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
           !> no vegetation dynamics and not starting with bare ground
           !! 
           CASE ("none")
-            veg_pool%reserve%carbon      = 5.0_wp
-            dens_ind(:)                  = 0.4_wp
+            veg_pool%reserve%carbon(:)      = 5.0_wp
+            dens_ind(:)                     = 0.4_wp
 
-            veg_pool%reserve%nitrogen    = veg_pool%reserve%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-            veg_pool%reserve%phosphorus  = veg_pool%reserve%nitrogen  / lctlib%np_leaf
+            veg_pool%reserve%nitrogen(:)    = veg_pool%reserve%carbon(:)    / (1._wp + fresp_growth) / lctlib%cn_leaf
+            veg_pool%reserve%phosphorus(:)  = veg_pool%reserve%nitrogen(:)  / lctlib%np_leaf
 
             ! pool%reserve%carbon13
             IF(lctlib%ps_pathway == ic3phot)THEN
@@ -344,8 +344,8 @@ CONTAINS
             ELSE
                hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
             ENDIF
-            veg_pool%reserve%carbon13 = veg_pool%reserve%carbon * &
-                                        calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:))
+            veg_pool%reserve%carbon13(:) = veg_pool%reserve%carbon(:) * &
+                                           calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1(:))
 
             ! pool%reserve%carbon14
             IF(lctlib%ps_pathway == ic3phot)THEN
@@ -353,10 +353,10 @@ CONTAINS
             ELSE
                hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
             ENDIF
-            veg_pool%reserve%carbon14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
-                                        veg_pool%reserve%carbon 
+            veg_pool%reserve%carbon14(:)   = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
+                                             veg_pool%reserve%carbon(:) 
 
-            veg_pool%reserve%nitrogen15 = veg_pool%reserve%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+            veg_pool%reserve%nitrogen15(:) = veg_pool%reserve%nitrogen(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           CASE DEFAULT
             WRITE(message_text,'(2a)') 'not a valid veg_dynamics_scheme: ',TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)
             CALL finish("mo_veg_config_class:init_veg_config",message_text) 
@@ -372,21 +372,21 @@ CONTAINS
         !leaf_nitrogen
         IF(dsl4jsb_Config(VEG_)%pft_id==0) THEN
           veg_pool%leaf%nitrogen(:)   = ref_nleaf / molar_mass_N * lai(:)
-          height=10.0_wp
+          height                      = 10.0_wp
         ELSE
           veg_pool%leaf%nitrogen(:)   = lai(:) / lctlib%sla / lctlib%cn_leaf
           veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf
           IF(lctlib%growthform==itree)THEN
-             height(:) = 10.0_wp
+             height(:)                = 10.0_wp
           ELSE 
-             height(:) = 1.0_wp
+             height(:)                = 1.0_wp
           ENDIF
         ENDIF
         leaf_nitrogen_cl(:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
         lai_cl(:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
 
 
-      !> 1.3 Default - error catching
+      !> 1.3 Default (simply for error catching)
       !!
       CASE DEFAULT
         CALL finish('veg_init','Invalid SLM model name. Use either land, plant, soil, canopy or test_canopy.')
@@ -396,84 +396,83 @@ CONTAINS
     !> 2.0 vegetation init for all SLM models
     !!
     ! plant variables
-    dphi(:)               = - lctlib%phi_leaf_min
-    beta_sinklim_ps(:)    = 1.0_wp
-    leaf_cn_direction(:)  = 0.0_wp
-    fn_oth_cl(:,:)        = 1.0_wp  ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
-                                    ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
+    dphi(:)                             = -1.0_wp * lctlib%phi_leaf_min
+    beta_sinklim_ps(:)                  = 1.0_wp
+    leaf_cn_direction(:)                = 0.0_wp
+    fn_oth_cl(:,:)                      = 1.0_wp  ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
+                                                  ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
 
     ! initialising moving averages
     ! allocation
-    npp_talloc_mavg(:) = 0.0_wp
-    n_fixation_talloc_mavg(:) = 0.0_wp
-    transpiration_talloc_mavg(:) = eps8
-    unit_transpiration_talloc_mavg(:) = 1.e-6
-    unit_uptake_n_talloc_mavg(:) = eps8
-    unit_uptake_p_talloc_mavg(:) = 4._wp*1.e-10
-    dphi_talloc_mavg(:) =  - lctlib%phi_leaf_min
-    growth_cn_talloc_mavg(:) = 60.0_wp
-    unit_npp_talloc_mavg(:) = unit_uptake_n_talloc_mavg(:) * growth_cn_talloc_mavg(:)
-    growth_cp_talloc_mavg(:) = 2000.0_wp
-    labile_carbon_talloc_mavg(:) = 0.0_wp
-    labile_nitrogen_talloc_mavg(:) = 0.0_wp
-    labile_phosphorus_talloc_mavg(:) = 0.0_wp
-    reserve_carbon_talloc_mavg(:) = 0.0_wp
-    reserve_nitrogen_talloc_mavg(:) = 0.0_wp
-    reserve_phosphorus_talloc_mavg(:) = 0.0_wp
+    npp_talloc_mavg(:)                  = 0.0_wp
+    n_fixation_talloc_mavg(:)           = 0.0_wp
+    transpiration_talloc_mavg(:)        = eps8
+    unit_transpiration_talloc_mavg(:)   = 1.e-6
+    unit_uptake_n_talloc_mavg(:)        = eps8
+    unit_uptake_p_talloc_mavg(:)        = 4._wp * 1.e-10
+    dphi_talloc_mavg(:)                 = -1.0_wp * lctlib%phi_leaf_min
+    growth_cn_talloc_mavg(:)            = 60.0_wp
+    unit_npp_talloc_mavg(:)             = unit_uptake_n_talloc_mavg(:) * growth_cn_talloc_mavg(:)
+    growth_cp_talloc_mavg(:)            = 2000.0_wp
+    labile_carbon_talloc_mavg(:)        = 0.0_wp
+    labile_nitrogen_talloc_mavg(:)      = 0.0_wp
+    labile_phosphorus_talloc_mavg(:)    = 0.0_wp
+    reserve_carbon_talloc_mavg(:)       = 0.0_wp
+    reserve_nitrogen_talloc_mavg(:)     = 0.0_wp
+    reserve_phosphorus_talloc_mavg(:)   = 0.0_wp
 
     ! N fraction optimisation
-    fleaf_sunlit_tfrac_mavg_cl(:,:) = 0.5_wp
-    t_air_tfrac_mavg(:) = 283.15_wp
-    press_srf_tfrac_mavg(:) = standard_press_srf
-    co2_mixing_ratio_tfrac_mavg(:) = def_co2_mixing_ratio
-    ga_tfrac_mavg(:) = 0.2_wp
-    beta_sinklim_ps_tfrac_mavg(:) = 1.0_wp
+    fleaf_sunlit_tfrac_mavg_cl(:,:)     = 0.5_wp
+    t_air_tfrac_mavg(:)                 = 283.15_wp
+    press_srf_tfrac_mavg(:)             = standard_press_srf
+    co2_mixing_ratio_tfrac_mavg(:)      = def_co2_mixing_ratio
+    ga_tfrac_mavg(:)                    = 0.2_wp
+    beta_sinklim_ps_tfrac_mavg(:)       = 1.0_wp
 
     ! leaf N optimisation
-    fleaf_sunlit_tcnl_mavg_cl(:,:) = 0.5_wp
-    t_air_tcnl_mavg(:) = 283.15_wp
-    press_srf_tcnl_mavg(:) = standard_press_srf
-    co2_mixing_ratio_tcnl_mavg(:) = def_co2_mixing_ratio
-    beta_sinklim_ps_tcnl_mavg(:) = 1.0_wp
-    growth_cn_tcnl_mavg(:) = 60.0_wp
-    uptake_n_tcnl_mavg(:) = eps8
-    npp_tcnl_mavg(:) = uptake_n_tcnl_mavg * growth_cn_tcnl_mavg
-
+    fleaf_sunlit_tcnl_mavg_cl(:,:)      = 0.5_wp
+    t_air_tcnl_mavg(:)                  = 283.15_wp
+    press_srf_tcnl_mavg(:)              = standard_press_srf
+    co2_mixing_ratio_tcnl_mavg(:)       = def_co2_mixing_ratio
+    beta_sinklim_ps_tcnl_mavg(:)        = 1.0_wp
+    growth_cn_tcnl_mavg(:)              = 60.0_wp
+    uptake_n_tcnl_mavg(:)               = eps8
+    npp_tcnl_mavg(:)                    = uptake_n_tcnl_mavg(:) * growth_cn_tcnl_mavg(:)
 
     ! daytime averages plus accumulation var
-    t_air_daytime(:)                  = 283.15_wp
-    press_srf_daytime(:)              = standard_press_srf
-    co2_mixing_ratio_daytime(:)       = def_co2_mixing_ratio
-    ga_daytime(:)                     = 0.2_wp
-    beta_sinklim_ps_daytime(:)        = 1.0_wp
-    t_jmax_opt_daytime(:)             = 17.0_wp
-    t_jmax_opt_daytime_dacc(:)        = 17.0_wp
-    t_air_daytime_dacc(:)             = 283.15_wp
-    press_srf_daytime_dacc(:)         = standard_press_srf
-    co2_mixing_ratio_daytime_dacc(:)  = def_co2_mixing_ratio
-    ga_daytime_dacc(:)                = 0.2_wp
-    beta_sinklim_ps_daytime_dacc(:)   = 1.0_wp
+    t_air_daytime(:)                    = 283.15_wp
+    press_srf_daytime(:)                = standard_press_srf
+    co2_mixing_ratio_daytime(:)         = def_co2_mixing_ratio
+    ga_daytime(:)                       = 0.2_wp
+    beta_sinklim_ps_daytime(:)          = 1.0_wp
+    t_jmax_opt_daytime(:)               = 17.0_wp
+    t_jmax_opt_daytime_dacc(:)          = 17.0_wp
+    t_air_daytime_dacc(:)               = 283.15_wp
+    press_srf_daytime_dacc(:)           = standard_press_srf
+    co2_mixing_ratio_daytime_dacc(:)    = def_co2_mixing_ratio
+    ga_daytime_dacc(:)                  = 0.2_wp
+    beta_sinklim_ps_daytime_dacc(:)     = 1.0_wp
 
     ! moving averages
-    growth_req_n_tlabile_mavg(:)      = 1._wp/25._wp
-    growth_req_p_tlabile_mavg(:)      = 1._wp/14._wp
-    t_air_tphen_mavg(:)               = 283.15_wp
-    npp_tuptake_mavg(:)               = 1.0_wp
-    demand_uptake_n_tuptake_mavg(:)   = 0.1_wp
-    demand_uptake_p_tuptake_mavg(:)   = 0.1_wp
-    growth_req_n_tuptake_mavg(:)      = 1._wp/25._wp
-    growth_req_p_tuptake_mavg(:)      = 1._wp/14._wp
-    cost_n_fixation_tuptake_mavg(:)   = 10.0_wp
-    ga_tcnl_mavg(:)                   = 0.2_wp
-    leaf2root_troot_mavg(:)           = 1.0_wp
-    an_boc_tvegdyn_mavg(:)            = 5.0_wp
-    net_growth_tvegdyn_mavg(:)        = 5.0_wp
-    lai_tvegdyn_mavg(:)               = 0.1_wp
-    t_air_tacclim_mavg(:)             = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
-    t_soil_root_tacclim_mavg(:)       = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
-    t_air_week_mavg(:)                = 283.15_wp
-    t_air_month_mavg(:)               = 283.15_wp
-    t_jmax_opt_mavg(:)                = 17.0_wp
+    growth_req_n_tlabile_mavg(:)        = 1._wp / 25._wp
+    growth_req_p_tlabile_mavg(:)        = 1._wp / 14._wp
+    t_air_tphen_mavg(:)                 = 283.15_wp
+    npp_tuptake_mavg(:)                 = 1.0_wp
+    demand_uptake_n_tuptake_mavg(:)     = 0.1_wp
+    demand_uptake_p_tuptake_mavg(:)     = 0.1_wp
+    growth_req_n_tuptake_mavg(:)        = 1._wp / 25._wp
+    growth_req_p_tuptake_mavg(:)        = 1._wp / 14._wp
+    cost_n_fixation_tuptake_mavg(:)     = 10.0_wp
+    ga_tcnl_mavg(:)                     = 0.2_wp
+    leaf2root_troot_mavg(:)             = 1.0_wp
+    an_boc_tvegdyn_mavg(:)              = 5.0_wp
+    net_growth_tvegdyn_mavg(:)          = 5.0_wp
+    lai_tvegdyn_mavg(:)                 = 0.1_wp
+    t_air_tacclim_mavg(:)               = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
+    t_soil_root_tacclim_mavg(:)         = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_veg_respiration:temperature_response_respiration
+    t_air_week_mavg(:)                  = 283.15_wp
+    t_air_month_mavg(:)                 = 283.15_wp
+    t_jmax_opt_mavg(:)                  = 17.0_wp
 
 ! Pass back values to process memory
 #define Passback_veg_pool
@@ -481,6 +480,5 @@ CONTAINS
 #undef Passback_veg_pool
 
   END SUBROUTINE veg_init
-
 
 END MODULE mo_veg_init

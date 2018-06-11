@@ -12,8 +12,6 @@ MODULE mo_veg_update_pools
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind
-  USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -35,8 +33,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_pools(tile, options)
 
+    USE mo_kind,                            ONLY: wp, eps4, eps8
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_base_memory,                     ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_base_constants,                  ONLY: dtime, one_day
     USE mo_base_config_class,               ONLY: base_config
@@ -73,15 +73,14 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    TYPE(t_slm_tile),         INTENT(inout)         :: tile             !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)            :: options          !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: nsoil_sb
-    REAL(wp), DIMENSION(options%nc)       :: hlp1       !< dummy variable
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),        POINTER               :: model
+    TYPE(t_lctlib_element),   POINTER               :: lctlib           !< land-cover-type library - parameter across pft's
+    REAL(wp),                 DIMENSION(options%nc) :: hlp1             !< dummy variable
+    INTEGER                                         :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -92,8 +91,8 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),       POINTER :: pheno__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),         POINTER :: veg__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),          POINTER :: sb__mem
-    dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(RAD_)                          ! TYPE(t_rad_memory),         POINTER :: rad__mem
+    dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),        POINTER :: soil__mem
     ! Declare pointers to variables in memory
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -105,15 +104,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
     ! PHENO_
     dsl4jsb_Logical2D_onChunk   :: growing_season 
-    ! SOIL_
+    ! SOIL_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SOIL_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    ! RAD_
+    ! RAD_ 2D
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
+    ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
-    ! VEG_
+    ! VEG_ 2D
     dsl4jsb_Logical2D_onChunk   :: l_do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: dens_ind
@@ -158,6 +158,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
@@ -298,7 +299,7 @@ CONTAINS
        !! 
        !! 
        npp(:)        = gross_assimilation(:)     - & 
-                       growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
+                       growth_respiration(:)     - maint_respiration(:)     - n_processing_respiration(:) 
        npp_c13(:)    = gross_assimilation_C13(:) - &
                        growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
        npp_c14(:)    = gross_assimilation_C14(:) - & 
@@ -312,7 +313,7 @@ CONTAINS
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
-       n_fixation_n15(:) = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
+       n_fixation_n15(:)               = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
        veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
                                           ( uptake_nh4(:) + uptake_no3(:) + n_fixation(:)) * dtime / 1000000.0_wp
        veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
@@ -323,19 +324,17 @@ CONTAINS
        !> 1.2a Add mycorrhiza export
        !!
        veg_growth%labile%carbon(:)     = veg_growth%labile%carbon(:)   + & 
-                                        SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:),DIM=2)
+                                         SUM(sb_mycorrhiza_export%carbon(:,:)     * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%carbon13(:)   = veg_growth%labile%carbon13(:) + & 
-                                        SUM(sb_mycorrhiza_export%carbon13(:,:) * soil_depth_sl(:,:),DIM=2)
+                                         SUM(sb_mycorrhiza_export%carbon13(:,:)   * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%carbon14(:)   = veg_growth%labile%carbon14(:) + & 
-                                        SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:),DIM=2)
+                                         SUM(sb_mycorrhiza_export%carbon14(:,:)   * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
-                                        SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:),DIM=2)
+                                         SUM(sb_mycorrhiza_export%nitrogen(:,:)   * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
-                                        SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:),DIM=2)
+                                         SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:),DIM=2)
        veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + & 
-                                        SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:),DIM=2)
-
-
+                                         SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:),DIM=2)
 
        !> 1.3 update labile pool and reserve 
        !! 
@@ -345,70 +344,73 @@ CONTAINS
        !> 1.4 update fluxes from continuous nutrient turnover and resorption 
        !!
        veg_pool%labile%nitrogen(:)       = veg_pool%labile%nitrogen(:)       + recycling_leaf_n(:) + & 
-                                         recycling_fine_root_n(:) + recycling_heart_wood_n(:)
+                                           recycling_fine_root_n(:)          + recycling_heart_wood_n(:)
        veg_pool%leaf%nitrogen(:)         = veg_pool%leaf%nitrogen(:)         - recycling_leaf_n(:)
        veg_pool%fine_root%nitrogen(:)    = veg_pool%fine_root%nitrogen(:)    - recycling_fine_root_n(:)
        veg_pool%heart_wood%nitrogen(:)   = veg_pool%heart_wood%nitrogen(:)   - recycling_heart_wood_n(:)
    
        veg_pool%labile%phosphorus(:)     = veg_pool%labile%phosphorus(:)     + recycling_leaf_p(:) + & 
-                                         recycling_fine_root_p(:) + recycling_heart_wood_p(:)
+                                           recycling_fine_root_p(:)          + recycling_heart_wood_p(:)
        veg_pool%leaf%phosphorus(:)       = veg_pool%leaf%phosphorus(:)       - recycling_leaf_p(:)
        veg_pool%fine_root%phosphorus(:)  = veg_pool%fine_root%phosphorus(:)  - recycling_fine_root_p(:)
        veg_pool%heart_wood%phosphorus(:) = veg_pool%heart_wood%phosphorus(:) - recycling_heart_wood_p(:)
    
        veg_pool%labile%nitrogen15(:)     = veg_pool%labile%nitrogen15(:)     + recycling_leaf_n15(:) + & 
-                                         recycling_fine_root_n15(:) + recycling_heart_wood_n15(:)
+                                           recycling_fine_root_n15(:)        + recycling_heart_wood_n15(:)
        veg_pool%leaf%nitrogen15(:)       = veg_pool%leaf%nitrogen15(:)       - recycling_leaf_n15(:)
        veg_pool%fine_root%nitrogen15(:)  = veg_pool%fine_root%nitrogen15(:)  - recycling_fine_root_n15(:)
        veg_pool%heart_wood%nitrogen15(:) = veg_pool%heart_wood%nitrogen15(:) - recycling_heart_wood_n15(:)
 
        !> 1.5 update labile pool with fluxes to mycorrhiza
-       veg_pool%labile%carbon     = veg_pool%labile%carbon       - veg_exudation%carbon 
-       veg_pool%labile%nitrogen   = veg_pool%labile%nitrogen     - veg_exudation%nitrogen 
-       veg_pool%labile%phosphorus = veg_pool%labile%phosphorus   - veg_exudation%phosphorus 
-       veg_pool%labile%carbon13   = veg_pool%labile%carbon13     - veg_exudation%carbon13 
-       veg_pool%labile%carbon14   = veg_pool%labile%carbon14     - veg_exudation%carbon14 
-       veg_pool%labile%nitrogen15 = veg_pool%labile%nitrogen15   - veg_exudation%nitrogen15 
+       veg_pool%labile%carbon(:)     = veg_pool%labile%carbon(:)       - veg_exudation%carbon(:) 
+       veg_pool%labile%nitrogen(:)   = veg_pool%labile%nitrogen(:)     - veg_exudation%nitrogen(:) 
+       veg_pool%labile%phosphorus(:) = veg_pool%labile%phosphorus(:)   - veg_exudation%phosphorus(:) 
+       veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon13(:)     - veg_exudation%carbon13(:) 
+       veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon14(:)     - veg_exudation%carbon14(:) 
+       veg_pool%labile%nitrogen15(:) = veg_pool%labile%nitrogen15(:)   - veg_exudation%nitrogen15(:) 
 
    
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
        !! 
-       veg_pool           = veg_pool - veg_litterfall
-       veg_pool           = veg_pool + veg_growth
+       veg_pool           = veg_pool          - veg_litterfall
+       veg_pool           = veg_pool          + veg_growth
        veg_pool%labile    = veg_pool%labile   + veg_establishment
        veg_pool%seed_bed  = veg_pool%seed_bed - veg_establishment
    
        !> 1.6 Radioactive decay of C14 in living plant tissue
        !!
-       veg_pool%leaf%carbon14         = veg_pool%leaf%carbon14        * (1._wp - lambda_C14 * dtime )
-       veg_pool%fine_root%carbon14    = veg_pool%fine_root%carbon14   * (1._wp - lambda_C14 * dtime )
-       veg_pool%sap_wood%carbon14     = veg_pool%sap_wood%carbon14    * (1._wp - lambda_C14 * dtime )
-       veg_pool%heart_wood%carbon14   = veg_pool%heart_wood%carbon14  * (1._wp - lambda_C14 * dtime )
-       veg_pool%coarse_root%carbon14  = veg_pool%coarse_root%carbon14 * (1._wp - lambda_C14 * dtime )
-       veg_pool%fruit%carbon14        = veg_pool%fruit%carbon14       * (1._wp - lambda_C14 * dtime )
-       veg_pool%labile%carbon14       = veg_pool%labile%carbon14      * (1._wp - lambda_C14 * dtime )
-       veg_pool%reserve%carbon14      = veg_pool%reserve%carbon14     * (1._wp - lambda_C14 * dtime )
-       veg_pool%seed_bed%carbon14     = veg_pool%seed_bed%carbon14    * (1._wp - lambda_C14 * dtime )
+       veg_pool%leaf%carbon14(:)         = veg_pool%leaf%carbon14(:)        * (1._wp - lambda_C14 * dtime )
+       veg_pool%fine_root%carbon14(:)    = veg_pool%fine_root%carbon14(:)   * (1._wp - lambda_C14 * dtime )
+       veg_pool%sap_wood%carbon14(:)     = veg_pool%sap_wood%carbon14(:)    * (1._wp - lambda_C14 * dtime )
+       veg_pool%heart_wood%carbon14(:)   = veg_pool%heart_wood%carbon14(:)  * (1._wp - lambda_C14 * dtime )
+       veg_pool%coarse_root%carbon14(:)  = veg_pool%coarse_root%carbon14(:) * (1._wp - lambda_C14 * dtime )
+       veg_pool%fruit%carbon14(:)        = veg_pool%fruit%carbon14(:)       * (1._wp - lambda_C14 * dtime )
+       veg_pool%labile%carbon14(:)       = veg_pool%labile%carbon14(:)      * (1._wp - lambda_C14 * dtime )
+       veg_pool%reserve%carbon14(:)      = veg_pool%reserve%carbon14(:)     * (1._wp - lambda_C14 * dtime )
+       veg_pool%seed_bed%carbon14(:)     = veg_pool%seed_bed%carbon14(:)    * (1._wp - lambda_C14 * dtime )
    
     CASE ('canopy')
    
        ! diagnose required change in leaf C given phenology to attain prescribed LAI max
        WHERE(growing_season(:))
           veg_growth%leaf%carbon(:) = dsl4jsb_Config(PHENO_)%lai_max / lctlib%sla * &
-                                      (1._wp - exp(-k_leafon_canopy * (dsl4jsb_Config(PHENO_)%lai_max - lai(:)) / dsl4jsb_Config(PHENO_)%lai_max)) * &
-                                     dtime / one_day 
+                                      (1._wp - exp(-k_leafon_canopy * &
+                                       (dsl4jsb_Config(PHENO_)%lai_max - lai(:)) / dsl4jsb_Config(PHENO_)%lai_max)) * &
+                                      dtime / one_day 
        ELSEWHERE
           veg_litterfall%leaf%carbon(:) = MAX(veg_pool%leaf%carbon(:), & 
                                               lai(:)/lctlib%sla * max_leaf_shedding_rate * dtime / one_day * & 
-                                              dsl4jsb_Config(PHENO_)%lai_max / MAX(eps4,lai(:)))
+                                              dsl4jsb_Config(PHENO_)%lai_max / &
+                                              MAX(eps4, lai(:)))
        ENDWHERE
  
        ! update leaf C:N:P pools 
-       veg_pool%leaf%carbon(:) = veg_pool%leaf%carbon(:) + veg_growth%leaf%carbon(:) - veg_litterfall%leaf%carbon(:) 
-       veg_pool%leaf%nitrogen(:) = veg_pool%leaf%carbon(:) / lctlib%cn_leaf 
+       veg_pool%leaf%carbon(:)     = veg_pool%leaf%carbon(:)   + veg_growth%leaf%carbon(:) - veg_litterfall%leaf%carbon(:) 
+       veg_pool%leaf%nitrogen(:)   = veg_pool%leaf%carbon(:)   / lctlib%cn_leaf 
        veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf 
 
     END SELECT
+
 
     !> 2.0 Update plant diagnostics given the above fluxes
     !!
@@ -426,12 +428,13 @@ CONTAINS
     END WHERE
 
     WHERE(veg_pool%leaf%carbon(:) > eps8)
-        mean_leaf_age(:) = (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
+        mean_leaf_age(:) = (mean_leaf_age(:) + dtime / one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
       ELSEWHERE
         mean_leaf_age(:) = 0.0_wp
     END WHERE
 
     dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
+
 
     !> 3.0 stand/cohort harvest
     !!
@@ -481,43 +484,43 @@ CONTAINS
       veg_pool%reserve%carbon14(:)   = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
                                        veg_pool%reserve%carbon(:)
       ! pool%reserve%nitrogen15
-      veg_pool%reserve%nitrogen15(:) = veg_pool%reserve%nitrogen(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      veg_pool%reserve%nitrogen15(:) = veg_pool%reserve%nitrogen(:) / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ENDIF
 
 
     !> 4.0 Given current vegetation pools, update canopy layers 
     !!
     !!
-    CALL calc_canopy_layers( &
-                             options                                        , & ! in
+    CALL calc_canopy_layers( options                                        , & ! in
                              lctlib                                         , &
                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                             veg_pool%leaf%nitrogen(:)          , &
-                             lai(:)                             , &
-                             ppfd_sunlit_tfrac_mavg_cl(:,:)     , &
-                             ppfd_shaded_tfrac_mavg_cl(:,:)     , & 
-                             fleaf_sunlit_tfrac_mavg_cl(:,:)    , &
-                             t_air_tfrac_mavg(:)                , &
-                             t_air_tacclim_mavg(:)              , &
-                             press_srf_tfrac_mavg(:)            , &
-                             co2_mixing_ratio_tfrac_mavg(:)     , &
-                             ga_tfrac_mavg(:)                   , &
-                             beta_air_tfrac_mavg(:)             , &
-                             beta_soa_tphen_mavg(:)             , &
-                             beta_soil_ps_tfrac_mavg(:)         , &
-                             beta_sinklim_ps_tfrac_mavg(:)      , &
-                             beta_soil_gs_tfrac_mavg(:)         , & 
-                             t_jmax_opt_mavg(:)                 , &
-                             lai_cl(:,:)                        , & ! out
-                             cumm_lai_cl(:,:)                   , & ! out
-                             leaf_nitrogen_cl(:,:)              , & ! inout
-                             fn_rub_cl(:,:)                     , &
-                             fn_et_cl(:,:)                      , &
-                             fn_pepc_cl(:,:)                    , &
-                             fn_chl_cl(:,:)                     , &
-                             fn_oth_cl(:,:)                     )
+                             veg_pool%leaf%nitrogen(:)                      , &
+                             lai(:)                                         , &
+                             ppfd_sunlit_tfrac_mavg_cl(:,:)                 , &
+                             ppfd_shaded_tfrac_mavg_cl(:,:)                 , & 
+                             fleaf_sunlit_tfrac_mavg_cl(:,:)                , &
+                             t_air_tfrac_mavg(:)                            , &
+                             t_air_tacclim_mavg(:)                          , &
+                             press_srf_tfrac_mavg(:)                        , &
+                             co2_mixing_ratio_tfrac_mavg(:)                 , &
+                             ga_tfrac_mavg(:)                               , &
+                             beta_air_tfrac_mavg(:)                         , &
+                             beta_soa_tphen_mavg(:)                         , &
+                             beta_soil_ps_tfrac_mavg(:)                     , &
+                             beta_sinklim_ps_tfrac_mavg(:)                  , &
+                             beta_soil_gs_tfrac_mavg(:)                     , & 
+                             t_jmax_opt_mavg(:)                             , &
+                             lai_cl(:,:)                                    , & ! out
+                             cumm_lai_cl(:,:)                               , & ! out
+                             leaf_nitrogen_cl(:,:)                          , & ! inout
+                             fn_rub_cl(:,:)                                 , &
+                             fn_et_cl(:,:)                                  , &
+                             fn_pepc_cl(:,:)                                , &
+                             fn_chl_cl(:,:)                                 , &
+                             fn_oth_cl(:,:)                                 )
+
 
     !> 5.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!

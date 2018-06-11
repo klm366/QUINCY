@@ -9,9 +9,6 @@
 !!
 MODULE mo_veg_respiration
 
-  USE mo_kind
-
-
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: calc_maintenance_respiration, temperature_response_respiration
@@ -32,31 +29,33 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION temperature_response_respiration(temp, temp_mavg) RESULT(temp_response)
 
+    USE mo_kind,                    ONLY: wp, eps8
     USE mo_veg_constants,           ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: temp                      !< instantaneous temperature (K)
     REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K) 
     REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10°C)
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
 
 
-    hlp1 = t_maint_k3 + 1.0_wp / (1._wp/t_maint_k2 - log(eps8)/t_maint_k1)
+    hlp1 = t_maint_k3 + 1.0_wp / (1._wp / t_maint_k2 - log(eps8) / t_maint_k1)
 
     IF(temp >= hlp1) THEN
       ! IF flag_t_resp_acclimation is false: temp_mavg == t_acclim_zero
       temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
-                       exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
+                       exp(t_maint_k1 * (1._wp / t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
     ELSE
       temp_response = 0.0_wp
     ENDIF 
 
-
   END FUNCTION temperature_response_respiration
+
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculate maintenance respiration
@@ -77,10 +76,11 @@ CONTAINS
                                                         coarse_root_nitrogen)   & 
                                                         RESULT(maint_respiration)
 
-    USE mo_veg_constants, ONLY: fmaint_rate_base, fmaint_rate_wood
+    USE mo_kind,                    ONLY: wp
+    USE mo_veg_constants,           ONLY: fmaint_rate_base, fmaint_rate_wood
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: t_wood                   !< temperature of the stem (K) 
     REAL(wp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K) 
@@ -91,6 +91,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
                                                      ! (calculated in photosynthesis; µmol C / m2 / s)
     REAL(wp)             :: maint_respiration        !< maintenance respiration (µmol C / m2 / s)
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
 

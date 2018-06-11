@@ -11,7 +11,6 @@ MODULE mo_veg_turnover
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
 
@@ -34,6 +33,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_turnover(tile, options)
 
+    USE mo_kind,                  ONLY: wp
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -53,9 +53,9 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
     ! ---------------------------
     ! 0.2 Local 
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),        POINTER       :: model
+    TYPE(t_lctlib_element),   POINTER       :: lctlib           !< land-cover-type library - parameter across pft's
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -137,25 +137,24 @@ CONTAINS
 
     !> 1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !!
-    CALL calc_nutrient_recycling( &
-                                  options                               , & ! in
+    CALL calc_nutrient_recycling( options                               , & ! in
+                                  lctlib                                , & ! in 
                                   target_cn_fine_root(:)                , &
                                   target_np_fine_root(:)                , &
                                   target_cn_leaf(:)                     , &
                                   target_np_leaf(:)                     , &
                                   growing_season(:)                     , &
-                                  veg_pool                              , &
+                                  veg_pool                              , & ! in
                                   recycling_leaf_n(:)                   , & ! inout
                                   recycling_fine_root_n(:)              , &
                                   recycling_leaf_p(:)                   , &
                                   recycling_fine_root_p(:)              , &
                                   recycling_leaf_n15(:)                 , &
-                                  recycling_fine_root_n15(:)            )
+                                  recycling_fine_root_n15(:)            )   ! inout
 
     !> 2.0 Calculate recycling and retranslocation
     !!  
-    CALL calc_turnover( &
-                        options                               , & ! in 
+    CALL calc_turnover( options                               , & ! in 
                         lctlib                                , & ! in 
                         growing_season(:)                     , & ! in
                         lai(:)                                , & ! in
@@ -169,7 +168,7 @@ CONTAINS
                         veg_pool                              , &
                         veg_growth                            , &
                         net_growth                            , &
-                        veg_litterfall                        )
+                        veg_litterfall                        )   ! inout
 
 ! Pass back values to process memory
 #define Passback_veg_pool
@@ -194,8 +193,8 @@ CONTAINS
   !! Input: plant status and leaf and root C:N:P target ratios \n
   !! Output: net flux between labile and leaves/roots (+ve: flux to labile, -ve: flux from labile)
   !----------------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_nutrient_recycling( &
-                                      options                           , &
+  SUBROUTINE calc_nutrient_recycling( options                           , &
+                                      lctlib                            , &
                                       target_cn_fine_root               , &
                                       target_np_fine_root               , &
                                       target_cn_leaf                    , &
@@ -209,8 +208,10 @@ CONTAINS
                                       recycling_leaf_n15                , &
                                       recycling_fine_root_n15           )
 
+    USE mo_kind,                  ONLY: wp, eps8
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
     dsl4slm_Use_memory_a_veg
 
@@ -218,6 +219,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),         INTENT(in)    :: options                                !< model options
+    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
                                                        target_np_fine_root               , &  !< target N:P of fine_roots 
                                                        target_cn_leaf                    , &  !< ..
@@ -241,17 +243,19 @@ CONTAINS
     !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
     !!
     WHERE (growing_season(:))
-       recycling_leaf(:)      = ( veg_pool%leaf%nitrogen(:) - & 
-                                  veg_pool%leaf%carbon(:) / target_cn_leaf(:) ) / tau_nutrient_recycling/one_day * dtime
-       recycling_fine_root(:) = ( veg_pool%fine_root%nitrogen(:) - &
-                                  veg_pool%fine_root%carbon(:) / target_cn_fine_root(:) ) / tau_nutrient_recycling/one_day * dtime
+       recycling_leaf(:)      = (veg_pool%leaf%nitrogen(:) - & 
+                                 veg_pool%leaf%carbon(:) / target_cn_leaf(:)) / tau_nutrient_recycling / &
+                                 one_day * dtime
+       recycling_fine_root(:) = (veg_pool%fine_root%nitrogen(:) - &
+                                 veg_pool%fine_root%carbon(:) / target_cn_fine_root(:)) / tau_nutrient_recycling / &
+                                 one_day * dtime
        !> 1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
        !! 
        WHERE((-1.0_wp * (recycling_leaf(:) + recycling_fine_root(:))) > eps8)
-          hlp1(:) = -1.0_wp * ( 1.0_wp/tau_labile/one_day * veg_pool%labile%nitrogen(:) * dtime ) / & 
-                              ( recycling_leaf(:) + recycling_fine_root(:) ) 
+          hlp1(:) = -1.0_wp * (1.0_wp / tau_labile / one_day * veg_pool%labile%nitrogen(:) * dtime) / & 
+                              (recycling_leaf(:) + recycling_fine_root(:)) 
           WHERE(hlp1(:) < 1.0_wp)
-             recycling_leaf(:)       = recycling_leaf(:) * hlp1(:)
+             recycling_leaf(:)       = recycling_leaf(:)      * hlp1(:)
              recycling_fine_root(:)  = recycling_fine_root(:) * hlp1(:)
           END WHERE
        END WHERE
@@ -263,39 +267,40 @@ CONTAINS
        WHERE(recycling_leaf(:) >= 0.0_wp)  ! for all positive values of recycling_fine_root(:)
           WHERE(veg_pool%leaf%nitrogen(:) > eps8)
             recycling_leaf_n15(:) = recycling_leaf_n15(:) + & 
-                                    recycling_leaf(:)/veg_pool%leaf%nitrogen(:) * veg_pool%leaf%nitrogen15(:)
+                                    recycling_leaf(:) / veg_pool%leaf%nitrogen(:) * veg_pool%leaf%nitrogen15(:)
           END WHERE
        ELSEWHERE  ! for all negative values of recycling_fine_root(:)
           WHERE(veg_pool%labile%nitrogen(:) > eps8)
             recycling_leaf_n15(:) = recycling_leaf_n15(:) + & 
-                                    recycling_leaf(:)/veg_pool%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:)
+                                    recycling_leaf(:) / veg_pool%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:)
           END WHERE
        END WHERE
        WHERE(recycling_fine_root(:) >= 0.0_wp)  ! for all positive values of recycling_fine_root(:)
           WHERE(veg_pool%fine_root%nitrogen(:) > eps8)
             recycling_fine_root_n15(:) = recycling_fine_root_n15(:) + & 
-                                         recycling_fine_root(:)/veg_pool%fine_root%nitrogen(:) * veg_pool%fine_root%nitrogen15(:)
+                                         recycling_fine_root(:) / veg_pool%fine_root%nitrogen(:) * veg_pool%fine_root%nitrogen15(:)
           END WHERE
        ELSEWHERE  ! for all negative values of recycling_fine_root(:)
           WHERE(veg_pool%labile%nitrogen(:) > eps8)
             recycling_fine_root_n15(:) = recycling_fine_root_n15(:) + & 
-                                         recycling_fine_root(:)/veg_pool%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:)
+                                         recycling_fine_root(:) / veg_pool%labile%nitrogen(:) * veg_pool%labile%nitrogen15(:)
           END WHERE
        END WHERE
 
+
        !> 2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
        !!
-       recycling_leaf(:)      = ( veg_pool%leaf%phosphorus(:) - veg_pool%leaf%nitrogen(:) / target_np_leaf(:) ) / &
-                                  tau_nutrient_recycling/one_day * dtime 
-       recycling_fine_root(:) = ( veg_pool%fine_root%phosphorus(:) - veg_pool%fine_root%nitrogen(:) / target_np_fine_root(:) ) / &
-                                  tau_nutrient_recycling/one_day * dtime
+       recycling_leaf(:)      = (veg_pool%leaf%phosphorus(:) - veg_pool%leaf%nitrogen(:) / target_np_leaf(:)) / &
+                                 tau_nutrient_recycling / one_day * dtime 
+       recycling_fine_root(:) = (veg_pool%fine_root%phosphorus(:) - veg_pool%fine_root%nitrogen(:) / target_np_fine_root(:)) / &
+                                 tau_nutrient_recycling / one_day * dtime
        !> 2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
        !! 
        WHERE((-1.0_wp * (recycling_leaf(:) + recycling_fine_root(:))) > eps8)
-          hlp1(:) = -1.0_wp * ( 1.0_wp/tau_labile/one_day * veg_pool%labile%phosphorus(:) * dtime ) / & 
-                              ( recycling_leaf(:) + recycling_fine_root(:) ) 
+          hlp1(:) = -1.0_wp * (1.0_wp/tau_labile/one_day * veg_pool%labile%phosphorus(:) * dtime) / & 
+                              (recycling_leaf(:) + recycling_fine_root(:)) 
           WHERE(hlp1(:) < 1.0_wp)
-             recycling_leaf(:)       = recycling_leaf(:) * hlp1(:)
+             recycling_leaf(:)       = recycling_leaf(:)      * hlp1(:)
              recycling_fine_root(:)  = recycling_fine_root(:) * hlp1(:)
           END WHERE
        END WHERE
@@ -331,11 +336,11 @@ CONTAINS
                             net_growth                , &
                             veg_litterfall            )
 
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_kind,                  ONLY: wp, eps4
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_base_memory,           ONLY: t_jsb_task_options
-    USE mo_shared_constants
-    USE mo_veg_constants
+    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, itree
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
     dsl4slm_Use_memory_a_veg
 
@@ -373,10 +378,10 @@ CONTAINS
     !! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
     SELECT CASE (lctlib%phenology_type)
       CASE (ievergreen)
-         fturn_leaf(:) = 1.0_wp /lctlib%tau_leaf /one_day /one_year * dtime
+         fturn_leaf(:)      = 1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime
       CASE (iraingreen, isummergreen)
          WHERE(growing_season(:))
-            fturn_leaf(:) = 0.0_wp              ! herbivory
+            fturn_leaf(:)   = 0.0_wp              ! herbivory
          ELSEWHERE
            WHERE(lai(:) > eps4)
               fturn_leaf(:) = MAX(eps4, max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
@@ -386,13 +391,13 @@ CONTAINS
          END WHERE
       CASE (iperennial)
          WHERE(growing_season(:))
-           fturn_leaf(:) = 1.0_wp /lctlib%tau_leaf /one_day /one_year * dtime
+           fturn_leaf(:)    = 1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime
          ELSEWHERE
            WHERE(lai(:) > eps4)
-             fturn_leaf(:) = MAX(1.0_wp /lctlib%tau_leaf /one_day /one_year *dtime, & 
-                                 max_leaf_shedding_rate *dtime /one_day *target_lai(:) /lai(:))
+             fturn_leaf(:)  = MAX(1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime, & 
+                                 max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
            ELSEWHERE
-             fturn_leaf(:) = 1.0_wp
+             fturn_leaf(:)  = 1.0_wp
            END WHERE
          END WHERE
     END SELECT
@@ -416,11 +421,13 @@ CONTAINS
     recycling_leaf_p(:)               = recycling_leaf_p(:) + retranslocation(:)
     veg_litterfall%leaf%phosphorus(:) = veg_litterfall%leaf%phosphorus(:) - retranslocation(:)
 
+
     !> 2.0 fine root turnover to litter
     !! 
-    fturn(:)                  = 1.0_wp /lctlib%tau_fine_root /one_day /one_year *dtime
+    fturn(:)                  = 1.0_wp / lctlib%tau_fine_root / one_day / one_year * dtime
     veg_litterfall%fine_root  = veg_litterfall%fine_root + veg_pool%fine_root * fturn(:)
     net_growth(:)             = net_growth(:) - veg_pool%fine_root%carbon(:) * fturn(:)
+
 
     !> 3.0 coarse root turnover to litter 
     !! 
@@ -428,14 +435,14 @@ CONTAINS
     veg_litterfall%coarse_root  = veg_litterfall%coarse_root + veg_pool%coarse_root * fturn(:)
     net_growth(:)               = net_growth(:) - veg_pool%coarse_root%carbon(:) * fturn(:)
 
+
     !> 4.0 sapwood turnover 
     !! 
-
     !> 4.1 litter production from halms (grasses), or branches (trees)
     !! 
     SELECT CASE (lctlib%growthform)
       CASE (itree)
-        fturn(:) = 1.0_wp /lctlib%tau_branch /one_day /one_year *dtime
+        fturn(:) = 1.0_wp / lctlib%tau_branch / one_day / one_year * dtime
       CASE (igrass) ! for grases follows leaf phenology
         fturn(:) = fturn_leaf(:)
     ENDSELECT 
@@ -445,10 +452,9 @@ CONTAINS
     !> 4.2 heart wood formation, including nutrient recycling
     !! 
     IF(lctlib%growthform == itree)THEN
-        fturn(:)              = (1.0_wp - lctlib%frac_sapwood_branch) /lctlib%tau_sap_wood /one_day /one_year *dtime
+        fturn(:)              = (1.0_wp - lctlib%frac_sapwood_branch) / lctlib%tau_sap_wood / one_day / one_year * dtime
         veg_growth%heart_wood = veg_growth%heart_wood + veg_pool%sap_wood * fturn(:)
         veg_growth%sap_wood   = veg_growth%sap_wood   - veg_pool%sap_wood * fturn(:) 
-
         ! Nutrient recycling
         nitrogen_recycling_fract(:)   = calc_nitrogen_recycling_fract("wood")
         phosphorus_recycling_fract(:) = calc_phosphorus_recycling_fract("wood")
@@ -460,16 +466,17 @@ CONTAINS
                                           veg_pool%sap_wood%phosphorus(:) * fturn(:) * phosphorus_recycling_fract(:)
     ENDIF 
 
+
     !> 5.0 fruit turnover to seed_bed
     !! 
-    fturn(:)            = 1.0_wp /lctlib%tau_fruit /one_day /one_year *dtime
+    fturn(:)            = 1.0_wp / lctlib%tau_fruit / one_day / one_year * dtime
     veg_growth%seed_bed = veg_growth%seed_bed + veg_pool%fruit * fturn(:)
     veg_growth%fruit    = veg_growth%fruit    - veg_pool%fruit * fturn(:) 
     net_growth(:)       = net_growth(:)       - veg_pool%fruit%carbon(:) * fturn(:)
 
     !> 6.0 seed-bed turnover to litter 
     !! 
-    fturn(:)                = 1.0_wp /lctlib%tau_seed_litter /one_day /one_year *dtime
+    fturn(:)                = 1.0_wp / lctlib%tau_seed_litter / one_day / one_year * dtime
     veg_litterfall%seed_bed = veg_litterfall%seed_bed + veg_pool%seed_bed * fturn(:)
 
   END SUBROUTINE calc_turnover
@@ -484,13 +491,16 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_nitrogen_recycling_fract(pool_name) RESULT (recycling_fract)
 
-    USE mo_veg_constants,     ONLY: resorp_fract_leaf,resorp_fract_wood
+    USE mo_kind,                  ONLY: wp
+    USE mo_veg_constants,         ONLY: resorp_fract_leaf, resorp_fract_wood
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CHARACTER(4), INTENT(in) :: pool_name
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: recycling_fract 
+    REAL(wp)                 :: recycling_fract 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nitrogen_recycling_fract'
 
     SELECT CASE(TRIM(pool_name))
@@ -499,7 +509,6 @@ CONTAINS
       CASE("wood")
         recycling_fract = resorp_fract_wood
     ENDSELECT
-
 
   END FUNCTION calc_nitrogen_recycling_fract
 
@@ -513,13 +522,16 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_phosphorus_recycling_fract(pool_name) RESULT (recycling_fract)
 
-    USE mo_veg_constants,     ONLY: resorp_fract_leaf,resorp_fract_wood
+    USE mo_kind,                  ONLY: wp
+    USE mo_veg_constants,         ONLY: resorp_fract_leaf,resorp_fract_wood
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CHARACTER(4), INTENT(in) :: pool_name
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: recycling_fract 
+    REAL(wp)                 :: recycling_fract 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phosphorus_recycling_fract'
 
     SELECT CASE(TRIM(pool_name))

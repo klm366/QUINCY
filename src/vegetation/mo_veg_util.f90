@@ -26,7 +26,6 @@ MODULE mo_veg_util
 
 CONTAINS
 
-
   !-----------------------------------------------------------------------------------------------------
   !> init/reset vegetation fluxes (with/to zero)
   !! 
@@ -49,9 +48,8 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
     ! ---------------------------
     ! 0.2 Local 
-    TYPE(t_jsb_model),      POINTER       :: model
-    !TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc
+    TYPE(t_jsb_model),        POINTER       :: model
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -105,7 +103,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+!    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)           ! veg__mem => veg_memory
     ! Get process variables (Set pointers to variables in memory)
@@ -152,6 +150,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
 
     ! t_slm_struct_veg_pool
     CALL veg__mem%growth%init(zero)
