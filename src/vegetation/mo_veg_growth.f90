@@ -1802,26 +1802,13 @@ CONTAINS
     !!  scaled to the default turnover time of the labile pool
     !!  for grasses after leaf termination this is reduced to a tenth of respiration to account 
     !!  for reduced fine root respiration in dormant roots
+    !  note, in the below WHERE() the 'lctlib%growthform==igrass' is vectorized automatically, 
+    !  so for all itree the ELSEWHERE statement is executed, and for igrass the WHERE statement if 'veg_pool_leaf_carbon(:) < eps8'
     WHERE(lctlib%growthform==igrass .AND. veg_pool_leaf_carbon(:) < eps8)
        target_labile_pool_carbon(:)  = 0.1_wp * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile 
     ELSEWHERE 
        target_labile_pool_carbon(:)  = MAX( gpp_mavg(:) , maint_respiration_mavg(:) ) * one_day / 1.e6_wp * tau_labile
     ENDWHERE
-    ! The above code is not correct as no mask can be created from 'lctlib%growthform==igrass'
-    !   it should rather be an IF() statement, also, because this function works at only one tile and so at only one PFT
-    ! The above code (introduced with r1145 in the reserve_dynamics branch) does:
-    !   a) for grasses: create a mask according to the 'veg_pool_leaf_carbon(:) < eps8'
-    !   b) for trees (i.e. not grasses): runs the code of the ELSEWHERE for all points independent of 'veg_pool_leaf_carbon(:) < eps8'
-    ! The code could be:
-    ! IF (lctlib%growthform==igrass) THEN
-    !   WHERE(veg_pool_leaf_carbon(:) < eps8)
-    !    target_labile_pool_carbon(:)  = 0.1_wp * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile 
-    !   ENDWHERE
-    ! ELSE
-    !   WHERE (veg_pool_leaf_carbon(:) < eps8)  ! oder '(veg_pool_leaf_carbon(:) > eps8)' ?
-    !    target_labile_pool_carbon(:)  = MAX( gpp_mavg(:) , maint_respiration_mavg(:) ) * one_day / 1.e6_wp * tau_labile
-    !   ENDWHERE
-    ! ENDIF
     !! 
     !! for N and P this corresponds to the current growth C:N:P in the target labile pool 
     target_labile_pool_nitrogen(:)   = target_labile_pool_carbon(:)    * growth_req_n_mavg(:)
