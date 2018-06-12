@@ -130,9 +130,7 @@ MODULE mo_carbon_memory_class
                                     ! since last maxLAI calculation
       veg_carbon_at_max_green,    & ! Total vegetation carbon [mol(C) m-2(canopy)] 
                                     ! at the time of the green pool maximum (current_max_green)
-
-      prev_veg_c_at_max_green,    & !@todo not required anymore (i.e. also not the corresponding delta...)
-
+                                    
                                     !TODO-JN-COHORTS maybe I want them as ta variables also for easier plotting/comparison
                                     ! -> currently of course need to be multiplied with phenos veg_frac_correction...
       annual_avg_NPP,             & ! NPP increment with annual weighting [mol(C) m-2(canopy) y-1] 
@@ -240,7 +238,6 @@ MODULE mo_carbon_memory_class
       delta_YCpool_humus_2_rp,             &
       delta_current_max_green_rp,          & 
       delta_veg_carbon_at_max_green_rp,    &
-      delta_prev_veg_c_at_max_green_rp,    & 
       delta_annual_avg_NPP_rp,             &
       delta_biennial_avg_NPP_rp,           & 
       delta_decennial_avg_NPP_rp,          &
@@ -640,7 +637,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
+!@todo why not using previous_day_NPP_pot_rate_ca ?
       CALL jsb_add_var( mem, 'npp_pot_ydaymean', mem%NPP_pot_yDayMean,                              &
         & hgrid, surface,                                                                           &
         & t_cf('NPP_pot_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean NPP Rate of the previous day.'), &
@@ -1143,13 +1140,6 @@ CONTAINS
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-          CALL jsb_add_var( mem,'prev_max_green_veg_c', mem%prev_veg_c_at_max_green, &
-            & hgrid, surface,                                                    &
-            & t_cf('prev_veg_c_at_max_green', 'mol(C) m-2(canopy)', 'Last years total vegetation carbon'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
-
           CALL jsb_add_var( mem,'annual_avg_NPP', mem%annual_avg_NPP, &
             & hgrid, surface,                                                    &
             & t_cf('annual_avg_NPP', 'mol(C) m-2(canopy) y-1', 'NPP increment with annual weighting'), &
@@ -1184,12 +1174,6 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
             & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-          CALL jsb_add_var( mem,'delta_prev_max_green_veg_c_rp', mem%delta_prev_veg_c_at_max_green_rp, &
-            & hgrid, surface,                                                    &
-            & t_cf('delta_prev_veg_c_at_max_green_rp', 'mol(C) m-2(canopy)', 'Change in last years vegetation carbon'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'delta_annual_avg_NPP_rp', mem%delta_annual_avg_NPP_rp, &
             & hgrid, surface,                                                    &
             & t_cf('delta_annual_avg_NPP_rp', 'mol(C) m-2(canopy) y-1', 'Change in NPP increment with annual weighting'), &

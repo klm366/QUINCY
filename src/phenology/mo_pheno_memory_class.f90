@@ -26,7 +26,7 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_processes PHENO_, FAGE_
 
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)
@@ -84,6 +84,7 @@ MODULE mo_pheno_memory_class
       !                                 ! northern hemisphere and at July,1, in the southern hemisphere. A negative value
       !                                 ! indicates that summation has not yet started.
       & day_NPP_sum,                & ! sum of NPP since midnight (needed to compute previous_day_NPP_pot_rate_ca(:,:)) [mol(CO2)/m^2]
+      & delta_day_npp_sum_rp,       & ! change in day npp sum due to ageing of cohorts - only required with fage
       & heat_sum_EG,                & ! Heat sums --- needed for the phenology of summergreens, evergreens and crops.
       & heat_sum_SG,                & ! Where heat summation has not yet started, "heat_sum" is set to a value < -1.
       & heat_sum_CRP,               & ! For summer crops heat summation starts with "0".
@@ -339,6 +340,13 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
             & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+
+          IF (model%processes(FAGE_)%p%config%active) THEN
+            CALL jsb_add_var( mem, 'delta_day_npp_sum_rp', mem%delta_day_npp_sum_rp, hgrid, surface, &
+              & t_cf('delta_day_npp_sum_rp', 'mol(C) m-2(parent))', 'Change in current npp sum.'),         &
+              & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+              & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+          ENDIF
 
         END IF
 
