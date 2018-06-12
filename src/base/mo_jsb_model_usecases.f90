@@ -292,12 +292,11 @@ CONTAINS
 
     INTEGER, PARAMETER :: npft = 11
     INTEGER, PARAMETER :: ncohorts = 16 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
-                                       ! -> cannot get it via model%processes(FAGE_)%p%config% here!?
-                                       !    thus, on model%config% ? But then how to get it in mo_fage_config_class???
-                                       ! + test ncohorts >0 & <=99 ! (cohort_name len=10 -- pft_shortname + '_fc' + j)
-
-    CHARACTER(len=5) :: pft_shortname
-    CHARACTER(len=10) :: cohort_name
+                          ! -> cannot get it via model%processes(FAGE_)%p%config% here!?
+                          !    thus, on model%config% ? But then how to get it in mo_fage_config_class???
+                          ! + test ncohorts >0 & <=99 ! (age_cohort_name len=10: pft_shortname(5) + '_fc' + j (2))
+    CHARACTER(len=5)  :: pft_shortname
+    CHARACTER(len=10) :: age_cohort_name
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = (/ &
       & 'Tropical broadleaf evergreen  ', &
@@ -406,8 +405,8 @@ CONTAINS
 !              CALL veg_tile%Set_process_action(FAGE_, ON_TILE_, SKIP_)
 
               DO j=1,ncohorts
-                WRITE(cohort_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
-                cohort_tile => t_jsb_tile(cohort_name, TRIM(cohort_name // ' tile'), &
+                WRITE(age_cohort_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
+                cohort_tile => t_jsb_tile(age_cohort_name, TRIM(age_cohort_name // ' tile'), &
                  & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=pft_tile, &
                  & fract_varname='allFirst') !-> TODO-JN-COHORTS: cross check with SUBROUTINE fage_init_ic(tile)
               ENDDO

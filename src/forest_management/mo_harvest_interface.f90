@@ -111,7 +111,7 @@ CONTAINS
     USE mo_jsb_time,       ONLY: is_newyear
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
     USE mo_carbon_process,        ONLY: relocate_carbon_damage
-    USE mo_carbon_interface,      ONLY: update_per_tile_vars, &
+    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, &
       & calculate_current_c_state_sum, check_carbon_conservation_for_operation
 
     ! Arguments
@@ -285,7 +285,7 @@ CONTAINS
             & YCpool_humus_2(:)              & ! inout
             & )
 
-          CALL update_per_tile_vars(tile, options, &
+          CALL recalc_per_tile_vars(tile, options, &
             & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
             & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
             & YCpool_ethanol_ag1 = YCpool_ethanol_ag1(:), YCpool_nonsoluble_ag1 = YCpool_nonsoluble_ag1(:), &

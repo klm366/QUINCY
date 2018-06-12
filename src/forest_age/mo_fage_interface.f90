@@ -167,7 +167,7 @@ CONTAINS
     USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing, correct_and_synchronise_fracts, &
       & weighted_avg_var_upon_area_change
     USE mo_jsb_time,             ONLY: is_newyear
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift, &
+    USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift, &
       & rescale_carbon_upon_reference_area_change
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -178,13 +178,18 @@ CONTAINS
 
     dsl4jsb_Def_memory_tile(PHENO_, prevChild)
     dsl4jsb_Def_memory_tile(PHENO_, currentChild)
+    dsl4jsb_Def_memory_tile(CARBON_, prevChild)
+    dsl4jsb_Def_memory_tile(CARBON_, currentChild)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: veg_frac_correction_prevChild
     dsl4jsb_Real2D_onChunk :: veg_frac_correction_currentChild
     dsl4jsb_Real2D_onChunk :: lai_prevChild
     dsl4jsb_Real2D_onChunk :: lai_currentChild
-
+    dsl4jsb_Real2D_onChunk :: LAI_yDayMean_prevChild
+    dsl4jsb_Real2D_onChunk :: LAI_yDayMean_currentChild
+    dsl4jsb_Real2D_onChunk :: LAI_sum_prevChild
+    dsl4jsb_Real2D_onChunk :: LAI_sum_currentChild
 
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age, cohort_max_age
@@ -274,7 +279,7 @@ CONTAINS
         currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) + fract_source_max_age(:)
 
         ! b) accordingly move carbon from one age cohort to the next age cohorts delta
-        CALL update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
+        CALL recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift( &
           & prevChild, currentChild, options, fract_source_max_age(:), source_fract(:))
 
         ! c) correct veg_frac_correction and lai
@@ -303,8 +308,20 @@ CONTAINS
         !                  each time the veg_frac_correction changes and could thus be treated the same as the cpools
         dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, prevChild)
         dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, currentChild)
-
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), lai_prevChild(:), lai_currentChild(:)) 
+
+        dsl4jsb_Get_memory_tile(CARBON_, prevChild)
+        dsl4jsb_Get_memory_tile(CARBON_, currentChild)
+
+        dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_yDayMean, prevChild)
+        dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_yDayMean, currentChild)
+        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
+          & LAI_yDayMean_prevChild(:), LAI_yDayMean_currentChild(:)) 
+
+        dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_sum, prevChild)
+        dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_sum, currentChild)
+        CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
+          & LAI_sum_prevChild(:), LAI_sum_currentChild(:)) 
 
         ! d) TODO-JN-COHORTS what else to shift? 
 
@@ -381,7 +398,7 @@ CONTAINS
     USE mo_jsb_time,             ONLY: is_newday
     USE mo_fage_util,            ONLY: get_mean_age
     USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_upon_disturbance
+    USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: WIND, FIRE
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -471,7 +488,7 @@ CONTAINS
         firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
 
         ! b) carbon consequences 
-        CALL update_delta_carbon_rp_upon_disturbance( &
+        CALL recalc_delta_carbon_rp_upon_disturbance( &
           currentChild, firstChild, l_sourceisfirstChild, options, burnedArea(:), source_fract(:), FIRE)
 
         ! c) TODO-JN-COHORTS what else to shift? 
@@ -490,7 +507,7 @@ CONTAINS
           firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + damagedArea(:)
 
           ! b) carbon consequences 
-          CALL update_delta_carbon_rp_upon_disturbance( &
+          CALL recalc_delta_carbon_rp_upon_disturbance( &
             currentChild, firstChild, l_sourceisfirstChild, options, damagedArea(:), source_fract(:), WIND)
 
           ! c) TODO-JN-COHORTS what else to shift? 
@@ -581,7 +598,7 @@ CONTAINS
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_fage_util,            ONLY: get_mean_age
     USE mo_fage_process,         ONLY: update_frac_per_age_and_determine_area_to_harvest_from_cohort
-    USE mo_carbon_interface,     ONLY: update_delta_carbon_rp_upon_disturbance
+    USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: CLEARCUT
     USE mo_harvest_constants,    ONLY: HARVEST_OLDEST_TREES
 
@@ -700,7 +717,7 @@ CONTAINS
 
             ! b) carbon consequences 
             CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-            CALL update_delta_carbon_rp_upon_disturbance( &
+            CALL recalc_delta_carbon_rp_upon_disturbance( &
               currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisAgeCohort(:), source_fract(:), CLEARCUT)
 
             ! c) TODO-JN-COHORTS what else to shift? 

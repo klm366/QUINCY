@@ -53,10 +53,10 @@ MODULE mo_carbon_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                                                       &
-               & update_per_tile_vars,                                                     &
-               & update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift,           &
-               & update_delta_carbon_rp_upon_disturbance,                                  &
-               & update_carbon_states_with_delta_carbon,                                   &
+               & recalc_per_tile_vars,                                                     &
+               & recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift,                &
+               & recalc_delta_carbon_rp_upon_disturbance,                                  &
+               & apply_delta_carbon_to_carbon_states,                                   &
                & rescale_carbon_upon_reference_area_change, calculate_current_c_state_sum, &
                & check_carbon_conservation_for_operation
 
@@ -619,7 +619,7 @@ CONTAINS
 
        ! C pools
 
-      CALL update_per_tile_vars(tile, options, &
+      CALL recalc_per_tile_vars(tile, options, &
         & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
         & Cpool_crop_harvest = Cpool_crop_harvest(:), &
         & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
@@ -711,7 +711,7 @@ CONTAINS
 
     !@todo Those commented out are currently not used by other processes, 
     !     some of them are even not used at all 
-    !     + they are not part of the update_per_tile_vars
+    !     + they are not part of the recalc_per_tile_vars
     !       i.e. anyways not updated! 
     ! ++ I do not need them....
 !    dsl4jsb_Aggregate_onChunk(CARBON_, litter_flux_ta,           weighted_by_fract)
@@ -807,7 +807,7 @@ CONTAINS
         ! a) TODO-JN-COHORTS what else to update? 
 
         ! b) update C states with deltas (+ reset C deltas to 0)
-        CALL update_carbon_states_with_delta_carbon(tile, options)
+        CALL apply_delta_carbon_to_carbon_states(tile, options)
       ENDIF
 
       ! c) update area fractions 
@@ -1013,7 +1013,7 @@ CONTAINS
     YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2 * (oldRefArea / newRefArea)
     YCpool_humus_2        = YCpool_humus_2        * (oldRefArea / newRefArea)
 
-    CALL update_per_tile_vars(tile, options, &
+    CALL recalc_per_tile_vars(tile, options, &
       & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
       & Cpool_crop_harvest = Cpool_crop_harvest(:), &
       & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
@@ -1042,7 +1042,7 @@ CONTAINS
   !       because it makes the transfer from delta to states easier afterwards, particularly since 
   !       area losses and gains happen simultaneously
 
-  SUBROUTINE update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift( &
+  SUBROUTINE recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift( &
       sourceT, sinkT, options, delta_fract, prev_fract )
 
     USE mo_carbon_process,      ONLY: update_delta_carbon_rp
@@ -1061,7 +1061,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
-      & TRIM(modname)//':update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift'
+      & TRIM(modname)//':recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift'
     INTEGER                     :: ics, ice, iblk, nc, i
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green
@@ -1088,6 +1088,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
+
+    dsl4jsb_Real2D_onChunk ::  GPP_sum
+    dsl4jsb_Real2D_onChunk ::  NPP_pot_sum
 
     dsl4jsb_Real2D_onChunk ::  veg_frac_correction
 
@@ -1122,6 +1125,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sourceT
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sourceT
 
+    dsl4jsb_Real2D_onChunk ::  delta_GPP_sum_rp_sourceT
+    dsl4jsb_Real2D_onChunk ::  delta_NPP_pot_sum_rp_sourceT
+
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp_sinkT
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp_sinkT
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_reserve_rp_sinkT
@@ -1149,6 +1155,9 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sinkT
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sinkT
+
+    dsl4jsb_Real2D_onChunk ::  delta_GPP_sum_rp_sinkT
+    dsl4jsb_Real2D_onChunk ::  delta_NPP_pot_sum_rp_sinkT
 
     !-------------------------
     model => Get_model(sourceT%owner_model_id)
@@ -1203,6 +1212,9 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, YCpool_nonsoluble_bg2, sourceT)
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, YCpool_humus_2, sourceT)
 
+    dsl4jsb_Get_var2d_onChunk_tile(CARBON_, GPP_sum, sourceT)
+    dsl4jsb_Get_var2d_onChunk_tile(CARBON_, NPP_pot_sum, sourceT)
+
     dsl4jsb_Get_var2d_onChunk_tile(PHENO_, veg_frac_correction, sourceT)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
@@ -1241,6 +1253,9 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_YCpool_nonsoluble_bg2_rp, sourceT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_YCpool_humus_2_rp, sourceT)
 
+    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_GPP_sum_rp, sourceT)
+    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_NPP_pot_sum_rp, sourceT)
+
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_Cpool_green_rp, sinkT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_Cpool_woods_rp, sinkT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_Cpool_reserve_rp, sinkT)
@@ -1265,6 +1280,9 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_YCpool_ethanol_bg2_rp, sinkT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_YCpool_nonsoluble_bg2_rp, sinkT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_YCpool_humus_2_rp, sinkT)
+
+    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_GPP_sum_rp, sinkT)
+    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_NPP_pot_sum_rp, sinkT)
 
     CALL update_delta_carbon_rp(Cpool_green(:), delta_Cpool_green_rp_sourceT(:), &
       & delta_Cpool_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
@@ -1313,6 +1331,12 @@ CONTAINS
     CALL update_delta_carbon_rp(YCpool_humus_2(:), delta_YCpool_humus_2_rp_sourceT(:), &
       & delta_YCpool_humus_2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
 
+    CALL update_delta_carbon_rp(GPP_sum(:), delta_GPP_sum_rp_sourceT(:), &
+      & delta_GPP_sum_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(NPP_pot_sum(:), delta_NPP_pot_sum_rp_sourceT(:), &
+      & delta_NPP_pot_sum_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+
+
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL update_delta_carbon_rp(current_max_green(:), delta_current_max_green_rp_sourceT(:), &
         & delta_current_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
@@ -1320,7 +1344,7 @@ CONTAINS
         & delta_veg_carbon_at_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
     ENDIF
 
-  END SUBROUTINE update_delta_carbon_rp_of_source_and_sink_tile_upon_area_shift
+  END SUBROUTINE recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift
 
 
   ! ================================================================================================================================
@@ -1342,7 +1366,7 @@ CONTAINS
   !! @param[in]     prev_fract       Source fract before change
   !! @param[in]     distKind         Kind of the executed disturbance - wind, fire, clearCut 
   !
-  SUBROUTINE update_delta_carbon_rp_upon_disturbance( &
+  SUBROUTINE recalc_delta_carbon_rp_upon_disturbance( &
       sourceT, sinkT, l_sourceisfirstChild, options, delta_fract, prev_fract, distKind )
 
     USE mo_carbon_process,      ONLY: update_delta_carbon_rp, relocate_carbon_fire, relocate_carbon_damage
@@ -1365,7 +1389,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
-      & TRIM(modname)//':update_delta_carbon_rp_upon_disturbance'
+      & TRIM(modname)//':recalc_delta_carbon_rp_upon_disturbance'
     INTEGER                     :: ics, ice, iblk, nc, i
     REAL(wp), DIMENSION(options%nc) :: helper, d_green_new, d_reserve_new, d_wood_new
     REAL(wp), DIMENSION(options%nc) :: d_acid_ag1_new, d_water_ag1_new, d_ethanol_ag1_new, d_nonsoluble_ag1_new
@@ -1702,7 +1726,7 @@ CONTAINS
       CALL finish(TRIM(routine), message_text)
     ENDIF
 
-  END SUBROUTINE update_delta_carbon_rp_upon_disturbance
+  END SUBROUTINE recalc_delta_carbon_rp_upon_disturbance
 
 
   ! ================================================================================================================================
@@ -1714,7 +1738,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_per_tile_vars(tile, options, &
+  SUBROUTINE recalc_per_tile_vars(tile, options, &
       & Cpool_green , Cpool_woods, Cpool_reserve, Cpool_crop_harvest, &
       & YCpool_acid_ag1, YCpool_water_ag1, YCpool_ethanol_ag1, YCpool_nonsoluble_ag1, &
       & YCpool_acid_bg1, YCpool_water_bg1, YCpool_ethanol_bg1, YCpool_nonsoluble_bg1, &
@@ -1775,7 +1799,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':update_per_tile_vars'
+    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':recalc_per_tile_vars'
     INTEGER                         :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  Cpool_green_ta
@@ -1935,7 +1959,7 @@ CONTAINS
     IF (PRESENT(Cflux_herbivory)) CALL get_per_tile(Cflux_herbivory_ta(:), &
       & Cflux_herbivory(:), veg_frac_correction(:), fract_fpc_max(:))
 
-  END SUBROUTINE update_per_tile_vars
+  END SUBROUTINE recalc_per_tile_vars
 
 
   ! ================================================================================================================================
@@ -1948,7 +1972,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_carbon_states_with_delta_carbon(tile, options)
+  SUBROUTINE apply_delta_carbon_to_carbon_states(tile, options)
 
     USE mo_carbon_process,      ONLY: update_state_reset_delta
 
@@ -1963,7 +1987,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':update_carbon_states_with_delta_carbon'
+    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':apply_delta_carbon_to_carbon_states'
     INTEGER                         :: ics, ice, iblk, nc, i
     REAL(wp), DIMENSION(options%nc) :: delta_fract, prev_fract
 
@@ -1991,6 +2015,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  YCpool_ethanol_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  YCpool_humus_2
+
+    dsl4jsb_Real2D_onChunk ::  GPP_sum
+    dsl4jsb_Real2D_onChunk ::  NPP_pot_sum
 
     dsl4jsb_Real2D_onChunk ::  carbon_2_GreenLitterPools
     dsl4jsb_Real2D_onChunk ::  carbon_2_WoodLitterPools
@@ -2024,6 +2051,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_nonsoluble_bg2_rp
     dsl4jsb_Real2D_onChunk ::  delta_YCpool_humus_2_rp
 
+    dsl4jsb_Real2D_onChunk ::  delta_GPP_sum_rp
+    dsl4jsb_Real2D_onChunk ::  delta_NPP_pot_sum_rp
+    
     dsl4jsb_Real2D_onChunk ::  delta_carbon_2_GreenLitterPools_rp
     dsl4jsb_Real2D_onChunk ::  delta_carbon_2_WoodLitterPools_rp
 
@@ -2069,6 +2099,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  YCpool_humus_2)            ! inout 
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_sum)                ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_sum)            ! inout 
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_GreenLitterPools) ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_WoodLitterPools)  ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_atmos)            ! inout 
@@ -2097,6 +2130,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_ethanol_bg2_rp)        ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_nonsoluble_bg2_rp)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_YCpool_humus_2_rp)            ! inout 
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_GPP_sum_rp)                ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_NPP_pot_sum_rp)            ! inout 
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_carbon_2_GreenLitterPools_rp) ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_carbon_2_WoodLitterPools_rp)  ! inout 
@@ -2176,6 +2212,11 @@ CONTAINS
     CALL update_state_reset_delta(YCpool_humus_2(:), delta_YCpool_humus_2_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
 
+    CALL update_state_reset_delta(GPP_sum(:), delta_GPP_sum_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+    CALL update_state_reset_delta(NPP_pot_sum(:), delta_NPP_pot_sum_rp(:), delta_fract(:), &
+      & veg_frac_correction(:), prev_fract(:))
+
     ! Following three are only required if with disturbances or harvest, however, they are always defined anyway 
     CALL update_state_reset_delta(carbon_2_GreenLitterPools(:), delta_carbon_2_GreenLitterPools_rp(:), delta_fract(:), &
       & veg_frac_correction(:), prev_fract(:))
@@ -2191,7 +2232,7 @@ CONTAINS
         & veg_frac_correction(:), prev_fract(:))
     ENDIF
 
-    CALL update_per_tile_vars(tile, options, &
+    CALL recalc_per_tile_vars(tile, options, &
       & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
       & Cpool_crop_harvest = Cpool_crop_harvest(:), &
       & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
@@ -2206,7 +2247,7 @@ CONTAINS
       & carbon_2_GreenLitterPools = carbon_2_GreenLitterPools(:), &
       & carbon_2_WoodLitterPools = carbon_2_WoodLitterPools(:), carbon_2_atmos = carbon_2_atmos(:))
 
-  END SUBROUTINE update_carbon_states_with_delta_carbon
+  END SUBROUTINE apply_delta_carbon_to_carbon_states
 
 
   ! ================================================================================================================================

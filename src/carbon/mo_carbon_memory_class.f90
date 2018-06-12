@@ -87,6 +87,7 @@ MODULE mo_carbon_memory_class
       YCpool_ethanol_bg2,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
       YCpool_nonsoluble_bg2,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
       YCpool_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
+!@todo: why? its not used!
       C_sum_natural,              & ! R: added
       !
       LAI_sum,                    & ! used to accumulate LAI over a day
@@ -161,6 +162,7 @@ MODULE mo_carbon_memory_class
       YCpool_ethanol_bg2_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
       YCpool_nonsoluble_bg2_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
       YCpool_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
+!@todo: why? its not used!
       C_sum_natural_ta,              & ! R: added
       !
 !      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
@@ -233,6 +235,9 @@ MODULE mo_carbon_memory_class
       delta_carbon_2_WoodLitterPools_rp,   &
       delta_carbon_2_atmos_rp
 
+    TYPE(t_jsb_var_real2d) ::              &
+      delta_GPP_sum_rp,                    &
+      delta_NPP_pot_sum_rp
 
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
@@ -339,23 +344,25 @@ CONTAINS
         & prefix, suffix,                                                                              &
         & lrestart=.TRUE., initval_r=3.0E-5_wp ) ! initval taken from JSBACH3, arbitary.
 
+!@todo: relict from CBALANCE, (currently) not required for YASSO 
       CALL jsb_add_var( mem, 'topsoiltemp', mem%topSoilTemp,                                           &
         & hgrid, surface,                                                                              &
         & t_cf('topSoilTemp', 'K', 'Top soil temperature.'),                                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=FULL,                                                                           &
-        & lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
 
+!@todo: relict from CBALANCE, (currently) not required for YASSO
       CALL jsb_add_var( mem, 'alpha', mem%alpha,                                                       &
         & hgrid, surface,                                                                              &
         & t_cf('alpha', '-', 'Water Stress Coefficient. Relative soil moisture.'),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=FULL,                                                                           &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3's alpha_yDayMean
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3's alpha_yDayMean
 
-
+!@todo: relict from CBALANCE?
       ! Carbon variables on canopy area
       CALL jsb_add_var( mem, 'litter_flux', mem%litter_flux,                                             &
         & hgrid, surface,                                                                                &
@@ -556,7 +563,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
+!@todo: how does this and PHENO_ day_npp_sum differ?
       CALL jsb_add_var( mem, 'npp_pot_sum', mem%NPP_pot_sum,                                   &
         & hgrid, surface,                                                                      &
         & t_cf('NPP_pot_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate NPP over a day.'), &
@@ -569,28 +576,28 @@ CONTAINS
         & t_cf('GPP_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate GPP over a day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+!@todo: relict from CBALANCE?
       CALL jsb_add_var( mem, 'topsoiltemp_sum', mem%topSoilTemp_sum,                                    &
         & hgrid, surface,                                                                               &
         & t_cf('topSoilTemp_sum', 'K', 'Used to accumulate upper soil layer temperature over a day..'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
+!@todo: relict from CBALANCE?
       CALL jsb_add_var( mem, 'alpha_sum', mem%alpha_sum,                                     &
         & hgrid, surface,                                                                    &
         & t_cf('alpha_sum', '-', 'Used to accumulate water stress coefficient over a day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'soil_respiration', mem%soil_respiration,           &
         & hgrid, surface,                                                        &
         & t_cf('soil_respiration', 'mol(C) m-2(canopy) s-1', 'Soil respiration.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'npp_flux_correction', mem%NPP_flux_correction,                                      &
         & hgrid, surface,                                                                                         &
@@ -612,7 +619,7 @@ CONTAINS
         & t_cf('LAI_yyDayMean', '-', 'Previous previous day mean.'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
      CALL jsb_add_var( mem, 'lai_ydaymean', mem%LAI_yDayMean,                 &
         & hgrid, surface,                                                     &
@@ -644,20 +651,20 @@ CONTAINS
         & prefix, suffix,                                                                       &
         & loutput=.TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-
+!@todo: relict from CBALANCE?
       CALL jsb_add_var( mem, 'topsoiltemp_ydaymean', mem%topSoilTemp_yDayMean,                             &
         & hgrid, surface,                                                                                  &
         & t_cf('topSoilTemp_yDayMean', 'K', 'Previous day mean temperature of the uppermost soil layer.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                               &
         & prefix, suffix,                                                                                  &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
+!@todo: relict from CBALANCE?
       CALL jsb_add_var( mem, 'alpha_ydaymean', mem%alpha_yDayMean,                             &
         & hgrid, surface,                                                                      &
         & t_cf('alpha_yDayMean', '-', 'Previous day mean value of Water Stress Coefficient.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3.
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3.
 
       CALL jsb_add_var( mem, 'root_exudates', mem%root_exudates,             &
         & hgrid, surface,                                                    &
@@ -763,7 +770,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
         & output_level=BASIC,                                                                            &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 1
       CALL jsb_add_var( mem, 'c_acid_ag1_ta', mem%YCpool_acid_ag1_ta,                                         &
@@ -973,6 +980,7 @@ CONTAINS
      !    & output_level=BASIC,                                                                                &
      !    & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
+!@todo: only diagnostic, why in restart?
       CALL jsb_add_var( mem, 'npp_pot_ydaymean_ta', mem%NPP_pot_yDayMean_ta,                              &
         & hgrid, surface,                                                                           &
         & t_cf('NPP_pot_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean NPP Rate of the previous day.'), &
@@ -981,7 +989,7 @@ CONTAINS
         & output_level=BASIC,                                                                                &
         & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
-
+!@todo: only diagnostic, why in restart?
       CALL jsb_add_var( mem, 'npp_act_ydaymean_ta', mem%NPP_act_yDayMean_ta,                                &
         & hgrid, surface,                                                                             &
         & t_cf('NPP_act_yDayMean_ta', 'mol(C) m-2 s-1', 'Actual NPP Rate of the previous day.'), &
@@ -1243,6 +1251,17 @@ CONTAINS
           & t_cf('delta_carbon_2_atmos_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_atmos.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_GPP_sum_rp', mem%delta_GPP_sum_rp, hgrid, surface, &
+          & t_cf('delta_GPP_sum_rp', 'mol(C) m-2(parent))', 'Change in GPP.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_NPP_pot_sum_rp', mem%delta_NPP_pot_sum_rp, hgrid, surface, &
+          & t_cf('delta_NPP_pot_sum_rp', 'mol(C) m-2(parent))', 'Change in NPP.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
 
 
       END IF ! (model%processes(FAGE_)%p%config%active) THEN

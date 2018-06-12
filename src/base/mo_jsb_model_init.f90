@@ -294,6 +294,11 @@ CONTAINS
       ! TBD
     END IF
 
+    !NOTE: JN changed the order of the processes such that all processes changing the area of a tile are
+    ! conducted first in the timestep.
+
+    !------------------------ tasks that can change area
+
     !Aging happens once at the beginning of each year at the start of a timestep. 
     IF (model%processes(FAGE_)%p%config%active) THEN
        CALL model%Queue_task(FAGE_, "calculate_ageing")
@@ -311,11 +316,29 @@ CONTAINS
       ENDIF
     ENDIF
 
+    !Disturbances happen on a daily basis and can lead to area changes when running with cohorts  
+    IF (model%processes(FUEL_)%p%config%active) THEN
+      CALL model%Queue_task(FUEL_, "fuel")
+    END IF
+    IF (model%processes(DISTURB_)%p%config%active) THEN
+      CALL model%Queue_task(DISTURB_, "natural_disturbances")
+
+      ! in case that forest age is switched on, i.e. working with age cohorts,
+      ! disturbances need to be handled on the parent of the age cohorts!
+      IF (model%processes(FAGE_)%p%config%active) THEN
+         CALL model%Queue_task(FAGE_, "nat_dist_age_cohorts")
+         CALL model%Queue_task(CARBON_, "apply_age_cohort_changes")
+      END IF
+    END IF
+
+    !------------------------ tasks that do not change area
+
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
     CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
-                                                          ! before C_NPP_pot_allocation TODO-JN
-                      ! before it was between humidity_scaling and foliage_projected_cover
+                                                          ! before C_NPP_pot_allocation
+                                                          ! and with area changes it should happen before assimi 
+                      ! --- before it was between humidity_scaling and foliage_projected_cover
                       ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(HYDRO_,  "soil_properties")
@@ -355,22 +378,6 @@ CONTAINS
                                                      ! should be called after the soil hydrology is calculated
     END IF
 
-    IF (model%processes(FUEL_)%p%config%active) THEN
-      CALL model%Queue_task(FUEL_, "fuel")
-    END IF
-    IF (model%processes(DISTURB_)%p%config%active) THEN
-      CALL model%Queue_task(DISTURB_, "natural_disturbances")
-
-      ! in case that forest age is switched on, i.e. working with age cohorts,
-      ! disturbances need to be handled on the parent of the age cohorts!
-      IF (model%processes(FAGE_)%p%config%active) THEN
-         CALL model%Queue_task(FAGE_, "nat_dist_age_cohorts")
-         CALL model%Queue_task(CARBON_, "apply_age_cohort_changes")
-      END IF
-    END IF
-
-    ! JN: changed order npp and disturbances because disturbances might change area 
-    !     and by swapping dist and carbon less variables have to be aggregated upon area shift
     IF (model%processes(CARBON_)%p%config%active) THEN
       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
     END IF
