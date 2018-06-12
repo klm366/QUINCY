@@ -66,11 +66,11 @@ MODULE mo_rad_constants
    & AlbedoLakeSnowMax       = 0.80_wp,    &
     !
     ! Parameters of glacier scheme albedo
-   & AlbedoGlacierVisMin  = 0.78,          & ! Albedo of glacier in the visible range at the melting point
-   & AlbedoGlacierVisMax  = 0.9,           & ! Albedo of glacier in the visible range at hard frost
+   & AlbedoGlacierVisMin  = 0.76,          & ! Albedo of glacier in the visible range at the melting point
+   & AlbedoGlacierVisMax  = 0.89,          & ! Albedo of glacier in the visible range at hard frost
    & TempAlbedoGlacierMax = 5.0,           & ! Maximum glacier albedo at this temperature below melting point of H2O
-   & AlbedoGlacierNirMin  = 0.4,           & ! Albedo of glacier in the NIR range at at the melting point
-   & AlbedoGlacierNirMax  = 0.75,          & ! Albedo of glacier in the NIR range at hard frost
+   & AlbedoGlacierNirMin  = 0.34,          & ! Albedo of glacier in the NIR range at at the melting point
+   & AlbedoGlacierNirMax  = 0.72,          & ! Albedo of glacier in the NIR range at hard frost
     ! Parameters for function vegetation_albedo_simple echam5
    & AlbedoCanopySnow_simple = 0.2,        & ! Albedo of snow on canopy
    & AlbedoSnowMin_simple    = 0.4,        & ! Minimum possible snow albedo

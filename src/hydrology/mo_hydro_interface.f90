@@ -570,11 +570,7 @@ CONTAINS
       drainage(:) = 0._wp
       w_snow_soil(:) = 0._wp
       evapo_snow(:) = evapopot(:)
-      IF (model%config%l_compat401) THEN
-        snow_soil_dens(:) = 330._wp
-      ELSE
-        snow_soil_dens(:) = dens_snow
-      END IF
+      snow_soil_dens(:) = dens_snow
     ELSE
       IF (tile%is_vegetation) THEN
         trans_tmp(:) = trans(:)
@@ -611,10 +607,6 @@ CONTAINS
         & water_excess(:),                & !< out
         & evapo_deficit(:)                & !< out
         & )
-
-      IF (model%config%l_compat401) THEN
-        snow_soil_dens(:) = 330._wp
-      END IF
 
     END IF
 
