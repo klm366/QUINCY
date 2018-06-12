@@ -70,14 +70,6 @@ MODULE mo_pheno_memory_class
 
                                       !! JN: variables required when l_forestRegrowth = true, i.e. when the 
                                       !      maxLAI is derived from biomass via allometric relationships
-      & prev_veg_c_at_max_green,    & ! Last periods total vegetation carbon [mol(C) m-2(canopy)] 
-                                      ! at the time of the green pool maximum --> only changes ones a year!
-      & annual_veg_c_inc,           & ! annual increment in total vegetation carbon [mol(C) m-2(canopy)] 
-                                      ! calculated ar the time of the green pool maximum --> only changes ones a year!
-      & biennial_avg_veg_c_inc,     & ! avg increment in total vegetation carbon [mol(C) m-2(canopy)] 
-                                      ! over the last two years calculated at the time of the green pool maximum
-      & decennial_avg_veg_c_inc,    & ! avg increment in total vegetation carbon [mol(C) m-2(canopy)] 
-                                      ! over the last ten years calculated at the time of the green pool maximum
       & number_of_individuals,      & ! Number of individuals in last calculation [trees ha-1]
       & biomass_per_individual,     & ! Biomass per individual according to allometric relationships [kg/tree]
 
@@ -336,31 +328,6 @@ CONTAINS
           CALL jsb_add_var( mem,'biomass_per_ind', mem%biomass_per_individual, &
             & hgrid, surface,                                                    &
             & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-
-          CALL jsb_add_var( mem,'prev_max_green_veg_c', mem%prev_veg_c_at_max_green, &
-            & hgrid, surface,                                                    &
-            & t_cf('prev_veg_c_at_max_green', 'mol(C) m-2(canopy)', 'Last periods total vegetation carbon'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'annual_veg_c_inc', mem%annual_veg_c_inc, &
-            & hgrid, surface,                                                    &
-            & t_cf('annual_veg_c_inc', 'mol(C) m-2(canopy)', 'annual increment in total vegetation carbon'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'biennial_mi_veg_c', mem%biennial_avg_veg_c_inc, &
-            & hgrid, surface,                                                    &
-            & t_cf('biennial_avg_veg_c_inc', 'mol(C) m-2(canopy)', 'biennial increment in total vegetation carbon'), &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-            & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
-          CALL jsb_add_var( mem,'decennial_mi_veg_c', mem%decennial_avg_veg_c_inc, &
-            & hgrid, surface,                                                    &
-            & t_cf('decennial_avg_veg_c_inc', 'mol(C) m-2(canopy)', 'decennial increment in total vegetation carbon'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)

@@ -156,7 +156,7 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
-    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day, days_per_year
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -296,7 +296,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_soilresp_ta  ! .. biosphere (due to NPP, soil respiration and
     dsl4jsb_Real2D_onChunk ::  CO2_flx2atm_herbivory_ta ! .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)] 
 
-
+    dsl4jsb_Real2D_onChunk ::  annual_avg_NPP 
+    dsl4jsb_Real2D_onChunk ::  biennial_avg_NPP 
+    dsl4jsb_Real2D_onChunk ::  decennial_avg_NPP 
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
     !dsl4jsb_Real2D_onChunk :: frac_litter_wood_new
@@ -407,6 +409,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_npp_ta )         ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_soilresp_ta )    ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  CO2_flx2atm_herbivory_ta )   ! out
+
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  annual_avg_NPP )             ! out
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  biennial_avg_NPP )           ! out
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  decennial_avg_NPP )          ! out
+    ENDIF
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
     !dsl4jsb_Get_var2D_onChunk(CARBON_,  frac_litter_wood_new )
@@ -643,6 +651,16 @@ CONTAINS
         & * sec_per_day * veg_frac_correction * fract_fpc_max
       CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
+
+      IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+         ! calculate weighted (multi) annual increments
+         annual_avg_NPP = (annual_avg_NPP * (days_per_year - 1) / days_per_year) &
+           & + ( sec_per_day * NPP_act_yDayMean )
+         biennial_avg_NPP = (biennial_avg_NPP * ((2 * days_per_year) - 1) / (2 * days_per_year)) &
+           & + ( sec_per_day * NPP_act_yDayMean / 2 )
+         decennial_avg_NPP = (decennial_avg_NPP * ((10 * days_per_year) - 1) / (10 * days_per_year)) &
+           & + ( sec_per_day * NPP_act_yDayMean / 10 )
+      ENDIF
 
    END IF
 
@@ -1096,6 +1114,11 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  current_max_green
     dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
+    dsl4jsb_Real2D_onChunk ::  prev_veg_c_at_max_green
+    dsl4jsb_Real2D_onChunk ::  annual_avg_NPP
+    dsl4jsb_Real2D_onChunk ::  biennial_avg_NPP
+    dsl4jsb_Real2D_onChunk ::  decennial_avg_NPP
+
 
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp_sourceT
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_woods_rp_sourceT
@@ -1124,6 +1147,11 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sourceT
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sourceT
+
+    dsl4jsb_Real2D_onChunk ::  delta_prev_veg_c_at_max_green_rp_sourceT
+    dsl4jsb_Real2D_onChunk ::  delta_annual_avg_NPP_rp_sourceT
+    dsl4jsb_Real2D_onChunk ::  delta_biennial_avg_NPP_rp_sourceT
+    dsl4jsb_Real2D_onChunk ::  delta_decennial_avg_NPP_rp_sourceT
 
     dsl4jsb_Real2D_onChunk ::  delta_GPP_sum_rp_sourceT
     dsl4jsb_Real2D_onChunk ::  delta_NPP_pot_sum_rp_sourceT
@@ -1155,6 +1183,11 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp_sinkT
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp_sinkT
+
+    dsl4jsb_Real2D_onChunk ::  delta_prev_veg_c_at_max_green_rp_sinkT
+    dsl4jsb_Real2D_onChunk ::  delta_annual_avg_NPP_rp_sinkT
+    dsl4jsb_Real2D_onChunk ::  delta_biennial_avg_NPP_rp_sinkT
+    dsl4jsb_Real2D_onChunk ::  delta_decennial_avg_NPP_rp_sinkT
 
     dsl4jsb_Real2D_onChunk ::  delta_GPP_sum_rp_sinkT
     dsl4jsb_Real2D_onChunk ::  delta_NPP_pot_sum_rp_sinkT
@@ -1226,6 +1259,16 @@ CONTAINS
 
       dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_current_max_green_rp, sinkT)
       dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_veg_carbon_at_max_green_rp, sinkT)
+
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_prev_veg_c_at_max_green_rp, sourceT)
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_annual_avg_NPP_rp, sourceT)
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_biennial_avg_NPP_rp, sourceT)
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_decennial_avg_NPP_rp, sourceT)
+
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_prev_veg_c_at_max_green_rp, sinkT)
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_annual_avg_NPP_rp, sinkT)
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_biennial_avg_NPP_rp, sinkT)
+      dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_decennial_avg_NPP_rp, sinkT)
     ENDIF
 
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_Cpool_green_rp, sourceT)
@@ -1342,6 +1385,17 @@ CONTAINS
         & delta_current_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
       CALL update_delta_carbon_rp(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp_sourceT(:), &
         & delta_veg_carbon_at_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+
+
+      CALL update_delta_carbon_rp(prev_veg_c_at_max_green(:), delta_prev_veg_c_at_max_green_rp_sourceT(:), &
+        & delta_prev_veg_c_at_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(annual_avg_NPP(:), delta_annual_avg_NPP_rp_sourceT(:), &
+        & delta_annual_avg_NPP_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(biennial_avg_NPP(:), delta_biennial_avg_NPP_rp_sourceT(:), &
+        & delta_biennial_avg_NPP_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(decennial_avg_NPP(:), delta_decennial_avg_NPP_rp_sourceT(:), &
+        & delta_decennial_avg_NPP_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+
     ENDIF
 
   END SUBROUTINE recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift
@@ -2025,6 +2079,10 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  current_max_green
     dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
+    dsl4jsb_Real2D_onChunk ::  prev_veg_c_at_max_green
+    dsl4jsb_Real2D_onChunk ::  annual_avg_NPP
+    dsl4jsb_Real2D_onChunk ::  biennial_avg_NPP
+    dsl4jsb_Real2D_onChunk ::  decennial_avg_NPP
 
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_green_rp
     dsl4jsb_Real2D_onChunk ::  delta_Cpool_reserve_rp 
@@ -2059,6 +2117,11 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  delta_current_max_green_rp
     dsl4jsb_Real2D_onChunk ::  delta_veg_carbon_at_max_green_rp
+    dsl4jsb_Real2D_onChunk ::  delta_prev_veg_c_at_max_green_rp
+    dsl4jsb_Real2D_onChunk ::  delta_annual_avg_NPP_rp
+    dsl4jsb_Real2D_onChunk ::  delta_biennial_avg_NPP_rp
+    dsl4jsb_Real2D_onChunk ::  delta_decennial_avg_NPP_rp
+
     dsl4jsb_Real2D_onChunk ::  delta_carbon_2_atmos_rp
 
     dsl4jsb_Real2D_onChunk ::  veg_frac_correction
@@ -2144,6 +2207,17 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_current_max_green_rp)       ! inout 
       dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_veg_carbon_at_max_green_rp) ! inout 
+
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  prev_veg_c_at_max_green)          ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  annual_avg_NPP)                 ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  biennial_avg_NPP)           ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  decennial_avg_NPP)          ! inout 
+
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_prev_veg_c_at_max_green_rp) ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_annual_avg_NPP_rp)        ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_biennial_avg_NPP_rp)  ! inout 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  delta_decennial_avg_NPP_rp) ! inout 
+
     ENDIF
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction)      ! in
