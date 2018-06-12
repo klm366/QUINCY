@@ -42,7 +42,6 @@ ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 
 #ggrids="T63"    # for testing
 
 
-remap_scheme=ycon
 declare -A source_res_dict
 source_res_dict[0]=05 #vg T31
 source_res_dict[1]=05 #vg T31
@@ -685,6 +684,13 @@ do
 	    ulimit -m unlimited
     fi
 
+    if [[ $bisection -le 5 ]]
+    then
+      remap_scheme=ycon
+    else
+      remap_scheme=dis
+    fi
+
     if [[ "${old_r2b4_amip}" != "true" ]]
     then
       grid_name=R02B${n0}
@@ -695,6 +701,7 @@ do
     fi
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
+    remap_scheme=ycon
     source_res=${grid_name}
     icon_grid=${grid_name}
   fi
