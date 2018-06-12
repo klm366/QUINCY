@@ -1,12 +1,10 @@
 &VEGETATION_CTL
   ! vegetation process
-  ! flags
-  flag_optimal_Nleaf=.FALSE.
-  flag_optimal_allocation=.FALSE.
-  !
   ! options
   bnf_scheme="standard"
   veg_dynamics_scheme="population"
+  biomass_alloc_scheme="fixed"
+  leaf_stoichom_scheme="fixed"
   plant_functional_type_id=5
   ! site specific cohort harvest each x years
   cohort_harvest_interval=80
@@ -28,7 +26,6 @@
 /
 &RADIATION_CTL
   ! nothing here yet
-  ! 
 /
 &GRID_CTL
   latitude=50.0
@@ -57,7 +54,6 @@
   sb_nloss_scheme="fixed"
   sb_bnf_scheme="standard"
   sb_adsorp_scheme="eca_full"
-  ! 
   ! N & P flags
   flag_sb_prescribe_nh4=.FALSE.
   flag_sb_prescribe_no3=.FALSE.
@@ -75,7 +71,6 @@
   flag_sb_ECA_upt_po4=.TRUE.
   flag_sb_CLE_po4=.TRUE.
   flag_sb_LK_po4=.TRUE.
-  ! 
   ! parameter values
   usda_taxonomy_class=1
   nwrb_taxonomy_class=1
@@ -98,13 +93,11 @@
   output_interval_flux="weekly"
   output_start_first_day_year=1
   output_end_last_day_year=30
-  ! 
   ! fluxnet diagnostics
   ! if fluxnet sites: output per timestep for last forcing period [FALSE TRUE]
   fluxnet_output=.FALSE.
   ! length of forcing period [years] provided by data file
   fluxnet_output_length=2
-  ! 
   ! flags
   ! generate forcing file for the standalone soil model (veg%litterfall pool plus rate modifiers) per timestep [FALSE TRUE]
   flag_generate_soil_forcing=.FALSE.

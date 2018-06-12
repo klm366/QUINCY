@@ -75,8 +75,8 @@ flag_optimal_Nfraction="F"      # optimal N fraction
 ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
-flag_optimal_Nleaf="F"            # optimal N leaf
-flag_optimal_allocation="F"       # optimal allocation
+biomass_alloc_scheme="fixed"    # fixed dynamic optimal
+leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
 veg_dynamics_scheme="population"  # none population cohort
 flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 

@@ -38,8 +38,8 @@ MODULE mo_veg_config_class
     CHARACTER(15)    :: veg_dynamics_scheme        !< select scheme to calculate within-tile vegetation dynamics + start from bareground
                                                    !! none: constant mortality
                                                    !! "none population cohort"   
-    LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
-    LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
+    CHARACTER(15)    :: biomass_alloc_scheme       !< select scheme for veg biomass allocation: fixed dynamic optimal
+    CHARACTER(15)    :: leaf_stoichom_scheme       !< select scheme for C/N leaf stoichometry:  fixed dynamic optimal
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
   END type t_veg_config
@@ -72,8 +72,8 @@ CONTAINS
     REAL(wp)                    :: cohort_harvest_interval
     CHARACTER(15)               :: bnf_scheme       
     CHARACTER(15)               :: veg_dynamics_scheme
-    LOGICAL                     :: flag_optimal_Nleaf
-    LOGICAL                     :: flag_optimal_allocation
+    CHARACTER(15)               :: biomass_alloc_scheme
+    CHARACTER(15)               :: leaf_stoichom_scheme
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /vegetation_ctl/       & 
@@ -84,8 +84,8 @@ CONTAINS
       cohort_harvest_interval,      &
       bnf_scheme,                   & 
       veg_dynamics_scheme,          &
-      flag_optimal_Nleaf,           &
-      flag_optimal_allocation
+      biomass_alloc_scheme,         &
+      leaf_stoichom_scheme
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -100,8 +100,8 @@ CONTAINS
     cohort_harvest_interval        = 80.0_wp
     bnf_scheme                     = "standard"
     veg_dynamics_scheme            = "population"
-    flag_optimal_Nleaf             = .FALSE.
-    flag_optimal_allocation        = .FALSE.
+    biomass_alloc_scheme           = "fixed"
+    leaf_stoichom_scheme           = "fixed"
 
     ! read the namelist
     ! &VEGETATION_CTL
@@ -128,8 +128,8 @@ CONTAINS
     config%cohort_harvest_interval       = cohort_harvest_interval
     config%bnf_scheme                    = TRIM(bnf_scheme)
     config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
-    config%flag_optimal_Nleaf            = flag_optimal_Nleaf
-    config%flag_optimal_allocation       = flag_optimal_allocation
+    config%biomass_alloc_scheme          = biomass_alloc_scheme
+    config%leaf_stoichom_scheme          = leaf_stoichom_scheme
 
   END SUBROUTINE Init_veg_config
 

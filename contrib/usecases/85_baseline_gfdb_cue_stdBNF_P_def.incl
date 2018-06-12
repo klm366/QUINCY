@@ -43,8 +43,8 @@ ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
 # plant growth model options
-flag_optimal_Nleaf="F"            # optimal N leaf
-flag_optimal_allocation="F"       # optimal allocation
+biomass_alloc_scheme="fixed"    # fixed dynamic optimal
+leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
 # vegetation dynamics options
 veg_dynamics_scheme="population"  # none population cohort
 cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"

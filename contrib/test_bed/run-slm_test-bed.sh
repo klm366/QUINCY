@@ -39,15 +39,15 @@ ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
 # plant growth model options
-flag_optimal_Nleaf="F"
-flag_optimal_allocation="F"
+biomass_alloc_scheme="fixed"    # fixed dynamic optimal
+leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
 # vegetation dynamics options
 veg_dynamics_scheme="population"  # none population cohort
 cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
 
 # soil model options
 soil_depth=5.7                  # meter
-nsoil_layer=5                   # number of soil layers (default: 5 | min: 5 | max: 20)
+nsoil_layer=5                   # number of soil layers (default for SLM land: 5 | default for SLM soil: 15 | min: 5 | max: 20)
 
 # JSM
 flag_sb_jsm_transport="F"       # ..
@@ -93,16 +93,8 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-# check if '-o' option is used, if so, set all optimality flags to F per default
-argOpt_o="$(grep -w "\-o" <<< "$@")"
-if [ ! -z "${argOpt_o// }" ]  # the search term is available yes / no  [-z test is explicitly for: the length of string is zero]
- then 
-  flag_optimal_Nfraction="F"
-  flag_optimal_Nleaf="F"
-  flag_optimal_allocation="F"
-fi
 # getopts
-while getopts ":p:m:i:f:s:y:o:b:z:h" opt; do
+while getopts ":p:m:i:f:s:y:b:z:h" opt; do
   case "$opt" in
   "p")
     echo "   plant_functional_type_id=""$OPTARG"
@@ -160,36 +152,6 @@ while getopts ":p:m:i:f:s:y:o:b:z:h" opt; do
     simulation_length_number="$OPTARG"
     output_start_first_day_year=1
     output_end_last_day_year="$OPTARG"
-    ;;
-  "o")
-    case "$OPTARG" in
-    "no")
-      echo "   no optimality"
-      flag_optimal_Nfraction="F"
-      flag_optimal_Nleaf="F"
-      flag_optimal_allocation="F"
-      ;;
-    "all")
-      echo "   using optimal Nfraction"
-      echo "   using optimal Nleaf"      
-      echo "   using optimal Allocation"
-      flag_optimal_Nfraction="T"
-      flag_optimal_Nleaf="T"
-      flag_optimal_allocation="T"
-      ;;
-    "nf")
-      echo "   using optimal Nfraction"
-      flag_optimal_Nfraction="T"
-      ;;
-    "nl")
-      echo "   using optimal Nleaf"
-      flag_optimal_Nleaf="T"
-      ;;
-    "al")
-      echo "   using optimal Allocation"
-      flag_optimal_allocation="T"
-      ;;
-    esac
     ;;
   "b")
     case "$OPTARG" in
@@ -269,14 +231,6 @@ while getopts ":p:m:i:f:s:y:o:b:z:h" opt; do
     echo "    Arguments to -y:"
     echo "       any integer value"
     echo "       note: this sets simulation output accordingly (1-x)"
-    echo " -o set the optimality scheme(s)"
-    echo "    Arguments to -o:"
-    echo "       no : no optimality"
-    echo "       all: all optimality schemes"
-    echo "       nf : using only optimal Nfraction"
-    echo "       nl : using only optimal Nleaf"
-    echo "       al : using only optimal allocation"
-    echo "    note: you can use the -o option multiple times as argument to the script, e.g., script.sh -o nf -o al"
     echo " -b set the N uptake scheme"
     echo "    Arguments to -b:"
     echo "       none: no BNF"
@@ -326,6 +280,8 @@ validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
 validateSBModelScheme="simple_0d simple_1d jsm"
 validateSBNLossScheme="none fixed dynamic"
+validateBiomassAllocScheme="fixed dynamic optimal"
+validateLeafStoichomScheme="fixed dynamic optimal"
 validateVegDynamicsScheme="none population cohort"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
@@ -358,9 +314,9 @@ validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jma
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
 validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
 validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
-validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
-validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
+validateUserConfigValues "$biomass_alloc_scheme" "$validateBiomassAllocScheme" "biomass_alloc_scheme"
+validateUserConfigValues "$leaf_stoichom_scheme" "$validateLeafStoichomScheme" "leaf_stoichom_scheme"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "setPFTAutomatically"
@@ -630,6 +586,8 @@ changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
 changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
+changeNamelistValue biomass_alloc_scheme "$biomass_alloc_scheme"
+changeNamelistValue leaf_stoichom_scheme "$leaf_stoichom_scheme"
 changeNamelistValue cohort_harvest_interval "$cohort_harvest_interval"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
@@ -706,18 +664,6 @@ if [ $flag_t_jmax_acclimation == T ]
     changeNamelistValue flag_t_jmax_acclimation ".TRUE."
   else
     changeNamelistValue flag_t_jmax_acclimation ".FALSE."
-fi
-if [ $flag_optimal_Nleaf == T ]
-  then
-    changeNamelistValue flag_optimal_Nleaf ".TRUE."
-  else
-    changeNamelistValue flag_optimal_Nleaf ".FALSE."
-fi
-if [ $flag_optimal_allocation == T ]
-  then
-    changeNamelistValue flag_optimal_allocation ".TRUE."
-  else
-    changeNamelistValue flag_optimal_allocation ".FALSE."
 fi
 if [ $flag_optimal_Nfraction == T ]
   then

@@ -510,7 +510,7 @@ CONTAINS
     !!   IF(growing_season(ichunk))THEN                                 \n
     !!   IF(veg_pool_leaf_nitrogen(ichunk) > eps4)THEN
     !! 
-    IF (dsl4jsb_Config(VEG_)%flag_optimal_Nleaf) THEN
+    IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
       CALL calc_dir_optimal_cn_leaf(    options                                        , & ! in
                                         lctlib                                         , &
                                         dsl4jsb_Config(ASSIMI_)%ncanopy                , &
@@ -548,23 +548,23 @@ CONTAINS
                                         labile_carbon_tcnl_mavg(:)                     , &
                                         labile_nitrogen_tcnl_mavg(:)                   , & ! in
                                         leaf_cn_direction(:)                           )   ! inout
-    END IF ! dsl4jsb_Config(VEG_)%flag_optimal_Nleaf
+    END IF 
 
-    CALL calc_stoichiometry_changes(  lctlib%growthform                       , & ! lctlib
-                                      lctlib%cn_leaf                          , & ! lctlib
-                                      dsl4jsb_Config(VEG_)%flag_optimal_Nleaf , & ! in
-                                      growing_season(:)                       , &
-                                      leaf_cn_direction(:)                    , &
-                                      target_np_leaf(:)                       , &
-                                      target_cn_leaf(:)                       , & ! inout
-                                      target_cn_fine_root(:)                  , & ! out
-                                      target_cn_coarse_root(:)                , &
-                                      target_cn_sap_wood(:)                   , &
-                                      target_cn_fruit(:)                      , &
-                                      target_np_fine_root(:)                  , &
-                                      target_np_coarse_root(:)                , &
-                                      target_np_sap_wood(:)                   , &
-                                      target_np_fruit(:)                      )
+    CALL calc_stoichiometry_changes(  lctlib%growthform                               , & ! lctlib
+                                      lctlib%cn_leaf                                  , & ! lctlib
+                                      TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , & ! in
+                                      growing_season(:)                               , &
+                                      leaf_cn_direction(:)                            , &
+                                      target_np_leaf(:)                               , &
+                                      target_cn_leaf(:)                               , & ! inout
+                                      target_cn_fine_root(:)                          , & ! out
+                                      target_cn_coarse_root(:)                        , &
+                                      target_cn_sap_wood(:)                           , &
+                                      target_cn_fruit(:)                              , &
+                                      target_np_fine_root(:)                          , &
+                                      target_np_coarse_root(:)                        , &
+                                      target_np_sap_wood(:)                           , &
+                                      target_np_fruit(:)                              )
 
 
     !> 3.0 calculate current allometry 
@@ -609,46 +609,46 @@ CONTAINS
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(lctlib%phenology_type                         , &  ! lctlib
-                        lctlib%growthform                             , &
-                        lctlib%allom_k1                               , &
-                        lctlib%allom_k2                               , &
-                        lctlib%sla                                    , &
-                        lctlib%wood_density                           , &
-                        lctlib%tau_leaf                               , &
-                        lctlib%tau_fine_root                          , &
-                        lctlib%k_latosa                               , &
-                        lctlib%k_root                                 , &
-                        lctlib%k_rtos                                 , &
-                        lctlib%c0_allom                               , &  ! lctlib
-                        dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
-                        TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)         , &
-                        height(:)                                     , &
-                        veg_pool%sap_wood%carbon(:)                   , &
-                        veg_pool%heart_wood%carbon(:)                 , &
-                        dens_ind(:)                                   , & 
-                        labile_carbon_talloc_mavg(:)                  , &
-                        labile_nitrogen_talloc_mavg(:)                , & 
-                        labile_phosphorus_talloc_mavg(:)              , &
-                        reserve_carbon_talloc_mavg(:)                 , &
-                        reserve_nitrogen_talloc_mavg(:)               , &
-                        reserve_phosphorus_talloc_mavg(:)             , &
-                        growth_cn_talloc_mavg(:)                      , &
-                        growth_cp_talloc_mavg(:)                      , & 
-                        npp_talloc_mavg(:)                            , &
-                        unit_npp_talloc_mavg(:)                       , &
-                        transpiration_talloc_mavg(:)                  , &
-                        unit_transpiration_talloc_mavg(:)             , &
-                        n_fixation_talloc_mavg(:)                     , &
-                        unit_uptake_n_talloc_mavg(:)                  , &
-                        unit_uptake_p_talloc_mavg(:)                  , &
-                        dphi_talloc_mavg(:)                           , &
-                        kstar_labile(:)                               , &
-                        dheight(:)                                    , &  ! out
-                        leaf2sapwood_mass_ratio(:)                    , & 
-                        leaf2root_mass_ratio(:)                       , &
-                        k1_opt(:)                                     , &
-                        k2_opt(:)                                     )
+    CALL calc_allometry(lctlib%phenology_type                             , &  ! lctlib
+                        lctlib%growthform                                 , &
+                        lctlib%allom_k1                                   , &
+                        lctlib%allom_k2                                   , &
+                        lctlib%sla                                        , &
+                        lctlib%wood_density                               , &
+                        lctlib%tau_leaf                                   , &
+                        lctlib%tau_fine_root                              , &
+                        lctlib%k_latosa                                   , &
+                        lctlib%k_root                                     , &
+                        lctlib%k_rtos                                     , &
+                        lctlib%c0_allom                                   , &  ! lctlib
+                        TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme)   , &
+                        TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)             , &
+                        height(:)                                         , &
+                        veg_pool%sap_wood%carbon(:)                       , &
+                        veg_pool%heart_wood%carbon(:)                     , &
+                        dens_ind(:)                                       , & 
+                        labile_carbon_talloc_mavg(:)                      , &
+                        labile_nitrogen_talloc_mavg(:)                    , & 
+                        labile_phosphorus_talloc_mavg(:)                  , &
+                        reserve_carbon_talloc_mavg(:)                     , &
+                        reserve_nitrogen_talloc_mavg(:)                   , &
+                        reserve_phosphorus_talloc_mavg(:)                 , &
+                        growth_cn_talloc_mavg(:)                          , &
+                        growth_cp_talloc_mavg(:)                          , & 
+                        npp_talloc_mavg(:)                                , &
+                        unit_npp_talloc_mavg(:)                           , &
+                        transpiration_talloc_mavg(:)                      , &
+                        unit_transpiration_talloc_mavg(:)                 , &
+                        n_fixation_talloc_mavg(:)                         , &
+                        unit_uptake_n_talloc_mavg(:)                      , &
+                        unit_uptake_p_talloc_mavg(:)                      , &
+                        dphi_talloc_mavg(:)                               , &
+                        kstar_labile(:)                                   , &
+                        dheight(:)                                        , &  ! out
+                        leaf2sapwood_mass_ratio(:)                        , & 
+                        leaf2root_mass_ratio(:)                           , &
+                        k1_opt(:)                                         , &
+                        k2_opt(:)                                         )
 
     
     !> 4.0 calculate reserve & labile pool dynamics
@@ -713,35 +713,35 @@ CONTAINS
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
     !! 
-    CALL calc_allocation_fraction(options                                       , & ! in
-                                  lctlib                                        , & 
-                                  dsl4jsb_Config(VEG_)%flag_optimal_allocation  , &
-                                  dheight(:)                                    , &
-                                  kstar_labile(:)                               , &
-                                  veg_pool%leaf%carbon(:)                       , &
-                                  veg_pool%sap_wood%carbon(:)                   , &
-                                  veg_pool%coarse_root%carbon(:)                , &
-                                  veg_pool%fine_root%carbon(:)                  , &
-                                  veg_pool%labile%carbon(:)                     , &
-                                  height(:)                                     , &
-                                  leaf2sapwood_mass_ratio(:)                    , &
-                                  leaf2root_mass_ratio(:)                       , & 
-                                  k1_opt(:)                                     , &
-                                  k2_opt(:)                                     , &
-                                  target_cn_leaf(:)                             , &
-                                  target_cn_fine_root(:)                        , &
-                                  target_cn_coarse_root(:)                      , &
-                                  target_cn_sap_wood(:)                         , &
-                                  target_cn_fruit(:)                            , &
-                                  target_np_leaf(:)                             , &
-                                  target_np_fine_root(:)                        , &
-                                  target_np_coarse_root(:)                      , &
-                                  target_np_sap_wood(:)                         , &
-                                  target_np_fruit(:)                            , &
-                                  veg_reserve_use%carbon(:)                     , & 
-                                  veg_falloc                                    , & ! inout
-                                  growth_req_n(:)                               , & ! out
-                                  growth_req_p(:)                               )   ! out
+    CALL calc_allocation_fraction(options                                           , & ! in
+                                  lctlib                                            , & 
+                                  TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme)   , &
+                                  dheight(:)                                        , &
+                                  kstar_labile(:)                                   , &
+                                  veg_pool%leaf%carbon(:)                           , &
+                                  veg_pool%sap_wood%carbon(:)                       , &
+                                  veg_pool%coarse_root%carbon(:)                    , &
+                                  veg_pool%fine_root%carbon(:)                      , &
+                                  veg_pool%labile%carbon(:)                         , &
+                                  height(:)                                         , &
+                                  leaf2sapwood_mass_ratio(:)                        , &
+                                  leaf2root_mass_ratio(:)                           , & 
+                                  k1_opt(:)                                         , &
+                                  k2_opt(:)                                         , &
+                                  target_cn_leaf(:)                                 , &
+                                  target_cn_fine_root(:)                            , &
+                                  target_cn_coarse_root(:)                          , &
+                                  target_cn_sap_wood(:)                             , &
+                                  target_cn_fruit(:)                                , &
+                                  target_np_leaf(:)                                 , &
+                                  target_np_fine_root(:)                            , &
+                                  target_np_coarse_root(:)                          , &
+                                  target_np_sap_wood(:)                             , &
+                                  target_np_fruit(:)                                , &
+                                  veg_reserve_use%carbon(:)                         , & 
+                                  veg_falloc                                        , & ! inout
+                                  growth_req_n(:)                                   , & ! out
+                                  growth_req_p(:)                                   )   ! out
 
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
@@ -1293,7 +1293,7 @@ CONTAINS
   ! --------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_stoichiometry_changes(growthform              , &   ! lctlib
                                                   cn_leaf                 , &   ! lctlib
-                                                  flag_optimal_Nleaf      , &   ! in
+                                                  leaf_stoichom_scheme    , &   ! in
                                                   growing_season          , &
                                                   leaf_cn_direction       , &
                                                   target_np_leaf          , &
@@ -1315,7 +1315,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                  INTENT(in)    :: growthform                !< land-cover-type library parameter
     REAL(wp),                 INTENT(in)    :: cn_leaf                   !< land-cover-type library parameter
-    LOGICAL,                  INTENT(in)    :: flag_optimal_Nleaf        !< from veg config
+    CHARACTER(len=*),         INTENT(in)    :: leaf_stoichom_scheme      !< from veg config
     LOGICAL,                  INTENT(in)    :: growing_season            !< 
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
                                                target_np_leaf            !< 
@@ -1335,7 +1335,7 @@ CONTAINS
 
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (flag_optimal_Nleaf .AND. growing_season) THEN
+    IF (leaf_stoichom_scheme == "optimal" .AND. growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
     !ELSE
@@ -1396,7 +1396,7 @@ CONTAINS
                                             k_root                        , &
                                             k_rtos                        , &
                                             c0_allom                      , &  ! lctlib
-                                            flag_optimal_allocation       , &
+                                            biomass_alloc_scheme          , &
                                             bnf_scheme                    , &
                                             height                        , &
                                             veg_pool_sap_wood_carbon      , &
@@ -1445,7 +1445,7 @@ CONTAINS
                                           k_root                 , &   !< land-cover-type library parameter
                                           k_rtos                 , &   !< land-cover-type library parameter
                                           c0_allom                     !< land-cover-type library parameter
-    LOGICAL,               INTENT(in)  :: flag_optimal_allocation      !< from veg config
+    CHARACTER(len=*),      INTENT(in)  :: biomass_alloc_scheme         !< from veg config
     CHARACTER(len=*),      INTENT(in)  :: bnf_scheme                   !< from veg config
     REAL(wp),              INTENT(in)  :: height                       !< height (m)
     REAL(wp),              INTENT(in)  :: veg_pool_sap_wood_carbon     !< woody biomass of an individual tree (mol C/m2)
@@ -1529,84 +1529,86 @@ CONTAINS
         ! => Cl = k_latosa / sla / wood_density / height * Cs = leaf2sapwood_mass_ratio * Cs / height
         leaf2sapwood_mass_ratio = k_latosa / sla / wood_density
 
-        IF (flag_optimal_allocation) THEN
-           !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
-           !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
-           !! NPP = gN * R * growth_cn
-           !! Or similar relationships for P
-           !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
-           SELECT CASE (bnf_scheme)
-           CASE("optimal")
-              k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                         MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-              k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                         MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-              IF ( k1_opt_n >= k1_opt_p) THEN 
-                 ! if N is more limiting than P
-                 k1_opt = k1_opt_n 
-                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                          MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-              ELSE
-                 k1_opt = k1_opt_p 
-                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                          MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-              ENDIF
-           CASE DEFAULT 
-              k1_opt_n = (npp*tau_leaf*one_year*one_day + &
-                          (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
-                          n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
-                         MAX( MAX(unit_uptake_n, 0.05_wp) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-               
-              k1_opt_p = (npp*tau_leaf*one_year*one_day + &
-                          (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                         MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-              IF ( k1_opt_n >= k1_opt_p) THEN 
-                 ! if N is more limiting than P
-                 k1_opt = k1_opt_n 
-                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                          MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
-              ELSE
-                 k1_opt = k1_opt_p 
-                 k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                          MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-              ENDIF
-           END SELECT
+        SELECT CASE (biomass_alloc_scheme)
+          CASE("optimal")
+             !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
+             !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
+             !! NPP = gN * R * growth_cn
+             !! Or similar relationships for P
+             !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
+             SELECT CASE (bnf_scheme)
+             CASE("optimal")
+                k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                           MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+                k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                           MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+                IF ( k1_opt_n >= k1_opt_p) THEN 
+                   ! if N is more limiting than P
+                   k1_opt = k1_opt_n 
+                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                            MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+                ELSE
+                   k1_opt = k1_opt_p 
+                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+                ENDIF
+             CASE DEFAULT 
+                k1_opt_n = (npp*tau_leaf*one_year*one_day + &
+                            (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
+                            n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
+                           MAX( MAX(unit_uptake_n, 0.05_wp) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+                 
+                k1_opt_p = (npp*tau_leaf*one_year*one_day + &
+                            (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                           MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+                IF ( k1_opt_n >= k1_opt_p) THEN 
+                   ! if N is more limiting than P
+                   k1_opt = k1_opt_n 
+                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                            MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
+                ELSE
+                   k1_opt = k1_opt_p 
+                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+                ENDIF
+             END SELECT
 
-           !> water based optimality, following Magnani 2000 
-           !! R = k1 + k2*dL +k3*dS
-           IF (height > 0.5_wp) THEN
-              k1_opt_w = transpiration      / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
-              k2_opt_w = unit_transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
-           ELSE
-              ! all resistance is in the root for small trees
-              k1_opt_w = transpiration      / rhoh2o * (1._wp) / (k_root * dphi) 
-              k2_opt_w = unit_transpiration / rhoh2o * (1._wp) / (k_root * dphi)
-           ENDIF
-             
-           ! Compare root increments for a hypothetical unit of leaf growth 
-           !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-              ! water is limiting 
-           !   k1_opt = k1_opt_w 
-           !   k2_opt = k2_opt_w 
-           !ENDIF 
-        ELSE             
-           ! scaling factor for root to leaf mass
-           ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
-           ! Note: currently still lacks a moisture response!
-           ! sapwood mass / height =  k_rtos * fine_root_mass
-           ! Cr = Cs / k_rtos / height
-           ! let Cs = Cl / leaf2sapwood_mass_ratio * height
-           ! => Cl = Cr * leaf2sapwood_mass_ratio * k_rtos = Cl = Cr * leaf2root_mass_ratio 
-           ! ad 2: nitrogen/phosphorus sensitivity still needed
-           leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio
-        ENDIF 
+             !> water based optimality, following Magnani 2000 
+             !! R = k1 + k2*dL +k3*dS
+             IF (height > 0.5_wp) THEN
+                k1_opt_w = transpiration      / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
+                k2_opt_w = unit_transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
+             ELSE
+                ! all resistance is in the root for small trees
+                k1_opt_w = transpiration      / rhoh2o * (1._wp) / (k_root * dphi) 
+                k2_opt_w = unit_transpiration / rhoh2o * (1._wp) / (k_root * dphi)
+             ENDIF
+               
+             ! Compare root increments for a hypothetical unit of leaf growth 
+             !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+                ! water is limiting 
+             !   k1_opt = k1_opt_w 
+             !   k2_opt = k2_opt_w 
+             !ENDIF 
+          CASE("fixed")
+             ! scaling factor for root to leaf mass
+             ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
+             ! Note: currently still lacks a moisture response!
+             ! sapwood mass / height =  k_rtos * fine_root_mass
+             ! Cr = Cs / k_rtos / height
+             ! let Cs = Cl / leaf2sapwood_mass_ratio * height
+             ! => Cl = Cr * leaf2sapwood_mass_ratio * k_rtos = Cl = Cr * leaf2root_mass_ratio 
+             ! ad 2: nitrogen/phosphorus sensitivity still needed
+             leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio
+        END SELECT  ! biomass_alloc_scheme
       !> 1.1 grass
       !! 
       CASE (igrass)
-         ! leaf to stem mass ratio
-         leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
-         ! leaf:root ratio
-         IF (flag_optimal_allocation) THEN
+        ! leaf to stem mass ratio
+        leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
+        ! leaf:root ratio
+        SELECT CASE (biomass_alloc_scheme)
+          CASE("optimal")
             SELECT CASE (bnf_scheme)
               CASE("optimal")
                  k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
@@ -1639,25 +1641,24 @@ CONTAINS
                     k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
                              MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  ENDIF
-           END SELECT
+            END SELECT ! bnf_scheme
 
             !> water based optimality, following Magnani 2000 
-          
-           k1_opt_w = transpiration      / (k_root * dphi) 
-           k2_opt_w = unit_transpiration / (k_root * dphi) 
+            k1_opt_w = transpiration      / (k_root * dphi) 
+            k2_opt_w = unit_transpiration / (k_root * dphi) 
 
-           ! Compare root increments for a hypothetical unit of leaf growth 
-           IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+            ! Compare root increments for a hypothetical unit of leaf growth 
+            IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
               ! water is limiting 
               k1_opt = k1_opt_w 
               k2_opt = k2_opt_w 
-           ENDIF 
+            ENDIF 
 
-         ELSE      
+          CASE("fixed")
             leaf2root_mass_ratio = sm2lm_grass * k_rtos 
-         ENDIF
+        END SELECT ! biomass_alloc_scheme
 
-    ENDSELECT
+    ENDSELECT ! growthform
 
   END SUBROUTINE calc_allometry 
 
@@ -2156,7 +2157,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_allocation_fraction(options                     , &
                                       lctlib                      , &
-                                      flag_optimal_allocation     , &
+                                      biomass_alloc_scheme        , &
                                       dheight                     , &
                                       kstar_labile                , &
                                       leaf_carbon                 , &
@@ -2196,7 +2197,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),         INTENT(in)    :: options                    !< model options
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
-    LOGICAL,                          INTENT(in)    :: flag_optimal_allocation    !< from veg config
+    CHARACTER(len=*),                 INTENT(in)    :: biomass_alloc_scheme       !< from veg config
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: dheight                 ,& !< derivative of height per unit sapwood mass change 
                                                        kstar_labile            ,& !< potential labile pool turnover rate (1/day) without stoichiometric limit
                                                        leaf_carbon             ,& !< carbon in leaves (mol/individual)
@@ -2272,90 +2273,92 @@ CONTAINS
         wood_carbon(:)          = sap_wood_carbon(:) + coarse_root_carbon(:)
 
         !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> 
-        !! rewrite "IF (flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
-        IF (flag_optimal_allocation) THEN
-          WHERE(b_inc(:) > eps8)
-            !! needed for stability - to be checked BLARPP! 
-            !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
-            b_inc(:) = 0.2_wp * dtime / one_day 
+        !! rewrite "CASE (biomass_alloc_scheme == "optimal")" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
+        SELECT CASE(biomass_alloc_scheme)
+          CASE("optimal")
+            WHERE(b_inc(:) > eps8)
+              !! needed for stability - to be checked BLARPP! 
+              !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
+              b_inc(:) = 0.2_wp * dtime / one_day 
 
-            !> 1.2.1a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
-            !! 
-            leaf_carbon_inc(:) = MAX((b_inc(:) - k1_opt(:) + root_carbon(:) + wood_carbon(:) - dheight(:) / &
-                                      leaf2wood_mass_ratio(:) * (b_inc(:)-k1_opt(:) + root_carbon(:)) - height(:) / &
-                                      leaf2wood_mass_ratio(:)*leaf_carbon(:)) / &
-                                     (1.0_wp + k2_opt(:) + dheight(:) / leaf2wood_mass_ratio(:) * &
-                                      (b_inc(:) - (1.0_wp + k2_opt(:)) * leaf_carbon(:) - k1_opt(:) + root_carbon(:)) + &
-                                      height(:)/leaf2wood_mass_ratio(:)), &
-                                     0.0_wp)
-            sap_wood_carbon_inc(:) = MAX((( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
-                                          height(:) - sap_wood_carbon(:)) / & 
-                                         (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / &
-                                          leaf2sapwood_mass_ratio(:) * dheight(:) ), &
-                                         0.0_wp)        
-            WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
-              coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
-                                              lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
-              root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
-            ELSEWHERE
-              leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt(:) + root_carbon(:)) / (1.0_wp + k2_opt(:)), 0.0_wp)
-              root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
-              sap_wood_carbon_inc(:)    = 0.0_wp
-              coarse_root_carbon_inc(:) = 0.0_wp
+              !> 1.2.1a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
+              !! 
+              leaf_carbon_inc(:) = MAX((b_inc(:) - k1_opt(:) + root_carbon(:) + wood_carbon(:) - dheight(:) / &
+                                        leaf2wood_mass_ratio(:) * (b_inc(:)-k1_opt(:) + root_carbon(:)) - height(:) / &
+                                        leaf2wood_mass_ratio(:)*leaf_carbon(:)) / &
+                                       (1.0_wp + k2_opt(:) + dheight(:) / leaf2wood_mass_ratio(:) * &
+                                        (b_inc(:) - (1.0_wp + k2_opt(:)) * leaf_carbon(:) - k1_opt(:) + root_carbon(:)) + &
+                                        height(:)/leaf2wood_mass_ratio(:)), &
+                                       0.0_wp)
+              sap_wood_carbon_inc(:) = MAX((( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
+                                            height(:) - sap_wood_carbon(:)) / & 
+                                           (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / &
+                                            leaf2sapwood_mass_ratio(:) * dheight(:) ), &
+                                           0.0_wp)        
+              WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
+                coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
+                                                lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
+                root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
+              ELSEWHERE
+                leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt(:) + root_carbon(:)) / (1.0_wp + k2_opt(:)), 0.0_wp)
+                root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
+                sap_wood_carbon_inc(:)    = 0.0_wp
+                coarse_root_carbon_inc(:) = 0.0_wp
+              END WHERE
             END WHERE
-          END WHERE
-        ELSE 
-          WHERE(b_inc(:) > eps8)
-            !! needed for stability - to be checked BLARPP! 
-            !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
-            b_inc(:) = 0.2_wp * dtime / one_day 
+          CASE("fixed")
+            WHERE(b_inc(:) > eps8)
+              !! needed for stability - to be checked BLARPP! 
+              !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
+              b_inc(:) = 0.2_wp * dtime / one_day 
 
-            !> 1.2.1b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
-            !! simulataneously with the height-to-diameter relationship 
-            leaf_carbon_inc(:)     = MAX((b_inc(:) + leaf_carbon(:) * dheight(:) / leaf2wood_mass_ratio(:) * & 
-                                          (leaf_carbon(:) / leaf2root_mass_ratio(:) - b_inc(:) - root_carbon(:) ) + &
-                                          wood_carbon(:) + root_carbon(:) - leaf_carbon(:) * &
-                                          (height(:) / leaf2wood_mass_ratio(:) + 1.0_wp / leaf2root_mass_ratio(:))) / & 
-                                         (1.0_wp + ( b_inc(:) - (1.0_wp + 2.0_wp / leaf2root_mass_ratio(:)) * &
-                                          leaf_carbon(:) + root_carbon(:)) * dheight(:) / &
-                                          leaf2wood_mass_ratio(:) + height(:) / &
-                                          leaf2wood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:) ), & 
-                                         0.0_wp) 
+              !> 1.2.1b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
+              !! simulataneously with the height-to-diameter relationship 
+              leaf_carbon_inc(:)     = MAX((b_inc(:) + leaf_carbon(:) * dheight(:) / leaf2wood_mass_ratio(:) * & 
+                                            (leaf_carbon(:) / leaf2root_mass_ratio(:) - b_inc(:) - root_carbon(:) ) + &
+                                            wood_carbon(:) + root_carbon(:) - leaf_carbon(:) * &
+                                            (height(:) / leaf2wood_mass_ratio(:) + 1.0_wp / leaf2root_mass_ratio(:))) / & 
+                                           (1.0_wp + ( b_inc(:) - (1.0_wp + 2.0_wp / leaf2root_mass_ratio(:)) * &
+                                            leaf_carbon(:) + root_carbon(:)) * dheight(:) / &
+                                            leaf2wood_mass_ratio(:) + height(:) / &
+                                            leaf2wood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:) ), & 
+                                           0.0_wp) 
 
-            sap_wood_carbon_inc(:) = MAX((( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
-                                          height(:) - sap_wood_carbon(:)) / & 
-                                         (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
-                                          dheight(:) ), &
-                                         0.0_wp)          
-            WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
-              coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
-                                              lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
-              root_carbon_inc(:)        = MAX((leaf_carbon(:) + leaf_carbon_inc(:)) / &
-                                              leaf2root_mass_ratio(:) - root_carbon(:), 0.0_wp)
-            ELSEWHERE ! special case of no wood growth (phenology etc.): redistribute available carbon 
-              leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + root_carbon(:)) / & 
-                                              (1.0_wp + 1._wp / leaf2root_mass_ratio(:)), 0.0_wp)
-              root_carbon_inc(:)        = MAX(0.0_wp, &
-                                              MIN(b_inc(:) - leaf_carbon_inc(:), & 
-                                                  (leaf_carbon_inc(:) + leaf_carbon(:)) / &
-                                                  leaf2root_mass_ratio(:) - root_carbon(:)))
-              sap_wood_carbon_inc(:)    = 0.0_wp
-              coarse_root_carbon_inc(:) = 0.0_wp
+              sap_wood_carbon_inc(:) = MAX((( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
+                                            height(:) - sap_wood_carbon(:)) / & 
+                                           (1._wp - ( leaf_carbon(:) + leaf_carbon_inc(:) ) / leaf2sapwood_mass_ratio(:) * &
+                                            dheight(:) ), &
+                                           0.0_wp)          
+              WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
+                coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
+                                                lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
+                root_carbon_inc(:)        = MAX((leaf_carbon(:) + leaf_carbon_inc(:)) / &
+                                                leaf2root_mass_ratio(:) - root_carbon(:), 0.0_wp)
+              ELSEWHERE ! special case of no wood growth (phenology etc.): redistribute available carbon 
+                leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + root_carbon(:)) / & 
+                                                (1.0_wp + 1._wp / leaf2root_mass_ratio(:)), 0.0_wp)
+                root_carbon_inc(:)        = MAX(0.0_wp, &
+                                                MIN(b_inc(:) - leaf_carbon_inc(:), & 
+                                                    (leaf_carbon_inc(:) + leaf_carbon(:)) / &
+                                                    leaf2root_mass_ratio(:) - root_carbon(:)))
+                sap_wood_carbon_inc(:)    = 0.0_wp
+                coarse_root_carbon_inc(:) = 0.0_wp
+              END WHERE
             END WHERE
-          END WHERE
-        ENDIF ! flag_optimal_allocation
+        END SELECT ! biomass_alloc_scheme
 
       !> 1.2.2 grass
       !!
       CASE(igrass)
-         IF (flag_optimal_allocation) THEN
+        SELECT CASE(biomass_alloc_scheme)
+          CASE("optimal")
             leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt(:) - leaf_carbon(:) / &
                                              leaf2sapwood_mass_ratio(:) + root_carbon(:) + sap_wood_carbon(:)) / &
                                             (1.0_wp + k2_opt(:) + 1.0_wp / leaf2sapwood_mass_ratio(:)), 0.0_wp)
             root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
             sap_wood_carbon_inc(:)    = ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:)
             coarse_root_carbon_inc(:) = 0.0_wp
-         ELSE
+          CASE("fixed")
             leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + &
                                              sap_wood_carbon(:) + root_carbon(:)) / & 
                                             (1.0_wp + 1._wp / leaf2sapwood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:)), &
@@ -2365,7 +2368,7 @@ CONTAINS
                                             0.0_wp)
             sap_wood_carbon_inc(:)    = ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:)
             coarse_root_carbon_inc(:) = 0.0_wp
-         ENDIF
+         END SELECT ! biomass_alloc_scheme
 
       !> 1.2.3 default - write and exit
       !!
