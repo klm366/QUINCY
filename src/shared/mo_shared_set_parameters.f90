@@ -49,9 +49,11 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: floss_nmin
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
+    REAL(wp)           :: tau_structural_litter
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: k_diff_org
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
     PROCEDURE :: set_param => set_parameter_values_with_list_values
@@ -104,9 +106,11 @@ CONTAINS
     REAL(wp)           :: floss_nmin
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
+    REAL(wp)           :: tau_structural_litter
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: k_diff_org
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
@@ -138,9 +142,11 @@ CONTAINS
         floss_nmin                , &
         tau_fast                  , &
         tau_slow                  , &
+        tau_structural_litter     , &
         microbial_cue             , & 
         microbial_cue_min         , &      
-        microbial_cue_max              
+        microbial_cue_max         , &
+        k_diff_org
 
     ! variables for reading model-options from namelist
     ! 
@@ -174,9 +180,11 @@ CONTAINS
     floss_nmin                  = missval
     tau_fast                    = missval
     tau_slow                    = missval
+    tau_structural_litter       = missval
     microbial_cue               = missval
     microbial_cue_min           = missval
     microbial_cue_max           = missval
+    k_diff_org                  = missval
 
     ! read the namelist
     ! 
@@ -222,9 +230,11 @@ CONTAINS
     this%floss_nmin                  = floss_nmin
     this%tau_fast                    = tau_fast
     this%tau_slow                    = tau_slow
+    this%tau_structural_litter       = tau_structural_litter
     this%microbial_cue               = microbial_cue
     this%microbial_cue_min           = microbial_cue_min
     this%microbial_cue_max           = microbial_cue_max
+    this%k_diff_org                  = k_diff_org
 
   END SUBROUTINE Read_parameter_list
 
@@ -261,41 +271,46 @@ CONTAINS
     !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by param.list
     !! 
     ! SHARED_CTL
-    IF (ABS(this%mavg_period_tlabile  - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
-    IF (ABS(this%mavg_period_tphen    - missval) > eps8)  mavg_period_tphen     = this%mavg_period_tphen
-    IF (ABS(this%mavg_period_tuptake  - missval) > eps8)  mavg_period_tuptake   = this%mavg_period_tuptake
-    IF (ABS(this%mavg_period_tfrac    - missval) > eps8)  mavg_period_tfrac     = this%mavg_period_tfrac
-    IF (ABS(this%mavg_period_tcnl     - missval) > eps8)  mavg_period_tcnl      = this%mavg_period_tcnl
-    IF (ABS(this%mavg_period_talloc   - missval) > eps8)  mavg_period_talloc    = this%mavg_period_talloc
-    IF (ABS(this%mavg_period_tvegdyn  - missval) > eps8)  mavg_period_tvegdyn   = this%mavg_period_tvegdyn
-    IF (ABS(this%mavg_period_tacclim  - missval) > eps8)  mavg_period_tacclim   = this%mavg_period_tacclim
-    IF (ABS(this%mavg_period_tmic     - missval) > eps8)  mavg_period_tmic      = this%mavg_period_tmic
+    IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
+    IF (ABS(this%mavg_period_tphen      - missval) > eps8)  mavg_period_tphen     = this%mavg_period_tphen
+    IF (ABS(this%mavg_period_tuptake    - missval) > eps8)  mavg_period_tuptake   = this%mavg_period_tuptake
+    IF (ABS(this%mavg_period_tfrac      - missval) > eps8)  mavg_period_tfrac     = this%mavg_period_tfrac
+    IF (ABS(this%mavg_period_tcnl       - missval) > eps8)  mavg_period_tcnl      = this%mavg_period_tcnl
+    IF (ABS(this%mavg_period_talloc     - missval) > eps8)  mavg_period_talloc    = this%mavg_period_talloc
+    IF (ABS(this%mavg_period_tvegdyn    - missval) > eps8)  mavg_period_tvegdyn   = this%mavg_period_tvegdyn
+    IF (ABS(this%mavg_period_tacclim    - missval) > eps8)  mavg_period_tacclim   = this%mavg_period_tacclim
+    IF (ABS(this%mavg_period_tmic       - missval) > eps8)  mavg_period_tmic      = this%mavg_period_tmic
     
     ! VEGETATION_CTL
-    IF (ABS(this%delta_n_fraction     - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
-    IF (ABS(this%delta_n_leaf         - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf
-    IF (ABS(this%cost_n_fixation_max  - missval) > eps8)  cost_n_fixation_max   = this%cost_n_fixation_max / &
-                                                                                    (molar_mass_C/molar_mass_N)
-    IF (ABS(this%cost_n_fixation_min  - missval) > eps8)  cost_n_fixation_min   = this%cost_n_fixation_min / &
-                                                                                    (molar_mass_C/molar_mass_N)
-    IF (ABS(this%vmax_bnf             - missval) > eps8)  vmax_bnf              = this%vmax_bnf / &
-                                                                                    (molar_mass_N/molar_mass_C) / &
-                                                                                    (one_day*one_year) *1.e6_wp
-    IF (ABS(this%k_bnf                - missval) > eps8)  k_bnf                 = this%k_bnf / &
-                                                                                    (molar_mass_C/molar_Mass_N)
-    IF (ABS(this%offset_bnf           - missval) > eps8)  offset_bnf            = this%offset_bnf * 2.0_wp * & 
-                                                                                    (transform_cost_nh4*transform_cost_no3)/ &
-                                                                                    (transform_cost_nh4+transform_cost_no3)
-    IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
-    IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
+    IF (ABS(this%delta_n_fraction       - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
+    IF (ABS(this%delta_n_leaf           - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf
+    IF (ABS(this%cost_n_fixation_max    - missval) > eps8)  cost_n_fixation_max   = this%cost_n_fixation_max / &
+                                                                                      (molar_mass_C/molar_mass_N)
+    IF (ABS(this%cost_n_fixation_min    - missval) > eps8)  cost_n_fixation_min   = this%cost_n_fixation_min / &
+                                                                                      (molar_mass_C/molar_mass_N)
+    IF (ABS(this%vmax_bnf               - missval) > eps8)  vmax_bnf              = this%vmax_bnf / &
+                                                                                      (molar_mass_N/molar_mass_C) / &
+                                                                                      (one_day*one_year) *1.e6_wp
+    IF (ABS(this%k_bnf                  - missval) > eps8)  k_bnf                 = this%k_bnf / &
+                                                                                      (molar_mass_C/molar_Mass_N)
+    IF (ABS(this%offset_bnf             - missval) > eps8)  offset_bnf            = this%offset_bnf * 2.0_wp * & 
+                                                                                      (transform_cost_nh4*transform_cost_no3)/ &
+                                                                                      (transform_cost_nh4+transform_cost_no3)
+    IF (ABS(this%f_resp_acclim          - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
+    IF (ABS(this%fmaint_rate_base       - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
     ! SB_CTL
-    IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
-    IF (ABS(this%tau_fast             - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
-    IF (ABS(this%tau_slow             - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
-    IF (ABS(this%microbial_cue        - missval) > eps8)  microbial_cue         = this%microbial_cue
-    IF (ABS(this%microbial_cue_min    - missval) > eps8)  microbial_cue_min     = this%microbial_cue_min
-    IF (ABS(this%microbial_cue_max    - missval) > eps8)  microbial_cue_max     = this%microbial_cue_max
+    IF (ABS(this%floss_nmin             - missval) > eps8)  floss_nmin            = this%floss_nmin
+    IF (ABS(this%tau_fast               - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
+    IF (ABS(this%tau_slow               - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
+    IF (ABS(this%tau_structural_litter  - missval) > eps8)  tau_structural_litter = this%tau_structural_litter * &
+                                                                                      one_year * one_day
+    IF (ABS(this%microbial_cue          - missval) > eps8)  microbial_cue         = this%microbial_cue
+    IF (ABS(this%microbial_cue_min      - missval) > eps8)  microbial_cue_min     = this%microbial_cue_min
+    IF (ABS(this%microbial_cue_max      - missval) > eps8)  microbial_cue_max     = this%microbial_cue_max
+    IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org            = this%k_diff_org * &
+                                                                                      0.286933_wp / 8.0_wp / one_year / one_day
+
 
   END SUBROUTINE set_parameter_values_with_list_values
 

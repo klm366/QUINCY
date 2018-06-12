@@ -560,7 +560,7 @@ CONTAINS
     !> 2.6 transport due to bioturbation
     !!
     IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=='simple_1d')THEN
-       k_bioturb(:,:) = calc_bioturbation_rate(options, bulk_dens_corr_sl(:,:))
+       k_bioturb(:,:) = calc_bioturbation_rate(options, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
        CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
                                                 sb_pool%microbial, sb_pool%residue, & 
                                                 sb_transport%microbial, sb_transport%residue, &

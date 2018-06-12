@@ -1135,7 +1135,7 @@ CONTAINS
                             sb_pool%residue_assoc%carbon14(ipoi,:),dC13residue_assoc(ipoi,:))
           lun=lun+1
           ! soilpooldN15org_lay
-          write(lun,'(201F16.6)') time_d, &
+          write(lun,'(201F20.6)') time_d, &
             calc_delta_N15(sb_pool%soluable_litter%nitrogen(ipoi,:), &
                             sb_pool%soluable_litter%nitrogen15(ipoi,:)), &
             calc_delta_N15(sb_pool%polymeric_litter%nitrogen(ipoi,:), &

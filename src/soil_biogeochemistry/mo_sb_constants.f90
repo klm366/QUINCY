@@ -235,7 +235,7 @@ CONTAINS
     kmr_hsc             = 0.001_wp
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
-    k_diff_org          = 0.286933_wp / 8.0_wp / one_year / one_day
+    k_diff_org          = 0.15_wp / one_year / one_day
     rho_bulk_org        = 150.3935_wp 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
     qmax_po4_fine_particle = 0.5_wp / molar_mass_P ! [mol P kg-1 soil], 

@@ -453,7 +453,7 @@ CONTAINS
 
     !> 5.2 transport due to bioturbation
     !!
-    k_bioturb(:,:) = calc_bioturbation_rate(options, bulk_dens_corr_sl(:,:))
+    k_bioturb(:,:) = calc_bioturbation_rate(options, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
     CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
                                     sb_pool%polymeric_litter, sb_pool%dom_assoc, sb_pool%fungi, & 
                                     sb_pool%microbial, sb_pool%residue, sb_pool%residue_assoc, & 

@@ -734,7 +734,7 @@ CONTAINS
   !!
   !! Output: vertical transport rate (1/s) 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_bioturbation_rate(options,bulk_dens_corr_sl) RESULT(k_bioturb)
+  FUNCTION calc_bioturbation_rate(options,soil_depth_sl,bulk_dens_corr_sl,root_fraction_sl) RESULT(k_bioturb)
 
     USE mo_sb_constants, ONLY: k_diff_org
 
@@ -742,17 +742,36 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl          !< thickness of soil layers [m] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: bulk_dens_corr_sl      !< OM corrected bulk density [kg m-3] 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: root_fraction_sl       !< root fraction in soil layer 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: k_bioturb              !< diffusion factor for bioturbation 
     ! ---------------------------
     ! 0.2 Local
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1
+    INTEGER :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_rate'
 
 
-    !> 1.0 
-    !! 
+    !> 1.0 calculate root density relative to top-soil root density  
+    !!
+    WHERE(soil_depth_sl > eps8)
+       hlp1(:,:) = root_fraction_sl / soil_depth_sl
+    ELSEWHERE
+       hlp1(:,:) = 0.0_wp
+    ENDWHERE
+    DO isoil = options%nsoil_sb,1,-1
+       WHERE(hlp1(:,1) > eps8)
+          hlp1(:,isoil) = hlp1(:,isoil)/hlp1(:,1)
+       ELSEWHERE
+          hlp1(:,isoil) = 0.0_wp
+       ENDWHERE
+    ENDDO
+
+    !> 2.0 adjust bioturbation coefficient by bulk density and root density
+    !!
     WHERE(bulk_dens_corr_sl(:,:) > eps8) 
-       k_bioturb(:,:) = k_diff_org / bulk_dens_corr_sl(:,:)
+       k_bioturb(:,:) = hlp1(:,:) * k_diff_org / bulk_dens_corr_sl(:,:)
     ELSEWHERE
        k_bioturb(:,:) = 0.0_wp
     ENDWHERE

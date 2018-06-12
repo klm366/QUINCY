@@ -28,10 +28,12 @@
   floss_nmin=NAN
   tau_fast=NAN
   tau_slow=NAN
+  tau_structural_litter=NAN
   microbial_cue=NAN
   microbial_cue_min=NAN
   microbial_cue_max=NAN
   qmax_org_mineral=NAN
+  k_diff_org=NAN
 /
 &VEGETATION_CTL
   delta_n_fraction=NAN
