@@ -495,10 +495,12 @@ function crosscheck_vars {
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
+  debug_file ${grid_name}_soil_field_remap.nc
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
   mv ${temp} ${grid_name}_maxmoist_remap.nc
+  debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
@@ -628,6 +630,54 @@ function generate_output_files {
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
   debug_file ${outfile}
+
+}
+
+function modify_soil_and_root_depth {
+
+  local soil_depth=${grid_name}_soil_depth_remap.nc
+  local root_depth=${grid_name}_root_depth_remap.nc
+
+  local temp=temp_$$
+
+  echo "Modifying soil and root depth ..."
+
+  # masks for tropics and extra-tropics (NH and SH)
+  ${cdo} gtc,-1. -masklonlatbox,0.,360.,30.,90.   ${soil_depth} ${temp}_NH_mask.nc
+  ${cdo} gtc,-1. -masklonlatbox,0.,360.,-90.,-30. ${soil_depth} ${temp}_SH_mask.nc
+  ${cdo} gtc,-1. -masklonlatbox,0.,360.,-30.,30.  ${soil_depth} ${temp}_EQ_mask.nc
+
+  # soil depth
+  ${cdo} mulc,0.7 -mul ${soil_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_soil_depth_EQ.nc
+  ${cdo} mul -addc,0.2 ${soil_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_soil_depth_NH.nc
+  ${cdo} mul -addc,0.2 ${soil_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_soil_depth_SH.nc
+  ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
+  ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
+
+  # root depth
+  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
+  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
+  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
+  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
+  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+
+  # keep minimum values (0.3m for root depth and 0.5m for soil depth)
+  ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc
+  ${cdo} setctomiss,0. ${temp}_soil_depth_all_05.nc ${temp}_soil_depth_all_05_miss.nc
+  ${cdo} setmisstoc,0.5 -subc,1. ${temp}_soil_depth_all_05_miss.nc ${temp}_soil_depth_all_05_0.nc
+  ${cdo} add ${temp}_soil_depth_all_05_0.nc -mul ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc ${temp}_soil_depth_all_min.nc
+  mv ${temp}_soil_depth_all_min.nc ${soil_depth}
+  debug_file ${soil_depth}
+
+  ${cdo} gtc,0.3 ${temp}_root_depth_all.nc ${temp}_root_depth_all_03.nc
+  ${cdo} setctomiss,0. ${temp}_root_depth_all_03.nc ${temp}_root_depth_all_03_miss.nc
+  ${cdo} setmisstoc,0.3 -subc,1. ${temp}_root_depth_all_03_miss.nc ${temp}_root_depth_all_03_0.nc
+  ${cdo} add ${temp}_root_depth_all_03_0.nc -mul ${temp}_root_depth_all.nc ${temp}_root_depth_all_03.nc ${temp}_root_depth_all_min.nc
+  mv ${temp}_root_depth_all_min.nc ${root_depth}
+  debug_file ${root_depth}
+
+  # clean
+  rm ${temp}_*.nc
 
 }
 
@@ -787,6 +837,11 @@ do
   generate_fractions
 
   crosscheck_vars
+
+  if [[ ${jsb4icon} == true ]]
+  then
+    modify_soil_and_root_depth
+  fi
 
   generate_output_files
 
