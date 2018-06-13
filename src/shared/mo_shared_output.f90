@@ -1258,39 +1258,14 @@ CONTAINS
     END SELECT
 
 
-    !! land/plant & canopy
+    !! land/plant
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
-        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
         fname = 'vegfluxN'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         fname = 'vegfluxP'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-      CASE('canopy') ! subset of CASE('land','plant')
-        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxdC13dC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
-        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-        lun=lun+1
-        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
     END SELECT
@@ -1300,6 +1275,18 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')
+        fname = 'vegfluxC'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxdC13DC14'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1        
+        fname = 'vegfluxH2O'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
         fname = 'atm_forcing'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
@@ -1397,33 +1384,11 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
-        ! vegfluxC
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC'
-        lun=lun+1 
-        ! vegfluxdC13DC14
-        WRITE(lun,'(a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
-        lun=lun+1
         ! vegfluxN
         WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_d15NH4 Uptake_d15NO3'
         lun=lun+1
         ! vegfluxP
         WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP'
-        lun=lun+1
-        ! vegfluxH2O
-        WRITE(lun,'(a)') 'Time Precip PET Evaporation Interception Transpiration Runoff Drainage GC GA'
-        lun=lun+1
-        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
-        lun=lun+1
-      CASE('canopy') ! subset of CASE('land','plant')
-        ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
-        lun=lun+1   
-        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
-                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
-        lun=lun+1
-        WRITE(lun,'(a)') 'Time Precip Evaporation Interception Transpiration Runoff Drainage GC GA'
-        lun=lun+1
-        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1
     END SELECT
 
@@ -1432,6 +1397,18 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')
+        ! vegfluxC
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC'
+        lun=lun+1 
+        ! vegfluxdC13DC14
+        WRITE(lun,'(a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+        lun=lun+1
+        ! vegfluxH2O
+        WRITE(lun,'(a)') 'Time Precip PET Evaporation Interception Transpiration Runoff Drainage GC GA'
+        lun=lun+1
+        ! vegfluxEnergy
+        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+        lun=lun+1        
         ! atm_forcing
         WRITE(lun,'(2a)') 'Time sum_Precip mean_AirTemperature mean_Wind mean_SWdown mean_LWdown mean_VPD', &
                           ' atm_CO2 atm_d13CO2 atm_d14CO2'
@@ -2241,6 +2218,24 @@ CONTAINS
                !! 
                SELECT CASE(TRIM(base_config%slm_model_name))
                  CASE('land','plant')
+                   ! vegfluxN
+                   write(lun,'(10F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
+                                          res_use_n_acc, n_fixation_acc, & 
+                                          calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
+                                          calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
+                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
+
+                   lun=lun+1
+                   ! vegfluxP
+                   write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
+                   lun=lun+1
+               END SELECT ! land/plant & canopy
+
+
+               !! land & plant & canopy
+               !! 
+               SELECT CASE(TRIM(base_config%slm_model_name))
+                 CASE('land','plant','canopy')
                    ! vegfluxC
                    write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                           n_transform_resp_acc,n_fixation_resp_acc         , & 
@@ -2255,17 +2250,6 @@ CONTAINS
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
                    lun=lun+1
-                   ! vegfluxN
-                   write(lun,'(10F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
-                                          res_use_n_acc, n_fixation_acc, & 
-                                          calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
-                                          calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
-                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
-
-                   lun=lun+1
-                   ! vegfluxP
-                   write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
-                   lun=lun+1
                    ! vegfluxH2O
                    write(lun,'(12F18.8)') time_d, precip_acc, pet_acc, evaporation_acc, interception_acc, & 
                                           transpiration_acc, runoff_acc, drainage_acc, gc_acc, ga_acc
@@ -2275,42 +2259,10 @@ CONTAINS
                    ELSE
                       hlp1=0.0_wp
                    ENDIF
+                   ! vegfluxEnergy
                    write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
                                           albedo_acc, ppfd_acc, appfd_acc, hlp1
                    lun=lun+1
-                 CASE('canopy') ! subset of the previous CASE('land','plant')
-                   ! files: vegfluxC, vegfluxdC13dC14, vegfluxH2O, vegfluxEnergy
-                   write(lun,'(8F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
-                                         n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                         npp_acc, res_use_c_acc
-                   lun=lun+1
-                   dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
-                   dC13rg = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
-                   dC13rm = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
-                   write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
-                                         calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
-                                         calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
-                                         calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
-                   lun=lun+1
-                   ! vegfluxH2O
-                   write(lun,'(12F18.8)') time_d, precip_acc, pet_acc, evaporation_acc, interception_acc, transpiration_acc, runoff_acc, & 
-                                          drainage_acc, gc_acc, ga_acc
-                   lun=lun+1
-                   IF(ppfd_acc>eps8) THEN
-                      hlp1=appfd_acc/ppfd_acc
-                   ELSE
-                      hlp1=0.0_wp
-                   ENDIF
-                   write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
-                                          albedo_acc, ppfd_acc, appfd_acc, hlp1
-                   lun=lun+1
-               END SELECT ! land/plant & canopy
-
-
-               !! land & plant & canopy
-               !! 
-               SELECT CASE(TRIM(base_config%slm_model_name))
-                 CASE('land','plant','canopy')
                    ! atm_forcing
                    IF(ndat_acc > 1.0_wp) THEN
                      t_air_acc                = t_air_acc                / ndat_acc
