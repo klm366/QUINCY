@@ -138,6 +138,10 @@ MODULE mo_sb_constants
       vmax_plant_uptake_po4, &   !< maximum PO4 uptake capacity of fine roots (mol PO4 / mol biomass C / s)
       km_plant_uptake_po4, &     !< half-saturation concentration (mol PO4 / m3)
       vmax_denitirfication, &    !< maximum rate of denitrification per N uptake
+      k_mic_uptake_nh4, &        !< Reaction rate of microbe nh4 carrier enzyme [s-1], ECA specific
+      k_plant_uptake_nh4, &      !< Reaction rate of plant nh4 carrier enzyme [s-1], ECA specific
+      k_mic_uptake_no3, &        !< Reaction rate of microbe no3 carrier enzyme [s-1], ECA specific
+      k_plant_uptake_no3, &      !< Reaction rate of plant no3 carrier enzyme [s-1], ECA specific
       k_mic_uptake_po4, &        !< Reaction rate of microbe PO4 carrier enzyme [s-1], ECA specific
       k_plant_uptake_po4, &      !< Reaction rate of plant PO4 carrier enzyme [s-1], ECA specific
       f_mic_carrier_po4, &       !< ratio between microbial P transport and microbial biomass, []
@@ -328,6 +332,10 @@ CONTAINS
     vmax_plant_uptake_po4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s
     km_plant_uptake_po4   = 0.067_wp / molar_mass_P ! mol / m3
     vmax_denitirfication  = 0.01_wp
+    k_mic_uptake_nh4      = 1000._wp/ one_day ! [s-1], Zhu et al. 2016
+    k_plant_uptake_nh4    = 120._wp/ one_day ! [s-1], Zhu et al. 2016
+    k_mic_uptake_no3      = 1000._wp/ one_day ! [s-1], Zhu et al. 2016
+    k_plant_uptake_no3    = 2._wp/ one_day ! [s-1], Zhu et al. 2016
     k_mic_uptake_po4      = 10.0_wp * 400._wp / 10000._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein  !temporarily times 10
     k_plant_uptake_po4    = 12._wp / 100._wp/ one_day ! [s-1], Zhu et al. 2016, and references therein/ 100._wp
     f_mic_carrier_po4     = 0.0015_wp ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
