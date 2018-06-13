@@ -216,7 +216,7 @@ PROGRAM land_model_driver
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
       END IF
     CASE('test_canopy')
-      ntimestep = 1
+      ntimestep = 0     ! simulation starts with zero, and loop asks for 'IF (itimestep .GT. ntimestep) EXIT'
   END SELECT
 
 
