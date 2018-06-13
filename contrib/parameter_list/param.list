@@ -32,8 +32,32 @@
   microbial_cue=NAN
   microbial_cue_min=NAN
   microbial_cue_max=NAN
-  qmax_org_mineral=NAN
   k_diff_org=NAN
+  ! additional jsm parameters
+  vmax_mic_uptake_nh4=NAN
+  km_mic_uptake_nh4=NAN
+  vmax_mic_uptake_no3=NAN
+  km_mic_uptake_no3=NAN
+  f_mic_carrier_n=NAN
+  vmax_plant_uptake_nh4=NAN
+  km_plant_uptake_nh4=NAN
+  vmax_plant_uptake_no3=NAN
+  km_plant_uptake_no3=NAN
+  f_plant_carrier_n=NAN
+  vmax_mic_uptake_po4=NAN
+  km_mic_uptake_po4=NAN
+  vmax_plant_uptake_po4=NAN
+  km_plant_uptake_po4=NAN
+  k_mic_uptake_nh4=NAN
+  k_plant_uptake_nh4=NAN
+  k_mic_uptake_no3=NAN
+  k_plant_uptake_no3=NAN
+  k_mic_uptake_po4=NAN
+  k_plant_uptake_po4=NAN
+  f_mic_carrier_po4=NAN
+  f_plant_carrier_po4=NAN
+  qmax_po4_mineral=NAN
+  km_adsorpt_mineral_po4=NAN
 /
 &VEGETATION_CTL
   delta_n_fraction=NAN

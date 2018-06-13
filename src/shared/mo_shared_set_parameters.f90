@@ -54,6 +54,31 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
     REAL(wp)           :: k_diff_org
+    ! additional jsm parameters
+    REAL(wp)           :: vmax_mic_uptake_nh4, &    
+                          km_mic_uptake_nh4, &      
+                          vmax_mic_uptake_no3, &    
+                          km_mic_uptake_no3, &      
+                          f_mic_carrier_n, &        
+                          vmax_plant_uptake_nh4, &  
+                          km_plant_uptake_nh4, &    
+                          vmax_plant_uptake_no3, &  
+                          km_plant_uptake_no3, &    
+                          f_plant_carrier_n, &      
+                          vmax_mic_uptake_po4, &    
+                          km_mic_uptake_po4, &      
+                          vmax_plant_uptake_po4, &  
+                          km_plant_uptake_po4, &    
+                          k_mic_uptake_nh4, &       
+                          k_plant_uptake_nh4, &     
+                          k_mic_uptake_no3, &       
+                          k_plant_uptake_no3, &     
+                          k_mic_uptake_po4, &       
+                          k_plant_uptake_po4, &     
+                          f_mic_carrier_po4, &      
+                          f_plant_carrier_po4, &    
+                          qmax_po4_mineral, &       
+                          km_adsorpt_mineral_po4 
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
     PROCEDURE :: set_param => set_parameter_values_with_list_values
@@ -111,6 +136,31 @@ CONTAINS
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
     REAL(wp)           :: k_diff_org
+    ! additional jsm parameters
+    REAL(wp)           :: vmax_mic_uptake_nh4, &    
+                          km_mic_uptake_nh4, &      
+                          vmax_mic_uptake_no3, &    
+                          km_mic_uptake_no3, &      
+                          f_mic_carrier_n, &        
+                          vmax_plant_uptake_nh4, &  
+                          km_plant_uptake_nh4, &    
+                          vmax_plant_uptake_no3, &  
+                          km_plant_uptake_no3, &    
+                          f_plant_carrier_n, &      
+                          vmax_mic_uptake_po4, &    
+                          km_mic_uptake_po4, &      
+                          vmax_plant_uptake_po4, &  
+                          km_plant_uptake_po4, &    
+                          k_mic_uptake_nh4, &       
+                          k_plant_uptake_nh4, &     
+                          k_mic_uptake_no3, &       
+                          k_plant_uptake_no3, &     
+                          k_mic_uptake_po4, &       
+                          k_plant_uptake_po4, &     
+                          f_mic_carrier_po4, &      
+                          f_plant_carrier_po4, &    
+                          qmax_po4_mineral, &       
+                          km_adsorpt_mineral_po4 
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
@@ -146,7 +196,32 @@ CONTAINS
         microbial_cue             , & 
         microbial_cue_min         , &      
         microbial_cue_max         , &
-        k_diff_org
+        k_diff_org                , &
+        vmax_mic_uptake_nh4       , &    
+        km_mic_uptake_nh4         , &      
+        vmax_mic_uptake_no3       , &    
+        km_mic_uptake_no3         , &      
+        f_mic_carrier_n           , &        
+        vmax_plant_uptake_nh4     , &  
+        km_plant_uptake_nh4       , &    
+        vmax_plant_uptake_no3     , &  
+        km_plant_uptake_no3       , &    
+        f_plant_carrier_n         , &      
+        vmax_mic_uptake_po4       , &    
+        km_mic_uptake_po4         , &      
+        vmax_plant_uptake_po4     , &  
+        km_plant_uptake_po4       , &    
+        k_mic_uptake_nh4          , &       
+        k_plant_uptake_nh4        , &     
+        k_mic_uptake_no3          , &       
+        k_plant_uptake_no3        , &     
+        k_mic_uptake_po4          , &       
+        k_plant_uptake_po4        , &     
+        f_mic_carrier_po4         , &      
+        f_plant_carrier_po4       , &    
+        qmax_po4_mineral          , &       
+        km_adsorpt_mineral_po4 
+
 
     ! variables for reading model-options from namelist
     ! 
@@ -185,6 +260,30 @@ CONTAINS
     microbial_cue_min           = missval
     microbial_cue_max           = missval
     k_diff_org                  = missval
+    vmax_mic_uptake_nh4         = missval    
+    km_mic_uptake_nh4           = missval      
+    vmax_mic_uptake_no3         = missval    
+    km_mic_uptake_no3           = missval      
+    f_mic_carrier_n             = missval        
+    vmax_plant_uptake_nh4       = missval  
+    km_plant_uptake_nh4         = missval    
+    vmax_plant_uptake_no3       = missval  
+    km_plant_uptake_no3         = missval    
+    f_plant_carrier_n           = missval      
+    vmax_mic_uptake_po4         = missval    
+    km_mic_uptake_po4           = missval      
+    vmax_plant_uptake_po4       = missval  
+    km_plant_uptake_po4         = missval    
+    k_mic_uptake_nh4            = missval       
+    k_plant_uptake_nh4          = missval     
+    k_mic_uptake_no3            = missval       
+    k_plant_uptake_no3          = missval     
+    k_mic_uptake_po4            = missval       
+    k_plant_uptake_po4          = missval     
+    f_mic_carrier_po4           = missval      
+    f_plant_carrier_po4         = missval    
+    qmax_po4_mineral            = missval       
+    km_adsorpt_mineral_po4      = missval
 
     ! read the namelist
     ! 
@@ -235,6 +334,30 @@ CONTAINS
     this%microbial_cue_min           = microbial_cue_min
     this%microbial_cue_max           = microbial_cue_max
     this%k_diff_org                  = k_diff_org
+    this%vmax_mic_uptake_nh4         = vmax_mic_uptake_nh4       
+    this%km_mic_uptake_nh4           = km_mic_uptake_nh4           
+    this%vmax_mic_uptake_no3         = vmax_mic_uptake_no3       
+    this%km_mic_uptake_no3           = km_mic_uptake_no3           
+    this%f_mic_carrier_n             = f_mic_carrier_n               
+    this%vmax_plant_uptake_nh4       = vmax_plant_uptake_nh4   
+    this%km_plant_uptake_nh4         = km_plant_uptake_nh4       
+    this%vmax_plant_uptake_no3       = vmax_plant_uptake_no3   
+    this%km_plant_uptake_no3         = km_plant_uptake_no3       
+    this%f_plant_carrier_n           = f_plant_carrier_n           
+    this%vmax_mic_uptake_po4         = vmax_mic_uptake_po4       
+    this%km_mic_uptake_po4           = km_mic_uptake_po4           
+    this%vmax_plant_uptake_po4       = vmax_plant_uptake_po4   
+    this%km_plant_uptake_po4         = km_plant_uptake_po4       
+    this%k_mic_uptake_nh4            = k_mic_uptake_nh4             
+    this%k_plant_uptake_nh4          = k_plant_uptake_nh4         
+    this%k_mic_uptake_no3            = k_mic_uptake_no3             
+    this%k_plant_uptake_no3          = k_plant_uptake_no3         
+    this%k_mic_uptake_po4            = k_mic_uptake_po4             
+    this%k_plant_uptake_po4          = k_plant_uptake_po4         
+    this%f_mic_carrier_po4           = f_mic_carrier_po4           
+    this%f_plant_carrier_po4         = f_plant_carrier_po4       
+    this%qmax_po4_mineral            = qmax_po4_mineral             
+    this%km_adsorpt_mineral_po4      = km_adsorpt_mineral_po4
 
   END SUBROUTINE Read_parameter_list
 
@@ -300,16 +423,48 @@ CONTAINS
     IF (ABS(this%fmaint_rate_base       - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
     ! SB_CTL
-    IF (ABS(this%floss_nmin             - missval) > eps8)  floss_nmin            = this%floss_nmin
-    IF (ABS(this%tau_fast               - missval) > eps8)  tau_fast              = this%tau_fast    * one_year * one_day
-    IF (ABS(this%tau_slow               - missval) > eps8)  tau_slow              = this%tau_slow    * one_year * one_day
-    IF (ABS(this%tau_structural_litter  - missval) > eps8)  tau_structural_litter = this%tau_structural_litter * &
-                                                                                      one_year * one_day
-    IF (ABS(this%microbial_cue          - missval) > eps8)  microbial_cue         = this%microbial_cue
-    IF (ABS(this%microbial_cue_min      - missval) > eps8)  microbial_cue_min     = this%microbial_cue_min
-    IF (ABS(this%microbial_cue_max      - missval) > eps8)  microbial_cue_max     = this%microbial_cue_max
-    IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org            = this%k_diff_org * &
-                                                                                      0.286933_wp / 8.0_wp / one_year / one_day
+    IF (ABS(this%floss_nmin             - missval) > eps8)  floss_nmin             = this%floss_nmin
+    IF (ABS(this%tau_fast               - missval) > eps8)  tau_fast               = this%tau_fast    * one_year * one_day
+    IF (ABS(this%tau_slow               - missval) > eps8)  tau_slow               = this%tau_slow    * one_year * one_day
+    IF (ABS(this%tau_structural_litter  - missval) > eps8)  tau_structural_litter  = this%tau_structural_litter * &
+                                                                                       one_year * one_day
+    IF (ABS(this%microbial_cue          - missval) > eps8)  microbial_cue          = this%microbial_cue
+    IF (ABS(this%microbial_cue_min      - missval) > eps8)  microbial_cue_min      = this%microbial_cue_min
+    IF (ABS(this%microbial_cue_max      - missval) > eps8)  microbial_cue_max      = this%microbial_cue_max
+    IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org             = this%k_diff_org * &
+                                                                                       0.286933_wp / 8.0_wp / one_year / one_day
+    IF (ABS(this%vmax_mic_uptake_nh4    - missval) > eps8)  vmax_mic_uptake_nh4    = this%vmax_mic_uptake_nh4 * &
+                                                                                       48.0_wp / 3600._wp * molar_mass_C
+    IF (ABS(this%km_mic_uptake_nh4      - missval) > eps8)  km_mic_uptake_nh4      = this%km_mic_uptake_nh4 / molar_mass_N
+    IF (ABS(this%vmax_mic_uptake_no3    - missval) > eps8)  vmax_mic_uptake_no3    = this%vmax_mic_uptake_no3 * &
+                                                                                       39.0_wp / 3600._wp * molar_mass_C
+    IF (ABS(this%km_mic_uptake_no3      - missval) > eps8)  km_mic_uptake_no3      = this%km_mic_uptake_no3 / molar_mass_N
+    IF (ABS(this%f_mic_carrier_n        - missval) > eps8)  f_mic_carrier_n        = this%f_mic_carrier_n
+    IF (ABS(this%vmax_plant_uptake_nh4  - missval) > eps8)  vmax_plant_uptake_nh4  = this%vmax_plant_uptake_nh4 / &
+                                                                                       3600._wp * molar_mass_C
+    IF (ABS(this%km_plant_uptake_nh4    - missval) > eps8)  km_plant_uptake_nh4    = this%km_plant_uptake_nh4 / molar_mass_N
+    IF (ABS(this%vmax_plant_uptake_no3  - missval) > eps8)  vmax_plant_uptake_no3  = this%vmax_plant_uptake_no3 / &
+                                                                                       3600._wp * molar_mass_C
+    IF (ABS(this%km_plant_uptake_no3    - missval) > eps8)  km_plant_uptake_no3    = this%km_plant_uptake_no3 / molar_mass_N
+    IF (ABS(this%f_plant_carrier_n      - missval) > eps8)  f_plant_carrier_n      = this%f_plant_carrier_n
+    IF (ABS(this%vmax_mic_uptake_po4    - missval) > eps8)  vmax_mic_uptake_po4    = this%vmax_mic_uptake_po4 / &
+                                                                                       3600._wp * molar_mass_C
+    IF (ABS(this%km_mic_uptake_po4      - missval) > eps8)  km_mic_uptake_po4      = this%km_mic_uptake_po4 / molar_mass_P
+    IF (ABS(this%vmax_plant_uptake_po4  - missval) > eps8)  vmax_plant_uptake_po4  = this%vmax_plant_uptake_po4 / &
+                                                                                       3600._wp * molar_mass_C
+    IF (ABS(this%km_plant_uptake_po4    - missval) > eps8)  km_plant_uptake_po4    = this%km_plant_uptake_po4 / molar_mass_P
+    IF (ABS(this%k_mic_uptake_nh4       - missval) > eps8)  k_mic_uptake_nh4       = this%k_mic_uptake_nh4 / one_day
+    IF (ABS(this%k_plant_uptake_nh4     - missval) > eps8)  k_plant_uptake_nh4     = this%k_plant_uptake_nh4 / one_day
+    IF (ABS(this%k_mic_uptake_no3       - missval) > eps8)  k_mic_uptake_no3       = this%k_mic_uptake_no3 / one_day
+    IF (ABS(this%k_plant_uptake_no3     - missval) > eps8)  k_plant_uptake_no3     = this%k_plant_uptake_no3 / one_day
+    IF (ABS(this%k_mic_uptake_po4       - missval) > eps8)  k_mic_uptake_po4       = this%k_mic_uptake_po4 * &
+                                                                                       400._wp / 10000._wp / one_day
+    IF (ABS(this%k_plant_uptake_po4     - missval) > eps8)  k_plant_uptake_po4     = this%k_plant_uptake_po4 / 100._wp / one_day
+    IF (ABS(this%f_mic_carrier_po4      - missval) > eps8)  f_mic_carrier_po4      = this%f_mic_carrier_po4
+    IF (ABS(this%f_plant_carrier_po4    - missval) > eps8)  f_plant_carrier_po4    = this%f_plant_carrier_po4 / 80._wp
+    IF (ABS(this%qmax_po4_mineral       - missval) > eps8)  qmax_po4_mineral       = this%qmax_po4_mineral / molar_mass_P
+    IF (ABS(this%km_adsorpt_mineral_po4 - missval) > eps8)  km_adsorpt_mineral_po4 = this%km_adsorpt_mineral_po4 / &
+                                                                                       1000._wp / molar_mass_P
 
 
   END SUBROUTINE set_parameter_values_with_list_values
