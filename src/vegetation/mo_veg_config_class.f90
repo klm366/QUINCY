@@ -120,6 +120,14 @@ CONTAINS
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
     ENDSELECT
 
+    ! exit SLM if cohort scheme is selected, see #382 & #400 & #401
+    SELECT CASE (TRIM(veg_dynamics_scheme))
+      CASE ("cohort")
+        WRITE(message_text,'(3a)') 'the veg_dynamics_scheme ',TRIM(veg_dynamics_scheme), &
+                                   ' has some issues (#382 & #400 & #401) and is disabled by default'
+        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
+    ENDSELECT
+
     ! pass values as read from file
     config%active                        = active
     config%ic_filename                   = ic_filename
