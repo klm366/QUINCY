@@ -431,8 +431,7 @@ CONTAINS
     IF (ABS(this%microbial_cue          - missval) > eps8)  microbial_cue          = this%microbial_cue
     IF (ABS(this%microbial_cue_min      - missval) > eps8)  microbial_cue_min      = this%microbial_cue_min
     IF (ABS(this%microbial_cue_max      - missval) > eps8)  microbial_cue_max      = this%microbial_cue_max
-    IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org             = this%k_diff_org * &
-                                                                                       0.286933_wp / 8.0_wp / one_year / one_day
+    IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org             = this%k_diff_org / one_year / one_day
     IF (ABS(this%vmax_mic_uptake_nh4    - missval) > eps8)  vmax_mic_uptake_nh4    = this%vmax_mic_uptake_nh4 * &
                                                                                        48.0_wp / 3600._wp * molar_mass_C
     IF (ABS(this%km_mic_uptake_nh4      - missval) > eps8)  km_mic_uptake_nh4      = this%km_mic_uptake_nh4 / molar_mass_N
