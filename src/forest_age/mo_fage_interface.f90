@@ -323,6 +323,8 @@ CONTAINS
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
           & LAI_sum_prevChild(:), LAI_sum_currentChild(:)) 
 
+        !@todo: with flux aggregation - i.e. when more processes are calculated on the leaves, 
+        !                                    more variables will need to be considered here
         ! d) TODO-JN-COHORTS what else to shift? 
 
         ! move further in the child list

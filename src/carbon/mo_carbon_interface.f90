@@ -1255,11 +1255,15 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, NPP_pot_sum, sourceT)
 
     dsl4jsb_Get_var2d_onChunk_tile(PHENO_, veg_frac_correction, sourceT)
-    
+
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, delta_day_npp_sum_rp, sourceT)
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, delta_day_npp_sum_rp, sinkT)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      dsl4jsb_Get_var2d_onChunk_tile(CARBON_, annual_avg_NPP, sourceT)
+      dsl4jsb_Get_var2d_onChunk_tile(CARBON_, biennial_avg_NPP, sourceT)
+      dsl4jsb_Get_var2d_onChunk_tile(CARBON_, decennial_avg_NPP, sourceT)
+      
       dsl4jsb_Get_var2d_onChunk_tile(CARBON_, current_max_green, sourceT)
       dsl4jsb_Get_var2d_onChunk_tile(CARBON_, veg_carbon_at_max_green, sourceT)
 
@@ -2318,6 +2322,14 @@ CONTAINS
         & veg_frac_correction(:), prev_fract(:))
       CALL update_state_reset_delta(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp(:), delta_fract(:), &
         & veg_frac_correction(:), prev_fract(:))
+
+      CALL update_state_reset_delta(annual_avg_NPP(:), delta_annual_avg_NPP_rp(:), delta_fract(:), &
+        & veg_frac_correction(:), prev_fract(:))
+      CALL update_state_reset_delta(biennial_avg_NPP(:), delta_biennial_avg_NPP_rp(:), delta_fract(:), &
+        & veg_frac_correction(:), prev_fract(:))
+      CALL update_state_reset_delta(decennial_avg_NPP(:), delta_decennial_avg_NPP_rp(:), delta_fract(:), &
+        & veg_frac_correction(:), prev_fract(:))
+
     ENDIF
 
     CALL recalc_per_tile_vars(tile, options, &
