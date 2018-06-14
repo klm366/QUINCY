@@ -1096,7 +1096,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     microbial_pue_eff(:,:) = microbial_pue
     WHERE(growth_c(:,:) < growth_p(:,:))  
        ! inorganic P immobilisation flux, in agreement with C and N uptake
-       microbial_uptake_po4_sl(:,:) = MAX(growth_c(:,:) / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0)
+       microbial_uptake_po4_sl(:,:) = MAX(growth_c(:,:) / microbial_cn / microbial_np - microbial_pue * uptake_p(:,:),0.0_wp)
        ! In the case that the source C:N:P is too tight for microbes, cause gross mineralisation
        WHERE(uptake_p(:,:) > eps8)
           microbial_pue_eff(:,:) = ( growth_c(:,:) / microbial_cn / microbial_np - microbial_uptake_po4_sl(:,:) ) / uptake_p(:,:)
