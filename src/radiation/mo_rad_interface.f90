@@ -737,7 +737,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
-    !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_slow)            ! in
+    !RMS dsl4jsb_Get_var2D_onChunk(CARBON_,   c_slow)            ! in
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis)               ! inout
@@ -818,7 +818,7 @@ CONTAINS
       IF (use_alb_soil_scheme) THEN
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
-        dsl4jsb_Get_var2D_onChunk(CARBON,   c_litter_green_ag) ! in
+        dsl4jsb_Get_var2D_onChunk(CARBON_, c_litter_green_ag) ! in
 
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
@@ -883,7 +883,7 @@ CONTAINS
 
           IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
-          dsl4jsb_Get_var2D_onChunk(CARBON,   c_litter_green_ag) ! in
+          dsl4jsb_Get_var2D_onChunk(CARBON_, c_litter_green_ag) ! in
 
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
