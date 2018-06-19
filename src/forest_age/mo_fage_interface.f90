@@ -493,6 +493,8 @@ CONTAINS
         CALL recalc_delta_carbon_rp_upon_disturbance( &
           currentChild, firstChild, l_sourceisfirstChild, options, burnedArea(:), source_fract(:), FIRE)
 
+        !@todo: with flux aggregation - i.e. when more processes are calculated on the leaves, 
+        !                                    probably more variables will need to be considered here
         ! c) TODO-JN-COHORTS what else to shift? 
 
 
@@ -512,6 +514,8 @@ CONTAINS
           CALL recalc_delta_carbon_rp_upon_disturbance( &
             currentChild, firstChild, l_sourceisfirstChild, options, damagedArea(:), source_fract(:), WIND)
 
+        !@todo: with flux aggregation - i.e. when more processes are calculated on the leaves, 
+        !                                    probably more variables will need to be considered here
           ! c) TODO-JN-COHORTS what else to shift? 
         ENDIF
 
