@@ -56,37 +56,37 @@ MODULE mo_carbon_memory_class
 
 
     TYPE(t_jsb_var_real2d) ::     &
-      cconservation_calcCpools,   & 
-      litter_flux,                & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
+      cconservation_calcCpools,   &
+      cflux_c_greenwood_2_litter,                & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                     !    [mol(C)/m^2(canopy) s]
-      Cpool_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
+      c_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
                                     ! .. of vegetation [mol(C)/m^2(canopy)]
-      Cpool_woods,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+      c_woods,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                     ! .. plants [mol(C)/m^2(canopy)]
-      Cpool_reserve,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
+      c_reserve,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
                                     ! .. bad times[mol(C)/m^2(canopy)]
-!@todo why is the Cpool_crop_harvest realised as a density and not as a per tile variable in the first case?
-      Cpool_crop_harvest,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]     
+!@todo why is the c_crop_harvest realised as a density and not as a per tile variable in the first case?
+      c_crop_harvest,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
      !SIZE CLASS 1
-      YCpool_acid_ag1,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      YCpool_water_ag1,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      YCpool_ethanol_ag1,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      YCpool_nonsoluble_ag1,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      YCpool_acid_bg1,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      YCpool_water_bg1,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      YCpool_ethanol_bg1,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      YCpool_nonsoluble_bg1,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      YCpool_humus_1,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
+      c_acid_ag1,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
+      c_water_ag1,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
+      c_ethanol_ag1,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
+      c_nonsoluble_ag1,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
+      c_acid_bg1,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
+      c_water_bg1,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
+      c_ethanol_bg1,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
+      c_nonsoluble_bg1,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
+      c_humus_1,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
      !SIZE CLASS 2
-      YCpool_acid_ag2,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      YCpool_water_ag2,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      YCpool_ethanol_ag2,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      YCpool_nonsoluble_ag2,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      YCpool_acid_bg2,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      YCpool_water_bg2,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      YCpool_ethanol_bg2,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      YCpool_nonsoluble_bg2,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      YCpool_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
+      c_acid_ag2,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
+      c_water_ag2,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
+      c_ethanol_ag2,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
+      c_nonsoluble_ag2,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
+      c_acid_bg2,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
+      c_water_bg2,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
+      c_ethanol_bg2,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
+      c_nonsoluble_bg2,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
+      c_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
 !@todo: why? its not used!
       C_sum_natural,              & ! R: added
       !
@@ -115,14 +115,14 @@ MODULE mo_carbon_memory_class
       topSoilTemp_yDayMean,       & !
       alpha_yDayMean,             & !
       root_exudates,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(canopy) s]
-      Cflux_herbivory,            & ! Total carbon flux from C pool green to herbivory.
-      Cflux_herbivory_LG,         & ! ..part of Cflux_herbivory that goes into green litter
-      Cflux_herbivory_2_atm,      & ! ..part of Cflux_herbivory that goes into atmosphere
+      cflux_c_green_2_herb,            & ! Total carbon flux from C pool green to herbivory.
+      cflux_herb_2_littergreen,         & ! ..part of cflux_c_green_2_herb that goes into green litter
+      cflux_herb_2_atm,      & ! ..part of cflux_c_green_2_herb that goes into atmosphere
       !
-      carbon_2_GreenLitterPools,  & ! R: should be later renamed to C_2_GreenLitterPools
-      carbon_2_WoodLitterPools,   & ! R: should be later renamed to C_2_WoodLitterPools
-      carbon_2_atmos,             &  ! R: should be later renamed to C_2_atmos
-                                    ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
+      cflux_dist_greenreserve_2_soil,  & ! R: should be later renamed to C_2_GreenLitterPools
+      cflux_dist_woods_2_soil,   & ! R: should be later renamed to C_2_WoodLitterPools
+      cflux_fire_all_2_atm,      & ! R: should be later renamed to C_2_atmos
+                                   ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       !frac_litter_wood_new,       & ! new fraction in above ground wood litter pool 
 !JN: variables required when l_forestRegrowth = true, i.e. when the maxLAI is derived from biomass via allometric relationships
@@ -140,35 +140,35 @@ MODULE mo_carbon_memory_class
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
-!      litter_flux_ta,                & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
-!                                       !    [mol(C)/m^2(tile area) s]
-      Cpool_green_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
+!      cflux_c_greenwood_2_litter_ta, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
+                                       !    [mol(C)/m^2(tile area) s]
+      c_green_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
                                        ! .. of vegetation [mol(C)/m^2(tile area)]
-      Cpool_woods_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+      c_woods_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                        ! .. plants [mol(C)/m^2(tile area)]
-      Cpool_reserve_ta,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
+      c_reserve_ta,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
                                        ! .. bad times[mol(C)/m^2(tile area)]
-      Cpool_crop_harvest_ta,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]     
+      c_crop_harvest_ta,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
      !SIZE CLASS 1
-      YCpool_acid_ag1_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      YCpool_water_ag1_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      YCpool_ethanol_ag1_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      YCpool_nonsoluble_ag1_ta,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      YCpool_acid_bg1_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      YCpool_water_bg1_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      YCpool_ethanol_bg1_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      YCpool_nonsoluble_bg1_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      YCpool_humus_1_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
+      c_acid_ag1_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
+      c_water_ag1_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
+      c_ethanol_ag1_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
+      c_nonsoluble_ag1_ta,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
+      c_acid_bg1_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
+      c_water_bg1_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
+      c_ethanol_bg1_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
+      c_nonsoluble_bg1_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
+      c_humus_1_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
      !SIZE CLASS 2
-      YCpool_acid_ag2_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      YCpool_water_ag2_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      YCpool_ethanol_ag2_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      YCpool_nonsoluble_ag2_ta,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      YCpool_acid_bg2_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      YCpool_water_bg2_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      YCpool_ethanol_bg2_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      YCpool_nonsoluble_bg2_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      YCpool_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
+      c_acid_ag2_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
+      c_water_ag2_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
+      c_ethanol_ag2_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
+      c_nonsoluble_ag2_ta,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
+      c_acid_bg2_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
+      c_water_bg2_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
+      c_ethanol_bg2_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
+      c_nonsoluble_bg2_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
+      c_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
 !@todo: why? its not used!
       C_sum_natural_ta,              & ! R: added
       !
@@ -191,59 +191,59 @@ MODULE mo_carbon_memory_class
                                        ! [mol(CO2)/(m^2(tile area) s)]
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
-      Cflux_herbivory_ta,            & ! Total carbon flux from C pool green to herbivory.
-      !Cflux_herbivory_LG_ta,         & ! ..part of Cflux_herbivory that goes into green litter
-      !Cflux_herbivory_2_atm_ta,      & ! ..part of Cflux_herbivory that goes into atmosphere
-      carbon_2_GreenLitterPools_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
-      carbon_2_WoodLitterPools_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
-      carbon_2_atmos_ta,             & ! R: should be later renamed to C_2_atmos_ta
+      cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
+      !cflux_herb_2_littergreen_ta,         & ! ..part of cflux_c_green_2_herb that goes into green litter
+      !cflux_herb_2_atm_ta,      & ! ..part of cflux_c_green_2_herb that goes into atmosphere
+      cflux_dist_greenreserve_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
+      cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
+      cflux_fire_all_2_atm_ta,      & ! R: should be later renamed to C_2_atmos_ta
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
 
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       frac_litter_wood_new_ta,       & ! new fraction in above ground wood litter pool 
       ! former (JS3) local variables. R: nur auf tile area benötigt!
-      CO2_flx2atm_npp_ta,            & ! [kg(CO2)/m^2 s]  tile averages of net CO2 fluxes between
-      CO2_flx2atm_soilresp_ta,       & !  .. biosphere (due to NPP, soil respiration and
-      CO2_flx2atm_herbivory_ta,      & !  .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
+      cflux_npp_2_atm_ta,            & ! [kg(CO2)/m^2 s]  tile averages of net CO2 fluxes between
+      cflux_soilresp_2_atm_ta,       & !  .. biosphere (due to NPP, soil respiration and
+      cflux_herb_2_atm_ta,      & !  .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
                                        ! .. (positive for emission to atmosphere,
                                        ! ..  negative for absorption by biosphere)
-      CO2_flx2atm_npp_yday_ta          ! day CO2 flux from actual NPP, required for C conservation test
+      cflux_npp_2_atm_yday_ta          ! day CO2 flux from actual NPP, required for C conservation test
 
     ! Changes in state variables resulting due to area changes of the currently operating process 
     ! TODO-JN-COHORTS needs to be adapted for absolute fractions: currently in [mol(C)/m^2(parent)]
     ! TODO-JN currently only required for forests - but they do not have an lct_id, so memory is also created for others
     TYPE(t_jsb_var_real2d) ::              &
-      delta_Cpool_green_rp,                & 
-      delta_Cpool_woods_rp,                & 
-      delta_Cpool_reserve_rp,              & 
-      delta_Cpool_crop_harvest_rp,         & 
-      delta_YCpool_acid_ag1_rp,            & 
-      delta_YCpool_water_ag1_rp,           & 
-      delta_YCpool_ethanol_ag1_rp,         & 
-      delta_YCpool_nonsoluble_ag1_rp,      & 
-      delta_YCpool_acid_bg1_rp,            & 
-      delta_YCpool_water_bg1_rp,           & 
-      delta_YCpool_ethanol_bg1_rp,         & 
-      delta_YCpool_nonsoluble_bg1_rp,      & 
-      delta_YCpool_humus_1_rp,             & 
+      delta_c_green_rp,                & 
+      delta_c_woods_rp,                & 
+      delta_c_reserve_rp,              & 
+      delta_c_crop_harvest_rp,         & 
+      delta_c_acid_ag1_rp,            & 
+      delta_c_water_ag1_rp,           & 
+      delta_c_ethanol_ag1_rp,         & 
+      delta_c_nonsoluble_ag1_rp,      & 
+      delta_c_acid_bg1_rp,            & 
+      delta_c_water_bg1_rp,           & 
+      delta_c_ethanol_bg1_rp,         & 
+      delta_c_nonsoluble_bg1_rp,      & 
+      delta_c_humus_1_rp,             & 
      !SIZE CLASS 2
-      delta_YCpool_acid_ag2_rp,            & 
-      delta_YCpool_water_ag2_rp,           & 
-      delta_YCpool_ethanol_ag2_rp,         & 
-      delta_YCpool_nonsoluble_ag2_rp,      & 
-      delta_YCpool_acid_bg2_rp,            & 
-      delta_YCpool_water_bg2_rp,           & 
-      delta_YCpool_ethanol_bg2_rp,         & 
-      delta_YCpool_nonsoluble_bg2_rp,      & 
-      delta_YCpool_humus_2_rp,             &
+      delta_c_acid_ag2_rp,            & 
+      delta_c_water_ag2_rp,           & 
+      delta_c_ethanol_ag2_rp,         & 
+      delta_c_nonsoluble_ag2_rp,      & 
+      delta_c_acid_bg2_rp,            & 
+      delta_c_water_bg2_rp,           & 
+      delta_c_ethanol_bg2_rp,         & 
+      delta_c_nonsoluble_bg2_rp,      & 
+      delta_c_humus_2_rp,             &
       delta_current_max_green_rp,          & 
       delta_veg_carbon_at_max_green_rp,    &
       delta_annual_avg_NPP_rp,             &
       delta_biennial_avg_NPP_rp,           & 
       delta_decennial_avg_NPP_rp,          &
-      delta_carbon_2_GreenLitterPools_rp,  &
-      delta_carbon_2_WoodLitterPools_rp,   &
-      delta_carbon_2_atmos_rp
+      delta_cflux_dist_greenreserve_2_soil_rp,  &
+      delta_cflux_dist_woods_2_soil_rp,   &
+      delta_cflux_fire_all_2_atm_rp
 
     TYPE(t_jsb_var_real2d) ::              &
       delta_GPP_sum_rp,                    &
@@ -374,187 +374,187 @@ CONTAINS
 
 !@todo: relict from CBALANCE?
       ! Carbon variables on canopy area
-      CALL jsb_add_var( mem, 'litter_flux', mem%litter_flux,                                             &
+      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter', mem%cflux_c_greenwood_2_litter,                                             &
         & hgrid, surface,                                                                                &
-        & t_cf('litter_flux', 'mol(CO2) m-2(canopy) s-1', 'Total litter flux entering the soil pools.'), &
+        & t_cf('cflux_c_greenwood_2_litter', 'mol(CO2) m-2(canopy) s-1', 'Total litter flux entering the soil pools.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
         & output_level=FULL,                                                                             &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cpool_green', mem%Cpool_green,                                     &
+      CALL jsb_add_var( mem, 'c_green', mem%c_green,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('Cpool_green', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_green', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=FULL,                                                                             &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cpool_woods', mem%Cpool_woods,                                                &
+      CALL jsb_add_var( mem, 'c_woods', mem%c_woods,                                                &
         & hgrid, surface,                                                                                   &
-        & t_cf('Cpool_woods', 'mol(C) m-2(canopy)', 'C-Pool for structural material/parts of vegetation.'), &
+        & t_cf('c_woods', 'mol(C) m-2(canopy)', 'C-Pool for structural material/parts of vegetation.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
         & prefix, suffix,                                                                                   &
         & output_level=FULL,                                                                             &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cpool_reserve', mem%Cpool_reserve,                                                             &
+      CALL jsb_add_var( mem, 'c_reserve', mem%c_reserve,                                                             &
         & hgrid, surface,                                                                                                    &
-        & t_cf('Cpool_reserve', 'mol(C) m-2(canopy)', 'C-Pool for reserve carbohydrates (starches, sugars) of vegetation.'), &
+        & t_cf('c_reserve', 'mol(C) m-2(canopy)', 'C-Pool for reserve carbohydrates (starches, sugars) of vegetation.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                 &
         & prefix, suffix,                                                                                                    &
         & output_level=FULL,                                                                             &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cpool_crop_harvest', mem%Cpool_crop_harvest,                               &
+      CALL jsb_add_var( mem, 'c_crop_harvest', mem%c_crop_harvest,                               &
         & hgrid, surface,                                                                                &
-        & t_cf('Cpool_crop_harvest', 'mol(C) m-2(canopy)', 'C-Pool for Harvested Material from Crops.'), &
+        & t_cf('c_crop_harvest', 'mol(C) m-2(canopy)', 'C-Pool for Harvested Material from Crops.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
         & output_level=FULL,                                                                             &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 1
-      CALL jsb_add_var( mem, 'ycpool_acid_ag1', mem%YCpool_acid_ag1,                                               &
+      CALL jsb_add_var( mem, 'c_acid_ag1', mem%c_acid_ag1,                                               &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_acid_ag1', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_acid_ag1', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=FULL,                                                                                       &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_water_ag1', mem%YCpool_water_ag1,                                               &
+      CALL jsb_add_var( mem, 'c_water_ag1', mem%c_water_ag1,                                               &
         & hgrid, surface,                                                                                            &
-        & t_cf('YCpool_water_ag1', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_water_ag1', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                         &
         & prefix, suffix,                                                                                            &
         & output_level=FULL,                                                                                       &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_ethanol_ag1', mem%YCpool_ethanol_ag1,                                               &
+      CALL jsb_add_var( mem, 'c_ethanol_ag1', mem%c_ethanol_ag1,                                               &
         & hgrid, surface,                                                                                                &
-        & t_cf('YCpool_ethanol_ag1', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_ethanol_ag1', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
         & prefix, suffix,                                                                                                &
         & output_level=FULL,                                                                                       &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_nonsoluble_ag1', mem%YCpool_nonsoluble_ag1,                                        &
+      CALL jsb_add_var( mem, 'c_nonsoluble_ag1', mem%c_nonsoluble_ag1,                                        &
         & hgrid, surface,                                                                                               &
-        & t_cf('YCpool_nonsoluble_ag1', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
+        & t_cf('c_nonsoluble_ag1', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=FULL,                                                                                       &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_acid_bg1', mem%YCpool_acid_bg1,                                               &
+      CALL jsb_add_var( mem, 'c_acid_bg1', mem%c_acid_bg1,                                               &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_acid_bg1', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_acid_bg1', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_water_bg1', mem%YCpool_water_bg1,                                               &
+      CALL jsb_add_var( mem, 'c_water_bg1', mem%c_water_bg1,                                               &
         & hgrid, surface,                                                                                            &
-        & t_cf('YCpool_water_bg1', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_water_bg1', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                         &
         & prefix, suffix,                                                                                            &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_ethanol_bg1', mem%YCpool_ethanol_bg1,                                              &
+      CALL jsb_add_var( mem, 'c_ethanol_bg1', mem%c_ethanol_bg1,                                              &
         & hgrid, surface,                                                                                               &
-        & t_cf('YCpool_ethanol_bg1', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
+        & t_cf('c_ethanol_bg1', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_nonsoluble_bg1', mem%YCpool_nonsoluble_bg1,                                       &
+      CALL jsb_add_var( mem, 'c_nonsoluble_bg1', mem%c_nonsoluble_bg1,                                       &
         & hgrid, surface,                                                                                              &
-        & t_cf('YCpool_nonsoluble_bg1', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
+        & t_cf('c_nonsoluble_bg1', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_humus_1', mem%YCpool_humus_1,                     &
+      CALL jsb_add_var( mem, 'c_humus_1', mem%c_humus_1,                     &
         & hgrid, surface,                                                              &
-        & t_cf('YCpool_humus_1', 'mol(C) m-2(canopy)', 'C-Pool for humus in Yasso.'),  &
+        & t_cf('c_humus_1', 'mol(C) m-2(canopy)', 'C-Pool for humus in Yasso.'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 2
-      CALL jsb_add_var( mem, 'ycpool_acid_ag2', mem%YCpool_acid_ag2,                                               &
+      CALL jsb_add_var( mem, 'c_acid_ag2', mem%c_acid_ag2,                                               &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_acid_ag2', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_acid_ag2', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_water_ag2', mem%YCpool_water_ag2,                                               &
+      CALL jsb_add_var( mem, 'c_water_ag2', mem%c_water_ag2,                                               &
         & hgrid, surface,                                                                                            &
-        & t_cf('YCpool_water_ag2', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_water_ag2', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                         &
         & prefix, suffix,                                                                                            &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_ethanol_ag2', mem%YCpool_ethanol_ag2,                                               &
+      CALL jsb_add_var( mem, 'c_ethanol_ag2', mem%c_ethanol_ag2,                                               &
         & hgrid, surface,                                                                                                &
-        & t_cf('YCpool_ethanol_ag2', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_ethanol_ag2', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
         & prefix, suffix,                                                                                                &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_nonsoluble_ag2', mem%YCpool_nonsoluble_ag2,                                        &
+      CALL jsb_add_var( mem, 'c_nonsoluble_ag2', mem%c_nonsoluble_ag2,                                        &
         & hgrid, surface,                                                                                               &
-        & t_cf('YCpool_nonsoluble_ag2', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
+        & t_cf('c_nonsoluble_ag2', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_acid_bg2', mem%YCpool_acid_bg2,                                               &
+      CALL jsb_add_var( mem, 'c_acid_bg2', mem%c_acid_bg2,                                               &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_acid_bg2', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_acid_bg2', 'mol(C) m-2(canopy)', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_water_bg2', mem%YCpool_water_bg2,                                               &
+      CALL jsb_add_var( mem, 'c_water_bg2', mem%c_water_bg2,                                               &
         & hgrid, surface,                                                                                            &
-        & t_cf('YCpool_water_bg2', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_water_bg2', 'mol(C) m-2(canopy)', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                         &
         & prefix, suffix,                                                                                            &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_ethanol_bg2', mem%YCpool_ethanol_bg2,                                              &
+      CALL jsb_add_var( mem, 'c_ethanol_bg2', mem%c_ethanol_bg2,                                              &
         & hgrid, surface,                                                                                               &
-        & t_cf('YCpool_ethanol_bg2', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
+        & t_cf('c_ethanol_bg2', 'mol(C) m-2(canopy)', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_nonsoluble_bg2', mem%YCpool_nonsoluble_bg2,                                       &
+      CALL jsb_add_var( mem, 'c_nonsoluble_bg2', mem%c_nonsoluble_bg2,                                       &
         & hgrid, surface,                                                                                              &
-        & t_cf('YCpool_nonsoluble_bg2', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
+        & t_cf('c_nonsoluble_bg2', 'mol(C) m-2(canopy)', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=FULL,                                                                                       &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'ycpool_humus_2', mem%YCpool_humus_2,                     &
+      CALL jsb_add_var( mem, 'c_humus_2', mem%c_humus_2,                     &
         & hgrid, surface,                                                              &
-        & t_cf('YCpool_humus_2', 'mol(C) m-2(canopy)', 'C-Pool for humus in Yasso.'),  &
+        & t_cf('c_humus_2', 'mol(C) m-2(canopy)', 'C-Pool for humus in Yasso.'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=FULL,                                                                                       &
@@ -683,25 +683,25 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cflux_herbivory', mem%Cflux_herbivory,                                              &
+      CALL jsb_add_var( mem, 'cflux_c_green_2_herb', mem%cflux_c_green_2_herb,                                              &
         & hgrid, surface,                                                                                         &
-        & t_cf('Cflux_herbivory', 'mol(C) m-2(canopy) s-1', 'Total carbon flux from C pool green to herbivory.'), &
+        & t_cf('cflux_c_green_2_herb', 'mol(C) m-2(canopy) s-1', 'Total carbon flux from C pool green to herbivory.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cflux_herbivory_lg', mem%Cflux_herbivory_LG,                                         &
+      CALL jsb_add_var( mem, 'cflux_c_green_2_herb_lg', mem%cflux_herb_2_littergreen,                                         &
         & hgrid, surface,                                                                                          &
-        & t_cf('Cflux_herbivory_LG', 'mol(C) m-2(canopy) s-1', 'Carbon flux from Cflux_herbivory into green litter &
-        & (complementary to Cflux_herbivory_2_atm).'),                                                             &
+        & t_cf('cflux_herb_2_littergreen', 'mol(C) m-2(canopy) s-1', 'Carbon flux from cflux_c_green_2_herb into green litter &
+        & (complementary to cflux_herb_2_atm).'),                                                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'cflux_herbivory_2_atm', mem%Cflux_herbivory_2_atm,                                    &
+      CALL jsb_add_var( mem, 'cflux_herb_2_atm', mem%cflux_herb_2_atm,                                    &
         & hgrid, surface,                                                                                           &
-        & t_cf('Cflux_herbivory_2_atm', 'mol(C) m-2(canopy) s-1', 'Carbon flux from Cflux_herbivory into atmosphere &
-        &  (complementary to Cflux_herbivory_LG).'),                                                                &
+        & t_cf('cflux_herb_2_atm', 'mol(C) m-2(canopy) s-1', 'Carbon flux from cflux_c_green_2_herb into atmosphere &
+        &  (complementary to cflux_herb_2_littergreen).'),                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -713,27 +713,27 @@ CONTAINS
 !         & prefix, suffix,                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c2greenlitterpools', mem%carbon_2_GreenLitterPools,                           &
+      CALL jsb_add_var( mem, 'c2greenlitterpools', mem%cflux_dist_greenreserve_2_soil,                           &
         & hgrid, surface,                                                                                          &
-        & t_cf('carbon_2_GreenLitterPools', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the &
+        & t_cf('cflux_dist_greenreserve_2_soil', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the &
         &  green litter pools.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c2woodlitterpools', mem%carbon_2_WoodLitterPools,                             &
+      CALL jsb_add_var( mem, 'c2woodlitterpools', mem%cflux_dist_woods_2_soil,                             &
         & hgrid, surface,                                                                                          &
-        & t_cf('carbon_2_WoodLitterPools', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the  &
+        & t_cf('cflux_dist_woods_2_soil', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the  &
         & woody litter pools..'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c2atmos', mem%carbon_2_atmos,                                                  &
+      CALL jsb_add_var( mem, 'c2atmos', mem%cflux_fire_all_2_atm,                                                  &
         & hgrid, surface,                                                                                           &
-        & t_cf('carbon_2_atmos', 'mol(C) m-2(canopy) s-1', 'Carbon flux into atmosphere.'),         &
+        & t_cf('cflux_fire_all_2_atm', 'mol(C) m-2(canopy) s-1', 'Carbon flux into atmosphere.'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                      &
@@ -742,187 +742,187 @@ CONTAINS
 
 
       ! Carbon variables on tile area
-      ! CALL jsb_add_var( mem, 'litter_flux_ta', mem%litter_flux_ta,                                       &
-      !   & hgrid, surface,                                                                                &
-      !   & t_cf('litter_flux_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'),      &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-      !   & prefix, suffix,                                                                                &
-      !   & output_level=BASIC,                                                                            &
-      !   & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+!      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter_ta', mem%cflux_c_greenwood_2_litter_ta,                                       &
+!        & hgrid, surface,                                                                                &
+!        & t_cf('cflux_c_greenwood_2_litter_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'),      &
+!        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
+!        & prefix, suffix,                                                                                &
+!        & output_level=BASIC,                                                                            &
+!        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_green_ta', mem%Cpool_green_ta,                              &
+      CALL jsb_add_var( mem, 'c_green_ta', mem%c_green_ta,                              &
         & hgrid, surface,                                                                   &
-        & t_cf('Cpool_green_ta', 'mol(C) m-2', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_green_ta', 'mol(C) m-2', 'C-Pool for green parts of vegetation.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
         & output_level=BASIC,                                                                            &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_woods_ta', mem%Cpool_woods_ta,                                         &
+      CALL jsb_add_var( mem, 'c_woods_ta', mem%c_woods_ta,                                         &
         & hgrid, surface,                                                                              &
-        & t_cf('Cpool_woods_ta', 'mol(C) m-2', 'C-Pool for structural material/parts of vegetation.'), &
+        & t_cf('c_woods_ta', 'mol(C) m-2', 'C-Pool for structural material/parts of vegetation.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=BASIC,                                                                            &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_reserve_ta', mem%Cpool_reserve_ta,                                                      &
+      CALL jsb_add_var( mem, 'c_reserve_ta', mem%c_reserve_ta,                                                      &
         & hgrid, surface,                                                                                               &
-        & t_cf('Cpool_reserve_ta', 'mol(C) m-2', 'C-Pool for reserve carbohydrates (starches, sugars) of vegetation.'), &
+        & t_cf('c_reserve_ta', 'mol(C) m-2', 'C-Pool for reserve carbohydrates (starches, sugars) of vegetation.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=BASIC,                                                                            &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_crop_harvest_ta', mem%Cpool_crop_harvest_ta,                        &
+      CALL jsb_add_var( mem, 'c_crop_harvest_ta', mem%c_crop_harvest_ta,                        &
         & hgrid, surface,                                                                           &
-        & t_cf('Cpool_crop_harvest_ta', 'mol(C) m-2', 'C-Pool for Harvested Material from Crops.'), &
+        & t_cf('c_crop_harvest_ta', 'mol(C) m-2', 'C-Pool for Harvested Material from Crops.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
         & output_level=BASIC,                                                                            &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 1
-      CALL jsb_add_var( mem, 'c_acid_ag1_ta', mem%YCpool_acid_ag1_ta,                                         &
+      CALL jsb_add_var( mem, 'c_acid_ag1_ta', mem%c_acid_ag1_ta,                                         &
         & hgrid, surface,                                                                                     &
-        & t_cf('YCpool_acid_ag1_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_acid_ag1_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
         & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_water_ag1_ta', mem%YCpool_water_ag1_ta,                                         &
+      CALL jsb_add_var( mem, 'c_water_ag1_ta', mem%c_water_ag1_ta,                                         &
         & hgrid, surface,                                                                                       &
-        & t_cf('YCpool_water_ag1_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_water_ag1_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_ethanol_ag1_ta', mem%YCpool_ethanol_ag1_ta,                                         &
+      CALL jsb_add_var( mem, 'c_ethanol_ag1_ta', mem%c_ethanol_ag1_ta,                                         &
         & hgrid, surface,                                                                                           &
-        & t_cf('YCpool_ethanol_ag1_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_ethanol_ag1_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_nonsoluble_ag1_ta', mem%YCpool_nonsoluble_ag1_ta,                                  &
+      CALL jsb_add_var( mem, 'c_nonsoluble_ag1_ta', mem%c_nonsoluble_ag1_ta,                                  &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_nonsoluble_ag1_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
+        & t_cf('c_nonsoluble_ag1_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_acid_bg1_ta', mem%YCpool_acid_bg1_ta,                                         &
+      CALL jsb_add_var( mem, 'c_acid_bg1_ta', mem%c_acid_bg1_ta,                                         &
         & hgrid, surface,                                                                                     &
-        & t_cf('YCpool_acid_bg1_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_acid_bg1_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_water_bg1_ta', mem%YCpool_water_bg1_ta,                                         &
+      CALL jsb_add_var( mem, 'c_water_bg1_ta', mem%c_water_bg1_ta,                                         &
         & hgrid, surface,                                                                                       &
-        & t_cf('YCpool_water_bg1_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_water_bg1_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_ethanol_bg1_ta', mem%YCpool_ethanol_bg1_ta,                                        &
+      CALL jsb_add_var( mem, 'c_ethanol_bg1_ta', mem%c_ethanol_bg1_ta,                                        &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_ethanol_bg1_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
+        & t_cf('c_ethanol_bg1_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_nonsoluble_bg1_ta', mem%YCpool_nonsoluble_bg1_ta,                                 &
+      CALL jsb_add_var( mem, 'c_nonsoluble_bg1_ta', mem%c_nonsoluble_bg1_ta,                                 &
         & hgrid, surface,                                                                                         &
-        & t_cf('YCpool_nonsoluble_bg1_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
+        & t_cf('c_nonsoluble_bg1_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_humus_1_ta', mem%YCpool_humus_1_ta,               &
+      CALL jsb_add_var( mem, 'c_humus_1_ta', mem%c_humus_1_ta,               &
         & hgrid, surface,                                                         &
-        & t_cf('YCpool_humus_1_ta', 'mol(C) m-2', 'C-Pool for humus in Yasso.'),  &
+        & t_cf('c_humus_1_ta', 'mol(C) m-2', 'C-Pool for humus in Yasso.'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 2
-      CALL jsb_add_var( mem, 'c_acid_ag2_ta', mem%YCpool_acid_ag2_ta,                                         &
+      CALL jsb_add_var( mem, 'c_acid_ag2_ta', mem%c_acid_ag2_ta,                                         &
         & hgrid, surface,                                                                                     &
-        & t_cf('YCpool_acid_ag2_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_acid_ag2_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_water_ag2_ta', mem%YCpool_water_ag2_ta,                                         &
+      CALL jsb_add_var( mem, 'c_water_ag2_ta', mem%c_water_ag2_ta,                                         &
         & hgrid, surface,                                                                                       &
-        & t_cf('YCpool_water_ag2_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_water_ag2_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_ethanol_ag2_ta', mem%YCpool_ethanol_ag2_ta,                                         &
+      CALL jsb_add_var( mem, 'c_ethanol_ag2_ta', mem%c_ethanol_ag2_ta,                                         &
         & hgrid, surface,                                                                                           &
-        & t_cf('YCpool_ethanol_ag2_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
+        & t_cf('c_ethanol_ag2_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_nonsoluble_ag2_ta', mem%YCpool_nonsoluble_ag2_ta,                                  &
+      CALL jsb_add_var( mem, 'c_nonsoluble_ag2_ta', mem%c_nonsoluble_ag2_ta,                                  &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_nonsoluble_ag2_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
+        & t_cf('c_nonsoluble_ag2_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (aboveground).'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_acid_bg2_ta', mem%YCpool_acid_bg2_ta,                                         &
+      CALL jsb_add_var( mem, 'c_acid_bg2_ta', mem%c_acid_bg2_ta,                                         &
         & hgrid, surface,                                                                                     &
-        & t_cf('YCpool_acid_bg2_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_acid_bg2_ta', 'mol(C) m-2', 'C-Pool for acid-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_water_bg2_ta', mem%YCpool_water_bg2_ta,                                         &
+      CALL jsb_add_var( mem, 'c_water_bg2_ta', mem%c_water_bg2_ta,                                         &
         & hgrid, surface,                                                                                       &
-        & t_cf('YCpool_water_bg2_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
+        & t_cf('c_water_bg2_ta', 'mol(C) m-2', 'C-Pool for water-soluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_ethanol_bg2_ta', mem%YCpool_ethanol_bg2_ta,                                        &
+      CALL jsb_add_var( mem, 'c_ethanol_bg2_ta', mem%c_ethanol_bg2_ta,                                        &
         & hgrid, surface,                                                                                          &
-        & t_cf('YCpool_ethanol_bg2_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
+        & t_cf('c_ethanol_bg2_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (belowground)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_nonsoluble_bg2_ta', mem%YCpool_nonsoluble_bg2_ta,                                 &
+      CALL jsb_add_var( mem, 'c_nonsoluble_bg2_ta', mem%c_nonsoluble_bg2_ta,                                 &
         & hgrid, surface,                                                                                         &
-        & t_cf('YCpool_nonsoluble_bg2_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
+        & t_cf('c_nonsoluble_bg2_ta', 'mol(C) m-2', 'C-Pool for nonsoluble litter in Yasso (belowground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & output_level=MEDIUM,                                                                                &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c_humus_2_ta', mem%YCpool_humus_2_ta,               &
+      CALL jsb_add_var( mem, 'c_humus_2_ta', mem%c_humus_2_ta,               &
         & hgrid, surface,                                                         &
-        & t_cf('YCpool_humus_2_ta', 'mol(C) m-2', 'C-Pool for humus in Yasso.'),  &
+        & t_cf('c_humus_2_ta', 'mol(C) m-2', 'C-Pool for humus in Yasso.'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                                                &
@@ -1027,50 +1027,50 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
-      CALL jsb_add_var( mem, 'cflux_herbivory_ta', mem%Cflux_herbivory_ta,                                   &
+      CALL jsb_add_var( mem, 'cflux_c_green_2_herb_ta', mem%cflux_c_green_2_herb_ta,                                   &
         & hgrid, surface,                                                                                    &
-        & t_cf('Cflux_herbivory_ta', 'mol(C) m-2 s-1', 'Total carbon flux from C pool green to herbivory.'), &
+        & t_cf('cflux_c_green_2_herb_ta', 'mol(C) m-2 s-1', 'Total carbon flux from C pool green to herbivory.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
         & prefix, suffix,                                                                                    &
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c2greenlitter_ta', mem%carbon_2_GreenLitterPools_ta,    &
+      CALL jsb_add_var( mem, 'c2greenlitter_ta', mem%cflux_dist_greenreserve_2_soil_ta,    &
         & hgrid, surface,                                                                         &
-        & t_cf('carbon_2_GreenLitterPools_ta', 'mol(C) m-2 s-1', 'Carbon flux to green litter.'), &
+        & t_cf('cflux_dist_greenreserve_2_soil_ta', 'mol(C) m-2 s-1', 'Carbon flux to green litter.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
         & prefix, suffix,                                                                         &
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c2woodlitter_ta', mem%carbon_2_WoodLitterPools_ta,     &
+      CALL jsb_add_var( mem, 'c2woodlitter_ta', mem%cflux_dist_woods_2_soil_ta,     &
         & hgrid, surface,                                                                        &
-        & t_cf('carbon_2_WoodLitterPools_ta', 'mol(C) m-2 s-1', 'Carbon flux to woody litter.'), &
+        & t_cf('cflux_dist_woods_2_soil_ta', 'mol(C) m-2 s-1', 'Carbon flux to woody litter.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'c2atmos_ta', mem%carbon_2_atmos_ta,                                    &
+      CALL jsb_add_var( mem, 'c2atmos_ta', mem%cflux_fire_all_2_atm_ta,                                    &
         & hgrid, surface,                                                                                   &
-        & t_cf('carbon_2_atmos_ta', 'mol(C) m-2 s-1', 'Total carbon flux from C pool green to herbivory.'), &
+        & t_cf('cflux_fire_all_2_atm_ta', 'mol(C) m-2 s-1', 'Total carbon flux from C pool green to herbivory.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
         & prefix, suffix,                                                                                   &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
-!       CALL jsb_add_var( mem, 'Cflux_herbivory_LG_ta', mem%Cflux_herbivory_LG_ta,                                   &
+!       CALL jsb_add_var( mem, 'cflux_herb_2_littergreen_ta', mem%cflux_herb_2_littergreen_ta,                                   &
 !         & hgrid, surface,                                                                                          &
-!         & t_cf('Cflux_herbivory_LG_ta', 'mol(C) m-2 s-1', 'Carbon flux from Cflux_herbivory into green litter &
-!         &                                                      (complementary to Cflux_herbivory_2_atm).'),        &
+!         & t_cf('cflux_herb_2_littergreen_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into green litter &
+!         &                                                      (complementary to cflux_herb_2_atm).'),        &
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
 !         & prefix, suffix,                                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 ! 
-!       CALL jsb_add_var( mem, 'Cflux_herbivory_2_atm_ta', mem%Cflux_herbivory_2_atm_ta,                              &
+!       CALL jsb_add_var( mem, 'cflux_herb_2_atm_ta', mem%cflux_herb_2_atm_ta,                              &
 !         & hgrid, surface,                                                                                           &
-!         & t_cf('Cflux_herbivory_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from Cflux_herbivory into atmosphere &
-!         &                                                          (complementary to Cflux_herbivory_LG).'),        &
+!         & t_cf('cflux_herb_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into atmosphere &
+!         &                                                          (complementary to cflux_herb_2_littergreen).'),        &
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
 !         & prefix, suffix,                                                                                           &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -1084,35 +1084,35 @@ CONTAINS
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! R: In JSBACH3 the following variables are not written into the output.
-      CALL jsb_add_var( mem, 'co2_l2a_npp_ta', mem%CO2_flx2atm_npp_ta,                                                 &
+      CALL jsb_add_var( mem, 'co2_l2a_npp_ta', mem%cflux_npp_2_atm_ta,                                                 &
         & hgrid, surface,                                                                                              &
-        & t_cf('CO2_flx2atm_npp_ta', 'kg(CO2) m-2 s-1', 'Net CO2 fluxes between biosphere and atmosphere due to NPP.'), &
+        & t_cf('cflux_npp_2_atm_ta', 'kg(CO2) m-2 s-1', 'Net CO2 fluxes between biosphere and atmosphere due to NPP.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=BASIC,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'co2_l2a_resp_ta', mem%CO2_flx2atm_soilresp_ta,                                 &
+      CALL jsb_add_var( mem, 'co2_l2a_resp_ta', mem%cflux_soilresp_2_atm_ta,                                 &
         & hgrid, surface,                                                                                    &
-        & t_cf('CO2_flx2atm_soilresp_ta', 'kg(CO2) m-2 s-1',                                                 &
+        & t_cf('cflux_soilresp_2_atm_ta', 'kg(CO2) m-2 s-1',                                                 &
         &      'Net CO2 fluxes between biosphere and atmosphere due to soil respiration.'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
         & prefix, suffix,                                                                                    &
         & output_level=BASIC,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'co2_l2a_herb_ta', mem%CO2_flx2atm_herbivory_ta,                                 &
+      CALL jsb_add_var( mem, 'co2_l2a_herb_ta', mem%cflux_herb_2_atm_ta,                                 &
         & hgrid, surface,                                                                                     &
-        & t_cf('CO2_flx2atm_herbivory_ta', 'kg(CO2) m-2 s-1',                                                 &
+        & t_cf('cflux_herb_2_atm_ta', 'kg(CO2) m-2 s-1',                                                 &
         &      'Net CO2 fluxes between biosphere and atmosphere due to herbivory.'),                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=BASIC,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'co2_l2a_npp_yday_ta', mem%CO2_flx2atm_npp_yday_ta,                                       &
+      CALL jsb_add_var( mem, 'co2_l2a_npp_yday_ta', mem%cflux_npp_2_atm_yday_ta,                                       &
         & hgrid, surface,                                                                                              &
-        & t_cf('CO2_flx2atm_npp_yday_ta', 'kg(CO2) m-2 s-1', 'Net daily CO2 flux, only needed for conservation test.'), &
+        & t_cf('cflux_npp_2_atm_yday_ta', 'kg(CO2) m-2 s-1', 'Net daily CO2 flux, only needed for conservation test.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=BASIC,                                                                                &
@@ -1196,108 +1196,108 @@ CONTAINS
 
 !TODO-JN-COHORTS: change unit when absolute areas are implemented
 ! ++ think about "fract_fpc_max"!
-        CALL jsb_add_var( mem, 'delta_cpool_green_rp', mem%delta_Cpool_green_rp, hgrid, surface, &
-          & t_cf('delta_Cpool_green_rp', 'mol(C) m-2(parent))', 'Change in Cpool_green.'),         &
+        CALL jsb_add_var( mem, 'delta_c_green_rp', mem%delta_c_green_rp, hgrid, surface, &
+          & t_cf('delta_c_green_rp', 'mol(C) m-2(parent))', 'Change in c_green.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_cpool_woods_rp', mem%delta_Cpool_woods_rp, hgrid, surface, &
-          & t_cf('delta_Cpool_woods_rp', 'mol(C) m-2(parent))', 'Change in Cpool_woods.'),         &
+        CALL jsb_add_var( mem, 'delta_c_woods_rp', mem%delta_c_woods_rp, hgrid, surface, &
+          & t_cf('delta_c_woods_rp', 'mol(C) m-2(parent))', 'Change in c_woods.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_cpool_reserve_rp', mem%delta_Cpool_reserve_rp, hgrid, surface, &
-          & t_cf('delta_Cpool_reserve_rp', 'mol(C) m-2(parent))', 'Change in Cpool_reserve.'),         &
+        CALL jsb_add_var( mem, 'delta_c_reserve_rp', mem%delta_c_reserve_rp, hgrid, surface, &
+          & t_cf('delta_c_reserve_rp', 'mol(C) m-2(parent))', 'Change in c_reserve.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem, 'delta_cpool_crop_harvest_rp', mem%delta_Cpool_crop_harvest_rp, hgrid, surface, &
-          & t_cf('delta_Cpool_crop_harvest_rp', 'mol(C) m-2(parent))', 'Change in Cpool_crop_harvest.'),         &
+        CALL jsb_add_var( mem, 'delta_c_crop_harvest_rp', mem%delta_c_crop_harvest_rp, hgrid, surface, &
+          & t_cf('delta_c_crop_harvest_rp', 'mol(C) m-2(parent))', 'Change in c_crop_harvest.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem, 'delta_ycpool_acid_ag1_rp', mem%delta_YCpool_acid_ag1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_acid_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_ag1.'),         &
+        CALL jsb_add_var( mem, 'delta_c_acid_ag1_rp', mem%delta_c_acid_ag1_rp, hgrid, surface, &
+          & t_cf('delta_c_acid_ag1_rp', 'mol(C) m-2(parent))', 'Change in c_acid_ag1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_water_ag1_rp', mem%delta_YCpool_water_ag1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_water_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_ag1.'),         &
+        CALL jsb_add_var( mem, 'delta_c_water_ag1_rp', mem%delta_c_water_ag1_rp, hgrid, surface, &
+          & t_cf('delta_c_water_ag1_rp', 'mol(C) m-2(parent))', 'Change in c_water_ag1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_ag1_rp', mem%delta_YCpool_ethanol_ag1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_ethanol_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_ag1.'),         &
+        CALL jsb_add_var( mem, 'delta_c_ethanol_ag1_rp', mem%delta_c_ethanol_ag1_rp, hgrid, surface, &
+          & t_cf('delta_c_ethanol_ag1_rp', 'mol(C) m-2(parent))', 'Change in c_ethanol_ag1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_nonsoluble_ag1_rp', mem%delta_YCpool_nonsoluble_ag1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_nonsoluble_ag1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_ag1.'),         &
+        CALL jsb_add_var( mem, 'delta_c_nonsoluble_ag1_rp', mem%delta_c_nonsoluble_ag1_rp, hgrid, surface, &
+          & t_cf('delta_c_nonsoluble_ag1_rp', 'mol(C) m-2(parent))', 'Change in c_nonsoluble_ag1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_acid_ag2_rp', mem%delta_YCpool_acid_ag2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_acid_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_ag2.'),         &
+        CALL jsb_add_var( mem, 'delta_c_acid_ag2_rp', mem%delta_c_acid_ag2_rp, hgrid, surface, &
+          & t_cf('delta_c_acid_ag2_rp', 'mol(C) m-2(parent))', 'Change in c_acid_ag2.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_water_ag2_rp', mem%delta_YCpool_water_ag2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_water_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_ag2.'),         &
+        CALL jsb_add_var( mem, 'delta_c_water_ag2_rp', mem%delta_c_water_ag2_rp, hgrid, surface, &
+          & t_cf('delta_c_water_ag2_rp', 'mol(C) m-2(parent))', 'Change in c_water_ag2.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_ag2_rp', mem%delta_YCpool_ethanol_ag2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_ethanol_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_ag2.'),         &
+        CALL jsb_add_var( mem, 'delta_c_ethanol_ag2_rp', mem%delta_c_ethanol_ag2_rp, hgrid, surface, &
+          & t_cf('delta_c_ethanol_ag2_rp', 'mol(C) m-2(parent))', 'Change in c_ethanol_ag2.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_nonsoluble_ag2_rp', mem%delta_YCpool_nonsoluble_ag2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_nonsoluble_ag2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_ag2.'),         &
+        CALL jsb_add_var( mem, 'delta_c_nonsoluble_ag2_rp', mem%delta_c_nonsoluble_ag2_rp, hgrid, surface, &
+          & t_cf('delta_c_nonsoluble_ag2_rp', 'mol(C) m-2(parent))', 'Change in c_nonsoluble_ag2.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_humus_1_rp', mem%delta_YCpool_humus_1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_humus_1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_humus_1.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-
-        CALL jsb_add_var( mem, 'delta_ycpool_acid_bg1_rp', mem%delta_YCpool_acid_bg1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_acid_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_bg1.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_water_bg1_rp', mem%delta_YCpool_water_bg1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_water_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_bg1.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_bg1_rp', mem%delta_YCpool_ethanol_bg1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_ethanol_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_bg1.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_YCpool_nonsoluble_bg1_rp', mem%delta_YCpool_nonsoluble_bg1_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_nonsoluble_bg1_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_bg1.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_acid_bg2_rp', mem%delta_YCpool_acid_bg2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_acid_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_acid_bg2.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_water_bg2_rp', mem%delta_YCpool_water_bg2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_water_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_water_bg2.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_ethanol_bg2_rp', mem%delta_YCpool_ethanol_bg2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_ethanol_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_ethanol_bg2.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_nonsoluble_bg2_rp', mem%delta_YCpool_nonsoluble_bg2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_nonsoluble_bg2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_nonsoluble_bg2.'),         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_ycpool_humus_2_rp', mem%delta_YCpool_humus_2_rp, hgrid, surface, &
-          & t_cf('delta_YCpool_humus_2_rp', 'mol(C) m-2(parent))', 'Change in YCpool_humus_2.'),         &
+        CALL jsb_add_var( mem, 'delta_c_humus_1_rp', mem%delta_c_humus_1_rp, hgrid, surface, &
+          & t_cf('delta_c_humus_1_rp', 'mol(C) m-2(parent))', 'Change in c_humus_1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem, 'delta_c2glpools_rp', mem%delta_carbon_2_GreenLitterPools_rp, hgrid, surface, &
-          & t_cf('delta_carbon_2_GreenLitterPools_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_GreenLitterPools.'), &
+        CALL jsb_add_var( mem, 'delta_c_acid_bg1_rp', mem%delta_c_acid_bg1_rp, hgrid, surface, &
+          & t_cf('delta_c_acid_bg1_rp', 'mol(C) m-2(parent))', 'Change in c_acid_bg1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_c2wlpools_rp', mem%delta_carbon_2_WoodLitterPools_rp, hgrid, surface, &
-          & t_cf('delta_carbon_2_WoodLitterPools_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_WoodLitterPools.'), &
+        CALL jsb_add_var( mem, 'delta_c_water_bg1_rp', mem%delta_c_water_bg1_rp, hgrid, surface, &
+          & t_cf('delta_c_water_bg1_rp', 'mol(C) m-2(parent))', 'Change in c_water_bg1.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-        CALL jsb_add_var( mem, 'delta_c2atmos_rp', mem%delta_carbon_2_atmos_rp, hgrid, surface, &
-          & t_cf('delta_carbon_2_atmos_rp', 'mol(C) m-2(parent))', 'Change in carbon_2_atmos.'),         &
+        CALL jsb_add_var( mem, 'delta_c_ethanol_bg1_rp', mem%delta_c_ethanol_bg1_rp, hgrid, surface, &
+          & t_cf('delta_c_ethanol_bg1_rp', 'mol(C) m-2(parent))', 'Change in c_ethanol_bg1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c_nonsoluble_bg1_rp', mem%delta_c_nonsoluble_bg1_rp, hgrid, surface, &
+          & t_cf('delta_c_nonsoluble_bg1_rp', 'mol(C) m-2(parent))', 'Change in c_nonsoluble_bg1.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c_acid_bg2_rp', mem%delta_c_acid_bg2_rp, hgrid, surface, &
+          & t_cf('delta_c_acid_bg2_rp', 'mol(C) m-2(parent))', 'Change in c_acid_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c_water_bg2_rp', mem%delta_c_water_bg2_rp, hgrid, surface, &
+          & t_cf('delta_c_water_bg2_rp', 'mol(C) m-2(parent))', 'Change in c_water_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c_ethanol_bg2_rp', mem%delta_c_ethanol_bg2_rp, hgrid, surface, &
+          & t_cf('delta_c_ethanol_bg2_rp', 'mol(C) m-2(parent))', 'Change in c_ethanol_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c_nonsoluble_bg2_rp', mem%delta_c_nonsoluble_bg2_rp, hgrid, surface, &
+          & t_cf('delta_c_nonsoluble_bg2_rp', 'mol(C) m-2(parent))', 'Change in c_nonsoluble_bg2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c_humus_2_rp', mem%delta_c_humus_2_rp, hgrid, surface, &
+          & t_cf('delta_c_humus_2_rp', 'mol(C) m-2(parent))', 'Change in c_humus_2.'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'delta_c2glpools_rp', mem%delta_cflux_dist_greenreserve_2_soil_rp, hgrid, surface, &
+          & t_cf('delta_cflux_dist_greenreserve_2_soil_rp', 'mol(C) m-2(parent))', 'Change in cflux_dist_greenreserve_2_soil.'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c2wlpools_rp', mem%delta_cflux_dist_woods_2_soil_rp, hgrid, surface, &
+          & t_cf('delta_cflux_dist_woods_2_soil_rp', 'mol(C) m-2(parent))', 'Change in cflux_dist_woods_2_soil.'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'delta_c2atmos_rp', mem%delta_cflux_fire_all_2_atm_rp, hgrid, surface, &
+          & t_cf('delta_cflux_fire_all_2_atm_rp', 'mol(C) m-2(parent))', 'Change in cflux_fire_all_2_atm.'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 

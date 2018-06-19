@@ -265,9 +265,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
 
     ! JN 10.01.18 only required with l_forestRegrowth = true 
-    dsl4jsb_Real2D_onChunk :: Cpool_green
-    dsl4jsb_Real2D_onChunk :: Cpool_reserve
-    dsl4jsb_Real2D_onChunk :: Cpool_woods
+    dsl4jsb_Real2D_onChunk :: c_green
+    dsl4jsb_Real2D_onChunk :: c_reserve
+    dsl4jsb_Real2D_onChunk :: c_woods
 
     dsl4jsb_Real2D_onChunk :: current_max_green
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green
@@ -323,9 +323,9 @@ CONTAINS
       ENDIF
 
       dsl4jsb_Get_memory(CARBON_)
-      dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_green)             ! in
-      dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_reserve)           ! in
-      dsl4jsb_Get_var2D_onChunk(CARBON_,   Cpool_woods)             ! in
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_green)             ! in
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_reserve)           ! in
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_woods)             ! in
 
       dsl4jsb_Get_var2D_onChunk(CARBON_,    current_max_green)       ! inout
       dsl4jsb_Get_var2D_onChunk(CARBON_,    veg_carbon_at_max_green) ! inout
@@ -426,7 +426,7 @@ CONTAINS
           & dsl4jsb_Lctlib_param(beta_leaf),          & ! <- in
           & dsl4jsb_Lctlib_param(clumpinessFactor),   & ! <- in
           & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! <- in
-          & Cpool_woods(:),                           & ! <- in
+          & c_woods(:),                           & ! <- in
           & current_max_green(:),                     & ! <- InOut
           & veg_carbon_at_max_green(:),               & ! <- InOut
           & number_of_individuals(:),                 & ! <- InOut
@@ -448,9 +448,9 @@ CONTAINS
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday()) THEN
         CALL track_max_green_pool(&
-          & Cpool_green(:),                       & ! <- in
-          & Cpool_reserve(:),                     & ! <- in
-          & Cpool_woods(:),                       & ! <- in
+          & c_green(:),                       & ! <- in
+          & c_reserve(:),                     & ! <- in
+          & c_woods(:),                       & ! <- in
           & current_max_green(:),                 & ! <- InOut
           & veg_carbon_at_max_green(:)            & ! <- InOut
           & )

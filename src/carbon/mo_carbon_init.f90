@@ -169,140 +169,140 @@ CONTAINS
     ! R: TBD: 3D Variablen einlesen. Dann wäre es dxsl4jsb_var3D_onDomain!
     !    Bisher wurden 3D variablen irgendwo über einlesen vom File initialisiert!
     return_pointer => input_file%Read_2d(         &
-      & variable_name='Cpool_green',           &
-      & fill_array = dsl4jsb_var_ptr(CARBON_,Cpool_green))
-    dsl4jsb_var2D_onDomain(CARBON_,Cpool_green) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,Cpool_green), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,Cpool_green) >= 0._wp)
+      & variable_name='c_green',           &
+      & fill_array = dsl4jsb_var_ptr(CARBON_,c_green))
+    dsl4jsb_var2D_onDomain(CARBON_,c_green) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_green), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_green) >= 0._wp)
 
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='Cpool_woods',             &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, Cpool_woods))
-    dsl4jsb_var2D_onDomain(CARBON_, Cpool_woods) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,Cpool_woods), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,Cpool_woods) >= 0._wp)
+      & variable_name='c_woods',             &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_woods))
+    dsl4jsb_var2D_onDomain(CARBON_, c_woods) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_woods), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_woods) >= 0._wp)
 
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='Cpool_reserve',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, Cpool_reserve))
-    dsl4jsb_var2D_onDomain(CARBON_,Cpool_reserve) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,Cpool_reserve), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,Cpool_reserve) >= 0._wp)
+      & variable_name='c_reserve',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_reserve))
+    dsl4jsb_var2D_onDomain(CARBON_,c_reserve) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_reserve), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_reserve) >= 0._wp)
 
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_acid_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_acid_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag1) >= 0._wp)
+      & variable_name='c_acid_ag1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_ag1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) >= 0._wp)
 
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_acid_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_acid_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag1) >= 0._wp)
+      & variable_name='c_acid_ag1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_ag1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_ethanol_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_ethanol_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_ag1) >= 0._wp)
+      & variable_name='c_ethanol_ag1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_ag1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_nonsoluble_ag1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_ag1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag1) >= 0._wp)
+      & variable_name='c_nonsoluble_ag1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_ag1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag1), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag1) >= 0._wp)
       
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_acid_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_acid_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_bg1) >= 0._wp)
+      & variable_name='c_acid_bg1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_bg1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_water_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_water_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_bg1) >= 0._wp)
+      & variable_name='c_water_bg1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_water_bg1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_water_bg1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_water_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_water_bg1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_ethanol_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_ethanol_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_bg1) >= 0._wp)
+      & variable_name='c_ethanol_bg1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_bg1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_nonsoluble_bg1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_bg1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg1) >= 0._wp)
+      & variable_name='c_nonsoluble_bg1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_bg1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg1), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_humus_1',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_humus_1))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_humus_1) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_humus_1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_humus_1) >= 0._wp)
+      & variable_name='c_humus_1',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_humus_1))
+    dsl4jsb_var2D_onDomain(CARBON_,c_humus_1) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_humus_1), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_humus_1) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_acid_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_acid_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_ag2) >= 0._wp)
+      & variable_name='c_acid_ag2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_ag2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_ag2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_water_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_water_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_ag2) >= 0._wp)
+      & variable_name='c_water_ag2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_water_ag2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_water_ag2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_water_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_water_ag2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_ethanol_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_ethanol_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_ag2) >= 0._wp)
+      & variable_name='c_ethanol_ag2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_ag2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_ag2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_nonsoluble_ag2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_ag2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_ag2) >= 0._wp)
+      & variable_name='c_nonsoluble_ag2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_ag2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag2), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_ag2) >= 0._wp)
 
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_acid_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_acid_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_acid_bg2) >= 0._wp)
+      & variable_name='c_acid_bg2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_acid_bg2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_acid_bg2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_water_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_water_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_water_bg2) >= 0._wp)
+      & variable_name='c_water_bg2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_water_bg2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_water_bg2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_water_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_water_bg2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_ethanol_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_ethanol_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_ethanol_bg2) >= 0._wp)
+      & variable_name='c_ethanol_bg2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_ethanol_bg2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_ethanol_bg2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_nonsoluble_bg2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_nonsoluble_bg2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2), 0._wp, &
-            dsl4jsb_var2D_onDomain(CARBON_,YCpool_nonsoluble_bg2) >= 0._wp)
+      & variable_name='c_nonsoluble_bg2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_nonsoluble_bg2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg2), 0._wp, &
+            dsl4jsb_var2D_onDomain(CARBON_,c_nonsoluble_bg2) >= 0._wp)
     !
     return_pointer => input_file%Read_2d(         &
-      & variable_name='YCpool_humus_2',          &
-      & fill_array = dsl4jsb_var_ptr(CARBON_, YCpool_humus_2))
-    dsl4jsb_var2D_onDomain(CARBON_,YCpool_humus_2) = &
-      MERGE(dsl4jsb_var2D_onDomain(CARBON_,YCpool_humus_2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,YCpool_humus_2) >= 0._wp)
+      & variable_name='c_humus_2',          &
+      & fill_array = dsl4jsb_var_ptr(CARBON_, c_humus_2))
+    dsl4jsb_var2D_onDomain(CARBON_,c_humus_2) = &
+      MERGE(dsl4jsb_var2D_onDomain(CARBON_,c_humus_2), 0._wp, dsl4jsb_var2D_onDomain(CARBON_,c_humus_2) >= 0._wp)
 
 
     CALL input_file%Close()

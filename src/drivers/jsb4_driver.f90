@@ -448,8 +448,9 @@ PROGRAM jsb4_driver
 
         IF (model%processes(CARBON_)%p%config%active) THEN 
           dsl4jsb_Get_memory(CARBON_)
-          CO2_flux_yday(:,iblk) = dsl4jsb_var2D_onChunk(CARBON_, CO2_flx2atm_npp_yday_ta) &
-            & + dsl4jsb_var2D_onChunk(CARBON_, CO2_flx2atm_soilresp_ta) + dsl4jsb_var2D_onChunk(CARBON_, CO2_flx2atm_herbivory_ta)
+          CO2_flux_yday(:,iblk) = dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta) &
+            & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta) &
+            & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)
           CALL check_carbon_conservation_for_operation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
             & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
           IF(.NOT. jsbach_is_restarted()) THEN

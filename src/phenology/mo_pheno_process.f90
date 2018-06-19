@@ -890,7 +890,7 @@ MODULE mo_pheno_process
                                           & lctlib_beta_leaf,               & ! <- in
                                           & lctlib_clumpinessFactor,        & ! <- in
                                           & lctlib_specificLeafArea_C,      & ! <- in
-                                          & Cpool_woods,                    & ! <- in
+                                          & c_woods,                    & ! <- in
                                           & current_max_green,              & ! <- InOut
                                           & veg_carbon_at_max_green,        & ! <- InOut
                                           & number_of_individuals,          & ! <- InOut
@@ -911,7 +911,7 @@ MODULE mo_pheno_process
                               & lctlib_beta_leaf,               & 
                               & lctlib_clumpinessFactor,        &
                               & lctlib_specificLeafArea_C,      &
-                              & Cpool_woods
+                              & c_woods
     REAL(wp), intent(inout) ::  current_max_green,              & 
                               & veg_carbon_at_max_green,        & 
                               & number_of_individuals,          & 
@@ -931,8 +931,8 @@ MODULE mo_pheno_process
 
     !For numerical reasons funct_allometry%FOM_alloc_vegetation_carbon_at_max_green_pool cannot be zero. 
     !We also want to set max_LAI to the minimum value after harvest, 
-    !    ie. when cbalance%Cpool_woods(kidx0:kidx1,itile)=zero.
-    IF ((veg_carbon_at_max_green .GT. PhenoParam%FR%min_c) .AND. (Cpool_woods .GT. PhenoParam%FR%min_c)) THEN 
+    !    ie. when cbalance%c_woods(kidx0:kidx1,itile)=zero.
+    IF ((veg_carbon_at_max_green .GT. PhenoParam%FR%min_c) .AND. (c_woods .GT. PhenoParam%FR%min_c)) THEN 
 
       !calculate number of individuals, assuming that forest is at self-thinning
       number_of_individuals = exp(MIN((log(veg_carbon_at_max_green * kgPerHa) - lctlib_alpha_nr_ind) &
@@ -967,20 +967,20 @@ MODULE mo_pheno_process
 
 
   ELEMENTAL SUBROUTINE track_max_green_pool( & 
-                                          & Cpool_green,                    & ! <- in
-                                          & Cpool_woods,                    & ! <- in
-                                          & Cpool_reserve,                  & ! <- in
-                                          & current_max_green,              & ! <- InOut
-                                          & veg_carbon_at_max_green )         ! <- inout
+                                          & c_green,                    & ! <- in
+                                          & c_woods,                    & ! <- in
+                                          & c_reserve,                  & ! <- in
+                                          & current_max_green,          & ! <- InOut
+                                          & veg_carbon_at_max_green )     ! <- inout
 
      !-----------------------------------------------------------------------
      !  ARGUMENTS
-     REAL(wp), intent(in)    :: Cpool_green, Cpool_woods, Cpool_reserve
+     REAL(wp), intent(in)    :: c_green, c_woods, c_reserve
      REAL(wp), intent(inout) :: current_max_green, veg_carbon_at_max_green
 
-     IF (current_max_green + EPSILON(1.0_wp) .LT. Cpool_green) THEN 
-       current_max_green = Cpool_green
-       veg_carbon_at_max_green = Cpool_green + Cpool_woods + Cpool_reserve 
+     IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN 
+       current_max_green = c_green
+       veg_carbon_at_max_green = c_green + c_woods + c_reserve 
      ENDIF
 
      RETURN

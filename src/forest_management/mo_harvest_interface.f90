@@ -140,30 +140,30 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_harvest
     dsl4jsb_Real3D_onChunk :: to_harvest
 
-    dsl4jsb_Real2D_onChunk :: Cpool_green
-    dsl4jsb_Real2D_onChunk :: Cpool_woods
-    dsl4jsb_Real2D_onChunk :: Cpool_reserve
+    dsl4jsb_Real2D_onChunk :: c_green
+    dsl4jsb_Real2D_onChunk :: c_woods
+    dsl4jsb_Real2D_onChunk :: c_reserve
     !
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag2
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag2
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag2
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag2
+    dsl4jsb_Real2D_onChunk :: c_acid_ag1
+    dsl4jsb_Real2D_onChunk :: c_water_ag1
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag1
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1
+    dsl4jsb_Real2D_onChunk :: c_acid_ag2
+    dsl4jsb_Real2D_onChunk :: c_water_ag2
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag2
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2
     ! below ground
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_water_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg2
-    dsl4jsb_Real2D_onChunk :: YCpool_water_bg2
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg2
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg2
+    dsl4jsb_Real2D_onChunk :: c_acid_bg1
+    dsl4jsb_Real2D_onChunk :: c_water_bg1
+    dsl4jsb_Real2D_onChunk :: c_ethanol_bg1
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk :: c_acid_bg2
+    dsl4jsb_Real2D_onChunk :: c_water_bg2
+    dsl4jsb_Real2D_onChunk :: c_ethanol_bg2
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_bg2
 
-    dsl4jsb_Real2D_onChunk :: YCpool_humus_1
-    dsl4jsb_Real2D_onChunk :: YCpool_humus_2
+    dsl4jsb_Real2D_onChunk :: c_humus_1
+    dsl4jsb_Real2D_onChunk :: c_humus_2
 
 
     ! Get local variables from options argument
@@ -199,27 +199,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(FM_,   to_harvest)
 
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_green)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_woods)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_reserve)            ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag1)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag1)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag1)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag2)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag2)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag2)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg1)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg1)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg1)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg2)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg2)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg2)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_2)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_reserve)            ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_bg1)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_bg1)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_bg1)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_bg1)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_bg2)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_bg2)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_bg2)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_bg2)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_1)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_2)           ! inout
 
     !
     ! ---------------------------
@@ -260,42 +260,42 @@ CONTAINS
             & harvested_area(:),             & ! in
             & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
             & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-            & Cpool_green(:),                & ! inout
-            & Cpool_woods(:),                & ! inout
-            & Cpool_reserve(:),              & ! inout
+            & c_green(:),                & ! inout
+            & c_woods(:),                & ! inout
+            & c_reserve(:),              & ! inout
             & dummy1(:),                     & ! inout
             & dummy2(:),                     & ! inout
-            & YCpool_acid_ag1(:),            & ! inout
-            & YCpool_water_ag1(:),           & ! inout
-            & YCpool_ethanol_ag1(:),         & ! inout
-            & YCpool_nonsoluble_ag1(:),      & ! inout
-            & YCpool_acid_ag2(:),            & ! inout
-            & YCpool_water_ag2(:),           & ! inout
-            & YCpool_ethanol_ag2(:),         & ! inout
-            & YCpool_nonsoluble_ag2(:),      & ! inout
-            & YCpool_acid_bg1(:),            & ! inout
-            & YCpool_water_bg1(:),           & ! inout
-            & YCpool_ethanol_bg1(:),         & ! inout
-            & YCpool_nonsoluble_bg1(:),      & ! inout
-            & YCpool_acid_bg2(:),            & ! inout
-            & YCpool_water_bg2(:),           & ! inout
-            & YCpool_ethanol_bg2(:),         & ! inout
-            & YCpool_nonsoluble_bg2(:),      & ! inout
-            & YCpool_humus_1(:),             & ! inout
-            & YCpool_humus_2(:)              & ! inout
+            & c_acid_ag1(:),            & ! inout
+            & c_water_ag1(:),           & ! inout
+            & c_ethanol_ag1(:),         & ! inout
+            & c_nonsoluble_ag1(:),      & ! inout
+            & c_acid_ag2(:),            & ! inout
+            & c_water_ag2(:),           & ! inout
+            & c_ethanol_ag2(:),         & ! inout
+            & c_nonsoluble_ag2(:),      & ! inout
+            & c_acid_bg1(:),            & ! inout
+            & c_water_bg1(:),           & ! inout
+            & c_ethanol_bg1(:),         & ! inout
+            & c_nonsoluble_bg1(:),      & ! inout
+            & c_acid_bg2(:),            & ! inout
+            & c_water_bg2(:),           & ! inout
+            & c_ethanol_bg2(:),         & ! inout
+            & c_nonsoluble_bg2(:),      & ! inout
+            & c_humus_1(:),             & ! inout
+            & c_humus_2(:)              & ! inout
             & )
 
           CALL recalc_per_tile_vars(tile, options, &
-            & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
-            & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
-            & YCpool_ethanol_ag1 = YCpool_ethanol_ag1(:), YCpool_nonsoluble_ag1 = YCpool_nonsoluble_ag1(:), &
-            & YCpool_acid_ag2 = YCpool_acid_ag2(:), YCpool_water_ag2 = YCpool_water_ag2(:), &
-            & YCpool_ethanol_ag2 = YCpool_ethanol_ag2(:), YCpool_nonsoluble_ag2 = YCpool_nonsoluble_ag2(:), &
-            & YCpool_acid_bg1 = YCpool_acid_bg1(:), YCpool_water_bg1 = YCpool_water_bg1(:), &
-            & YCpool_ethanol_bg1 = YCpool_ethanol_bg1(:), YCpool_nonsoluble_bg1 = YCpool_nonsoluble_bg1(:), &
-            & YCpool_acid_bg2 = YCpool_acid_bg2(:), YCpool_water_bg2 = YCpool_water_bg2(:), &
-            & YCpool_ethanol_bg2 = YCpool_ethanol_bg2(:), YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2(:), &
-            & YCpool_humus_1 = YCpool_humus_1(:), YCpool_humus_2 = YCpool_humus_2(:))
+            & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
+            & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
+            & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+            & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
+            & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+            & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
+            & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+            & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
+            & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+            & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:))
 
           ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
           dummy1 = 0._wp

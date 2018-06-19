@@ -27,7 +27,7 @@ MODULE mo_disturb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, HYDRO_, RAD_, A2L_, CARBON_, SEB_, FAGE_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, CARBON_, SEB_, FAGE_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(ASSIMI_)
@@ -39,6 +39,7 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
@@ -143,6 +144,7 @@ CONTAINS
 
     ! Declare process memories
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
@@ -177,37 +179,39 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: burned_frac
     dsl4jsb_Real2D_onChunk :: damaged_frac
     !
-    dsl4jsb_Real2D_onChunk :: Cpool_green
-    dsl4jsb_Real2D_onChunk :: Cpool_woods
-    dsl4jsb_Real2D_onChunk :: Cpool_reserve
-    dsl4jsb_Real2D_onChunk :: carbon_2_GreenLitterPools
-    dsl4jsb_Real2D_onChunk :: carbon_2_WoodLitterPools
+    dsl4jsb_Real2D_onChunk :: c_green
+    dsl4jsb_Real2D_onChunk :: c_woods
+    dsl4jsb_Real2D_onChunk :: c_reserve
+    dsl4jsb_Real2D_onChunk :: cflux_dist_greenreserve_2_soil
+    dsl4jsb_Real2D_onChunk :: cflux_dist_woods_2_soil
     !
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag1
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_ag2
-    dsl4jsb_Real2D_onChunk :: YCpool_water_ag2
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_ag2
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_ag2
+    dsl4jsb_Real2D_onChunk :: c_acid_ag1
+    dsl4jsb_Real2D_onChunk :: c_water_ag1
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag1
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1
+    dsl4jsb_Real2D_onChunk :: c_acid_ag2
+    dsl4jsb_Real2D_onChunk :: c_water_ag2
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag2
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2
     ! below ground
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_water_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg1
-    dsl4jsb_Real2D_onChunk :: YCpool_acid_bg2
-    dsl4jsb_Real2D_onChunk :: YCpool_water_bg2
-    dsl4jsb_Real2D_onChunk :: YCpool_ethanol_bg2
-    dsl4jsb_Real2D_onChunk :: YCpool_nonsoluble_bg2
+    dsl4jsb_Real2D_onChunk :: c_acid_bg1
+    dsl4jsb_Real2D_onChunk :: c_water_bg1
+    dsl4jsb_Real2D_onChunk :: c_ethanol_bg1
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk :: c_acid_bg2
+    dsl4jsb_Real2D_onChunk :: c_water_bg2
+    dsl4jsb_Real2D_onChunk :: c_ethanol_bg2
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_bg2
     !
-    dsl4jsb_Real2D_onChunk :: YCpool_humus_1
-    dsl4jsb_Real2D_onChunk :: YCpool_humus_2
-    dsl4jsb_Real2D_onChunk :: carbon_2_atmos
-
+    dsl4jsb_Real2D_onChunk :: c_humus_1
+    dsl4jsb_Real2D_onChunk :: c_humus_2
+    dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm
+    !
+    dsl4jsb_Real2D_onChunk :: veg_frac_correction
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: cover_frac_pot
-
-    dsl4jsb_Real2D_onChunk :: carbon_2_atmos_ta
+    !
+    dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm_ta
 
     ! Locally allocated vectors
     !
@@ -241,6 +245,7 @@ CONTAINS
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
@@ -266,39 +271,39 @@ CONTAINS
     END IF 
 
     !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_green)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_woods)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Cpool_reserve)            ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_GreenLitterPools)! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_WoodLitterPools) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_reserve)            ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_greenreserve_2_soil)! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil) ! inout
     !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag1)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag1)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag1)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_ag2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_ag2)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_ag2)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_ag2)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2)    ! inout
     ! below ground
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg1)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg1)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg1)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_acid_bg2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_water_bg2)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_ethanol_bg2)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_nonsoluble_bg2)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_bg1)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_bg1)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_bg1)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_bg1)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_bg2)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_bg2)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_bg2)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_bg2)    ! inout
     !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    YCpool_humus_2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_atmos)           ! inout
-
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_1)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_2)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm)     ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,     veg_frac_correction )     ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max )           ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_frac_pot)           ! in
 
     ! for the conservation test 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    carbon_2_atmos_ta)        ! in
-
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm_ta)  ! in
 
     ! ---------------------------
     ! Go
@@ -324,8 +329,8 @@ CONTAINS
     END IF
 
     IF (is_newday()) THEN ! only once per day
-      carbon_2_GreenLitterPools(:) = 0._wp
-      carbon_2_WoodLitterPools(:) = 0._wp
+      cflux_dist_greenreserve_2_soil(:) = 0._wp
+      cflux_dist_woods_2_soil(:) = 0._wp
 
       burned_frac(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) & 
@@ -409,117 +414,117 @@ CONTAINS
           SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
             CASE (0) !! No windbreak algorithm
             CASE (1) !! jsbach algorithm
-
+            
               CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
-
+            
               CALL relocate_carbon_damage(       &
                 & damaged_frac(:),               & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
                 & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-                & Cpool_green(:),                & ! inout
-                & Cpool_woods(:),                & ! inout
-                & Cpool_reserve(:),              & ! inout
-                & carbon_2_GreenLitterPools(:),  & ! inout
-                & carbon_2_WoodLitterPools(:),   & ! inout
-                & YCpool_acid_ag1(:),            & ! inout
-                & YCpool_water_ag1(:),           & ! inout
-                & YCpool_ethanol_ag1(:),         & ! inout
-                & YCpool_nonsoluble_ag1(:),      & ! inout
-                & YCpool_acid_ag2(:),            & ! inout
-                & YCpool_water_ag2(:),           & ! inout
-                & YCpool_ethanol_ag2(:),         & ! inout
-                & YCpool_nonsoluble_ag2(:),      & ! inout
-                & YCpool_acid_bg1(:),            & ! inout
-                & YCpool_water_bg1(:),           & ! inout
-                & YCpool_ethanol_bg1(:),         & ! inout
-                & YCpool_nonsoluble_bg1(:),      & ! inout
-                & YCpool_acid_bg2(:),            & ! inout
-                & YCpool_water_bg2(:),           & ! inout
-                & YCpool_ethanol_bg2(:),         & ! inout
-                & YCpool_nonsoluble_bg2(:),      & ! inout
-                & YCpool_humus_1(:),             & ! inout
-                & YCpool_humus_2(:)              & ! inout
+                & c_green(:),                & ! inout
+                & c_woods(:),                & ! inout
+                & c_reserve(:),              & ! inout
+                & cflux_dist_greenreserve_2_soil(:),  & ! inout
+                & cflux_dist_woods_2_soil(:),   & ! inout
+                & c_acid_ag1(:),            & ! inout
+                & c_water_ag1(:),           & ! inout
+                & c_ethanol_ag1(:),         & ! inout
+                & c_nonsoluble_ag1(:),      & ! inout
+                & c_acid_ag2(:),            & ! inout
+                & c_water_ag2(:),           & ! inout
+                & c_ethanol_ag2(:),         & ! inout
+                & c_nonsoluble_ag2(:),      & ! inout
+                & c_acid_bg1(:),            & ! inout
+                & c_water_bg1(:),           & ! inout
+                & c_ethanol_bg1(:),         & ! inout
+                & c_nonsoluble_bg1(:),      & ! inout
+                & c_acid_bg2(:),            & ! inout
+                & c_water_bg2(:),           & ! inout
+                & c_ethanol_bg2(:),         & ! inout
+                & c_nonsoluble_bg2(:),      & ! inout
+                & c_humus_1(:),             & ! inout
+                & c_humus_2(:)              & ! inout
                 & )
 
-              CALL recalc_per_tile_vars(tile, options, &
-                & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
-                & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
-                & YCpool_ethanol_ag1 = YCpool_ethanol_ag1(:), YCpool_nonsoluble_ag1 = YCpool_nonsoluble_ag1(:), &
-                & YCpool_acid_ag2 = YCpool_acid_ag2(:), YCpool_water_ag2 = YCpool_water_ag2(:), &
-                & YCpool_ethanol_ag2 = YCpool_ethanol_ag2(:), YCpool_nonsoluble_ag2 = YCpool_nonsoluble_ag2(:), &
-                & YCpool_acid_bg1 = YCpool_acid_bg1(:), YCpool_water_bg1 = YCpool_water_bg1(:), &
-                & YCpool_ethanol_bg1 = YCpool_ethanol_bg1(:), YCpool_nonsoluble_bg1 = YCpool_nonsoluble_bg1(:), &
-                & YCpool_acid_bg2 = YCpool_acid_bg2(:), YCpool_water_bg2 = YCpool_water_bg2(:), &
-                & YCpool_ethanol_bg2 = YCpool_ethanol_bg2(:), YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2(:), &
-                & YCpool_humus_1 = YCpool_humus_1(:), YCpool_humus_2 = YCpool_humus_2(:), &
-                & carbon_2_GreenLitterPools = carbon_2_GreenLitterPools(:), &
-                & carbon_2_WoodLitterPools = carbon_2_WoodLitterPools(:))
+                CALL recalc_per_tile_vars(tile, options, &
+                  & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
+                  & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
+                  & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                  & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
+                  & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                  & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
+                  & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                  & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
+                  & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                  & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:), &
+                  & cflux_dist_greenreserve_2_soil = cflux_dist_greenreserve_2_soil(:), &
+                  & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
 
-
-              ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
-              dummy_flux = 0._wp
-              CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
-                & dummy_flux(:), cconservation_wind(:))
-
+                ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
+                dummy_flux = 0._wp
+                CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+                  & dummy_flux(:), cconservation_wind(:))
+                
             CASE DEFAULT
               CALL finish('disturbed_frac','Unknown windbreak algorithm')
           END SELECT
 
-          carbon_2_atmos = 0._wp
+          cflux_fire_all_2_atm = 0._wp
           SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
             CASE (0) !! No fire algorithm
             CASE (1) !! jsbach algorithm
-
+            
               CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
-
+            
               CALL relocate_carbon_fire( &
                 & burned_frac(:),                & ! in, only for windbreak
                 & dsl4jsb_Config(CARBON_)%fire_frac_wood_2_atmos , & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
                 & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-                & Cpool_green(:),                & ! inout
-                & Cpool_woods(:),                & ! inout
-                & Cpool_reserve(:),              & ! inout
-                & carbon_2_GreenLitterPools(:),  & ! inout
-                & carbon_2_WoodLitterPools(:),   & ! inout
-                & YCpool_acid_ag1(:),            & ! inout
-                & YCpool_water_ag1(:),           & ! inout
-                & YCpool_ethanol_ag1(:),         & ! inout
-                & YCpool_nonsoluble_ag1(:),      & ! inout
-                & YCpool_acid_ag2(:),            & ! inout
-                & YCpool_water_ag2(:),           & ! inout
-                & YCpool_ethanol_ag2(:),         & ! inout
-                & YCpool_nonsoluble_ag2(:),      & ! inout
-                & YCpool_acid_bg1(:),            & ! inout
-                & YCpool_water_bg1(:),           & ! inout
-                & YCpool_ethanol_bg1(:),         & ! inout
-                & YCpool_nonsoluble_bg1(:),      & ! inout
-                & YCpool_acid_bg2(:),            & ! inout
-                & YCpool_water_bg2(:),           & ! inout
-                & YCpool_ethanol_bg2(:),         & ! inout
-                & YCpool_nonsoluble_bg2(:),      & ! inout
-                & YCpool_humus_1(:),             & ! inout
-                & YCpool_humus_2(:),             & ! inout
-                & carbon_2_atmos(:)              & ! inout
+                & c_green(:),                & ! inout
+                & c_woods(:),                & ! inout
+                & c_reserve(:),              & ! inout
+                & cflux_dist_greenreserve_2_soil(:),  & ! inout
+                & cflux_dist_woods_2_soil(:),   & ! inout
+                & c_acid_ag1(:),            & ! inout
+                & c_water_ag1(:),           & ! inout
+                & c_ethanol_ag1(:),         & ! inout
+                & c_nonsoluble_ag1(:),      & ! inout
+                & c_acid_ag2(:),            & ! inout
+                & c_water_ag2(:),           & ! inout
+                & c_ethanol_ag2(:),         & ! inout
+                & c_nonsoluble_ag2(:),      & ! inout
+                & c_acid_bg1(:),            & ! inout
+                & c_water_bg1(:),           & ! inout
+                & c_ethanol_bg1(:),         & ! inout
+                & c_nonsoluble_bg1(:),      & ! inout
+                & c_acid_bg2(:),            & ! inout
+                & c_water_bg2(:),           & ! inout
+                & c_ethanol_bg2(:),         & ! inout
+                & c_nonsoluble_bg2(:),      & ! inout
+                & c_humus_1(:),             & ! inout
+                & c_humus_2(:),             & ! inout
+                & cflux_fire_all_2_atm      & ! out
                 & )
 
               CALL recalc_per_tile_vars(tile, options, &
-                & Cpool_green= Cpool_green(:), Cpool_woods = Cpool_woods(:), Cpool_reserve = Cpool_reserve(:), &
-                & YCpool_acid_ag1 = YCpool_acid_ag1(:), YCpool_water_ag1 = YCpool_water_ag1(:), &
-                & YCpool_ethanol_ag1 = YCpool_ethanol_ag1(:), YCpool_nonsoluble_ag1 = YCpool_nonsoluble_ag1(:), &
-                & YCpool_acid_ag2 = YCpool_acid_ag2(:), YCpool_water_ag2 = YCpool_water_ag2(:), &
-                & YCpool_ethanol_ag2 = YCpool_ethanol_ag2(:), YCpool_nonsoluble_ag2 = YCpool_nonsoluble_ag2(:), &
-                & YCpool_acid_bg1 = YCpool_acid_bg1(:), YCpool_water_bg1 = YCpool_water_bg1(:), &
-                & YCpool_ethanol_bg1 = YCpool_ethanol_bg1(:), YCpool_nonsoluble_bg1 = YCpool_nonsoluble_bg1(:), &
-                & YCpool_acid_bg2 = YCpool_acid_bg2(:), YCpool_water_bg2 = YCpool_water_bg2(:), &
-                & YCpool_ethanol_bg2 = YCpool_ethanol_bg2(:), YCpool_nonsoluble_bg2 = YCpool_nonsoluble_bg2(:), &
-                & YCpool_humus_1 = YCpool_humus_1(:), YCpool_humus_2 = YCpool_humus_2(:), &
-                & carbon_2_GreenLitterPools = carbon_2_GreenLitterPools(:), &
-                & carbon_2_WoodLitterPools = carbon_2_WoodLitterPools(:), carbon_2_atmos = carbon_2_atmos(:))
+                & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
+                & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
+                & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
+                & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
+                & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
+                & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:), &
+                & cflux_dist_greenreserve_2_soil = cflux_dist_greenreserve_2_soil(:), &
+                & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:), &
+                & cflux_fire_all_2_atm = cflux_fire_all_2_atm(:))
 
               ! negate carbon_2_atmos_ta -- its a flux away from the land and therefore previously negative
               CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
-                & -carbon_2_atmos_ta(:), cconservation_fire(:))
+                & -cflux_fire_all_2_atm_ta(:), cconservation_fire(:))
 
             CASE (2) !! Arora & Boer algorithm
               CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
@@ -531,7 +536,7 @@ CONTAINS
           END SELECT
 
           ! R: This corresponds to JS3, but I did not understand it...
-          !    disturbance%disturb_2_atmos corresponds to dsl4jsb_Get_var2D_onChunk(CARBON_,  carbon_2_atmos )
+          !    disturbance%disturb_2_atmos corresponds to dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_fire_all_2_atm )
           !    However, I guess it is better not to take this from JS3.
           !IF ( tile%Is_process_active(CARBON_) ) THEN
           !  ! Calculate CO2 and other fluxes to the atmosphere (updated once a day)
@@ -597,46 +602,22 @@ CONTAINS
     !dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m,           weighted_by_fract)
 
     IF ( tile%Is_process_active(CARBON_) ) THEN
-
-      !@todo: these are not even aggregated in the carbon process!
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green,               weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods,               weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve,             weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_GreenLitterPools, weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_WoodLitterPools,  weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag1,           weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag1,          weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag1,        weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag1,     weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag2,           weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag2,          weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag2,        weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag2,     weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1,            weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2,            weighted_by_fract)
-       ! dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_atmos,            weighted_by_fract)
-
-       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_green_ta,               weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_woods_ta,               weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  Cpool_reserve_ta,             weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_GreenLitterPools_ta, weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_WoodLitterPools_ta,  weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag1_ta,           weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag1_ta,          weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag1_ta,        weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag1_ta,     weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_acid_ag2_ta,           weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_water_ag2_ta,          weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_ethanol_ag2_ta,        weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_nonsoluble_ag2_ta,     weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_1_ta,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  YCpool_humus_2_ta,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  carbon_2_atmos_ta,            weighted_by_fract)
-
-       IF (.NOT. tile%Is_process_active(FAGE_)) THEN
-         dsl4jsb_Aggregate_onChunk(DISTURB_,  cconservation_wind,            weighted_by_fract)
-         dsl4jsb_Aggregate_onChunk(DISTURB_,  cconservation_fire,            weighted_by_fract)
-       ENDIF
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,               weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,               weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,             weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil_ta, weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta,  weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag1_ta,           weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag1_ta,          weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag1_ta,        weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag1_ta,     weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag2_ta,           weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag2_ta,          weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag2_ta,        weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag2_ta,     weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm_ta,            weighted_by_fract)
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
