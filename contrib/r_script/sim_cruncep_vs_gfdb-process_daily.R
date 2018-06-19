@@ -48,7 +48,7 @@ for (s in 1:nsite) {
    nflux            <- read.table(paste(dirnames[[s]],'output/','vegfluxN_daily.txt',sep=''),header=T)
    pflux            <- read.table(paste(dirnames[[s]],'output/','vegfluxP_daily.txt',sep=''),header=T)
    cnp_soilpool     <- read.table(paste(dirnames[[s]],'output/','soilpoolOrg_daily.txt',sep=''),header=T)
-   c13c14_soilpool  <- read.table(paste(dirnames[[s]],'output/','soilpooldC13DC14dN15_daily.txt',sep=''),header=T)
+   c13c14n15_soilpool <- read.table(paste(dirnames[[s]],'output/','soilpooldC13DC14dN15_daily.txt',sep=''),header=T)
    cc13c14_soilflux <- read.table(paste(dirnames[[s]],'output/','soilfluxCdC13DC14_daily.txt',sep=''),header=T)
    n_soilflux       <- read.table(paste(dirnames[[s]],'output/','soilfluxN_daily.txt',sep=''),header=T)  
    p_soilflux       <- read.table(paste(dirnames[[s]],'output/','soilfluxP_daily.txt',sep=''),header=T)  
@@ -61,6 +61,7 @@ for (s in 1:nsite) {
    nnfluxvar        <- dim(nflux)[2]-1
    npfluxvar        <- dim(pflux)[2]-1
    ncnpsoilpoolvar  <- dim(cnp_soilpool)[2]-1
+   nc13c14n15soilpoolvar <- dim(c13c14n15_soilpool)[2]-1
    ncsoilfluxvar    <- dim(cc13c14_soilflux)[2]-1
    nnsoilfluxvar    <- dim(n_soilflux)[2]-1
    npsoilfluxvar    <- dim(p_soilflux)[2]-1
@@ -149,15 +150,31 @@ for (s in 1:nsite) {
 
    #isotope signature
    if(s==1) { 
-      isotope_mean<-array(NA,c(nsite,3))
-      colnames(isotope_mean)<-c('Leaf_dC13','SapWood_DC14','HeartWood_DC14')
-      isotope_std<-isotope_mean
+      c_isotope_mean<-array(NA,c(nsite,3))
+      colnames(c_isotope_mean)<-c('Leaf_dC13','SapWood_DC14','HeartWood_DC14')
+      c_isotope_std<-c_isotope_mean
    }
    var_idx<-which(colnames(c1314pool)=='Leaf_dC13'|colnames(c1314pool)=='SapWood_DC14'|colnames(c1314pool)=='HeartWood_DC14')
    for (var in var_idx) {
-     hlp1<-aggregate(c1314pool[,var],list(yearidx),mean)
-     isotope_mean[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
-     isotope_std[s,which(colnames(isotope_mean)==colnames(c1314pool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+     cn<-colnames(c1314pool)
+     if(cn[var]=='Leaf_dC13') c1314pool[abs(c1314pool[,var])<0.0001,var]<-NA
+     hlp1<-aggregate(c1314pool[,var],list(yearidx),mean,na.rm=T)
+     c_isotope_mean[s,which(colnames(c_isotope_mean)==colnames(c1314pool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+     c_isotope_std[s,which(colnames(c_isotope_mean)==colnames(c1314pool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+   }
+
+   if(s==1) { 
+      n_isotope_mean<-array(NA,c(nsite,2))
+      colnames(n_isotope_mean)<-c('Leaf_d15N','Total_dN15')
+      n_isotope_std<-n_isotope_mean
+   }
+   var_idx<-which(colnames(n15pool)=='Leaf_d15N'|colnames(n15pool)=='Total_dN15')
+   for (var in var_idx) {
+     cn<-colnames(n15pool)
+     if(cn[var]=='Leaf_d15N') n15pool[abs(n15pool[,var])<0.0001,var]<-NA
+     hlp1<-aggregate(n15pool[,var],list(yearidx),mean,na.rm=T)
+     n_isotope_mean[s,which(colnames(n_isotope_mean)==colnames(n15pool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
+     n_isotope_std[s,which(colnames(n_isotope_mean)==colnames(n15pool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
    }
 
    #soil water
@@ -168,7 +185,11 @@ for (s in 1:nsite) {
    }
    var_idx<-which(colnames(h2opool)=='RootZoneSoilMoisture'|colnames(h2opool)=='RootZoneSoilWaterPotential')
    for (var in var_idx) {
-     if(colnames(h2opool)[var]=='RootZoneSoilMoisture') {hlp1<-aggregate(h2opool[,var],list(yearidx),mean)/aggregate(h2opool[,var],list(yearidx),max)} 
+     if(colnames(h2opool)[var]=='RootZoneSoilMoisture') {
+         maxval<-max(h2opool[,var])
+         tsval<-h2opool[,var]/maxval
+         hlp1<-aggregate(tsval,list(yearidx),mean)
+     }
      else {hlp1<-aggregate(h2opool[,var],list(yearidx),min)} 
      soilwater_mean[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
      soilwater_std[s,which(colnames(soilwater_mean)==colnames(h2opool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
@@ -198,6 +219,17 @@ for (s in 1:nsite) {
      hlp1<-aggregate(cnp_soilpool[,var+1],list(yearidx),max) 
      cnp_soilpool_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
      cnp_soilpool_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
+   }
+   # isotopic signature soil organic pools
+   if(s==1) { 
+      c13c14n15_soilpool_mean<-array(NA,c(nsite,nc13c14n15soilpoolvar))
+      colnames(c13c14n15_soilpool_mean)<-colnames(c13c14n15_soilpool)[1+1:nc13c14n15soilpoolvar]
+      c13c14n15_soilpool_std<-c13c14n15_soilpool_mean
+   }
+   for (var in 1:nc13c14n15soilpoolvar) {
+     hlp1<-aggregate(c13c14n15_soilpool[,var+1],list(yearidx),max) 
+     c13c14n15_soilpool_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     c13c14n15_soilpool_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
    # soil cfluxes pools
    if(s==1) { 
@@ -260,13 +292,47 @@ for (s in 1:nsite) {
    }
 }   
 
+# hack for simple
+soil_org_isotope_mean<-array(NA,c(nsite,6))
+colnames(soil_org_isotope_mean)<-c('Litter_dC13','Litter_DC14','Litter_dN15','SOM_dC13','SOM_DC14','SOM_dN15')
+soil_org_isotope_std<-soil_org_isotope_mean
+
+pool_mean<-data.frame(cnp_soilpool_mean)
+pool_std<-data.frame(cnp_soilpool_std)
+iso_mean<-data.frame(c13c14n15_soilpool_mean)
+iso_std<-data.frame(c13c14n15_soilpool_std)
+soil_org_isotope_mean[,1]<-((iso_mean$MetLitterdC13*pool_mean$MetLitterC+
+                             iso_mean$StrLitterdC13*pool_mean$StrLitterC+
+                             iso_mean$WodLitterdC13*pool_mean$WodLitterC)/
+                            (pool_mean$MetLitterC+pool_mean$StrLitterC+pool_mean$WodLitterC))
+soil_org_isotope_mean[,2]<-((iso_mean$MetLitterDC14*pool_mean$MetLitterC+
+                             iso_mean$StrLitterDC14*pool_mean$StrLitterC+
+                             iso_mean$WodLitterDC14*pool_mean$WodLitterC)/
+                            (pool_mean$MetLitterC+pool_mean$StrLitterC+pool_mean$WodLitterC))
+soil_org_isotope_mean[,3]<-((iso_mean$MetLitterdN15*pool_mean$MetLitterN+
+                             iso_mean$StrLitterdN15*pool_mean$StrLitterN+
+                             iso_mean$WodLitterN15*pool_mean$WodLitterN)/
+                            (pool_mean$MetLitterN+pool_mean$StrLitterN+pool_mean$WodLitterN))
+soil_org_isotope_mean[,4]<-((iso_mean$FastdC13*pool_mean$FastC+
+                             iso_mean$SlowdC13*pool_mean$SlowC)/
+                            (pool_mean$FastC+pool_mean$SlowC))
+soil_org_isotope_mean[,5]<-((iso_mean$FastDC14*pool_mean$FastC+
+                             iso_mean$SlowDC14*pool_mean$SlowC)/
+                            (pool_mean$FastC+pool_mean$SlowC))
+soil_org_isotope_mean[,6]<-((iso_mean$FastdN15*pool_mean$FastN+
+                             iso_mean$SlowdN15*pool_mean$SlowN)/
+                            (pool_mean$FastN+pool_mean$SlowN))
+
+
 # mean values:         slm_site_mean.csv
-out_mean<-cbind(site_str,cpool_mean,diag_mean,stoch_mean,cflux_mean,nflux_mean,pflux_mean,isotope_mean,
-                soilwater_mean,cnp_soilpool_mean,cc13c14_soilflux_mean,n_soilflux_mean,n_soilflux_mean, 
-                atm_forcing_mean,h2oflux_mean)
+out_mean<-cbind(site_str,cpool_mean,stoch_mean,diag_mean,cnp_soilpool_mean,
+                         cflux_mean,nflux_mean,n_soilflux_mean,pflux_mean,p_soilflux_mean,h2oflux_mean,
+                         c_isotope_mean,n_isotope_mean,soil_org_isotope_mean,cc13c14_soilflux_mean,
+                         soilwater_mean,atm_forcing_mean)
 write.csv(out_mean,file='slm_site_mean.csv',quote=F)
 # standard deviation:  slm_site_sd.csv
-out_std<-cbind(site_str,cpool_std,diag_std,stoch_std,cflux_std,nflux_std,pflux_std,isotope_std,
-               soilwater_std,cnp_soilpool_std,cc13c14_soilflux_std,n_soilflux_std,p_soilflux_std, 
-               atm_forcing_std,h2oflux_std)
+out_std<-cbind(site_str,cpool_std,stoch_std,diag_std,cnp_soilpool_std,
+                         cflux_std,nflux_std,n_soilflux_std,pflux_std,p_soilflux_std,h2oflux_std,
+                         c_isotope_std,n_isotope_std,soil_org_isotope_std,cc13c14_soilflux_std,
+                         soilwater_std,atm_forcing_std)
 write.csv(out_std,file='slm_site_sd.csv',quote=F)
