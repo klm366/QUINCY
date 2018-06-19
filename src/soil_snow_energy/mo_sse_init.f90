@@ -224,14 +224,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
-    LOGICAL  :: l_compat401
     INTEGER  :: nsoil, nproma, nblks
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_properties'
 
     model => Get_model(tile%owner_model_id)
-
-    l_compat401 = model%config%l_compat401
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -313,20 +310,15 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      IF (model%config%l_compat401) THEN
-        vol_heat_cap_snow(:,:) = 634500._wp
-        heat_cond_snow   (:,:) = 0.31_wp
+      IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
+        ! USe snow density values for fresh snow for initialization
+        vol_heat_cap_snow(:,:) = ci * dens_snow_min                               ! Use specific heat of ice (Verseghy 1991)
+        heat_cond_snow   (:,:) = 2.5e-6_wp*dens_snow_min**2._wp - 0.123e-3_wp*dens_snow_min + 0.024_wp ! Calonne et al. (2011)
+        ! vol_heat_cap_snow(:,:) = vol_hcap_snow_min
+        ! heat_cond_snow   (:,:) = hcond_snow_min
       ELSE
-        IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-          ! USe snow density values for fresh snow for initialization
-          vol_heat_cap_snow(:,:) = ci * dens_snow_min                               ! Use specific heat of ice (Verseghy 1991)
-          heat_cond_snow   (:,:) = 2.5e-6_wp*dens_snow_min**2._wp - 0.123e-3_wp*dens_snow_min + 0.024_wp ! Calonne et al. (2011)
-          ! vol_heat_cap_snow(:,:) = vol_hcap_snow_min
-          ! heat_cond_snow   (:,:) = hcond_snow_min
-        ELSE
-          vol_heat_cap_snow(:,:) = vol_hcap_snow
-          heat_cond_snow   (:,:) = hcond_snow
-        END IF
+        vol_heat_cap_snow(:,:) = vol_hcap_snow
+        heat_cond_snow   (:,:) = hcond_snow
       END IF
     ! ELSE
     !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old

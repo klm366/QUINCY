@@ -158,19 +158,19 @@ CONTAINS
 
     IF (tile%contains_vegetation) THEN
       ! Get canopy albedo
-      return_pointer => input_file%Read_2d( &
-        & variable_name='albedo_veg_vis',   &
-        & fill_array = dsl4jsb_var_ptr(RAD_, alb_vis_can))
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+        return_pointer => input_file%Read_2d( &
+          & variable_name='albedo_veg_vis',   &
+          & fill_array = dsl4jsb_var_ptr(RAD_, alb_vis_can))
         dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = &
           & MERGE(dsl4jsb_var2D_onDomain(RAD_, alb_vis_can), 0._wp, dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) >= 0._wp)
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
       END IF
-      return_pointer => input_file%Read_2d( &
-        & variable_name='albedo_veg_nir',   &
-        & fill_array = dsl4jsb_var_ptr(RAD_, alb_nir_can))
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+        return_pointer => input_file%Read_2d( &
+          & variable_name='albedo_veg_nir',   &
+          & fill_array = dsl4jsb_var_ptr(RAD_, alb_nir_can))
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = &
           & MERGE(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), 0._wp, dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) >= 0._wp)
       ELSE

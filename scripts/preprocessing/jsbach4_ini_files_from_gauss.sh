@@ -16,15 +16,15 @@ rootdir=/pool/data/ICON/grids
 case `hostname` in
   mlogin*|mistralpp*)
     basedir=${rootdir}/private/jsbach
-    #basedir=/work/mj0060/m212005/ini_files/jsbach4/icon                             # for local use
+    #basedir=/work/mj0060/m212005/ini_files/jsbach4/icon                                  # for local use
     #
-    #output_path=${rootdir}/public/mpim                                             # eventually it should be this
-    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land  # temporary
-    #output_path=/work/mj0060/m212005/data/icon                                      # for local use
+    #output_path=${rootdir}/public/mpim                                                   # eventually it should be this
+    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land/r0002  # temporary
+    #output_path=/work/mj0060/m212005/data/icon                                           # for local use
     ;;
   *)
-    basedir=/scratch/local1/m220053/ini_files/jsbach4/icon                          # for local use
-    output_path=/scratch/local1/m220053/ini_files/jsbach4                           # for local use
+    basedir=/scratch/local1/m220053/ini_files/jsbach4/icon                                # for local use
+    output_path=/scratch/local1/m220053/ini_files/jsbach4                                 # for local use
     ;;
 esac
 
@@ -37,12 +37,12 @@ old_r2b4_amip=false                                       # Temporary: old r2b4_
   grid_path=/pool/data/ICON/grids/private/r2b4_amip
 
 bisections="0 1 2 3 4 5 6 7 8 9 10 11"
-#bisections="4"  # for testing
-ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
-#ggrids="T63"    # for testing
+#bisections="4"                          # for testing
+#ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
+#ggrids="T63"                            # for testing
+ggrids=""                                # disable gaussian grids
 
 
-remap_scheme=ycon
 declare -A source_res_dict
 source_res_dict[0]=05 #vg T31
 source_res_dict[1]=05 #vg T31
@@ -496,10 +496,12 @@ function crosscheck_vars {
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
+  debug_file ${grid_name}_soil_field_remap.nc
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
   mv ${temp} ${grid_name}_maxmoist_remap.nc
+  debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
@@ -632,6 +634,54 @@ function generate_output_files {
 
 }
 
+function modify_soil_and_root_depth {
+
+  local soil_depth=${grid_name}_soil_depth_remap.nc
+  local root_depth=${grid_name}_root_depth_remap.nc
+
+  local temp=temp_$$
+
+  echo "Modifying soil and root depth ..."
+
+  # masks for tropics and extra-tropics (NH and SH)
+  ${cdo} gtc,-1. -masklonlatbox,0.,360.,30.,90.   ${soil_depth} ${temp}_NH_mask.nc
+  ${cdo} gtc,-1. -masklonlatbox,0.,360.,-90.,-30. ${soil_depth} ${temp}_SH_mask.nc
+  ${cdo} gtc,-1. -masklonlatbox,0.,360.,-30.,30.  ${soil_depth} ${temp}_EQ_mask.nc
+
+  # soil depth
+  ${cdo} mulc,0.7 -mul ${soil_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_soil_depth_EQ.nc
+  ${cdo} mul -addc,0.2 ${soil_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_soil_depth_NH.nc
+  ${cdo} mul -addc,0.2 ${soil_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_soil_depth_SH.nc
+  ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
+  ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
+
+  # root depth
+  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
+  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
+  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
+  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
+  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+
+  # keep minimum values (0.3m for root depth and 0.5m for soil depth)
+  ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc
+  ${cdo} setctomiss,0. ${temp}_soil_depth_all_05.nc ${temp}_soil_depth_all_05_miss.nc
+  ${cdo} setmisstoc,0.5 -subc,1. ${temp}_soil_depth_all_05_miss.nc ${temp}_soil_depth_all_05_0.nc
+  ${cdo} add ${temp}_soil_depth_all_05_0.nc -mul ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc ${temp}_soil_depth_all_min.nc
+  mv ${temp}_soil_depth_all_min.nc ${soil_depth}
+  debug_file ${soil_depth}
+
+  ${cdo} gtc,0.3 ${temp}_root_depth_all.nc ${temp}_root_depth_all_03.nc
+  ${cdo} setctomiss,0. ${temp}_root_depth_all_03.nc ${temp}_root_depth_all_03_miss.nc
+  ${cdo} setmisstoc,0.3 -subc,1. ${temp}_root_depth_all_03_miss.nc ${temp}_root_depth_all_03_0.nc
+  ${cdo} add ${temp}_root_depth_all_03_0.nc -mul ${temp}_root_depth_all.nc ${temp}_root_depth_all_03.nc ${temp}_root_depth_all_min.nc
+  mv ${temp}_root_depth_all_min.nc ${root_depth}
+  debug_file ${root_depth}
+
+  # clean
+  rm ${temp}_*.nc
+
+}
+
 function debug_file {
 
   if [[ ${jsb4icon} == "true" ]]
@@ -685,6 +735,13 @@ do
 	    ulimit -m unlimited
     fi
 
+    if [[ $bisection -le 5 ]]
+    then
+      remap_scheme=ycon
+    else
+      remap_scheme=dis
+    fi
+
     if [[ "${old_r2b4_amip}" != "true" ]]
     then
       grid_name=R02B${n0}
@@ -695,6 +752,7 @@ do
     fi
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
+    remap_scheme=ycon
     source_res=${grid_name}
     icon_grid=${grid_name}
   fi
@@ -780,6 +838,11 @@ do
   generate_fractions
 
   crosscheck_vars
+
+  if [[ ${jsb4icon} == true ]]
+  then
+    modify_soil_and_root_depth
+  fi
 
   generate_output_files
 
