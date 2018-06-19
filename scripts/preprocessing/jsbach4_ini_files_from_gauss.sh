@@ -16,15 +16,15 @@ rootdir=/pool/data/ICON/grids
 case `hostname` in
   mlogin*|mistralpp*)
     basedir=${rootdir}/private/jsbach
-    #basedir=/work/mj0060/m212005/ini_files/jsbach4/icon                             # for local use
+    #basedir=/work/mj0060/m212005/ini_files/jsbach4/icon                                  # for local use
     #
-    #output_path=${rootdir}/public/mpim                                             # eventually it should be this
-    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land  # temporary
-    #output_path=/work/mj0060/m212005/data/icon                                      # for local use
+    #output_path=${rootdir}/public/mpim                                                   # eventually it should be this
+    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land/r0002  # temporary
+    #output_path=/work/mj0060/m212005/data/icon                                           # for local use
     ;;
   *)
-    basedir=/scratch/local1/m220053/ini_files/jsbach4/icon                          # for local use
-    output_path=/scratch/local1/m220053/ini_files/jsbach4                           # for local use
+    basedir=/scratch/local1/m220053/ini_files/jsbach4/icon                                # for local use
+    output_path=/scratch/local1/m220053/ini_files/jsbach4                                 # for local use
     ;;
 esac
 
@@ -37,9 +37,10 @@ old_r2b4_amip=false                                       # Temporary: old r2b4_
   grid_path=/pool/data/ICON/grids/private/r2b4_amip
 
 bisections="0 1 2 3 4 5 6 7 8 9 10 11"
-#bisections="4"  # for testing
-ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
-#ggrids="T63"    # for testing
+#bisections="4"                          # for testing
+#ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
+#ggrids="T63"                            # for testing
+ggrids=""                                # disable gaussian grids
 
 
 declare -A source_res_dict
