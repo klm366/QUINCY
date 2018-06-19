@@ -737,8 +737,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
-    !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_litter_green_ag) ! in
-    !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_slow)            ! in
+    !RMS dsl4jsb_Get_var2D_onChunk(CARBON_,   c_slow)            ! in
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis)               ! inout
@@ -819,6 +818,8 @@ CONTAINS
       IF (use_alb_soil_scheme) THEN
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
+        dsl4jsb_Get_var2D_onChunk(CARBON_, c_litter_green_ag) ! in
+
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
           & use_alb_mineralsoil_const,                & ! in
@@ -881,6 +882,8 @@ CONTAINS
           ! The albedo for bare soil under the canopy of a vegetation tile is the same as for the bare soil tile:
 
           IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
+
+          dsl4jsb_Get_var2D_onChunk(CARBON_, c_litter_green_ag) ! in
 
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
