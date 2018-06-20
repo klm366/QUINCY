@@ -9,6 +9,7 @@
 !! implementation to SLM Steffen Richter (2017-12-14)
 !! 
 MODULE mo_rad_config_class
+#ifndef __NO_JSBACH__
 
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -88,4 +89,5 @@ CONTAINS
 
   END SUBROUTINE Init_rad_config
 
+#endif
 END MODULE mo_rad_config_class

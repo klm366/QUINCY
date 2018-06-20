@@ -1,14 +1,23 @@
 mo_pheno_interface.o: \
+  mo_jsb_control.o \
   mo_kind.o \
   mo_exception.o \
-  mo_pheno_update_phenology.o
+  mo_pheno_update_phenology.o \
+  mo_pheno_config_class.o \
+  mo_pheno_memory_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_task_class.o
 
 mo_pheno_update_phenology.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_control.o \
   mo_exception.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
@@ -47,7 +56,8 @@ mo_pheno_init.o: \
   mo_kind.o \
   mo_jsb_control.o \
   mo_exception.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_base_config_class.o \
   mo_jsb_class.o \

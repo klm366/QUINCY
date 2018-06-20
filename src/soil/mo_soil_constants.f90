@@ -8,6 +8,7 @@
 !! First version by Jan Engel (2016-07-21)
 !!
 MODULE mo_soil_constants
+#ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -111,4 +112,5 @@ CONTAINS
 
   END SUBROUTINE init_soil_constants
 
+#endif
 END MODULE mo_soil_constants

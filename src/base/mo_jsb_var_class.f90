@@ -9,13 +9,11 @@
 !! 2nd   version by Jan Engel (20170927); remove operator overload functions from variables
 !!
 MODULE mo_jsb_var_class
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp, dp
-  USE mo_exception, ONLY: finish
-
-!>  @todo currently commented out and defined locally VARNAME_LEN \n
-!!  USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN   ! *slmtemp
+  USE mo_kind,                ONLY: wp, dp
+  USE mo_exception,           ONLY: finish
+  USE mo_jsb_varlist_iface,   ONLY: VARNAME_LEN 
 
   IMPLICIT NONE
   PRIVATE
@@ -24,10 +22,6 @@ MODULE mo_jsb_var_class
   PUBLIC :: t_jsb_var_logical2d                                               ! *slmjsb4
   PUBLIC :: REAL2D, REAL3D
 
-!> @todo in JSBACH4 this parameter is defined in mo_jsb_varlist_iface (USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN), 
-!! thus, delete here and insert the USE statement instead later
-!! *slmtemp
-  INTEGER, PARAMETER :: VARNAME_LEN = 64
 
   ENUM, BIND(C)
     ENUMERATOR :: REAL2D=1, REAL3D
@@ -39,6 +33,7 @@ MODULE mo_jsb_var_class
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_var
+    REAL(wp), ALLOCATABLE      :: field(:,:,:,:,:)
     CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
     CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
     INTEGER                    :: type            ! REAL2D / REAL3D
@@ -50,6 +45,8 @@ MODULE mo_jsb_var_class
                                                   ! of those where variable doesn't exist
   END TYPE t_jsb_var
 
+!#pragma GCC diagnostic push
+!#pragma GCC diagnostic ignored "-Wsurprising"
 
   !-----------------------------------------------------------------------------------------------------!
   ! 2D                                                                                                  !
@@ -283,5 +280,5 @@ MODULE mo_jsb_var_class
 
 !!  END FUNCTION Multiply_real3d_with_field
 
-!#endif
+#endif
 END MODULE mo_jsb_var_class

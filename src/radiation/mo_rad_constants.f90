@@ -8,6 +8,7 @@
 !! First version by Jan Engel (2016-07-21)
 !!
 MODULE mo_rad_constants
+#ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -72,4 +73,6 @@ CONTAINS
     k_r2fr_chl                = 0.0012_wp - 0.012_wp !<  Kull & Kruijt 1998
 
   END SUBROUTINE init_rad_constants
+
+#endif
 END MODULE mo_rad_constants

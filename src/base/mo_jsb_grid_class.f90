@@ -1,5 +1,3 @@
-! from the JSBACH4 git develop branch rev. 972a425 - Steffen 01.09.2017
-
 !>
 !! @brief Contains JSBACH grid structure and methods
 !!
@@ -20,7 +18,8 @@ MODULE mo_jsb_grid_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_grid, t_jsb_vgrid
+  PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
+  PUBLIC :: new_grid
 
   TYPE t_jsb_grid
     INTEGER                      :: id = 0
@@ -46,6 +45,10 @@ MODULE mo_jsb_grid_class
     PROCEDURE :: Print => Print_grid
   END TYPE t_jsb_grid
 
+  TYPE t_jsb_grid_ptr
+    TYPE(t_jsb_grid), POINTER :: p => NULL()
+  END TYPE t_jsb_grid_ptr
+
   TYPE t_jsb_vgrid
     INTEGER ::           id           = 0
     CHARACTER(len=20) :: name         = ''
@@ -60,9 +63,47 @@ MODULE mo_jsb_grid_class
     INTEGER :: echamZaxisID           = 0
   END TYPE t_jsb_vgrid
 
+  TYPE t_jsb_vgrid_ptr
+    TYPE(t_jsb_vgrid), POINTER :: p => NULL()
+  END TYPE t_jsb_vgrid_ptr
+
+  INTERFACE new_grid
+    MODULE PROCEDURE new_grid_from_lonlat
+  END INTERFACE new_grid
+
+
+  INTEGER, SAVE :: ngrid_count = 0
+  
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_grid_class'
 
 CONTAINS
+
+
+  !> Grid constructor
+  !! 
+  FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
+
+    IMPLICIT NONE
+    
+    REAL(wp)                        :: lon
+    REAL(wp)                        :: lat
+    TYPE(t_jsb_grid), POINTER       :: grid
+
+    TYPE(t_jsb_grid), POINTER       :: new
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_lonlat'
+
+    ALLOCATE(new)
+
+    ngrid_count = ngrid_count + 1 
+    new%id = ngrid_count 
+
+    allocate(new%lon(1,1))
+    allocate(new%lat(1,1))
+
+    grid => new
+  END FUNCTION new_grid_from_lonlat
+  
 
   !>
   !! Print method for grid instance.

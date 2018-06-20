@@ -29,7 +29,8 @@ mo_soil_init.o: \
   mo_kind.o \
   mo_jsb_control.o \
   mo_exception.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_base_config_class.o \
   mo_jsb_class.o \
@@ -46,7 +47,8 @@ mo_soil_util.o: \
   mo_exception.o \
   mo_jsb_control.o \
   mo_jsb_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_process_class.o \
   mo_base_constants.o \
@@ -56,7 +58,8 @@ mo_soil_update_physics.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_control.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
@@ -81,7 +84,8 @@ mo_soil_update_turbulence.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_control.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \

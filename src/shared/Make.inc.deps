@@ -22,7 +22,8 @@ mo_shared_update_time_averages.o: \
   mo_shared_constants.o \
   mo_base_constants.o \
   mo_jsb_model_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_veg_memory_class.o \
   mo_veg_config_class.o \
   mo_pheno_memory_class.o \
@@ -48,7 +49,8 @@ mo_shared_output.o: \
   mo_jsb_control.o \
   mo_exception.o \
   mo_jsb_model_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_base_constants.o \
   mo_base_config_class.o \
   mo_jsb_class.o \

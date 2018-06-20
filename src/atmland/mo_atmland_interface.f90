@@ -17,7 +17,8 @@ MODULE mo_atmland_interface
   USE mo_exception,               ONLY: finish
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message
-  USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
+  USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+  USE mo_jsb_task_class,          ONLY: t_jsb_task_options
   USE mo_jsb_var_class,           ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
@@ -110,7 +111,7 @@ CONTAINS
     IMPLICIT NONE 
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     REAL(wp), OPTIONAL, INTENT(in) :: &
                                       t_air(:)              , &
@@ -277,7 +278,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     REAL(wp), OPTIONAL, INTENT(out) :: &
                                       t_srf(:)             ,   &

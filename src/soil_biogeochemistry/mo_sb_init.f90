@@ -31,7 +31,8 @@ CONTAINS
   SUBROUTINE sb_init(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config  
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -63,8 +64,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout)      :: tile       !< data structure for dynamic vegetation and soil variables
-    TYPE(t_jsb_task_options), INTENT(in)         :: options      !< model options
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER              :: model
@@ -437,7 +438,7 @@ CONTAINS
                                soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, soil_p_depth, &
                                po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary)
 
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_shared_constants,      ONLY: molar_mass_P
     USE mo_sb_constants
 

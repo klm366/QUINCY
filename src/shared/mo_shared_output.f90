@@ -92,7 +92,7 @@ CONTAINS
   SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
@@ -103,7 +103,7 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
+    CLASS(t_jsb_tile_abstract), INTENT(in)      :: tile           !< one tile with data structure for one lct
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
@@ -505,7 +505,8 @@ CONTAINS
   SUBROUTINE write_output_pool(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
@@ -529,10 +530,10 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile), INTENT(in), TARGET :: tile        !< one tile
-    TYPE(t_jsb_task_options), INTENT(in) :: options     !< model options
-    REAL(wp), INTENT(in)                 :: time_d      !< time in days
-    INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in) :: options      !< model options
+    REAL(wp),                   INTENT(in) :: time_d       !< time in days
+    INTEGER,                    INTENT(in) :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
@@ -1195,7 +1196,7 @@ CONTAINS
   SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
@@ -1207,7 +1208,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(in)                 :: tile           !< data structure for dynamic vegetation and soil variables
+    CLASS(t_jsb_tile_abstract), INTENT(in)      :: tile           !< one tile with data structure for one lct
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
@@ -1556,7 +1557,8 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_base_config_class,     ONLY: base_config
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
@@ -1585,10 +1587,10 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile           !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)    :: options        !< model options
-    REAL(wp),                 INTENT(in)    :: time_d         !< time in days
-    INTEGER,                  INTENT(in)    :: time_y         !< time in years; the 1st year of a simulation == year 1 (not zero)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile           !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options        !< model options
+    REAL(wp),                   INTENT(in)    :: time_d         !< time in days
+    INTEGER,                    INTENT(in)    :: time_y         !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
@@ -2731,7 +2733,7 @@ CONTAINS
   SUBROUTINE open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
@@ -2742,12 +2744,12 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_tile), INTENT(in)          :: tile           !< data structure for dynamic vegetation and soil variables
-    INTEGER,          INTENT(in)          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
-                                             ics, &
-                                             ice, &
-                                             nc, &
-                                             nsoil_sb 
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile         !< one tile with data structure for one lct
+    INTEGER,                    INTENT(in) :: iblk, &      !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
+                                              ics, &
+                                              ice, &
+                                              nc, &
+                                              nsoil_sb 
     ! 0.2 Local
     TYPE(t_jsb_model),POINTER             :: model
     INTEGER        :: lun           ! logical unit number
@@ -2854,7 +2856,8 @@ CONTAINS
   SUBROUTINE write_soil_forcing(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -2870,7 +2873,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     REAL(wp),                   INTENT(in)        :: time_d       !< time in days
     INTEGER,                    INTENT(in)        :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)

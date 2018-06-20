@@ -1,5 +1,3 @@
-! from the JSBACH4 git develop branch rev. 972a425 - Steffen 01.09.2017
-
 !>
 !! @brief Contains interface to spatial domains from ICON/ECHAM6
 !!

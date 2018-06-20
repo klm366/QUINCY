@@ -7,8 +7,6 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2016-02-01)
 !!
-!! @par SLM - Revision History
-!! copied from git:JSBACH4 to SLM at 20160615 & updated 20170516
 !! 
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__

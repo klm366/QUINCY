@@ -9,7 +9,7 @@
 !! 2nd version by Jan Engel, MPI BGC (20160913) -> integration into SLM
 !!
 MODULE mo_soil_config_class
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
@@ -207,5 +207,5 @@ CONTAINS
 
   END SUBROUTINE Init_soil_config
 
-!#endif
+#endif
 END MODULE mo_soil_config_class

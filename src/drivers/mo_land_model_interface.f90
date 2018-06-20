@@ -15,6 +15,7 @@ MODULE mo_land_model_interface
 #include "dsl_jsbach.inc"
 
   USE mo_kind
+  USE mo_exception
 
   IMPLICIT NONE
 
@@ -104,9 +105,12 @@ CONTAINS
 
 
     USE mo_jsb_class,                     ONLY: Get_model
-    USE mo_base_memory,                   ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,                ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,                ONLY: t_jsb_process_task
     USE mo_jsb_model_class,               ONLY: t_jsb_model
-    USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_, &
+                                                Get_process_name
+    USE mo_hsm_class,                     ONLY: t_Message
     USE mo_base_config_class,             ONLY: base_config
     USE mo_jsb4_forcing,                  ONLY: forcing_options
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
@@ -132,12 +136,12 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout)      :: tile              !< data structure for dynamic vegetation and soil variables
-    LOGICAL,INTENT(in)                  :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
-    INTEGER,INTENT(in)                  :: time_year         !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
-    REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
-    REAL(wp),INTENT(in)           :: &               !! a2l memory - INTENT(in) - start
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile              !< one tile with data structure for one lct
+    LOGICAL,                    INTENT(in)        :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+    REAL(wp),                   INTENT(in)        :: time_day          !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
+    INTEGER,                    INTENT(in)        :: time_year         !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
+    REAL(wp),                   INTENT(in)        :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
+    REAL(wp),                   INTENT(in)        :: &                 !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
                                   rain(:)               , &
@@ -203,8 +207,10 @@ CONTAINS
                                   sensible_hflx_ice(:) !! l2a memory - end
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER     :: model
-    CHARACTER(len=*),       PARAMETER   :: routine = TRIM(modname)//':land_model_interface'
+    TYPE(t_jsb_model),          POINTER   :: model
+    CLASS(t_jsb_process_task),  POINTER   :: task
+    CLASS(t_Message),           POINTER   :: msg
+    CHARACTER(len=*),           PARAMETER :: routine = TRIM(modname)//':land_model_interface'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -297,7 +303,16 @@ CONTAINS
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
-      CALL update_phenology       (tile, model%options)
+
+      ! update_phenology
+        msg  => t_Message('', model%Get_action('INTEGRATE'))
+        task => model%processes(PHENO_)%p%Get_task(TRIM(Get_process_name(PHENO_)))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+        msg  => t_Message('', model%Get_action('AGGREGATE'))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+      
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
       SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
@@ -347,7 +362,16 @@ CONTAINS
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
-      CALL update_phenology       (tile, model%options)
+
+      ! update_phenology
+        msg  => t_Message('', model%Get_action('INTEGRATE'))
+        task => model%processes(PHENO_)%p%Get_task(TRIM(Get_process_name(PHENO_)))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+        msg  => t_Message('', model%Get_action('AGGREGATE'))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
       CALL update_veg_growth      (tile, model%options)
@@ -423,7 +447,16 @@ CONTAINS
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
-      CALL update_phenology       (tile, model%options)
+
+      ! update_phenology
+        msg  => t_Message('', model%Get_action('INTEGRATE'))
+        task => model%processes(PHENO_)%p%Get_task(TRIM(Get_process_name(PHENO_)))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+        msg  => t_Message('', model%Get_action('AGGREGATE'))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+
       CALL update_veg_pools       (tile, model%options)
 
       !! accumulation over time - daytime & moving average

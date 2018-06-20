@@ -10,7 +10,7 @@
 !! integration into SLM by Jan Engel, MPI BGC (20160401)
 !!
 MODULE mo_veg_config_class
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
@@ -141,5 +141,5 @@ CONTAINS
 
   END SUBROUTINE Init_veg_config
 
-!#endif
+#endif
 END MODULE mo_veg_config_class

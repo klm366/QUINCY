@@ -2,7 +2,10 @@ land_model_driver.o: \
   mo_kind.o \
   mo_land_model_interface.o \
   mo_base_constants.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_base.o \
   mo_base_config_class.o \
   mo_jsb_model_init.o \
   mo_jsb4_forcing.o \
@@ -13,9 +16,12 @@ land_model_driver.o: \
 
 mo_land_model_interface.o: \
   mo_kind.o \
+  mo_exception.o \
   mo_jsb_control.o \
   mo_jsb_model_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_hsm_class.o \
   mo_base_config_class.o \
   mo_base_constants.o \
   mo_jsb4_forcing.o \
@@ -40,10 +46,12 @@ mo_land_model_interface.o: \
 
 mo_test_canopy_model.o: \
   mo_kind.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_class.o \
   mo_rad_constants.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
@@ -69,7 +77,9 @@ mo_atmland_forcing.o: \
   mo_base_config_class.o \
   mo_base_constants.o \
   mo_jsb_model_class.o \
-  mo_base_memory.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_tile_class.o \
   mo_jsb4_forcing.o \
   mo_shared_isotope.o \
   mo_shared_constants.o \

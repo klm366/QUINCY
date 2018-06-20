@@ -8,6 +8,7 @@
 !! First version by Jan Engel (20160913)
 !!
 MODULE mo_soil_memory_class
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
@@ -126,9 +127,7 @@ CONTAINS
   SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -491,4 +490,5 @@ CONTAINS
 
   END SUBROUTINE Init_soil_memory
 
+#endif
 END MODULE mo_soil_memory_class

@@ -66,7 +66,7 @@ CONTAINS
                                 fn_oth_cl         , &
                                 inquire_n_fractions)
 
-    USE mo_base_memory,             ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_assimi_constants,        ONLY: jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc, &
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, &
@@ -796,7 +796,7 @@ CONTAINS
                                                   unit_npp                , &
                                                   unit_transpiration )
 
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,      ONLY: r_gas_dryair
     USE mo_rad_constants,         ONLY: rad2ppfd, kbl0_vis
@@ -1041,7 +1041,7 @@ CONTAINS
                                         labile_nitrogen               , & ! in
                                         leaf_cn_direction             )   ! inout
 
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_veg_constants,         ONLY: delta_n_leaf

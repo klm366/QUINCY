@@ -36,7 +36,8 @@ CONTAINS
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_base_config_class,     ONLY: base_config
     USE mo_base_constants,        ONLY: one_year, one_day
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -59,8 +60,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local 
     TYPE(t_jsb_model),      POINTER         :: model
@@ -284,7 +285,7 @@ CONTAINS
                                               height                  , &
                                               diameter) RESULT(fpc) 
 
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, itree
 
@@ -342,7 +343,7 @@ CONTAINS
                                 mortality_rate )
 
     USE mo_base_constants,        ONLY: one_day, one_year, dtime
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: min_greff, k1_mort_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
                                         itree, igrass, background_mort_rate_tree, background_mort_rate_grass
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -467,7 +468,7 @@ CONTAINS
                               veg_litterfall            , &
                               mortality_rate)
 
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: wood_extraction_rate
     dsl4slm_Use_memory_a_veg
 
@@ -522,7 +523,7 @@ CONTAINS
                                     veg_pool_seed_bed           , &
                                     veg_establishment           )
 
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_rad_constants,         ONLY: rfr_ratio_toc 

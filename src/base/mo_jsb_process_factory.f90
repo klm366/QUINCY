@@ -46,7 +46,7 @@ MODULE mo_jsb_process_factory
   USE mo_veg_config_class,     ONLY: t_veg_config
 !!  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
-!!  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
+  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
   USE mo_pheno_config_class,   ONLY: t_pheno_config  
 !!  USE mo_sb_interface,         ONLY: Register_sb_tasks
   USE mo_sb_config_class,      ONLY: t_sb_config  
@@ -104,7 +104,7 @@ CONTAINS
 !     CALL Register_assimi_tasks(return_ptr, model_id)
      ALLOCATE(t_assimi_config::return_ptr%config)
    CASE (PHENO_)
-!     CALL Register_pheno_tasks(return_ptr, model_id)
+     CALL Register_pheno_tasks(return_ptr, model_id)
      ALLOCATE(t_pheno_config::return_ptr%config)
    CASE (SB_)
 !     CALL Register_sb_tasks(return_ptr, model_id)

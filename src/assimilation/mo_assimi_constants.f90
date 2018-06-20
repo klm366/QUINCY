@@ -8,6 +8,7 @@
 !! First version by Jan Engel (2016-07-21)
 !!
 MODULE mo_assimi_constants
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
 
@@ -187,4 +188,5 @@ CONTAINS
 
   END SUBROUTINE init_assimi_constants
 
+#endif
 END MODULE mo_assimi_constants

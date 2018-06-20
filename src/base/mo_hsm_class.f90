@@ -86,7 +86,7 @@ MODULE mo_hsm_class
     PROCEDURE :: Is_not_equal       => Is_not_equal_state
     GENERIC   :: OPERATOR(/=)       => Is_not_equal
     PROCEDURE :: Process_message    => Process_message_state
-    PROCEDURE(Handler_interface), DEFERRED :: Handler             ! State's handler function
+    ! PROCEDURE(Handler_interface), DEFERRED :: Handler             ! State's handler function
   END TYPE t_State
 
   ! Derived-type constructor
@@ -467,6 +467,7 @@ CONTAINS
 !!$    return_ptr => this%Handler(hsm, msg)
 !!$
 !!$  END FUNCTION Process_message_state
+
   FUNCTION Process_message_state(this, hsm, msg) RESULT(return_ptr)
 
     CLASS(t_State),   INTENT(inout) :: this
@@ -490,7 +491,7 @@ CONTAINS
 !!$    this%hsm => hsm
     !CALL this%Print_state()
 
-    return_ptr => this%Handler(msg)
+    ! return_ptr => this%Handler(msg)
 
     SELECT CASE (TRIM(msg%action%name))
     CASE ('START')

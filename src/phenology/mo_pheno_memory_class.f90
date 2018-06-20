@@ -8,6 +8,7 @@
 !! First version by Jan Engel (20161214)
 !!
 MODULE mo_pheno_memory_class
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
@@ -44,6 +45,9 @@ MODULE mo_pheno_memory_class
                                     lai_max                 !< maximum lai - from site specific lai data
 
 
+    !! test variable introduced by Steffen to have a test for the pheno_interface aggregate & integrate routines !!
+    TYPE(t_jsb_var_real2d)          :: testvar
+
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
   END TYPE t_pheno_memory
@@ -63,9 +67,7 @@ CONTAINS
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -87,7 +89,7 @@ CONTAINS
     INTEGER                      :: table
     CHARACTER(len=*),  PARAMETER :: routine = TRIM(modname)//':Init_pheno_memory'
 
-    model => Get_model(model_id)
+    model => get_model(model_id)
 
 !    table = tables(1)
     table = 1
@@ -97,6 +99,15 @@ CONTAINS
 !    canopy_layer => Get_vgrid('canopy_layer')
 
     IF (.NOT. ALLOCATED(mem%growing_season%ptr)) THEN
+
+    !! test variable introduced by Steffen to have a test for the pheno_interface aggregate & integrate routines !!
+    CALL jsb_add_var( mem, 'testvar', mem%testvar,      &
+          hgrid, surface,                               &
+          t_cf('testvariable', '', ''),                 &
+          t_grib1(table, 255, grib_bits),               &
+          t_grib2(255, 255, 255, grib_bits),            &
+          prefix, suffix,                               &
+          initval_r=0.0_wp )
 
       !> add variables to pheno memory pheno\%VAR
       !! 
@@ -138,4 +149,5 @@ CONTAINS
 
   END SUBROUTINE Init_pheno_memory
 
+#endif
 END MODULE mo_pheno_memory_class

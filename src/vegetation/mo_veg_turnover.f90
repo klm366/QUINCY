@@ -35,7 +35,8 @@ CONTAINS
 
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -49,8 +50,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local 
     TYPE(t_jsb_model),        POINTER       :: model
@@ -210,7 +211,7 @@ CONTAINS
 
     USE mo_kind,                  ONLY: wp, eps8
     USE mo_base_constants,        ONLY: dtime, one_day
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
     dsl4slm_Use_memory_a_veg
@@ -338,7 +339,7 @@ CONTAINS
 
     USE mo_kind,                  ONLY: wp, eps4
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, itree
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial

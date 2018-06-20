@@ -16,7 +16,7 @@ MODULE mo_veg_growth
   USE mo_exception,             ONLY: message
   USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
-  USE mo_base_memory,           ONLY: t_jsb_task_options
+  USE mo_jsb_task_class,        ONLY: t_jsb_task_options
 
 
   IMPLICIT NONE
@@ -39,7 +39,8 @@ CONTAINS
   SUBROUTINE update_veg_growth(tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -68,8 +69,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
-    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model            !< model 
@@ -966,7 +967,7 @@ CONTAINS
                        
     USE mo_kind,                    ONLY: wp, eps8
     USE mo_base_config_class,       ONLY: base_config
-    USE mo_base_memory,             ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_shared_constants,        ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
@@ -1760,7 +1761,7 @@ CONTAINS
 
 
     USE mo_base_constants,        ONLY: one_day
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, &
                                         fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
@@ -1880,7 +1881,7 @@ CONTAINS
 
     USE mo_kind,                  ONLY: wp, eps8
     USE mo_base_constants,        ONLY: one_day, dtime
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, &
                                         lambda_phiphen,  k_phiphen, &
@@ -2185,7 +2186,7 @@ CONTAINS
                                       growth_req_n                , &     
                                       growth_req_p )       
 
-    USE mo_base_memory,             ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_constants,           ONLY: itree, igrass, &
@@ -2504,7 +2505,7 @@ CONTAINS
 
     USE mo_kind,                  ONLY: wp, eps8
     USE mo_base_constants,        ONLY: one_day, dtime
-    USE mo_base_memory,           ONLY: t_jsb_task_options
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: knut_labile, tau_labile, fresp_growth
     dsl4slm_Use_memory_a_veg
 

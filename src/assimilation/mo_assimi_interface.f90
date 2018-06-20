@@ -8,6 +8,7 @@
 !! First version by Jan Engel (2016-07-19)
 !!
 MODULE mo_assimi_interface
+#ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
 
@@ -27,5 +28,5 @@ MODULE mo_assimi_interface
 
 
 
-
+#endif
 END MODULE mo_assimi_interface

@@ -8,6 +8,7 @@
 !! First version by Jan Engel (20160815)
 !!
 MODULE mo_assimi_memory_class
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
@@ -105,19 +106,20 @@ CONTAINS
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1.InOut
     CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem  !> assimi memory
     CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
     CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
     INTEGER,             INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -428,4 +430,5 @@ CONTAINS
 
   END SUBROUTINE Init_assimi_memory
 
+#endif
 END MODULE mo_assimi_memory_class

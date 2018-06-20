@@ -42,7 +42,7 @@ MODULE mo_base_config_class
     LOGICAL           :: flag_stand_harvest
     INTEGER           :: stand_replacing_year
     !! GRID_CTL
-    REAL(wp)          :: lat, lon                           !< latitude longitude currently stored in mo_base_memory:t_slm_grid
+    REAL(wp)          :: lat, lon                           !< latitude longitude
     
     !! other parameters than namelist parameters
     LOGICAL           :: l_do_stand_replacing_harvest

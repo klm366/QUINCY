@@ -88,7 +88,9 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, grid  ! grid is used for calc_solar_angle()
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+    USE mo_jsb_grid,              ONLY: Get_Grid
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config
     USE mo_shared_constants,      ONLY: molar_mass_N, molar_mass_P, grav
@@ -108,10 +110,10 @@ CONTAINS
 
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile)  , INTENT(inout) :: tile                           !< one tile
-    INTEGER           , INTENT(in)    :: ics, ice, nc, iblk, nsoil_sb   !< info on block, chunk and soil layer number
-    REAL(wp)          , INTENT(in)    :: time                           !< current time (not timestep !)
-    REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile                           !< one tile with data structure for one lct
+    INTEGER                   , INTENT(in)    :: ics, ice, nc, iblk, nsoil_sb   !< info on block, chunk and soil layer number
+    REAL(wp)                  , INTENT(in)    :: time                           !< current time (not timestep !)
+    REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
                                       rain(:)               , &    !< ..
@@ -155,6 +157,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER     :: model                  ! the model structure
+    TYPE(t_jsb_grid),  POINTER     :: grid
     ! READ() input variables for: land plant canopy and soil (these variable names can differ from column names in forcing files)
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
@@ -225,6 +228,7 @@ CONTAINS
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
 !    lctlib => model%lctlib(tile%lcts%lib_id) 
+    grid   => Get_grid(model%grid_id)
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
@@ -380,7 +384,7 @@ CONTAINS
 
       lw_srf_down(:)          = lw_srf_down_r
       swvis_srf_down(:)       = swvis_srf_down_r
-      cos_zenith_angle(:)     = calc_solar_angle(grid%lat,grid%lon,time)                      
+      cos_zenith_angle(:)     = calc_solar_angle(grid%lat(1,1), grid%lon(1,1), time) 
       swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
       swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
       swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r

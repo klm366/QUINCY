@@ -8,7 +8,8 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_exception.o \
   mo_jsb_control.o \
   mo_jsb_model_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
@@ -47,6 +48,7 @@ mo_assimi_config_class.o: \
   mo_namelist.o \
   mo_exception.o \
   mo_io_units.o \
+  mo_jsb_control.o \
   mo_jsb_config_class.o
 
 mo_assimi_init.o: \
@@ -54,7 +56,8 @@ mo_assimi_init.o: \
   mo_exception.o \
   mo_jsb_control.o \
   mo_jsb_model_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
@@ -66,7 +69,8 @@ mo_assimi_util.o: \
   mo_jsb_control.o \
   mo_exception.o \
   mo_jsb_class.o \
-  mo_base_memory.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_process_class.o \
   mo_base_constants.o \

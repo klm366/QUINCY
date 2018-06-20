@@ -18,11 +18,14 @@ PROGRAM land_model_driver
   USE mo_land_model_interface,    ONLY: land_model_interface 
   ! base
   USE mo_base_constants,          ONLY: one_year
-  USE mo_base_memory,             ONLY: t_slm_tile
+  USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
   USE mo_base_config_class,       ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
                                         fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
+  USE mo_jsb_class,               ONLY: get_model
+  USE mo_jsb_model_class,         ONLY: t_jsb_model
+  USE mo_jsb_base,                ONLY: init_base
   ! forcing
   USE mo_jsb4_forcing,            ONLY: forcing_options
   ! atmland
@@ -49,6 +52,12 @@ PROGRAM land_model_driver
   INTEGER       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
   INTEGER       :: nsoil_sb             !< necessary for open_pool_output_files() & init_output_writing_pool()
                                                         !!  number of soil layers used in SB_ - equal to nsoil_water
+  INTEGER       :: nproca                             ! number of processors for jsbach
+  INTEGER       :: nprocb                             ! has to be one
+  INTEGER       :: nprocio                            ! number of processors for I/O server
+  INTEGER       :: npedim                             ! Working dimension for blocks in each domain.
+                                                      ! Default (-1): each domain is processed in one call
+  INTEGER       :: model_id
   REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -122,14 +131,27 @@ PROGRAM land_model_driver
   !! 
   !! Create Tile & Model init & Define iblk, ics, ice
   !! 
-  TYPE(t_slm_tile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
-                                           !! in jsbach4 tile is created in mo_jsb_model_usecases
+  TYPE(t_jsb_model), POINTER          :: model
+  CLASS(t_jsb_tile_abstract), POINTER :: tile !< data structure for dynamic vegetation and soil variables
+                                              !! in jsbach4 tile is created in mo_jsb_model_usecases
+  ! define default values
+  nproca   = 1
+  nprocb   = 1
+  nprocio  = 0
+  npedim   = -1
+  model_id = 1
   iblk     = 1
   ics      = 1
   ice      = 1
   nc       = ice - ics + 1                 ! (end-number - start-number + 1)
   nsoil_sb = -1                            ! namelist parameter
-  CALL init_model(tile, l_forcing, nsoil_sb, iblk, ics, ice, nc)  !< model init : mo_jsb_model_init 
+
+  ! init
+  CALL init_base()
+  CALL init_model(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, ics, ice, nc)
+
+  model => get_model(model_id)
+  tile  => model%Get_top_tile()
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------

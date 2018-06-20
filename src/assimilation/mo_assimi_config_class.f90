@@ -9,14 +9,14 @@
 !! integration into SLM by Jan Engel, MPI BGC (20160722)
 !!
 MODULE mo_assimi_config_class
-!#ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: eps4
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: wp, eps4
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ CONTAINS
     ! extinction coefficient for canopy layer depth calculation
     k_canopy_layer = 0.7_wp
 
-    CALL message(TRIM(routine), 'Starting assimi configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting assimi configuration')
 
     ! Set defaults
     active                         = .TRUE.
@@ -148,5 +148,5 @@ CONTAINS
 
   END SUBROUTINE Init_assimi_config
 
-!#endif
+#endif
 END MODULE mo_assimi_config_class

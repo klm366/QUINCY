@@ -8,6 +8,7 @@
 !! First version by Jan Engel (20161214)
 !!
 MODULE mo_pheno_constants
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
 
@@ -50,4 +51,5 @@ CONTAINS
 
   END SUBROUTINE init_pheno_constants
 
+#endif
 END MODULE mo_pheno_constants

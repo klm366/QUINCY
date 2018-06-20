@@ -13,7 +13,7 @@ MODULE mo_sb_jsm_transport
 
   USE mo_kind,            ONLY: wp, eps4, eps8
   USE mo_exception,       ONLY: message, finish
-  USE mo_base_memory,     ONLY: t_jsb_task_options
+  USE mo_jsb_task_class,  ONLY: t_jsb_task_options
   USE mo_base_constants,  ONLY: dtime
 
 

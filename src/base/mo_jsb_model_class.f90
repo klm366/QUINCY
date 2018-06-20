@@ -12,25 +12,21 @@ MODULE mo_jsb_model_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_kind,              ONLY: wp
-!  USE mo_io_units,          ONLY: filename_max
+  USE mo_io_units,          ONLY: filename_max
 !  USE mo_jsb_parallel,      ONLY: Get_omp_no_of_threads, Get_omp_thread
-
   USE mo_hsm_class,         ONLY: t_Hsm, t_State, t_Message, t_Action
 !  USE mo_jsb_config_class,  ONLY: t_jsb_model_config, t_jsb_config_p
-  USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p
-! USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
-!  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_process_class, ONLY: t_jsb_process_p       ! , t_jsb_process, 
+  USE mo_jsb_task_class,    ONLY: t_jsb_task_options    ! , t_jsb_process_task, t_jsb_process_task_p, t_Task_queue
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
 
-  USE mo_base_memory,    ONLY: t_jsb_task_options     ! *slmtemp
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
-  PUBLIC :: new_model !, print_model, delete_model
-
-  INTEGER, PARAMETER      :: filename_max  = 60   ! *slmtemp
+  PUBLIC :: new_model    ! , print_model, delete_model
 
 
   !>
@@ -72,10 +68,10 @@ MODULE mo_jsb_model_class
     ! Extensions:
     PROCEDURE :: Configure_processes => Configure_model_processes
 !    PROCEDURE :: Get_shortname       => Get_model_shortname
-!    PROCEDURE :: Get_top_tile
-!    PROCEDURE :: Goto_next_tile
+    PROCEDURE :: Get_top_tile
+    PROCEDURE :: Goto_next_tile
 !    PROCEDURE :: Get_next_tile
-!    PROCEDURE :: Reset_tiles
+    PROCEDURE :: Reset_tiles
 !    PROCEDURE :: Get_tile
 !    PROCEDURE :: Get_process
 !    PROCEDURE :: Queue_task
@@ -124,10 +120,10 @@ CONTAINS
 
     ALLOCATE(return_ptr)
 
-!    CALL return_ptr%Init_hsm(name)
+    CALL return_ptr%Init_hsm(name)
 
-!    CALL return_ptr%Register_action(t_Action("INTEGRATE"))
-!    CALL return_ptr%Register_action(t_Action("AGGREGATE"))
+    CALL return_ptr%Register_action(t_Action("INTEGRATE"))
+    CALL return_ptr%Register_action(t_Action("AGGREGATE"))
 
     return_ptr%id                = id
     return_ptr%shortname         = TRIM(shortname)
@@ -185,278 +181,63 @@ CONTAINS
 
   END SUBROUTINE Configure_model_processes
 
-!!!!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
-!!!!$
-!!!!$    CLASS(t_jsb_model), INTENT(in) :: this
-!!!!$    CLASS(t_jsb_config_p), POINTER :: return_ptr(:)
-!!!!$
-!!!!$    INTEGER :: iproc
-!!!!$
-!!!!$    ALLOCATE(return_ptr(SIZE(this%processes)))
-!!!!$    DO iproc=1,SIZE(this%processes)
-!!!!$      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-!!!!$        return_ptr(iproc)%p => this%processes(iproc)%p%config
-!!!!$      ELSE
-!!!!$        return_ptr(iproc)%p => NULL()
-!!!!$      END IF
-!!!!$    END DO
-!!!!$
-!!!!$  END FUNCTION Get_process_configs
-!!  !
-!!  ! State machine engine
-!!  !
-!!!!$  ! Just a stub to the real engine hsm%Process_message
-!!!!$  SUBROUTINE Process_task(this, task)
-!!!!$
-!!!!$    CLASS(t_jsb_model),    INTENT(inout) :: this
-!!!!$    CLASS(t_jsb_task_msg), INTENT(in)    :: msg
-!!!!$
-!!!!$    CALL this%Process_message(msg)
-!!!!$
-!!!!$  END SUBROUTINE Process_task
-!!!!$
+  FUNCTION Get_top_tile(this) RESULT(return_ptr)
 
-!!  SUBROUTINE Run_tasks(this, debug)
+    CLASS(t_jsb_model), INTENT(in) :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
 
-!!    CLASS(t_jsb_model), INTENT(inout) :: this
-!!    LOGICAL, OPTIONAL,  INTENT(in)    :: debug
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_model_top_tile'
 
-!!    CLASS(t_Task_queue),  POINTER :: current_queue_element
-!!    CLASS(t_Message), POINTER :: msg
-!!    LOGICAL :: l_debug
-!!    INTEGER :: no_omp_thread
+    return_ptr => NULL()
 
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Run_tasks'
+    SELECT TYPE (top => this%top)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => top
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'tile is of type t_State, should be t_jsb_tile')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
 
-!!    no_omp_thread = Get_omp_thread()
+  END FUNCTION Get_top_tile
 
-!!    l_debug = .FALSE.
-!!    IF (PRESENT(debug)) l_debug = debug
+  SUBROUTINE Reset_tiles(this)
 
-!!    msg => t_Message('', this%Get_action('INTEGRATE'))
+    CLASS(t_jsb_model), INTENT(inout) :: this
 
-!!    current_queue_element => this%queue
-!!    DO WHILE (ASSOCIATED(current_queue_element))
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Set_model_top_tile'
 
-!!      ASSOCIATE(task => current_queue_element%task)
-!!        IF (this%processes(task%process_id)%p%config%active) THEN  ! Only if process this task belongs to is active
-!!          this%current_task(no_omp_thread)%p => task
-!!          CALL this%Start() ! Start state machine
-!!          !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
-!!          !msg%action = this%Get_action('INTEGRATE')
-!!          CALL this%Process_message(msg, l_debug)
-!!        END IF
-!!      END ASSOCIATE
+    CALL this%Reset()
 
-!!      current_queue_element => current_queue_element%next
+  END SUBROUTINE Reset_tiles
 
-!!    END DO
+  FUNCTION Goto_next_tile(this) RESULT(return_ptr)
 
-!!    DEALLOCATE(msg)
+    CLASS(t_jsb_model), INTENT(inout)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
 
-!!  END SUBROUTINE Run_tasks
+    CLASS(t_State), POINTER :: next
 
-!!  FUNCTION Get_model_name(this) RESULT(return_value)
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Goto_next_tile'
 
-!!    CLASS(t_jsb_model), INTENT(in) :: this
-!!    CHARACTER(LEN=:), ALLOCATABLE :: return_value
+    next => this%Goto_next()
+    IF (.NOT. ASSOCIATED(next)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
 
-!!    return_value = this%name
+    SELECT TYPE (next)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => next
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
 
-!!  END FUNCTION Get_model_name
+    NULLIFY(next)
 
-!!  FUNCTION Get_model_shortname(this) RESULT(return_value)
-
-!!    CLASS(t_jsb_model), INTENT(in) :: this
-!!    CHARACTER(LEN=:), ALLOCATABLE :: return_value
-
-!!    return_value = this%shortname
-
-!!  END FUNCTION Get_model_shortname
-
-!!  FUNCTION Get_top_tile(this) RESULT(return_ptr)
-
-!!    CLASS(t_jsb_model), INTENT(in) :: this
-!!    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
-
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_model_top_tile'
-
-!!    return_ptr => NULL()
-
-!!    SELECT TYPE (top => this%top)
-!!    CLASS IS (t_jsb_tile_abstract)
-!!      return_ptr => top
-!!    CLASS IS (t_State)
-!!      CALL finish(TRIM(routine), 'tile is of type t_State, should be t_jsb_tile')
-!!    CLASS DEFAULT
-!!      CALL finish(TRIM(routine), 'Unkown type for tile')
-!!    END SELECT
-
-!!  END FUNCTION Get_top_tile
-
-!!  SUBROUTINE Reset_tiles(this)
-
-!!    CLASS(t_jsb_model), INTENT(inout) :: this
-
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Set_model_top_tile'
-
-!!    CALL this%Reset()
-
-!!  END SUBROUTINE Reset_tiles
-
-!!  FUNCTION Goto_next_tile(this) RESULT(return_ptr)
-
-!!    CLASS(t_jsb_model), INTENT(inout)  :: this
-!!    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
-
-!!    CLASS(t_State), POINTER :: next
-
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Goto_next_tile'
-
-!!    next => this%Goto_next()
-!!    IF (.NOT. ASSOCIATED(next)) THEN
-!!      return_ptr => NULL()
-!!      RETURN
-!!    END IF
-
-!!    SELECT TYPE (next)
-!!    CLASS IS (t_jsb_tile_abstract)
-!!      return_ptr => next
-!!    CLASS IS (t_State)
-!!      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
-!!    CLASS DEFAULT
-!!      CALL finish(TRIM(routine), 'Unkown type for tile')
-!!    END SELECT
-
-!!    NULLIFY(next)
-
-!!  END FUNCTION Goto_next_tile
-
-!!  FUNCTION Get_next_tile(this) RESULT(return_ptr)
-
-!!    CLASS(t_jsb_model), INTENT(inout)  :: this
-!!    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
-
-!!    CLASS(t_State), POINTER :: next
-
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_next_tile'
-
-!!    next => this%Get_next()
-!!    IF (.NOT. ASSOCIATED(next)) THEN
-!!      return_ptr => NULL()
-!!      RETURN
-!!    END IF
-
-!!    SELECT TYPE (next)
-!!    CLASS IS (t_jsb_tile_abstract)
-!!      return_ptr => next
-!!    CLASS IS (t_State)
-!!      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
-!!    CLASS DEFAULT
-!!      CALL finish(TRIM(routine), 'Unkown type for tile')
-!!    END SELECT
-
-!!    NULLIFY(next)
-
-!!    IF (.NOT. ASSOCIATED(return_ptr)) &
-!!      & CALL finish(TRIM(routine), 'Could not find next tile')
-
-!!  END FUNCTION Get_next_tile
-
-!!  FUNCTION Get_tile(this, tile_id) RESULT(return_ptr)
-
-!!    CLASS(t_jsb_model), INTENT(in) :: this
-!!    INTEGER,            INTENT(in) :: tile_id(:)
-!!    CLASS(t_jsb_tile_abstract),  POINTER    :: return_ptr
-
-!!    CLASS(t_State), POINTER :: state
-
-!!    state => this%Get_state(tile_id)
-
-!!    SELECT TYPE (state)
-!!    CLASS IS (t_jsb_tile_abstract)
-!!      return_ptr => state
-!!    END SELECT
-
-!!    NULLIFY(state)
-
-!!  END FUNCTION Get_tile
-
-!!  SUBROUTINE Set_options(this, dtime, steplen, iblk, ics, ice, nc)
-
-!!    USE mo_jsb_utils_iface, ONLY: assign_if_present
-
-!!    CLASS(t_jsb_model), INTENT(inout) :: this
-!!    REAL(wp), OPTIONAL, INTENT(in)    :: dtime
-!!    REAL(wp), OPTIONAL, INTENT(in)    :: steplen
-!!    INTEGER,  OPTIONAL, INTENT(in)    :: iblk
-!!    INTEGER,  OPTIONAL, INTENT(in)    :: ics
-!!    INTEGER,  OPTIONAL, INTENT(in)    :: ice
-!!    INTEGER,  OPTIONAL, INTENT(in)    :: nc
-
-!!    INTEGER :: no_omp_thread
-
-!!    no_omp_thread = Get_omp_thread()
-
-!!    CALL assign_if_present(this%options(no_omp_thread)%dtime,   dtime)
-!!    CALL assign_if_present(this%options(no_omp_thread)%steplen, steplen)
-!!    CALL assign_if_present(this%options(no_omp_thread)%iblk,    iblk)
-!!    CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
-!!    CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
-!!    CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
-
-!!  END SUBROUTINE Set_options
-
-!!  !>
-!!  !! Destructor method for model instance.
-!!  !!
-!!  !! Subroutine to delete model instance from memory.
-!!  !!
-!!  SUBROUTINE delete_model(self)
-
-!!    TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-
-!!    INTEGER :: i
-
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:delete_model'
-
-!!    CALL message(TRIM(routine), 'starting destruction of JSBACH model instance')
-
-!!    DEALLOCATE(self)
-
-!!    CALL message(TRIM(routine), 'destruction of JSBACH model instance completed.')
-
-!!  END SUBROUTINE delete_model
-
-!!  !>
-!!  !! Print method for model instance.
-!!  !!
-!!  !! Subroutine to print description of model instance.
-!!  !!
-!!  SUBROUTINE print_model(self)
-
-!!    USE mo_jsb_control,    ONLY: model_base_dir
-!!    USE mo_jsb_grid_class, ONLY: t_jsb_grid
-!!    USE mo_jsb_grid,       ONLY: Get_grid
-
-!!    TYPE(t_jsb_model), INTENT(in) :: self
-
-!!    TYPE(t_jsb_grid), POINTER :: grid
-!!    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:print_model'
-
-!!    CALL message(TRIM(routine), 'print JSBACH model description')
-
-!!    WRITE(message_text,'(A,I2,A,A,A,A,A)') 'Model id: ', self%id, ', model name: ', TRIM(self%name), &
-!!                                     ' (', TRIM(self%shortname), ')'
-!!    CALL message('', message_text)
-!!    CALL message('', '... '//TRIM(self%description))
-
-!!    CALL message('', 'Namelist file: '//TRIM(model_base_dir)//'/'//TRIM(self%namelist_filename))
-
-!!    grid => Get_grid(self%grid_id)
-!!    IF (ASSOCIATED(grid)) CALL grid%Print
-
-!!  END SUBROUTINE print_model
+  END FUNCTION Goto_next_tile
 
 #endif
 END MODULE mo_jsb_model_class
