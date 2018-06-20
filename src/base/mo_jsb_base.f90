@@ -374,6 +374,8 @@ CONTAINS
     CHARACTER(LEN=30)           :: lctlib_filename
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
 
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
+
     model => Get_model(model_id)
 
     ! select lctlib file depending on the usecase
