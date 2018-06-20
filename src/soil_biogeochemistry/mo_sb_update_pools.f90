@@ -621,10 +621,18 @@ CONTAINS
     
        ENDIF
 
-       po4_assoc_slow(:,:) = po4_assoc_slow(:,:) + (slow_sorption_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime/1.e6_wp
-       po4_occluded(:,:)   = po4_occluded(:,:)   + (occlusion_po4(:,:) + transport_po4_occluded(:,:)) * dtime/1.e6_wp
-       po4_primary(:,:)    = po4_primary(:,:)    + ( - weathering_po4(:,:) + transport_po4_primary(:,:)) * dtime/1.e6_wp
-
+       !> 4.3.1 update some pools; all soil models
+       !! 
+       !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
+       po4_assoc_slow(:,:)   = po4_assoc_slow(:,:) + &
+                               (slow_sorption_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime/1.e6_wp
+       IF (base_config%l_transient_spinup) THEN
+         po4_occluded(:,:)   = po4_occluded(:,:)   + transport_po4_occluded(:,:) * dtime / 1.e6_wp
+         po4_primary(:,:)    = po4_primary(:,:)    + transport_po4_primary(:,:)  * dtime / 1.e6_wp
+       ELSE
+         po4_occluded(:,:)   = po4_occluded(:,:)   + (occlusion_po4(:,:)   + transport_po4_occluded(:,:)) * dtime / 1.e6_wp
+         po4_primary(:,:)    = po4_primary(:,:)    + (-weathering_po4(:,:) + transport_po4_primary(:,:))  * dtime / 1.e6_wp
+       ENDIF
     ENDIF
 
 
