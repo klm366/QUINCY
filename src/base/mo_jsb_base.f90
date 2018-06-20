@@ -165,12 +165,18 @@ CONTAINS
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_model_usecases, ONLY: init_usecase
+    USE mo_jsb_lctlib_class,   ONLY: Read_lctlib
 
     INTEGER, INTENT(in) :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
 
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
+
     model => Get_model(model_id)
+
+    model%lctlib => Read_lctlib('lctlib_nlct21.def')
+    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
