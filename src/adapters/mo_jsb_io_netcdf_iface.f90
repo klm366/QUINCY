@@ -14,7 +14,7 @@ MODULE mo_jsb_io_netcdf_iface
   USE mo_exception,          ONLY: finish, message
   USE mo_io_units,           ONLY: filename_max
   USE mo_jsb_domain_iface,   ONLY: t_patch, pe_decomposed
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel, my_process_is_stdio, p_bcast, p_io
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel, my_process_is_stdio, p_bcast, p_io, mpi_comm
 #ifdef __ICON__
   USE mo_read_interface, ONLY: read_1D, read_2D, read_2D_time, read_2D_extdim, openInputFile, closeFile, on_cells, &
                                t_stream_id, read_netcdf_broadcast_method
@@ -222,7 +222,7 @@ CONTAINS
         CALL nf(nf_inq_dimlen(file_id, dim_id(1), var_size(1)), TRIM(routine))
       END IF
       
-      CALL p_bcast(var_size(1), p_io)
+      CALL p_bcast(var_size(1), p_io, mpi_comm)
 
       ALLOCATE(tmp_array(var_size(1)))
 
@@ -231,7 +231,7 @@ CONTAINS
 
         CALL nf(nf_get_var_double(file_id, var_id, tmp_array), TRIM(routine))
       END IF
-      CALL p_bcast(tmp_array, p_io)
+      CALL p_bcast(tmp_array, p_io, mpi_comm)
 
       IF (PRESENT(fill_array)) THEN
         fill_array(:) = tmp_array(:)
@@ -364,7 +364,7 @@ CONTAINS
         END IF
       END IF
 
-      CALL p_bcast(var_extdim_size, p_io)
+      CALL p_bcast(var_extdim_size, p_io, mpi_comm)
 
       IF (PRESENT(start_extdim)) THEN
         start_step = start_extdim
@@ -427,7 +427,7 @@ CONTAINS
       netcdf_file_has_dim = (status == NF_NOERR)
     END IF
 
-    CALL p_bcast(netcdf_file_has_dim, p_io)
+    CALL p_bcast(netcdf_file_has_dim, p_io, mpi_comm)
 
   END FUNCTION netcdf_file_has_dim
 
@@ -447,7 +447,7 @@ CONTAINS
       netcdf_file_has_var = (status == NF_NOERR)
     END IF
 
-    CALL p_bcast(netcdf_file_has_var, p_io)
+    CALL p_bcast(netcdf_file_has_var, p_io, mpi_comm)
 
   END FUNCTION netcdf_file_has_var
 
