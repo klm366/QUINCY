@@ -13,7 +13,6 @@ MODULE mo_jsb_grid_class
   USE mo_kind,               ONLY: wp
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message_text, message, finish
-  USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_domain_iface,   ONLY: t_patch, p_patch, pe_decomposed,               &
                                    get_grid_filename_domain => get_grid_filename, &
                                    get_ntotal_domain        => get_ntotal,        &
@@ -78,8 +77,9 @@ MODULE mo_jsb_grid_class
     REAL(wp), ALLOCATABLE :: lbounds(:)
     REAL(wp), ALLOCATABLE :: ubounds(:)
     REAL(wp), ALLOCATABLE :: dz(:)
-    INTEGER :: cdiZaxisID             = 0
-    INTEGER :: echamZaxisID           = 0
+    INTEGER :: cdi_axis_type          = 0
+    INTEGER :: ZaxisID                = 0   ! ICON: zaxis type (ZA_*), ECHAM: cdi zaxis id
+    INTEGER :: echamZaxisIdx          = 0   ! ICON: N/A, ECHAM: levelindx for dimension
   END TYPE t_jsb_vgrid
 
   TYPE t_jsb_vgrid_ptr
@@ -111,7 +111,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_host'
 
-    IF (debug_on()) CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
+    ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) &
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -166,7 +166,7 @@ CONTAINS
 
     grid => new
 
-    IF (debug_on()) CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+    ! CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
 
   END FUNCTION new_grid_from_host
 
@@ -389,106 +389,133 @@ CONTAINS
 
   FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds, dz) RESULT(new)
 
-    USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisInqName, zaxisInqSize
-    USE mo_jsb_io_iface, ONLY: Create_zaxis
 
     CHARACTER(len=*),           INTENT(in) :: name
     INTEGER,                    INTENT(in) :: cdi_axis_type
     INTEGER,                    INTENT(in) :: length
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: longname
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: units
-    REAL(wp),         OPTIONAL, INTENT(in) :: levels(:), lbounds(:), ubounds(:), dz(:)
+    REAL(wp),         OPTIONAL, INTENT(in) :: levels(length)
+    REAL(wp),         OPTIONAL, INTENT(in) :: lbounds(length)
+    REAL(wp),         OPTIONAL, INTENT(in) :: ubounds(length)
+    REAL(wp),         OPTIONAL, INTENT(in) :: dz(length)
 
     TYPE(t_jsb_vgrid), POINTER :: new
 
-    INTEGER :: cdi_size
-    CHARACTER(len=100) :: cdi_name
     INTEGER :: i, idx
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_vgrid'
 
-    IF(length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
+    IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
+    IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
 
     ALLOCATE(new)
 
+    new%cdi_axis_type = cdi_axis_type
     new%name = TRIM(name)
     new%n_levels = length
+
+    IF (PRESENT(longname)) THEN
+      new%longname = TRIM(longname)
+    ELSE
+      new%longname = ''
+    END IF
+    IF (PRESENT(units)) THEN
+      new%units  = TRIM(units)
+    ELSE
+      new%units = ''
+    END IF
+
     ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length), new%dz(length))
-    IF (PRESENT(levels)) THEN
-      new%levels(:) = levels(1:length)
-    ELSE
-      DO i=1,length
-        new%levels(:) = REAL(i,wp)
-      END DO
-    END IF
-    IF (PRESENT(lbounds)) THEN
-      new%lbounds(:) = lbounds(1:length)
-    ELSE
-      new%lbounds(1) = 0._wp
-      DO i=2,length
-        new%lbounds(i) = new%levels(i-1) + (new%levels(i-1) - new%lbounds(i-1))
-      END DO
-    END IF
-    IF (PRESENT(ubounds)) THEN
-      new%ubounds(:) = ubounds(1:length)
-    ELSE
-      DO i=1,length
-        new%ubounds(i) = new%levels(i) + (new%levels(i) - new%lbounds(i))
-      END DO
-    END IF
+    new%levels (:) = 0._wp
+    new%lbounds(:) = 0._wp
+    new%ubounds(:) = 0._wp
+    new%dz     (:) = 0._wp
+
+    IF (PRESENT(levels))  new%levels (:) = levels(:)
+    IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
+    IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
     IF (PRESENT(dz)) THEN
-      new%dz(:) = dz(1:length)
-    ELSE
-      new%dz(:) = new%ubounds(:) - new%lbounds(:)
+      IF (ANY(dz(:) <= 0._wp)) CALL finish(TRIM(routine), 'Dz must be larger than zero')
+      new%dz     (:) = dz(:)
     END IF
-    IF (PRESENT(longname)) new%longname = TRIM(longname)
-    IF (PRESENT(units)) new%units  = TRIM(units)
 
-    ! Find free slot in cdi_zaxis_ids
-    idx = 0
-    DO i=1,SIZE(cdi_zaxis_ids)
-      IF (cdi_zaxis_ids(i) == 0) THEN
-        idx = i
-        EXIT
-      END IF
-    END DO
-    IF (idx == 0) CALL finish(TRIM(routine), 'Increase size of cdi_zaxis_ids')
-    new%id = idx
-
-    ! Find CDI zaxis with same name and same size
-    idx = 0
-    DO i=1,SIZE(cdi_zaxis_ids)
-      IF (cdi_zaxis_ids(i) == 0) CYCLE
-      CALL zaxisInqName(cdi_zaxis_ids(i), cdi_name)
-      IF (TRIM(cdi_name) /= name) THEN
-        CYCLE
+    IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
+      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(TRIM(routine), 'Ubounds must be larger than Lbounds')
+      IF (PRESENT(dz)) THEN
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(TRIM(routine), 'Dz != Ubounds-Lbounds')
       ELSE
-        cdi_size = zaxisInqSize(cdi_zaxis_ids(i))
-        IF (cdi_size /= length) THEN
-          CYCLE
-        ELSE
-          idx = i
-          EXIT
+        new%dz(:) = ubounds(:) - lbounds(:)
+      END IF
+      IF (.NOT. PRESENT(levels)) THEN
+        new%levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+      END IF
+    ELSE IF (PRESENT(lbounds)) THEN
+      IF (PRESENT(dz)) THEN
+        new%ubounds(:) = lbounds(:) + dz(:)
+        IF (.NOT. PRESENT(levels)) THEN
+          new%levels(:) = 0.5_wp * (lbounds(:) + new%ubounds(:))
+        END IF
+      ELSE IF (PRESENT(levels)) THEN
+        new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
+        new%dz(:) = new%ubounds(:) - lbounds(:)
+      ELSE
+        CALL finish(TRIM(routine), 'Lbounds present ... specify either Levels or Dz!')
+      END IF
+    ELSE IF (PRESENT(ubounds)) THEN
+      IF (PRESENT(dz)) THEN
+        new%lbounds(:) = ubounds(:) - dz(:)
+        IF (.NOT. PRESENT(levels)) THEN
+          new%levels(:) = 0.5_wp * (new%lbounds(:) + ubounds(:))
+        END IF
+      ELSE IF (PRESENT(levels)) THEN
+        new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
+        new%dz(:) = ubounds(:) - new%lbounds(:)
+      ELSE
+        CALL finish(TRIM(routine), 'Ubounds present ... specify either Levels or Dz!')
+      END IF
+    ELSE
+      IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
+        new%lbounds(:) = levels
+      ELSE IF (PRESENT(dz)) THEN
+        new%lbounds(1) = 0._wp
+        new%lbounds(2:length) = dz(1:length-1)
+        new%ubounds(:) = new%lbounds(:) + dz(:)
+      ELSE IF (PRESENT(levels)) THEN
+        IF (length > 1) THEN ! Multi-level axis
+          new%lbounds(1) = 0._wp
+          DO i=2,length
+            new%lbounds(i) = levels(i-1) + (levels(i-1) - new%lbounds(i-1))
+          END DO
+          new%ubounds(:) = levels(:) + (levels(:) - new%lbounds(:))
+          new%dz(:) = new%ubounds(:) - new%lbounds(:)
+        ELSE ! Single level axis (level specified)
+          new%lbounds(1) = levels(1)
+          new%ubounds(1) = levels(1)
+          new%dz(1)      = 0._wp
+        END IF
+      ELSE
+        IF (length > 1) THEN ! Multi-level axis
+          DO i=1,length
+            new%levels(i) = REAL(i,wp)
+            new%lbounds(i) = REAL(i,wp)
+            new%ubounds(i) = REAL(i+1,wp)
+            new%dz(i) = 1._wp
+          END DO
+        ELSE ! Single level axis (level not specified)
+          new%levels(1) = 0._wp
+          new%lbounds(1) = 0._wp
+          new%ubounds(1) = 0._wp
+          new%dz(1)      = 0._wp
         END IF
       END IF
-    END DO
-    ! If none found create a new CDI zaxis, else use existing one
-    IF (idx == 0) THEN
-      CALL Create_zaxis(new%cdiZaxisID, new%echamZaxisID, &
-        & cdi_axis_type, length, new%name, new%levels(1:length), new%units, new%longname, &
-        & new%lbounds(1:length), new%ubounds(1:length))
-      WRITE(message_text, '(A,A,2I4)') 'Created new vgrid: name, ID, length = ',TRIM(new%name), new%cdiZaxisID, length
-      CALL message(TRIM(routine), message_text)
-    ELSE
-      new%cdiZaxisID = cdi_zaxis_ids(idx)
     END IF
-    cdi_zaxis_ids(new%id) = new%cdiZaxisID
 
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)
 
-    USE mo_jsb_io, ONLY: cdi_zaxis_ids, zaxisDestroy
+    ! USE mo_jsb_io_iface, ONLY: Destroy_zaxis
 
 #ifdef HAVE_F2003
     TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: self
@@ -509,22 +536,7 @@ CONTAINS
     IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
     IF (ALLOCATED(self%dz))      DEALLOCATE(self%dz)
 
-    cdi_zaxis_ids(self%id) = 0
-    ! If this was the last instance of a JSBACH vgrid that uses a particular cdiZaxisID, also destroy CDI zaxis
-    idx = 0
-    DO i=1,SIZE(cdi_zaxis_ids)
-      IF (cdi_zaxis_ids(i) == self%cdiZaxisID) THEN
-        idx = i
-        EXIT
-      END IF
-    END DO
-    IF (idx == 0) CALL zaxisDestroy(self%cdiZaxisID)
-
     DEALLOCATE(self)
-!!$    self%cdiZaxisID = 0
-!!$    self%id = 0
-!!$    self%n_levels = 0
-!!$    self%name = ''
 
     CALL message(TRIM(routine), 'destruction of JSBACH vgrid completed.')
 

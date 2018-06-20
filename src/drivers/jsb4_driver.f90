@@ -12,8 +12,8 @@ PROGRAM jsb4_driver
 #ifndef __ICON__
 
   USE mo_jsb_interface,      ONLY: jsbach_interface
-  USE mo_jsb_base,           ONLY: init_base
-  USE mo_jsb_model_init,     ONLY: init_model
+  USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
+  USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday, is_newyear
@@ -217,8 +217,10 @@ PROGRAM jsb4_driver
   ! - jsbach_init
   CALL jsbach_init_version
 
-  CALL init_base('namelist.jsbach')
-  CALL init_model(nproca, nprocb, npedim, model_id)
+  CALL jsbach_setup_models('namelist.jsbach')
+  CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
+  CALL jsbach_setup_tiles(model_id)
+  CALL jsbach_init(model_id)
 
   CALL jsbach_label_run(jsbach_runs_standalone())
 

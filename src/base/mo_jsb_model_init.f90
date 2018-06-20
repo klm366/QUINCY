@@ -11,7 +11,7 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_base,         ONLY: jsbach
+  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
   USE mo_jsb_model_class,  ONLY: t_jsb_model
 
@@ -22,19 +22,19 @@ MODULE mo_jsb_model_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: init_model
+  PUBLIC :: jsbach_setup_grid, jsbach_init
 
-  INTERFACE init_model
-    MODULE PROCEDURE init_model_standalone
-    MODULE PROCEDURE init_model_patch
-    MODULE PROCEDURE init_model_decomposition
-  END INTERFACE init_model
+  INTERFACE jsbach_setup_grid
+    MODULE PROCEDURE setup_grid_standalone
+    MODULE PROCEDURE setup_grid_patch
+    MODULE PROCEDURE setup_grid_decomposition
+  END INTERFACE jsbach_setup_grid
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_init'
 
 CONTAINS
 
-  SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, model_name)
+  SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
 #ifndef __ICON__
     !>>> TODO: echam
     USE mo_gaussgrid,     ONLY : inigau
@@ -55,11 +55,11 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER  :: grid
     TYPE(pe_decomposed) :: decomposition
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_standalone'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_standalone'
 
     INTEGER :: nlon, nlat
 
-    model => jsbach%models(model_id)%m
+    model => Get_model(model_id)
 
     IF (PRESENT(model_name)) THEN
       IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
@@ -90,13 +90,13 @@ CONTAINS
     CALL register_grid(grid)
     model%grid_id = grid%id
 
-    CALL init_model_common(model)
+    ! CALL init_model_common(model)
 
     NULLIFY(model)
 
-  END SUBROUTINE init_model_standalone
+  END SUBROUTINE setup_grid_standalone
 
-  SUBROUTINE init_model_patch( model_id, patch)
+  SUBROUTINE setup_grid_patch( model_id, patch)
 
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
@@ -108,7 +108,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_patch'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_patch'
 
     IF (patch%id < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid patch')
@@ -116,19 +116,19 @@ CONTAINS
     IF (model_id > get_no_of_models()) &
       CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
 
-    model => jsbach%models(model_id)%m
+    model => Get_model(model_id)
 
     grid => new_grid(patch=patch)
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
-    CALL init_model_common(model)
+    ! CALL init_model_common(model)
 
     NULLIFY(model)
 
-  END SUBROUTINE init_model_patch
+  END SUBROUTINE setup_grid_patch
 
-  SUBROUTINE init_model_decomposition( model_id, decomposition)
+  SUBROUTINE setup_grid_decomposition( model_id, decomposition)
 
     USE mo_jsb_domain_iface, ONLY: pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
@@ -140,7 +140,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_decomposition'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_decomposition'
 
     IF (decomposition%nlon < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
@@ -148,27 +148,24 @@ CONTAINS
     IF (model_id > get_no_of_models()) &
       CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
 
-    model => jsbach%models(model_id)%m
+    model => Get_model(model_id)
 
     grid => new_grid(decomp=decomposition)
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
-    CALL init_model_common(model)
+    ! CALL init_model_common(model)
 
     NULLIFY(model)
 
-  END SUBROUTINE init_model_decomposition
+  END SUBROUTINE setup_grid_decomposition
 
-  SUBROUTINE init_model_common(model)
+  SUBROUTINE jsbach_init(model_id)
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
-    USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
-    USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
-    USE mo_jsb_model_usecases,  ONLY: init_usecase
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init
@@ -185,9 +182,7 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
-    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,            ONLY: Register_vgrid
-    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
+    USE mo_jsb_io,              ONLY: cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
     dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, FAGE_, FM_, HARV_
@@ -202,6 +197,14 @@ CONTAINS
     dsl4jsb_Use_config(FM_)
     dsl4jsb_Use_config(HARV_)
 
+    INTEGER, INTENT(in) :: model_id
+
+    TYPE(t_jsb_model), POINTER  :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
+    INTEGER                             :: iproc, ilct, jlct, i, no_children
+    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    INTEGER                             :: no_omp_thread
+
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
@@ -213,15 +216,7 @@ CONTAINS
     dsl4jsb_Def_config(HARV_)
     dsl4jsb_Def_config(FAGE_)
 
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    TYPE(t_jsb_vgrid),          POINTER :: surface                      ! Vertical grid
-    INTEGER                             :: iproc, ilct, jlct, i, no_children
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
-    INTEGER                             :: no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_init'
 
     no_omp_thread = Get_omp_thread()
 
@@ -229,16 +224,9 @@ CONTAINS
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
-    CALL model%Set_mode(model%config%hsm_mode)
-
     CALL cdiDefMissval(missval)
 
-    ALLOCATE(model%processes(max_no_of_processes))
-    DO iproc=1,max_no_of_processes
-      model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
-    END DO
-
-    CALL model%Configure_processes()
+    model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(SSE_)
@@ -251,62 +239,6 @@ CONTAINS
     dsl4jsb_Get_config(FM_)
     dsl4jsb_Get_config(HARV_)
 
-    ! Crosscheck process configs
-    IF (TRIM(model%config%tpe_scheme) /= '') THEN
-      CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
-      IF (model%config%use_lakes) THEN
-        CALL message('    ', '... using lakes')
-      ELSE
-        CALL message('    ', '... not using lakes')
-      END IF
-      IF (model%config%use_glacier) THEN
-        CALL message('    ', '... using glaciers')
-      ELSE
-        CALL message('    ', '... not using glaciers')
-      END IF
-    END IF
-
-    IF (model%config%l_compat401) THEN
-      CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
-      CALL message('    ', '... using soil heat capacity from mineral soil map')
-      CALL message('    ', '... using soil heat conductivity from mineral soil map')
-      CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
-      CALL message('    ', '... not using multi-layer snow model')
-      CALL message('    ', '... not using dynamical snow density and thickness')
-      CALL message('    ', '... not using frozen ground')
-      CALL message('    ', '... not using organic soil fractions')
-      dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
-      dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
-      dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
-      dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
-      dsl4jsb_Config(SSE_)%l_snow = .FALSE.
-      dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
-      dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
-      dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
-    END IF
-
-    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
-      dsl4jsb_Config(FUEL_)%active = .TRUE.
-      CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
-    END IF
-    IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
-      dsl4jsb_Config(CARBON_)%active = .TRUE.
-      CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
-    END IF
-
-    surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
-    CALL register_vgrid(surface)
-
-    model%lctlib => Read_lctlib('lctlib_nlct21.def')
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
-
-    IF (model%config%usecase /= '') THEN
-      ! Shortcut model configuration through usecase
-      CALL init_usecase(model)
-    ELSE
-      ! Explicit model configuration through namelist
-      ! TBD
-    END IF
 
     !NOTE: JN changed the order of the processes such that all processes changing the area of a tile are
     ! conducted first in the timestep.
@@ -614,7 +546,7 @@ CONTAINS
       END DO
     END IF
 
-  END SUBROUTINE init_model_common
+  END SUBROUTINE jsbach_init
 
 #endif
 END MODULE mo_jsb_model_init
