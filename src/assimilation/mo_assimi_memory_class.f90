@@ -85,7 +85,7 @@ MODULE mo_assimi_memory_class
     ! R: This variable is needed for process DISTURB and should be later in the process vegdyn 
     !    However it has to exist on each pft, therefore I put it to this process for now!
     TYPE(t_jsb_var_real2d) ::     &
-      cover_frac_pot ! Potential Natural Land Cover Fraction
+      cover_fract_pot ! Potential Natural Land Cover Fraction
 
   CONTAINS
     PROCEDURE :: Init => Init_assimi_memory
@@ -246,9 +246,9 @@ CONTAINS
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'cover_frac_pot', mem%cover_frac_pot,             &
+      CALL jsb_add_var( mem, 'cover_fract_pot', mem%cover_fract_pot,             &
         & hgrid, surface,                                                 &
-        & t_cf('cover_frac_pot', 'fract', ''),                                      &
+        & t_cf('cover_fract_pot', 'fract', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                      &
         & initval_r=0.1_wp ) ! initval choosen freely

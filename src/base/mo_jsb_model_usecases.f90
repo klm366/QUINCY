@@ -16,7 +16,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, &
     & CARBON_, DISTURB_, FUEL_, FAGE_, FM_, HARV_
-  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_, SKIP_
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -52,12 +52,6 @@ CONTAINS
 
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
-
-    CASE ('jsbach_lite_tpe_open')
-      CALL init_usecase_lite_tpe_open(model)
-
-    CASE ('jsbach_lite_tpe_closed')
-      CALL init_usecase_lite_tpe_closed(model)
 
     CASE ('jsbach_age_cohorts')
       CALL init_usecase_age_cohorts(model)
@@ -109,9 +103,11 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
@@ -188,11 +184,13 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
@@ -259,27 +257,6 @@ CONTAINS
     NULLIFY(pft_tile)
 
   END SUBROUTINE init_usecase_pfts
-  
-  SUBROUTINE init_usecase_lite_tpe_open(model)
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_open'
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CALL init_usecase_lite(model)
-
-  END SUBROUTINE init_usecase_lite_tpe_open
-
-  SUBROUTINE init_usecase_lite_tpe_closed(model)
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_closed'
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CALL init_usecase_lite(model)
-
-  END SUBROUTINE init_usecase_lite_tpe_closed
-
   
   SUBROUTINE init_usecase_age_cohorts(model)
 
@@ -350,11 +327,13 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
+        IF (model%config%use_glacier) THEN  
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/), &
@@ -421,7 +400,6 @@ CONTAINS
     NULLIFY(pft_tile)
 
   END SUBROUTINE init_usecase_age_cohorts
-
 
 #endif
 END MODULE mo_jsb_model_usecases

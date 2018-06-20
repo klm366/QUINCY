@@ -50,7 +50,7 @@ CONTAINS
     & swvis_srf_down,         &
     & swnir_srf_down,         &
     & swpar_srf_down,         &
-    & frac_par_diffuse,       &
+    & fract_par_diffuse,       &
     & press_srf,              &
     & drag_srf,               &
     & t_acoef,                &
@@ -79,7 +79,7 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in) ::                                            &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:),          &
       & lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), swpar_srf_down(:), &
-      & frac_par_diffuse(:), press_srf(:), drag_srf(:),                          &
+      & fract_par_diffuse(:), press_srf(:), drag_srf(:),                          &
       & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
       & pch(:), cos_zenith_angle(:),                                             &
       & CO2_air(:),                                                              &
@@ -113,7 +113,7 @@ CONTAINS
     IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
     IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
     IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
-    IF (PRESENT(frac_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,frac_par_diffuse)  = frac_par_diffuse  (:)
+    IF (PRESENT(fract_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)  = fract_par_diffuse  (:)
     IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
     IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
     IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
@@ -222,7 +222,7 @@ CONTAINS
       IF (PRESENT(fact_q_air))    fact_q_air(:)       =                dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
       IF (PRESENT(fact_qsat_srf)) fact_qsat_srf(:)    =                dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
       IF (PRESENT(evapopot))      evapopot(:)         =                dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_lnd)
+      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))   latent_hflx(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx)) sensible_hflx(:)    = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
       IF (PRESENT(grnd_hflx))     grnd_hflx(:)        =                dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and
@@ -267,7 +267,7 @@ CONTAINS
       IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
       IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
       IF (PRESENT(evapopot))        evapopot(:)         = dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapo_lnd)
+      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
       IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and

@@ -217,7 +217,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)        :: w_soil_filling,  &
                                               t_air_in_Celcius, &
                                               LaiMax_corrected, &
-                                              veg_frac_correction_old, &
+                                              veg_fract_correction_old, &
                                               old_c_state_sum, dummy_flux
 
     TYPE(t_jsb_grid),  POINTER             :: grid
@@ -275,7 +275,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
 
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
@@ -333,7 +333,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)      ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_frac_correction)     ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)     ! inout
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    cconservation_allom)     ! inout
 
@@ -417,7 +417,7 @@ CONTAINS
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear()) THEN
-        veg_frac_correction_old(:) = veg_frac_correction(:)
+        veg_fract_correction_old(:) = veg_fract_correction(:)
 
         CALL derive_maxLai_according_to_allometric_relationships( &
           & dsl4jsb_Lctlib_param(alpha_nr_ind),       & ! <- in
@@ -431,14 +431,14 @@ CONTAINS
           & veg_carbon_at_max_green(:),               & ! <- InOut
           & number_of_individuals(:),                 & ! <- InOut
           & biomass_per_individual(:),                & ! <- InOut
-          & veg_frac_correction(:),                   & ! <- InOut
+          & veg_fract_correction(:),                   & ! <- InOut
           & maxLAI_allom(:)                           & ! <- InOut
           & )
 
         ! redistribute 
         CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
 
-        CALL rescale_carbon_upon_reference_area_change(tile, options, veg_frac_correction_old, veg_frac_correction)
+        CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
         dummy_flux = 0._wp
         CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &

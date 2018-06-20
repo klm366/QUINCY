@@ -702,7 +702,7 @@ MODULE mo_pheno_process
 
                    ! If also yesterdays net production is positive let it grow
                    IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN
-                      grRate = PhenoParam%CRP%leafAlloc_frac * lctlib_specificLeafArea_C * & ! => growth rate is high (depending on NPP)
+                      grRate = PhenoParam%CRP%leafAlloc_fract * lctlib_specificLeafArea_C * & ! => growth rate is high (depending on NPP)
                                  MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / lai                     !    .. and is in units of 1/days
                       lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_wp, LaiMax_corrected)
                    ELSE                                                                ! else ..
@@ -734,7 +734,7 @@ MODULE mo_pheno_process
 
                ! If yesterdays net production is positive let it grow
                IF(previous_day_NPP_pot_rate_ca > 0._wp ) THEN
-                  grRate = PhenoParam%CRP%leafAlloc_frac * lctlib_specificLeafArea_C *  & ! => growth rate
+                  grRate = PhenoParam%CRP%leafAlloc_fract * lctlib_specificLeafArea_C *  & ! => growth rate
                                 MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / lai                   !    .. is in units of 1/days
                   lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
                ELSE
@@ -895,7 +895,7 @@ MODULE mo_pheno_process
                                           & veg_carbon_at_max_green,        & ! <- InOut
                                           & number_of_individuals,          & ! <- InOut
                                           & biomass_per_individual,         & ! <- InOut
-                                          & veg_frac_correction,            & ! <- InOut
+                                          & veg_fract_correction,            & ! <- InOut
                                           & maxLAI_allom )                    ! <- inout
 
     !-----------------------------------------------------------------------
@@ -916,7 +916,7 @@ MODULE mo_pheno_process
                               & veg_carbon_at_max_green,        & 
                               & number_of_individuals,          & 
                               & biomass_per_individual,         & 
-                              & veg_frac_correction,            &
+                              & veg_fract_correction,            &
                               & maxLAI_allom
 
     !-----------------------------------------------------------------------
@@ -955,7 +955,7 @@ MODULE mo_pheno_process
     ENDIF
 
     ! recalculate correction factor for the canopy cover
-    veg_frac_correction = 1.0_wp - exp(-maxLAI_allom / lctlib_clumpinessFactor )
+    veg_fract_correction = 1.0_wp - exp(-maxLAI_allom / lctlib_clumpinessFactor )
 
     ! reset tracking variables
     veg_carbon_at_max_green = 0.0_wp

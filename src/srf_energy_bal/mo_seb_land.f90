@@ -499,7 +499,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: latent_hflx_lnd
     dsl4jsb_Real2D_onChunk :: sensible_hflx_lnd
     dsl4jsb_Real2D_onChunk :: evapopot
-    dsl4jsb_Real2D_onChunk :: evapotranspiration
+    dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: fract_snow
 
     ! Locally allocated vectors
@@ -538,7 +538,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)            ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotranspiration)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
 
@@ -560,7 +560,7 @@ CONTAINS
 
     ! Compute latent heat flux
     !
-    latent_hflx(:) = alv * evapotranspiration(:) + (als - alv) * fract_snow(:) * evapopot(:)
+    latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
 
     ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
     sensible_hflx_lnd(:) = sensible_hflx(:)

@@ -40,15 +40,16 @@ MODULE mo_hydro_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow,          & !< Snow fraction of tile                                                []
-      & w_snow,              & !< Water content of snow reservoir                                      [m water equivalent]
-      & evap_snow,           & !< Evaporation from snow                                                [kg m-2 s-1]
-      & snowmelt,            & !< Snow melt                                                            [kg m-2 s-1]
-      & evapopot,            & !< Potential evaporation                                                [kg m-2 s-1]
-      & evapotranspiration,  & !< Evapotranspiration                                                   [kg m-2 s-1]
-      & water_flux,          & ! Total water flux                                                      [m3/s]
-      & water_content,       & ! Total water content                                                   [m3]
-      & water_budget           ! Water budget error                                                    [m3]
+      & fract_snow,           & !< Snow fraction of tile                                                []
+      & w_snow,               & !< Water content of snow reservoir                                      [m water equivalent]
+      & evapo_snow,           & !< Evaporation from snow                                                [kg m-2 s-1]
+      & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
+      & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
+      & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
+                                ! e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
+      & water_flux,           & ! Total water flux                                                      [m3/s]
+      & water_content,        & ! Total water content                                                   [m3]
+      & water_budget            ! Water budget error                                                    [m3]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,           & !< surface runoff
@@ -65,9 +66,9 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_soil,  & !< Snow fraction on soil                                               []
       & w_snow_soil,      & !< Water content of snow reservoir of soil                             [m water equivalent]
-      ! & w_snow_soil_old,  & !< Water content of snow reservoir of soil (old)                       [m water equivalent]
+      ! & w_snow_soil_old,  & !< Water content of snow reservoir of soil (old)                     [m water equivalent]
       & snow_soil_dens,   & !< Density of snow on soil                                             [kg m-3]
-      & evapo_lnd,        & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
+      & evapotrans_lnd,   & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
       & q_snocpymlt         !< Heating by melting of snow on canopy                                [W m-2]
 
     ! Additional variables for soil
@@ -92,9 +93,9 @@ MODULE mo_hydro_memory_class
       & w_skin,           & !< Water content in skin reservoir (soil and canopy)                        [m]
       & snow_accum,       & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,  & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
-      !& evap_soil,        & !< Evaporation from ground                                                  [kg m-2 s-1]
-      & evap_skin,        & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
-      & evap_deficit,     & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
+      !& evapo_soil,        & !< Evaporation from ground                                                  [kg m-2 s-1]
+      & evapo_skin,        & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
+      & evapo_deficit,     & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_excess,     & !< Water available for infiltration into the soil                           [m water equivalent]
       & w_soil_overflow,  & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
       & w_soil_column,    & !< Water content in the whole soil column (root zone)                       [m]
@@ -227,14 +228,14 @@ CONTAINS
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
-    CALL jsb_add_var( mem, 'evapotranspiration', mem%evapotranspiration,                    &
+    CALL jsb_add_var( mem, 'evapotrans', mem%evapotrans,                    &
       & hgrid, surface,                                                                  &
       & t_cf('surface_evapotranspiration', 'kg m-2 s-1', 'Evapotranspiration from surface'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & lrestart=.TRUE.,                                                    &
       & output_level=BASIC, &
-      & loutput = .TRUE.,initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Potential evapotranspiration/sublimation
     CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                     &
@@ -243,11 +244,11 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & lrestart=.TRUE.,                                                    &
-      & loutput = .TRUE.,initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL jsb_add_var( mem, 'evap_snow', mem%evap_snow,                                   &
+    CALL jsb_add_var( mem, 'evapo_snow', mem%evapo_snow,                                   &
       & hgrid, surface,                                                                  &
-      & t_cf('evap_snow', 'kg m-2 s-1', 'Evaporation from snow'),                        &
+      & t_cf('evapo_snow', 'kg m-2 s-1', 'Evaporation from snow'),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & lrestart=.FALSE.,                                                                &
@@ -344,7 +345,7 @@ CONTAINS
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  )                                       &
-      &  .AND. .NOT. ASSOCIATED(mem%evapo_lnd%ptr) ) THEN
+      &  .AND. .NOT. ASSOCIATED(mem%evapotrans_lnd%ptr) ) THEN
 
       CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil, &
         & hgrid, surface,                                                            &
@@ -375,7 +376,7 @@ CONTAINS
         & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
-      CALL jsb_add_var( mem, 'evapo_lnd', mem%evapo_lnd,                                 &
+      CALL jsb_add_var( mem, 'evapotrans_lnd', mem%evapotrans_lnd,                                 &
         & hgrid, surface,                                                                  &
         & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
@@ -586,15 +587,15 @@ CONTAINS
         & lrestart=.FALSE.,                                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL jsb_add_var( mem, 'evap_skin', mem%evap_skin,                                     &
+    CALL jsb_add_var( mem, 'evapo_skin', mem%evapo_skin,                                     &
         & hgrid, surface,                                                                  &
-        & t_cf('evap_skin', 'kg m-2 s-1', 'Evaporation from skin reservoir'),              &
+        & t_cf('evapo_skin', 'kg m-2 s-1', 'Evaporation from skin reservoir'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL jsb_add_var( mem, 'evap_deficit', mem%evap_deficit,                               &
+    CALL jsb_add_var( mem, 'evapo_deficit', mem%evapo_deficit,                               &
         & hgrid, surface,                                                                  &
         & t_cf('evaporation_deficit', 'm water equivalent', ''),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &

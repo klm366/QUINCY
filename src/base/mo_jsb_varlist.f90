@@ -22,8 +22,7 @@ MODULE mo_jsb_varlist
                                   t_var_metadata, t_list_element,   &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
                                   VARNAME_LEN
-  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, missval, &
-                                  FILETYPE_NC2, tables
+  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_jsb_process_class, ONLY: Get_process_name
 
@@ -60,8 +59,8 @@ CONTAINS
     IF (.NOT. ASSOCIATED(return_ptr)) THEN
       ALLOCATE(return_ptr)
       CALL jsb_new_var_list(return_ptr, TRIM(name), patch_id, &
-        & loutput=.TRUE., output_type=FILETYPE_NC2, &
-        & lrestart=.TRUE., restart_type=FILETYPE_NC2, table=tables(1))
+        & loutput=.TRUE., &
+        & lrestart=.TRUE., table=tables(1))
     END IF
 
   END FUNCTION Get_varlist

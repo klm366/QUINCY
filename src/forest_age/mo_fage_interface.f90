@@ -157,14 +157,14 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Task "calculate_ageing" calculates the required changes upon ageing 
-  !!        changes in delta fract, delta cpools, delta veg_frac_correction 
+  !!        changes in delta fract, delta cpools, delta veg_fract_correction 
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   ! 
   SUBROUTINE update_calculate_ageing(tile, options)
 
-    USE mo_fage_process,         ONLY: update_frac_per_age_upon_ageing, correct_and_synchronise_fracts, &
+    USE mo_fage_process,         ONLY: update_fract_per_age_upon_ageing, correct_and_synchronise_fracts, &
       & weighted_avg_var_upon_area_change
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift, &
@@ -182,8 +182,8 @@ CONTAINS
     dsl4jsb_Def_memory_tile(CARBON_, currentChild)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction_prevChild
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction_currentChild
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction_prevChild
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction_currentChild
     dsl4jsb_Real2D_onChunk :: lai_prevChild
     dsl4jsb_Real2D_onChunk :: lai_currentChild
     dsl4jsb_Real2D_onChunk :: LAI_yDayMean_prevChild
@@ -197,7 +197,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), POINTER    :: currentChild, prevChild
     REAL(wp), DIMENSION(options%nc)        :: fract_source_max_age, fract_sum, remainder, &
-                                            & source_fract, sink_fract, altered_sink_fract, old_veg_frac_correction_sink
+                                            & source_fract, sink_fract, altered_sink_fract, old_veg_fract_correction_sink
 
     REAL(wp) :: fractSum
     INTEGER  :: i,j, ncohorts, max_age, iblk, ics, ice, nc
@@ -282,30 +282,30 @@ CONTAINS
         CALL recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift( &
           & prevChild, currentChild, options, fract_source_max_age(:), source_fract(:))
 
-        ! c) correct veg_frac_correction and lai
+        ! c) correct veg_fract_correction and lai
 
-        ! ------ veg_frac_correction needs to be averaged because it is required for correct recalculation of the carbon pools  
+        ! ------ veg_fract_correction needs to be averaged because it is required for correct recalculation of the carbon pools  
         !     -> particularly of max_green_veg_c for subsequent maxLAI calculation!
         dsl4jsb_Get_memory_tile(PHENO_, prevChild)
         dsl4jsb_Get_memory_tile(PHENO_, currentChild)
 
-        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_frac_correction, prevChild)
-        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_frac_correction, currentChild)
+        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, prevChild)
+        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, currentChild)
 
-        old_veg_frac_correction_sink(:) = veg_frac_correction_currentChild(:)
+        old_veg_fract_correction_sink(:) = veg_fract_correction_currentChild(:)
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), &
-          & veg_frac_correction_prevChild(:), veg_frac_correction_currentChild(:)) 
+          & veg_fract_correction_prevChild(:), veg_fract_correction_currentChild(:)) 
 
-        ! ++ when the veg_frac_correction changes cpools always need to be rescaled 
-        IF(ANY(old_veg_frac_correction_sink(:) .NE. veg_frac_correction_currentChild(:))) THEN
+        ! ++ when the veg_fract_correction changes cpools always need to be rescaled 
+        IF(ANY(old_veg_fract_correction_sink(:) .NE. veg_fract_correction_currentChild(:))) THEN
           CALL rescale_carbon_upon_reference_area_change(currentChild, options, &
-            & old_veg_frac_correction_sink(:), veg_frac_correction_currentChild(:))
+            & old_veg_fract_correction_sink(:), veg_fract_correction_currentChild(:))
         ENDIF
 
         ! ------ also the lai needs to be weighted upon area change involved with ageing 
         !        this is not done as for the cpools, because currently (28.03.18) KN and JN interprete LAI as per tile
         !        --> NOTE: if not per tile but per canopy it also would need to be rescaled 
-        !                  each time the veg_frac_correction changes and could thus be treated the same as the cpools
+        !                  each time the veg_fract_correction changes and could thus be treated the same as the cpools
         dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, prevChild)
         dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, lai, currentChild)
         CALL weighted_avg_var_upon_area_change( sink_fract(:), fract_source_max_age(:), lai_prevChild(:), lai_currentChild(:)) 
@@ -332,7 +332,7 @@ CONTAINS
       ENDDO
 
       ! update the area per age tracking vector - for ageing this can be done for all children at once
-      CALL update_frac_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
+      CALL update_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
     ELSE
       tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
@@ -399,7 +399,7 @@ CONTAINS
 
     USE mo_jsb_time,             ONLY: is_newday
     USE mo_fage_util,            ONLY: get_mean_age
-    USE mo_fage_process,         ONLY: update_frac_per_age_equally_upon_disturbance
+    USE mo_fage_process,         ONLY: update_fract_per_age_equally_upon_disturbance
     USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: WIND, FIRE
 
@@ -411,8 +411,8 @@ CONTAINS
     dsl4jsb_Def_memory_tile(DISTURB_, currentChild)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: burned_frac
-    dsl4jsb_Real2D_onChunk :: damaged_frac
+    dsl4jsb_Real2D_onChunk :: burned_fract
+    dsl4jsb_Real2D_onChunk :: damaged_fract
 
     dsl4jsb_Real2D_onChunk :: mean_age
     dsl4jsb_Real3D_onChunk :: fract_per_age
@@ -471,17 +471,17 @@ CONTAINS
           currentChild%l_update_c(ics:ice, iblk) = .FALSE.
         ENDIF
 
-        ! -> damaged_frac and burned_frac were determined by the disturbance process and are a fraction of the tile
+        ! -> damaged_fract and burned_fract were determined by the disturbance process and are a fraction of the tile
         CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
 
         !get current child tiles disturbed areas!
         dsl4jsb_Get_memory_tile(DISTURB_, currentChild)
-        dsl4jsb_Get_var2d_onChunk_tile(DISTURB_, burned_frac, currentChild)
-        dsl4jsb_Get_var2d_onChunk_tile(DISTURB_, damaged_frac, currentChild)
+        dsl4jsb_Get_var2d_onChunk_tile(DISTURB_, burned_fract, currentChild)
+        dsl4jsb_Get_var2d_onChunk_tile(DISTURB_, damaged_fract, currentChild)
 
         !***********************************************
         !*** care for fire damage
-        burnedArea(:) = burned_frac(:) * source_fract(:)
+        burnedArea(:) = burned_fract(:) * source_fract(:)
 
         ! a) changes in area
         ! reduce current tiles delta fraction  
@@ -500,7 +500,7 @@ CONTAINS
 
         !***********************************************
         !*** care for wind damage 
-        damagedArea(:) = damaged_frac(:) * (source_fract(:) - burnedArea(:))
+        damagedArea(:) = damaged_fract(:) * (source_fract(:) - burnedArea(:))
 
         ! wind damage only depends on the forcing and there is a chance that no area is damaged
         IF(ANY(damagedArea(:) .GT. 0._wp)) THEN
@@ -525,7 +525,7 @@ CONTAINS
           disturbed_area(:,i) = damagedArea(:) + burnedArea(:)
           IF(ANY(disturbed_area(:,i) .GT. 0._wp)) THEN
             IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
-              CALL update_frac_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
+              CALL update_fract_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
                 & i, disturbed_area(:,i), cohort_max_age(:,:), fract_per_age(:,:))
             ELSE
               CALL finish(TRIM(routine), 'Currently only "static" implemented as forest ageing scheme')
@@ -603,7 +603,7 @@ CONTAINS
 
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_fage_util,            ONLY: get_mean_age
-    USE mo_fage_process,         ONLY: update_frac_per_age_and_determine_area_to_harvest_from_cohort
+    USE mo_fage_process,         ONLY: update_fract_per_age_and_determine_area_to_harvest_from_cohort
     USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: CLEARCUT
     USE mo_harvest_constants,    ONLY: HARVEST_OLDEST_TREES
@@ -685,7 +685,7 @@ CONTAINS
         firstChild%l_update_c(ics:ice, iblk) = .TRUE.
 
         IF (dsl4jsb_Config(HARV_)%harv_kind .EQ. HARVEST_OLDEST_TREES) THEN
-          ! as opposed to damaged_frac in update_nat_dist_age_cohorts area_to_harvest is already with respect
+          ! as opposed to damaged_fract in update_nat_dist_age_cohorts area_to_harvest is already with respect
           ! to this tiles area - i.e. not per age cohort, thus it does not have to be multiplied with age cohort fractions
           stillToHarvest(:) = area_to_harvest(:)
 
@@ -710,7 +710,7 @@ CONTAINS
 
             ! Determine area to be harvested from this age cohort
             harvestFromThisAgeCohort = 0._wp
-            CALL update_frac_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
+            CALL update_fract_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
               & max_age, cohort_max_age(:,i), cohort_max_age(:,i-1), fract_per_age(:,:), &
               & harvestFromThisAgeCohort(:), stillToHarvest(:))
              

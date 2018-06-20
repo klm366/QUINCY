@@ -14,7 +14,7 @@ MODULE mo_disturbance_constants
 
   IMPLICIT NONE
   PUBLIC
-  ! Submodel identifiers for subroutine disturbed_frac and relocate_disturbed_carbon
+  ! Submodel identifiers for subroutine disturbed_fract and relocate_disturbed_carbon
   ! to tell the subroutines which kind of parametrizations they should use.
   ! However, only two of them are used in JS4.
   !INTEGER , PARAMETER, PUBLIC  :: DIST_FIRE_WOOD        =  1 !! Calculation wrt. burning woody pfts

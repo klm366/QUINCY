@@ -123,7 +123,7 @@ PROGRAM jsb4_driver
 
   !! TODO: so far not used in jsb4 but already read from forcing file/ calculated in mo_jsb4_forcing
   REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
-  REAL(wp), ALLOCATABLE :: frac_par_diffuse(:,:)
+  REAL(wp), ALLOCATABLE :: fract_par_diffuse(:,:)
 
   !! JSB4 interface variables - output, required for next timesteps forcing (if not reading interface vars)
   REAL(wp), ALLOCATABLE :: t_srf_proc(:,:)
@@ -131,9 +131,9 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: fact_qsat_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: rough_h_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: rough_m_srf_proc(:,:)
-  REAL(wp), ALLOCATABLE :: evap_act2pot_proc(:,:)
-!  REAL(wp), ALLOCATABLE :: evap_act_sum_proc(:,:)
-!  REAL(wp), ALLOCATABLE :: evap_pot_sum_proc(:,:)
+  REAL(wp), ALLOCATABLE :: evapo_act2pot_proc(:,:)
+!  REAL(wp), ALLOCATABLE :: evapo_act_sum_proc(:,:)
+!  REAL(wp), ALLOCATABLE :: evapo_pot_sum_proc(:,:)
 
 
   !! JSB4 interface variables - output
@@ -253,7 +253,7 @@ PROGRAM jsb4_driver
   ALLOCATE(cos_zenith_angle(nproma, nblks))
 
   ALLOCATE(CO2_concentration(nproma, nblks))
-  ALLOCATE(frac_par_diffuse(nproma, nblks))
+  ALLOCATE(fract_par_diffuse(nproma, nblks))
 
   ! output required for next timesteps forcing (if not reading interface vars)
   ALLOCATE(t_srf_proc(nproma, nblks))
@@ -261,9 +261,9 @@ PROGRAM jsb4_driver
   ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
   ALLOCATE(rough_h_srf_proc(nproma, nblks))
   ALLOCATE(rough_m_srf_proc(nproma, nblks))
-  ALLOCATE(evap_act2pot_proc(nproma, nblks))
-!  ALLOCATE(evap_act_sum_proc(nproma, nblks))
-!  ALLOCATE(evap_pot_sum_proc(nproma, nblks))
+  ALLOCATE(evapo_act2pot_proc(nproma, nblks))
+!  ALLOCATE(evapo_act_sum_proc(nproma, nblks))
+!  ALLOCATE(evapo_pot_sum_proc(nproma, nblks))
 
   ! output
   ALLOCATE(t_eff_srf(nproma))
@@ -314,10 +314,10 @@ PROGRAM jsb4_driver
     fact_qsat_srf_proc = 0.5_wp
     rough_h_srf_proc = 1._wp
     rough_m_srf_proc = 1._wp
-    evap_act2pot_proc = 1._wp
+    evapo_act2pot_proc = 1._wp
 
-!    evap_act_sum_proc = 0._wp
-!    evap_pot_sum_proc = 0._wp
+!    evapo_act_sum_proc = 0._wp
+!    evapo_pot_sum_proc = 0._wp
   ENDIF
 
   model => get_model(model_id)
@@ -339,7 +339,7 @@ PROGRAM jsb4_driver
       rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
       rough_m_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_m)
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotranspiration),-EPSILON(1._wp)) &
+      evapo_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
   ENDIF
@@ -388,10 +388,10 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
-        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse,                              &
+        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
         & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
       ! TODO-JN: for forest management test, before there is a better way available: 
@@ -502,7 +502,7 @@ PROGRAM jsb4_driver
       ENDIF
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
-        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), frac_par_diffuse(:,iblk), &
+        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
         & press_srf(:,iblk), drag_srf(:,iblk), &
         & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk), &
         & CO2_concentration(:,iblk), &
@@ -512,20 +512,20 @@ PROGRAM jsb4_driver
         & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:,iblk), evapopot=evapopot(:))
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
-        ! To ensure restart identity, the daily evap_act_sum and evap_pot_sum would need to be calculated in jsbach!
+        ! To ensure restart identity, the daily evapo_act_sum and evapo_pot_sum would need to be calculated in jsbach!
         ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
-        evap_act2pot_proc(:,iblk) &
+        evapo_act2pot_proc(:,iblk) &
           & = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
-!        evap_act_sum_proc(:,iblk) = evap_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
-!        evap_pot_sum_proc(:,iblk) = evap_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
+!        evapo_act_sum_proc(:,iblk) = evapo_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
+!        evapo_pot_sum_proc(:,iblk) = evapo_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF
 
     ENDDO
 
 !    IF ((.NOT. read_interface_vars) .AND. is_newday()) THEN
-!      evap_act2pot_proc = evap_act_sum_proc / evap_pot_sum_proc
-!      evap_act_sum_proc = 0._wp
-!      evap_pot_sum_proc = 0._wp
+!      evapo_act2pot_proc = evapo_act_sum_proc / evapo_pot_sum_proc
+!      evapo_act_sum_proc = 0._wp
+!      evapo_pot_sum_proc = 0._wp
 !    ENDIF
 
     CALL out_streams
@@ -569,7 +569,7 @@ PROGRAM jsb4_driver
 
   ! deallocate in- and output arrays
   DEALLOCATE(t_air_K, q_air, rain, snow, wind_air, wind_10m)
-  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse)
+  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse)
   DEALLOCATE(press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, CO2_concentration)
 
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
@@ -582,8 +582,8 @@ PROGRAM jsb4_driver
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
-    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evap_act2pot_proc)
-    !DEALLOCATE(evap_act_sum_proc, evap_pot_sum_proc)
+    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evapo_act2pot_proc)
+    !DEALLOCATE(evapo_act_sum_proc, evapo_pot_sum_proc)
   ENDIF
 
   ! Stop MPI

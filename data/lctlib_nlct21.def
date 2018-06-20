@@ -75,21 +75,21 @@ MinVegRoughness 0.005 2.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.3 0.3 0.005 0.005 0.005 
 #MaxVegRoughness: Vegetation roughness length at LAI=LAI_max [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero                     
 MaxVegRoughness 0.010 5.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 1.0 1.0 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.10
                      
-#Frac_npp_2_woodPool: Maximum fraction of NPP used for buildup of woody parts                     
-Frac_npp_2_woodPool 0.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.0 0.0 0.0 0.0 0.0 0.3 0.3 0.0 0.0 0.0
+#Fract_npp_2_woodPool: Maximum fraction of NPP used for buildup of woody parts                     
+Fract_npp_2_woodPool 0.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.0 0.0 0.0 0.0 0.0 0.3 0.3 0.0 0.0 0.0
                      
-#Frac_npp_2_reservePool: Maximum fraction of NPP put into the storage pool                     
-Frac_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.15 0.15 0.15 0.15 0.1 0.1 0.2 0.2 0.2
+#Fract_npp_2_reservePool: Maximum fraction of NPP put into the storage pool                     
+Fract_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.15 0.15 0.15 0.15 0.1 0.1 0.2 0.2 0.2
                      
-#Frac_npp_2_exudates: Maximum fraction of NPP put into the root exudates                     
-Frac_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+#Fract_npp_2_exudates: Maximum fraction of NPP put into the root exudates                     
+Fract_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
                      
-#Frac_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
-Frac_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
+#Fract_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
+Fract_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
                      
-#Frac_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
+#Fract_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
 #                   (The rest enters slow pool.)                      
-Frac_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
+Fract_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
                      
 #Tau_c_litter_leaf: Life time of leaf litter [days]                     
 Tau_c_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
@@ -110,14 +110,14 @@ Max_C_content_woods 0.0 2997.25 2997.25 2397.8 1798.3 2397.8 1798.3 2397.8 1798.
 #reserveC2leafC: Factor by which the maximum carbon content of the reserve pool is larger than MAXLAI /SLA                     
 reserveC2leafC 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 4.0 4.0 4.0 4.0 4.0 2.0 2.0 4.0 4.0 4.0
                      
-#frac_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
-frac_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+#fract_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
+fract_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
                      
-#frac_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
-frac_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+#fract_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
+fract_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
-#frac_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
-frac_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+#fract_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
+fract_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #MaxLAI: Maximum LAI used in the LogoP scheme [m2/m2]                     
 MaxLAI 0.0 7.0 7.0 5.0 5.0 6.0 5.0 5.0 5.0 2.0 2.0 3.0 3.0 3.0 3.0 3.0 1.5 3.0 4.0 4.0 4.0

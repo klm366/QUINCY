@@ -124,7 +124,7 @@ MODULE mo_carbon_memory_class
       cflux_fire_all_2_atm,      & ! R: should be later renamed to C_2_atmos
                                    ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !frac_litter_wood_new,       & ! new fraction in above ground wood litter pool 
+      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool 
 !JN: variables required when l_forestRegrowth = true, i.e. when the maxLAI is derived from biomass via allometric relationships
       current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)] 
                                     ! since last maxLAI calculation
@@ -132,11 +132,10 @@ MODULE mo_carbon_memory_class
                                     ! at the time of the green pool maximum (current_max_green)
                                     
                                     !TODO-JN-COHORTS maybe I want them as ta variables also for easier plotting/comparison
-                                    ! -> currently of course need to be multiplied with phenos veg_frac_correction...
+                                    ! -> currently of course need to be multiplied with phenos veg_fract_correction...
       annual_avg_NPP,             & ! NPP increment with annual weighting [mol(C) m-2(canopy) y-1] 
       biennial_avg_NPP,           & ! NPP increment with biennial weighting [mol(C) m-2(canopy) y-1]
       decennial_avg_NPP             ! NPP increment with decennial weighting [mol(C) m-2(canopy) y-1]
-
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
@@ -200,7 +199,7 @@ MODULE mo_carbon_memory_class
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
 
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      frac_litter_wood_new_ta,       & ! new fraction in above ground wood litter pool 
+      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool 
       ! former (JS3) local variables. R: nur auf tile area benötigt!
       cflux_npp_2_atm_ta,            & ! [kg(CO2)/m^2 s]  tile averages of net CO2 fluxes between
       cflux_soilresp_2_atm_ta,       & !  .. biosphere (due to NPP, soil respiration and
@@ -361,7 +360,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=FULL,                                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
+        & lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
 
 !@todo: relict from CBALANCE, (currently) not required for YASSO
       CALL jsb_add_var( mem, 'alpha', mem%alpha,                                                       &
@@ -370,17 +369,17 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=FULL,                                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3's alpha_yDayMean
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3's alpha_yDayMean
 
 !@todo: relict from CBALANCE?
       ! Carbon variables on canopy area
-      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter', mem%cflux_c_greenwood_2_litter,                                             &
+      CALL jsb_add_var( mem, 'c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                       &
         & hgrid, surface,                                                                                &
         & t_cf('cflux_c_greenwood_2_litter', 'mol(CO2) m-2(canopy) s-1', 'Total litter flux entering the soil pools.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
         & output_level=FULL,                                                                             &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_green', mem%c_green,                                     &
         & hgrid, surface,                                                                        &
@@ -388,7 +387,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=FULL,                                                                             &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_woods', mem%c_woods,                                                &
         & hgrid, surface,                                                                                   &
@@ -396,7 +395,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
         & prefix, suffix,                                                                                   &
         & output_level=FULL,                                                                             &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_reserve', mem%c_reserve,                                                             &
         & hgrid, surface,                                                                                                    &
@@ -404,7 +403,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                 &
         & prefix, suffix,                                                                                                    &
         & output_level=FULL,                                                                             &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_crop_harvest', mem%c_crop_harvest,                               &
         & hgrid, surface,                                                                                &
@@ -412,7 +411,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
         & output_level=FULL,                                                                             &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 1
       CALL jsb_add_var( mem, 'c_acid_ag1', mem%c_acid_ag1,                                               &
@@ -421,7 +420,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=FULL,                                                                                       &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_ag1', mem%c_water_ag1,                                               &
         & hgrid, surface,                                                                                            &
@@ -429,7 +428,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                         &
         & prefix, suffix,                                                                                            &
         & output_level=FULL,                                                                                       &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_ethanol_ag1', mem%c_ethanol_ag1,                                               &
         & hgrid, surface,                                                                                                &
@@ -437,7 +436,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
         & prefix, suffix,                                                                                                &
         & output_level=FULL,                                                                                       &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_nonsoluble_ag1', mem%c_nonsoluble_ag1,                                        &
         & hgrid, surface,                                                                                               &
@@ -445,7 +444,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=FULL,                                                                                       &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_acid_bg1', mem%c_acid_bg1,                                               &
         & hgrid, surface,                                                                                          &
@@ -558,7 +557,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=FULL,                                                                                       &
-        & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_sum_natural', mem%C_sum_natural,                      &
         & hgrid, surface,                                                             &
@@ -600,14 +599,14 @@ CONTAINS
         & t_cf('alpha_sum', '-', 'Used to accumulate water stress coefficient over a day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'soil_respiration', mem%soil_respiration,           &
         & hgrid, surface,                                                        &
         & t_cf('soil_respiration', 'mol(C) m-2(canopy) s-1', 'Soil respiration.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'npp_flux_correction', mem%NPP_flux_correction,                                      &
         & hgrid, surface,                                                                                         &
@@ -615,21 +614,21 @@ CONTAINS
         &                                                        to avoid a negative reserve pool.'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'excess_npp', mem%excess_NPP,                                                               &
         & hgrid, surface,                                                                                                &
         & t_cf('excess_NPP', 'mol(C) m-2 (canopy) s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
         & prefix, suffix,                                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'lai_yydaymean', mem%LAI_yyDayMean,              &
         & hgrid, surface,                                                     &
         & t_cf('LAI_yyDayMean', '-', 'Previous previous day mean.'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
      CALL jsb_add_var( mem, 'lai_ydaymean', mem%LAI_yDayMean,                 &
         & hgrid, surface,                                                     &
@@ -651,7 +650,7 @@ CONTAINS
         & t_cf('NPP_act_yDayMean', 'mol(C) m-2(canopy) s-1', 'Actual NPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
       CALL jsb_add_var( mem, 'gpp_ydaymean', mem%GPP_yDayMean,                                  &
@@ -659,7 +658,7 @@ CONTAINS
         & t_cf('GPP_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean GPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
-        & loutput=.TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 !@todo: relict from CBALANCE?
       CALL jsb_add_var( mem, 'topsoiltemp_ydaymean', mem%topSoilTemp_yDayMean,                             &
@@ -674,7 +673,7 @@ CONTAINS
         & t_cf('alpha_yDayMean', '-', 'Previous day mean value of Water Stress Coefficient.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3.
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3.
 
       CALL jsb_add_var( mem, 'root_exudates', mem%root_exudates,             &
         & hgrid, surface,                                                    &
@@ -706,9 +705,9 @@ CONTAINS
         & prefix, suffix,                                                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-!       CALL jsb_add_var( mem, 'frac_litter_wood_new', mem%frac_litter_wood_new,                     &
+!       CALL jsb_add_var( mem, 'fract_litter_wood_new', mem%fract_litter_wood_new,                     &
 !         & hgrid, surface,                                                                          &
-!         & t_cf('frac_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
+!         & t_cf('fract_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !         & prefix, suffix,                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -737,18 +736,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                      &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
 
       ! Carbon variables on tile area
-!      CALL jsb_add_var( mem, 'cflux_c_greenwood_2_litter_ta', mem%cflux_c_greenwood_2_litter_ta,                                       &
+!      CALL jsb_add_var( mem, 'c_greenwood2litter_ta', mem%cflux_c_greenwood_2_litter_ta,                                       &
 !        & hgrid, surface,                                                                                &
 !        & t_cf('cflux_c_greenwood_2_litter_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'),      &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
 !        & prefix, suffix,                                                                                &
 !        & output_level=BASIC,                                                                            &
-!        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+!        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_green_ta', mem%c_green_ta,                              &
         & hgrid, surface,                                                                   &
@@ -756,7 +755,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
         & output_level=BASIC,                                                                            &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_woods_ta', mem%c_woods_ta,                                         &
         & hgrid, surface,                                                                              &
@@ -764,7 +763,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level=BASIC,                                                                            &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_reserve_ta', mem%c_reserve_ta,                                                      &
         & hgrid, surface,                                                                                               &
@@ -772,7 +771,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=BASIC,                                                                            &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_crop_harvest_ta', mem%c_crop_harvest_ta,                        &
         & hgrid, surface,                                                                           &
@@ -780,7 +779,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
         & output_level=BASIC,                                                                            &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 1
       CALL jsb_add_var( mem, 'c_acid_ag1_ta', mem%c_acid_ag1_ta,                                         &
@@ -789,7 +788,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
-        & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_ag1_ta', mem%c_water_ag1_ta,                                         &
         & hgrid, surface,                                                                                       &
@@ -797,7 +796,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_ethanol_ag1_ta', mem%c_ethanol_ag1_ta,                                         &
         & hgrid, surface,                                                                                           &
@@ -805,7 +804,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_nonsoluble_ag1_ta', mem%c_nonsoluble_ag1_ta,                                  &
         & hgrid, surface,                                                                                          &
@@ -813,7 +812,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_acid_bg1_ta', mem%c_acid_bg1_ta,                                         &
         & hgrid, surface,                                                                                     &
@@ -821,7 +820,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_bg1_ta', mem%c_water_bg1_ta,                                         &
         & hgrid, surface,                                                                                       &
@@ -829,7 +828,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_ethanol_bg1_ta', mem%c_ethanol_bg1_ta,                                        &
         & hgrid, surface,                                                                                          &
@@ -837,7 +836,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_nonsoluble_bg1_ta', mem%c_nonsoluble_bg1_ta,                                 &
         & hgrid, surface,                                                                                         &
@@ -845,7 +844,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_humus_1_ta', mem%c_humus_1_ta,               &
         & hgrid, surface,                                                         &
@@ -853,7 +852,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! Yasso 2
       CALL jsb_add_var( mem, 'c_acid_ag2_ta', mem%c_acid_ag2_ta,                                         &
@@ -862,7 +861,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_ag2_ta', mem%c_water_ag2_ta,                                         &
         & hgrid, surface,                                                                                       &
@@ -870,7 +869,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_ethanol_ag2_ta', mem%c_ethanol_ag2_ta,                                         &
         & hgrid, surface,                                                                                           &
@@ -878,7 +877,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_nonsoluble_ag2_ta', mem%c_nonsoluble_ag2_ta,                                  &
         & hgrid, surface,                                                                                          &
@@ -886,7 +885,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_acid_bg2_ta', mem%c_acid_bg2_ta,                                         &
         & hgrid, surface,                                                                                     &
@@ -894,7 +893,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_bg2_ta', mem%c_water_bg2_ta,                                         &
         & hgrid, surface,                                                                                       &
@@ -902,7 +901,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_ethanol_bg2_ta', mem%c_ethanol_bg2_ta,                                        &
         & hgrid, surface,                                                                                          &
@@ -910,7 +909,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
         & prefix, suffix,                                                                                          &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_nonsoluble_bg2_ta', mem%c_nonsoluble_bg2_ta,                                 &
         & hgrid, surface,                                                                                         &
@@ -918,7 +917,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_humus_2_ta', mem%c_humus_2_ta,               &
         & hgrid, surface,                                                         &
@@ -926,7 +925,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_sum_natural_ta', mem%C_sum_natural_ta,           &
         & hgrid, surface,                                                        &
@@ -934,21 +933,21 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & output_level=MEDIUM,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! CALL jsb_add_var( mem, 'npp_pot_sum_ta', mem%NPP_pot_sum_ta,                        &
       !   & hgrid, surface,                                                                 &
       !   & t_cf('NPP_pot_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate NPP over a day.'), &
       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       !   & prefix, suffix,                                                                 &
-      !   & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      !   & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       ! CALL jsb_add_var( mem, 'gpp_sum_ta', mem%GPP_sum_ta,                            &
       !   & hgrid, surface,                                                             &
       !   & t_cf('GPP_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate GPP over a day.'), &
       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
       !   & prefix, suffix,                                                             &
-      !   & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      !   & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'soil_respiration_ta', mem%soil_respiration_ta,  &
         & hgrid, surface,                                                     &
@@ -956,7 +955,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'npp_flux_corr_ta', mem%NPP_flux_correction_ta,                           &
         & hgrid, surface,                                                                                    &
@@ -965,7 +964,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
         & prefix, suffix,                                                                                    &
         & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'excess_npp_ta', mem%excess_NPP_ta,                                                    &
         & hgrid, surface,                                                                                           &
@@ -973,14 +972,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
      !  CALL jsb_add_var( mem, 'lai_yydaymean_ta', mem%LAI_yyDayMean_ta,              &
      !    & hgrid, surface,                                                     &
      !    & t_cf('LAI_yyDayMean_ta', '-', 'Previous previous day mean.'),          &
      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
      !    & prefix, suffix,                                                     &
-     !    & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+     !    & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
      ! CALL jsb_add_var( mem, 'lai_ydaymean_ta', mem%LAI_yDayMean_ta,                 &
      !    & hgrid, surface,                                                     &
@@ -988,7 +987,7 @@ CONTAINS
      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
      !    & prefix, suffix,                                                     &
      !    & output_level=BASIC,                                                                                &
-     !    & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+     !    & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 !@todo: only diagnostic, why in restart?
       CALL jsb_add_var( mem, 'npp_pot_ydaymean_ta', mem%NPP_pot_yDayMean_ta,                              &
@@ -997,7 +996,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
         & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & lrestart=.FALSE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 !@todo: only diagnostic, why in restart?
       CALL jsb_add_var( mem, 'npp_act_ydaymean_ta', mem%NPP_act_yDayMean_ta,                                &
@@ -1006,7 +1005,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
         & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
+        & lrestart=.FALSE., initval_r=1.0E-13_wp ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
       CALL jsb_add_var( mem, 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                       &
@@ -1076,9 +1075,9 @@ CONTAINS
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
-!       CALL jsb_add_var( mem, 'frac_litter_wood_new_ta', mem%frac_litter_wood_new_ta,                     &
+!       CALL jsb_add_var( mem, 'fract_litter_wood_new_ta', mem%fract_litter_wood_new_ta,                     &
 !         & hgrid, surface,                                                                          &
-!         & t_cf('frac_litter_wood_new_ta', 'mol(C) m-2', 'New fraction in wood litter pool.'), &
+!         & t_cf('fract_litter_wood_new_ta', 'mol(C) m-2', 'New fraction in wood litter pool.'), &
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !         & prefix, suffix,                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
@@ -1116,7 +1115,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=BASIC,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
         & hgrid, surface,                                                           &

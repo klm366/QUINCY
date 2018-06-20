@@ -18,20 +18,20 @@ MODULE mo_disturb_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: burned_frac_jsbach, broken_woody_frac_jsbach, get_relative_humidity_air
+  PUBLIC :: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_process'
 
 CONTAINS
 
-  PURE ELEMENTAL SUBROUTINE burned_frac_jsbach( &
+  PURE ELEMENTAL SUBROUTINE burned_fract_jsbach( &
     & fire_rel_hum_threshold,   & ! in
     & fire_litter_threshold,    & ! in
     & fire_minimum,             & ! in
     & fire_tau,                 & ! in
     & q_rel_air_climbuf,        & ! in
     & fuel,                     & ! in
-    & burned_frac               & ! out
+    & burned_fract               & ! out
     & )
 
     ! Input Arguments
@@ -44,7 +44,7 @@ CONTAINS
       & fuel
 
     ! Output Arguments
-    REAL(wp), INTENT(out) :: burned_frac
+    REAL(wp), INTENT(out) :: burned_fract
 
     ! Locals
     REAL(wp) :: delta_time_yr
@@ -57,53 +57,53 @@ CONTAINS
 
     delta_time_yr = 1._wp / 365._wp
 
-    burned_frac = fire_minimum * delta_time_yr
+    burned_fract = fire_minimum * delta_time_yr
 
     IF (       q_rel_air_climbuf < fire_rel_hum_threshold   &
          .AND. fuel > fire_litter_threshold                 &
        ) THEN
-      burned_frac = burned_frac                                                      &
+      burned_fract = burned_fract                                                      &
         &           + (fire_rel_hum_threshold - q_rel_air_climbuf) / (fire_tau * fire_rel_hum_threshold) &
         &             * delta_time_yr
     END IF
 
-  END SUBROUTINE burned_frac_jsbach
+  END SUBROUTINE burned_fract_jsbach
 
   ! Calculate windbreak for woody types
-  PURE ELEMENTAL SUBROUTINE broken_woody_frac_jsbach( &
+  PURE ELEMENTAL SUBROUTINE broken_woody_fract_jsbach( &
     & wind_threshold,        & ! in
     & wind_damage_scale,     & ! in
-    & cover_frac_pot,        & ! in
+    & cover_fract_pot,        & ! in
     & prev_day_max_wind_10m, & ! in
     & max_wind_10m,          & ! in
-    & damaged_frac           & ! out
+    & damaged_fract           & ! out
                                       )
 
     ! Arguments
     REAL(wp), INTENT(in) ::    &
       & wind_threshold,        &
       & wind_damage_scale,     &
-      & cover_frac_pot,        &
+      & cover_fract_pot,        &
       & prev_day_max_wind_10m, &
       & max_wind_10m
 
     REAL(wp), INTENT(out) :: &
-      & damaged_frac
+      & damaged_fract
 
     ! Locals
     REAL(wp) :: delta_time_yr
 
     delta_time_yr = 1._wp / 365._wp
 
-    IF (      cover_frac_pot > EPSILON(1._wp) &
+    IF (      cover_fract_pot > EPSILON(1._wp) &
         .AND. prev_day_max_wind_10m > max_wind_10m * wind_threshold &
        ) THEN
-      damaged_frac = MIN( 1._wp - EPSILON(1._wp) / cover_frac_pot,                                          &
+      damaged_fract = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot,                                          &
         &                 delta_time_yr * wind_damage_scale * prev_day_max_wind_10m ** 3._wp / max_wind_10m &
         &               )
     ENDIF
 
-  END SUBROUTINE broken_woody_frac_jsbach
+  END SUBROUTINE broken_woody_fract_jsbach
 
   FUNCTION get_relative_humidity_air(nc, air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
 

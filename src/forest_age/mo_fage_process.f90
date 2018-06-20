@@ -16,8 +16,8 @@ MODULE mo_fage_process
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: update_frac_per_age_upon_ageing, update_frac_per_age_equally_upon_disturbance, &
-     & update_frac_per_age_and_determine_area_to_harvest_from_cohort, correct_and_synchronise_fracts, &
+   PUBLIC :: update_fract_per_age_upon_ageing, update_fract_per_age_equally_upon_disturbance, &
+     & update_fract_per_age_and_determine_area_to_harvest_from_cohort, correct_and_synchronise_fracts, &
      & weighted_avg_var_upon_area_change
 
    !TODO-JN: merge_cohorts update_age?
@@ -27,7 +27,7 @@ MODULE mo_fage_process
  CONTAINS   
 
 
-  SUBROUTINE update_frac_per_age_upon_ageing( &
+  SUBROUTINE update_fract_per_age_upon_ageing( &
                     nidx, nage,               &   !in
                     fract_per_age,            &   !inout
                     mean_age                  &   !inout
@@ -64,7 +64,7 @@ MODULE mo_fage_process
       mean_age (:) = get_mean_age(fract_per_age)
     END IF
 
-  END SUBROUTINE update_frac_per_age_upon_ageing
+  END SUBROUTINE update_fract_per_age_upon_ageing
 
 
   !TODO-JN: make faster?
@@ -114,7 +114,7 @@ MODULE mo_fage_process
 
 
   !TODO-JN: make faster?
-  SUBROUTINE update_frac_per_age_equally_upon_disturbance( &
+  SUBROUTINE update_fract_per_age_equally_upon_disturbance( &
                     nidx, nage, ncohorts, iThisAgeCohort,  &   !in
                     disturbed_area,                        &   !in
                     cohort_max_age,                        &   !in
@@ -150,7 +150,7 @@ MODULE mo_fage_process
         IF(disturbed_area(j) .GT. thisAreaSum) THEN
           WRITE (message_text,*) 'more area disturbed (', disturbed_area(j), &
             & ') than available (', thisAreaSum , ') at age cohort ', iThisAgeCohort
-          CALL finish ('update_frac_per_age_equally_upon_disturbance', message_text)
+          CALL finish ('update_fract_per_age_equally_upon_disturbance', message_text)
         ENDIF
 
         fract_per_age(j,1) = fract_per_age(j,1) + disturbed_area(j)
@@ -160,11 +160,11 @@ MODULE mo_fage_process
         ENDDO
       ENDIF
     ENDDO
-  END SUBROUTINE update_frac_per_age_equally_upon_disturbance
+  END SUBROUTINE update_fract_per_age_equally_upon_disturbance
 
 
   !TODO-JN: make faster?
-  SUBROUTINE update_frac_per_age_and_determine_area_to_harvest_from_cohort( &
+  SUBROUTINE update_fract_per_age_and_determine_area_to_harvest_from_cohort( &
                     harvest_kind, nidx, nage, &   !in
                     this_cohort_max_age,                             &   !in
                     prev_cohort_max_age,                             &   !in
@@ -208,11 +208,11 @@ MODULE mo_fage_process
           ENDIF
         ENDDO
       ELSE
-        CALL finish('update_frac_per_age_and_determine_area_to_harvest_from_cohort','Not implemented harvest kind')
+        CALL finish('update_fract_per_age_and_determine_area_to_harvest_from_cohort','Not implemented harvest kind')
       ENDIF
     ENDDO
 
-  END SUBROUTINE update_frac_per_age_and_determine_area_to_harvest_from_cohort
+  END SUBROUTINE update_fract_per_age_and_determine_area_to_harvest_from_cohort
 
 
   ELEMENTAL SUBROUTINE weighted_avg_var_upon_area_change( & 

@@ -145,11 +145,11 @@ CONTAINS
     !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
     ! TODO-JN: decide on ForestFlag vs is_Woody!
     IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, veg_frac_correction) =   &
+      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
         & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
     ! @todo: do not rely on the lib_id but use a flag instead!
     ELSE IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
-      dsl4jsb_var2D_onDomain(PHENO_, veg_frac_correction) =   &
+      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
         & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
     END IF
     

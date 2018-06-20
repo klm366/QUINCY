@@ -309,9 +309,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb_ta       ! out
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Real2D_onChunk :: frac_litter_wood_new
+    !dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
     !
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI 
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
@@ -426,9 +426,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm_ta )   ! out
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,  frac_litter_wood_new )
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,  fract_litter_wood_new )
     !
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
@@ -471,11 +471,11 @@ CONTAINS
     !    In JS3 the areaWeightingFactor rescales the canopy area up to the whole Gridbox. E.g. for the C pools.
     !    In JS4 this upscaling has normally to be done by the accumulation procedures. However, the canopy area
     !    still has to be scaled to the PFT tile area for JS4. As the C pools are calculated on m^2 canopy also in JS4
-    !    => Cpool(on PFT tile) =Cpool(canopy) * veg_frac_correction. 
+    !    => Cpool(on PFT tile) =Cpool(canopy) * veg_fract_correction. 
     !
     ! Therefore this gets arbitary:
     ! Prepare area weighting factor to rescale from 1/[m^2(canopy)] to 1/[m^2(grid box)]
-    ! areaWeightingFactor(:,:) = veg_frac_correction(:,:) * surface%cover_fract(kidx0:kidx1,:) &
+    ! areaWeightingFactor(:,:) = veg_fract_correction(:,:) * surface%cover_fract(kidx0:kidx1,:) &
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
 
 
@@ -542,16 +542,16 @@ CONTAINS
                               topSoilTemp_yDayMean,                             & ! in
                               alpha_yDayMean,                                   & ! in
                               !
-                              dsl4jsb_Lctlib_param(frac_npp_2_woodPool),        & ! in
-                              dsl4jsb_Lctlib_param(frac_NPP_2_reservePool),     & ! in
-                              dsl4jsb_Lctlib_param(frac_NPP_2_exudates),        & ! in
+                              dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
+                              dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
+                              dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
                               !
-                              dsl4jsb_Lctlib_param(frac_green_2_herbivory),     & ! in
+                              dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
                               dsl4jsb_Lctlib_param(tau_c_litter_leaf),      & ! in
                               dsl4jsb_Lctlib_param(tau_c_litter_wood),      & ! in
                               dsl4jsb_Lctlib_param(tau_c_woods),            & ! in
                               dsl4jsb_Lctlib_param(LAI_shed_constant),          & ! in
-                              dsl4jsb_Lctlib_param(frac_C_litter_green2atmos),  & ! in
+                              dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
                               dsl4jsb_Lctlib_param(Max_C_content_woods),        & ! in
                               dsl4jsb_Lctlib_param(specificLeafArea_C),         & ! in
                               dsl4jsb_Lctlib_param(reserveC2leafC),             & ! in
@@ -575,7 +575,7 @@ CONTAINS
                               cflux_herb_2_atm,                            & ! out
                               NPP_act_yDayMean,                                 & ! out
                               !
-    !frac_litter_wood_new    = frac_litter_wood_new,       & ! inout, optional. Only for spitfire
+    !fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
                               ! variables only needed with yasso:
                               ! R: Note, in the moment the procedure is only used with Yasso.
    temp2_30d               =  pseudo_temp_yDay,                                 & ! in, optional, necessary with yasso
@@ -635,7 +635,6 @@ CONTAINS
        ! ------------------------------------------------------------------------------------------------------------------------
 
        ! C pools
-       
       CALL recalc_per_tile_vars(tile, options, &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
         & c_crop_harvest = c_crop_harvest(:), &
@@ -657,7 +656,7 @@ CONTAINS
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
       ! therefore + here instead of -
       current_fluxes = (NPP_act_yDayMean + cflux_herb_2_atm + soil_respiration) &
-        & * sec_per_day * veg_frac_correction * fract_fpc_max
+        & * sec_per_day * veg_fract_correction * fract_fpc_max
       CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
 
@@ -677,20 +676,20 @@ CONTAINS
    ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
    cflux_npp_2_atm_ta = molarMassCO2_kg *                     & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+              (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * (NPP_pot_rate_ca                         & ! current (not actual) NPP rate
                        - (NPP_pot_yDayMean-NPP_act_yDayMean)))  ! corrected with yesterdays actual NPP defizit
 
    cflux_soilresp_2_atm_ta = molarMassCO2_kg *                & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
+              (- veg_fract_correction *fract_fpc_max           & ! Minus: atmosphere gain is positive
                    * soil_respiration      )                    ! .. soil respiration
 
    cflux_herb_2_atm_ta = molarMassCO2_kg *               & ! Conversion factor from mol to kg CO2
-              (- veg_frac_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
+              (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                    * cflux_herb_2_atm )                    ! .. herbivory
 
    cflux_npp_2_atm_yday_ta = molarMassCO2_kg *                & ! C conservarion test in jsb standalone driver 
-              (- veg_frac_correction * fract_fpc_max          & ! cannot deal with diurnal cycle of NPP, 
+              (- veg_fract_correction * fract_fpc_max          & ! cannot deal with diurnal cycle of NPP, 
                    * (NPP_act_yDayMean))                        ! therefore here additionaly the day mean
 
 
@@ -778,7 +777,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,       weighted_by_fract)
    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen_ta, weighted_by_fract)
    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)
-   ! dsl4jsb_Aggregate_onChunk(CARBON_, frac_litter_wood_new_ta,  weighted_by_fract)
+   ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_yday_ta,  weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(CARBON_, cconservation_calcCpools, weighted_by_fract)
@@ -1114,7 +1113,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  GPP_sum
     dsl4jsb_Real2D_onChunk ::  NPP_pot_sum
 
-    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
+    dsl4jsb_Real2D_onChunk ::  veg_fract_correction
 
     dsl4jsb_Real2D_onChunk ::  current_max_green
     dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
@@ -1257,7 +1256,7 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, GPP_sum, sourceT)
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, NPP_pot_sum, sourceT)
 
-    dsl4jsb_Get_var2d_onChunk_tile(PHENO_, veg_frac_correction, sourceT)
+    dsl4jsb_Get_var2d_onChunk_tile(PHENO_, veg_fract_correction, sourceT)
 
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, delta_day_npp_sum_rp, sourceT)
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, delta_day_npp_sum_rp, sinkT)
@@ -1342,75 +1341,75 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_NPP_pot_sum_rp, sinkT)
 
     CALL update_delta_carbon_rp(c_green(:), delta_c_green_rp_sourceT(:), &
-      & delta_c_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_green_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_woods(:), delta_c_woods_rp_sourceT(:), &
-      & delta_c_woods_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_woods_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_reserve(:), delta_c_reserve_rp_sourceT(:), &
-      & delta_c_reserve_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_reserve_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_crop_harvest(:), delta_c_crop_harvest_rp_sourceT(:), &
-      delta_c_crop_harvest_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      delta_c_crop_harvest_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
     CALL update_delta_carbon_rp(c_acid_ag1(:), delta_c_acid_ag1_rp_sourceT(:), &
-      & delta_c_acid_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_acid_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_water_ag1(:), delta_c_water_ag1_rp_sourceT(:), &
-      & delta_c_water_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_water_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_ethanol_ag1(:), delta_c_ethanol_ag1_rp_sourceT(:), &
-      & delta_c_ethanol_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_ethanol_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_nonsoluble_ag1(:), delta_c_nonsoluble_ag1_rp_sourceT(:), &
-      & delta_c_nonsoluble_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_nonsoluble_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_acid_bg1(:), delta_c_acid_bg1_rp_sourceT(:), &
-      & delta_c_acid_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_acid_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_water_bg1(:), delta_c_water_bg1_rp_sourceT(:), &
-      & delta_c_water_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_water_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_ethanol_bg1(:), delta_c_ethanol_bg1_rp_sourceT(:), &
-      & delta_c_ethanol_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_ethanol_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_nonsoluble_bg1(:), delta_c_nonsoluble_bg1_rp_sourceT(:), &
-      & delta_c_nonsoluble_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_nonsoluble_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_humus_1(:), delta_c_humus_1_rp_sourceT(:), &
-      & delta_c_humus_1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_humus_1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
     CALL update_delta_carbon_rp(c_acid_ag2(:), delta_c_acid_ag2_rp_sourceT(:), &
-      & delta_c_acid_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_acid_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_water_ag2(:), delta_c_water_ag2_rp_sourceT(:), &
-      & delta_c_water_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_water_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_ethanol_ag2(:), delta_c_ethanol_ag2_rp_sourceT(:), &
-      & delta_c_ethanol_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_ethanol_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_nonsoluble_ag2(:), delta_c_nonsoluble_ag2_rp_sourceT(:), &
-      & delta_c_nonsoluble_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_nonsoluble_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_acid_bg2(:), delta_c_acid_bg2_rp_sourceT(:), &
-      & delta_c_acid_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_acid_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_water_bg2(:), delta_c_water_bg2_rp_sourceT(:), &
-      & delta_c_water_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_water_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_ethanol_bg2(:), delta_c_ethanol_bg2_rp_sourceT(:), &
-      & delta_c_ethanol_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_ethanol_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_nonsoluble_bg2(:), delta_c_nonsoluble_bg2_rp_sourceT(:), &
-      & delta_c_nonsoluble_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_nonsoluble_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(c_humus_2(:), delta_c_humus_2_rp_sourceT(:), &
-      & delta_c_humus_2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_c_humus_2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
     CALL update_delta_carbon_rp(GPP_sum(:), delta_GPP_sum_rp_sourceT(:), &
-      & delta_GPP_sum_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_GPP_sum_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     CALL update_delta_carbon_rp(NPP_pot_sum(:), delta_NPP_pot_sum_rp_sourceT(:), &
-      & delta_NPP_pot_sum_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_NPP_pot_sum_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
     !TODO-JN-COHORTS day_npp_sum is not a carbon variable but belongs to pheno 
     ! -- nevertheless averaged for now here in mo_carbon_interface, since for now its the 
     !    only non carbon variable, and its too much effort to make an own task
     CALL update_delta_carbon_rp(day_npp_sum(:), delta_day_npp_sum_rp_sourceT(:), &
-      & delta_day_npp_sum_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+      & delta_day_npp_sum_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL update_delta_carbon_rp(current_max_green(:), delta_current_max_green_rp_sourceT(:), &
-        & delta_current_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_current_max_green_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp_sourceT(:), &
-        & delta_veg_carbon_at_max_green_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_veg_carbon_at_max_green_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
       CALL update_delta_carbon_rp(annual_avg_NPP(:), delta_annual_avg_NPP_rp_sourceT(:), &
-        & delta_annual_avg_NPP_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_annual_avg_NPP_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(biennial_avg_NPP(:), delta_biennial_avg_NPP_rp_sourceT(:), &
-        & delta_biennial_avg_NPP_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_biennial_avg_NPP_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(decennial_avg_NPP(:), delta_decennial_avg_NPP_rp_sourceT(:), &
-        & delta_decennial_avg_NPP_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_decennial_avg_NPP_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
     ENDIF
 
@@ -1490,7 +1489,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  c_humus_2
 
-    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
+    dsl4jsb_Real2D_onChunk ::  veg_fract_correction
 
     dsl4jsb_Real2D_onChunk ::  delta_cflux_dist_greenreserve_2_soil_rp_sinkT
     dsl4jsb_Real2D_onChunk ::  delta_cflux_dist_woods_2_soil_rp_sinkT
@@ -1574,7 +1573,7 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, c_nonsoluble_bg2, sourceT)
     dsl4jsb_Get_var2d_onChunk_tile(CARBON_, c_humus_2, sourceT)
 
-    dsl4jsb_Get_var2d_onChunk_tile(PHENO_, veg_frac_correction, sourceT)
+    dsl4jsb_Get_var2d_onChunk_tile(PHENO_, veg_fract_correction, sourceT)
 
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_cflux_dist_greenreserve_2_soil_rp, sinkT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_cflux_dist_woods_2_soil_rp, sinkT)
@@ -1620,74 +1619,74 @@ CONTAINS
 
     ! For all implemented disturbance kinds the vegetation carbon on the disturbed area 
     ! is entirely distributed to other pools, therefore, additional pools are required 
-    CALL update_delta_carbon_rp(c_green(:), helper(:), d_green_new(:), delta_fract(:), veg_frac_correction(:))
-    CALL update_delta_carbon_rp(c_woods(:), helper(:), d_wood_new(:), delta_fract(:), veg_frac_correction(:))
-    CALL update_delta_carbon_rp(c_reserve(:), helper(:), d_reserve_new(:), delta_fract(:), veg_frac_correction(:))
+    CALL update_delta_carbon_rp(c_green(:), helper(:), d_green_new(:), delta_fract(:), veg_fract_correction(:))
+    CALL update_delta_carbon_rp(c_woods(:), helper(:), d_wood_new(:), delta_fract(:), veg_fract_correction(:))
+    CALL update_delta_carbon_rp(c_reserve(:), helper(:), d_reserve_new(:), delta_fract(:), veg_fract_correction(:))
 
     IF ((distKind .EQ. FIRE)) THEN
       ! For fire disturbance, parts of the above ground litter carbon are burned 
       ! to deal with the first and all other childs in the same function call, therefore, additional pools are used
-      CALL update_delta_carbon_rp(c_acid_ag1(:), helper(:), d_acid_ag1_new(:), delta_fract(:), veg_frac_correction(:))
-      CALL update_delta_carbon_rp(c_water_ag1(:), helper(:), d_water_ag1_new(:), delta_fract(:), veg_frac_correction(:))
+      CALL update_delta_carbon_rp(c_acid_ag1(:), helper(:), d_acid_ag1_new(:), delta_fract(:), veg_fract_correction(:))
+      CALL update_delta_carbon_rp(c_water_ag1(:), helper(:), d_water_ag1_new(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_ethanol_ag1(:), helper(:), &
-        & d_ethanol_ag1_new(:), delta_fract(:), veg_frac_correction(:))
+        & d_ethanol_ag1_new(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_nonsoluble_ag1(:), helper(:), &
-        & d_nonsoluble_ag1_new(:), delta_fract(:), veg_frac_correction(:))
-      CALL update_delta_carbon_rp(c_acid_ag2(:), helper(:), d_acid_ag2_new(:), delta_fract(:), veg_frac_correction(:))
-      CALL update_delta_carbon_rp(c_water_ag2(:), helper(:), d_water_ag2_new(:), delta_fract(:), veg_frac_correction(:))
+        & d_nonsoluble_ag1_new(:), delta_fract(:), veg_fract_correction(:))
+      CALL update_delta_carbon_rp(c_acid_ag2(:), helper(:), d_acid_ag2_new(:), delta_fract(:), veg_fract_correction(:))
+      CALL update_delta_carbon_rp(c_water_ag2(:), helper(:), d_water_ag2_new(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_ethanol_ag2(:), helper(:), &
-        & d_ethanol_ag2_new(:), delta_fract(:), veg_frac_correction(:))
+        & d_ethanol_ag2_new(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_nonsoluble_ag2(:), helper(:), &
-        & d_nonsoluble_ag2_new(:), delta_fract(:), veg_frac_correction(:))
+        & d_nonsoluble_ag2_new(:), delta_fract(:), veg_fract_correction(:))
     ELSEIF (.NOT. l_sourceisfirstChild) THEN
       ! For other disturbances above ground litter is only redistributed 
       ! However, for the first child the damaged area stays within the first age cohort and so do the ag litter pools
       CALL update_delta_carbon_rp(c_acid_ag1(:), helper(:), &
-        & delta_c_acid_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_acid_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_water_ag1(:), helper(:), &
-        & delta_c_water_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_water_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_ethanol_ag1(:), helper(:), &
-        & delta_c_ethanol_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_ethanol_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_nonsoluble_ag1(:), helper(:), &
-        & delta_c_nonsoluble_ag1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_nonsoluble_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
       CALL update_delta_carbon_rp(c_acid_ag2(:), helper(:), &
-        & delta_c_acid_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_acid_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_water_ag2(:), helper(:), &
-        & delta_c_water_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_water_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_ethanol_ag2(:), helper(:), &
-        & delta_c_ethanol_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_ethanol_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_nonsoluble_ag2(:), helper(:), &
-        & delta_c_nonsoluble_ag2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_nonsoluble_ag2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     ENDIF
 
     IF (.NOT. l_sourceisfirstChild) THEN
       ! As opposed to the ag litter, the bg litter/soil is not changed by fire, thus here it is always the case that 
       ! when the first child is the source, the damaged area stays within the first age cohort and same for bg soil/litter pools
       CALL update_delta_carbon_rp(c_crop_harvest(:), helper(:), &
-        delta_c_crop_harvest_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        delta_c_crop_harvest_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
       CALL update_delta_carbon_rp(c_acid_bg1(:), helper(:), &
-        & delta_c_acid_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_acid_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_water_bg1(:), helper(:), &
-        & delta_c_water_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_water_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_ethanol_bg1(:), helper(:), &
-        & delta_c_ethanol_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_ethanol_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_nonsoluble_bg1(:), helper(:), &
-        & delta_c_nonsoluble_bg1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_nonsoluble_bg1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_humus_1(:), helper(:), &
-        & delta_c_humus_1_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_humus_1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
       CALL update_delta_carbon_rp(c_acid_bg2(:), helper(:), &
-        & delta_c_acid_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_acid_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_water_bg2(:), helper(:), &
-        & delta_c_water_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_water_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_ethanol_bg2(:), helper(:), &
-        & delta_c_ethanol_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_ethanol_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_nonsoluble_bg2(:), helper(:), &
-        & delta_c_nonsoluble_bg2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_nonsoluble_bg2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL update_delta_carbon_rp(c_humus_2(:), helper(:), &
-        & delta_c_humus_2_rp_sinkT(:), delta_fract(:), veg_frac_correction(:))
+        & delta_c_humus_2_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
     ENDIF
 
     IF (l_sourceisfirstChild) THEN
@@ -1752,7 +1751,7 @@ CONTAINS
 
       CALL relocate_carbon_fire( &
         & helper(:),                     & ! in
-        & dsl4jsb_Config(CARBON_)%fire_frac_wood_2_atmos , & ! in
+        & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
         & model%lctlib(sinkT%lcts(1)%lib_id)%LeafLit_coef(1:5), & ! in
         & model%lctlib(sinkT%lcts(1)%lib_id)%WoodLit_coef(1:5), & ! in
         & d_green_new(:),                & ! inout
@@ -1911,7 +1910,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
 
-    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
+    dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
 
     dsl4jsb_Get_memory(CARBON_)
@@ -1960,74 +1959,74 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction )         ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )               ! in
 
-    IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_frac_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_frac_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_reserve)) CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_frac_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_reserve)) CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
 
     IF (PRESENT(c_crop_harvest)) CALL get_per_tile(c_crop_harvest_ta(:), &
-      & c_crop_harvest(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_crop_harvest(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_acid_ag1)) CALL get_per_tile(c_acid_ag1_ta(:), &
-      & c_acid_ag1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_acid_ag1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_water_ag1)) CALL get_per_tile(c_water_ag1_ta(:), &
-      & c_water_ag1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_water_ag1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_ethanol_ag1)) CALL get_per_tile(c_ethanol_ag1_ta(:), &
-      & c_ethanol_ag1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_ethanol_ag1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_nonsoluble_ag1)) CALL get_per_tile(c_nonsoluble_ag1_ta(:), &
-      & c_nonsoluble_ag1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_nonsoluble_ag1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_acid_bg1)) CALL get_per_tile(c_acid_bg1_ta(:), &
-      & c_acid_bg1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_acid_bg1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_water_bg1)) CALL get_per_tile(c_water_bg1_ta(:), &
-      & c_water_bg1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_water_bg1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_ethanol_bg1)) CALL get_per_tile(c_ethanol_bg1_ta(:), &
-      & c_ethanol_bg1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_ethanol_bg1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_nonsoluble_bg1)) CALL get_per_tile(c_nonsoluble_bg1_ta(:), &
-      & c_nonsoluble_bg1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_nonsoluble_bg1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_humus_1)) CALL get_per_tile(c_humus_1_ta(:), &
-      & c_humus_1(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_humus_1(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_acid_ag2)) CALL get_per_tile(c_acid_ag2_ta(:), &
-      & c_acid_ag2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_acid_ag2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_water_ag2)) CALL get_per_tile(c_water_ag2_ta(:), &
-      & c_water_ag2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_water_ag2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_ethanol_ag2)) CALL get_per_tile(c_ethanol_ag2_ta(:), &
-      & c_ethanol_ag2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_ethanol_ag2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_nonsoluble_ag2)) CALL get_per_tile(c_nonsoluble_ag2_ta(:), &
-      & c_nonsoluble_ag2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_nonsoluble_ag2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_acid_bg2)) CALL get_per_tile(c_acid_bg2_ta(:), &
-      & c_acid_bg2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_acid_bg2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_water_bg2)) CALL get_per_tile(c_water_bg2_ta(:), &
-      & c_water_bg2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_water_bg2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_ethanol_bg2)) CALL get_per_tile(c_ethanol_bg2_ta(:), &
-      & c_ethanol_bg2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_ethanol_bg2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_nonsoluble_bg2)) CALL get_per_tile(c_nonsoluble_bg2_ta(:), &
-      & c_nonsoluble_bg2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_nonsoluble_bg2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_humus_2)) CALL get_per_tile(c_humus_2_ta(:), &
-      & c_humus_2(:), veg_frac_correction(:), fract_fpc_max(:))
+      & c_humus_2(:), veg_fract_correction(:), fract_fpc_max(:))
 
     CALL calculate_current_c_state_sum(tile, options, C_sum_natural_ta(:))
 
     ! C fluxes
     IF (PRESENT(cflux_dist_greenreserve_2_soil)) CALL get_per_tile(cflux_dist_greenreserve_2_soil_ta(:), &
-      & cflux_dist_greenreserve_2_soil(:), veg_frac_correction(:), fract_fpc_max(:))
+      & cflux_dist_greenreserve_2_soil(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_dist_woods_2_soil)) CALL get_per_tile(cflux_dist_woods_2_soil_ta(:), &
-      & cflux_dist_woods_2_soil(:), veg_frac_correction(:), fract_fpc_max(:))
+      & cflux_dist_woods_2_soil(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_fire_all_2_atm))CALL get_per_tile(cflux_fire_all_2_atm_ta(:), &
-      & cflux_fire_all_2_atm(:), veg_frac_correction(:), fract_fpc_max(:))
+      & cflux_fire_all_2_atm(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(NPP_pot_yDayMean)) CALL get_per_tile(NPP_pot_yDayMean_ta(:), &
-      & NPP_pot_yDayMean(:), veg_frac_correction(:), fract_fpc_max(:))
+      & NPP_pot_yDayMean(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(NPP_act_yDayMean)) CALL get_per_tile(NPP_act_yDayMean_ta(:), &
-      & NPP_act_yDayMean(:), veg_frac_correction(:), fract_fpc_max(:))
+      & NPP_act_yDayMean(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(NPP_flux_correction)) CALL get_per_tile(NPP_flux_correction_ta(:), &
-      & NPP_flux_correction(:), veg_frac_correction(:), fract_fpc_max(:))
+      & NPP_flux_correction(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(GPP_yDayMean)) CALL get_per_tile(GPP_yDayMean_ta(:), &
-      & GPP_yDayMean(:), veg_frac_correction(:), fract_fpc_max(:))
-!    cflux_c_greenwood_2_litter_ta               = cflux_c_greenwood_2_litter * veg_frac_correction * fract_fpc_max
+      & GPP_yDayMean(:), veg_fract_correction(:), fract_fpc_max(:))
+!    cflux_c_greenwood_2_litter_ta               = cflux_c_greenwood_2_litter * veg_fract_correction * fract_fpc_max
     IF (PRESENT(root_exudates)) CALL get_per_tile(root_exudates_ta(:), &
-      & root_exudates(:), veg_frac_correction(:), fract_fpc_max(:))
+      & root_exudates(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
-      & cflux_c_green_2_herb(:), veg_frac_correction(:), fract_fpc_max(:))
+      & cflux_c_green_2_herb(:), veg_fract_correction(:), fract_fpc_max(:))
 
   END SUBROUTINE recalc_per_tile_vars
 
@@ -2144,7 +2143,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  delta_cflux_fire_all_2_atm_rp
 
-    dsl4jsb_Real2D_onChunk ::  veg_frac_correction
+    dsl4jsb_Real2D_onChunk ::  veg_fract_correction
 
     model => Get_model(tile%owner_model_id)
 
@@ -2241,7 +2240,7 @@ CONTAINS
 
     ENDIF
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_frac_correction)      ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction)      ! in
 
     delta_fract(:)=tile%delta_fract(ics:ice, iblk)
     CALL tile%Get_fraction(ics, ice, iblk, fract=prev_fract(:))
@@ -2261,77 +2260,77 @@ CONTAINS
     !      then the following should not happen and other Assertions and MAX statements will be required!)
 
     CALL update_state_reset_delta(c_green(:), delta_c_green_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_reserve(:), delta_c_reserve_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_woods(:), delta_c_woods_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_crop_harvest(:), delta_c_crop_harvest_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
 
     CALL update_state_reset_delta(c_acid_ag1(:), delta_c_acid_ag1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_water_ag1(:), delta_c_water_ag1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_ethanol_ag1(:), delta_c_ethanol_ag1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_nonsoluble_ag1(:), delta_c_nonsoluble_ag1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_acid_bg1(:), delta_c_acid_bg1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_water_bg1(:), delta_c_water_bg1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_ethanol_bg1(:), delta_c_ethanol_bg1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_nonsoluble_bg1(:), delta_c_nonsoluble_bg1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_humus_1(:), delta_c_humus_1_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
 
     CALL update_state_reset_delta(c_acid_ag2(:), delta_c_acid_ag2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_water_ag2(:), delta_c_water_ag2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_ethanol_ag2(:), delta_c_ethanol_ag2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_nonsoluble_ag2(:), delta_c_nonsoluble_ag2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_acid_bg2(:), delta_c_acid_bg2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_water_bg2(:), delta_c_water_bg2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_ethanol_bg2(:), delta_c_ethanol_bg2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_nonsoluble_bg2(:), delta_c_nonsoluble_bg2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(c_humus_2(:), delta_c_humus_2_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
 
     CALL update_state_reset_delta(GPP_sum(:), delta_GPP_sum_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(NPP_pot_sum(:), delta_NPP_pot_sum_rp(:), delta_fract(:), &
-      & veg_frac_correction(:), prev_fract(:))
+      & veg_fract_correction(:), prev_fract(:))
 
     ! Following three are only required if with disturbances or harvest, however, they are always defined anyway 
     CALL update_state_reset_delta(cflux_dist_greenreserve_2_soil(:), delta_cflux_dist_greenreserve_2_soil_rp(:), &
-      & delta_fract(:), veg_frac_correction(:), prev_fract(:))
+      & delta_fract(:), veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(cflux_dist_woods_2_soil(:), delta_cflux_dist_woods_2_soil_rp(:), &
-      & delta_fract(:), veg_frac_correction(:), prev_fract(:))
+      & delta_fract(:), veg_fract_correction(:), prev_fract(:))
     CALL update_state_reset_delta(cflux_fire_all_2_atm(:), delta_cflux_fire_all_2_atm_rp(:), &
-      & delta_fract(:), veg_frac_correction(:), prev_fract(:))
+      & delta_fract(:), veg_fract_correction(:), prev_fract(:))
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL update_state_reset_delta(current_max_green(:), delta_current_max_green_rp(:), delta_fract(:), &
-        & veg_frac_correction(:), prev_fract(:))
+        & veg_fract_correction(:), prev_fract(:))
       CALL update_state_reset_delta(veg_carbon_at_max_green(:), delta_veg_carbon_at_max_green_rp(:), delta_fract(:), &
-        & veg_frac_correction(:), prev_fract(:))
+        & veg_fract_correction(:), prev_fract(:))
 
       CALL update_state_reset_delta(annual_avg_NPP(:), delta_annual_avg_NPP_rp(:), delta_fract(:), &
-        & veg_frac_correction(:), prev_fract(:))
+        & veg_fract_correction(:), prev_fract(:))
       CALL update_state_reset_delta(biennial_avg_NPP(:), delta_biennial_avg_NPP_rp(:), delta_fract(:), &
-        & veg_frac_correction(:), prev_fract(:))
+        & veg_fract_correction(:), prev_fract(:))
       CALL update_state_reset_delta(decennial_avg_NPP(:), delta_decennial_avg_NPP_rp(:), delta_fract(:), &
-        & veg_frac_correction(:), prev_fract(:))
+        & veg_fract_correction(:), prev_fract(:))
 
     ENDIF
 

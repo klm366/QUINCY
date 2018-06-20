@@ -122,7 +122,7 @@ CONTAINS
   !!
   SUBROUTINE update_natural_disturbances(tile, options)
 
-    USE mo_disturb_process,       ONLY: burned_frac_jsbach, broken_woody_frac_jsbach, get_relative_humidity_air
+    USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, &
       & calculate_current_c_state_sum, check_carbon_conservation_for_operation
@@ -176,8 +176,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_fire
     dsl4jsb_Real2D_onChunk :: cconservation_wind
 
-    dsl4jsb_Real2D_onChunk :: burned_frac
-    dsl4jsb_Real2D_onChunk :: damaged_frac
+    dsl4jsb_Real2D_onChunk :: burned_fract
+    dsl4jsb_Real2D_onChunk :: damaged_fract
     !
     dsl4jsb_Real2D_onChunk :: c_green
     dsl4jsb_Real2D_onChunk :: c_woods
@@ -207,9 +207,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_humus_2
     dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm
     !
-    dsl4jsb_Real2D_onChunk :: veg_frac_correction
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: cover_frac_pot
+    dsl4jsb_Real2D_onChunk :: cover_fract_pot
     !
     dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm_ta
 
@@ -262,8 +262,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_air_climbuf)        ! inout
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_air_climbuf_yDay)   ! out
 
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_frac)              ! out
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_frac)             ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)              ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)             ! out
 
     IF (.NOT. tile%Is_process_active(FAGE_)) THEN
       dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)       ! out
@@ -298,12 +298,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_1)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_2)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm)     ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,     veg_frac_correction )     ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,     veg_fract_correction )     ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max )           ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_frac_pot)           ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)           ! in
 
     ! for the conservation test 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm_ta)  ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm_ta)
 
     ! ---------------------------
     ! Go
@@ -332,7 +332,7 @@ CONTAINS
       cflux_dist_greenreserve_2_soil(:) = 0._wp
       cflux_dist_woods_2_soil(:) = 0._wp
 
-      burned_frac(:) = 0._wp
+      burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) & 
           .OR. (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. dsl4jsb_Lctlib_param(pasture_PFT)) &
          ) THEN
@@ -350,43 +350,43 @@ CONTAINS
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
             ENDIF
 
-            CALL burned_frac_jsbach( &
+            CALL burned_fract_jsbach( &
               & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
               & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
               & fire_minimum,                & ! in
               & fire_tau,                    & ! in
               & q_rel_air_climbuf(:),        & ! in
               & fuel(:),                     & ! in
-              & burned_frac(:)               & ! out
+              & burned_fract(:)               & ! out
               & )
 
           CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
+            CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
           CASE (3)
-            CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
-          CASE (4) !! Read burned_frac
+            CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
+          CASE (4) !! Read burned_fract
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown fire algorithm')
+            CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
 
       END IF
 
-      damaged_frac(:) = 0._wp
+      damaged_fract(:) = 0._wp
       IF (dsl4jsb_Lctlib_param(woody_PFT) .AND. dsl4jsb_Lctlib_param(dynamic_PFT)) THEN
 
         SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
           CASE (0) !! No windbreak algorithm
           CASE (1) !! jsbach algorithm
-            CALL broken_woody_frac_jsbach(                 & ! in
+            CALL broken_woody_fract_jsbach(                 & ! in
               & dsl4jsb_Config(DISTURB_)%wnd_threshold,    & ! in
               & dsl4jsb_Config(DISTURB_)%wnd_damage_scale, & ! in
-              & cover_frac_pot(:),                         & ! in
+              & cover_fract_pot(:),                         & ! in
               & prev_day_max_wind_10m(:),                  & ! in
               & max_wind_10m(:),                           & ! in
-              & damaged_frac(:)                            & ! out
+              & damaged_fract(:)                            & ! out
               & )
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown windbreak algorithm')
+            CALL finish('disturbed_fract','Unknown windbreak algorithm')
         END SELECT
 
       END IF
@@ -418,7 +418,7 @@ CONTAINS
               CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
             
               CALL relocate_carbon_damage(       &
-                & damaged_frac(:),               & ! in
+                & damaged_fract(:),               & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
                 & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
                 & c_green(:),                & ! inout
@@ -466,7 +466,7 @@ CONTAINS
                   & dummy_flux(:), cconservation_wind(:))
                 
             CASE DEFAULT
-              CALL finish('disturbed_frac','Unknown windbreak algorithm')
+              CALL finish('disturbed_fract','Unknown windbreak algorithm')
           END SELECT
 
           cflux_fire_all_2_atm = 0._wp
@@ -477,8 +477,8 @@ CONTAINS
               CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
             
               CALL relocate_carbon_fire( &
-                & burned_frac(:),                & ! in, only for windbreak
-                & dsl4jsb_Config(CARBON_)%fire_frac_wood_2_atmos , & ! in
+                & burned_fract(:),                & ! in, only for windbreak
+                & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
                 & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
                 & c_green(:),                & ! inout
@@ -527,12 +527,12 @@ CONTAINS
                 & -cflux_fire_all_2_atm_ta(:), cconservation_fire(:))
 
             CASE (2) !! Arora & Boer algorithm
-              CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
+              CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
             CASE (3)
-              CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
-            CASE (4) !! Read burned_frac
+              CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
+            CASE (4) !! Read burned_fract
             CASE DEFAULT
-              CALL finish('disturbed_frac','Unknown fire algorithm')
+              CALL finish('disturbed_fract','Unknown fire algorithm')
           END SELECT
 
           ! R: This corresponds to JS3, but I did not understand it...
@@ -544,7 +544,7 @@ CONTAINS
           !ENDIF
 
         ENDIF
-      ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) ) 
+      ENDIF ! ( tile%parent_tile%Is_process_active(FAGE_) )
     ENDIF ! is_newday
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -591,8 +591,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(DISTURB_, burned_frac,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_frac,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay, weighted_by_fract)
 
