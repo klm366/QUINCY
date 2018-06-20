@@ -113,8 +113,8 @@ CONTAINS
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE.
     IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='forest_fract',            &
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='forest_fract',  &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
@@ -125,8 +125,8 @@ CONTAINS
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='veg_ratio_max',           &
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='veg_ratio_max', &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
 
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
@@ -178,20 +178,15 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, lai) = &
       & wgt1 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw2)
 
-    IF (model%config%l_compat401) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
+    IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+        & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
+      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
+        & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
     ELSE
-      IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
-          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
-          & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
-      ELSE
-        dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-          & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
-          & dsl4jsb_Lctlib_param(ClumpinessFactor))
-      END IF
+      dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
+        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
+        & dsl4jsb_Lctlib_param(ClumpinessFactor))
     END IF
 
   END SUBROUTINE pheno_init_ic

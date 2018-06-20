@@ -4,5 +4,6 @@
 /.projectile
 .env
 .idea/
+.vscode
 /doc/html
 /doc/latex

@@ -91,10 +91,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_roughness::return_ptr)
-
-    return_ptr%name = 'surface_roughness'
-    return_ptr%process_id = TURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_roughness', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_roughness
 
@@ -110,10 +107,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_humidity_scaling::return_ptr)
-
-    return_ptr%name = 'humidity_scaling'
-    return_ptr%process_id = TURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='humidity_scaling', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_humidity_scaling
 
@@ -369,11 +363,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)         ! in
       END IF
 
-      IF (model%config%l_compat401) THEN
-        mask(:) = w_soil_sl(:,1) > w_soil_pwp_sl(:,1)
-      ELSE
-        mask(:) = w_soil_column(:) > dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract * max_moist(:)
-      END IF
+      mask(:) = w_soil_column(:) > dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract * max_moist(:)
       WHERE (mask(:))
         fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
           & (fract_water(:) + ( 1._wp - fract_water(:)) /                &

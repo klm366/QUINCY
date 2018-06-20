@@ -24,7 +24,7 @@ MODULE mo_hydro_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
-    REAL(wp)              :: &
+    REAL(wp)            :: &
       & w_skin_max,        & !< Water holding capacity of ground skin reservoir [m water equivalent]
       & w_soil_limit,      & !< Upper limit for maximum soil moisture content
       & w_soil_crit_fract, & !< Fraction of field capacity at which soil starts to dry,
@@ -117,10 +117,10 @@ CONTAINS
 
     config%w_soil_crit_fract   = w_soil_crit_fract
     CALL message(TRIM(routine), 'Fraction of field capacity at critical point: '//TRIM(real2string(w_soil_crit_fract)))
-    
+
     config%w_soil_wilt_fract   = w_soil_wilt_fract
     CALL message(TRIM(routine), 'Fraction of field capacity at permanent wilting point: '//TRIM(real2string(w_soil_wilt_fract)))
-    
+
     config%scheme_stom_cond    = scheme_stom_cond
 
     config%l_organic           = l_organic

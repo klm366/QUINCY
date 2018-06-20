@@ -25,8 +25,8 @@ MODULE mo_assimi_config_class
   PUBLIC :: t_assimi_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
-     INTEGER                             :: ncanopy          ! number of canopy layers for the assimi process
-                                                             ! R: could be different for other processes e.g. for radiation
+     INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
+                                               ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
@@ -54,11 +54,10 @@ CONTAINS
     INTEGER                     :: ncanopy, i
     TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
 
-    NAMELIST /jsb_assimi_nml/      &
-         active,                   &
-         ic_filename,              &
-         bc_filename
-         !X e.g: use_assimi_veg_simple
+    NAMELIST /jsb_assimi_nml/  &
+     & active,                 &
+     & ic_filename,            &
+     & bc_filename
 
     INTEGER :: nml_handler, nml_unit, istat
 

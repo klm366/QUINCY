@@ -151,17 +151,6 @@ CONTAINS
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp
 
-!!$    ALLOCATE(new%patch)
-!!$    new%patch%id = patch%id
-!!$    new%patch%n_patch_cells = patch%n_patch_cells
-!!$    new%patch%n_patch_cells_g = patch%n_patch_cells_g
-!!$    new%patch%nblks_c = patch%nblks_c
-!!$    new%patch%npromz_c = patch%npromz_c
-!!$    new%patch%grid_filename = patch%grid_filename
-!!$    new%patch%comm_pat_gather_c = patch%comm_pat_gather_c
-!!$    new%patch%cells%glb_index = patch%cells%glb_index
-
-
     new%configured = .TRUE.
 
     grid => new
@@ -172,8 +161,8 @@ CONTAINS
 
   FUNCTION new_grid_from_file(filename, name) RESULT(grid)
 
-!!$    USE mo_jsb_io_netcdf,      ONLY: ncfile_has_dim
-    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
+    ! USE mo_jsb_io_netcdf,      ONLY: ncfile_has_dim
+    ! USE mo_jsb_parallel, ONLY: my_process_is_stdio
 
     CHARACTER(LEN=*), INTENT(in)    :: filename
     CHARACTER(LEN=*), INTENT(in)    :: name
@@ -193,17 +182,15 @@ CONTAINS
     new%name = name
     new%filename = filename
 
-!!$    IF (my_process_is_stdio()) THEN
-!!$
-!!$      IF (ncfile_has_dim(TRIM(filename), 'lon_cell_centre')) THEN
-!!$        ! ICON grid
-!!$      ELSE
-!!$        ! ECHAM grid
-!!$      END IF
-!!$
-!!$    END IF
+    ! IF (my_process_is_stdio()) THEN
 
-    !CALL p_bcast(, p_io, mpi_comm)
+    !   IF (ncfile_has_dim(TRIM(filename), 'lon_cell_centre')) THEN
+    !     ! ICON grid
+    !   ELSE
+    !     ! ECHAM grid
+    !   END IF
+
+    ! END IF
 
     new%configured = .TRUE.
 

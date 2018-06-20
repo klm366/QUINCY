@@ -7,6 +7,7 @@
 !! @par Revision History
 !! First version                                              by Reiner Schnur (2013-02-06)
 !! New subroutines and some adaptations for jsb4 standalone   by Julia Nabel (2016-02-20)
+!! Added ltimer although this doesn't really belong here      by Reiner Schnur (2018-06-04)
 !!
 MODULE mo_jsb_time_iface
 #ifndef __NO_JSBACH__
@@ -34,6 +35,7 @@ MODULE mo_jsb_time_iface
     &                                  calculate_time_interpolation_weights
   USE mo_echam_phy_config,       ONLY: echam_phy_tc, dt_zero
   USE mo_master_config,          ONLY: isRestart
+  USE mo_run_config,             ONLY: l_timer_host => ltimer
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
@@ -42,6 +44,7 @@ MODULE mo_jsb_time_iface
   USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date, next_date, lstart, lresume, l_trigradm1
   USE mo_interpo,         ONLY: wgt1, wgt2, nmw1, nmw2
   USE mo_semi_impl,       ONLY: eps
+  USE mo_control,         ONLY: l_timer_host => ltimer
 
 #ifdef STANDALONE
   USE mo_time_event,      ONLY: io_time_event, TIME_INC_DAYS, TIME_INC_MONTHS, TRIG_FIRST, TRIG_LAST
@@ -68,6 +71,7 @@ MODULE mo_jsb_time_iface
   PUBLIC :: get_date_components
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
+  PUBLIC :: l_timer_host
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time_iface'
 

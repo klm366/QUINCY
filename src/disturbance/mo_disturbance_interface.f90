@@ -87,10 +87,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_natural_disturbances::return_ptr)
-
-    return_ptr%name = 'natural_disturbances'
-    return_ptr%process_id = DISTURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='natural_disturbances', process_id=DISTURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_natural_disturbances
 
@@ -121,7 +118,7 @@ CONTAINS
   !!
   SUBROUTINE update_natural_disturbances(tile, options)
 
-    USE mo_disturb_process,       ONLY: burned_fractt_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+    USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
@@ -386,7 +383,7 @@ CONTAINS
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
             ENDIF
 
-            CALL burned_fractt_jsbach(                           &
+            CALL burned_fract_jsbach(                           &
               & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
               & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
               & fire_minimum,                                    & ! in
