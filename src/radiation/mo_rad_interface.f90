@@ -669,7 +669,7 @@ CONTAINS
       & fract_forest,          &
       & fract_snow_can,        &
       & fract_snow_soil,       &
-      & c_litter_green_ag,     &
+      & c_ag_sum_1,            &
       !CBAL & c_slow,           &
       & c_bg_sum,              &
       & swvis_srf_down,        &
@@ -818,14 +818,14 @@ CONTAINS
       IF (use_alb_soil_scheme) THEN
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
-        dsl4jsb_Get_var2D_onChunk(CARBON_, c_litter_green_ag) ! in
+        dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
 
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
           & use_alb_mineralsoil_const,                & ! in
           & use_alb_soil_organic_C,                   & ! in
           & use_alb_soil_litter,                      & ! in
-          & c_litter_green_ag(:),                     & ! in
+          & c_ag_sum_1(:),                            & ! in
           !CBAL & c_slow(:),                           & ! in
           & c_bg_sum(:),                              & ! in
           ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
@@ -883,14 +883,14 @@ CONTAINS
 
           IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
-          dsl4jsb_Get_var2D_onChunk(CARBON_, c_litter_green_ag) ! in
+          dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in (Note: c_humus_1 is part of green litter.)
 
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
             & use_alb_mineralsoil_const,                & ! in
             & use_alb_soil_organic_C,                   & ! in
             & use_alb_soil_litter,                      & ! in
-            & c_litter_green_ag(:),                     & ! in
+            & c_ag_sum_1(:),                            & ! in
             !CBAL & c_slow(:),                           & ! in
             & c_bg_sum(:),                              & ! in
             & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in

@@ -90,6 +90,7 @@ MODULE mo_carbon_memory_class
       c_nonsoluble_bg2,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
       c_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
       c_bg_sum,              & ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
+      c_ag_sum_1,            & ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
 
       C_sum_natural,              & ! R: added
       !
@@ -565,7 +566,15 @@ CONTAINS
         & prefix, suffix,                                                                &
         & output_level=FULL,                                                             &
         & lrestart=.TRUE., initval_r=0.0_wp ) 
-        
+
+      CALL jsb_add_var( mem, 'c_ag_sum_1', mem%c_ag_sum_1,                                       &
+        & hgrid, surface,                                                                        &
+        & t_cf('c_ag_sum_1', 'mol(C) m-2(canopy)', 'C-Pool of above ground green C in Yasso.'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=FULL,                                                                     &
+        & lrestart=.TRUE., initval_r=0.0_wp ) 
+
       CALL jsb_add_var( mem, 'c_sum_natural', mem%C_sum_natural,                      &
         & hgrid, surface,                                                             &
         & t_cf('C_sum_natural', 'mol(C) m-2(canopy)', 'Sum of all natural C pools.'), &

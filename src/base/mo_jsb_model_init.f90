@@ -175,7 +175,6 @@ CONTAINS
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
-    USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init
@@ -219,9 +218,6 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
-
-    model%lctlib => Read_lctlib('lctlib_nlct21.def')
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(SSE_)

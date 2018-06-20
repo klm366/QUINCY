@@ -1,8 +1,19 @@
 # Changelog for JSBACH4+
 
+## jsbach-4.20p6
+
+_Release Date: 20 June 2018_
+
+- Earlier reading of lctlib so that it can be used in init_usecase to set up tile structure and processes
+- Use correct communicator in `mo_jsb_io_netcdf_iface.f90`
+- Replaced `c_litter_green_ag` in the albedo calculations with `c_ag_sum_1`
+
+  This is to be consistent with `c_bg_sum` used in the albedo calculations.
+
 ## jsbach-4.20p5
 
 _Release Date: 20 June 2018_
+(replaced by jsbach-4.20p6 in order to get a few fixes in)
 
 - Timers
   - Implement constructor function for `t_jsb_process_task` abstract type and add timers for each process task
