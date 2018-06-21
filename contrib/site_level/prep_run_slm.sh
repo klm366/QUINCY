@@ -112,8 +112,8 @@ cohort_harvest_interval=80        # number of years after which the cohort is ha
 flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
-soil_depth=5.7                    # meters
-nsoil_layer=5                     # number of soil layers (default for SLM land: 5 | default for SLM soil: 15 | min: 5 | max: 20)
+soil_depth=5.7                  # meter (5.7 to 9.5)
+nsoil_layer=5                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
 
 # JSM
 flag_sb_jsm_transport="F"         # ..
@@ -618,7 +618,7 @@ case "$forcingDataSet" in
 esac
 
 
-## SLM model forcing: land/plant/canopy/soil 
+## SLM model forcing: land/plant/canopy/soil (only 15 soil layer forcing for SLM soil )
 metForcingDir="new_met_forcing/"
 soilForcingDirBase="new_soil_forcing_sl"
 case "$slmModel" in
@@ -632,20 +632,21 @@ case "$slmModel" in
   siteDataFoldForcing="$siteDataFold""$metForcingDir"
   ;;
 "soil")
-  if [ $nsoil_layer -eq 5 ]
-    then
-      siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""5/"
-  elif [ $nsoil_layer -eq 9 ]
-    then
-      siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""9/"
-  elif [ $nsoil_layer -eq 15 ]
-    then
-      siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""15/"
-  else
-    echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
-    echo "EXIT!"
-    exit 1
+  # test number of soil layers against the default value 15; soil-forcing is available for 15 sl only
+  if [ "$nsoil_layer" != 15 ]; then
+    echo " "
+    echo " You aim at using ""$nsoil_layer"" soil layers, where soil forcing is available for 15 sl only."
+    echo " nsoil_layer is now set to 15."
+    nsoil_layer=15
   fi
+  # test soil depth against the value necessary to run 15 sl, i.e., 9.5 meters
+  if [ "$soil_depth" != 9.5 ]; then
+    echo " You aim at using 15 soil layers, which needs a soil depth of 9.5 meters. But your soil depth is set to ""$soil_depth""."
+    echo " soil_depth is now set to 9.5 meters."
+    soil_depth=9.5
+  fi
+  # soil forcing directory
+  siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""15/"
   ;;
 esac
 

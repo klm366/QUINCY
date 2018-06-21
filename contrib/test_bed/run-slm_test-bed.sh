@@ -46,8 +46,8 @@ veg_dynamics_scheme="population"  # none population cohort
 cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
 
 # soil model options
-soil_depth=5.7                  # meter
-nsoil_layer=5                   # number of soil layers (default for SLM land: 5 | default for SLM soil: 15 | min: 5 | max: 20)
+soil_depth=5.7                  # meter (5.7 to 9.5)
+nsoil_layer=5                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
 
 # JSM
 flag_sb_jsm_transport="F"       # ..
@@ -363,35 +363,21 @@ esac
 ## test number of soil levels and set dirname for soil_forcing files
 if [ $slmModel == "soil" ]
   then
-    # test number of soil layers against min and max values (5:20)
-    if [ "$nsoil_layer" -lt 5 ]
-     then
-      echo " "
-      echo " You aim at using ""$nsoil_layer"" soil layers, where the minimum number is 5. nsoil_layer is now set to 5"
-      nsoil_layer=5
-     else
-      if [ "$nsoil_layer" -gt 20 ]
-       then
-        echo " "
-        echo " You aim at using ""$nsoil_layer"" soil layers, where the maximum number is 20. nsoil_layer is now set to 20"
-        nsoil_layer=20
-      fi
-    fi
+  # test number of soil layers against the default value 15; soil-forcing is available for 15 sl only
+  if [ "$nsoil_layer" != 15 ]; then
+    echo " "
+    echo " You aim at using ""$nsoil_layer"" soil layers, where soil forcing is available for 15 sl only."
+    echo " nsoil_layer is now set to 15."
+    nsoil_layer=15
+  fi
+  # test soil depth against the value necessary to run 15 sl, i.e., 9.5 meters
+  if [ "$soil_depth" != 9.5 ]; then
+    echo " You aim at using 15 soil layers, which needs a soil depth of 9.5 meters. But your soil depth is set to ""$soil_depth""."
+    echo " soil_depth is now set to 9.5 meters."
+    soil_depth=9.5
+  fi
     # soil forcing directory
-    if [ $nsoil_layer -eq 5 ]
-      then
-        soilForcingDir="$soilForcingDirBase""5/"
-    elif [ $nsoil_layer -eq 9 ]
-      then
-        soilForcingDir="$soilForcingDirBase""9/"
-    elif [ $nsoil_layer -eq 15 ]
-      then
-        soilForcingDir="$soilForcingDirBase""15/"
-    else
-      echo "Note: soil forcing is available only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
-      echo "EXIT!"
-      exit 1
-    fi
+    soilForcingDir="$soilForcingDirBase""15/"
 fi 
 
 

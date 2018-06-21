@@ -16,7 +16,7 @@ paramSensitivitySim="F"
 sb_model_scheme="jsm"
 flag_sb_prescribe_po4="T"
 soil_depth=9.5
-nsoil_layer=9
+nsoil_layer=15
 
 simulation_length_number=500
 output_interval_pool="weekly"
