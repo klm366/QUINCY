@@ -224,8 +224,7 @@ CONTAINS
       & rain               = rain(:),               &
       & snow               = snow(:),               &
       & wind_air           = wind_air(:),           &
-!!$      & wind_10m          = wind_10m(:),          &
-      & wind_10m           = wind_air(:)*0.8_wp,    & ! Temporary
+      & wind_10m           = wind_10m(:),           &
       & lw_srf_down        = lw_srf_down(:),        &
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
