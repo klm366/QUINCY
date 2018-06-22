@@ -136,7 +136,7 @@ CONTAINS
 
     TYPE (t_list_element), POINTER :: element
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r2d'
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
@@ -230,7 +230,7 @@ CONTAINS
 
     TYPE (t_list_element), POINTER :: element
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':add_var_list_element_r3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r3d'
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
