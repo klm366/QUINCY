@@ -86,7 +86,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
 
     model => Get_model(model_id)
 

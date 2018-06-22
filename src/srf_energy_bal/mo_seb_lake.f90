@@ -100,7 +100,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_lake'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_lake'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -485,7 +485,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes_lake'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_lake'
 
     iblk    = options%iblk
     ics     = options%ics

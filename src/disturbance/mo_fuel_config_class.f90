@@ -57,7 +57,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fuel_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fuel_config'
 
     CALL message(TRIM(routine), 'Starting fuel configuration')
 

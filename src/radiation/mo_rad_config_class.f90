@@ -103,7 +103,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
 

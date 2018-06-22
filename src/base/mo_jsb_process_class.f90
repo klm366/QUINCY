@@ -100,7 +100,7 @@ CONTAINS
     CLASS(t_jsb_process),     INTENT(inout) :: this
     CLASS(t_jsb_process_task), TARGET, INTENT(in)    :: task
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_task'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Register_task'
 
     IF (this%id /= task%process_id) &
       CALL finish(TRIM(routine), 'Task is for another process')
@@ -124,7 +124,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_task'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_task'
 
     return_ptr => NULL()
     DO i=1,SIZE(this%task_list)
@@ -146,7 +146,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Configure_process'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Configure_process'
 
     IF (.NOT. ASSOCIATED(this%config)) RETURN
 
@@ -159,7 +159,7 @@ CONTAINS
     INTEGER, INTENT(in) :: iact
     CHARACTER(len=:), ALLOCATABLE :: return_value
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_name'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_action_name'
 
     SELECT CASE(iact)
     CASE (SKIP_)

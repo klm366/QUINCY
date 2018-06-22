@@ -265,7 +265,7 @@ CONTAINS
 
     REAL(wp), PARAMETER :: cmid_offset = 0.07_wp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_temperature'
 
     ndim  = SIZE(tsoil,1)
     nsoil = SIZE(tsoil,2)

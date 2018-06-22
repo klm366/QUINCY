@@ -42,7 +42,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hydro_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
 
     CALL hydro_init_bc(tile)
     CALL hydro_init_ic(tile)
@@ -68,7 +68,7 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hydro_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -250,7 +250,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hydro_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_ic'
 
     !-----------------------------------------------------------------------
     ! CONTENT
@@ -423,7 +423,7 @@ CONTAINS
 
     INTEGER  :: nsoil
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 

@@ -87,7 +87,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: cos_zenith_angle(:)
   !----------------------------------------------------------------------------
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_interface_variables'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':write_interface_variables'
 
 #ifndef __ICON__
     INCLUDE 'netcdf.inc'
@@ -301,7 +301,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: pch(:)
     REAL(wp), INTENT(out) :: cos_zenith_angle(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_interface_variables'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_interface_variables'
     CHARACTER(len=*), PARAMETER :: filename = 'interface_variables.nc' 
 
 #ifndef __ICON__

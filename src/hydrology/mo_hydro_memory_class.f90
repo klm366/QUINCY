@@ -189,7 +189,7 @@ CONTAINS
 
     REAL(wp) :: ini_snow_dens
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_hydro_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
 
     model => Get_model(model_id)
 

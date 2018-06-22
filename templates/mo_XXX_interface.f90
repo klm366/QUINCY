@@ -139,7 +139,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_<PROCESS_NAME_LOWER_CASE>'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_<PROCESS_NAME_LOWER_CASE>'
 
 
     ! Declare process memories
@@ -192,7 +192,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_<PROCESS_NAME_LOWER_CASE>'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_<PROCESS_NAME_LOWER_CASE>'
     
     ! Get local variables from options argument
     iblk = options%iblk

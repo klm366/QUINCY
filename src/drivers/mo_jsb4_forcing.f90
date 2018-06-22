@@ -268,7 +268,7 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
     REAL(wp), INTENT(OUT) :: pch(:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_interface_variables_from_external_forcing'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_interface_variables_from_external_forcing'
 
     TYPE(t_jsb_model),  POINTER  :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
@@ -466,7 +466,7 @@ CONTAINS
 
     INTEGER, INTENT(IN) :: model_id
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/    forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,               &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
@@ -702,7 +702,7 @@ CONTAINS
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
     REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_data_and_update_field'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_data_and_update_field'
 
     LOGICAL ::  new_year_forcing     ! jsb3: defined comparing current_date with next_date, because with stepwise forcing
     LOGICAL ::  new_day_forcing      ! the dates in the forcing file shall correspond to the dates of stepwise output.
@@ -920,7 +920,7 @@ CONTAINS
     REAL(wp),        INTENT(IN) :: constantValue
     TYPE(input_variable_type),INTENT(INOUT) :: forcing_input_variable ! structure filled in this subroutine
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing_input_variable'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing_input_variable'
 
     forcing_input_variable%frequency = frequency_key_to_constant_val(variable_name, forcing_frequ_keyword)
     forcing_input_variable%variable_name = variable_name
@@ -944,7 +944,7 @@ CONTAINS
     CHARACTER(len=*),INTENT(IN) :: variable_name
     CHARACTER(len=*),INTENT(IN) :: forcing_frequ_keyword
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':frequency_key_to_constant_val'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':frequency_key_to_constant_val'
 
     SELECT CASE(TRIM(tolower(forcing_frequ_keyword)))
     CASE("monthly")
@@ -1006,7 +1006,7 @@ CONTAINS
     CHARACTER(len=*),INTENT(IN) :: expectedUnit
     CHARACTER(len=*),INTENT(IN) :: readUnit
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_unit'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':test_unit'
 
     INTEGER :: nc_var_id, status
 
@@ -1347,7 +1347,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
     REAL(wp), INTENT(OUT):: qsat(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sat_specific_humidity'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
     INTEGER :: i
 !    REAL(wp) :: vtmpc1           ! in jsb3 this is set in this function, but it is also already calculated in mo_physical_constants!
@@ -1454,7 +1454,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
     REAL(wp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':vapour_pressure_from_evapor'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':vapour_pressure_from_evapor'
 
     REAL(wp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
     REAL(wp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure

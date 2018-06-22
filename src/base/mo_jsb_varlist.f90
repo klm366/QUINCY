@@ -113,7 +113,7 @@ CONTAINS
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
     CHARACTER(len=:), ALLOCATABLE :: output_level_name
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -233,7 +233,7 @@ CONTAINS
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
     CHARACTER(len=:), ALLOCATABLE :: output_level_name
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r3d'
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -364,7 +364,7 @@ CONTAINS
     INTEGER           :: ldims(2), gdims(2)
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)

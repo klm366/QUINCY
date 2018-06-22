@@ -40,7 +40,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':disturb_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':disturb_init'
 
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Get_memory(DISTURB_)
@@ -63,7 +63,7 @@ CONTAINS
 !     TYPE(t_jsb_model),       POINTER :: model
 !     dsl4jsb_Def_memory(DISTURB_)
 ! 
-!     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':disturb_init_bc'
+!     CHARACTER(len=*), PARAMETER :: routine = modname//':disturb_init_bc'
 ! 
 !     !-----------------------------------------------------------------------
 !     ! CONTENT
@@ -101,7 +101,7 @@ CONTAINS
 !     TYPE(t_input_file) :: input_file
 !     !INTEGER :: i, n1, n2
 ! 
-!     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':disturb_init_ic'
+!     CHARACTER(len=*), PARAMETER :: routine = modname//':disturb_init_ic'
 ! 
 !     model => get_model(tile%owner_model_id)
 ! 
