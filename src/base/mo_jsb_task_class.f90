@@ -12,7 +12,7 @@ MODULE mo_jsb_task_class
 
   USE mo_kind,        ONLY: wp
   USE mo_exception,   ONLY: message, finish
-  USE mo_timer,       ONLY: timer_start, timer_stop
+  USE mo_timer,       ONLY: new_timer, timer_start, timer_stop
 
   USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, l_timer, debug_on
 
@@ -45,6 +45,7 @@ MODULE mo_jsb_task_class
     CHARACTER(len=50)              :: name
     INTEGER                        :: process_id     = 0
     INTEGER                        :: owner_model_id = 0
+    INTEGER                        :: timer_integrate = 0
     INTEGER                        :: timer_aggregate = 0
     !CLASS(t_jsb_task_msg), POINTER :: msg => NULL()
 !!$    PROCEDURE(Integrate_task), POINTER, NOPASS :: Integrate
@@ -52,7 +53,8 @@ MODULE mo_jsb_task_class
   CONTAINS
     PROCEDURE(Interface_task), DEFERRED, NOPASS :: Integrate
     PROCEDURE(Interface_task), DEFERRED, NOPASS :: Aggregate
-    PROCEDURE :: Do_it
+    PROCEDURE                                   :: Do_it
+    PROCEDURE                                   :: Construct => Construct_task
   END TYPE t_jsb_process_task
 
   ABSTRACT INTERFACE
@@ -77,6 +79,25 @@ MODULE mo_jsb_task_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_task_class'
 
 CONTAINS
+
+  SUBROUTINE Construct_task(this, name, process_id, owner_model_id)
+
+    CLASS(t_jsb_process_task), INTENT(inout) :: this
+    CHARACTER(len=*),          INTENT(in)    :: name
+    INTEGER,                   INTENT(in)    :: process_id
+    INTEGER,                   INTENT(in)    :: owner_model_id
+
+    ! ALLOCATE(t_jsb_process_task::task)
+    this%name = name
+    this%process_id = process_id
+    this%owner_model_id = owner_model_id
+
+    IF (l_timer .AND. debug_on()) THEN
+      this%timer_integrate = new_timer('jsb:update_'//TRIM(name))
+      this%timer_aggregate = new_timer('jsb:aggregate_'//TRIM(name))
+    END IF
+
+  END SUBROUTINE Construct_task
 
   SUBROUTINE Do_it(this, msg, tile, options)
 
@@ -105,13 +126,25 @@ CONTAINS
 !!$
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
-        IF (l_timer .AND. debug_on()) CALL timer_start(timer_integrate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) THEN
+          CALL timer_start(timer_integrate(this%owner_model_id))
+          IF (this%timer_integrate > 0) CALL timer_start(this%timer_integrate)
+        END IF
         CALL this%Integrate(tile, options)
-        IF (l_timer .AND. debug_on()) CALL timer_stop(timer_integrate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) THEN
+          IF (this%timer_integrate > 0) CALL timer_stop(this%timer_integrate)
+          CALL timer_stop(timer_integrate(this%owner_model_id))
+        END IF
       CASE ('AGGREGATE')
-        IF (l_timer .AND. debug_on()) CALL timer_start(timer_aggregate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) THEN
+          CALL timer_start(timer_aggregate(this%owner_model_id))
+          IF (this%timer_aggregate > 0) CALL timer_start(this%timer_aggregate)
+        END IF
         CALL this%Aggregate(tile, options)
-        IF (l_timer .AND. debug_on()) CALL timer_stop(timer_aggregate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) THEN
+          IF (this%timer_aggregate > 0) CALL timer_stop(this%timer_aggregate)
+          CALL timer_stop(timer_aggregate(this%owner_model_id))
+        END IF
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unknown action for task'//TRIM(this%name))
       END SELECT

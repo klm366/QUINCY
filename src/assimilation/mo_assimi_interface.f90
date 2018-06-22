@@ -103,10 +103,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_assimilation_scaling_factors::return_ptr)
-
-    return_ptr%name = 'assimilation_scaling_factors'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='assimilation_scaling_factors', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation_scaling_factors
 
@@ -122,10 +119,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_unstressed', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_unstressed
 
@@ -141,10 +135,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_assimilation::return_ptr)
-
-    return_ptr%name = 'assimilation'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='assimilation', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation
 

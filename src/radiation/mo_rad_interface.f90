@@ -106,10 +106,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_radiation::return_ptr)
-
-    return_ptr%name = 'surface_radiation'
-    return_ptr%process_id = RAD_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_radiation', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_radiation
 
@@ -125,10 +122,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_radiation_par::return_ptr)
-
-    return_ptr%name = 'radiation_par'
-    return_ptr%process_id = RAD_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='radiation_par', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_radiation_par
   
@@ -144,10 +138,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_albedo::return_ptr)
-
-    return_ptr%name = 'albedo'
-    return_ptr%process_id = RAD_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='albedo', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_albedo
 
@@ -415,8 +406,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_vis_soil          ! Soil albedo in the visible range
     dsl4jsb_Real2D_onChunk :: lai                   ! Leaf area index [-]
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle      ! Angle of incoming radiation [-]
-    dsl4jsb_Real2D_onChunk :: fract_par_direct       ! Fraction of direct (in contrast to diffuse) PAR [-]
-    dsl4jsb_Real2D_onChunk :: fract_par_diffuse      ! Fraction of diffuse (in contrast to direct) PAR [-]
+    dsl4jsb_Real2D_onChunk :: fract_par_direct      ! Fraction of direct (in contrast to diffuse) PAR [-]
+    dsl4jsb_Real2D_onChunk :: fract_par_diffuse     ! Fraction of diffuse (in contrast to direct) PAR [-]
     dsl4jsb_Real2D_onChunk :: canopy_bound_lai
     dsl4jsb_Real2D_onChunk :: apar_nacc
 
@@ -458,10 +449,10 @@ CONTAINS
     
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in (received from the atmosphere)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)      ! in (received from the atmosphere)
+    dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)     ! in (received from the atmosphere)
     dsl4jsb_Get_var2D_onChunk(A2L_,   swpar_srf_down)        ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                   ! in    
-    dsl4jsb_Get_var2D_onChunk(RAD_,   fract_par_direct)       ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                   ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,   fract_par_direct)      ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_soil)          ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par)                   ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol)          ! inout
@@ -507,7 +498,7 @@ CONTAINS
          & alb_vis_soil(:),           & ! in
          & lai(:),                    & ! in
          & cos_zenith_angle(:),       & ! in
-         & fract_par_direct(:),        & ! in
+         & fract_par_direct(:),       & ! in
          & canopy_bound_lai(icanopy), & ! in
          & canopy_bound_lai_delta,    & ! in
          & B4_layer_above,            & ! inout
@@ -638,13 +629,13 @@ CONTAINS
       & albedo_age_weight, &    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                 !                            the snow albedo resulting from both schemes
       & AlbedoCanopySnow
-                                              
+
     LOGICAL ::           &
       & use_alb_veg_simple,        &
       & use_alb_soil_scheme,       &
       & use_alb_soil_litter,       &
       & use_alb_mineralsoil_const
-      
+
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk ::  &
       & cos_zenith_angle,      &
@@ -670,7 +661,7 @@ CONTAINS
       & fract_forest,          &
       & fract_snow_can,        &
       & fract_snow_soil,       &
-      & c_litter_green_ag, &
+      & c_litter_green_ag,     &
       !CBAL & c_slow,            &
       & c_bg_sum,              &
       & swvis_srf_down,        &
@@ -729,25 +720,27 @@ CONTAINS
         ALLOCATE(c_bg_sum(nc))
         c_bg_sum(:) = 0._wp                           ! dummy
       END IF
+    ELSE
+      c_bg_sum => NULL()
     END IF
 
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)        ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)        ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, t_unfilt)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_litter_green_ag) ! in
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_slow)            ! in
 
-    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_background)        ! in
-    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis)               ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir)               ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis_snow)          ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir_snow)          ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis)               ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir)               ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_snow)          ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir_snow)          ! inout
     IF (.NOT. tile%is_lake) THEN
-      dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis_lnd)               ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir_lnd)               ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_lnd)           ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)           ! inout
     END IF
 
     ! ---------------------------
@@ -805,7 +798,7 @@ CONTAINS
     ELSE IF (tile%is_glacier) THEN
       CALL calc_glacier_albedo( &
         & l_day(:),             & ! in
-        & t_unfilt(:),          & ! in       
+        & t_unfilt(:),          & ! in
         & alb_vis_lnd(:),       & ! inout
         & alb_nir_lnd(:)        & ! inout
         & )
@@ -824,8 +817,8 @@ CONTAINS
           & use_alb_mineralsoil_const,                & ! in
           & use_alb_soil_organic_C,                   & ! in
           & use_alb_soil_litter,                      & ! in
-          & c_litter_green_ag(:),                 & ! in
-          !CBAL & c_slow(:),                            & ! in
+          & c_litter_green_ag(:),                     & ! in
+          !CBAL & c_slow(:),                           & ! in
           & c_bg_sum(:),                              & ! in
           ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
           & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
@@ -887,8 +880,8 @@ CONTAINS
             & use_alb_mineralsoil_const,                & ! in
             & use_alb_soil_organic_C,                   & ! in
             & use_alb_soil_litter,                      & ! in
-            & c_litter_green_ag(:),                 & ! in
-            !CBAL & c_slow(:),                            & ! in
+            & c_litter_green_ag(:),                     & ! in
+            !CBAL & c_slow(:),                           & ! in
             & c_bg_sum(:),                              & ! in
             & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
             & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in

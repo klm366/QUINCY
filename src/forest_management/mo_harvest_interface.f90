@@ -76,10 +76,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_forest_harvest::return_ptr)
-
-    return_ptr%name = 'forest_harvest'
-    return_ptr%process_id = HARV_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='forest_harvest', process_id=HARV_, owner_model_id=model_id)
 
   END FUNCTION Create_task_forest_harvest
 

@@ -93,10 +93,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_calculate_ageing::return_ptr)
-
-    return_ptr%name = 'calculate_ageing'
-    return_ptr%process_id = FAGE_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='calculate_ageing', process_id=FAGE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_calculate_ageing
 
@@ -111,10 +108,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_nat_dist_age_cohorts::return_ptr)
-
-    return_ptr%name = 'nat_dist_age_cohorts'
-    return_ptr%process_id = FAGE_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='nat_dist_age_cohorts', process_id=FAGE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_nat_dist_age_cohorts
   
@@ -129,10 +123,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_harvest_age_cohorts::return_ptr)
-
-    return_ptr%name = 'harvest_age_cohorts'
-    return_ptr%process_id = FAGE_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='harvest_age_cohorts', process_id=FAGE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_harvest_age_cohorts
 

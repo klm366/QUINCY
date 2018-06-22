@@ -97,10 +97,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_phenology::return_ptr)
-
-    return_ptr%name = 'phenology'
-    return_ptr%process_id = PHENO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='phenology', process_id=PHENO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_phenology
   
@@ -116,10 +113,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_foliage_projected_cover::return_ptr)
-
-    return_ptr%name = 'foliage_projected_cover'
-    return_ptr%process_id = PHENO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='foliage_projected_cover', process_id=PHENO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_foliage_projected_cover
 

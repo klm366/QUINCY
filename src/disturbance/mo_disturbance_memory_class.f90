@@ -31,17 +31,17 @@ MODULE mo_disturb_memory_class
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
 
-   TYPE(t_jsb_var_real2d) ::   &
-      cconservation_fire,      &
-      cconservation_wind,      &
-      burned_fract,             & ! burned fraction of tile
-      damaged_fract,            & ! windbreak fraction of tile
-      q_rel_air_climbuf,       & ! Relative humiditiy of lowest air layer smoothed in time.
-      q_rel_air_climbuf_yday,  & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
-                                 ! This is only needed for cbalone forcing!
-      prev_day_max_wind_10m,   & ! for windbreak
-      max_wind_10m,            & ! for windbreak
-      max_wind_10m_act           ! for windbreak
+  TYPE(t_jsb_var_real2d) ::   &
+    cconservation_fire,       &
+    cconservation_wind,       &
+    burned_fract,             & ! burned fraction of tile
+    damaged_fract,            & ! windbreak fraction of tile
+    q_rel_air_climbuf,        & ! Relative humiditiy of lowest air layer smoothed in time.
+    q_rel_air_climbuf_yday,   & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
+                                ! This is only needed for cbalone forcing!
+    prev_day_max_wind_10m,    & ! for windbreak
+    max_wind_10m,             & ! for windbreak
+    max_wind_10m_act            ! for windbreak
 
   CONTAINS
     PROCEDURE :: Init => Init_disturb_memory
@@ -82,21 +82,22 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%burned_fract%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                              &
+      CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                            &
         & hgrid, surface,                                                                 &
-        & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),                &
+        & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
         & prefix, suffix,                                                                 &
         & output_level=BASIC,                                                             &
         & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'damaged_fract', mem%damaged_fract,                            &
-        & hgrid, surface,                                                                 &
+      CALL jsb_add_var( mem, 'damaged_fract', mem%damaged_fract,                           &
+        & hgrid, surface,                                                                  &
         & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-        & prefix, suffix,                                                                 &
-        & output_level=BASIC,                                                             &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+        & prefix, suffix,                                                                  &
+        & output_level=BASIC,                                                              &
+        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+
 
       CALL jsb_add_var( mem, 'q_air_clim', mem%q_rel_air_climbuf,                                       &
         & hgrid, surface,                                                                               &
@@ -155,7 +156,6 @@ CONTAINS
           & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
       END IF
     END IF
-
 
   END SUBROUTINE Init_disturb_memory
 

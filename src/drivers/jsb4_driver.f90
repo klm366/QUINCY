@@ -13,7 +13,7 @@ PROGRAM jsb4_driver
 
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
-  USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init
+  USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday, is_newyear
@@ -152,7 +152,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
 
-  REAL(wp), ALLOCATABLE :: CO2_flux(:,:)
+  REAL(wp), ALLOCATABLE :: CO2_flux(:)
 
   !! only required for conservation tests
   REAL(wp), ALLOCATABLE :: old_c_state_sum(:,:), cconservation(:,:)
@@ -282,8 +282,7 @@ PROGRAM jsb4_driver
   ALLOCATE(alb_nir_dir(nproma))
   ALLOCATE(alb_vis_dif(nproma))
   ALLOCATE(alb_nir_dif(nproma))
-
-  ALLOCATE(CO2_flux(nproma, nblks))
+  ALLOCATE(CO2_flux(nproma))
 
   ! Only required for c conservation test
   ALLOCATE(old_c_state_sum(nproma, nblks))
@@ -322,17 +321,18 @@ PROGRAM jsb4_driver
 !    evapo_pot_sum_proc = 0._wp
   ENDIF
 
-  model => get_model(model_id)
-  tile => model%Get_top_tile()
-  ics = 1
-  ice = nproma
-
   IF(jsbach_is_restarted()) THEN
+  
+    model => get_model(model_id)
+    tile => model%Get_top_tile()
+    ics = 1
+    ice = nproma
 
     CALL IO_read_streams
-    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    
     DO iblk = 1, nblks
       CALL model%Set_options(iblk=iblk)
       t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
@@ -344,6 +344,8 @@ PROGRAM jsb4_driver
       evapo_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
+
+    CALL jsbach_init_after_restart(model_id)
   ENDIF
 
   !TODO-JN: Temporäre Lösung bis Stiigs module verfügbar ist!
@@ -354,7 +356,6 @@ PROGRAM jsb4_driver
     harvest_from_files(:,:,:) = -1._wp
     read_harvest(:,:)=-1._wp
   ENDIF
-
 
   CALL init_output
   CALL open_output_streams
@@ -502,6 +503,7 @@ PROGRAM jsb4_driver
           & swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
       ENDIF
+      
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
         & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
@@ -511,13 +513,13 @@ PROGRAM jsb4_driver
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:,iblk), evapopot=evapopot(:))
+        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot=evapopot(:))
+        
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
         ! To ensure restart identity, the daily evapo_act_sum and evapo_pot_sum would need to be calculated in jsbach!
         ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
-        evapo_act2pot_proc(:,iblk) &
-          & = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
+        evapo_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
 !        evapo_act_sum_proc(:,iblk) = evapo_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
 !        evapo_pot_sum_proc(:,iblk) = evapo_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF

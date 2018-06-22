@@ -91,10 +91,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_roughness::return_ptr)
-
-    return_ptr%name = 'surface_roughness'
-    return_ptr%process_id = TURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_roughness', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_roughness
 
@@ -110,10 +107,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_humidity_scaling::return_ptr)
-
-    return_ptr%name = 'humidity_scaling'
-    return_ptr%process_id = TURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='humidity_scaling', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_humidity_scaling
 

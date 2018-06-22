@@ -28,7 +28,7 @@ MODULE mo_carbon_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: carbon_init, carbon_start_cpools
+  PUBLIC :: carbon_init, carbon_read_cpools
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_init'
 
@@ -152,7 +152,7 @@ CONTAINS
 
   END SUBROUTINE carbon_init_ic
 
-  SUBROUTINE carbon_start_cpools(tile)
+  SUBROUTINE carbon_read_cpools(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -180,7 +180,7 @@ CONTAINS
       & 'c_acid_ag2',  'c_water_ag2', 'c_ethanol_ag2', 'c_nonsoluble_ag2',               &
       & 'c_acid_bg2',  'c_water_bg2', 'c_ethanol_bg2', 'c_nonsoluble_bg2', 'c_humus_2' ]
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':carbon_start_cpools'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':carbon_read_cpools'
 
     model => get_model(tile%owner_model_id)
 
@@ -271,7 +271,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-  END SUBROUTINE carbon_start_cpools
+  END SUBROUTINE carbon_reaD_cpools
 
 #endif
 END MODULE mo_carbon_init
