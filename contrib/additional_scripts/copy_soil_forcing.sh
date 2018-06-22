@@ -1,14 +1,16 @@
 #!/bin/bash
 
-## copy the soil_forcing to the BGI/SLM model-input folders where the SLM_soil model expect the forcing files
-## this soil_forcing needs to be created for both FLUXNET and CRUNCEPv5 using the prep_run_slm.sh with option flag_generate_soil_forcing == T
-## 
-## first version: Jan Engel, MPI-BGC Jena, 20170207
+## copy the just-created soil_forcing (usecase 01) to the particular folders in the sites sets (BGI/data/Model/SLM1/input/point/)
+## forcing for 15 soil layers only
 ##
+## this soil_forcing needs to be created for FLUXNET and CRUNCEP cue & spp and FACE:
+##  using the prep_run_slm.sh with option flag_generate_soil_forcing == T
+## 
 
 
-# set manually: forcing  mode with options: static tansient (see prep_run_slm)
-forcingMode="static"
+
+# no need to set any options
+
 
 
 ########################################################################################################
@@ -31,30 +33,26 @@ pathServerC="$mainPathServer""CRUNCEPv7/"
 ## source folders - where the simulation results have been stored
 pathSourceBase="/Net/Groups/BGI/scratch/""$userName""/slm/"
 
-# different file names for CRUNCEPv7 depending on the forcing mode
-# e.g.: VAL_1901-2015.dat / VAL_1984-2013.dat (transient / static)
+# met-forcing years included into the file names for CRUNCEP
 crunYears="_1984-2013"
-if [ $forcingMode == "transient" ]
- then
-  crunYears="_1901-2015"
-fi
 
-# get current date (yyyy-mm-dd) for renaming folders in user scratch
+# get current date (yyyy-mm-dd) for renaming folders in user scratch after soil forcing was copied
 currDate=$(date +%F)
 
 
 #####################################################################
 ## loop over potential numbers of soil layers present: 5 9 15      ##
 #####################################################################
-for sl in 5 9 15
- do
-  echo " "
-  echo " Running soil_forcing update for ""$sl"" soil layers."
-  echo " "
+
+## set number of soil layers
+sl=15
+echo " "
+echo " Running soil_forcing update for ""$sl"" soil layers for all site-sets for which new soil forcing is available."
+echo " "
 
 ## set the soil_forcing folder for the particular sl number at the server where the soil_forcing files are stored
-#  create this folder in case it is not present
-soilForce="new_soil_forcing_sl""$sl""/"
+#  create this folder in case it is not present, does preserve folders and symlinks to folders present
+soilForce="soil_forcing_sl""$sl""/"
 mkdir -p "$pathServerF""$soilForce"
 mkdir -p "$pathServerC""$soilForce"
 
@@ -62,6 +60,8 @@ mkdir -p "$pathServerC""$soilForce"
 expNameF="exp_create_soil_forc_fluxnet_sl""$sl"
 expNameCC="exp_create_soil_forc_cruncep_cue_sl""$sl"
 expNameCS="exp_create_soil_forc_cruncep_spp_sl""$sl"
+#expNameA="exp_create_soil_forc_face_sl""$sl"
+
 
 
 #################################################

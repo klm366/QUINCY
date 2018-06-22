@@ -1,53 +1,38 @@
 # default SLM usecase: 01_generate_soil_forcing_def
 # 
-# generate forcing for stand alone soil model:
-#  create additional output (veg litterfall + some soilphysics) used as input of the (standalone) soil model
-#  options apply specifically to the generation of soil forcing using the land model
+# generate soil_forcing for stand alone SLM soil model:
+#  creating: veg litterfall + some soilphysics output used as input by the (standalone) soil model
+#  options apply specifically to the generation of soil forcing using the SLM land model
 #
 # necessary settings for the prep_run_slm.sh:
 #  forcingDataSet fluxnet/cruncep
 #  siteSelection  cue/spp
-#  soil_depth     any between 5.7 and 9.5
-#  nsoil_layer    either 5, 9 or 15
 #
 
 echo " Simulation runs for soil_forcing creation:"
 echo "  usecase='01_generate_soil_forcing_def' applying special settings to some options"
 echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
-echo "    FLUXNET, and CRUNCEPv7 with siteSelection cue & spp"
-echo "    each for nsoil_layer = 5  with soil_depth 5.7"
-echo "    each for nsoil_layer = 9  with soil_depth 9.5"
-echo "    each for nsoil_layer = 15 with soil_depth 9.5"
+echo "    FLUXNET (all sites)"
+echo "    CRUNCEP with siteSelection cue & spp"
+echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing is set to TRUE for u01 automatically"
 echo " "
 echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
-echo "   (this script updates the soil forcing for FLUXNET and CRUNCEPv7, "
-echo "    and renames the experimentalID but leaves the renamed simulation folders in your scratch)"
+echo "   (this script updates the soil forcing for teh site sets, "
+echo "    and renames the experimentalID of soil_forcing simulations leaving the renamed folders in your scratch)"
 echo " "
 
 # set experimentalID according to site dataset
+# add cue/spp in case of a cruncep simulation
 experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
 if [ $forcingDataSet == "cruncep" ]
  then
   experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
 fi
 
-# add number of soil layers to experimentalID
-if [ $nsoil_layer -eq 5 ]
-  then
-    experimentalID="$experimentalID"_sl5
-elif [ $nsoil_layer -eq 9 ]
-  then
-    experimentalID="$experimentalID"_sl9
-elif [ $nsoil_layer -eq 15 ]
-  then
-    experimentalID="$experimentalID"_sl15
-else
-  echo "Note: soil forcing can be created only for 5, 9 or 15 soil layers. You selected sl: ""$nsoil_layer""."
-  echo "EXIT!"
-  exit 1
-fi
+# add number of soil layers to experimentalID, only 15 sl since ticket #407
+experimentalID="$experimentalID"_sl15
 
-forcingMode="static"
+forcingMode="static"          # ! if changed to "transient" adaptions to the copy_soil_forcing.sh are needed
 slmModel="land"
 
 spinupLengthSoilForcing=200   # years of spin-up before output is generated and saved
@@ -79,6 +64,9 @@ biomass_alloc_scheme="fixed"    # fixed dynamic optimal
 leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
 veg_dynamics_scheme="population"  # none population cohort
 flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
+
+soil_depth=9.5                  # meter (5.7 to 9.5)
+nsoil_layer=15                  # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
 
 simulation_length_number=${spinupLengthSoilForcing}
 # the soil forcing is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
