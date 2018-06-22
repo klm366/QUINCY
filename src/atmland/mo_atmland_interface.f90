@@ -152,7 +152,7 @@ CONTAINS
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
     & CO2_flux,                                                                      &
-    & t_lwtr, t_lice,                                                                &
+    & t_lwtr, t_lice, qsat_lwtr, qsat_lice,                                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
     & ice_fract_lake,                                                                &
@@ -166,7 +166,7 @@ CONTAINS
       & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
-      & t_lwtr(:), t_lice(:),                                                        &
+      & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:),                            &
       & evapo_wtr(:), latent_hflx_wtr(:), sensible_hflx_wtr(:),                      &
       & evapo_ice(:), latent_hflx_ice(:), sensible_hflx_ice(:),                      &
       & ice_fract_lake(:),                                                           &
@@ -248,6 +248,8 @@ CONTAINS
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lwtr)
       IF (PRESENT(t_lice))            t_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lice)
+      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr)
+      IF (PRESENT(qsat_lice))         qsat_lice(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
       IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_wtr)
       IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_wtr)
       IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_wtr)

@@ -124,8 +124,8 @@ CONTAINS
 
     USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
-    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, &
-      & calculate_current_c_state_sum, check_carbon_conservation_for_operation
+    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_bg_sum, &
+      & calculate_current_c_ta_state_sum, check_carbon_conservation_for_operation
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
@@ -415,7 +415,7 @@ CONTAINS
             CASE (0) !! No windbreak algorithm
             CASE (1) !! jsbach algorithm
             
-              CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+              CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
             
               CALL relocate_carbon_damage(       &
                 & damaged_fract(:),               & ! in
@@ -446,6 +446,7 @@ CONTAINS
                 & c_humus_2(:)              & ! inout
                 & )
 
+                CALL calculate_current_c_bg_sum(tile, options)
                 CALL recalc_per_tile_vars(tile, options, &
                   & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
                   & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
@@ -474,7 +475,7 @@ CONTAINS
             CASE (0) !! No fire algorithm
             CASE (1) !! jsbach algorithm
             
-              CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+              CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
             
               CALL relocate_carbon_fire( &
                 & burned_fract(:),                & ! in, only for windbreak
@@ -507,6 +508,7 @@ CONTAINS
                 & cflux_fire_all_2_atm      & ! out
                 & )
 
+              CALL calculate_current_c_bg_sum(tile, options)
               CALL recalc_per_tile_vars(tile, options, &
                 & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
                 & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &

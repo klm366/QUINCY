@@ -54,10 +54,11 @@ MODULE mo_carbon_interface
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                                                       &
                & recalc_per_tile_vars,                                                     &
+               & calculate_current_c_bg_sum,                                               &
                & recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift,                &
                & recalc_delta_carbon_rp_upon_disturbance,                                  &
                & apply_delta_carbon_to_carbon_states,                                   &
-               & rescale_carbon_upon_reference_area_change, calculate_current_c_state_sum, &
+               & rescale_carbon_upon_reference_area_change, calculate_current_c_ta_state_sum, &
                & check_carbon_conservation_for_operation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
@@ -209,6 +210,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
                                                      !  material of living plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
+
+    dsl4jsb_Real2D_onChunk ::  c_litter_green_ag ! C-pool for above ground non-woody litter especially from leaves
+                                                     !     [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_litter_green_bg ! C-pool for below ground non-woody litter especially from
+                                                     !     fine roots [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_litter_wood_ag  ! C-pool for litter originating from above ground woody parts of the
+                                                     !    plants [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_litter_wood_bg  ! C-pool for litter originating from below ground woody parts of the
+                                                     !    plants [mol(C)/m^2(canopy)]
+    !CBAL dsl4jsb_Real2D_onChunk ::  c_slow            ! C-pool for below ground organic material (coming from the litter
+                                                     !     pools) [mol(C)/m^2(canopy)]
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -247,7 +259,9 @@ CONTAINS
                                                       !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)^2/m(canopy)]
-    !
+
+    dsl4jsb_Real2D_onChunk ::  c_bg_sum          ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
+
     !
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
@@ -364,6 +378,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_ag )     ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_bg )     ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_ag  )     ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_bg  )     ! inout
+    !CBAL dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow            )     ! inout
+
     !SIZE CLASS 1
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! inout
@@ -384,7 +404,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout 
-    !
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout 
+
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  NPP_pot_rate_ca )           ! inout 
@@ -532,7 +554,7 @@ CONTAINS
           MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
        END IF
 
-       CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
        ! Now update the C pools
        CALL calc_Cpools(      LAI_yDayMean,                                     & ! in
@@ -563,7 +585,12 @@ CONTAINS
                               c_green,                                      & ! inout
                               c_woods,                                      & ! inout
                               c_reserve,                                    & ! inout
-                              c_crop_harvest,                               & ! inout                                     & ! inout
+                              c_crop_harvest,                               & ! inout
+                              c_litter_green_ag,                            & ! inout
+                              c_litter_green_bg,                            & ! inout
+                              c_litter_wood_ag,                             & ! inout
+                              c_litter_wood_bg,                             & ! inout
+                              !CBAL c_slow,                                       & ! inout
                               !
                               soil_respiration,                                 & ! out
                               NPP_flux_correction,                              & ! out
@@ -612,6 +639,7 @@ CONTAINS
    WoodLit_coef5           =  dsl4jsb_Lctlib_param(WoodLit_coef(5)),            & ! in, optional, necessary with yasso
    WoodLitterSize          =  dsl4jsb_Lctlib_param(WoodLitterSize)              & ! in, optional, necessary with yasso
                               )
+
        ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
        !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
        !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
@@ -635,6 +663,7 @@ CONTAINS
        ! ------------------------------------------------------------------------------------------------------------------------
 
        ! C pools
+      CALL calculate_current_c_bg_sum(tile, options)
       CALL recalc_per_tile_vars(tile, options, &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
         & c_crop_harvest = c_crop_harvest(:), &
@@ -669,6 +698,7 @@ CONTAINS
          decennial_avg_NPP = (decennial_avg_NPP * ((10 * days_per_year) - 1) / (10 * days_per_year)) &
            & + ( sec_per_day * NPP_act_yDayMean / 10 )
       ENDIF
+
    END IF
 
    ! Compute net CO2 fluxes exchanged with atmosphere at each time step
@@ -739,11 +769,16 @@ CONTAINS
     !     + they are not part of the recalc_per_tile_vars
     !       i.e. anyways not updated! 
     ! ++ I do not need them....
-!    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta,           weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest_ta,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag_ta, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,  weighted_by_fract)
+    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1_ta,    weighted_by_fract)
@@ -762,6 +797,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_ta,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,        weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,         weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,           weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,               weighted_by_fract)
@@ -1033,6 +1069,7 @@ CONTAINS
     c_nonsoluble_bg2 = c_nonsoluble_bg2 * (oldRefArea / newRefArea)
     c_humus_2        = c_humus_2        * (oldRefArea / newRefArea)
 
+    CALL calculate_current_c_bg_sum(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
       & c_crop_harvest = c_crop_harvest(:), &
@@ -2005,7 +2042,7 @@ CONTAINS
     IF (PRESENT(c_humus_2)) CALL get_per_tile(c_humus_2_ta(:), &
       & c_humus_2(:), veg_fract_correction(:), fract_fpc_max(:))
 
-    CALL calculate_current_c_state_sum(tile, options, C_sum_natural_ta(:))
+    CALL calculate_current_c_ta_state_sum(tile, options, C_sum_natural_ta(:))
 
     ! C fluxes
     IF (PRESENT(cflux_dist_greenreserve_2_soil)) CALL get_per_tile(cflux_dist_greenreserve_2_soil_ta(:), &
@@ -2334,6 +2371,7 @@ CONTAINS
 
     ENDIF
 
+    CALL calculate_current_c_bg_sum(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
       & c_crop_harvest = c_crop_harvest(:), &
@@ -2361,7 +2399,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   ! 
-  SUBROUTINE calculate_current_c_state_sum(tile, options, current_c_state_sum)
+  SUBROUTINE calculate_current_c_ta_state_sum(tile, options, current_c_state_sum)
 
     USE mo_util,                ONLY: real2string
 
@@ -2373,7 +2411,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_state_sum'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_ta_state_sum'
     INTEGER                     :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
@@ -2440,7 +2478,72 @@ CONTAINS
         & c_acid_bg2_ta + c_water_bg2_ta + c_ethanol_bg2_ta + c_nonsoluble_bg2_ta + &
         & c_humus_1_ta  + c_humus_2_ta
 
-  END SUBROUTINE calculate_current_c_state_sum
+  END SUBROUTINE calculate_current_c_ta_state_sum
+
+
+  ! ================================================================================================================================
+  !>
+  !! @brief calculates the current sum of all bg carbon state variables (per canopy)
+  !!
+  !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  SUBROUTINE calculate_current_c_bg_sum(tile, options)
+
+    USE mo_util,                ONLY: real2string
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)         :: options
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    ! Local variables
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_bg_sum'
+    INTEGER                     :: ics, ice, iblk
+
+    dsl4jsb_Real2D_onChunk ::  c_bg_sum
+
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg1
+    dsl4jsb_Real2D_onChunk ::  c_water_bg1
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1 
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk ::  c_humus_1
+
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg2
+    dsl4jsb_Real2D_onChunk ::  c_water_bg2
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
+    dsl4jsb_Real2D_onChunk ::  c_humus_2
+
+    dsl4jsb_Get_memory(CARBON_)
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )               ! out
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)         ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)             ! in
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! in
+
+    !TODO-JN-COHORTS: could be done in mo_carbon_process
+    c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + &
+             & c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + &
+             & c_humus_1  + c_humus_2
+
+  END SUBROUTINE calculate_current_c_bg_sum
 
 
   ! ================================================================================================================================
@@ -2470,7 +2573,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':check_carbon_conservation_for_operation'
     INTEGER                     :: ics, ice, iblk
 
-    CALL calculate_current_c_state_sum(tile, options, Cconserve)
+    CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
     !TODO-JN-COHORTS: could be done in mo_carbon_process
     Cconserve = Cconserve - old_c_state_sum - cflux
 

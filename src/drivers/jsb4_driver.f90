@@ -21,7 +21,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
 
-  USE mo_carbon_interface,   ONLY: check_carbon_conservation_for_operation, calculate_current_c_state_sum
+  USE mo_carbon_interface,   ONLY: check_carbon_conservation_for_operation, calculate_current_c_ta_state_sum
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_, CARBON_, FM_
@@ -465,7 +465,7 @@ PROGRAM jsb4_driver
               print *, 'flux: ', - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day
               print *, 'error: ', cconservation(:,iblk)
             ENDIF
-            CALL calculate_current_c_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
+            CALL calculate_current_c_ta_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
             !IF (iblk .EQ. 1) THEN
             IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
               print *, '***********************'

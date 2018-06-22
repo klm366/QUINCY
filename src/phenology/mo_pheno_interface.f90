@@ -192,7 +192,7 @@ CONTAINS
 
     ! Declarations
     USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, &
-                                       calculate_current_c_state_sum, check_carbon_conservation_for_operation
+                                       calculate_current_c_ta_state_sum, check_carbon_conservation_for_operation
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
                                        track_max_green_pool, derive_maxlai_according_to_allometric_relationships
@@ -436,7 +436,7 @@ CONTAINS
           & )
 
         ! redistribute 
-        CALL calculate_current_c_state_sum(tile, options, old_c_state_sum(:))
+        CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 

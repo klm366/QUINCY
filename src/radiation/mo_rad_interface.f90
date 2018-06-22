@@ -28,12 +28,13 @@ MODULE mo_rad_interface
   !USE mo_jsb_aggregate_class, ONLY: t_jsb_aggregator
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, PHENO_, A2L_, RAD_, HYDRO_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, PHENO_, A2L_, RAD_, HYDRO_, ASSIMI_, CARBON_
 
   ! Use process configurations
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
@@ -41,6 +42,7 @@ MODULE mo_rad_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(CARBON_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -621,15 +623,16 @@ CONTAINS
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(RAD_)
+
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
-    !RMS dsl4jsb_Def_memory(CARBON)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(CARBON_)
 
     ! Declare configuration variables
-    CHARACTER(len=10) :: use_alb_soil_organic_C
+    CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
 
     REAL(wp) :: &
       & albedo_age_weight, &    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
@@ -668,7 +671,8 @@ CONTAINS
       & fract_snow_can,        &
       & fract_snow_soil,       &
       & c_litter_green_ag, &
-      & c_slow,            &
+      !CBAL & c_slow,            &
+      & c_bg_sum,              &
       & swvis_srf_down,        &
       & swnir_srf_down
     ! Lakes
@@ -699,7 +703,6 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
-    !RMS dsl4jsb_Get_memory(CARBON)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
@@ -713,6 +716,20 @@ CONTAINS
     use_alb_soil_organic_C    = dsl4jsb_Config(RAD_) %use_alb_soil_organic_C
     albedo_age_weight         = dsl4jsb_Config(RAD_) %albedo_age_weight
     AlbedoCanopySnow          = dsl4jsb_Config(RAD_) %AlbedoCanopySnow
+
+    IF (tile%is_bare .OR. tile%is_vegetation) THEN
+      IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Is_process_active(CARBON_)) THEN
+        CALL finish(TRIM(routine), 'Carbon process must be active for use_alb_soil_organic_C')
+      END IF
+
+      IF (TRIM(use_alb_soil_organic_C) /= '') THEN
+        dsl4jsb_Get_memory(CARBON_)
+        dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
+      ELSE
+        ALLOCATE(c_bg_sum(nc))
+        c_bg_sum(:) = 0._wp                           ! dummy
+      END IF
+    END IF
 
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)      ! in
@@ -808,7 +825,8 @@ CONTAINS
           & use_alb_soil_organic_C,                   & ! in
           & use_alb_soil_litter,                      & ! in
           & c_litter_green_ag(:),                 & ! in
-          & c_slow(:),                            & ! in
+          !CBAL & c_slow(:),                            & ! in
+          & c_bg_sum(:),                              & ! in
           ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
           & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
           & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
@@ -870,7 +888,8 @@ CONTAINS
             & use_alb_soil_organic_C,                   & ! in
             & use_alb_soil_litter,                      & ! in
             & c_litter_green_ag(:),                 & ! in
-            & c_slow(:),                            & ! in
+            !CBAL & c_slow(:),                            & ! in
+            & c_bg_sum(:),                              & ! in
             & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
             & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
             & alb_background(:),                        & ! in
@@ -929,6 +948,10 @@ CONTAINS
     IF (.NOT. tile%is_lake) THEN
       alb_vis(:) = alb_vis_lnd(:)
       alb_nir(:) = alb_nir_lnd(:)
+    END IF
+
+    IF (TRIM(use_alb_soil_organic_C) == '') THEN
+      IF (ASSOCIATED(c_bg_sum)) DEALLOCATE(c_bg_sum)
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
