@@ -14,7 +14,7 @@ MODULE mo_jsb_time_iface
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: finish, message, message_text
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
   USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
@@ -150,16 +150,16 @@ CONTAINS
     IF (my_process_is_mpi_parallel()) THEN
     ! jsb3 text: The following are used from ECHAM5 modules and ... need
     ! to be broadcast if running in standalone mode so that the modules can use them
-      CALL p_bcast(no_cycles, p_io)
-      CALL p_bcast(dt_start, p_io)
-      CALL p_bcast(dt_resume, p_io)
-      CALL p_bcast(dt_stop, p_io)
-      CALL p_bcast(no_days, p_io)
-      CALL p_bcast(no_steps, p_io)
-      CALL p_bcast(delta_time, p_io)
-      CALL p_bcast_event(putdata, p_io)
-      CALL p_bcast_event(trigfiles, p_io)
-      CALL p_bcast_event(putrerun, p_io)
+      CALL p_bcast(no_cycles, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_start, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_resume, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_stop, p_io, comm=mpi_comm)
+      CALL p_bcast(no_days, p_io, comm=mpi_comm)
+      CALL p_bcast(no_steps, p_io, comm=mpi_comm)
+      CALL p_bcast(delta_time, p_io, comm=mpi_comm)
+      CALL p_bcast_event(putdata, p_io, comm=mpi_comm)
+      CALL p_bcast_event(trigfiles, p_io, comm=mpi_comm)
+      CALL p_bcast_event(putrerun, p_io, comm=mpi_comm)
     ENDIF
 #endif
 
@@ -617,13 +617,13 @@ CONTAINS
     ENDIF
        
     IF (p_parallel) THEN
-       CALL p_bcast(istep, p_io)
-       CALL p_bcast(IO_timestep, p_io)
+       CALL p_bcast(istep, p_io, comm=mpi_comm)
+       CALL p_bcast(IO_timestep, p_io, comm=mpi_comm)
        IF (lresume) THEN
-          CALL p_bcast(forecast_date, p_io)
-          CALL p_bcast(forecast_time, p_io)
-          CALL p_bcast(verification_date, p_io)
-          CALL p_bcast(verification_time, p_io)
+          CALL p_bcast(forecast_date, p_io, comm=mpi_comm)
+          CALL p_bcast(forecast_time, p_io, comm=mpi_comm)
+          CALL p_bcast(verification_date, p_io, comm=mpi_comm)
+          CALL p_bcast(verification_time, p_io, comm=mpi_comm)
        ENDIF
     ENDIF
        

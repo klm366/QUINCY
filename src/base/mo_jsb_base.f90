@@ -69,9 +69,9 @@ CONTAINS
 
     CALL message(TRIM(routine), 'starting basic setup')
 
-    CALL init_jsb_master_control(master_namelist_filename)
-
     CALL init_parallel_iface
+
+    CALL init_jsb_master_control(master_namelist_filename)
 
     !IF (jsbach_runs_standalone()) CALL init_mpi_communicators !TODO-check-with-RMS: remove: done in the driver!
 

@@ -549,7 +549,7 @@ CONTAINS
   !!
   SUBROUTINE get_nlon_nlat_from_file(grid_filename, return_nlon, return_nlat) !filename
   
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifndef __ICON__  
     USE mo_control,   ONLY: nlon, ngl, nhgl, nvclev, vct
@@ -586,8 +586,8 @@ CONTAINS
     ENDIF
 
     IF (my_process_is_mpi_parallel()) THEN
-      CALL p_bcast (read_nlon, p_io)
-      CALL p_bcast (read_nlat, p_io)
+      CALL p_bcast (read_nlon, p_io, comm=mpi_comm)
+      CALL p_bcast (read_nlat, p_io, comm=mpi_comm)
     ENDIF
 
     !Assertion: number of lats needs to be even
@@ -620,7 +620,7 @@ CONTAINS
   !!
   SUBROUTINE get_lons_and_lats_from_file(grid_filename, nproma, nblks) !filename
 
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, my_process_is_mpi_parallel
 
 #ifndef __ICON__
     USE mo_io,         ONLY: IO_READ, IO_open, IO_close
