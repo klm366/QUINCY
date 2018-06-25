@@ -73,7 +73,7 @@ MODULE mo_jsb_tile_class
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
-    CLASS(t_jsb_memory_p),      POINTER    :: mem(:)
+    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)
     ! The next three pointers basically repeat what's already in the base type, but they save time-consuming "SELECT TYPE"s
     CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()
     CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
