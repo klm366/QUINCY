@@ -152,7 +152,7 @@ CONTAINS
           &      ]
       END IF
     ELSE
-      groups = [ CHARACTER(len=VARNAME_LEN) :: '']
+      groups = [ CHARACTER(len=VARNAME_LEN) :: 'ALL']
     END IF
 
     CALL add_var_list_element_r2d( &
@@ -288,7 +288,7 @@ CONTAINS
           &      ]
       END IF
     ELSE
-      groups = [ CHARACTER(len=VARNAME_LEN) :: '']
+      groups = [ CHARACTER(len=VARNAME_LEN) :: 'ALL']
     END IF
 
     CALL add_var_list_element_r3d( &

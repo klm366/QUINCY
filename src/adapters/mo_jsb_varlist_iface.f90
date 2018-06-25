@@ -148,7 +148,7 @@ CONTAINS
     END IF
 
 #ifdef __ICON__
-    IF (PRESENT(in_groups) .OR. TRIM(in_groups(1)) == '') THEN
+    IF (PRESENT(in_groups)) THEN
       CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
         ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
         initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &

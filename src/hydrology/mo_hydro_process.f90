@@ -486,7 +486,7 @@ CONTAINS
       p_wilt_l(:,:) = 0._wp
     END WHERE
 
-    ws_max(:) = get_water_in_root_zone(field_cap_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
+    ws_max(:) = get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
     WHERE (SUM(fract_org_l(:,:), DIM=2) <= EPSILON(1._wp))
       ws_max(:) = ws_max_mineral(:)
     END WHERE

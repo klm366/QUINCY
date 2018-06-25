@@ -108,7 +108,7 @@ CONTAINS
     USE mo_jsb_time,       ONLY: is_newyear
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
     USE mo_carbon_process,        ONLY: relocate_carbon_damage
-    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_bg_sum, &
+    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, &
       & calculate_current_c_ta_state_sum, check_carbon_conservation_for_operation
 
     ! Arguments
@@ -282,7 +282,7 @@ CONTAINS
             & c_humus_2(:)              & ! inout
             & )
 
-          CALL calculate_current_c_bg_sum(tile, options)
+          CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
           CALL recalc_per_tile_vars(tile, options, &
             & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
             & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &

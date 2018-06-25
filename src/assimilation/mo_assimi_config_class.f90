@@ -58,7 +58,6 @@ CONTAINS
      & active,                 &
      & ic_filename,            &
      & bc_filename
-     & !X e.g: use_assimi_veg_simple
 
     INTEGER :: nml_handler, nml_unit, istat
 

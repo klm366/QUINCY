@@ -185,9 +185,10 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, lai) = &
       & wgt1 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw2)
 
-    IF (model%config%l_compat401) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
+    IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+        & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
+      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
+        & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
     ELSE
       IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
           & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT

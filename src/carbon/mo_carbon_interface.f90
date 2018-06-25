@@ -54,7 +54,7 @@ MODULE mo_carbon_interface
   PRIVATE
   PUBLIC ::  Register_carbon_tasks ,                                                       &
                & recalc_per_tile_vars,                                                     &
-               & calculate_current_c_bg_sum,                                               &
+               & calculate_current_c_ag_1_and_bg_sums,                                               &
                & recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift,                &
                & recalc_delta_carbon_rp_upon_disturbance,                                  &
                & apply_delta_carbon_to_carbon_states,                                      &
@@ -255,6 +255,7 @@ CONTAINS
                                                       !  [mol(C)^2/m(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum          ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_ag_sum_1        ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
 
     !
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
@@ -399,7 +400,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout 
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1)           ! inout
 
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
@@ -635,9 +637,6 @@ CONTAINS
         &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
         & )
 
-      c_bg_sum =   c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + c_humus_1 &  ! Size class 1; green litter
-        &        + c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + c_humus_2    ! Size class 2; woody litter
-
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
       !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
       !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
@@ -661,7 +660,7 @@ CONTAINS
       ! ------------------------------------------------------------------------------------------------------------------------
 
       ! C pools
-      CALL calculate_current_c_bg_sum(tile, options)
+      CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
       CALL recalc_per_tile_vars(tile, options,                                      &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
         & c_crop_harvest = c_crop_harvest(:),                                       &
@@ -761,12 +760,13 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
+    
     !@todo Those commented out are currently not used by other processes, 
     !     some of them are even not used at all 
     !     + they are not part of the recalc_per_tile_vars
     !       i.e. anyways not updated! 
     ! ++ I do not need them....
+
     ! non-yasso-pools
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,            weighted_by_fract)
@@ -1072,7 +1072,7 @@ CONTAINS
     c_nonsoluble_bg2 = c_nonsoluble_bg2 * (oldRefArea / newRefArea)
     c_humus_2        = c_humus_2        * (oldRefArea / newRefArea)
 
-    CALL calculate_current_c_bg_sum(tile, options)
+    CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
       & c_crop_harvest = c_crop_harvest(:), &
@@ -2374,7 +2374,7 @@ CONTAINS
 
     ENDIF
 
-    CALL calculate_current_c_bg_sum(tile, options)
+    CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
       & c_crop_harvest = c_crop_harvest(:), &
@@ -2493,7 +2493,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   ! 
-  SUBROUTINE calculate_current_c_bg_sum(tile, options)
+  SUBROUTINE calculate_current_c_ag_1_and_bg_sums(tile, options)
 
     USE mo_util,                ONLY: real2string
 
@@ -2504,10 +2504,16 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_bg_sum'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_ag_1_and_bg_sums'
     INTEGER                     :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum
+    dsl4jsb_Real2D_onChunk ::  c_ag_sum_1
+
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag1
+    dsl4jsb_Real2D_onChunk ::  c_water_ag1
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1 
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1
 
     dsl4jsb_Real2D_onChunk ::  c_acid_bg1
     dsl4jsb_Real2D_onChunk ::  c_water_bg1
@@ -2528,6 +2534,12 @@ CONTAINS
     ice   = options%ice
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )               ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1 )               ! out
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)         ! in 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)      ! in
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)            ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)           ! in
@@ -2546,7 +2558,9 @@ CONTAINS
              & c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + &
              & c_humus_1  + c_humus_2
 
-  END SUBROUTINE calculate_current_c_bg_sum
+    c_ag_sum_1 =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1 + c_humus_1
+
+  END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
   ! ================================================================================================================================
