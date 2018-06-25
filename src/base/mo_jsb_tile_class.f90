@@ -202,7 +202,7 @@ CONTAINS
 
     CLASS(*), POINTER :: parent
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_parent_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_parent_memory'
 
     parent => this%Get_parent()
     IF (ASSOCIATED(parent)) THEN
@@ -222,7 +222,7 @@ CONTAINS
     INTEGER,                    INTENT(in) :: iproc
     LOGICAL                                :: return_value
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Is_process_active'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active'
 
     return_value = .FALSE.
 
@@ -240,7 +240,7 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: action
     INTEGER, OPTIONAL,          INTENT(in)    :: action_to_parents
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_process_action_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_process_action_tile'
 
     this%process_action(iproc) = action
 
@@ -257,7 +257,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_process_action_parents'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_process_action_parents'
 
     tile => this
     DO WHILE (ASSOCIATED(tile%parent))
@@ -277,7 +277,7 @@ CONTAINS
 
     INTEGER :: ilct
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_lct'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct'
 
     IF (.NOT. ALLOCATED(this%lcts)) THEN
 
@@ -333,7 +333,7 @@ CONTAINS
 
     CLASS(t_State), POINTER :: current
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_lct_to_parents'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct_to_parents'
 
     current => this%parent
 
@@ -357,7 +357,7 @@ CONTAINS
       & fract_old(:),    &
       & fract_max_old(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_fraction_1d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_1d'
 
     IF (PRESENT(fract)) THEN
       IF (SIZE(fract) /= ice-ics+1) &
@@ -411,7 +411,7 @@ CONTAINS
 
     INTEGER :: ilct
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_fraction_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
     IF (PRESENT(fract)) THEN
       IF (SIZE(fract,1) /= SIZE(this%fract,1) .OR. SIZE(fract,2) /= SIZE(this%fract,2)) &
@@ -484,7 +484,7 @@ CONTAINS
       & fract_old(:),    &
       & fract_max_old(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_fraction_1d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_1d'
 
     IF (PRESENT(fract)) THEN
       IF (SIZE(fract) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -517,7 +517,7 @@ CONTAINS
       & fract_old(:,:),    &
       & fract_max_old(:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_fraction_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_2d'
 
     IF (PRESENT(fract)) THEN
       IF (SIZE(fract,1) /= SIZE(this%fract,1) .OR. SIZE(fract,2) /= SIZE(this%fract,2)) &
@@ -586,7 +586,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)        :: this
     CLASS(t_jsb_aggregator),    INTENT(in),   TARGET :: aggregator
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_aggregator'
+    INTEGER :: n
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Register_aggregator'
 
 
     IF (.NOT. ALLOCATED(this%aggregators)) THEN
@@ -609,7 +610,7 @@ CONTAINS
     INTEGER :: i
     LOGICAL :: l_copy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_aggregator'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_aggregator'
 
     l_copy = .FALSE.
     IF (PRESENT(copy)) l_copy = copy
@@ -642,7 +643,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Create_aggregator_weighted_by_fract'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Create_aggregator_weighted_by_fract'
 
     IF (no_of_children < 1) CALL finish(TRIM(routine), 'This should not happen!')
 
@@ -660,7 +661,7 @@ CONTAINS
 
     TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Finalize_aggregator_weighted_by_fract'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Finalize_aggregator_weighted_by_fract'
 
     !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
 
@@ -680,7 +681,7 @@ CONTAINS
     CLASS(t_State), POINTER :: current
     REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_fractions_aggregator'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator'
 
     ! Check if child tile fractions have changed and, if necessary, update fractions of aggregator
     ! by looping over children of tile
@@ -728,9 +729,9 @@ CONTAINS
     CHARACTER(len=256) :: routine
 
     IF (debug_on()) THEN
-      routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
+      routine = modname//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
     ELSE
-      routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'
+      routine = modname//':Aggregate_weighted_by_fract_2d'
     END IF
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
@@ -815,9 +816,9 @@ CONTAINS
     CHARACTER(len=256) :: routine
 
     IF (debug_on()) THEN
-      routine = TRIM(modname)//':Aggregate_weighted_by_fract_3d'//'(called by '//TRIM(caller)//')'
+      routine = modname//':Aggregate_weighted_by_fract_3d'//'(called by '//TRIM(caller)//')'
     ELSE
-      routine = TRIM(modname)//':Aggregate_weighted_by_fract_3d'
+      routine = modname//':Aggregate_weighted_by_fract_3d'
     END IF
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN

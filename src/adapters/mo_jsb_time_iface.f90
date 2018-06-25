@@ -92,7 +92,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(in) :: filename
     LOGICAL, INTENT(IN) :: restart_jsbach
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_time_namelist'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_time_namelist'
 
 #ifdef STANDALONE
     INTEGER :: nml_handler, nml_unit, istat
@@ -175,7 +175,7 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':configure_time_and_events'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':configure_time_and_events'
     INTEGER :: IO_timestep, istep
 
 #ifdef STANDALONE
@@ -205,7 +205,7 @@ CONTAINS
 #ifndef __ICON__
     USE mo_time_control, ONLY: delta_time
 #endif
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_dt'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_dt'
     REAL(wp) :: ztime
 
 #ifdef __ICON__
@@ -237,7 +237,7 @@ CONTAINS
     USE mo_time_conversion, ONLY: TC_get
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_nsteps'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_nsteps'
 
 #ifndef __ICON__
     INTEGER :: start_day, start_second, stop_day, stop_second
@@ -389,7 +389,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':start_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':start_timestep'
 
 #ifdef __ICON__
     !
@@ -417,7 +417,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finish_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finish_timestep'
     
 #ifdef __ICON__
     WRITE(message_text,'(a,i10)') 'JSBACH: Finish TIME STEP n: ', istep
@@ -521,7 +521,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: w1, w2
     INTEGER, INTENT(out)  :: n1, n2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_interpolation_weights'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_interpolation_weights'
     
 #ifdef __ICON__
     TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights

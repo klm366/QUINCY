@@ -128,7 +128,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Create_zaxis'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Create_zaxis'
 
 #ifdef __ICON__
     echamZaxisIdx = -1

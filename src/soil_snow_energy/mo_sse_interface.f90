@@ -187,7 +187,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_temperature'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -455,7 +455,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_temperature'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -536,7 +536,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER  :: nsoil
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -669,7 +669,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_properties'
 
     INTEGER :: iblk, ics, ice, nc
 

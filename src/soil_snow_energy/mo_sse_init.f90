@@ -49,7 +49,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
     CALL sse_init_bc(tile)
     CALL sse_init_ic(tile)
@@ -73,7 +73,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -146,7 +146,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e
     INTEGER :: iblk
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_ic'
 
     model => get_model(tile%owner_model_id)
 
@@ -226,7 +226,7 @@ CONTAINS
 
     INTEGER  :: nsoil, nproma, nblks
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
     model => Get_model(tile%owner_model_id)
 

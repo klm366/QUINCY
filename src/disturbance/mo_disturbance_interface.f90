@@ -133,7 +133,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_natural_disturbances'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
 
     ! Declare process memories
     dsl4jsb_Def_memory(A2L_)
@@ -564,7 +564,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_natural_disturbance'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_natural_disturbance'
 
     INTEGER  :: iblk, ics, ice, nc
 

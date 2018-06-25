@@ -53,7 +53,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_turb_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_turb_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting turb configuration')
 

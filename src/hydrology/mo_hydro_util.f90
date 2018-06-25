@@ -41,7 +41,7 @@ CONTAINS
 
     INTEGER :: n, i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_water_in_root_zone_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_2d'
 
     n  = SIZE(dz,2)       ! Number of soil layers
 

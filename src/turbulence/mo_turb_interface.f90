@@ -157,7 +157,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_roughness'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -218,7 +218,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_roughness'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_roughness'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -306,7 +306,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_humidity_scaling'
 
     ! Get local variables from options argument
     iblk = options%iblk
@@ -439,7 +439,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_humidity_scaling'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_humidity_scaling'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc

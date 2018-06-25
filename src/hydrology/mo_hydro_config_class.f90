@@ -82,7 +82,7 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_hydro_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 

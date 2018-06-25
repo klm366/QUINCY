@@ -38,7 +38,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':turb_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init'
 
     CALL turb_init_bc(tile)
     CALL turb_init_ic(tile)
@@ -51,7 +51,7 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':turb_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -70,7 +70,7 @@ CONTAINS
 
     TYPE(t_input_file) :: input_file
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':turb_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init_ic'
 
     model => get_model(tile%owner_model_id)
 

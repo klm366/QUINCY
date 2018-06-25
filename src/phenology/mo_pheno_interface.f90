@@ -145,7 +145,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
@@ -252,7 +252,7 @@ CONTAINS
     LOGICAL :: l_newday
     REAL(wp) :: timestep  ! Timestep in days
 
-    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_phenology_logrop'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -520,7 +520,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     REAL(wp), POINTER      :: lai_mon(:,:)
 
-    CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology_climatology'
+    CHARACTER(len=*), PARAMETER            :: routine = modname//':update_phenology_climatology'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -565,7 +565,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -630,7 +630,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_fpc'
 
     ! ---------------------------
     ! Go
@@ -681,7 +681,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fpc'
 
     INTEGER :: iblk, ics, ice, nc
 

@@ -49,7 +49,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_config'
 
     CALL message(TRIM(routine), 'Starting phenology configuration')
 

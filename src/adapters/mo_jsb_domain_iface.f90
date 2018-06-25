@@ -60,7 +60,7 @@ CONTAINS
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
     CHARACTER(len=filename_max)               :: filename
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_grid_filename'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_grid_filename'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -87,7 +87,7 @@ CONTAINS
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_ntotal'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_ntotal'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -114,7 +114,7 @@ CONTAINS
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_ntotal_g'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_ntotal_g'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -142,7 +142,7 @@ CONTAINS
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
     INTEGER                                   :: get_dims_g(2)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_dims_g'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_dims_g'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -172,7 +172,7 @@ CONTAINS
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
     INTEGER                                   :: get_nlat_g
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nlat_g'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nlat_g'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -200,7 +200,7 @@ CONTAINS
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nblks'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nblks'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -231,7 +231,7 @@ CONTAINS
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nproma'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nproma'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -263,7 +263,7 @@ CONTAINS
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_blk_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -290,7 +290,7 @@ CONTAINS
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_blk_end'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -320,7 +320,7 @@ CONTAINS
 
     INTEGER :: i_startblk, i_endblk, jcs, jce, rl_start, rl_end
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_col_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -357,7 +357,7 @@ CONTAINS
 
     INTEGER :: i_startblk, i_endblk, jcs, jce, rl_start, rl_end
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_col_end'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -410,7 +410,7 @@ CONTAINS
 
     INTEGER :: nproma, nblks
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_lon'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_lon'
 
 #if !defined(__ICON__) && defined(STANDALONE)
     INTEGER :: jlat, jlon
@@ -456,7 +456,7 @@ CONTAINS
 
     INTEGER :: nproma, nblks
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_lat'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_lat'
 
     nproma = get_nproma(patch, decomp)
     nblks  = get_nblks (patch, decomp)
@@ -504,7 +504,7 @@ CONTAINS
 
     INTEGER :: nproma, nblks
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_area'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_area'
 
     nproma = get_nproma(patch, decomp)
     nblks  = get_nblks (patch, decomp)
@@ -560,7 +560,7 @@ CONTAINS
     CHARACTER(len=*), INTENT(in) :: grid_filename
     INTEGER, INTENT(out) :: return_nlon, return_nlat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nlon_nlat_from_file'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nlon_nlat_from_file'
 
 #ifndef __ICON__  
     TYPE(file_info) :: grid_file
@@ -633,7 +633,7 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(IN) :: grid_filename
     INTEGER,          INTENT(IN) :: nproma, nblks
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_lons_and_lats_from_file'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_lons_and_lats_from_file'
 
 #ifndef __ICON__
     REAL(wp), ALLOCATABLE :: read_lons(:), read_lats(:)
@@ -696,7 +696,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: nlon, nlat, nproca, nprocb, npedim
     TYPE(pe_decomposed), INTENT(OUT) :: decomposition
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbalone_init_decomp'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbalone_init_decomp'
 
 
 #ifndef __ICON__  
