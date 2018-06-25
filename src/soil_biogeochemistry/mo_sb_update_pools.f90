@@ -481,22 +481,22 @@ CONTAINS
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
     sb_formation%mycorrhiza%carbon(:,1)     = sb_formation%mycorrhiza%carbon(:,1) + &
-                                                             veg_exudation%carbon * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon(:) * mycorrhizal_cue / soil_depth_sl(:,1)
     sb_formation%mycorrhiza%nitrogen(:,1)   = sb_formation%mycorrhiza%nitrogen(:,1) + &
-                                                             veg_exudation%nitrogen / soil_depth_sl(:,1) + &
+                                                             veg_exudation%nitrogen(:) / soil_depth_sl(:,1) + &
                                                              (mycorrhiza_uptake_nh4_sl(:,1) + mycorrhiza_uptake_no3_sl(:,1)) * & !+ mycorrhiza_uptake_norg_sl(:,1)) * &
                                                              dtime / 1000000._wp
     sb_formation%mycorrhiza%phosphorus(:,1) = sb_formation%mycorrhiza%phosphorus(:,1) + &
-                                                             veg_exudation%phosphorus / soil_depth_sl(:,1) + &
+                                                             veg_exudation%phosphorus(:) / soil_depth_sl(:,1) + &
                                                              mycorrhiza_uptake_po4_sl(:,1) * dtime / 1000000._wp
     sb_formation%mycorrhiza%carbon13(:,1)   = sb_formation%mycorrhiza%carbon13(:,1) + &
-                                                             veg_exudation%carbon13 * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon13(:) * mycorrhizal_cue / soil_depth_sl(:,1)
     sb_formation%mycorrhiza%carbon14(:,1)   = sb_formation%mycorrhiza%carbon14(:,1) + &
-                                                             veg_exudation%carbon14 * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon14(:) * mycorrhizal_cue / soil_depth_sl(:,1)
     sb_formation%mycorrhiza%nitrogen15(:,1) = sb_formation%mycorrhiza%nitrogen15(:,1) + &
-                                                             veg_exudation%nitrogen15 / soil_depth_sl(:,1) + &
-                                                             (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
-                                                             dtime / 1000000._wp
+                                                     veg_exudation%nitrogen15(:) / soil_depth_sl(:,1) + &
+                                                     (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
+                                                     dtime / 1000000._wp
 
     sb_loss%mycorrhiza%carbon(:,1)     = sb_loss%mycorrhiza%carbon(:,1) + &
                                                         sb_mycorrhiza_export%carbon(:,1) 
@@ -531,20 +531,24 @@ CONTAINS
     !!
     !> 4.1 update of N pools  
     !!
-    nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) + asymb_n_fixation(:,:) + transport_nh4_solute(:,:) - & 
-                                                 plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
-                                                 nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
-                                                 volatilisation_nh4(:,:)) * dtime/1.e6_wp
-    nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) + asymb_n_fixation_n15(:,:) + transport_nh4_n15_solute(:,:) - & 
-                                                 plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) - &
-                                                 nitrification_no3_n15(:,:) - nitrification_noy_n15(:,:) - nitrification_n2o_n15(:,:) - &
-                                                 volatilisation_nh4_n15(:,:)) * dtime/1.e6_wp
-    no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) + nitrification_no3(:,:) + transport_no3_solute(:,:) - & 
-                                                 plant_uptake_no3_sl(:,:) - mycorrhiza_uptake_no3_sl(:,:) - &
-                                                 denitrification_noy(:,:) - denitrification_n2o(:,:) - denitrification_n2(:,:)) * dtime/1.e6_wp
-    no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) + nitrification_no3_n15(:,:) + transport_no3_n15_solute(:,:) - & 
-                                                 plant_uptake_no3_n15_sl(:,:) - mycorrhiza_uptake_no3_n15_sl(:,:) + &
-                                                 denitrification_noy_n15(:,:) - denitrification_n2o_n15(:,:) - denitrification_n2_n15(:,:)) * dtime/1.e6_wp
+    nh4_solute(:,:)     = nh4_solute(:,:)     + &
+                          (net_mineralisation_nh4(:,:) + asymb_n_fixation(:,:) + transport_nh4_solute(:,:) - & 
+                           plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
+                           nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
+                           volatilisation_nh4(:,:)) * dtime/1.e6_wp
+    nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + &
+                          (net_mineralisation_nh4_n15(:,:) + asymb_n_fixation_n15(:,:) + transport_nh4_n15_solute(:,:) - & 
+                           plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) - &
+                           nitrification_no3_n15(:,:) - nitrification_noy_n15(:,:) - nitrification_n2o_n15(:,:) - &
+                           volatilisation_nh4_n15(:,:)) * dtime/1.e6_wp
+    no3_solute(:,:)     = no3_solute(:,:)     + &
+                          (net_mineralisation_no3(:,:) + nitrification_no3(:,:) + transport_no3_solute(:,:) - & 
+                           plant_uptake_no3_sl(:,:) - mycorrhiza_uptake_no3_sl(:,:) - &
+                           denitrification_noy(:,:) - denitrification_n2o(:,:) - denitrification_n2(:,:)) * dtime/1.e6_wp
+    no3_n15_solute(:,:) = no3_n15_solute(:,:) + &
+                          (net_mineralisation_no3_n15(:,:) + nitrification_no3_n15(:,:) + transport_no3_n15_solute(:,:) - & 
+                           plant_uptake_no3_n15_sl(:,:) - mycorrhiza_uptake_no3_n15_sl(:,:) + &
+                           denitrification_noy_n15(:,:) - denitrification_n2o_n15(:,:) - denitrification_n2_n15(:,:)) * dtime/1.e6_wp
 
     noy(:,:)            = noy(:,:)            + (nitrification_noy(:,:) + denitrification_noy(:,:) + & 
                                                  transport_noy(:,:)) * dtime/1.e6_wp
@@ -608,16 +612,24 @@ CONTAINS
               fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) * veg_pool%fine_root%carbon(:)
             ENDDO
             !fine_root_carbon = root_fraction_sl(:,:) * 600._wp !temporary solution
-            CALL calc_adsorption_po4(options, fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), km_adsorpt_po4_sl(:,:), &
-                                       bulk_dens_corr_sl(:,:), po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
+            CALL calc_adsorption_po4(options, &
+                                       fine_root_carbon(:,:),  qmax_po4(:,:), p_deposition_sl(:,:), km_adsorpt_po4_sl(:,:), &
+                                       bulk_dens_corr_sl(:,:), po4_solute(:,:), po4_assoc_fast(:,:), &
+                                       !po4_assoc_slow(:,:), &    currently not used
                                        weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
-                                       transport_po4_solute(:,:), transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), &
+                                       transport_po4_solute(:,:), transport_po4_assoc_fast(:,:), &
+                                       !transport_po4_assoc_slow(:,:), &   currently not used
                                        gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), sb_pool%microbial%carbon(:,:),  &
                                        microbial_uptake_po4_sl(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
-                                       TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_CLE_po4, dsl4jsb_Config(SB_)%flag_sb_LK_po4)
-            po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - mycorrhiza_uptake_po4_sl(:,:) + weathering_po4(:,:) &
-                                  + biochem_mineralisation_po4(:,:) + transport_po4_solute(:,:) - fast_adsorption_po4(:,:)) * dtime/1.e6_wp
-            po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (fast_adsorption_po4 - slow_sorption_po4 + transport_po4_assoc_fast) * dtime/1.e6_wp
+                                       TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_CLE_po4, &
+                                       dsl4jsb_Config(SB_)%flag_sb_LK_po4)
+            po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:) - &
+                                  mycorrhiza_uptake_po4_sl(:,:) + weathering_po4(:,:) + &
+                                  biochem_mineralisation_po4(:,:) + transport_po4_solute(:,:) - fast_adsorption_po4(:,:)) * &
+                                  dtime/1.e6_wp
+            po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + &
+                                  (fast_adsorption_po4(:,:) - slow_sorption_po4(:,:) + transport_po4_assoc_fast(:,:)) * &
+                                  dtime/1.e6_wp
     
        ENDIF
 
@@ -638,14 +650,15 @@ CONTAINS
 
     !> 4.4 update diagnostics and other state variables depending on organic matter content 
     !!
-    bulk_soil_carbon_sl = calc_bulk_soil_carbon(options, sb_pool)
-    bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
+    bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+    bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:))
     !DO isoil = 1,nsoil_sb
     !   hlp1(:,isoil) = 0.9_wp * exp(-0.9_wp * SUM(soil_depth_sl(:,1:isoil),DIM=2)) + 0.1_wp
     !ENDDO
-    qmax_org = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,0._wp,qmax_org_min_sl)
-    qmax_po4 = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl,qmax_po4_om_sl,qmax_po4_min_sl)
-    km_adsorpt_po4_sl = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl, &
+    qmax_org(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:),0._wp,qmax_org_min_sl(:,:))
+    qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:),qmax_po4_om_sl(:,:), &
+                    qmax_po4_min_sl(:,:))
+    km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                         km_adsorpt_mineral_po4/1000._wp,km_adsorpt_mineral_po4)
 
     ! NH4
@@ -732,65 +745,65 @@ CONTAINS
        sb_delta_pools%nitrogen15(:,:)
 
     !! fluxes
-    total_flux_carbon(:) =                  veg_litterfall%leaf%carbon        + &
-      veg_litterfall%fine_root%carbon + veg_litterfall%coarse_root%carbon + &
-      veg_litterfall%sap_wood%carbon  + veg_litterfall%heart_wood%carbon  + &
-      veg_litterfall%labile%carbon    + veg_litterfall%reserve%carbon     + &
-      veg_litterfall%fruit%carbon     + veg_litterfall%seed_bed%carbon    + &
-      veg_exudation%carbon                                                    - &
+    total_flux_carbon(:) =                  veg_litterfall%leaf%carbon(:)        + &
+      veg_litterfall%fine_root%carbon(:) + veg_litterfall%coarse_root%carbon(:) + &
+      veg_litterfall%sap_wood%carbon(:)  + veg_litterfall%heart_wood%carbon(:)  + &
+      veg_litterfall%labile%carbon(:)    + veg_litterfall%reserve%carbon(:)     + &
+      veg_litterfall%fruit%carbon(:)     + veg_litterfall%seed_bed%carbon(:)    + &
+      veg_exudation%carbon(:)                                                    - &
       SUM(sb_mycorrhiza_export%carbon(:,:) * soil_depth_sl(:,:), DIM=2)  - &
       (leaching_dom_carbon(:)                                            + &
       SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                          ! DIM=2: sum only over dimension 2, i.e., soil layers
-    total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen    + &
-      veg_litterfall%fine_root%nitrogen + veg_litterfall%coarse_root%nitrogen + &
-      veg_litterfall%sap_wood%nitrogen  + veg_litterfall%heart_wood%nitrogen  + &
-      veg_litterfall%labile%nitrogen    + veg_litterfall%reserve%nitrogen     + &
-      veg_litterfall%fruit%nitrogen     + veg_litterfall%seed_bed%nitrogen    + &
+    total_flux_nitrogen(:) =                  veg_litterfall%leaf%nitrogen(:)    + &
+      veg_litterfall%fine_root%nitrogen(:) + veg_litterfall%coarse_root%nitrogen(:) + &
+      veg_litterfall%sap_wood%nitrogen(:)  + veg_litterfall%heart_wood%nitrogen(:)  + &
+      veg_litterfall%labile%nitrogen(:)    + veg_litterfall%reserve%nitrogen(:)     + &
+      veg_litterfall%fruit%nitrogen(:)     + veg_litterfall%seed_bed%nitrogen(:)    + &
       SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp   + &
       (nhx_deposition(:) + noy_deposition(:)) * dtime/1.e6_wp                 + & 
-      veg_exudation%nitrogen                                                  - &
+      veg_exudation%nitrogen(:)                                                  - &
       SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2)     - &
       (leaching_nh4_solute(:) + leaching_no3_solute(:) + leaching_dom_nitrogen(:) + &
        emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)   + &
        SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)              + &
        SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp                       
-    total_flux_phosphorus(:) =                  veg_litterfall%leaf%phosphorus    + &
-      veg_litterfall%fine_root%phosphorus + veg_litterfall%coarse_root%phosphorus + &
-      veg_litterfall%sap_wood%phosphorus  + veg_litterfall%heart_wood%phosphorus  + &
-      veg_litterfall%labile%phosphorus    + veg_litterfall%reserve%phosphorus     + &
-      veg_litterfall%fruit%phosphorus     + veg_litterfall%seed_bed%phosphorus    + &
+    total_flux_phosphorus(:) =                  veg_litterfall%leaf%phosphorus(:)    + &
+      veg_litterfall%fine_root%phosphorus(:) + veg_litterfall%coarse_root%phosphorus(:) + &
+      veg_litterfall%sap_wood%phosphorus(:)  + veg_litterfall%heart_wood%phosphorus(:)  + &
+      veg_litterfall%labile%phosphorus(:)    + veg_litterfall%reserve%phosphorus(:)     + &
+      veg_litterfall%fruit%phosphorus(:)     + veg_litterfall%seed_bed%phosphorus(:)    + &
       p_deposition(:) * dtime/1.e6_wp                                             + &
-      veg_exudation%phosphorus                                                    - &
+      veg_exudation%phosphorus(:)                                                    - &
       SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:), DIM=2)       - &
       (leaching_po4_solute(:) + leaching_dom_phosphorus(:)                        + &
        SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp       
-    total_flux_carbon13(:) =                  veg_litterfall%leaf%carbon13        + &
-      veg_litterfall%fine_root%carbon13 + veg_litterfall%coarse_root%carbon13 + &
-      veg_litterfall%sap_wood%carbon13  + veg_litterfall%heart_wood%carbon13  + &
-      veg_litterfall%labile%carbon13    + veg_litterfall%reserve%carbon13     + &
-      veg_litterfall%fruit%carbon13     + veg_litterfall%seed_bed%carbon13    + &
-      veg_exudation%carbon13                                                      - &
+    total_flux_carbon13(:) =                  veg_litterfall%leaf%carbon13(:)        + &
+      veg_litterfall%fine_root%carbon13(:) + veg_litterfall%coarse_root%carbon13(:) + &
+      veg_litterfall%sap_wood%carbon13(:)  + veg_litterfall%heart_wood%carbon13(:)  + &
+      veg_litterfall%labile%carbon13(:)    + veg_litterfall%reserve%carbon13(:)     + &
+      veg_litterfall%fruit%carbon13(:)     + veg_litterfall%seed_bed%carbon13(:)    + &
+      veg_exudation%carbon13(:)                                                      - &
       SUM(sb_mycorrhiza_export%carbon13(:,:) * soil_depth_sl(:,:), DIM=2)    - &
       (leaching_dom_carbon13(:)                                              + &
       SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
-    total_flux_carbon14(:) =                  veg_litterfall%leaf%carbon14        + &
-      veg_litterfall%fine_root%carbon14 + veg_litterfall%coarse_root%carbon14 + &
-      veg_litterfall%sap_wood%carbon14  + veg_litterfall%heart_wood%carbon14  + &
-      veg_litterfall%labile%carbon14    + veg_litterfall%reserve%carbon14     + &
-      veg_litterfall%fruit%carbon14     + veg_litterfall%seed_bed%carbon14    + &
-      veg_exudation%carbon14                                                      - &
+    total_flux_carbon14(:) =                  veg_litterfall%leaf%carbon14(:)        + &
+      veg_litterfall%fine_root%carbon14(:) + veg_litterfall%coarse_root%carbon14(:) + &
+      veg_litterfall%sap_wood%carbon14(:)  + veg_litterfall%heart_wood%carbon14(:)  + &
+      veg_litterfall%labile%carbon14(:)    + veg_litterfall%reserve%carbon14(:)     + &
+      veg_litterfall%fruit%carbon14(:)     + veg_litterfall%seed_bed%carbon14(:)    + &
+      veg_exudation%carbon14(:)                                                      - &
       SUM(sb_mycorrhiza_export%carbon14(:,:) * soil_depth_sl(:,:), DIM=2)    - &
       (leaching_dom_carbon14(:)                                              + &
       SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
-    total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15      + &
-      veg_litterfall%fine_root%nitrogen15 + veg_litterfall%coarse_root%nitrogen15   + &
-      veg_litterfall%sap_wood%nitrogen15  + veg_litterfall%heart_wood%nitrogen15    + &
-      veg_litterfall%labile%nitrogen15    + veg_litterfall%reserve%nitrogen15       + &
-      veg_litterfall%fruit%nitrogen15     + veg_litterfall%seed_bed%nitrogen15      + &
+    total_flux_nitrogen15(:) =                  veg_litterfall%leaf%nitrogen15(:)      + &
+      veg_litterfall%fine_root%nitrogen15(:) + veg_litterfall%coarse_root%nitrogen15(:)   + &
+      veg_litterfall%sap_wood%nitrogen15(:)  + veg_litterfall%heart_wood%nitrogen15(:)    + &
+      veg_litterfall%labile%nitrogen15(:)    + veg_litterfall%reserve%nitrogen15(:)       + &
+      veg_litterfall%fruit%nitrogen15(:)     + veg_litterfall%seed_bed%nitrogen15(:)      + &
       SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp     + &
       (nhx_deposition(:) + noy_deposition(:)) /                                       & 
          ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) *dtime/1.e6_wp         + &
-      veg_exudation%nitrogen15                                                      - &
+      veg_exudation%nitrogen15(:)                                                   - &
       SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:), DIM=2)         - &
       (leaching_nh4_n15_solute(:) + leaching_no3_n15_solute(:)                      + &
        emission_nh3_n15(:) + emission_noy_n15(:) + emission_n2o_n15(:)              + & 
@@ -893,8 +906,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     ! 0.2 local
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3, hlp4
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: km_adsorpt_po4_act, qmax_po4_mineral_act, k_desorpt_po4_act, k_adsorpt_po4_act, &
-                                                        rtm_sorption_act, rmm_sorption_act, rtm_desorption_act, rmm_desorption_act, bulk_dens_corr_sl_act 
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: km_adsorpt_po4_act, qmax_po4_mineral_act, &
+                                                        k_desorpt_po4_act, k_adsorpt_po4_act, &
+                                                        rtm_sorption_act, rmm_sorption_act, &
+                                                        rtm_desorption_act, rmm_desorption_act, &
+                                                        bulk_dens_corr_sl_act 
     INTEGER                                          :: isoil                !< loop over options%nsoil_sb                        
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_pinorg_dynamics'
 
@@ -949,10 +965,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 1.1 Langmuir equilibrium between soluble P and labile P, 0d model
     !!
       fast_adsorption_po4(:,:) = 0.0_wp
-      hlp1(:,:) = 0.0_wp; hlp2(:,:) = 0.0_wp; hlp4(:,:) = 0.0_wp; hlp3(:,:) = 0.0_wp; 
+      hlp1(:,:) = 0.0_wp
+      hlp2(:,:) = 0.0_wp
+      hlp4(:,:) = 0.0_wp
+      hlp3(:,:) = 0.0_wp
       hlp1(:,1) = (po4_solute(:,1) + km_adsorpt_po4_act(:,1))**2.0_wp / &
                   ((po4_solute(:,1) + km_adsorpt_po4_act(:,1))**2.0_wp + qmax_po4_mineral_act(:,1) * km_adsorpt_po4_act(:,1))
-      hlp2(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
+      hlp2(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + &
+                   transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
             (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_sorption_po4(:,1))) * dtime / 1000000._wp
 
       WHERE (po4_solute(:,1) < (-hlp2(:,1)) .OR. po4_assoc_fast(:,1) < (-hlp2(:,1)))
@@ -979,21 +999,24 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!
       hlp1(:,:) = (po4_solute(:,:) + km_adsorpt_po4_act(:,:))**2.0_wp / &
                   ((po4_solute(:,:) + km_adsorpt_po4_act(:,:))**2.0_wp + qmax_po4_mineral_act(:,:) * km_adsorpt_po4_act(:,:))
-      hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
-            (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_sorption_po4(:,:)) + transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
+      hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
+                   transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
+            (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_sorption_po4(:,:)) + &
+             transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
 
       WHERE (po4_solute(:,:) < (-hlp2(:,:)) .OR. po4_assoc_fast(:,:) < (-hlp2(:,:)))
         hlp1(:,:) = po4_solute(:,:)/(po4_solute(:,:)+po4_assoc_fast(:,:))
       ENDWHERE
 
-      fast_adsorption_po4(:,:) = hlp2(:,:) + (slow_sorption_po4(:,:) - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp - hlp1(:,:) * hlp2(:,:)
+      fast_adsorption_po4(:,:) = hlp2(:,:) + (slow_sorption_po4(:,:) - transport_po4_assoc_fast(:,:)) * dtime / &
+                                 1000000._wp - hlp1(:,:) * hlp2(:,:)
       fast_adsorption_po4(:,:) = fast_adsorption_po4(:,:) / dtime * 1000000._wp 
     ENDIF
 
     !> 3.0 update pools, both 1d and 0d
     !!
     po4_solute(:,:) = po4_solute(:,:) + hlp1(:,:)*hlp2(:,:)
-    po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (1 - hlp1(:,:))*hlp2(:,:)
+    po4_assoc_fast(:,:) = po4_assoc_fast(:,:) + (1.0_wp - hlp1(:,:))*hlp2(:,:)
 
 
   END SUBROUTINE calc_pinorg_dynamics

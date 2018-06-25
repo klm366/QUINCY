@@ -45,7 +45,7 @@ CONTAINS
   SUBROUTINE calc_transfer_litterfall_pools(options,soil_depth_sl,root_fraction_sl,veg_litterfall, &
                                   formation_soluable_litter,formation_polymeric_litter,formation_woody_litter)
                                  
-    USE mo_sb_constants
+    USE mo_sb_constants,                  ONLY: f_soluable_fine_root, f_soluable_leaf, f_soluable_fruit, f_soluable_seed_bed
     dsl4slm_Use_memory_a_veg
     dsl4slm_Use_memory_a_sb
 
@@ -63,7 +63,6 @@ CONTAINS
     ! 0.2 Local 
     INTEGER                                                 :: isoil
     REAL(wp), DIMENSION(options%nc)                         :: hlp1
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)        :: hlp2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_transfer_litterfall_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -78,166 +77,166 @@ CONTAINS
     !> 1.0 pure soluable litter -> labile + reserve?
     !!
     formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        (veg_litterfall%labile%carbon + veg_litterfall%reserve%carbon) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%carbon(:) + veg_litterfall%reserve%carbon(:)) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        (veg_litterfall%labile%nitrogen + veg_litterfall%reserve%nitrogen) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%nitrogen(:) + veg_litterfall%reserve%nitrogen(:)) / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        (veg_litterfall%labile%phosphorus + veg_litterfall%reserve%phosphorus) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%phosphorus(:) + veg_litterfall%reserve%phosphorus(:)) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        (veg_litterfall%labile%carbon13 + veg_litterfall%reserve%carbon13) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%carbon13(:) + veg_litterfall%reserve%carbon13(:)) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        (veg_litterfall%labile%carbon14 + veg_litterfall%reserve%carbon14) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%carbon14(:) + veg_litterfall%reserve%carbon14(:)) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        (veg_litterfall%labile%nitrogen15 + veg_litterfall%reserve%nitrogen15) / soil_depth_sl(:,1)
+        (veg_litterfall%labile%nitrogen15(:) + veg_litterfall%reserve%nitrogen15(:)) / soil_depth_sl(:,1)
 
     !> 2.0 mixed soluable and polymeric stuff
     !! 
     !> 2.1 leaves, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-    hlp1 = f_soluable_leaf 
+    hlp1(:) = f_soluable_leaf 
     formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        hlp1 * veg_litterfall%leaf%carbon / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%leaf%carbon(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon(:,1) = formation_polymeric_litter%carbon(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%leaf%carbon / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%leaf%carbon(:) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        hlp1 * veg_litterfall%leaf%nitrogen / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%leaf%nitrogen(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen(:,1) = formation_polymeric_litter%nitrogen(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%leaf%nitrogen / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%leaf%nitrogen(:) / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        hlp1 * veg_litterfall%leaf%phosphorus / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%leaf%phosphorus(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%phosphorus(:,1) = formation_polymeric_litter%phosphorus(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%leaf%phosphorus / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%leaf%phosphorus(:) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        hlp1 * veg_litterfall%leaf%carbon13 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%leaf%carbon13(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon13(:,1) = formation_polymeric_litter%carbon13(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%leaf%carbon13 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%leaf%carbon13(:) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        hlp1 * veg_litterfall%leaf%carbon14 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%leaf%carbon14(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon14(:,1) = formation_polymeric_litter%carbon14(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%leaf%carbon14 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%leaf%carbon14(:) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        hlp1 * veg_litterfall%leaf%nitrogen15 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%leaf%nitrogen15(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen15(:,1) = formation_polymeric_litter%nitrogen15(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%leaf%nitrogen15 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%leaf%nitrogen15(:) / soil_depth_sl(:,1)
 
     !> 2.2 fruit, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
     !!
-    hlp1 = f_soluable_fruit 
+    hlp1(:) = f_soluable_fruit 
     formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        hlp1 * veg_litterfall%fruit%carbon / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%fruit%carbon(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon(:,1) = formation_polymeric_litter%carbon(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%fruit%carbon / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%fruit%carbon(:) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        hlp1 * veg_litterfall%fruit%nitrogen / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%fruit%nitrogen(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen(:,1) = formation_polymeric_litter%nitrogen(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%fruit%nitrogen / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%fruit%nitrogen(:) / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        hlp1 * veg_litterfall%fruit%phosphorus / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%fruit%phosphorus(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%phosphorus(:,1) = formation_polymeric_litter%phosphorus(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%fruit%phosphorus / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%fruit%phosphorus(:) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        hlp1 * veg_litterfall%fruit%carbon13 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%fruit%carbon13(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon13(:,1) = formation_polymeric_litter%carbon13(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%fruit%carbon13 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%fruit%carbon13(:) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        hlp1 * veg_litterfall%fruit%carbon14 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%fruit%carbon14(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon14(:,1) = formation_polymeric_litter%carbon14(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%fruit%carbon14 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%fruit%carbon14(:) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        hlp1 * veg_litterfall%fruit%nitrogen15 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%fruit%nitrogen15(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen15(:,1) = formation_polymeric_litter%nitrogen15(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%fruit%nitrogen15 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%fruit%nitrogen15(:) / soil_depth_sl(:,1)
 
     !> 2.3 seed_bed, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
     !!
-    hlp1 = f_soluable_seed_bed 
+    hlp1(:) = f_soluable_seed_bed 
     formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        hlp1 * veg_litterfall%seed_bed%carbon / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%seed_bed%carbon(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon(:,1) = formation_polymeric_litter%carbon(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%seed_bed%carbon / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%carbon(:) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        hlp1 * veg_litterfall%seed_bed%nitrogen / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%seed_bed%nitrogen(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen(:,1) = formation_polymeric_litter%nitrogen(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%seed_bed%nitrogen / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%nitrogen(:) / soil_depth_sl(:,1)
     formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        hlp1 * veg_litterfall%seed_bed%phosphorus / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%seed_bed%phosphorus(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%phosphorus(:,1) = formation_polymeric_litter%phosphorus(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%seed_bed%phosphorus / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%phosphorus(:) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        hlp1 * veg_litterfall%seed_bed%carbon13 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%seed_bed%carbon13(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon13(:,1) = formation_polymeric_litter%carbon13(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%seed_bed%carbon13 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%carbon13(:) / soil_depth_sl(:,1)
     formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        hlp1 * veg_litterfall%seed_bed%carbon14 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%seed_bed%carbon14(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%carbon14(:,1) = formation_polymeric_litter%carbon14(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%seed_bed%carbon14 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%carbon14(:) / soil_depth_sl(:,1)
     formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        hlp1 * veg_litterfall%seed_bed%nitrogen15 / soil_depth_sl(:,1)
+        hlp1(:) * veg_litterfall%seed_bed%nitrogen15(:) / soil_depth_sl(:,1)
     formation_polymeric_litter%nitrogen15(:,1) = formation_polymeric_litter%nitrogen15(:,1) + &
-        (1._wp - hlp1) * veg_litterfall%seed_bed%nitrogen15 / soil_depth_sl(:,1)
+        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%nitrogen15(:) / soil_depth_sl(:,1)
 
     !> 3.0 roots
     !!
     DO isoil = 1,options%nsoil_sb
        !> 3.1 fine roots
        !! still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-       hlp1 = f_soluable_fine_root 
+       hlp1(:) = f_soluable_fine_root 
        WHERE(soil_depth_sl(:,isoil) > eps8)
           formation_soluable_litter%carbon(:,isoil) = formation_soluable_litter%carbon(:,isoil) + &
-              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon / soil_depth_sl(:,isoil)
+              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon(:) / soil_depth_sl(:,isoil)
           formation_polymeric_litter%carbon(:,isoil) = formation_polymeric_litter%carbon(:,isoil) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon / soil_depth_sl(:,isoil)
+              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon(:) / soil_depth_sl(:,isoil)
           formation_soluable_litter%nitrogen(:,isoil) = formation_soluable_litter%nitrogen(:,isoil) + &
-              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen / soil_depth_sl(:,isoil)
+              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen(:) / soil_depth_sl(:,isoil)
           formation_polymeric_litter%nitrogen(:,isoil) = formation_polymeric_litter%nitrogen(:,isoil) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen / soil_depth_sl(:,isoil)
+              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen(:) / soil_depth_sl(:,isoil)
           formation_soluable_litter%phosphorus(:,isoil) = formation_soluable_litter%phosphorus(:,isoil) + &
-              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus / soil_depth_sl(:,isoil)
+              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus(:) / soil_depth_sl(:,isoil)
           formation_polymeric_litter%phosphorus(:,isoil) = formation_polymeric_litter%phosphorus(:,isoil) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus / soil_depth_sl(:,isoil)
+              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus(:) / soil_depth_sl(:,isoil)
           formation_soluable_litter%carbon13(:,isoil) = formation_soluable_litter%carbon13(:,isoil) + &
-              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13 / soil_depth_sl(:,isoil)
+              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13(:) / soil_depth_sl(:,isoil)
           formation_polymeric_litter%carbon13(:,isoil) = formation_polymeric_litter%carbon13(:,isoil) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13 / soil_depth_sl(:,isoil)
+              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13(:) / soil_depth_sl(:,isoil)
           formation_soluable_litter%carbon14(:,isoil) = formation_soluable_litter%carbon14(:,isoil) + &
-              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14 / soil_depth_sl(:,isoil)
+              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14(:) / soil_depth_sl(:,isoil)
           formation_polymeric_litter%carbon14(:,isoil) = formation_polymeric_litter%carbon14(:,isoil) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14 / soil_depth_sl(:,isoil)
+              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14(:) / soil_depth_sl(:,isoil)
           formation_soluable_litter%nitrogen15(:,isoil) = formation_soluable_litter%nitrogen15(:,isoil) + &
-              hlp1 * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15 / soil_depth_sl(:,isoil)
+              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15(:) / soil_depth_sl(:,isoil)
           formation_polymeric_litter%nitrogen15(:,isoil) = formation_polymeric_litter%nitrogen15(:,isoil) + &
-              (1._wp - hlp1) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15 / soil_depth_sl(:,isoil)
+              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15(:) / soil_depth_sl(:,isoil)
 
           !> 3.2 woody litter below ground 
           !!
           formation_woody_litter%carbon(:,isoil) = formation_woody_litter%carbon(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon(:) / soil_depth_sl(:,isoil)
           formation_woody_litter%nitrogen(:,isoil) = formation_woody_litter%nitrogen(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen(:) / soil_depth_sl(:,isoil)
           formation_woody_litter%phosphorus(:,isoil) = formation_woody_litter%phosphorus(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%phosphorus / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%phosphorus(:) / soil_depth_sl(:,isoil)
           formation_woody_litter%carbon13(:,isoil) = formation_woody_litter%carbon13(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon13 / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon13(:) / soil_depth_sl(:,isoil)
           formation_woody_litter%carbon14(:,isoil) = formation_woody_litter%carbon14(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon14 / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon14(:) / soil_depth_sl(:,isoil)
           formation_woody_litter%nitrogen15(:,isoil) = formation_woody_litter%nitrogen15(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen15 / soil_depth_sl(:,isoil)
+             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen15(:) / soil_depth_sl(:,isoil)
        ENDWHERE
     ENDDO
 
     !> 4.0 woody litter above ground 
     !!
     formation_woody_litter%carbon(:,1) = formation_woody_litter%carbon(:,1) + & 
-        (veg_litterfall%sap_wood%carbon + veg_litterfall%heart_wood%carbon) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%carbon(:) + veg_litterfall%heart_wood%carbon(:)) / soil_depth_sl(:,1)
     formation_woody_litter%nitrogen(:,1) = formation_woody_litter%nitrogen(:,1) + & 
-        (veg_litterfall%sap_wood%nitrogen + veg_litterfall%heart_wood%nitrogen) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%nitrogen(:) + veg_litterfall%heart_wood%nitrogen(:)) / soil_depth_sl(:,1)
     formation_woody_litter%phosphorus(:,1) = formation_woody_litter%phosphorus(:,1) + & 
-        (veg_litterfall%sap_wood%phosphorus + veg_litterfall%heart_wood%phosphorus) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%phosphorus(:) + veg_litterfall%heart_wood%phosphorus(:)) / soil_depth_sl(:,1)
     formation_woody_litter%carbon13(:,1) = formation_woody_litter%carbon13(:,1) + & 
-        (veg_litterfall%sap_wood%carbon13 + veg_litterfall%heart_wood%carbon13) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%carbon13(:) + veg_litterfall%heart_wood%carbon13(:)) / soil_depth_sl(:,1)
     formation_woody_litter%carbon14(:,1) = formation_woody_litter%carbon14(:,1) + & 
-        (veg_litterfall%sap_wood%carbon14 + veg_litterfall%heart_wood%carbon14) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%carbon14(:) + veg_litterfall%heart_wood%carbon14(:)) / soil_depth_sl(:,1)
     formation_woody_litter%nitrogen15(:,1) = formation_woody_litter%nitrogen15(:,1) + & 
-        (veg_litterfall%sap_wood%nitrogen15 + veg_litterfall%heart_wood%nitrogen15) / soil_depth_sl(:,1)
+        (veg_litterfall%sap_wood%nitrogen15(:) + veg_litterfall%heart_wood%nitrogen15(:)) / soil_depth_sl(:,1)
 
   END SUBROUTINE calc_transfer_litterfall_pools 
 
@@ -257,8 +256,8 @@ CONTAINS
   SUBROUTINE calc_litter_turnover(options               , &
                                   tau_litter_pool       , &
                                   fc_litter2sink        , &
-                                  rtm_depolymerisation  , &
-                                  rmm_depolymerisation  , & 
+                                  !rtm_depolymerisation  , &  currently not used
+                                  !rmm_depolymerisation  , & 
                                   pool_litter           , &
                                   loss_litter           , &
                                   formation_sink        , & 
@@ -274,8 +273,8 @@ CONTAINS
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options               !< model options
     REAL(wp),                                         INTENT(in)    :: tau_litter_pool       !< turnover time of the litter pool [1/s]
     REAL(wp),                                         INTENT(in)    :: fc_litter2sink        !< fraction of litter C entering sink pool (rest is respired) 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier [-]
+    ! REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier [-]
+    ! REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier [-]
     TYPE(t_sb_element_a),                             INTENT(in)    :: pool_litter           !< litter pool to decompose [mol/m3]
     TYPE(t_sb_element_a),                             INTENT(inout) :: loss_litter           !< reduction in litter pool [mol/m3/timestep]
     TYPE(t_sb_element_a),                             INTENT(inout) :: formation_sink        !< formation of SOM pool [mol/m3/timestep]
@@ -352,6 +351,7 @@ CONTAINS
     USE mo_sb_constants, ONLY : f_plant_carrier_n, f_mic_carrier_n
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in)            :: solute                  !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp), INTENT(in)            :: microbial_carbon        !< microbial carbon density (mol / m3)
@@ -366,9 +366,11 @@ CONTAINS
     REAL(wp), INTENT(in)            :: km_plant_uptake         !< half-saturation constant of microbial nutrient uptake (mol S / m3)
     REAL(wp), INTENT(out)           :: microbial_uptake        !< microbial uptake flux (µmol / m3 / s)
     REAL(wp), INTENT(out)           :: plant_uptake            !< plant uptake flux (µmol / m3 / s)
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)              :: hlp1,hlp2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_inorganic_uptake'
+
 
     !> 1.0 uptake
     !! co-limited rates of N uptake for microbes and plants 
@@ -419,6 +421,7 @@ CONTAINS
     USE mo_base_constants,      ONLY: dtime
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     LOGICAL,  INTENT(in)            :: flag_sb_prescribe_po4     !< whether PO4 is prescribed or not
     REAL(wp), INTENT(in)            :: microbial_carbon          !< microbial carbon density (mol / m3)
@@ -450,10 +453,11 @@ CONTAINS
     REAL(wp), INTENT(out)           :: weathering_po4            !< phosphorus weathering rate [µmol P / m3 / s]
     REAL(wp), INTENT(out)           :: occlusion_po4             !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P / m3 / s]
     REAL(wp), INTENT(out)           :: slow_sorption_po4         !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)                        :: hlp1, hlp2, uptake_c, f_uptake, uptake_p
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_flux_po4'
-    ! ---------------------------
+
 
 
     !> 1.0 Calculates the biochemical P mineralization, and the loss of the contributing pools.
@@ -521,6 +525,7 @@ CONTAINS
                                   k_mic_uptake_po4, k_plant_uptake_po4, vmax_mic_uptake_po4, vmax_plant_uptake_po4
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in)    :: microbial_carbon          !< microbial carbon density (mol / m3)
     REAL(wp), INTENT(in)    :: fine_root_carbon          !< fine_root density (mol / m3)
@@ -535,19 +540,16 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: flag_sb_ECA_upt_po4       !< uptake option for P, TRUE: ECA; FALSE: non-ECA
     REAL(wp), INTENT(out)   :: microbial_uptake          !< microbial uptake flux (µmol / m3 / s)
     REAL(wp), INTENT(out)   :: plant_uptake              !< plant uptake flux (µmol / m3 / s)
-
-
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)                                             :: hlp1, hlp2, avail_sorption_sites
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_po4_uptake_ECA'
-    ! ---------------------------
 
 
-    !> define uptake scheme to use, 1. ECA; 2. non-ECA
-    IF (flag_sb_ECA_upt_po4) THEN
-    !> 1.0 uptake
+
+    !> 1.0 define uptake scheme to use, 1. ECA; 2. non-ECA
     !! co-limited rates of P uptake for microbes and plants
-
+    IF (flag_sb_ECA_upt_po4) THEN
       !> 1.1 ECA approach
       !! 
         avail_sorption_sites = MAX(eps8, qmax_po4 - assoc_fast) 
@@ -592,17 +594,21 @@ CONTAINS
   !!
   !! Output: adsorption rate
   !-----------------------------------------------------------------------------------------------------
-SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition_sl, km_adsorpt_po4_sl, &
-                                        bulk_dens_corr_sl, solute, assoc_fast, assoc_slow, &
+  SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition_sl, km_adsorpt_po4_sl, &
+                                        bulk_dens_corr_sl, solute, assoc_fast, &
+                                        !assoc_slow, &   currently not used
                                         weathering_po4, occlusion_po4, slow_sorption_po4, &
-                                        transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, &
+                                        transport_po4_solute, transport_po4_assoc_fast, &
+                                        !transport_po4_assoc_slow, &   currently not used
                                         gross_mineralisation_po4, biochem_min_po4, microbial_carbon, &
                                         microbial_uptake, plant_uptake, fast_adsorption_po4, &
                                         sb_adsorp_scheme, flag_sb_CLE_po4, flag_sb_LK_po4)
 
-    USE mo_sb_constants
+    USE mo_sb_constants,                ONLY: km_plant_uptake_po4, km_mic_uptake_po4, f_plant_carrier_po4, f_mic_carrier_po4, &
+                                              k_desorp_f_po4, k_adsorpt_f_po4
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options)                        , INTENT(in)     :: options           !< model options
     CHARACTER(len=*)                                , INTENT(in)     :: sb_adsorp_scheme  !< eca_full; 2: eca_part (only uptake, not for adsorption); 3: eca_none
@@ -611,7 +617,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: fine_root_carbon  !< fine_root density (mol / m3)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: solute            !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: assoc_fast        !< fast minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: assoc_slow        !< slow minerally associated PO4 pool [mol/m3]
+    !REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: assoc_slow        !< slow minerally associated PO4 pool [mol/m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: qmax_po4          !< sorption capacity of po4 to mineral soil [mol P / m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: p_deposition_sl   !< p deposition [µmol P / m3 / s]    
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: weathering_po4    !< phosphorus weathering rate [µmol P / m3 / s]
@@ -619,7 +625,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: slow_sorption_po4 !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_solute      !< transport of soluble PO4 [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_fast  !< transport of fast_assoc_po4 [µmol P / m3 / s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_slow  !< transport of slow_assoc_po4 [µmol P / m3 / s]
+    !REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: transport_po4_assoc_slow  !< transport of slow_assoc_po4 [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: km_adsorpt_po4_sl !< half-saturation of po4 sorption to soil [kg / m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: bulk_dens_corr_sl !< bulk density of the mineral soil [kg / m3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: microbial_carbon  !< microbial carbon density (mol / m3)
@@ -628,24 +634,24 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)    :: fast_adsorption_po4       !< phosphorus adsorption rate, solute --> assoc_fast [µmol P / m3 / s]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: microbial_uptake        !< microbial uptake flux (µmol / m3 / s)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: plant_uptake      !< plant uptake flux (µmol / m3 / s)
-
-
-
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb)                :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,hlp9,scal, &
-                                                                       perco_po4, desorp_f_po4, adsorpt_f_po4, lab_po4, avail_sorption_sites
-
+                                                                       perco_po4, desorp_f_po4, adsorpt_f_po4, lab_po4, &
+                                                                       avail_sorption_sites
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_adsorption_po4'
-    ! ---------------------------
 
-    !> 0.3 percolation flux (including deposition) and available sorption sites for po4
-    perco_po4(:,:) = p_deposition_sl(:,:) + transport_po4_solute(:,:)
-    avail_sorption_sites = qmax_po4 - assoc_fast
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
+
+    !> 0.9 percolation flux (including deposition) and available sorption sites for po4
+    perco_po4(:,:) = p_deposition_sl(:,:) + transport_po4_solute(:,:)
+    avail_sorption_sites(:,:) = qmax_po4(:,:) - assoc_fast(:,:)
+
 
     !> 1.0 ECA option for adsorption rate
     SELECT CASE (sb_adsorp_scheme)
@@ -656,63 +662,67 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         !> 2.1 By default, full ECA only applies to Langmuir kinetics; option with Constant Equilibrium
         !! potential adsorption is defined as the fast adsorption rate of Langmuir kinetics in Van der Zee et al. 1989
         !! constant Langmuir equilibrium is maintained by FUNCTION calc_CLE_po4
-            hlp4 = km_adsorpt_po4_sl
-            hlp5 = avail_sorption_sites
-            hlp2 = hlp4 + solute + hlp5 + &
-                   hlp4 / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon + &
-                   hlp4 / km_mic_uptake_po4 * f_mic_carrier_po4 * microbial_carbon
-            hlp3 = (k_adsorpt_f_po4/bulk_dens_corr_sl) * solute * hlp5
-            adsorpt_f_po4 = hlp3 * solute / hlp2
-            desorp_f_po4 = assoc_fast * k_desorp_f_po4
+            hlp4(:,:) = km_adsorpt_po4_sl(:,:)
+            hlp5(:,:) = avail_sorption_sites(:,:)
+            hlp2(:,:) = hlp4(:,:) + solute(:,:) + hlp5(:,:) + &
+                   hlp4(:,:) / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon(:,:) + &
+                   hlp4(:,:) / km_mic_uptake_po4 * f_mic_carrier_po4 * microbial_carbon(:,:)
+            hlp3(:,:) = (k_adsorpt_f_po4/bulk_dens_corr_sl(:,:)) * solute(:,:) * hlp5(:,:)
+            adsorpt_f_po4(:,:) = hlp3(:,:) * solute(:,:) / hlp2(:,:)
+            desorp_f_po4(:,:) = assoc_fast(:,:) * k_desorp_f_po4
 
-            hlp6 = ((weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4) * dtime
+            hlp6(:,:) = ((weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:)) / &
+                         1.e6_wp + desorp_f_po4(:,:)) * dtime
 
-            hlp9 = ((microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4) * dtime
+            hlp9(:,:) = ((microbial_uptake(:,:) + plant_uptake(:,:))/1.e6_wp + adsorpt_f_po4(:,:)) * dtime
 
         !! Langmuir equilibrium considering possible limiting sources 
-            scal = 1.0_wp
-            lab_po4 = 0.0_wp
-            WHERE ((solute + hlp6 - hlp9) < eps8)
-                hlp1 = assoc_fast + (- desorp_f_po4 - slow_sorption_po4/1.e6_wp)*dtime
-                scal = calc_CLE_po4("insufficient_p_input",solute, hlp4, hlp5, hlp1, hlp6, hlp9, adsorpt_f_po4*dtime)
-                adsorpt_f_po4 = adsorpt_f_po4 * scal
-                fast_adsorption_po4 = adsorpt_f_po4 - desorp_f_po4
-                microbial_uptake = microbial_uptake * scal
-                plant_uptake = plant_uptake * scal
+            scal(:,:) = 1.0_wp
+            lab_po4(:,:) = 0.0_wp
+            WHERE ((solute(:,:) + hlp6(:,:) - hlp9(:,:)) < eps8)
+                hlp1(:,:) = assoc_fast(:,:) + (- desorp_f_po4(:,:) - slow_sorption_po4(:,:)/1.e6_wp)*dtime
+                scal(:,:) = calc_CLE_po4("insufficient_p_input", solute(:,:), hlp4(:,:), hlp5(:,:), hlp1(:,:), hlp6(:,:), &
+                                         hlp9(:,:), adsorpt_f_po4(:,:)*dtime)
+                adsorpt_f_po4(:,:) = adsorpt_f_po4(:,:) * scal(:,:)
+                fast_adsorption_po4(:,:) = adsorpt_f_po4(:,:) - desorp_f_po4(:,:)
+                microbial_uptake(:,:) = microbial_uptake(:,:) * scal(:,:)
+                plant_uptake(:,:) = plant_uptake(:,:) * scal(:,:)
             ELSEWHERE
-                hlp1 = assoc_fast + (- desorp_f_po4 - slow_sorption_po4/1.e6_wp)*dtime
-                scal = calc_CLE_po4("sufficient_p_input",solute, hlp4, hlp5, hlp1, hlp6, hlp9, adsorpt_f_po4*dtime)
-                adsorpt_f_po4 = adsorpt_f_po4 * scal
-                fast_adsorption_po4 = adsorpt_f_po4 - desorp_f_po4
-                microbial_uptake = microbial_uptake * scal
-                plant_uptake = plant_uptake * scal
-                scal = -scal -1._wp
+                hlp1(:,:) = assoc_fast(:,:) + (- desorp_f_po4(:,:) - slow_sorption_po4(:,:)/1.e6_wp)*dtime
+                scal(:,:) = calc_CLE_po4("sufficient_p_input",solute(:,:), hlp4(:,:), hlp5(:,:), hlp1(:,:), hlp6(:,:), &
+                                         hlp9(:,:), adsorpt_f_po4(:,:)*dtime)
+                adsorpt_f_po4(:,:) = adsorpt_f_po4(:,:) * scal(:,:)
+                fast_adsorption_po4(:,:) = adsorpt_f_po4(:,:) - desorp_f_po4(:,:)
+                microbial_uptake(:,:) = microbial_uptake(:,:) * scal(:,:)
+                plant_uptake(:,:) = plant_uptake(:,:) * scal(:,:)
+                scal(:,:) = -scal(:,:) -1._wp
             ENDWHERE
         ELSE
         !> 2.2 By default, full ECA only applies to Langmuir kinetics; option with non-Equilibrium
         !! Langmuir equilibrium is not constantly maintained
-            scal = 1.0_wp
-            hlp4 = km_adsorpt_po4_sl
-            hlp5 = avail_sorption_sites
-            hlp2 = hlp4 + solute + hlp5 + &
-                   hlp4 / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon + &
-                   hlp4 / km_mic_uptake_po4 * f_mic_carrier_po4 * microbial_carbon
-            hlp3 = (k_adsorpt_f_po4/bulk_dens_corr_sl) * solute * hlp5
-            adsorpt_f_po4 = hlp3 * solute / hlp2 
-            desorp_f_po4 = assoc_fast * k_desorp_f_po4
+            scal(:,:) = 1.0_wp
+            hlp4(:,:) = km_adsorpt_po4_sl(:,:)
+            hlp5(:,:) = avail_sorption_sites(:,:)
+            hlp2(:,:) = hlp4(:,:) + solute(:,:) + hlp5(:,:) + &
+                   hlp4(:,:) / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon(:,:) + &
+                   hlp4(:,:) / km_mic_uptake_po4 * f_mic_carrier_po4 * microbial_carbon(:,:)
+            hlp3(:,:) = (k_adsorpt_f_po4/bulk_dens_corr_sl(:,:)) * solute(:,:) * hlp5(:,:)
+            adsorpt_f_po4(:,:) = hlp3(:,:) * solute(:,:) / hlp2(:,:) 
+            desorp_f_po4(:,:) = assoc_fast(:,:) * k_desorp_f_po4
 
         !> 2.2.1 limit to possible P sources
         !!
-            hlp1 = (microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4
+            hlp1(:,:) = (microbial_uptake(:,:) + plant_uptake(:,:))/1.e6_wp + adsorpt_f_po4(:,:)
+            hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:)) / &
+                        1.e6_wp + desorp_f_po4(:,:)
 
-            WHERE(hlp1 > (hlp6 + solute / dtime) .AND. solute > eps8)
-               scal=(hlp6 + solute / dtime)/hlp1
-               microbial_uptake = microbial_uptake    / hlp1 * (hlp6 + solute / dtime)
-               plant_uptake     = plant_uptake  / hlp1 * (hlp6 + solute / dtime)
-               adsorpt_f_po4    = adsorpt_f_po4 / hlp1 * (hlp6 + solute / dtime)
+            WHERE(hlp1(:,:) > (hlp6(:,:) + solute(:,:) / dtime) .AND. solute(:,:) > eps8)
+               scal(:,:)=(hlp6(:,:) + solute(:,:) / dtime)/hlp1(:,:)
+               microbial_uptake(:,:) = microbial_uptake(:,:)    / hlp1(:,:) * (hlp6(:,:) + solute(:,:) / dtime)
+               plant_uptake(:,:)     = plant_uptake(:,:)  / hlp1(:,:) * (hlp6(:,:) + solute(:,:) / dtime)
+               adsorpt_f_po4(:,:)    = adsorpt_f_po4(:,:) / hlp1(:,:) * (hlp6(:,:) + solute(:,:) / dtime)
             ENDWHERE
-            fast_adsorption_po4 = adsorpt_f_po4 - desorp_f_po4
+            fast_adsorption_po4(:,:) = adsorpt_f_po4(:,:) - desorp_f_po4(:,:)
         ENDIF
 
 
@@ -724,43 +734,44 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         IF (flag_sb_CLE_po4 .AND. flag_sb_LK_po4) THEN
         !> 3.1 option with Langmuir kinetics and constant equilibrium
         !! @to be finished...
-            hlp5 = avail_sorption_sites
-            adsorpt_f_po4 = (k_adsorpt_f_po4/bulk_dens_corr_sl) * solute * hlp5
-            desorp_f_po4 = assoc_fast * k_desorp_f_po4
+            hlp5(:,:) = avail_sorption_sites(:,:)
+            adsorpt_f_po4(:,:) = (k_adsorpt_f_po4/bulk_dens_corr_sl(:,:)) * solute(:,:) * hlp5(:,:)
+            desorp_f_po4(:,:) = assoc_fast(:,:) * k_desorp_f_po4
 
 
         ELSEIF (flag_sb_CLE_po4 .AND. (.NOT. flag_sb_LK_po4)) THEN
         !> 3.2 option with constant equilibrium, i.e. the same as Wang et al. 2007 and so forth
         !! 
-            hlp4 = km_adsorpt_po4_sl
-            hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
-                    (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
-            WHERE ((hlp6 * dtime + solute + assoc_fast) < eps8 .AND. solute > eps8)
-                hlp1 = microbial_uptake + plant_uptake
-                hlp3 = (hlp6 + hlp1) * dtime + solute + assoc_fast
-                microbial_uptake = microbial_uptake / hlp1 * hlp3
-                plant_uptake = plant_uptake / hlp1 * hlp3
-                hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
-                        (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
+            hlp4(:,:) = km_adsorpt_po4_sl(:,:)
+            hlp2(:,:) = qmax_po4(:,:) * hlp4(:,:) / ((solute(:,:) + hlp4(:,:))**2.0_wp + qmax_po4(:,:) * hlp4(:,:))
+            hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:) - &
+                    (microbial_uptake(:,:) + plant_uptake(:,:) + slow_sorption_po4(:,:)))/1.e6_wp
+            WHERE ((hlp6(:,:) * dtime + solute(:,:) + assoc_fast(:,:)) < eps8 .AND. solute(:,:) > eps8)
+                hlp1(:,:) = microbial_uptake(:,:) + plant_uptake(:,:)
+                hlp3(:,:) = (hlp6(:,:) + hlp1(:,:)) * dtime + solute(:,:) + assoc_fast(:,:)
+                microbial_uptake(:,:) = microbial_uptake(:,:) / hlp1(:,:) * hlp3(:,:)
+                plant_uptake(:,:) = plant_uptake(:,:) / hlp1(:,:) * hlp3(:,:)
+                hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:) - &
+                        (microbial_uptake(:,:) + plant_uptake(:,:) + slow_sorption_po4(:,:)))/1.e6_wp
             ENDWHERE
-            fast_adsorption_po4 = hlp2 * hlp6 + slow_sorption_po4
+            fast_adsorption_po4(:,:) = hlp2(:,:) * hlp6(:,:) + slow_sorption_po4(:,:)
 
         ELSEIF (flag_sb_LK_po4 .AND. (.NOT. flag_sb_CLE_po4)) THEN
         !> 3.3 option with Langmuir kinetics but not constant equilibrium
         !!
-            hlp5 = avail_sorption_sites
-            adsorpt_f_po4 = (k_adsorpt_f_po4/bulk_dens_corr_sl) * solute * hlp5
-            desorp_f_po4 = assoc_fast * k_desorp_f_po4
+            hlp5(:,:) = avail_sorption_sites(:,:)
+            adsorpt_f_po4(:,:) = (k_adsorpt_f_po4/bulk_dens_corr_sl(:,:)) * solute(:,:) * hlp5(:,:)
+            desorp_f_po4(:,:) = assoc_fast(:,:) * k_desorp_f_po4
 
         !> 3.3.1 limit to possible solution (P sources)
-            hlp1 = (microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4
+            hlp1(:,:) = (microbial_uptake(:,:) + plant_uptake(:,:))/1.e6_wp + adsorpt_f_po4(:,:)
+            hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:)) / &
+                        1.e6_wp + desorp_f_po4(:,:)
 
-            WHERE((hlp1 + solute / dtime) > hlp6 .AND. solute > eps8)
-               microbial_uptake = microbial_uptake / hlp1 * hlp6
-               plant_uptake     = plant_uptake     / hlp1 * hlp6
-               adsorpt_f_po4    = adsorpt_f_po4    / hlp1 * hlp6
+            WHERE((hlp1(:,:) + solute(:,:) / dtime) > hlp6(:,:) .AND. solute(:,:) > eps8)
+               microbial_uptake(:,:) = microbial_uptake(:,:) / hlp1(:,:) * hlp6(:,:)
+               plant_uptake(:,:)     = plant_uptake(:,:)     / hlp1(:,:) * hlp6(:,:)
+               adsorpt_f_po4(:,:)    = adsorpt_f_po4(:,:)    / hlp1(:,:) * hlp6(:,:)
             ENDWHERE
         ENDIF
 
@@ -770,44 +781,45 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
         IF (flag_sb_CLE_po4 .AND. flag_sb_LK_po4) THEN
         !> 4.1 option with Langmuir kinetics and constant equilibrium
         !! @to be finished...
-            hlp5 = avail_sorption_sites
-            adsorpt_f_po4 = (k_adsorpt_f_po4/bulk_dens_corr_sl) * solute * hlp5
-            desorp_f_po4 = assoc_fast * k_desorp_f_po4
+            hlp5(:,:) = avail_sorption_sites(:,:)
+            adsorpt_f_po4(:,:) = (k_adsorpt_f_po4/bulk_dens_corr_sl(:,:)) * solute(:,:) * hlp5(:,:)
+            desorp_f_po4(:,:) = assoc_fast(:,:) * k_desorp_f_po4
 
 
         ELSEIF (flag_sb_CLE_po4 .AND. (.NOT. flag_sb_LK_po4)) THEN
         !> 4.2 option with constant equilibrium, i.e. the same as Wang et al. 2007 and so forth
         !! 
-            hlp4 = km_adsorpt_po4_sl
-            hlp2 = qmax_po4 * hlp4 / ((solute + hlp4)**2.0_wp + qmax_po4 * hlp4)
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
-                    (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
-            WHERE ((hlp6 * dtime + solute + assoc_fast) < eps8 .AND. solute > eps8)
-                hlp1 = microbial_uptake + plant_uptake
-                hlp3 = (hlp6 + hlp1) * dtime + solute + assoc_fast
-                microbial_uptake = microbial_uptake / hlp1 * hlp3
-                plant_uptake = plant_uptake / hlp1 * hlp3
-                hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4 - &
-                        (microbial_uptake + plant_uptake + slow_sorption_po4))/1.e6_wp
+            hlp4(:,:) = km_adsorpt_po4_sl(:,:)
+            hlp2(:,:) = qmax_po4(:,:) * hlp4(:,:) / ((solute(:,:) + hlp4(:,:))**2.0_wp + qmax_po4(:,:) * hlp4(:,:))
+            hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:) - &
+                    (microbial_uptake(:,:) + plant_uptake(:,:) + slow_sorption_po4(:,:)))/1.e6_wp
+            WHERE ((hlp6(:,:) * dtime + solute(:,:) + assoc_fast(:,:)) < eps8 .AND. solute(:,:) > eps8)
+                hlp1(:,:) = microbial_uptake(:,:) + plant_uptake(:,:)
+                hlp3(:,:) = (hlp6(:,:) + hlp1(:,:)) * dtime + solute(:,:) + assoc_fast(:,:)
+                microbial_uptake(:,:) = microbial_uptake(:,:) / hlp1(:,:) * hlp3(:,:)
+                plant_uptake(:,:) = plant_uptake(:,:) / hlp1(:,:) * hlp3(:,:)
+                hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:) - &
+                        (microbial_uptake(:,:) + plant_uptake(:,:) + slow_sorption_po4(:,:)))/1.e6_wp
             ENDWHERE
-            fast_adsorption_po4 = hlp2 * hlp6 + slow_sorption_po4
+            fast_adsorption_po4(:,:) = hlp2(:,:) * hlp6(:,:) + slow_sorption_po4(:,:)
 
         ELSEIF (flag_sb_LK_po4 .AND. (.NOT. flag_sb_CLE_po4)) THEN
         !> 4.3 option with Langmuir kinetics but not constant equilibrium
         !!
-            hlp5 = avail_sorption_sites
-            adsorpt_f_po4 = (k_adsorpt_f_po4/bulk_dens_corr_sl) * solute * hlp5
-            desorp_f_po4 = assoc_fast * k_desorp_f_po4
+            hlp5(:,:) = avail_sorption_sites(:,:)
+            adsorpt_f_po4(:,:) = (k_adsorpt_f_po4/bulk_dens_corr_sl(:,:)) * solute(:,:) * hlp5(:,:)
+            desorp_f_po4(:,:) = assoc_fast(:,:) * k_desorp_f_po4
 
         !> 4.3.1 limit to possible P sources
         !!
-            hlp1 = (microbial_uptake + plant_uptake)/1.e6_wp + adsorpt_f_po4
-            hlp6 = (weathering_po4 + biochem_min_po4 + gross_mineralisation_po4 + perco_po4)/1.e6_wp + desorp_f_po4
+            hlp1(:,:) = (microbial_uptake(:,:) + plant_uptake(:,:))/1.e6_wp + adsorpt_f_po4(:,:)
+            hlp6(:,:) = (weathering_po4(:,:) + biochem_min_po4(:,:) + gross_mineralisation_po4(:,:) + perco_po4(:,:)) / &
+                        1.e6_wp + desorp_f_po4(:,:)
 
-            WHERE((hlp1 + solute / dtime) > hlp6 .AND. solute > eps8)
-               microbial_uptake = microbial_uptake / hlp1 * hlp6
-               plant_uptake     = plant_uptake     / hlp1 * hlp6
-               adsorpt_f_po4    = adsorpt_f_po4    / hlp1 * hlp6
+            WHERE((hlp1(:,:) + solute(:,:) / dtime) > hlp6(:,:) .AND. solute(:,:) > eps8)
+               microbial_uptake(:,:) = microbial_uptake(:,:) / hlp1(:,:) * hlp6(:,:)
+               plant_uptake(:,:)     = plant_uptake(:,:)     / hlp1(:,:) * hlp6(:,:)
+               adsorpt_f_po4(:,:)    = adsorpt_f_po4(:,:)    / hlp1(:,:) * hlp6(:,:)
             ENDWHERE
         ENDIF
 
@@ -815,9 +827,11 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     END SELECT
 
     !! convert the units
-    fast_adsorption_po4   = fast_adsorption_po4 * 1.e6_wp
+    fast_adsorption_po4(:,:)   = fast_adsorption_po4(:,:) * 1.e6_wp
 
   END SUBROUTINE calc_adsorption_po4
+  
+  
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
   !
@@ -986,7 +1000,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
 
     !> 1.0 potential microbial DOM consumption (µmol / m3 / s) 
     !! 
-    hlp1          = pool_dom%carbon(:,:) / (km_mic_uptake * rtm_hsc * rmm_hsc + pool_dom%carbon(:,:) )
+    hlp1(:,:)     = pool_dom%carbon(:,:) / (km_mic_uptake * rtm_hsc(:,:) * rmm_hsc(:,:) + pool_dom%carbon(:,:) )
     uptake_c(:,:) = vmax_mic_uptake * rtm_mic_uptake(:,:) * rmm_mic_uptake(:,:) * hlp1(:,:) * pool_microbial%carbon(:,:) 
     WHERE(pool_dom%carbon(:,:) > eps8)
        f_uptake(:,:) = uptake_c(:,:) / pool_dom%carbon(:,:)
@@ -1083,7 +1097,8 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
        microbial_uptake_no3_sl(:,:)     = microbial_uptake_no3_sl(:,:)     * scal(:,:) 
        microbial_uptake_no3_n15_sl(:,:) = microbial_uptake_no3_n15_sl(:,:) * scal(:,:)
        WHERE(uptake_n(:,:) > eps8)
-          microbial_nue_eff(:,:) = ( growth_c(:,:) / microbial_cn - microbial_uptake_nh4_sl(:,:) - microbial_uptake_no3_sl(:,:) ) / uptake_n(:,:)
+          microbial_nue_eff(:,:) = (growth_c(:,:) / &
+                                    microbial_cn - microbial_uptake_nh4_sl(:,:) - microbial_uptake_no3_sl(:,:)) / uptake_n(:,:)
        ENDWHERE
     ENDWHERE
     gross_mineralisation_nh4(:,:)     = (1._wp - microbial_nue_eff(:,:)) * uptake_n(:,:) 
@@ -1150,8 +1165,9 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     uptake_dom(:,:)                     = f_uptake(:,:) * pool_dom%nitrogen15(:,:)
     loss_dom%nitrogen15(:,:)            = loss_dom%nitrogen15(:,:) + uptake_dom(:,:) * dtime / 1000000.0_wp 
     formation_microbial%nitrogen15(:,:) = formation_microbial%nitrogen15(:,:) + & 
-                                            (microbial_nue * uptake_dom(:,:) + & 
-                                                            microbial_uptake_nh4_n15_sl(:,:) + microbial_uptake_no3_n15_sl(:,:)) * dtime / 1000000.0_wp
+                                          (microbial_nue * uptake_dom(:,:) + & 
+                                           microbial_uptake_nh4_n15_sl(:,:) + microbial_uptake_no3_n15_sl(:,:)) * &
+                                          dtime / 1000000.0_wp
 
   END SUBROUTINE calc_microbial_growth
 
@@ -1205,7 +1221,7 @@ SUBROUTINE calc_adsorption_po4(options, fine_root_carbon, qmax_po4, p_deposition
     !!
     hlp1(:,:) = 1._wp   
     hlp1(:,:) = microbial_carbon(:,:) / (km_depolymerisation * rtm_hsc(:,:) * rmm_hsc(:,:) + microbial_carbon(:,:)) 
-    hlp2(:,:) = vmax_depolymerisation * rtm_depolymerisation * rmm_depolymerisation * hlp1(:,:) * dtime * & 
+    hlp2(:,:) = vmax_depolymerisation * rtm_depolymerisation(:,:) * rmm_depolymerisation(:,:) * hlp1(:,:) * dtime * & 
                  pool_polymeric%carbon(:,:) 
     
     !> 2.0 convert to turnover rate [1 / timestep] 

@@ -345,14 +345,14 @@ CONTAINS
                                                                     ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
           IF(lctlib%growthform==itree) &
              sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-          DO isoil=2,options%nsoil_sb
+          DO isoil=2,nsoil_sb
              sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                        (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
              sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
                                                                        (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
           ENDDO
 
-          DO isoil=1,options%nsoil_sb
+          DO isoil=1,nsoil_sb
              sb_pool%microbial%carbon(:,isoil) = MAX(hlp4/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil), &
                                                      min_mic_biomass)
              sb_pool%residue%carbon(:,isoil) = hlp5/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
@@ -516,7 +516,8 @@ CONTAINS
       hlp3(:,1)           = soil_p_labile * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
       hlp1(:)             = soil_weight_0d(:) * qmax_po4_mineral !Smax in Eqn, [mol / m3]
       hlp2(:)             = soil_weight_0d(:) * km_adsorpt_mineral_po4 !K in Eqn, [mol / m3]
-      po4_assoc_fast(:,1) = (hlp3(:,1) + hlp1(:) + hlp2(:) - sqrt((hlp3(:,1) + hlp1(:) + hlp2(:))**2 - 4*hlp3(:,1)*hlp1(:))) / 2._wp
+      po4_assoc_fast(:,1) = (hlp3(:,1) + hlp1(:) + hlp2(:) - &
+                             sqrt((hlp3(:,1) + hlp1(:) + hlp2(:))**2.0_wp - 4.0_wp*hlp3(:,1)*hlp1(:))) / 2._wp
       po4_solute(:,1)     = hlp3(:,1) - po4_assoc_fast(:,1)
     ELSE
       !> 2.1 calculate the initial slow P, occluded P, primary P pool, and labile_P
@@ -568,7 +569,7 @@ CONTAINS
     !> based on the assumption that labile P is the sum of both,
     !! and they follow the Langmuir equilibrium
     !! po4_assoc_fast = (p_labile_sl + Smax + K - sqrt((p_labile_sl + Smax + K)**2 - 4*p_labile_sl*Smax)) / 2
-    fast_po4 = (Labile_p + Qmax + km- sqrt((Labile_p + Qmax + km)**2 - 4*Labile_p*Qmax)) / 2._wp
+    fast_po4 = (Labile_p + Qmax + km- sqrt((Labile_p + Qmax + km)**2.0_wp - 4.0_wp*Labile_p*Qmax)) / 2._wp
 
   END FUNCTION calc_fast_po4
 END MODULE mo_sb_init

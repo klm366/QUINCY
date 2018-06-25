@@ -81,40 +81,42 @@ CONTAINS
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
     USE mo_base_config_class,  ONLY: base_config
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
-
+    ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    LOGICAL  :: active
+    LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    CHARACTER(15)         :: sb_model_scheme
-    CHARACTER(15)         :: sb_nloss_scheme
-    CHARACTER(15)         :: sb_bnf_scheme
-    CHARACTER(15)         :: sb_adsorp_scheme
-    LOGICAL               :: flag_sb_prescribe_nh4
-    LOGICAL               :: flag_sb_prescribe_no3
-    LOGICAL               :: flag_sb_prescribe_po4
-    LOGICAL               :: flag_mycorrhiza
-    LOGICAL               :: flag_myco_inorganic
-    LOGICAL               :: flag_myco_organic
-    LOGICAL               :: flag_myco_priming
-    LOGICAL               :: flag_sb_jsm_transport
-    LOGICAL               :: flag_sb_jsm_litter_input
-    LOGICAL               :: flag_sb_jsm_OM_sorption
-    LOGICAL               :: flag_sb_ECA_upt_po4
-    LOGICAL               :: flag_sb_CLE_po4
-    LOGICAL               :: flag_sb_LK_po4
-    INTEGER               :: usda_taxonomy_class
-    INTEGER               :: nwrb_taxonomy_class
-    INTEGER               :: lithology_class
-    REAL(wp)              :: soil_ph
-    REAL(wp)              :: soil_p_depth,        &
-                             soil_p_labile,       &
-                             soil_p_slow,         &
-                             soil_p_occluded,     &
-                             soil_p_primary
-    REAL(wp)              :: qmax_org_fine_particle
+    CHARACTER(15)               :: sb_model_scheme
+    CHARACTER(15)               :: sb_nloss_scheme
+    CHARACTER(15)               :: sb_bnf_scheme
+    CHARACTER(15)               :: sb_adsorp_scheme
+    LOGICAL                     :: flag_sb_prescribe_nh4
+    LOGICAL                     :: flag_sb_prescribe_no3
+    LOGICAL                     :: flag_sb_prescribe_po4
+    LOGICAL                     :: flag_mycorrhiza
+    LOGICAL                     :: flag_myco_inorganic
+    LOGICAL                     :: flag_myco_organic
+    LOGICAL                     :: flag_myco_priming
+    LOGICAL                     :: flag_sb_jsm_transport
+    LOGICAL                     :: flag_sb_jsm_litter_input
+    LOGICAL                     :: flag_sb_jsm_OM_sorption
+    LOGICAL                     :: flag_sb_ECA_upt_po4
+    LOGICAL                     :: flag_sb_CLE_po4
+    LOGICAL                     :: flag_sb_LK_po4
+    INTEGER                     :: usda_taxonomy_class
+    INTEGER                     :: nwrb_taxonomy_class
+    INTEGER                     :: lithology_class
+    REAL(wp)                    :: soil_ph
+    REAL(wp)                    :: soil_p_depth,        &
+                                   soil_p_labile,       &
+                                   soil_p_slow,         &
+                                   soil_p_occluded,     &
+                                   soil_p_primary
+    REAL(wp)                    :: qmax_org_fine_particle
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
                       active                    , &

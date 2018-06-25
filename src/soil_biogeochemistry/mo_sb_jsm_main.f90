@@ -70,13 +70,11 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: nsoil_sb, isoil
-    INTEGER                               :: iblk, ics, ice, nc
-!!
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon
-!!
+    TYPE(t_jsb_model),      POINTER                   :: model
+    TYPE(t_lctlib_element), POINTER                   :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                                           :: nsoil_sb, isoil
+    INTEGER                                           :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)  :: fine_root_carbon_sl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -304,36 +302,36 @@ CONTAINS
 ! rmm_sorption = 1.0_wp
 ! rmm_desorption = 1.0_wp
 
-!    fine_root_carbon(:,:) = root_fraction_sl(:,:) * 600._wp 
+!    fine_root_carbon_sl(:,:) = root_fraction_sl(:,:) * 600._wp 
     DO isoil = 1,nsoil_sb
        WHERE(soil_depth_sl(:,isoil) > eps8)
-         fine_root_carbon(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool%fine_root%carbon(:)
        ELSEWHERE
-         fine_root_carbon(:,isoil) = 0.0_wp
+         fine_root_carbon_sl(:,isoil) = 0.0_wp
        ENDWHERE
     ENDDO
 
     !> X.0 Inorganic N assimilation
     !!
     !> X.1 NH4
-    CALL calc_inorganic_uptake(nh4_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
+    CALL calc_inorganic_uptake(nh4_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), &
                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
                                vmax_mic_uptake_nh4, km_mic_uptake_nh4, vmax_plant_uptake_nh4, km_plant_uptake_nh4, & 
                                microbial_uptake_nh4_sl(:,:), plant_uptake_nh4_sl(:,:))
     microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_sl(:,:) * &
-                                          calc_fractionation(nh4_solute,nh4_n15_solute,eta_mic_uptake_nh4)
+                                          calc_fractionation(nh4_solute(:,:), nh4_n15_solute(:,:), eta_mic_uptake_nh4)
     plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_sl(:,:) * &
-                                          calc_fractionation(nh4_solute,nh4_n15_solute,eta_plant_uptake_nh4)
+                                          calc_fractionation(nh4_solute(:,:) ,nh4_n15_solute(:,:) ,eta_plant_uptake_nh4)
 
     !> X.2 NO3
-    CALL calc_inorganic_uptake(no3_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
+    CALL calc_inorganic_uptake(no3_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), &
                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
                                vmax_mic_uptake_no3, km_mic_uptake_no3, vmax_plant_uptake_no3, km_plant_uptake_no3, & 
                                microbial_uptake_no3_sl(:,:), plant_uptake_no3_sl(:,:))
     microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_sl(:,:) * &
-                                          calc_fractionation(no3_solute,no3_n15_solute,eta_mic_uptake_no3)
+                                          calc_fractionation(no3_solute(:,:), no3_n15_solute(:,:), eta_mic_uptake_no3)
     plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_sl(:,:) * &
-                                          calc_fractionation(no3_solute,no3_n15_solute,eta_plant_uptake_no3)
+                                          calc_fractionation(no3_solute(:,:), no3_n15_solute(:,:), eta_plant_uptake_no3)
 
     !> X.3 PO4
 
@@ -348,22 +346,23 @@ CONTAINS
                             sb_loss%polymeric_litter%phosphorus(:,:), sb_loss%dom_assoc%phosphorus(:,:), &
                             sb_loss%residue%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), & 
                             po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_primary(:,:), bulk_dens_corr_sl(:,:), &
-                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:))
+                            biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), &
+                            occlusion_po4(:,:), slow_sorption_po4(:,:))
 
     !! Microbial and plant P uptake
     !!
-    CALL calc_po4_uptake_ECA(sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), po4_solute(:,:), &
+    CALL calc_po4_uptake_ECA(sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &
                                 rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
                                 qmax_po4(:,:), km_adsorpt_po4_sl(:,:), po4_assoc_fast(:,:), microbial_uptake_po4_sl(:,:), &
                                 plant_uptake_po4_sl(:,:), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4)
 
     !! P adsorption
-    !!
+    !!  this subroutine call is outdated and not consistent with subroutine definition anymore !
 !    CALL calc_adsorption_po4(options, po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), &
 !                               qmax_po4(:,:), weathering_po4(:,:), occlusion_po4(:,:), slow_sorption_po4(:,:), &
 !                               percolation_sl(:,:), bulk_dens_corr_sl(:,:), &
 !                               gross_mineralisation_po4(:,:), biochem_mineralisation_po4(:,:), &
-!                               sb_pool%microbial%carbon(:,:), fine_root_carbon(:,:), &
+!                               sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), &
 !                               microbial_uptake_po4_sl(:,:), plant_uptake_po4_sl(:,:), fast_adsorption_po4(:,:), &
 !                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
 !                               dsl4jsb_Config(SB_)%flag_sb_CLE_po4, &
@@ -374,14 +373,14 @@ CONTAINS
     !> 2.1 decay of soluable litter
     !!
     CALL calc_litter_turnover(options, tau_soluable_litter, 0.0_wp, &
-                              rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
+                              !rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &    currently not used
                               sb_pool%soluable_litter,sb_loss%soluable_litter,sb_formation%dom, &
                               het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
 
     !> 2.2 decay of woody litter
     !!
     CALL calc_litter_turnover(options, tau_woody_litter, fc_woody2polymeric, &
-                              rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
+                              !rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &    currently not used
                               sb_pool%woody_litter,sb_loss%woody_litter,sb_formation%polymeric_litter, &
                               het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
 
@@ -402,9 +401,9 @@ CONTAINS
                                sb_pool%residue,sb_loss%residue,sb_formation%dom)
 
     !> 2.5 update litter pools with recent litter fall
-    CALL calc_transfer_litterfall_pools(options,soil_depth_sl, & 
-                                        root_fraction_sl,veg_litterfall,sb_formation%soluable_litter, & 
-                                        sb_formation%polymeric_litter,sb_formation%woody_litter)
+    CALL calc_transfer_litterfall_pools(options,soil_depth_sl(:,:), & 
+                                        root_fraction_sl(:,:), veg_litterfall, sb_formation%soluable_litter, & 
+                                        sb_formation%polymeric_litter, sb_formation%woody_litter)
                                              
 
     !> 3.0 Microbial fluxes
@@ -431,8 +430,8 @@ CONTAINS
     !!
     !> 4.1 mineral stabilisation of organic matter
     !!
-    CALL calc_om_sorption(options,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
-                          rmm_desorption,sb_pool%dom,sb_pool%dom_assoc,sb_pool%residue, & 
+    CALL calc_om_sorption(options, qmax_org(:,:), rtm_sorption(:,:), rmm_sorption(:,:), rtm_desorption(:,:), &
+                          rmm_desorption(:,:), sb_pool%dom,sb_pool%dom_assoc,sb_pool%residue, & 
                           sb_pool%residue_assoc,sb_formation%dom,sb_formation%dom_assoc,sb_formation%residue, &
                           sb_formation%residue_assoc,sb_loss%dom,sb_loss%dom_assoc,sb_loss%residue,sb_loss%residue_assoc)
 
@@ -477,7 +476,8 @@ CONTAINS
                                     nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
                                     sb_transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
                                     transport_no3_solute(:,:), transport_po4_solute(:,:), & 
-                                    transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), transport_po4_occluded(:,:), transport_po4_primary(:,:), & 
+                                    transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), transport_po4_occluded(:,:), &
+                                    transport_po4_primary(:,:), & 
                                     transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), transport_no3_n15_solute(:,:))
 
     !> 6.0 convert inorganic transport fluxes to µmol m3 s-1

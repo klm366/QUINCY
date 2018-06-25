@@ -42,7 +42,10 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_sb_constants
+    USE mo_sb_constants,          ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
+                                        kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, &
+                                        ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
+                                        t_opt_nitrification, lambda_anvf, k_anvf
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -143,32 +146,33 @@ CONTAINS
 
     !> 1.0 calc modifiers
 
-    rtm_depolymerisation = calc_temperature_rate_modifier(t_soil_sl,ea_depolymerisation) 
-    rtm_mic_uptake       = calc_temperature_rate_modifier(t_soil_sl,ea_mic_uptake)
-    rtm_sorption         = calc_temperature_rate_modifier(t_soil_sl,ea_sorption) 
-    rtm_desorption       = calc_temperature_rate_modifier(t_soil_sl,ea_desorption) 
-    rtm_hsc              = calc_temperature_rate_modifier(t_soil_sl,ea_hsc) 
+    rtm_depolymerisation(:,:) = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_depolymerisation) 
+    rtm_mic_uptake(:,:)       = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_mic_uptake)
+    rtm_sorption(:,:)         = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_sorption) 
+    rtm_desorption(:,:)       = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_desorption) 
+    rtm_hsc(:,:)              = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_hsc) 
      
-    rmm_depolymerisation = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) 
-    rmm_mic_uptake       = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_mic_uptake)
-    rmm_sorption         = calc_convert_bulk_to_liquid(w_soil_sl)
-    rmm_desorption       = calc_convert_bulk_to_liquid(w_soil_sl) 
-    rmm_hsc              = calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_hsc) 
+    rmm_depolymerisation(:,:) = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_depolymerisation) 
+    rmm_mic_uptake(:,:)       = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_mic_uptake)
+    rmm_sorption(:,:)         = calc_convert_bulk_to_liquid(w_soil_sl(:,:))
+    rmm_desorption(:,:)       = calc_convert_bulk_to_liquid(w_soil_sl(:,:)) 
+    rmm_hsc(:,:)              = calc_substrate_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_hsc) 
 
     !> 2.0 simple soil model 
     !!
-    rtm_decomposition    = calc_temperature_rate_modifier(t_soil_sl,ea_depolymerisation) 
-    rmm_decomposition    = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) * &
-                           calc_moisture_modifier(w_soil_sl,w_soil_fc_sl)
+    rtm_decomposition(:,:)    = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_depolymerisation) 
+    rmm_decomposition(:,:)    = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_depolymerisation) * &
+                           calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:))
 
     !> 3.0 nitrification-denitrification model
     !!
-    rtm_nitrification    = calc_peaked_temperature_rate_modifier(t_soil_sl,ea_nitrification,ed_nitrification,t_opt_nitrification) 
-    rtm_denitrification  = calc_temperature_rate_modifier(t_soil_sl,ea_denitrification) 
-    rtm_gasdiffusion     = calc_temperature_rate_modifier(t_soil_sl,ea_gasdiffusion) 
-    rmm_nitrification    = calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) 
-    rmm_gasdiffusion     = 1.0_wp - calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) 
-    anaerobic_volume_fraction_sl = calc_anaerobic_volume_fraction(w_soil_sl,w_soil_sat_sl,lambda_anvf,k_anvf) 
+    rtm_nitrification(:,:)    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:),ea_nitrification,ed_nitrification, &
+                                                                      t_opt_nitrification) 
+    rtm_denitrification(:,:)  = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_denitrification) 
+    rtm_gasdiffusion(:,:)     = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_gasdiffusion) 
+    rmm_nitrification(:,:)    = calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:)) 
+    rmm_gasdiffusion(:,:)     = 1.0_wp - calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:)) 
+    anaerobic_volume_fraction_sl(:,:) = calc_anaerobic_volume_fraction(w_soil_sl(:,:),w_soil_sat_sl,lambda_anvf,k_anvf) 
 
   END SUBROUTINE update_sb_rate_modifier
 
