@@ -68,6 +68,7 @@ CONTAINS
 
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf 
     USE mo_assimi_constants,        ONLY: jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc, &
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, &
                                           kn, chl2n, ic4phot, jmax2n, k1_fn_struc, kfn_chl, vcmax2n
@@ -250,8 +251,8 @@ CONTAINS
            fn_rub_cl(:,:) = 1._wp - fn_oth_cl(:,:) - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:)
 
            ! convert mmol N / m2 to mg N / g DW
-           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / ((molar_mass_C / lctlib%sla)/0.48_wp)
-           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib%np_leaf * molar_mass_P / ((molar_mass_C / lctlib%sla)/0.48_wp)
+           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / ((molar_mass_C / lctlib%sla)/carbon_per_dryweight_leaf)
+           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib%np_leaf * molar_mass_P / ((molar_mass_C / lctlib%sla)/carbon_per_dryweight_leaf)
            !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
            ! implied Vmax and Jmax in nmol / g DW / s
            !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
