@@ -122,7 +122,7 @@ CONTAINS
   ! Copied from ICON module shared/mo_util_string
   !  
   FUNCTION int2string(n, opt_fmt)
-    CHARACTER(len=10) :: int2string ! result
+    CHARACTER(len=10)   :: int2string ! result
     INTEGER, INTENT(in) :: n
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
     !

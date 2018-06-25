@@ -250,11 +250,11 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
         CALL calc_assimilation_scaling_factors( &
-          & declination,                 & ! input
-          & canopy_bound_lai(i-1),       & ! input
-          & lai(:),                      & ! input
-          & lat(:),                      & ! input
-          & assimi_scaling_fact_cl(:,i)  & ! output
+          & declination,                        & ! input
+          & canopy_bound_lai(i-1),              & ! input
+          & lai(:),                             & ! input
+          & lat(:),                             & ! input
+          & assimi_scaling_fact_cl(:,i)         & ! output
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
@@ -524,9 +524,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: carbox_rate_max_cl     ! Output. Maximum carboxylation rate of canopy layer (=VCmax)
                                                          ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
                                                          ! and actual temperature.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output.
-    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output.
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output
+    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
@@ -638,7 +638,7 @@ CONTAINS
     !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
     !END DO
 
-    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy area
+    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy ground area
     gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) ! convert from canopy area to tile box area
 
     ! Same for dark_respiration_ca
@@ -697,8 +697,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_over_time,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_ca,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration_ca,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_pot_rate_ca,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, CO2_conc_leaf_cl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_cl,           weighted_by_fract)

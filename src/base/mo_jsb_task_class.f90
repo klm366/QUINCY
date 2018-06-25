@@ -14,7 +14,7 @@ MODULE mo_jsb_task_class
   USE mo_exception,   ONLY: message, finish
   USE mo_timer,       ONLY: new_timer, timer_start, timer_stop
 
-  USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, l_timer, debug_on
+  USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, timer_on, debug_on
 
   ! USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
   USE mo_hsm_class,       ONLY: t_Message
@@ -92,7 +92,7 @@ CONTAINS
     this%process_id = process_id
     this%owner_model_id = owner_model_id
 
-    IF (l_timer .AND. debug_on()) THEN
+    IF (timer_on('all')) THEN
       this%timer_integrate = new_timer('jsb:update_'//TRIM(name))
       this%timer_aggregate = new_timer('jsb:aggregate_'//TRIM(name))
     END IF
@@ -126,22 +126,22 @@ CONTAINS
 !!$
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
-        IF (l_timer .AND. debug_on()) THEN
+        IF (timer_on('detail')) THEN
           CALL timer_start(timer_integrate(this%owner_model_id))
           IF (this%timer_integrate > 0) CALL timer_start(this%timer_integrate)
         END IF
         CALL this%Integrate(tile, options)
-        IF (l_timer .AND. debug_on()) THEN
+        IF (timer_on('detail')) THEN
           IF (this%timer_integrate > 0) CALL timer_stop(this%timer_integrate)
           CALL timer_stop(timer_integrate(this%owner_model_id))
         END IF
       CASE ('AGGREGATE')
-        IF (l_timer .AND. debug_on()) THEN
+        IF (timer_on('detail')) THEN
           CALL timer_start(timer_aggregate(this%owner_model_id))
           IF (this%timer_aggregate > 0) CALL timer_start(this%timer_aggregate)
         END IF
         CALL this%Aggregate(tile, options)
-        IF (l_timer .AND. debug_on()) THEN
+        IF (timer_on('detail')) THEN
           IF (this%timer_aggregate > 0) CALL timer_stop(this%timer_aggregate)
           CALL timer_stop(timer_aggregate(this%owner_model_id))
         END IF

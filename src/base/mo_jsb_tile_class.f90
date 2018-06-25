@@ -679,6 +679,8 @@ CONTAINS
     !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
 
     IF (ALLOCATED(aggregator%fractions)) DEALLOCATE(aggregator%fractions)
+    IF (ALLOCATED(aggregator%data_sum))  DEALLOCATE(aggregator%data_sum)
+    IF (ALLOCATED(aggregator%fract_sum)) DEALLOCATE(aggregator%fract_sum)
 
   END SUBROUTINE Finalize_aggregator_weighted_by_fract
 

@@ -53,10 +53,10 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
-    TYPE(t_input_file) :: input_file
-    TYPE(t_jsb_vgrid), POINTER :: forest_age
+    TYPE(t_input_file)          :: input_file
+    TYPE(t_jsb_vgrid), POINTER  :: forest_age
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER  :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':fage_init_bc'
 

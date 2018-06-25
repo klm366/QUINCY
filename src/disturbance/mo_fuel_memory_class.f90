@@ -71,13 +71,13 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%fuel%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'fuel', mem%fuel,                                               &
-        & hgrid, surface,                                                                    &
-        & t_cf('fuel', 'mol(C)/m^2', 'Amount of carbon fuel for burned area calculations.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & output_level=BASIC,                                                             &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      CALL jsb_add_var( mem, 'fuel', mem%fuel,                                                                      &
+        & hgrid, surface,                                                                                           &
+        & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+        & prefix, suffix,                                                                                           &
+        & output_level=BASIC,                                                                                       &
+        & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     END IF
 

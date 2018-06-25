@@ -14,6 +14,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
+  USE mo_jsb_model_final,    ONLY: jsbach_finalize
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday, is_newyear
@@ -60,9 +61,8 @@ PROGRAM jsb4_driver
   USE mo_decomposition,    ONLY: local_decomposition
 
   ! time control and orbit calc
-  USE mo_timer,            ONLY: init_timer
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-                                    & time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
+    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
   ! ICON would be:
@@ -212,8 +212,6 @@ PROGRAM jsb4_driver
   CALL p_init_communicators(nproca, nprocb, nprocio)
   CALL machine_setup
 
-  CALL init_timer
-
   ! - jsbach_init
   CALL jsbach_init_version
 
@@ -321,12 +319,12 @@ PROGRAM jsb4_driver
 !    evapo_pot_sum_proc = 0._wp
   ENDIF
 
+  model => get_model(model_id)
+  tile => model%Get_top_tile()
+  ics = 1
+  ice = nproma
+
   IF(jsbach_is_restarted()) THEN
-  
-    model => get_model(model_id)
-    tile => model%Get_top_tile()
-    ics = 1
-    ice = nproma
 
     CALL IO_read_streams
     dsl4jsb_Get_memory(SEB_)
@@ -544,6 +542,8 @@ PROGRAM jsb4_driver
   IF (read_interface_vars) THEN
     CALL nf_check(nf_close(ncid))
   ENDIF
+
+  CALL jsbach_finalize()
 
 !$OMP PARALLEL
 !$OMP MASTER

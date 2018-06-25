@@ -5,7 +5,7 @@ MODULE mo_jsb_io_netcdf
   USE mo_exception, ONLY: finish, message
 
   USE mo_jsb_io_netcdf_iface, ONLY: nf_open, nf_inq_dimid, nf_inq_varid, nf_close, &
-    NF_NOWRITE, NF_NOERR, nf, t_input_file, netcdf_open_input, netcdf_close_file
+    & NF_NOWRITE, NF_NOERR, nf, t_input_file, netcdf_open_input, netcdf_close_file
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_grid
 

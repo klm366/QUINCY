@@ -45,10 +45,10 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_pheno_nml/  &
-      & active,           &
-      & l_forestRegrowth, &
-      & scheme,           &
-      & ic_filename,      &
+      & active,               &
+      & l_forestRegrowth,     &
+      & scheme,               &
+      & ic_filename,          &
       & bc_filename
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -61,7 +61,7 @@ CONTAINS
     active              = .TRUE.
     l_forestRegrowth    = .FALSE.
     scheme              = 'logrop'
-    bc_filename         = 'bc_land_phenology.nc'    
+    bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
     !first_call_phenology_this_day = .FALSE.
 

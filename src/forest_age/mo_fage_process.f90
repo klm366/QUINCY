@@ -28,9 +28,9 @@ MODULE mo_fage_process
 
 
   SUBROUTINE update_fract_per_age_upon_ageing( &
-                    nidx, nage,               &   !in
-                    fract_per_age,            &   !inout
-                    mean_age                  &   !inout
+                    nidx, nage,                &   !in
+                    fract_per_age,             &   !inout
+                    mean_age                   &   !inout
                     )
 
     USE mo_fage_util,             ONLY: get_mean_age
@@ -68,7 +68,7 @@ MODULE mo_fage_process
 
 
   !TODO-JN: make faster?
-  SUBROUTINE correct_and_synchronise_fracts( &
+  SUBROUTINE correct_and_synchronise_fracts(               &
                     nidx, nage, ncohorts, iThisAgeCohort,  &   !in
                     pftid, cohort_max_age,                 &   !in
                     fract_per_age,                         &   !inout
@@ -115,10 +115,10 @@ MODULE mo_fage_process
 
   !TODO-JN: make faster?
   SUBROUTINE update_fract_per_age_equally_upon_disturbance( &
-                    nidx, nage, ncohorts, iThisAgeCohort,  &   !in
-                    disturbed_area,                        &   !in
-                    cohort_max_age,                        &   !in
-                    fract_per_age                          &   !inout
+                    nidx, nage, ncohorts, iThisAgeCohort,   &   !in
+                    disturbed_area,                         &   !in
+                    cohort_max_age,                         &   !in
+                    fract_per_age                           &   !inout
                     )
 
     !-----------------------------------------------------------------------
@@ -165,7 +165,7 @@ MODULE mo_fage_process
 
   !TODO-JN: make faster?
   SUBROUTINE update_fract_per_age_and_determine_area_to_harvest_from_cohort( &
-                    harvest_kind, nidx, nage, &   !in
+                    harvest_kind, nidx, nage,                        &   !in
                     this_cohort_max_age,                             &   !in
                     prev_cohort_max_age,                             &   !in
                     fract_per_age,                                   &   !inout
@@ -215,7 +215,7 @@ MODULE mo_fage_process
   END SUBROUTINE update_fract_per_age_and_determine_area_to_harvest_from_cohort
 
 
-  ELEMENTAL SUBROUTINE weighted_avg_var_upon_area_change( & 
+  ELEMENTAL SUBROUTINE weighted_avg_var_upon_area_change(  & 
                                           & old_fract,     & ! <- in
                                           & delta_fract,   & ! <- in
                                           & new_var,       & ! <- in

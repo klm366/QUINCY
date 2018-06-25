@@ -5,8 +5,8 @@
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version                                 by Reiner Schnur (2013-04-04)
-!! IO namelist subroutine for jsb4 standalone    by Julia Nabel (2016-02-20)
+!! First version                                  by Reiner Schnur (2013-04-04)
+!! IO namelist subroutine for jsb4 standalone     by Julia Nabel (2016-02-20)
 !!
 MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__

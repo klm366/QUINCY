@@ -60,7 +60,7 @@ CONTAINS
     burned_fract = fire_minimum * delta_time_yr
 
     IF (       q_rel_air_climbuf < fire_rel_hum_threshold   &
-         & .AND. fuel > fire_litter_threshold               &
+          & .AND. fuel > fire_litter_threshold               &
        ) THEN
       burned_fract = burned_fract                                                                        &
         &           + (fire_rel_hum_threshold - q_rel_air_climbuf) / (fire_tau * fire_rel_hum_threshold) &
