@@ -148,7 +148,7 @@ p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 queue="all"                  # available queues: all BTM io mpi_large io_perform (for information on the queues run at pc026/27/28: bqueues -l; io_perform selects only the new INTEL3 nodes: lshosts)
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000                  # memory per job you may need [mega byte]; here provided in MB (default: 1000) but recalculated to KB which is what OpenLava needs
-numberCpuMax=80              # maximum number of simulations started in parallel
+numberCpuMax=160             # maximum number of simulations started in parallel (default is 160)
 
 
 
@@ -1051,11 +1051,11 @@ memory=$((memory * 1000))
 
 ## validate allocated number of CPUs ##
 lowestCpu=5      # 5   parallel jobs
-largestCpu=100   # 100 parallel jobs
+largestCpu=350   # 350 parallel jobs
 # test numberCpuMax empty or containing characters other then digits
 if [ -z $numberCpuMax ]  # returns TRUE if unset or empty
  then
-  echo "EXIT! No numberCpuMax values defined. Please define the number of CPUs that should run in parallel at the Cluster."
+  echo "EXIT! No numberCpuMax values defined. Please define the number of CPUs that may run in parallel at the BGC Cluster."
   exit 1  
  else
   if [ ! -z $(echo $numberCpuMax | tr -d "[:digit:]") ] # if "removing all digits" is not empty, i.e. other characters are included
@@ -1072,8 +1072,8 @@ if [ "$numberCpuMax" -lt "$lowestCpu" ]
  else
   if [ "$numberCpuMax" -gt "$largestCpu" ]
    then
-    echo "EXIT! Please decrease the number of parallel jobs, you aim at using more than 100 CPUs in parallel."
-    echo "(Of course, technically you could use more than 100 CPUs. This limit is simply set to be nice with your colleagues.)"
+    echo "EXIT! Please decrease the number of parallel jobs, you aim at using more than 350 CPUs in parallel."
+    echo "(Of course, technically you could use more than 350 CPUs. This limit is simply set to be nice with your colleagues.)"
     exit 1
   fi
 fi
