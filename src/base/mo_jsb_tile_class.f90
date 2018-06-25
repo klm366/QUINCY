@@ -275,7 +275,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     TYPE(t_jsb_lct),            INTENT(in)    :: lct
 
-    INTEGER :: ilct
+    TYPE(t_jsb_lct), ALLOCATABLE :: temp_lcts(:)
+    INTEGER :: ilct, nlct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct'
 
@@ -301,11 +302,15 @@ CONTAINS
 
     ELSE
 
-      DO ilct=1,SIZE(this%lcts)
+      nlct = SIZE(this%lcts)
+      DO ilct=1,nlct
         ! If this lct is already registered in the tile%lcts, do nothing and return
         IF (this%lcts(ilct)%id == lct%id) RETURN
       END DO
-      this%lcts = (/ this%lcts, lct /)
+      ALLOCATE(temp_lcts(nlct+1))
+      temp_lcts(1:nlct) = this%lcts
+      temp_lcts(nlct+1) = lct
+      CALL MOVE_ALLOC(temp_lcts, this%lcts)
 
     END IF
 
@@ -586,15 +591,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)        :: this
     CLASS(t_jsb_aggregator),    INTENT(in),   TARGET :: aggregator
 
+    TYPE(t_jsb_aggregator_p), ALLOCATABLE :: temp_aggregators(:)
     INTEGER :: n
     CHARACTER(len=*), PARAMETER :: routine = modname//':Register_aggregator'
 
-
-    IF (.NOT. ALLOCATED(this%aggregators)) THEN
-      this%aggregators = (/ t_jsb_aggregator_p(aggregator) /)
+    IF (ALLOCATED(this%aggregators)) THEN
+      n = SIZE(this%aggregators)
     ELSE
-      this%aggregators = (/ this%aggregators, t_jsb_aggregator_p(aggregator) /)
+      n = 0
     END IF
+    ALLOCATE(temp_aggregators(n+1))
+    IF (ALLOCATED(this%aggregators)) temp_aggregators(1:n) = this%aggregators
+    temp_aggregators(n+1) = t_jsb_aggregator_p(aggregator)
+    CALL move_ALLOC(temp_aggregators, this%aggregators)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Registered aggregator '//TRIM(aggregator%name)//' for tile '//TRIM(this%name))
 

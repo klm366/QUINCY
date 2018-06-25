@@ -138,21 +138,20 @@ CONTAINS
     p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      groups = [ CHARACTER(len=VARNAME_LEN) ::                &  ! All variables are put into these three catch-all groups
-        & 'ALL',                                              &
-        & 'jsb_all',                                          &
-        & 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all' &  ! var group jsb_<process>_all
-        & ]
+      ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
+      ! All variables are put into these three catch-all groups
+      groups(1) = 'ALL'
+      groups(2) = 'jsb_all'
+      ! var group jsb_<process>_all
+      groups(3) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all'
       IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
         output_level_name = Get_var_group_name(output_level)
-        groups = [ CHARACTER(len=VARNAME_LEN) ::                                &
-          & groups,                                                             &
-          & 'jsb_all_'//output_level_name,                                      & ! var group jsb_all_<level>
-          & 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name & ! var group jsb_<process>_<level>
-          &      ]
+        groups(4) = 'jsb_all_'//output_level_name ! var group jsb_all_<level>
+        groups(5) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name ! var group jsb_<process>_<level>
       END IF
     ELSE
-      groups = [ CHARACTER(len=VARNAME_LEN) :: 'ALL']
+      ALLOCATE(groups(1))
+      groups(1) = 'ALL'
     END IF
 
     CALL add_var_list_element_r2d( &
@@ -274,21 +273,20 @@ CONTAINS
     p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      groups = [ CHARACTER(len=VARNAME_LEN) ::                &  ! All variables are put into these three catch-all groups
-        & 'ALL',                                              &
-        & 'jsb_all',                                          &
-        & 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all' &  ! var group jsb_<process>_all
-        & ]
+      ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
+      ! All variables are put into these three catch-all groups
+      groups(1) = 'ALL'
+      groups(2) = 'jsb_all'
+      ! var group jsb_<process>_all
+      groups(3) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all'
       IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
         output_level_name = Get_var_group_name(output_level)
-        groups = [ CHARACTER(len=VARNAME_LEN) ::                                &
-          & groups,                                                             &
-          & 'jsb_all_'//output_level_name,                                      & ! var group jsb_all_<level>
-          & 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name & ! var group jsb_<process>_<level>
-          &      ]
+        groups(4) = 'jsb_all_'//output_level_name ! var group jsb_all_<level>
+        groups(5) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name ! var group jsb_<process>_<level>
       END IF
     ELSE
-      groups = [ CHARACTER(len=VARNAME_LEN) :: 'ALL']
+      ALLOCATE(groups(1))
+      groups(1) = 'ALL'
     END IF
 
     CALL add_var_list_element_r3d( &
@@ -384,11 +382,10 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(varlist_name), hgrid%patch%id)
 
-    groups = [ CHARACTER(len=VARNAME_LEN) :: &
-      & 'ALL',                               &
-      & 'jsb_all',                           &
-      & 'jsb_tile_fractions'                 &
-      &      ]
+    ALLOCATE(groups(3))
+    groups(1) = 'ALL'
+    groups(2) = 'jsb_all'
+    groups(3) = 'jsb_tile_fractions'
 
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
