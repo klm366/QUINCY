@@ -473,6 +473,8 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    l_compat401 = model%config%l_compat401
+
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
     soil_e_dz => soil_e%dz

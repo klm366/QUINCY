@@ -987,9 +987,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       END IF
-    ELSE
-      vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow) 
-      heat_cond_snow   (:) = hcond_snow
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
