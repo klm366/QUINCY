@@ -100,15 +100,23 @@ CONTAINS
     CLASS(t_jsb_process),     INTENT(inout) :: this
     CLASS(t_jsb_process_task), TARGET, INTENT(in)    :: task
 
+    TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_temp(:)
+    INTEGER :: n
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Register_task'
 
     IF (this%id /= task%process_id) &
       CALL finish(TRIM(routine), 'Task is for another process')
 
     IF (.NOT. ALLOCATED(this%task_list)) THEN
-      this%task_list = (/ t_jsb_process_task_p(task) /)
+      ALLOCATE(this%task_list(1))
+      this%task_list(1) = t_jsb_process_task_p(task)
     ELSE
-      this%task_list = (/ this%task_list, t_jsb_process_task_p(task) /)
+      n = SIZE(this%task_list)
+      ALLOCATE(task_temp(n+1))
+      task_temp(1:n) = this%task_list
+      task_temp(n+1) = t_jsb_process_task_p(task)
+      CALL MOVE_ALLOC(task_temp, this%task_list)
     END IF
 
     IF (debug_on()) CALL message(TRIM(routine), 'Registered task "'//TRIM(task%name)// &
