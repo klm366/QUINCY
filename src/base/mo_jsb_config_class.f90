@@ -28,6 +28,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_glacier
     CHARACTER(len=10)              :: tpe_scheme       ! For terraplanet setup: open/closed
     CHARACTER(len=10)              :: hsm_mode
+    LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   END TYPE t_jsb_model_config
 
@@ -73,6 +74,7 @@ CONTAINS
 
     LOGICAL                     :: use_lakes
     LOGICAL                     :: use_glacier
+    LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=40)           :: usecase
     CHARACTER(len=10)           :: tpe_scheme
@@ -82,6 +84,7 @@ CONTAINS
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
       use_glacier, &
+      l_compat401, &
       usecase, &
       tpe_scheme, &
       hsm_mode, &
@@ -99,6 +102,7 @@ CONTAINS
     ! Set defaults
     use_lakes       = .TRUE.
     use_glacier     = .TRUE.
+    l_compat401     = .FALSE.
     grid_filename   = ''
     grid_name       = ''
     usecase         = ''
@@ -123,6 +127,7 @@ CONTAINS
 
     model_config%use_lakes      = use_lakes
     model_config%use_glacier    = use_glacier
+    model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
     model_config%tpe_scheme     = tpe_scheme
     model_config%hsm_mode       = hsm_mode
