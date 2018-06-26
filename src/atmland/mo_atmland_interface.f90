@@ -91,7 +91,7 @@ CONTAINS
 
     INTEGER ::  iblk, ics, ice
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -184,7 +184,7 @@ CONTAINS
     INTEGER ::  iblk, ics, ice, i
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 

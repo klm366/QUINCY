@@ -150,7 +150,7 @@ CONTAINS
       & B,                & ! helper
       & C            ! helper
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_assimilation_waterunlimited'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterunlimited'
 
     ! Prepare CO2_conc_leaf_cl
     ! R: siehe mo_bethy.f90, Zeile 709
@@ -488,7 +488,7 @@ CONTAINS
       & B,         & ! helper
       & C            ! helper
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_assimilation_waterlimited'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterlimited'
 
     !-----------------------------------------------------------------------
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
@@ -750,7 +750,7 @@ CONTAINS
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_pot_rate'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
     REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m

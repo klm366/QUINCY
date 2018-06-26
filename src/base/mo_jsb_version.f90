@@ -29,7 +29,7 @@ MODULE mo_jsb_version
 
   PUBLIC :: jsbach_version, jsbach_init_version, jsbach_label_run
 
-  CHARACTER(len=  4), PARAMETER :: jsbach_version = '4.20p6' !< JSBACH version number
+  CHARACTER(len=  6), PARAMETER :: jsbach_version = '4.20p7' !< JSBACH version number
 
   CHARACTER(len=256) :: executable                         !< Name of executable
   CHARACTER(len= 80) :: label(4)                           !< Space for storing model information
@@ -49,7 +49,7 @@ CONTAINS
   SUBROUTINE jsbach_init_version(standalone)
 
 !!$    USE mo_netcdf, ONLY: global_att, put_att
-    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
@@ -76,7 +76,7 @@ CONTAINS
       CALL get_command_argument(0, executable)
     END IF
 
-    CALL p_bcast (executable, p_io)
+    CALL p_bcast (executable, p_io, comm=mpi_comm)
 
 !!$    IF (l_standalone) THEN
     IF (.NOT. version_printed) THEN

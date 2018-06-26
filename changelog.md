@@ -1,8 +1,35 @@
 # Changelog for JSBACH4+
 
+- [Changelog for JSBACH4+](#changelog-for-jsbach4)
+  - [jsbach-4.20p7](#jsbach-420p7)
+  - [jsbach-4.20p6](#jsbach-420p6)
+  - [jsbach-4.20p5](#jsbach-420p5)
+  - [jsbach-4.20p4](#jsbach-420p4)
+  - [jsbach-4.20p3](#jsbach-420p3)
+  - [jsbach-4.20p2](#jsbach-420p2)
+  - [jsbach-4.20p1](#jsbach-420p1)
+  - [jsbach-4.20](#jsbach-420)
+
+## jsbach-4.20p7
+
+_Release* Date: 26 June 2018_
+
+- Re-insert `l_compat401` switch for backward compatibility
+- Use 10m wind from atmosphere in the interface (instead of lowest level wind)
+
+  Note: currently, the 10m wind passed from the atmosphere should still be 0.8 * lowest level wind until issue with lookup table overflow is resolved in icon atmosphere
+- Various (technical) code fixes
+  - Fix pointless TRIM of already minimal-size module names
+  - Fix missing communicator argument in p_bcast calls
+  - Fix pointless polymorphism in `mo_jsb_tile_class.f90`
+  - Fix implicit (re-)allocation on assignment
+  
+    For performance reasons it is better not to use automatic reallocation of left-hand side (e.g. realloc-lhs compiler option for intel)
+  - Use correct character length for version string
+
 ## jsbach-4.20p6
 
-_Release Date: 20 June 2018_
+_Release* Date: 20 June 2018_
 
 - Earlier reading of lctlib so that it can be used in init_usecase to set up tile structure and processes
 - Use correct communicator in `mo_jsb_io_netcdf_iface.f90`

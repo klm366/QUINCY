@@ -58,7 +58,7 @@ CONTAINS
     INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx 
     INTEGER :: nblks, nproma
 
-    CHARACTER(len=*),  PARAMETER     :: routine = TRIM(modname)//':hd_init_bc'
+    CHARACTER(len=*),  PARAMETER     :: routine = modname//':hd_init_bc'
 
     model => get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
@@ -202,7 +202,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hd_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hd_init_ic'
 
     model => get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)

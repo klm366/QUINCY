@@ -71,7 +71,7 @@ CONTAINS
 
     REAL(wp) :: eps
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
 
     !TODO? currently the time is initalised from the namelist of the first processed model
     !      but then used globally for all models!
@@ -132,7 +132,7 @@ CONTAINS
 !!$    TYPE(t_datetime), INTENT(in) :: end_datetime
 !!$    REAL(wp),         INTENT(in) :: dtime
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
+!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
 !!$
 !!$    number_timesteps = nsteps
 !!$    timestep_length  = dtime
@@ -283,7 +283,7 @@ CONTAINS
 
   INTEGER FUNCTION get_year_at_model_start()
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_year_at_model_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_year_at_model_start'
 
     IF (.NOT. time_initialized) &
       CALL finish(TRIM(routine), 'Time not initialized yet.')

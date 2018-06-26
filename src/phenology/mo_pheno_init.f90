@@ -43,7 +43,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER  :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_memory(PHENO_)
@@ -78,7 +78,7 @@ CONTAINS
 
     TYPE(t_input_file) :: input_file
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -163,7 +163,7 @@ CONTAINS
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
 
@@ -178,15 +178,20 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, lai) = &
       & wgt1 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw2)
 
-    IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
-        & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
-        & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
-    ELSE
-      dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+    IF (model%config%l_compat401) THEN
       dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
-        & dsl4jsb_Lctlib_param(ClumpinessFactor))
+        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
+    ELSE
+      IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
+        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
+          & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
+      ELSE
+        dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
+          & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
+          & dsl4jsb_Lctlib_param(ClumpinessFactor))
+      END IF
     END IF
 
   END SUBROUTINE pheno_init_ic

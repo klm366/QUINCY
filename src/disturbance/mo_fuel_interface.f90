@@ -117,7 +117,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fuel'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_fuel'
 
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
@@ -234,7 +234,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fuel'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fuel'
 
     INTEGER  :: iblk, ics, ice, nc
 

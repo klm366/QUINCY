@@ -103,7 +103,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
 
@@ -136,15 +136,7 @@ CONTAINS
     config%use_alb_soil_organic_C    = use_alb_soil_organic_C
     config%use_alb_soil_litter       = use_alb_soil_litter
     config%use_alb_soil_scheme       = use_alb_soil_scheme
-
     config%use_alb_canopy            = use_alb_canopy
-    IF (use_alb_canopy) THEN
-      CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(bc_filename)//&
-        &                         ' ... therefore no influence of vegetation on albedo')
-    ELSE
-      CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
-    END IF
-
     config%albedo_age_weight         = albedo_age_weight
 
   END SUBROUTINE Init_rad_config

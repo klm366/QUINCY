@@ -98,7 +98,7 @@ CONTAINS
 
     INTEGER :: p_pe
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_full'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
 
     ! Arguments
     INTEGER, INTENT(in) :: &
@@ -224,8 +224,7 @@ CONTAINS
       & rain               = rain(:),               &
       & snow               = snow(:),               &
       & wind_air           = wind_air(:),           &
-!!$      & wind_10m          = wind_10m(:),          &
-      & wind_10m           = wind_air(:)*0.8_wp,    & ! Temporary
+      & wind_10m           = wind_10m(:),           &
       & lw_srf_down        = lw_srf_down(:),        &
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
@@ -315,7 +314,7 @@ CONTAINS
   SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
     & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_inquire'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_inquire'
 
     INTEGER, INTENT(in) :: &
       & model_id,          &
@@ -352,7 +351,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
     INTEGER :: p_pe, no_omp_thread
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -387,7 +386,7 @@ CONTAINS
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
 
     INTEGER :: no_omp_thread
 
