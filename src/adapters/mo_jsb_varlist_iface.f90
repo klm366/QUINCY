@@ -136,7 +136,7 @@ CONTAINS
 
     TYPE (t_list_element), POINTER :: element
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r2d'
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
@@ -147,7 +147,7 @@ CONTAINS
     END IF
 
 #ifdef __ICON__
-    IF (PRESENT(in_groups) .OR. TRIM(in_groups(1)) == '') THEN
+    IF (PRESENT(in_groups)) THEN
       CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
         ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
         initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
@@ -230,7 +230,7 @@ CONTAINS
 
     TYPE (t_list_element), POINTER :: element
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':add_var_list_element_r3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r3d'
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &

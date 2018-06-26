@@ -36,57 +36,57 @@ MODULE mo_pheno_memory_class
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
-    TYPE(t_jsb_var_real2d)           ::                   &
-      & lai,                        & !< Leaf area index
-      & fract_fpc,                  & !< Foliage projected cover of the pft
-                                      !  (fraction of ground area occupied by the vertical projection of foliage)
-      & fract_fpc_max,              & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
-      & fract_forest,               & !< Forest fraction
-      & growth_phase_SG,            & ! For summergreen only: values are:
-                                      !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
-                                      !    0.0  .. during growth phase (i.e. some weeks after spring event)
-                                      !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
-                                      ! Updated every day by the subroutine "update_growth_phase()".
-      & growth_phase_EG,            & ! For evergreen only: values are:
-                                      !    0.0  .. during growth phase (i.e. some weeks after spring event)
-                                      !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
-                                      ! Updated every day by the subroutine "update_growth_phase()".
-      & growth_phase_CRP,           & ! For extra-tropical crops only: values are:
-                                      !     -2.0  .. during rest phase of winter crops (i.e. from spring to autumn)
-                                      !     -1.0  .. during rest phase of summer crops (i.e. from autumn to spring)
-                                      !      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
-                                      !      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
-                                      !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
-                                      ! Updated every day by the subroutine "update_growth_phase()".
-      & days_since_growth_begin_EG, & ! For summergreen and evergreen only: serves to remember the number of
-                                      ! days elapsed since the growth phase began
-      & days_since_growth_begin_SG, & ! (as real numbers to save it in a stream).
-      & previous_day_NPP_pot_rate_ca, & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
-                                      ! at previous day, because not known for current day; updated at ..
-                                      ! the beginning of each new day (stream)
-      ! & laiMax_dyn,                 & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
-      !                                 ! coming from JSBACH, but smaller than that value when NPP is negative for more
-      !                                 ! than 1 year. (stream)
-      ! & year_NPP_sum,               & ! This field sums the NPP-rate during the whole year, starting on Jan,1, in the
-      !                                 ! northern hemisphere and at July,1, in the southern hemisphere. A negative value
-      !                                 ! indicates that summation has not yet started.
-      & day_NPP_sum,                & ! sum of NPP since midnight (needed to compute previous_day_NPP_pot_rate_ca(:,:)) [mol(CO2)/m^2]
-      & heat_sum_EG,                & ! Heat sums --- needed for the phenology of summergreens, evergreens and crops.
-      & heat_sum_SG,                & ! Where heat summation has not yet started, "heat_sum" is set to a value < -1.
-      & heat_sum_CRP,               & ! For summer crops heat summation starts with "0".
-      & heat_sum_winter,            & ! For winter crops heat summation starts with EPSILON(1.) and is positive in the
-                                      ! growing period (autumn to spring) and negative during summer. (stream)
-      & chill_days_SG,              & ! Number of chill days --- needed for the phenology of summer- and
-      & chill_days_EG,              & ! evergreens (stream)
-      & veg_fract_correction          ! Factor representing clumpyness of vegetation (for each tile type).
-                                      ! To write it in the output file we define it as 2d even when there is no change
-                                      ! between gridcells as it is in fact a 1d constant for each tile.
-                                      ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
-                                      ! canopy area = veg_fract_correction * tile area.
-                                      ! var (tile area) = veg_fract_correction * var(canopy area).
-                                      ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
-                                      !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
-                                      ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
+    TYPE(t_jsb_var_real2d)           :: &
+      & lai,                            & !< Leaf area index
+      & fract_fpc,                      & !< Foliage projected cover of the pft
+                                          !  (fraction of ground area occupied by the vertical projection of foliage)
+      & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
+      & fract_forest,                   & !< Forest fraction
+      & growth_phase_SG,                & ! For summergreen only: values are:
+                                          !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
+                                          !    0.0  .. during growth phase (i.e. some weeks after spring event)
+                                          !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
+                                          ! Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_EG,                & ! For evergreen only: values are:
+                                          !    0.0  .. during growth phase (i.e. some weeks after spring event)
+                                          !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
+                                          ! Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_CRP,               & ! For extra-tropical crops only: values are:
+                                          !     -2.0  .. during rest phase of winter crops (i.e. from spring to autumn)
+                                          !     -1.0  .. during rest phase of summer crops (i.e. from autumn to spring)
+                                          !      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
+                                          !      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
+                                          !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
+                                          ! Updated every day by the subroutine "update_growth_phase()".
+      & days_since_growth_begin_EG,     & ! For summergreen and evergreen only: serves to remember the number of
+                                          ! days elapsed since the growth phase began
+      & days_since_growth_begin_SG,     & ! (as real numbers to save it in a stream).
+      & previous_day_NPP_pot_rate_ca,   & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
+                                          ! at previous day, because not known for current day; updated at ..
+                                          ! the beginning of each new day (stream)
+      ! & laiMax_dyn,                    & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
+      !                                    ! coming from JSBACH, but smaller than that value when NPP is negative for more
+      !                                    ! than 1 year. (stream)
+      ! & year_NPP_sum,                  & ! This field sums the NPP-rate during the whole year, starting on Jan,1, in the
+      !                                    ! northern hemisphere and at July,1, in the southern hemisphere. A negative value
+      !                                    ! indicates that summation has not yet started.
+      & day_NPP_sum,                    & ! sum of NPP since midnight (needed to compute previous_day_NPP_pot_rate_ca(:,:)) [mol(CO2)/m^2]
+      & heat_sum_EG,                    & ! Heat sums --- needed for the phenology of summergreens, evergreens and crops.
+      & heat_sum_SG,                    & ! Where heat summation has not yet started, "heat_sum" is set to a value < -1.
+      & heat_sum_CRP,                   & ! For summer crops heat summation starts with "0".
+      & heat_sum_winter,                & ! For winter crops heat summation starts with EPSILON(1.) and is positive in the
+                                          ! growing period (autumn to spring) and negative during summer. (stream)
+      & chill_days_SG,                  & ! Number of chill days --- needed for the phenology of summer- and
+      & chill_days_EG,                  & ! evergreens (stream)
+      & veg_fract_correction              ! Factor representing clumpyness of vegetation (for each tile type).
+                                          ! To write it in the output file we define it as 2d even when there is no change
+                                          ! between gridcells as it is in fact a 1d constant for each tile.
+                                          ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
+                                          ! canopy area = veg_fract_correction * tile area.
+                                          ! var (tile area) = veg_fract_correction * var(canopy area).
+                                          ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
+                                          !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
+                                          ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
@@ -124,7 +124,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
 
     ! ---------------------------
     ! Go
@@ -181,11 +181,12 @@ CONTAINS
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
-        & hgrid, surface,                                                    &
-        & t_cf('Correction factor to convert tile to canopy area', '', '') , &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
+        & hgrid, surface,                                                      &
+        & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=FULL,                                                   &
+        & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN

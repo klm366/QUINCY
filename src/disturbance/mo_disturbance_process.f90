@@ -18,13 +18,13 @@ MODULE mo_disturb_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: burned_fractt_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+  PUBLIC :: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_process'
 
 CONTAINS
 
-  PURE ELEMENTAL SUBROUTINE burned_fractt_jsbach( &
+  PURE ELEMENTAL SUBROUTINE burned_fract_jsbach( &
     & fire_rel_hum_threshold,   & ! in
     & fire_litter_threshold,    & ! in
     & fire_minimum,             & ! in
@@ -67,7 +67,7 @@ CONTAINS
         &             * delta_time_yr
     END IF
 
-  END SUBROUTINE burned_fractt_jsbach
+  END SUBROUTINE burned_fract_jsbach
 
   ! Calculate windbreak for woody types
   PURE ELEMENTAL SUBROUTINE broken_woody_fract_jsbach( &
@@ -120,7 +120,7 @@ CONTAINS
     REAL(wp) :: air_qsat(SIZE(air_moisture)), &
                 relative_humidity_air(SIZE(air_moisture))
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_relative_humidity_air'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
 
     CALL sat_specific_humidity(nc,               & ! in
                                air_temperature,  & ! in
@@ -156,7 +156,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: pressure(nc)  ! Pressure at level [Pa]
     REAL(wp), INTENT(OUT):: qsat(nc)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sat_specific_humidity'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
     INTEGER  :: i
     INTEGER  :: it(nc)

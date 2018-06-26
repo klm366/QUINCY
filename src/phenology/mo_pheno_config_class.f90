@@ -42,21 +42,21 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_pheno_nml/  &
-      & active,       &
-      & scheme,       &
-      & ic_filename,  &
+      & active,               &
+      & scheme,               &
+      & ic_filename,          &
       & bc_filename
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_config'
 
     CALL message(TRIM(routine), 'Starting phenology configuration')
 
     ! Set defaults
     active              = .TRUE.
     scheme              = 'logrop'
-    bc_filename         = 'bc_land_phenology.nc'    
+    bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
     !first_call_phenology_this_day = .FALSE.
 

@@ -211,7 +211,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_radiation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
     
     ! Get local variables from options argument
     iblk = options%iblk
@@ -249,15 +249,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
       CALL calc_radiation_surface_net( &
-        & swvis_srf_down(:),        & ! in
-        & swnir_srf_down(:),        & ! in
-        & albedo_lwtr(:),           & ! in
-        & albedo_lwtr(:),           & ! in
-        & lw_srf_down(:),           & ! in
-        & t_lwtr(:),                & ! in
-        & rad_net_lwtr(:),          & ! out
-        & sw_net=sw_net_lwtr(:),    & ! out
-        & lw_net=lw_net_lwtr(:)     & ! out
+        & swvis_srf_down(:),           & ! in
+        & swnir_srf_down(:),           & ! in
+        & albedo_lwtr(:),              & ! in
+        & albedo_lwtr(:),              & ! in
+        & lw_srf_down(:),              & ! in
+        & t_lwtr(:),                   & ! in
+        & rad_net_lwtr(:),             & ! out
+        & sw_net=sw_net_lwtr(:),       & ! out
+        & lw_net=lw_net_lwtr(:)        & ! out
         & )
 
       ! Ice on lake
@@ -267,15 +267,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
       CALL calc_radiation_surface_net( &
-        & swvis_srf_down(:),        & ! in
-        & swnir_srf_down(:),        & ! in
-        & albedo_lice(:),           & ! in
-        & albedo_lice(:),           & ! in
-        & lw_srf_down(:),           & ! in
-        & t_lice(:),                & ! in
-        & rad_net_lice(:),          & ! out
-        & sw_net=sw_net_lice(:),    & ! out
-        & lw_net=lw_net_lice(:)     & ! out
+        & swvis_srf_down(:),           & ! in
+        & swnir_srf_down(:),           & ! in
+        & albedo_lice(:),              & ! in
+        & albedo_lice(:),              & ! in
+        & lw_srf_down(:),              & ! in
+        & t_lice(:),                   & ! in
+        & rad_net_lice(:),             & ! out
+        & sw_net=sw_net_lice(:),       & ! out
+        & lw_net=lw_net_lice(:)        & ! out
         & )
 
       rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
@@ -291,17 +291,17 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      swnir_srf_net)  ! out
 
       CALL calc_radiation_surface_net( &
-        & swvis_srf_down(:),    & ! in
-        & swnir_srf_down(:),    & ! in
-        & alb_vis_lnd(:),       & ! in
-        & alb_nir_lnd(:),       & ! in
-        & lw_srf_down(:),       & ! in
-        & t(:),                 & ! in
-        & rad_srf_net(:),       & ! out
-        & swvis_srf_net(:),     & ! out
-        & swnir_srf_net(:),     & ! out
-        & sw_srf_net(:),        & ! out
-        & lw_srf_net(:)         & ! out
+        & swvis_srf_down(:),           & ! in
+        & swnir_srf_down(:),           & ! in
+        & alb_vis_lnd(:),              & ! in
+        & alb_nir_lnd(:),              & ! in
+        & lw_srf_down(:),              & ! in
+        & t(:),                        & ! in
+        & rad_srf_net(:),              & ! out
+        & swvis_srf_net(:),            & ! out
+        & swnir_srf_net(:),            & ! out
+        & sw_srf_net(:),               & ! out
+        & lw_srf_net(:)                & ! out
         & )
     END IF
 
@@ -327,7 +327,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_radiation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_radiation'
 
     INTEGER :: iblk, ics, ice
 
@@ -418,7 +418,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_par'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_radiation_par'
     
     ! Get local variables from options argument
     iblk  = options%iblk
@@ -475,7 +475,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     ! Initialize local variables
     par_down_mol           = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
     soil_reflectivity_par  = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
@@ -486,7 +486,7 @@ CONTAINS
     ! Compute direct fraction of PAR.
     ! R:  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
     fract_par_direct = 1._wp - fract_par_diffuse
-                                                 
+
     B4_layer_above(:) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate first layer
     DO icanopy=1,ncanopy
        ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and lai_cl (leaf area index for each canopy layer)
@@ -568,7 +568,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_radiation_par'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_radiation_par'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -618,7 +618,7 @@ CONTAINS
 
     REAL(wp)                     :: StemArea             ! to be taken from the lctlib. (Area of stems and branches of woody plants.)
 
-    CHARACTER(len=*), PARAMETER    :: routine = TRIM(modname)//':update_albedo'
+    CHARACTER(len=*), PARAMETER    :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(RAD_)
@@ -633,12 +633,12 @@ CONTAINS
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
 
-    REAL(wp) :: &
+    REAL(wp) ::            &
       & albedo_age_weight, &    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                 !                            the snow albedo resulting from both schemes
       & AlbedoCanopySnow
 
-    LOGICAL ::           &
+    LOGICAL ::                     &
       & use_alb_veg_simple,        &
       & use_alb_soil_scheme,       &
       & use_alb_soil_litter,       &
@@ -669,8 +669,8 @@ CONTAINS
       & fract_forest,          &
       & fract_snow_can,        &
       & fract_snow_soil,       &
-      & c_litter_green_ag,     &
-      !CBAL & c_slow,            &
+      & c_ag_sum_1,            &
+      !CBAL & c_slow,           &
       & c_bg_sum,              &
       & swvis_srf_down,        &
       & swnir_srf_down
@@ -690,7 +690,7 @@ CONTAINS
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     ! Set model
     model => Get_model(tile%owner_model_id)
 
@@ -706,7 +706,7 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
-    
+
     ! Set pointers to variables in config
     use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
     use_alb_soil_scheme       = dsl4jsb_Config(RAD_) %use_alb_soil_scheme
@@ -737,8 +737,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
-    !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_litter_green_ag) ! in
-    !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   c_slow)            ! in
+    !RMS dsl4jsb_Get_var2D_onChunk(CARBON_,   c_slow)            ! in
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis)               ! inout
@@ -752,7 +751,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     ! Set day-or-night-switch
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
@@ -819,12 +818,14 @@ CONTAINS
       IF (use_alb_soil_scheme) THEN
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
+        dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
+
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
           & use_alb_mineralsoil_const,                & ! in
           & use_alb_soil_organic_C,                   & ! in
           & use_alb_soil_litter,                      & ! in
-          & c_litter_green_ag(:),                     & ! in
+          & c_ag_sum_1(:),                            & ! in
           !CBAL & c_slow(:),                           & ! in
           & c_bg_sum(:),                              & ! in
           ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
@@ -858,7 +859,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout      
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_can)           ! in (from rad_init)
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_can)           ! in (from rad_init)
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! inout
@@ -866,12 +867,12 @@ CONTAINS
 
       IF (use_alb_veg_simple) THEN
         alb_vis_lnd(:) = get_surface_albedo_simple( &
-          & t_unfilt(:),           &
-          & fract_forest(:),       &
-          & fract_snow_soil(:),    &
-          & fract_snow_can(:),     &
-          & lai(:),                &
-          & alb_background(:)      & ! Note, alb_background <-- bc_land_phy.nc
+          & t_unfilt(:),                            &
+          & fract_forest(:),                        &
+          & fract_snow_soil(:),                     &
+          & fract_snow_can(:),                      &
+          & lai(:),                                 &
+          & alb_background(:)                       & ! Note, alb_background <-- bc_land_phy.nc
                         )
         alb_nir_lnd(:) = alb_vis_lnd(:)
       ELSE
@@ -882,12 +883,14 @@ CONTAINS
 
           IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
+          dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in (Note: c_humus_1 is part of green litter.)
+
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
             & use_alb_mineralsoil_const,                & ! in
             & use_alb_soil_organic_C,                   & ! in
             & use_alb_soil_litter,                      & ! in
-            & c_litter_green_ag(:),                     & ! in
+            & c_ag_sum_1(:),                            & ! in
             !CBAL & c_slow(:),                           & ! in
             & c_bg_sum(:),                              & ! in
             & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
@@ -941,7 +944,7 @@ CONTAINS
           & alb_vis_lnd(:),                   & ! inout
           & alb_nir_lnd(:)                    & ! inout
           & )
-        
+
       END IF ! use_alb_veg_simple 
     END IF ! tile%lcts(1)%id == ...
 
@@ -979,7 +982,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_albedo'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_albedo'
 
     INTEGER :: iblk, ics, ice, nc
 

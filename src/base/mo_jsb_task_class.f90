@@ -107,7 +107,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Do_it'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
     ! If process the task belongs to is not active on this tile, do nothing.
     IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
@@ -161,7 +161,7 @@ CONTAINS
 
     CLASS(t_Task_queue), POINTER :: current, next
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Append_task'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Append_task'
 
     IF (.NOT. ASSOCIATED(this%task)) THEN
       ! If queue is empty just add task as first element

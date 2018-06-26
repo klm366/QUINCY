@@ -67,7 +67,7 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r  ! Vertical grids
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_hd_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hd configuration')
 

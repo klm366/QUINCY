@@ -200,7 +200,7 @@ CONTAINS
     INTEGER                      :: ncanopy          ! number of canopy layers
     REAL(wp),          POINTER   :: canopy_bound_lai(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':assimilation_scaling_factors'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':assimilation_scaling_factors'
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -250,11 +250,11 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
         CALL calc_assimilation_scaling_factors( &
-          & declination,                 & ! input
-          & canopy_bound_lai(i-1),       & ! input
-          & lai(:),                      & ! input
-          & lat(:),                      & ! input
-          & assimi_scaling_fact_cl(:,i)  & ! output
+          & declination,                        & ! input
+          & canopy_bound_lai(i-1),              & ! input
+          & lai(:),                             & ! input
+          & lat(:),                             & ! input
+          & assimi_scaling_fact_cl(:,i)         & ! output
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
@@ -284,7 +284,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_assimilation_scaling_factors'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation_scaling_factors'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -330,7 +330,7 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     INTEGER                                   :: icanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     ! Declare process memories
     dsl4jsb_Def_memory(ASSIMI_)
@@ -439,7 +439,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_unstressed'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -487,7 +487,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER                             :: icanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_memory(ASSIMI_)
@@ -524,9 +524,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: carbox_rate_max_cl     ! Output. Maximum carboxylation rate of canopy layer (=VCmax)
                                                          ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
                                                          ! and actual temperature.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output.
-    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output.
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output
+    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
@@ -678,7 +678,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_assimilation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation'
 
     ! Get local variables from options argument
     iblk = options%iblk

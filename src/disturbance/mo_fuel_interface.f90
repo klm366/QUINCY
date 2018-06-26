@@ -117,7 +117,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fuel'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_fuel'
 
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
@@ -126,7 +126,7 @@ CONTAINS
 
     dsl4jsb_Def_config(FUEL_)
 
-    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
+    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which fire is based
     !
     dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
     dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
@@ -136,7 +136,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     !
     ! Locally allocated vectors
     !
@@ -174,7 +174,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction)  ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)         ! in
     dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
 
@@ -196,7 +196,7 @@ CONTAINS
             & c_water_ag2_ta(:),       & ! in
             & c_ethanol_ag2_ta(:),     & ! in
             & c_nonsoluble_ag2_ta(:),  & ! in
-            & veg_fract_correction(:), & ! in
+            & fract_fpc_max(:),        & ! in
             & fuel(:)                  & ! out
             & )
 
@@ -234,7 +234,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fuel'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fuel'
 
     INTEGER  :: iblk, ics, ice, nc
 

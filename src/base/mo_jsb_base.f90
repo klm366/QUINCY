@@ -69,9 +69,9 @@ CONTAINS
 
     CALL message(TRIM(routine), 'starting basic setup')
 
-    CALL init_jsb_master_control(master_namelist_filename)
-
     CALL init_parallel_iface
+
+    CALL init_jsb_master_control(master_namelist_filename)
 
     !IF (jsbach_runs_standalone()) CALL init_mpi_communicators !TODO-check-with-RMS: remove: done in the driver!
 
@@ -152,6 +152,7 @@ CONTAINS
         CALL message('    ', '... not using dynamical snow density and thickness')
         CALL message('    ', '... not using frozen ground')
         CALL message('    ', '... not using organic soil fractions')
+        CALL message('    ', '... using canopy albedo from ini file')
         dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
         dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
         dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
@@ -160,6 +161,14 @@ CONTAINS
         dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
         dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
         dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
+        dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
+      END IF
+
+      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
+        CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
+          &                         ' ... therefore no influence of vegetation on albedo')
+      ELSE
+        CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
       END IF
 
       IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
@@ -184,12 +193,18 @@ CONTAINS
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_model_usecases, ONLY: init_usecase
+    USE mo_jsb_lctlib_class,   ONLY: Read_lctlib
 
     INTEGER, INTENT(in) :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
 
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
+
     model => Get_model(model_id)
+
+    model%lctlib => Read_lctlib('lctlib_nlct21.def')
+    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase

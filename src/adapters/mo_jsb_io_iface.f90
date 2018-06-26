@@ -12,7 +12,7 @@ MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
@@ -128,7 +128,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Create_zaxis'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Create_zaxis'
 
 #ifdef __ICON__
     echamZaxisIdx = -1
@@ -214,10 +214,10 @@ CONTAINS
 
     IF (my_process_is_mpi_parallel()) THEN
 #ifdef STANDALONE
-      CALL p_bcast(out_expname, p_io)
+      CALL p_bcast(out_expname, p_io, comm=mpi_comm)
 #endif
-      CALL p_bcast(read_interface_vars, p_io)
-      CALL p_bcast(write_interface_vars, p_io)
+      CALL p_bcast(read_interface_vars, p_io, comm=mpi_comm)
+      CALL p_bcast(write_interface_vars, p_io, comm=mpi_comm)
     ENDIF
 #endif
 

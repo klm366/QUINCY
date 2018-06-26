@@ -93,7 +93,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_model_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_model_config'
 
     CALL message(TRIM(routine), 'Starting model configuration from '//TRIM(namelist_filename))
 

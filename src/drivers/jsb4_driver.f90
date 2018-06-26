@@ -14,6 +14,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
+  USE mo_jsb_model_final,    ONLY: jsbach_finalize
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday
@@ -31,7 +32,7 @@ PROGRAM jsb4_driver
   ! Currently from adapter
   USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
-  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
@@ -54,10 +55,8 @@ PROGRAM jsb4_driver
   USE mo_decomposition,    ONLY: local_decomposition
 
   ! time control and orbit calc
-  USE mo_timer,            ONLY: init_timer, timer_start, timer_stop, timer_jsbach
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
     &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
-  USE mo_jsb_control,      ONLY: timer_on
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
   ! ICON would be:
@@ -182,7 +181,7 @@ PROGRAM jsb4_driver
 
   IF (my_process_is_mpi_parallel()) THEN
     buffer(:) = (/ nproca, nprocb, nprocio, npedim /)
-    CALL p_bcast (buffer, p_io)
+    CALL p_bcast (buffer, p_io, comm=mpi_comm)
     nproca  = buffer(1)
     nprocb  = buffer(2)
     nprocio = buffer(3)
@@ -192,11 +191,7 @@ PROGRAM jsb4_driver
   CALL p_init_communicators(nproca, nprocb, nprocio)
   CALL machine_setup
 
-  CALL init_timer
-
   ! - jsbach_init
-  CALL jsbach_init_version
-
   CALL jsbach_setup_models('namelist.jsbach')
   CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
   CALL jsbach_setup_tiles(model_id)
@@ -373,8 +368,6 @@ PROGRAM jsb4_driver
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
       ENDIF
 
-      IF (timer_on()) CALL timer_start(timer_jsbach)
-
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
         & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
@@ -385,8 +378,6 @@ PROGRAM jsb4_driver
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot=evapopot(:))
-
-      IF (timer_on()) CALL timer_stop(timer_jsbach)
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
@@ -416,6 +407,8 @@ PROGRAM jsb4_driver
   IF (read_interface_vars) THEN
     CALL nf_check(nf_close(ncid))
   ENDIF
+
+  CALL jsbach_finalize()
 
 !$OMP PARALLEL
 !$OMP MASTER

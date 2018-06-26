@@ -29,19 +29,19 @@ CONTAINS
   FUNCTION get_water_in_root_zone_2d(ws, dz, dz_root) RESULT(ws_root)
 
     REAL(wp), INTENT(in) :: &
-      & ws     (:,:), &              !< Water content of soil layers
-      & dz     (:,:), &              !< Thicknesses of soil layers
+      & ws     (:,:),       &              !< Water content of soil layers
+      & dz     (:,:),       &              !< Thicknesses of soil layers
       & dz_root(:,:)                 !< Thicknesses of root layers
     REAL(wp) :: ws_root(SIZE(ws,1))  !< Water content in root zone
 
-    REAL(wp) :: &
+    REAL(wp) ::                       &
       & bottom     (SIZE(ws     ,1)), &  !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  (SIZE(ws_root,1)), &  !< Cumulative depth of soil down to previous layer
       & root_depth (SIZE(ws,1))          !< Total depth of root_zone
 
     INTEGER :: n, i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_water_in_root_zone_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_2d'
 
     n  = SIZE(dz,2)       ! Number of soil layers
 

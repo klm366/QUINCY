@@ -19,7 +19,8 @@ CONTAINS
 
     TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid
 
-    INTEGER :: i
+    INTEGER :: i, n
+    TYPE(t_jsb_grid_ptr), ALLOCATABLE :: grids_temp(:)
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_grid'
 
@@ -32,9 +33,14 @@ CONTAINS
         END IF
       END DO
       ! grid is new
-      jsbach_grids = (/jsbach_grids, t_jsb_grid_ptr(grid)/)
+      n = SIZE(jsbach_grids)
+      ALLOCATE(grids_temp(n+1))
+      grids_temp(1:n) = jsbach_grids
+      grids_temp(n+1) = t_jsb_grid_ptr(grid)
+      CALL MOVE_ALLOC(grids_temp, jsbach_grids)
     ELSE
-      jsbach_grids = (/t_jsb_grid_ptr(grid)/)
+      ALLOCATE(jsbach_grids(1))
+      jsbach_grids(1) = t_jsb_grid_ptr(grid)
     END IF
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
@@ -47,8 +53,9 @@ CONTAINS
     USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids
 
     TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: vgrid
-
-    INTEGER :: i, length
+  
+    TYPE(t_jsb_vgrid_ptr), ALLOCATABLE :: vgrids_temp(:)
+    INTEGER :: i, n, length
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_vgrid'
 
@@ -61,9 +68,14 @@ CONTAINS
         END IF
       END DO
       ! Axis is new
-      jsbach_vgrids = (/jsbach_vgrids, t_jsb_vgrid_ptr(vgrid)/)
+      n = SIZE(jsbach_vgrids)
+      ALLOCATE(vgrids_temp(n+1))
+      vgrids_temp(1:n) = jsbach_vgrids
+      vgrids_temp(n+1) = t_jsb_vgrid_ptr(vgrid)
+      CALL MOVE_ALLOC(vgrids_temp, jsbach_vgrids)
     ELSE
-      jsbach_vgrids = (/t_jsb_vgrid_ptr(vgrid)/)
+      ALLOCATE(jsbach_vgrids(1))
+      jsbach_vgrids(1) = t_jsb_vgrid_ptr(vgrid)
     END IF
     vgrid%id = SIZE(jsbach_vgrids)
 

@@ -89,7 +89,7 @@ CONTAINS
 
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_a2l_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_a2l_memory'
 
     model => Get_model(model_id)
 

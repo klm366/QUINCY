@@ -145,7 +145,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
@@ -252,7 +252,7 @@ CONTAINS
     LOGICAL :: l_newday
     REAL(wp) :: timestep  ! Timestep in days
 
-    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_phenology_logrop'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -338,7 +338,7 @@ CONTAINS
     ! R: Note, in JSBACH3 the timestep was 1 day. Except of the former update_growth_phase which is now in the calc_XXX_phenology
     !    procedures the phenology including get_letItDie and get_letItGrow can be called several times a day. Within the
     !    calc_XXX_phenology procedures the is_newday-variable decides when to do the update_growth_phase stuff.
-    
+
     ! R: While the time issue is independent of the model or block, some calculations should not be done for each tile but only
     !    once for the whole hsm (tile%name == 'box'):
     ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muß man bis auf NPP nicht für jedes Tile machen. Daher
@@ -348,12 +348,12 @@ CONTAINS
     !    auch dem SEB Prozess zugeordnet.
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
-    CALL calc_previous_day_NPP(   &
-      & l_newday,                 & ! Input
-      & NPP_pot_rate_ca(:),       & ! Input
-      & dtime,                    & ! Input
+    CALL calc_previous_day_NPP(          &
+      & l_newday,                        & ! Input
+      & NPP_pot_rate_ca(:),              & ! Input
+      & dtime,                           & ! Input
       & previous_day_NPP_pot_rate_ca(:), & ! Output (for crop and raingreen)
-      & day_NPP_sum(:)            & ! InOut
+      & day_NPP_sum(:)                   & ! InOut
       & )
 
 
@@ -403,11 +403,11 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
-      CALL calc_summergreen_phenology(   &
+      CALL calc_summergreen_phenology(    &
          & day_of_year,                   & ! <- in
          & l_newday,                      & ! <- in
          & timestep,                      & ! <- in
-         & NPP_pot_rate_ca(:),                   & ! <- in
+         & NPP_pot_rate_ca(:),            & ! <- in
          & lat(:),                        & ! <- in
          & previous_day_temp_mean(:),     & ! <- in
          & pseudo_soil_temp(:),           & ! <- in
@@ -442,47 +442,47 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
        ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
-      CALL calc_crop_phenology(     &
-        & day_of_year,              & ! <- in
-        & l_newday,                 & ! <- in
-        & timestep,                 & ! <- in
+      CALL calc_crop_phenology(            &
+        & day_of_year,                     & ! <- in
+        & l_newday,                        & ! <- in
+        & timestep,                        & ! <- in
         & NPP_pot_rate_ca(:),              & ! <- in
-        & lat(:),                   & ! <- in
-        & pseudo_soil_temp(:),      & ! <- in
-        & LaiMax_corrected,         & ! <- in
+        & lat(:),                          & ! <- in
+        & pseudo_soil_temp(:),             & ! <- in
+        & LaiMax_corrected,                & ! <- in
         & previous_day_NPP_pot_rate_ca(:), & ! <- in
-        & w_soil_filling(:),        & ! <- in
-        & previous_day_temp_min,    & ! <- in
-        & previous_day_temp_max,    & ! <- in
+        & w_soil_filling(:),               & ! <- in
+        & previous_day_temp_min,           & ! <- in
+        & previous_day_temp_max,           & ! <- in
         & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! <- in
-        & heat_sum_CRP(:),          & ! <- inout
-        & heat_sum_winter,          & ! <- inout
-        & growth_phase_CRP(:),      & ! <- inout
-        & lai(:)                    & ! <- inout
+        & heat_sum_CRP(:),                 & ! <- inout
+        & heat_sum_winter,                 & ! <- inout
+        & growth_phase_CRP(:),             & ! <- inout
+        & lai(:)                           & ! <- inout
         & )
     END IF
 
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
-      CALL calc_raingreen_phenology( &
-        & timestep,                  & ! <- in
-        & w_soil_filling(:),         & ! <- in
-        & LaiMax_corrected,          & ! <- in
+      CALL calc_raingreen_phenology(        &
+        & timestep,                         & ! <- in
+        & w_soil_filling(:),                & ! <- in
+        & LaiMax_corrected,                 & ! <- in
         & previous_day_NPP_pot_rate_ca(:),  & ! <- in
-        & lai(:)                     & ! <- inout
+        & lai(:)                            & ! <- inout
         & )
     END IF
 
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
-       CALL calc_grass_phenology(    &
-         & t_air_in_Celcius(:),      & ! <- in
-         & timestep,                 & ! <- in
-         & w_soil_filling(:),        & ! <- in
-         & LaiMax_corrected,         & ! <- in
+       CALL calc_grass_phenology(           &
+         & t_air_in_Celcius(:),             & ! <- in
+         & timestep,                        & ! <- in
+         & w_soil_filling(:),               & ! <- in
+         & LaiMax_corrected,                & ! <- in
          & previous_day_NPP_pot_rate_ca(:), & ! <- in
-         & lai(:)                    & ! <- inout
+         & lai(:)                           & ! <- inout
          & )
     END IF
 
@@ -520,7 +520,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     REAL(wp), POINTER      :: lai_mon(:,:)
 
-    CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology_climatology'
+    CHARACTER(len=*), PARAMETER            :: routine = modname//':update_phenology_climatology'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -565,7 +565,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -630,7 +630,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_fpc'
 
     ! ---------------------------
     ! Go
@@ -685,7 +685,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fpc'
 
     INTEGER :: iblk, ics, ice, nc
 

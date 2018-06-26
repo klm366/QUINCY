@@ -40,7 +40,7 @@ CONTAINS
 
     LOGICAL :: unit_is_occupied
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_nml'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':open_nml'
 
     INQUIRE(UNIT=nnml, OPENED=unit_is_occupied)
     IF (unit_is_occupied) CALL finish(TRIM(routine), 'namelist unit is already open')
@@ -57,7 +57,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: nml_handler
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':close_nml'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':close_nml'
 
     IF (nml_handler /= 1) CALL finish(TRIM(routine), 'Cannot close namelist unit')
 
@@ -76,7 +76,7 @@ CONTAINS
     LOGICAL,          INTENT(in)  ,OPTIONAL :: lrewind      ! default: true
     INTEGER,          INTENT(out) ,OPTIONAL :: status       ! error return value
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':position_nml'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':position_nml'
 
 #ifdef __ICON__
     CALL position_nml_icon(name, lrewind=lrewind, status=status)

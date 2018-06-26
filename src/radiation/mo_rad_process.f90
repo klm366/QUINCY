@@ -567,7 +567,7 @@ CONTAINS
   ! boxC_litter_green_ag and boxC_slow (canopy) of all tiles and builds a whole grid cell average. (This is done in subroutine update_albedo.
   ! Note, the glacier tile implementation of the scheme is arbitary as JSBACH3 could never handle a glacier tile.) Then:
   ! From boxC_slow an albedo reduction may be calculated for the soil (linear or log).
-  ! From c_litter_green_ag the albedo of litter may be calculted (linear).
+  ! From c_litter_green_ag/c_ag_sum_1 the albedo of litter may be calculted (linear).
   ! Then soil and litter albedos may be summed up according to the litter view fraction.
   ! However, the JSBACH3 scheme is not useable for the new JSBACH4 concept of child tiles. To keep the JSBACH3 concept in JSBACH4
   ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful albedo.
@@ -583,8 +583,8 @@ CONTAINS
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
-    & c_litter_green_ag,     &
-    & c_bg_sum,                &
+    & c_ag_sum_1,                &
+    & c_bg_sum,                  &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
     & alb_background,            &
@@ -603,10 +603,10 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(in)  :: use_alb_soil_organic_C
     LOGICAL,          INTENT(in)  :: use_alb_soil_litter
     REAL(wp),         INTENT(in)  :: &
-      & c_litter_green_ag,  & 
+      & c_ag_sum_1,         &
       & c_bg_sum,           &
       & SpecificLeafArea_C, &
-      & AlbedoLitterVIS,    & 
+      & AlbedoLitterVIS,    &
       & alb_background
     REAL(wp),         INTENT(inout) :: &
       & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
@@ -635,7 +635,7 @@ CONTAINS
     ! Go
 
     IF (.NOT. l_day) RETURN
-    
+
     ! use constant mineral soil albedos?
     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
        alb_vis_mineralsoil = AlbedoSoilConstVis
@@ -677,7 +677,7 @@ CONTAINS
 
     ! albedo of litter on soil
     IF(use_alb_soil_litter) THEN
-      litter_area = c_litter_green_ag * specificLeafArea_C
+      litter_area = c_ag_sum_1 * specificLeafArea_C
       alb_vis_litter = litter_area * AlbedoLitterVIS
 
       IF (litter_area <= EPSILON(1._wp)) THEN
@@ -763,7 +763,7 @@ CONTAINS
     alb_nir_snow_temp = 0.0_wp
     alb_vis_snow      = 0.0_wp
     alb_nir_snow      = 0.0_wp
-    
+
     ! ---------------------------
     ! Go
 
@@ -904,7 +904,7 @@ CONTAINS
       & alb_vis_nostems, & ! albedo vis of surface without considering the snow cover
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
-      
+
     ! ---------------------------
     ! Go
 

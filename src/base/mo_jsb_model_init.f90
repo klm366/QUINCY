@@ -64,7 +64,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER  :: grid
     TYPE(pe_decomposed) :: decomposition
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_standalone'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
 
     INTEGER :: nlon, nlat
 
@@ -117,7 +117,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_patch'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_patch'
 
     IF (patch%id < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid patch')
@@ -149,7 +149,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_decomposition'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_decomposition'
 
     IF (decomposition%nlon < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
@@ -175,7 +175,6 @@ CONTAINS
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
-    USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init
@@ -208,7 +207,7 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init'
 
     no_omp_thread = Get_omp_thread()
 
@@ -219,9 +218,6 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
-
-    model%lctlib => Read_lctlib('lctlib_nlct21.def')
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(SSE_)
@@ -505,7 +501,7 @@ CONTAINS
 
     dsl4jsb_Def_config(CARBON_)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_init_after_restart'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
 
     no_omp_thread = Get_omp_thread()
 
