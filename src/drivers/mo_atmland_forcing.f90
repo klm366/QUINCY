@@ -161,7 +161,7 @@ CONTAINS
     ! READ() input variables for: land plant canopy and soil (these variable names can differ from column names in forcing files)
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
-                     co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
+                     co2_mixing_ratio_r, co2_dC13_r,    co2_DC14_r,             &
                      nhx_deposition_r,   noy_deposition_r, &   ! variables reading nhx_srf_down & noy_srf_down from the climate forcing file (maybe rename there)
                      nhx_dn15_deposition_r, noy_dn15_deposition_r, & 
                      p_deposition_r, f_n_demand_r, f_p_demand_r 
@@ -327,7 +327,7 @@ CONTAINS
       READ(lun,*, IOSTAT=stat) year, day, hour, & 
                        swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                        press_srf_r,        rain_r,        snow_r,     wind_air_r, &
-                       co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
+                       co2_mixing_ratio_r, co2_dC13_r,    co2_DC14_r,             &
                        nhx_deposition_r,   noy_deposition_r, p_deposition_r 
 
       ! day of the year: current time step
@@ -355,7 +355,7 @@ CONTAINS
         READ(lun,*) year, day, hour, &
                        swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                        press_srf_r,        rain_r,        snow_r,     wind_air_r, &
-                       co2_mixing_ratio_r, co2_dc13_r,    co2_dc14_r,             &
+                       co2_mixing_ratio_r, co2_dC13_r,    co2_DC14_r,             &
                        nhx_deposition_r, noy_deposition_r, p_deposition_r 
       END IF
 
@@ -392,13 +392,13 @@ CONTAINS
 
       co2_mixing_ratio(:)     = co2_mixing_ratio_r
       IF (forcing_options%flag_read_dC13) THEN
-        hlp1(:)               = calc_mixing_ratio_C13C12(co2_dc13_r)
+        hlp1(:)               = calc_mixing_ratio_C13C12(co2_dC13_r)
       ELSE
         hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
       END IF
       co2_mixing_ratio_C13(:) = co2_mixing_ratio(:) / (1._wp + 1._wp/hlp1(:))
       IF (forcing_options%flag_read_DC14) THEN
-        hlp1(:)               = calc_mixing_ratio_C14C(co2_dc13_r, co2_dc14_r)
+        hlp1(:)               = calc_mixing_ratio_C14C(co2_dC13_r, co2_DC14_r)
       ELSE
         hlp1(:)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
       END IF

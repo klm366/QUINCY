@@ -139,7 +139,7 @@ soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0        # float !
 flag_read_dC13="F"              # either use forcing dC13 or the prescribed default value
-flag_read_dC14="F"              # either use forcing dC14 or the prescribed default value
+flag_read_DC14="F"              # either use forcing DC14 or the prescribed default value
 n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
@@ -577,7 +577,7 @@ validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "outp
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
-validateUserConfigValues "$flag_read_dC14" "$validateFlags" "flag_read_dC14"
+validateUserConfigValues "$flag_read_DC14" "$validateFlags" "flag_read_DC14"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
@@ -1327,11 +1327,11 @@ if [ $flag_read_dC13 == T ]
   else
     changeNamelistValue flag_read_dC13 ".FALSE."
 fi
-if [ $flag_read_dC14 == T ]
+if [ $flag_read_DC14 == T ]
   then
-    changeNamelistValue flag_read_dC14 ".TRUE."
+    changeNamelistValue flag_read_DC14 ".TRUE."
   else
-    changeNamelistValue flag_read_dC14 ".FALSE."
+    changeNamelistValue flag_read_DC14 ".FALSE."
 fi
 if [ $flag_sb_jsm_transport == T ]
   then

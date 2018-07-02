@@ -255,7 +255,7 @@ CONTAINS
      ELSE 
         ! source dC13
         hlp1 = calc_delta_C13(source_element,source_isotope2)
-        ! source dC14
+        ! source DC14
         hlp2 = calc_delta_C14(source_element,source_isotope,hlp1) 
         ! mixing ratio dependent on input C13 and C14 - discrimination
         fractionation = calc_mixing_ratio_C14C(hlp1,hlp2-discrimination)

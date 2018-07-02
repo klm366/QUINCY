@@ -117,7 +117,7 @@
   forcing_mode="static"
   ! flags
   flag_read_dC13=.FALSE.
-  flag_read_dC14=.FALSE.
+  flag_read_DC14=.FALSE.
   ! simulation length 
   ! units: y years, w weeks, d days
   simulation_length_unit="y"

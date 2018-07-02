@@ -29,7 +29,7 @@ MODULE mo_jsb4_forcing
   CHARACTER(15)     :: p_deposition_scheme
   CHARACTER(15)     :: forcing_mode                 !< static / transient
   LOGICAL           :: flag_read_dC13
-  LOGICAL           :: flag_read_dC14
+  LOGICAL           :: flag_read_DC14
   CHARACTER(1)      :: simulation_length_unit       !< d days, w weeks, y years
   INTEGER           :: simulation_length_number
   INTEGER           :: transient_spinup_start_year
@@ -48,7 +48,7 @@ MODULE mo_jsb4_forcing
     CHARACTER(15)     :: p_deposition_scheme
     CHARACTER(15)     :: forcing_mode
     LOGICAL           :: flag_read_dC13
-    LOGICAL           :: flag_read_dC14
+    LOGICAL           :: flag_read_DC14
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     INTEGER           :: transient_spinup_start_year
@@ -100,7 +100,7 @@ CONTAINS
                       p_deposition_scheme           , &
                       forcing_mode                  , &
                       flag_read_dC13                , &
-                      flag_read_dC14                , &
+                      flag_read_DC14                , &
                       simulation_length_unit        , &
                       simulation_length_number      , &
                       transient_spinup_start_year   , &
@@ -125,7 +125,7 @@ CONTAINS
     p_deposition_scheme                 = "none"
     forcing_mode                        = "static"    ! static / transient
     flag_read_dC13                      = .FALSE.
-    flag_read_dC14                      = .FALSE.
+    flag_read_DC14                      = .FALSE.
     simulation_length_unit              = 'y'         ! y (years), w (weeks), d (days)
     simulation_length_number            = 30 
     transient_spinup_start_year         = 1901
@@ -163,7 +163,7 @@ CONTAINS
     forcing_options%p_deposition_scheme               = p_deposition_scheme
     forcing_options%forcing_mode                      = forcing_mode
     forcing_options%flag_read_dC13                    = flag_read_dC13
-    forcing_options%flag_read_dC14                    = flag_read_dC14
+    forcing_options%flag_read_DC14                    = flag_read_DC14
     forcing_options%simulation_length_unit            = simulation_length_unit
     forcing_options%simulation_length_number          = simulation_length_number
     forcing_options%transient_spinup_start_year       = transient_spinup_start_year

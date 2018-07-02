@@ -83,6 +83,6 @@ soil_theta_prescribe=1.0
 n_deposition_scheme="dynamic"
 p_deposition_scheme="dynamic"
 flag_read_dC13="T" 
-flag_read_dC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
+flag_read_DC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
 
 queue="io_perform"

@@ -217,7 +217,7 @@ CONTAINS
             fname = 'soilpooldC13org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            fname = 'soilpooldC14org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
+            fname = 'soilpoolDC14org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             fname = 'soilpooldN15org_lay'//'_'//TRIM(base_config%output_interval_pool)//'.txt'
@@ -283,7 +283,7 @@ CONTAINS
          WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                           'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
          lun=lun+1
-         WRITE(lun,'(2a)') 'Time Leaf_d15N FineRoot_d15N SapWood_d15N HeartWood_d15N CoarseRoot_d15N ', & 
+         WRITE(lun,'(2a)') 'Time Leaf_dN15 FineRoot_dN15 SapWood_dN15 HeartWood_dN15 CoarseRoot_dN15 ', & 
                           'Fruit_dN15 Labile_dN15 Reserve_dN15 SeedBank_dN15 Total_dN15'
          lun=lun+1
          ! soilpoolPhysics
@@ -430,7 +430,7 @@ CONTAINS
             WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str)
             lun=lun+1
             
-            ! dC13 dC14 dN15
+            ! dC13 DC14 dN15
             p1str=''
             p2str=''
             p3str=''
@@ -462,7 +462,7 @@ CONTAINS
             WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1          
-            ! soilpooldC14org_lay       
+            ! soilpoolDC14org_lay       
             WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1      
@@ -1112,7 +1112,7 @@ CONTAINS
                                   dC13mycorrhiza(ipoi,:),      dC13microbial(ipoi,:), &
                                   dC13residue(ipoi,:),         dC13residue_assoc(ipoi,:)
           lun=lun+1
-          ! soilpooldC14org_lay
+          ! soilpoolDC14org_lay
           write(lun,'(201F16.6)') time_d,&
             calc_delta_C14(sb_pool%soluable_litter%carbon(ipoi,:), &
                             sb_pool%soluable_litter%carbon14(ipoi,:),dC13soluable_litter(ipoi,:)),&
@@ -1386,7 +1386,7 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxN
-        WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_d15NH4 Uptake_d15NO3'
+        WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15'
         lun=lun+1
         ! vegfluxP
         WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP'
@@ -1412,7 +1412,7 @@ CONTAINS
         lun=lun+1        
         ! atm_forcing
         WRITE(lun,'(2a)') 'Time sum_Precip mean_AirTemperature mean_Wind mean_SWdown mean_LWdown mean_VPD', &
-                          ' atm_CO2 atm_d13CO2 atm_d14CO2'
+                          ' atm_CO2 atm_CO2_dC13 atm_CO2_DC14'
         lun=lun+1
     END SELECT
 
@@ -1425,7 +1425,7 @@ CONTAINS
         !! all soil models (simple_0d and simple_1d and jsm)
         ! soilfluxCdC13DC14
         WRITE(lun,'(2a)') 'Time Litterfall HetResp LeachingDOM Litterfall_dC13 HetResp_dC13 LeachingDOM_dC13 ', &
-                          'Litterfall_dC14 HetResp_DC14 LeachingDOM_dC14'
+                          'Litterfall_DC14 HetResp_DC14 LeachingDOM_DC14'
         lun=lun+1
         ! soilfluxN
         WRITE(lun,'(2a)') 'Time Litterfall NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
@@ -1437,8 +1437,8 @@ CONTAINS
                           'Occlusion_PO4 Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
         ! soilfluxdN
-        WRITE(lun,'(2a)') 'Time d15NDeposition d15Nfix_asymb Emission_d15NOY Emission_d15N2O Emission_d15N2 ', &
-                          'Leaching_d15NH4 Leaching_d15NO3'
+        WRITE(lun,'(2a)') 'Time dN15_Deposition dN15_fix_asymb Emission_NOY_dN15 Emission_N2O_dN15 Emission_N2_dN15 ', &
+                          'Leaching_NH4_dN15 Leaching_NO3_dN15'
         lun=lun+1
         ! sb_massBalance
         WRITE(lun,'(2a)') 'Time sb_deltaPoolC sb_deltaPoolN sb_deltaPoolP sb_deltaPoolC13 sb_deltaPoolC14 sb_deltaPoolN15 ', &

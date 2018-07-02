@@ -165,13 +165,13 @@ for (s in 1:nsite) {
 
    if(s==1) { 
       n_isotope_mean<-array(NA,c(nsite,2))
-      colnames(n_isotope_mean)<-c('Leaf_d15N','Total_dN15')
+      colnames(n_isotope_mean)<-c('Leaf_dN15','Total_dN15')
       n_isotope_std<-n_isotope_mean
    }
-   var_idx<-which(colnames(n15pool)=='Leaf_d15N'|colnames(n15pool)=='Total_dN15')
+   var_idx<-which(colnames(n15pool)=='Leaf_dN15'|colnames(n15pool)=='Total_dN15')
    for (var in var_idx) {
      cn<-colnames(n15pool)
-     if(cn[var]=='Leaf_d15N') n15pool[abs(n15pool[,var])<0.0001,var]<-NA
+     if(cn[var]=='Leaf_dN15') n15pool[abs(n15pool[,var])<0.0001,var]<-NA
      hlp1<-aggregate(n15pool[,var],list(yearidx),mean,na.rm=T)
      n_isotope_mean[s,which(colnames(n_isotope_mean)==colnames(n15pool)[var])]<-mean(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
      n_isotope_std[s,which(colnames(n_isotope_mean)==colnames(n15pool)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)

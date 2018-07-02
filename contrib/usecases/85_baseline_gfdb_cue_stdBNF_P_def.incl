@@ -70,7 +70,7 @@ flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeate
 useSiteSpecificAWC="T"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0        # float !
 flag_read_dC13="T"              # either use forcing dC13 or the prescribed default value
-flag_read_dC14="T"              # either use forcing dC14 or the prescribed default value
+flag_read_DC14="T"              # either use forcing DC14 or the prescribed default value
 n_deposition_scheme="dynamic"   # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="dynamic"   # options: none constant dynamic (p_srf_down)
 
