@@ -49,7 +49,7 @@ MODULE mo_pheno_interface
   !> Type definition for update_phenology task
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_phenology
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_phenology0    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_phenology !< Aggregates computed task variables
   END TYPE   tsk_phenology
 
@@ -95,22 +95,6 @@ CONTAINS
 
   END SUBROUTINE Register_pheno_tasks
 
-  ! ================================================================================================================================
-  !>
-  !! @brief Implementation to update the phenology state
-  !! Task "phenology" calculates the phenology state of plants.
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  ! 
-  SUBROUTINE update_phenology0(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    CALL update_phenology(tile, options)
-
-  END SUBROUTINE update_phenology0
 
   ! -------------------------------------------------------------------------------------------------------
   !>
