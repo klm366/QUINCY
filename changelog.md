@@ -1,6 +1,74 @@
-#Changelog for JSBACH4+
+# Changelog for JSBACH4+
 
-##jsbach-4.20p4
+- [Changelog for JSBACH4+](#changelog-for-jsbach4)
+  - [jsbach-4.20p7](#jsbach-420p7)
+  - [jsbach-4.20p6](#jsbach-420p6)
+  - [jsbach-4.20p5](#jsbach-420p5)
+  - [jsbach-4.20p4](#jsbach-420p4)
+  - [jsbach-4.20p3](#jsbach-420p3)
+  - [jsbach-4.20p2](#jsbach-420p2)
+  - [jsbach-4.20p1](#jsbach-420p1)
+  - [jsbach-4.20](#jsbach-420)
+
+## jsbach-4.20p7
+
+_Release* Date: 26 June 2018_
+
+- Re-insert `l_compat401` switch for backward compatibility
+- Use 10m wind from atmosphere in the interface (instead of lowest level wind)
+
+  Note: currently, the 10m wind passed from the atmosphere should still be 0.8 * lowest level wind until issue with lookup table overflow is resolved in icon atmosphere
+- Various (technical) code fixes
+  - Fix pointless TRIM of already minimal-size module names
+  - Fix missing communicator argument in p_bcast calls
+  - Fix pointless polymorphism in `mo_jsb_tile_class.f90`
+  - Fix implicit (re-)allocation on assignment
+  
+    For performance reasons it is better not to use automatic reallocation of left-hand side (e.g. realloc-lhs compiler option for intel)
+  - Use correct character length for version string
+
+## jsbach-4.20p6
+
+_Release* Date: 20 June 2018_
+
+- Earlier reading of lctlib so that it can be used in init_usecase to set up tile structure and processes
+- Use correct communicator in `mo_jsb_io_netcdf_iface.f90`
+- Replaced `c_litter_green_ag` in the albedo calculations with `c_ag_sum_1`
+
+  This is to be consistent with `c_bg_sum` used in the albedo calculations.
+
+## jsbach-4.20p5
+
+_Release Date: 20 June 2018_
+(replaced by jsbach-4.20p6 in order to get a few fixes in)
+
+- Timers
+  - Implement constructor function for `t_jsb_process_task` abstract type and add timers for each process task
+  - Namelist switches are now `debug_level` and `timer_level`, both can take values between 0 and 3 and are independent of each other
+  - Move main JSBACH timer from ICON/ECHAM to JSBACH
+- Use proper MPI communicator in `p_bcast` calls (created problem on CRAY with asynchronous output)
+- Carbon module
+  - Add the summation of `faPAR` from `faPAR_cl`
+  - Changed calculation of fuel from canopy to potential vegetation area and adapted fire_litter_threshold
+  - Correction of fire bug due to fuel and typo correction of subroutine name
+- Some re-factoring in `update_radiation_par`
+- Deletion of `l_compat401` switch, changes for accompanying tuning of model and pre-processing script for input data
+  - Delete `l_compat401` since standard experiments will now use new snow model and freezing of soil water
+  - Change canopy albedo in lctlib
+  - Set default for switch `use_alb_canopy` to false in order to actually use canopy albedo values from lctlib (instead of from ini file)
+  - Change albedo parameters for glaciers in `mo_rad_constants.f90`
+  - Use remapdis for ICON grids above R2B5 instead of remapycon in pre-processing script `jsbach4_ini_files_from_gauss.sh`
+  - Add function to modify soil and root depth as part of tuning the model in pre-processing script
+
+    Soil water holding capacity is modified by changing root depth and soil depth.
+    They are decreased by 30% in the range 30S - 30N to warm the tropical ontinents
+    and increased by 0.2m for the other land grid points to cool the extra-tropical
+    continents.
+  - Use revision for input data; put data for revision r0002 into new directory in pool
+- Further smaller fixes and code cleanup
+
+
+## jsbach-4.20p4
 
 _Release Date: 17 April 2018_
 
@@ -17,7 +85,7 @@ _Release Date: 17 April 2018_
   - Set URL of svn repo to new address `svn.mpimet.mpg.de`
   - Allow generation of files for coupled setup for non-r2b4 resolutions (might still need some work)
 
-##jsbach-4.20p3
+## jsbach-4.20p3
 
 _Release Date: 10 April 2018_
 
@@ -32,7 +100,7 @@ _Release Date: 10 April 2018_
   - updated files for coupled setup
   - changed default cdo remap scheme from "con" to "ycon"
 
-##jsbach-4.20p2
+## jsbach-4.20p2
 
 _Release Date: 29 March 2018_
 
@@ -49,9 +117,10 @@ _Release Date: 29 March 2018_
   - In preparation for use with CDI/PIO.
   - Initialization of JSBACH had to be separated into several subroutines because these have to be called at different stages in ICON.
 
-##jsbach-4.20p1
+## jsbach-4.20p1
 
 _Release Date: 13 February 2018_
 
-##jsbach-4.20
+## jsbach-4.20
+
 _Release Date: 16 December 2017_
