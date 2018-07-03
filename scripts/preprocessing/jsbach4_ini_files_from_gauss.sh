@@ -277,6 +277,7 @@ function remap_var {
       ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_${var}_ext.nc ${temp}
       ${cdo} setname,fao -setmisstoc,0 -setmissval,-9e33 -ifthen ${grid_name}_notsea_miss.nc \
              ${temp} ${grid_name}_${var}_remap.nc
+      rm ${temp}
       ;;
     albedo )
       echo "Remapping $var ..."
