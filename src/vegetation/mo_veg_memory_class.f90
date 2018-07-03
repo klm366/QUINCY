@@ -1007,8 +1007,8 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-!    IF (.NOT. ASSOCIATED(mem%height%ptr)) THEN
-    IF (.NOT. ALLOCATED(mem%height%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%height%ptr)) THEN
+!    IF (.NOT. ALLOCATED(mem%height%ptr)) THEN
 
       !> add variables to veg memory veg\%VAR
       !! 

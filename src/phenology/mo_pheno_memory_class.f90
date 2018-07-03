@@ -98,7 +98,8 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ALLOCATED(mem%growing_season%ptr)) THEN
+    !IF (.NOT. ASSOCIATED(mem%growing_season%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%gdd%ptr)) THEN
 
     !! test variable introduced by Steffen to have a test for the pheno_interface aggregate & integrate routines !!
     CALL jsb_add_var( mem, 'testvar', mem%testvar,      &

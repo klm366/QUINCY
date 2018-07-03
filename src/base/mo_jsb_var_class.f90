@@ -12,7 +12,7 @@ MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp, dp
-  USE mo_exception,           ONLY: finish
+  USE mo_exception,           ONLY: finish, message
   USE mo_jsb_varlist_iface,   ONLY: VARNAME_LEN 
 
   IMPLICIT NONE
@@ -39,7 +39,7 @@ MODULE mo_jsb_var_class
     INTEGER                    :: type            ! REAL2D / REAL3D
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
-    INTEGER, ALLOCATABLE       :: child_idx(:)
+    INTEGER, ALLOCATABLE       :: child_idx(:)    ! Position-numbers of same variable for for the child tiles (according to mem%vars(:)).
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                   ! of those where variable doesn't exist
@@ -68,7 +68,9 @@ MODULE mo_jsb_var_class
   !! ics:ice,iblk
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
-    REAL(wp), ALLOCATABLE :: ptr(:,:)
+    REAL(wp), POINTER :: ptr(:,:) => NULL()
+  CONTAINS
+    FINAL     :: finalize_jsb_var_real2d
   END TYPE t_jsb_var_real2d
 
   !-----------------------------------------------------------------------------------------------------!
@@ -81,7 +83,9 @@ MODULE mo_jsb_var_class
   !! ics:ice,:,iblk
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
-    REAL(wp), ALLOCATABLE :: ptr(:,:,:)
+    REAL(wp), POINTER :: ptr(:,:,:) => NULL()
+  CONTAINS
+    FINAL     :: finalize_jsb_var_real3d
   END TYPE t_jsb_var_real3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -155,7 +159,40 @@ MODULE mo_jsb_var_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
 
-!CONTAINS
+CONTAINS
+
+
+  SUBROUTINE finalize_jsb_var_real2d(this)
+
+    TYPE(t_jsb_var_real2d) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real2d'
+
+    !CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
+    IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
+
+    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
+    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+
+  END SUBROUTINE finalize_jsb_var_real2d
+
+  SUBROUTINE finalize_jsb_var_real3d(this)
+
+    TYPE(t_jsb_var_real3d) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real3d'
+
+    !CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
+    IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
+
+    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
+    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+
+  END SUBROUTINE finalize_jsb_var_real3d
 
 
 !!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)

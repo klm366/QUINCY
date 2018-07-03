@@ -138,7 +138,7 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ALLOCATED(mem%gross_assimilation%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%gross_assimilation%ptr)) THEN
 
       !> add variables to assimi memory assimi\%VAR
       !! 

@@ -238,6 +238,9 @@ CONTAINS
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
+    ALLOCATE(var%field(ics:ice,iblk,1,1,1))
+    var%ptr => var%field(:,:,1,1,1)
+
     var%name = TRIM(name)
     var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
@@ -250,7 +253,6 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr(ics:ice,iblk))
     var%ptr(ics:ice,iblk) = initval_r
 
   END SUBROUTINE slm_add_struct_element_r2d
@@ -317,6 +319,9 @@ CONTAINS
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT
 
+    ALLOCATE(var%field(ics:ice,1:nlevel,iblk,1,1))
+    var%ptr => var%field(:,:,:,1,1)
+    
     var%name = TRIM(name)
     var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
@@ -329,7 +334,6 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr(ics:ice,1:nlevel,iblk))
     var%ptr(ics:ice,1:nlevel,iblk) = initval_r
 
   END SUBROUTINE slm_add_struct_element_r3d
@@ -378,6 +382,9 @@ CONTAINS
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
+    ALLOCATE(var%field(ics:ice,iblk,1,1,1))
+    var%ptr => var%field(:,:,1,1,1)
+
     var%name = TRIM(name)
     var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
@@ -390,7 +397,6 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr(ics:ice,iblk))
     var%ptr(ics:ice,iblk) = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r2d
@@ -460,6 +466,9 @@ CONTAINS
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT
 
+    ALLOCATE(var%field(ics:ice,1:nlevel,iblk,1,1))
+    var%ptr => var%field(:,:,:,1,1)
+
     var%name = TRIM(name)
     var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
@@ -481,7 +490,6 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr(ics:ice,1:nlevel,iblk))
     var%ptr(ics:ice,1:nlevel,iblk) = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r3d

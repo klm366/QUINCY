@@ -136,7 +136,7 @@ CONTAINS
 !    canopy_layer => Get_vgrid('canopy_layer')
 
 
-    IF (.NOT. ALLOCATED(mem%sw_srf_net%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 
       CALL jsb_add_var(mem, 'sw_srf_net', mem%sw_srf_net, &
             hgrid, surface, &

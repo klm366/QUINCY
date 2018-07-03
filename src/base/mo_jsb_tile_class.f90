@@ -360,7 +360,7 @@ CONTAINS
       routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'
     END IF
 
-    IF (.NOT. ALLOCATED(var%ptr)) RETURN
+    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     nc = ice - ics + 1
 
@@ -476,7 +476,7 @@ CONTAINS
       routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'
     END IF
 
-    IF (.NOT. ALLOCATED(var%ptr)) RETURN
+    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
 

@@ -1106,7 +1106,7 @@ CONTAINS
 !    canopy_layer => Get_vgrid('canopy_layer')
 
 
-    IF (.NOT. ALLOCATED(mem%nh4_solute%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%nh4_solute%ptr)) THEN
 
       !> add variables to soil memory soil\%VAR
       !! 
