@@ -42,7 +42,8 @@ MODULE mo_fage_memory_class
       & fract_per_age,        &     ! Area fraction having a certain age - age = index third dim
       & cohort_max_age,       &     ! maximum age per child cohort 
       & disturbed_area              ! If run with disturbances: disturbed area 
-                                    ! -> TODO-JN: this only makes sense with fixed age cohort boundaries!? 
+                                    ! -> TODO-JN: this only makes sense with fixed age cohort boundaries!?
+                                    ! -> Ah, maybe per age?!
   CONTAINS
     PROCEDURE :: Init => Init_fage_memory
   END TYPE t_fage_memory

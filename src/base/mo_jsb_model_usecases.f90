@@ -269,18 +269,18 @@ CONTAINS
     CHARACTER(len=5)  :: pft_shortname
     CHARACTER(len=10) :: age_cohort_name
 
-    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = (/ &
-      & 'Tropical broadleaf evergreen  ', &
-      & 'Tropical broadleaf deciduous  ', &
-      & 'Extra-tropical evergreen      ', &
-      & 'Extra-tropical deciduous      ', &
-      & 'Raingreen shrubs              ', &
-      & 'Deciduous shrubs              ', &
-      & 'C3 grass                      ', &
-      & 'C4 grass                      ', &
-      & 'C3 pasture                    ', &
-      & 'C4 pasture                    ', &
-      & 'C3 crops                      '    /)
+    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
+      & 'Tropical broadleaf evergreen', &
+      & 'Tropical broadleaf deciduous', &
+      & 'Extra-tropical evergreen',     &
+      & 'Extra-tropical deciduous',     &
+      & 'Raingreen shrubs',             &
+      & 'Deciduous shrubs',             &
+      & 'C3 grass',                     &
+      & 'C4 grass',                     &
+      & 'C3 pasture',                   &
+      & 'C4 pasture',                   &
+      & 'C3 crops'                    ]
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
