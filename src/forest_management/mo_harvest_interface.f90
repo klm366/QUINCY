@@ -121,7 +121,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forest_harvest'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_forest_harvest'
 
     ! Declare process memories
     dsl4jsb_Def_memory(HARV_)
@@ -331,7 +331,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_forest_harvest'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_forest_harvest'
 
     INTEGER  :: iblk, ics, ice, nc
 

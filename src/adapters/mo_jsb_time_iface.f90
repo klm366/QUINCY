@@ -14,7 +14,7 @@ MODULE mo_jsb_time_iface
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: finish, message, message_text
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
   USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
@@ -92,7 +92,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(in) :: filename
     LOGICAL, INTENT(IN) :: restart_jsbach
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_time_namelist'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_time_namelist'
 
 #ifdef STANDALONE
     INTEGER :: nml_handler, nml_unit, istat
@@ -150,16 +150,16 @@ CONTAINS
     IF (my_process_is_mpi_parallel()) THEN
     ! jsb3 text: The following are used from ECHAM5 modules and ... need
     ! to be broadcast if running in standalone mode so that the modules can use them
-      CALL p_bcast(no_cycles, p_io)
-      CALL p_bcast(dt_start, p_io)
-      CALL p_bcast(dt_resume, p_io)
-      CALL p_bcast(dt_stop, p_io)
-      CALL p_bcast(no_days, p_io)
-      CALL p_bcast(no_steps, p_io)
-      CALL p_bcast(delta_time, p_io)
-      CALL p_bcast_event(putdata, p_io)
-      CALL p_bcast_event(trigfiles, p_io)
-      CALL p_bcast_event(putrerun, p_io)
+      CALL p_bcast(no_cycles, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_start, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_resume, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_stop, p_io, comm=mpi_comm)
+      CALL p_bcast(no_days, p_io, comm=mpi_comm)
+      CALL p_bcast(no_steps, p_io, comm=mpi_comm)
+      CALL p_bcast(delta_time, p_io, comm=mpi_comm)
+      CALL p_bcast_event(putdata, p_io, comm=mpi_comm)
+      CALL p_bcast_event(trigfiles, p_io, comm=mpi_comm)
+      CALL p_bcast_event(putrerun, p_io, comm=mpi_comm)
     ENDIF
 #endif
 
@@ -175,7 +175,7 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':configure_time_and_events'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':configure_time_and_events'
     INTEGER :: IO_timestep, istep
 
 #ifdef STANDALONE
@@ -205,7 +205,7 @@ CONTAINS
 #ifndef __ICON__
     USE mo_time_control, ONLY: delta_time
 #endif
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_dt'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_dt'
     REAL(wp) :: ztime
 
 #ifdef __ICON__
@@ -237,7 +237,7 @@ CONTAINS
     USE mo_time_conversion, ONLY: TC_get
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_nsteps'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_nsteps'
 
 #ifndef __ICON__
     INTEGER :: start_day, start_second, stop_day, stop_second, idt
@@ -393,7 +393,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':start_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':start_timestep'
 
 #ifdef __ICON__
     !
@@ -421,7 +421,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finish_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finish_timestep'
     
 #ifdef __ICON__
     WRITE(message_text,'(a,i10)') 'JSBACH: Finish TIME STEP n: ', istep
@@ -525,7 +525,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: w1, w2
     INTEGER, INTENT(out)  :: n1, n2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_interpolation_weights'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_interpolation_weights'
     
 #ifdef __ICON__
     TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights
@@ -621,13 +621,13 @@ CONTAINS
     ENDIF
        
     IF (p_parallel) THEN
-       CALL p_bcast(istep, p_io)
-       CALL p_bcast(IO_timestep, p_io)
+       CALL p_bcast(istep, p_io, comm=mpi_comm)
+       CALL p_bcast(IO_timestep, p_io, comm=mpi_comm)
        IF (lresume) THEN
-          CALL p_bcast(forecast_date, p_io)
-          CALL p_bcast(forecast_time, p_io)
-          CALL p_bcast(verification_date, p_io)
-          CALL p_bcast(verification_time, p_io)
+          CALL p_bcast(forecast_date, p_io, comm=mpi_comm)
+          CALL p_bcast(forecast_time, p_io, comm=mpi_comm)
+          CALL p_bcast(verification_date, p_io, comm=mpi_comm)
+          CALL p_bcast(verification_time, p_io, comm=mpi_comm)
        ENDIF
     ENDIF
        

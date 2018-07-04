@@ -84,7 +84,7 @@ CONTAINS
 
     INTEGER :: file_id, return_status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_open_input_generic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_open_input_generic'
 
     netcdf_open_input_generic%filename = TRIM(filename)
 
@@ -118,7 +118,7 @@ CONTAINS
 
     INTEGER :: file_id, return_status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_open_input_patch'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_open_input_patch'
 
     netcdf_open_input_patch%filename = TRIM(filename)
 
@@ -167,7 +167,7 @@ CONTAINS
 
     CLASS(t_input_file), INTENT(inout) :: input_file
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_close_file'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_close_file'
 
 #ifdef __ICON__
     IF (ALLOCATED(input_file%stream_id%read_info)) THEN
@@ -198,7 +198,7 @@ CONTAINS
     INTEGER :: var_size(MAX_VAR_DIMS)
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_1d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_1d'
 
     NULLIFY(netcdf_read_real_1d)
 
@@ -259,7 +259,7 @@ CONTAINS
     REAL(wp), POINTER :: tmp_array(:,:)
     INTEGER :: file_id, var_id
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d'
 
     NULLIFY(netcdf_read_real_2d)
 
@@ -309,7 +309,7 @@ CONTAINS
     INTEGER, OPTIONAL,  INTENT(in)    :: start_time_step, end_time_step
     REAL(wp), POINTER                 :: netcdf_read_real_2d_time(:,:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d_time'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d_time'
 
     netcdf_read_real_2d_time => netcdf_read_real_2d_extdim( &
       input_file, variable_name, fill_array,    &
@@ -332,7 +332,7 @@ CONTAINS
     INTEGER :: file_id, var_id, var_ndims, var_dim_ids(1:3), var_extdim_size, start_read_index(1:3), count_read_index(1:3)
     CHARACTER(LEN=NF_MAX_NAME) :: var_extdim_name
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d_extdim'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d_extdim'
 
     NULLIFY(netcdf_read_real_2d_extdim)
 
@@ -418,7 +418,7 @@ CONTAINS
 
     INTEGER :: dimid, status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_file_has_dim'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_file_has_dim'
 
     IF (my_process_is_stdio()) THEN
       IF (.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
@@ -438,7 +438,7 @@ CONTAINS
 
     INTEGER :: varid, status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_file_has_var'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_file_has_var'
 
     IF (my_process_is_stdio()) THEN
       IF(.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')

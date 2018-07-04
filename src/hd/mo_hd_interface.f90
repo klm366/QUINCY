@@ -121,7 +121,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_hd'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_hd'
 
     CHARACTER(len=32) :: routing_scheme
 
@@ -247,7 +247,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_lateral_flow'
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':hd_lateral_flow'
 
     ! Pointers to variables in memory
     REAL(wp), POINTER :: area(:,:)
@@ -499,7 +499,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_check_water_budget'
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':hd_check_water_budget'
 
     INTEGER :: nres_o_max, nres_b_max, nres_r_max
     INTEGER :: nproma, nblks

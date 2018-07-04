@@ -157,7 +157,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_roughness'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -218,7 +218,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_roughness'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_roughness'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -306,7 +306,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_humidity_scaling'
 
     ! Get local variables from options argument
     iblk = options%iblk
@@ -363,7 +363,11 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)         ! in
       END IF
 
-      mask(:) = w_soil_column(:) > dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract * max_moist(:)
+      IF (model%config%l_compat401) THEN
+        mask(:) = w_soil_sl(:,1) > w_soil_pwp_sl(:,1)
+      ELSE
+        mask(:) = w_soil_column(:) > dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract * max_moist(:)
+      END IF
       WHERE (mask(:))
         fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
           & (fract_water(:) + ( 1._wp - fract_water(:)) /                &
@@ -439,7 +443,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_humidity_scaling'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_humidity_scaling'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc

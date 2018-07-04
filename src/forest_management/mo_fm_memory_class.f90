@@ -58,7 +58,7 @@ CONTAINS
 !    TYPE(t_jsb_vgrid), POINTER :: age_cohorts_grid    ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fm_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fm_memory'
 
     model => Get_model(model_id)
 

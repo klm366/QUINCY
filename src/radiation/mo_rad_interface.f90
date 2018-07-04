@@ -211,7 +211,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_radiation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
     
     ! Get local variables from options argument
     iblk = options%iblk
@@ -327,7 +327,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_radiation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_radiation'
 
     INTEGER :: iblk, ics, ice
 
@@ -418,7 +418,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_par'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_radiation_par'
     
     ! Get local variables from options argument
     iblk  = options%iblk
@@ -568,7 +568,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_radiation_par'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_radiation_par'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -618,7 +618,7 @@ CONTAINS
 
     REAL(wp)                     :: StemArea             ! to be taken from the lctlib. (Area of stems and branches of woody plants.)
 
-    CHARACTER(len=*), PARAMETER    :: routine = TRIM(modname)//':update_albedo'
+    CHARACTER(len=*), PARAMETER    :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(RAD_)
@@ -982,7 +982,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_albedo'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_albedo'
 
     INTEGER :: iblk, ics, ice, nc
 

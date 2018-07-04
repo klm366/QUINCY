@@ -150,7 +150,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
@@ -277,7 +277,7 @@ CONTAINS
     LOGICAL :: l_newday
     REAL(wp) :: timestep  ! Timestep in days
 
-    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_phenology_logrop'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -623,7 +623,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     REAL(wp), POINTER      :: lai_mon(:,:)
 
-    CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology_climatology'
+    CHARACTER(len=*), PARAMETER            :: routine = modname//':update_phenology_climatology'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -670,7 +670,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -746,7 +746,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_fpc'
 
     ! ---------------------------
     ! Go
@@ -775,9 +775,13 @@ CONTAINS
     !
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
-      fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
-      CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-      fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
+      IF (model%config%l_compat401) THEN
+        fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
+      ELSE
+        fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
+        CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+        fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
+      END IF
     ELSE                                               ! We have PFTs and %scheme /= climatology
       fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), dsl4jsb_Lctlib_param(ClumpinessFactor))
     END IF
@@ -797,7 +801,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fpc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fpc'
 
     INTEGER :: iblk, ics, ice, nc
 

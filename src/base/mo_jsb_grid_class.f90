@@ -109,7 +109,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_host'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_host'
 
     ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
 
@@ -170,7 +170,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_file'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_file'
 
     CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from file:')
     CALL message('     ', TRIM(filename))
@@ -208,7 +208,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_lonlat'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_lonlat'
 
     ALLOCATE(new)
 
@@ -224,7 +224,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER :: self
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':delete_grid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_grid'
 
     CALL message(TRIM(routine), 'starting destruction of JSBACH grid instance.')
 
@@ -248,7 +248,7 @@ CONTAINS
 
     CLASS(t_jsb_grid), INTENT(in) :: this
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Print_grid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Print_grid'
 
     CALL message(TRIM(routine), 'print JSBACH grid description')
 
@@ -280,7 +280,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER             :: self
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nblks'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nblks'
 
     get_nblks = self%nblks
 
@@ -294,7 +294,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER             :: self
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nproma'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nproma'
 
     get_nproma = self%nproma
 
@@ -306,7 +306,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_blk_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
 
     IF (grid%patch%id >= 0) THEN
       get_blk_start = get_blk_start_domain(patch=grid%patch)
@@ -324,7 +324,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_blk_end'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
 
     IF (grid%patch%id >= 0) THEN
       get_blk_end = get_blk_end_domain(patch=grid%patch)
@@ -343,7 +343,7 @@ CONTAINS
     INTEGER,          INTENT(in) :: iblk
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_col_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
 
     IF (grid%patch%id >= 0) THEN
       get_col_start = get_col_start_domain(iblk, patch=grid%patch)
@@ -362,7 +362,7 @@ CONTAINS
     INTEGER,          INTENT(in) :: iblk
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_col_end'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
 
     IF (grid%patch%id >= 0) THEN
       get_col_end = get_col_end_domain(iblk, patch=grid%patch)
@@ -391,7 +391,7 @@ CONTAINS
 
     INTEGER :: i, idx
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_vgrid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
 
     IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
     IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
@@ -512,7 +512,7 @@ CONTAINS
 
     INTEGER :: i, idx
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':delete_vgrid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_vgrid'
 
     IF (self%id == 0) RETURN
 

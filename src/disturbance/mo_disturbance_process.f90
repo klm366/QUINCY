@@ -120,7 +120,7 @@ CONTAINS
     REAL(wp) :: air_qsat(SIZE(air_moisture)), &
                 relative_humidity_air(SIZE(air_moisture))
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_relative_humidity_air'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
 
     CALL sat_specific_humidity(nc,               & ! in
                                air_temperature,  & ! in
@@ -156,7 +156,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: pressure(nc)  ! Pressure at level [Pa]
     REAL(wp), INTENT(OUT):: qsat(nc)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sat_specific_humidity'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
     INTEGER  :: i
     INTEGER  :: it(nc)

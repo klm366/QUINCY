@@ -76,7 +76,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, forest_age, age_cohorts_grid ! Vertical grids
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fage_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fage_memory'
 
     ! ---------------------------
     ! Go

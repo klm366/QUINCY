@@ -35,7 +35,7 @@ CONTAINS
 
     INTEGER :: i,n
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_mean_age_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_mean_age_2d'
 
     n  = SIZE(fract_per_age,2)       ! max tracked age
 
@@ -55,7 +55,7 @@ CONTAINS
 
     INTEGER :: i,n
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_mean_age_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_mean_age_2d'
 
     n  = SIZE(fract_per_age,3)       ! max tracked age
 

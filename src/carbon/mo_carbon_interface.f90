@@ -167,7 +167,7 @@ CONTAINS
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
-    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -744,7 +744,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_C_NPP_pot_allocation'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -845,7 +845,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_apply_age_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_apply_age_cohort_changes'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -894,7 +894,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_apply_age_cohort_changes'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_apply_age_cohort_changes'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -977,7 +977,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rescale_carbon_upon_reference_area_change'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
     INTEGER                     :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green
@@ -1122,7 +1122,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
-      & TRIM(modname)//':recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift'
+      & modname//':recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift'
     INTEGER                     :: ics, ice, iblk, nc, i
 
     dsl4jsb_Real2D_onChunk ::  c_green
@@ -1498,7 +1498,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = &
-      & TRIM(modname)//':recalc_delta_carbon_rp_upon_disturbance'
+      & modname//':recalc_delta_carbon_rp_upon_disturbance'
     INTEGER                     :: ics, ice, iblk, nc, i
     REAL(wp), DIMENSION(options%nc) :: helper, d_green_new, d_reserve_new, d_wood_new
     REAL(wp), DIMENSION(options%nc) :: d_acid_ag1_new, d_water_ag1_new, d_ethanol_ag1_new, d_nonsoluble_ag1_new
@@ -1908,7 +1908,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':recalc_per_tile_vars'
+    CHARACTER(len=*), PARAMETER     :: routine = modname//':recalc_per_tile_vars'
     INTEGER                         :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
@@ -2096,7 +2096,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':apply_delta_carbon_to_carbon_states'
+    CHARACTER(len=*), PARAMETER     :: routine = modname//':apply_delta_carbon_to_carbon_states'
     INTEGER                         :: ics, ice, iblk, nc, i
     REAL(wp), DIMENSION(options%nc) :: delta_fract, prev_fract
 
@@ -2414,7 +2414,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_ta_state_sum'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
     INTEGER                     :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
@@ -2504,7 +2504,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_current_c_ag_1_and_bg_sums'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ag_1_and_bg_sums'
     INTEGER                     :: ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum
@@ -2587,7 +2587,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':check_carbon_conservation_for_operation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation_for_operation'
     INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)

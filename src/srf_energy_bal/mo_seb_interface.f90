@@ -194,7 +194,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -227,7 +227,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_energy'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
 
     INTEGER :: iblk, ics, ice
 
@@ -302,7 +302,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snowmelt_correction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
     IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%is_land) RETURN
 
@@ -395,7 +395,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snowmelt_correction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snowmelt_correction'
 
     INTEGER :: iblk, ics, ice
 
@@ -437,7 +437,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -474,7 +474,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_asselin'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
     INTEGER :: iblk, ics, ice
 
@@ -514,7 +514,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -547,7 +547,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_fluxes'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
 
     INTEGER :: iblk, ics, ice
 

@@ -64,7 +64,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_jsb_master_control'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_jsb_master_control'
 
     IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
 
@@ -125,7 +125,7 @@ CONTAINS
     INTEGER :: nml_handler, nml_unit, istat, i
     LOGICAL :: rwnd
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_jsb_control_namelist'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_jsb_control_namelist'
 
     NAMELIST /jsb_control_nml/ &
       is_standalone,           &
@@ -228,7 +228,7 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: level
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':debug_on'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':debug_on'
 
     IF (PRESENT(level)) THEN
       SELECT CASE (TRIM(level))
@@ -251,7 +251,7 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: level
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':timer_on'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':timer_on'
 
     IF (PRESENT(level)) THEN
       SELECT CASE (TRIM(level))

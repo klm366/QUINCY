@@ -81,7 +81,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
     CLASS(t_State),               POINTER :: parent_tmp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Construct_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting construction of tile '//TRIM(name))
 
@@ -268,7 +268,7 @@ CONTAINS
 
     INTEGER :: isteptype
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_tile'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
 
@@ -554,7 +554,7 @@ CONTAINS
     CHARACTER(LEN=15)             :: process_name
     INTEGER                       :: iproc, i, no_of_children, child_no
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_vars_on_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_vars_on_tile'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile structure on vars '//TRIM(this%name))
 
@@ -611,7 +611,7 @@ CONTAINS
 
     INTEGER :: iblk, no_omp_thread
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_task_on_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_task_on_tile'
 
     no_omp_thread = Get_omp_thread()
 
@@ -764,7 +764,7 @@ CONTAINS
 
     INTEGER :: ilct, iproc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Print_tile'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Print_tile'
 
     ! Print for basic type
     CALL this%Print_state()

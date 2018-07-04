@@ -429,7 +429,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -570,7 +570,11 @@ CONTAINS
       drainage(:) = 0._wp
       w_snow_soil(:) = 0._wp
       evapo_snow(:) = evapopot(:)
-      snow_soil_dens(:) = dens_snow
+      IF (model%config%l_compat401) THEN
+        snow_soil_dens(:) = 330._wp
+      ELSE
+        snow_soil_dens(:) = dens_snow
+      END IF
     ELSE
       IF (tile%is_vegetation) THEN
         trans_tmp(:) = trans(:)
@@ -608,6 +612,10 @@ CONTAINS
         & evapo_deficit(:)                & !< out
         & )
 
+      IF (model%config%l_compat401) THEN
+        snow_soil_dens(:) = 330._wp
+      END IF
+
     END IF
 
     IF (tile%is_glacier) THEN
@@ -640,7 +648,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_hydrology'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -729,7 +737,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER  :: nsoil
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -810,7 +818,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_properties'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -886,7 +894,7 @@ CONTAINS
     REAL(wp) :: dtime, steplen
     INTEGER  :: nsoil
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -1011,7 +1019,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_hydrology'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -1074,7 +1082,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     iblk = options%iblk
     ics  = options%ics
@@ -1120,7 +1128,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_unstressed'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -1196,7 +1204,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_stressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
     iblk = options%iblk
     ics  = options%ics
@@ -1286,7 +1294,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_stressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_stressed'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -1372,7 +1380,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_evaporation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -1488,7 +1496,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_evaporation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_evaporation'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -1530,7 +1538,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_ice_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_ice_hydrology'
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -1560,7 +1568,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_and_ice_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snow_and_ice_hydrology'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -1603,7 +1611,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
@@ -1777,7 +1785,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_and_skin_fraction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snow_and_skin_fraction'
 
     INTEGER  :: iblk, ics, ice
 
@@ -1846,7 +1854,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_water_balance'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -1915,7 +1923,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_water_balance'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_balance'
 
     INTEGER :: iblk, ics, ice, nc
 

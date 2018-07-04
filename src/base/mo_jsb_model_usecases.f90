@@ -36,7 +36,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase'
 
     IF (model%config%use_lakes) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH usecase "'//TRIM(model%config%usecase)//'" with lakes')
@@ -69,7 +69,7 @@ CONTAINS
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite'
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -145,7 +145,7 @@ CONTAINS
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_pfts'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
 
     ! Create root of the tile structure representing the whole grid box
@@ -286,7 +286,7 @@ CONTAINS
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_age_cohorts'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_age_cohorts'
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &

@@ -67,7 +67,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER  :: grid
     TYPE(pe_decomposed) :: decomposition
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_standalone'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
 
     INTEGER :: nlon, nlat
 
@@ -120,7 +120,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_patch'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_patch'
 
     IF (patch%id < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid patch')
@@ -152,7 +152,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_decomposition'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_decomposition'
 
     IF (decomposition%nlon < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
@@ -216,7 +216,7 @@ CONTAINS
     dsl4jsb_Def_config(HARV_)
     dsl4jsb_Def_config(FAGE_)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init'
 
     no_omp_thread = Get_omp_thread()
 
@@ -566,7 +566,7 @@ CONTAINS
 
     dsl4jsb_Def_config(CARBON_)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_init_after_restart'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
 
     no_omp_thread = Get_omp_thread()
 

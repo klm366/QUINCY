@@ -69,7 +69,7 @@ CONTAINS
     REAL(wp) :: cohorts_grid_levels(ncohorts)
     REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
     TYPE(t_jsb_vgrid), POINTER :: forest_age, age_cohorts_grid
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fage_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fage_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting fage configuration')
 

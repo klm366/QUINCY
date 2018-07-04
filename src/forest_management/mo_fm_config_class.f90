@@ -53,7 +53,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_fm_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fm_config'
 
     CALL message(TRIM(routine), 'Starting fm configuration')
 

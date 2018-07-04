@@ -32,7 +32,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finalize'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finalize'
 
     IF ((jsbach_runs_standalone() .OR. .NOT. l_timer_host) .AND. timer_on()) CALL print_timer()
 

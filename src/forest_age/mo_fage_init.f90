@@ -39,7 +39,7 @@ CONTAINS
     
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':fage_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':fage_init'
     
     CALL fage_init_bc(tile)
     CALL fage_init_ic(tile)
@@ -58,7 +58,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':fage_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':fage_init_bc'
 
     INTEGER :: i, max_age, age_interval, ncohorts
 
@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(FAGE_)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':fage_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':fage_init_ic'
 
     !-----------------------------------------------------------------------
     dsl4jsb_Real3D_onDomain :: fract_per_age

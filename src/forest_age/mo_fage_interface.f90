@@ -193,7 +193,7 @@ CONTAINS
     REAL(wp) :: fractSum
     INTEGER  :: i,j, ncohorts, max_age, iblk, ics, ice, nc
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_calculate_ageing'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_calculate_ageing'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -346,7 +346,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_calculate_ageing'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_calculate_ageing'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -416,7 +416,7 @@ CONTAINS
     INTEGER  :: i, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_nat_dist_age_cohorts'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_nat_dist_age_cohorts'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -553,7 +553,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_nat_dist_age_cohorts'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_nat_dist_age_cohorts'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -622,7 +622,7 @@ CONTAINS
     INTEGER  :: i, oldestAgeCohort, ncohorts, max_age, iblk, ics, ice, nc
     LOGICAL  :: l_sourceisfirstChild
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_harvest_age_cohorts'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_harvest_age_cohorts'
 
     ! ---------------------------
     iblk    = options%iblk
@@ -750,7 +750,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_harvest_age_cohorts'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_harvest_age_cohorts'
 
     INTEGER  :: iblk, ics, ice, nc
 

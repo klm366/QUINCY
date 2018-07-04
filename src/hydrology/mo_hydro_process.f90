@@ -1436,7 +1436,7 @@ CONTAINS
 !!$    REAL(wp) :: zpar(SIZE(par))
     REAL(wp) :: d, zpar
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_canopy_cond_unstressed_simple'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_canopy_cond_unstressed_simple'
 
 !!$    CALL message(TRIM(routine), 'Computing unstressed canopy conductance')
 
@@ -1461,7 +1461,7 @@ CONTAINS
       & water_stress
     LOGICAL,  INTENT(in) :: air_is_saturated
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_canopy_cond_stressed_simple'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_canopy_cond_stressed_simple'
 
 !!$    CALL message(TRIM(routine), 'Computing unstressed canopy conductance')
 

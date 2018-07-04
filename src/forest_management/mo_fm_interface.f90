@@ -117,7 +117,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forest_management'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_forest_management'
 
     ! Declare process memories
     dsl4jsb_Def_memory(FM_)
@@ -184,7 +184,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_forest_management'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_forest_management'
 
     INTEGER  :: iblk, ics, ice, nc
 

@@ -61,7 +61,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface        ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_harv_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_harv_memory'
 
     model => Get_model(model_id)
 

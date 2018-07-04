@@ -120,7 +120,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
 
     model => Get_model(model_id)
 

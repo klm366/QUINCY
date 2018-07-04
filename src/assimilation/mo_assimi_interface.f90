@@ -200,7 +200,7 @@ CONTAINS
     INTEGER                      :: ncanopy          ! number of canopy layers
     REAL(wp),          POINTER   :: canopy_bound_lai(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':assimilation_scaling_factors'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':assimilation_scaling_factors'
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -284,7 +284,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_assimilation_scaling_factors'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation_scaling_factors'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -330,7 +330,7 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     INTEGER                                   :: icanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     ! Declare process memories
     dsl4jsb_Def_memory(ASSIMI_)
@@ -439,7 +439,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_unstressed'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -487,7 +487,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER                             :: icanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_memory(ASSIMI_)
@@ -678,7 +678,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_assimilation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation'
 
     ! Get local variables from options argument
     iblk = options%iblk

@@ -43,7 +43,7 @@ CONTAINS
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_depth_to_layer_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
 
