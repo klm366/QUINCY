@@ -12,8 +12,6 @@ MODULE mo_base_constants
   USE mo_kind, ONLY : wp,eps4
 
 !  INTEGER, PARAMETER    :: nsoil      = 15        !< number of soil layer simulated by the model
-  ! convenience 
-  REAL(wp), PARAMETER   :: zero       = 0.0_wp    !< just zero
   ! time control
   REAL(wp), SAVE        :: dtime                  !< length of one time step in seconds
   REAL(wp), SAVE        :: one_year               !< length of one year in days 

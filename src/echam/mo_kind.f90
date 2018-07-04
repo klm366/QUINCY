@@ -50,6 +50,12 @@ MODULE mo_kind
   REAL(wp), PARAMETER :: eps8  = 0.00000001_wp
   REAL(wp), PARAMETER :: eps4  = 0.0001_wp
 
+  ! SLM convenience       *slmjsb4
+  REAL(wp), PARAMETER :: zero     = 0.0_wp    !< just zero
+  REAL(wp), PARAMETER :: l_false  = 0.0_wp    !< just zero
+  REAL(wp), PARAMETER :: l_true   = 1.0_wp    !< just one
+  REAL(wp), PARAMETER :: l_test   = 0.5_wp    !< just 0.5, inbetween l_false and l_true, for easy IF (TRUE/FALSE)
+
   ! Integer section
 
   INTEGER, PARAMETER :: i4 = SELECTED_INT_KIND(pi4)
@@ -74,4 +80,3 @@ CONTAINS
   END SUBROUTINE print_kinds
 
 END MODULE mo_kind
-

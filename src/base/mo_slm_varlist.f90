@@ -19,8 +19,7 @@ MODULE mo_slm_varlist
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
-  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
-                                  t_jsb_var_logical2d                        , &                 ! *slmjsb4
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d        , &                  ! *slmjsb4
                                   t_jsb_struct, t_jsb_n_struct                                   ! *slmjsb4
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -50,8 +49,6 @@ MODULE mo_slm_varlist
     MODULE PROCEDURE slm_add_var_list_element_r2d ! *slmtemp
     ! REAL 3D
     MODULE PROCEDURE slm_add_var_list_element_r3d ! *slmtemp
-    ! LOGICAL 2D
-    MODULE PROCEDURE slm_add_var_list_element_l2d ! *slmjsb4 *slmtemp
   END INTERFACE jsb_add_var
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_slm_varlist'
@@ -493,60 +490,5 @@ CONTAINS
     var%ptr(ics:ice,1:nlevel,iblk) = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r3d
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> add 2D LOGICAL variable to process memory
-  !!
-  !!  t_jsb_memory:mem <- t_jsb_var_logical2d:var
-  !!    
-  !! SCALAR !
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE slm_add_var_list_element_l2d( &
-    mem, name, var, &
-    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
-    initval_r) 
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_jsb_memory),                INTENT(inout)   :: mem              ! memory structure
-    CHARACTER(len=*),                   INTENT(in)      :: name             ! name of variable
-    TYPE(t_jsb_var_logical2d), TARGET,  INTENT(inout)   :: var              ! reference to jsbach var -> newly created plain scalar REAL
-
-    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: hgrid     ! horizontal grid type
-    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid     ! vertical grid type
-    TYPE(t_cf),                 INTENT(in) :: cf        ! CF related metadata
-    TYPE(t_grib1),              INTENT(in) :: grib1     ! GRIB1 related metadata
-    TYPE(t_grib2),              INTENT(in) :: grib2     ! GRIB2 related metadata
-    CHARACTER(len=*),           INTENT(in) :: prefix    ! Prefix for variable name
-    CHARACTER(len=*),           INTENT(in) :: suffix    ! Suffix for variable name
-    LOGICAL,          OPTIONAL, INTENT(in) :: initval_r ! value if var not available
-
-    ! 0.2 Local
-    INTEGER                     :: pos_of_var
-    TYPE(t_jsb_model), POINTER  :: model
-    INTEGER                     :: ice, ics, iblk   ! *slmtemp
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_l2d'
-
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
-
-    var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
-
-    pos_of_var = mem%no_of_vars + 1
-    IF (pos_of_var > mem%max_no_of_vars) THEN
-      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
-    ELSE
-      mem%vars(pos_of_var)%p => var
-      mem%no_of_vars = pos_of_var
-    END IF
-
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr(ics:ice,iblk))
-    var%ptr(ics:ice,iblk) = initval_r
-
-  END SUBROUTINE slm_add_var_list_element_l2d
 
 END MODULE mo_slm_varlist

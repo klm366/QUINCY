@@ -33,7 +33,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_pools(tile, options)
 
-    USE mo_kind,                            ONLY: wp, eps4, eps8
+    USE mo_kind,                            ONLY: wp, eps4, eps8, l_test
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
@@ -104,7 +104,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
     ! PHENO_
-    dsl4jsb_Logical2D_onChunk   :: growing_season 
+    dsl4jsb_Real2D_onChunk      :: l_growing_season 
     ! SOIL_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SOIL_ 3D
@@ -115,7 +115,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! VEG_ 2D
-    dsl4jsb_Logical2D_onChunk   :: l_do_cohort_harvest
+    dsl4jsb_Real2D_onChunk      :: l_do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
@@ -202,7 +202,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)             ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)               ! in
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                 ! in
@@ -393,7 +393,7 @@ CONTAINS
     CASE ('canopy')
    
        ! diagnose required change in leaf C given phenology to attain prescribed LAI max
-       WHERE(growing_season(:))
+       WHERE(l_growing_season(:) > l_test)
           veg_growth%leaf%carbon(:) = dsl4jsb_Config(PHENO_)%lai_max / lctlib%sla * &
                                       (1._wp - exp(-k_leafon_canopy * &
                                        (dsl4jsb_Config(PHENO_)%lai_max - lai(:)) / dsl4jsb_Config(PHENO_)%lai_max)) * &
@@ -441,9 +441,9 @@ CONTAINS
     !!
     !! in case of complete harvest, set all pools to zero
     !! (to account for wood extraction, which would otherwise leave some wood, and reset the key plant diagnostics)
-    IF(base_config%l_do_stand_replacing_harvest .OR. l_do_cohort_harvest(options%ics)) THEN 
+    IF(base_config%l_do_stand_replacing_harvest .OR. l_do_cohort_harvest(options%ics) > l_test) THEN 
       !! difference between cohort & population scheme
-      IF (l_do_cohort_harvest(options%ics)) THEN    ! -> cohort scheme
+      IF (l_do_cohort_harvest(options%ics) > l_test) THEN    ! -> cohort scheme
         dens_ind(:)                    = 1.0_wp
         veg_pool%reserve%carbon(:)     = 1.0_wp
       ELSE ! base_config%l_do_stand_replacing_harvest -> population scheme

@@ -11,7 +11,7 @@ MODULE mo_sb_util
 #include "dsl_jsbach.inc"
 !#ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp, zero
   USE mo_exception,   ONLY: finish
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
@@ -37,7 +37,6 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_constants,        ONLY: zero
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory

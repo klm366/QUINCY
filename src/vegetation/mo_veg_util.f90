@@ -14,7 +14,7 @@ MODULE mo_veg_util
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp, zero
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
 
@@ -38,7 +38,6 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_constants,        ONLY: zero
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 

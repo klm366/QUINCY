@@ -268,28 +268,31 @@ CONTAINS
     lun = 100
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-
+         ! vegpoolC
          WRITE(lun,'(2a)') 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
                           'Fruit_C Labile_C Reserve_C SeedBank_C Total_C Total_C13 Total_C14'
          lun=lun+1
+         ! vegpooldC13DC14
          WRITE(lun,'(4a)') 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
                           'Fruit_dC13 Labile_dC13 Reserve_dC13 SeedBank_dC13 Leaf_DC14 FineRoot_DC14 ', &
                           'SapWood_DC14 HeartWood_DC14 CoarseRoot_DC14 Fruit_DC14 Labile_DC14 ', &
                           'Reserve_DC14 SeedBank_DC14'
          lun=lun+1
+         ! vegpoolN
          WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
                           'Fruit_N Labile_N Reserve_N SeedBank_N Total_N'
          lun=lun+1
+         ! vegpoolP
          WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                           'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
          lun=lun+1
+         ! vegpooldN15
          WRITE(lun,'(2a)') 'Time Leaf_dN15 FineRoot_dN15 SapWood_dN15 HeartWood_dN15 CoarseRoot_dN15 ', & 
                           'Fruit_dN15 Labile_dN15 Reserve_dN15 SeedBank_dN15 Total_dN15'
          lun=lun+1
          ! soilpoolPhysics
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS '
          lun=lun+1
-         ! soilpoolPhysics_lay output per soil_layer for two SOIL_ variables
          p1str=''
          p2str=''
          DO isoil = 1,nsoil_sb
@@ -301,20 +304,26 @@ CONTAINS
             WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
             WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
          ENDDO
+         ! soilpoolPhysics_lay  ( output per soil_layer for two SOIL_ variables )
          WRITE(lun,'(3a)') 'Time ',TRIM(p1str), TRIM(p2str)
          lun=lun+1
+         ! soilpoolOrg         
          WRITE(lun,'(3a)') 'Time MetLitterC MetLitterN MetLitterP StrLitterC StrLitterN StrLitterP', &
                            ' WodLitterC WodLitterN WodLitterP',&
                            ' FastC FastN FastP SlowC SlowN SlowP MycC MycN MycP'
          lun=lun+1
+         ! soilpoolInOrg
          WRITE(lun,'(a)') 'Time MineralNH4 MineralNO3 MineralP NOY N2O N2'
          lun=lun+1
+         ! ecopoolCNP
          WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN EcoP EcoN15'
          lun=lun+1
+         ! soilpooldC13DC14dN15
          WRITE(lun,'(3a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14',& 
                            ' WodLitterDC14 FastDC14 SlowDC14 MycDC14',&
                            ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
+         ! veg_diagnostics
          WRITE(lun,'(2a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp', & 
                            ' growing_season cost_nup cost_bnf unit_transp transp'
          lun=lun+1
@@ -544,7 +553,6 @@ CONTAINS
     INTEGER                              :: icanopy                   ! loop over ncanopy
     REAL(wp)                             :: hlp1                      ! helper variable
     REAL(wp)                             :: l2r, s2c, bcf             ! helper ratio variables
-    REAl(wp)                             :: growing_season_float      ! output variable for growing season
     REAL(wp)                             :: dC13leaf,dC13fine_root, & ! 
                                             dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                             dC13fruit,dC13labile,dC13reserve,dC13seed_bed
@@ -566,7 +574,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! PHENO_
-    dsl4jsb_Logical2D_onChunk   :: growing_season
+    dsl4jsb_Real2D_onChunk      :: l_growing_season
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
@@ -647,7 +655,7 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
     dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
@@ -1004,17 +1012,12 @@ CONTAINS
               ELSE
                  bcf = 0._wp
               ENDIF
-              ! transition from bool to 0/1 for growing season
-              IF (growing_season(ipoi)) THEN
-                growing_season_float = 1.0_wp
-                ELSE
-                growing_season_float = 0.0_wp
-              END IF 
+
               write(lun,'(22F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
                 hlp1,l2r,s2c, bcf, &
                 target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
                 growth_cn_talloc_mavg(ipoi), npp_talloc_mavg(ipoi), &
-                growing_season_float, & 
+                l_growing_season(ipoi), & 
                 cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
               lun=lun+1

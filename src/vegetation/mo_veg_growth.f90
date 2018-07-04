@@ -97,7 +97,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! PHENO_
-    dsl4jsb_Logical2D_onChunk   :: growing_season
+    dsl4jsb_Real2D_onChunk      :: l_growing_season
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: q_air
@@ -265,7 +265,7 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)                 ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                              ! in
@@ -431,7 +431,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), growing_season(:))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), l_growing_season(:))
 
     !> 1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and 
     !!     update N-specific maintenance respiration rate 
@@ -508,7 +508,7 @@ CONTAINS
     !! 
     !! in this function it is looped over chunks with two IF staments:  \n
     !!   DO ichunk=1,nc                                                 \n
-    !!   IF(growing_season(ichunk))THEN                                 \n
+    !!   IF(l_growing_season(ichunk))THEN                                 \n
     !!   IF(veg_pool_leaf_nitrogen(ichunk) > eps4)THEN
     !! 
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
@@ -517,7 +517,7 @@ CONTAINS
                                         dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
-                                        growing_season(:)                              , &
+                                        l_growing_season(:)                            , &
                                         veg_pool%leaf%carbon(:)                        , &  
                                         veg_pool%leaf%nitrogen(:)                      , & 
                                         lai(:)                                         , &
@@ -554,7 +554,7 @@ CONTAINS
     CALL calc_stoichiometry_changes(  lctlib%growthform                               , & ! lctlib
                                       lctlib%cn_leaf                                  , & ! lctlib
                                       TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , & ! in
-                                      growing_season(:)                               , &
+                                      l_growing_season(:)                             , &
                                       leaf_cn_direction(:)                            , &
                                       target_np_leaf(:)                               , &
                                       target_cn_leaf(:)                               , & ! inout
@@ -687,7 +687,7 @@ CONTAINS
     !! Info: veg_reserve_use is of TYPE(t_slm_struct_veg_element / t_veg_element_a)
     CALL calc_reserve_useage(options                          , &   ! in
                              lctlib                           , &
-                             growing_season(:)                , &
+                             l_growing_season(:)              , &
                              kstar_labile(:)                  , &
                              target_labile_pool_carbon(:)     , & 
                              target_labile_pool_nitrogen(:)   , & 
@@ -799,9 +799,9 @@ CONTAINS
   !!  therefore only takes account of the impact of low temperatures (<5°C) and low moisture 
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,growing_season) RESULT(kstar_labile)
+  PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,l_growing_season) RESULT(kstar_labile)
 
-    USE mo_kind,              ONLY: wp   
+    USE mo_kind,              ONLY: wp, l_test   
     USE mo_shared_constants,  ONLY: Tzero
     USE mo_veg_constants,     ONLY: lambda_labile_temp  , &
                                     lambda_labile_theta , &
@@ -813,7 +813,7 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K) 
     REAL(wp),   INTENT(in)    :: w_soil_root_theta      !< soil moisture scalar (fraction of available water holding capacity) 
-    LOGICAL,    INTENT(in)    :: growing_season         !< is the plant growing? 
+    REAL(wp),   INTENT(in)    :: l_growing_season       !< is the plant growing? 
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
     ! ---------------------------
     ! 0.2 Local
@@ -828,7 +828,7 @@ CONTAINS
         ftemp = 0.0_wp
     ENDIF
     fmoist = 1.0_wp - exp(-(lambda_labile_theta * w_soil_root_theta)**k_labile_theta) 
-    IF(growing_season)THEN
+    IF(l_growing_season > l_test)THEN
         kstar_labile = ftemp * fmoist / tau_labile
       ELSE 
         kstar_labile = 0.0_wp
@@ -1295,7 +1295,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_stoichiometry_changes(growthform              , &   ! lctlib
                                                   cn_leaf                 , &   ! lctlib
                                                   leaf_stoichom_scheme    , &   ! in
-                                                  growing_season          , &
+                                                  l_growing_season        , &
                                                   leaf_cn_direction       , &
                                                   target_np_leaf          , &
                                                   target_cn_leaf          , &   ! inout
@@ -1317,7 +1317,7 @@ CONTAINS
     INTEGER,                  INTENT(in)    :: growthform                !< land-cover-type library parameter
     REAL(wp),                 INTENT(in)    :: cn_leaf                   !< land-cover-type library parameter
     CHARACTER(len=*),         INTENT(in)    :: leaf_stoichom_scheme      !< from veg config
-    LOGICAL,                  INTENT(in)    :: growing_season            !< 
+    REAL(wp),                 INTENT(in)    :: l_growing_season          !< 
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
                                                target_np_leaf            !< 
     REAL(wp),                 INTENT(inout) :: target_cn_leaf            !< 
@@ -1336,7 +1336,7 @@ CONTAINS
 
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (leaf_stoichom_scheme == "optimal" .AND. growing_season) THEN
+    IF (leaf_stoichom_scheme == "optimal" .AND. l_growing_season > l_test) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
     !ELSE
@@ -1865,7 +1865,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_reserve_useage( options                       , &
                                   lctlib                        , &
-                                  growing_season                , &
+                                  l_growing_season              , &
                                   kstar_labile                  , &
                                   target_labile_pool_carbon     , & 
                                   target_labile_pool_nitrogen   , & 
@@ -1897,7 +1897,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),         INTENT(in)    :: options                           !< model options    
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                            !< land-cover-type library - parameters for one pft
-    LOGICAL , DIMENSION(options%nc),  INTENT(in)    :: growing_season                    !< does the plant intend to grow?
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: l_growing_season                  !< does the plant intend to grow?
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: kstar_labile                  , & !< potential labile pool turnover (1/day) 
                                                        target_labile_pool_carbon     , & ! desirable size (mol C/m2) of the labile pool
                                                        target_labile_pool_nitrogen   , & ! desirable size (mol N/m2) of the labile pool
@@ -1930,7 +1930,7 @@ CONTAINS
     !! phi_storage is adjusted by phi_phenology to avoid storage building to interfere with flushing (push phi_storage towards 
     !!  reserve at times of low LAI or labile pool to give priority to growth and maintentance)
     hlp1(:) = MIN( MAX(min_lai, target_lai(:)), target_lai_max)
-    WHERE(lai(:) < hlp1(:) .AND. growing_season(:))
+    WHERE(lai(:) < hlp1(:) .AND. l_growing_season(:) > l_test)
       phi_phenology(:) = exp(-(lambda_phiphen * lai(:) / hlp1(:) )**k_phiphen) - exp(-(lambda_phiphen)**k_phiphen) 
     ELSEWHERE
       phi_phenology(:) = 0._wp
@@ -1983,7 +1983,7 @@ CONTAINS
     hlp1(:)          = MAX(0.0_wp, veg_pool_labile%nitrogen(:))        ! for safety, catch potential negative values
     WHERE(target_labile_pool_nitrogen(:) > eps8    .AND. & 
           hlp1(:) < target_labile_pool_nitrogen(:) .AND. & 
-          growing_season(:))
+          l_growing_season(:) > l_test)
       phi_maintenance(:) = exp(-(lambda_phimaint_nut * hlp1(:) / target_labile_pool_nitrogen(:))**k_phimaint_nut) & 
                            - exp(-(lambda_phimaint_nut)**k_phimaint_nut)
     ELSEWHERE
@@ -2034,7 +2034,7 @@ CONTAINS
     hlp1(:)          = MAX(0.0_wp, veg_pool_labile%phosphorus(:))      ! for safety, catch potential negative values
     WHERE(target_labile_pool_phosphorus(:) > eps8    .AND. & 
           hlp1(:) < target_labile_pool_phosphorus(:) .AND. & 
-          growing_season(:))
+          l_growing_season(:) > l_test)
       phi_maintenance(:) = exp(-(lambda_phimaint_nut * hlp1(:) / target_labile_pool_phosphorus(:))**k_phimaint_nut) & 
                            - exp(-(lambda_phimaint_nut)**k_phimaint_nut)
     ELSEWHERE

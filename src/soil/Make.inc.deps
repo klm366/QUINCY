@@ -51,7 +51,6 @@ mo_soil_util.o: \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_process_class.o \
-  mo_base_constants.o \
   mo_soil_memory_class.o
 
 mo_soil_update_physics.o: \

@@ -12,7 +12,7 @@ MODULE mo_veg_canopy
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                        ONLY: wp, eps4, eps8, eps12   
+  USE mo_kind,                        ONLY: wp, eps4, eps8, eps12, l_test
   USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
   USE mo_exception,                   ONLY: message_text, finish
   USE mo_assimi_update_canopy_fluxes, ONLY: calc_photosynthesis
@@ -1009,7 +1009,7 @@ CONTAINS
                                         ncanopy                       , &
                                         flag_optimal_Nfraction        , &
                                         canopy_layer_depth            , &
-                                        growing_season                , &
+                                        l_growing_season              , &
                                         veg_pool_leaf_carbon          , & 
                                         veg_pool_leaf_nitrogen        , & 
                                         lai                           , &
@@ -1056,7 +1056,7 @@ CONTAINS
     INTEGER,                                INTENT(in)    :: ncanopy                        !< number of canopy layers
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< depth of each single canopy layer
-    LOGICAL, DIMENSION(options%nc),         INTENT(in)    :: growing_season
+    REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: l_growing_season
     REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: veg_pool_leaf_carbon       , &
                                                              veg_pool_leaf_nitrogen
     REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: lai                        , &
@@ -1135,7 +1135,7 @@ CONTAINS
     !> 1.0 ...
     !!
     DO ipoint=1,options%nc
-    IF(growing_season(ipoint))THEN
+    IF(l_growing_season(ipoint) > l_test)THEN
     IF(veg_pool_leaf_nitrogen(ipoint) > eps4)THEN
 
       fn_chl_new_cl(ipoint,:)                 = fn_chl_cl(ipoint,:)
@@ -1235,7 +1235,7 @@ CONTAINS
     ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
       leaf_cn_direction(ipoint) = 0.0_wp
     END IF  ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
-    END IF  ! IF(growing_season(ipoint))
+    END IF  ! IF(l_growing_season(ipoint) > l_test)
   END DO  ! ipoint=1,options%nc
 
   END SUBROUTINE calc_dir_optimal_cn_leaf

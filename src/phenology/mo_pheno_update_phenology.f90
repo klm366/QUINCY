@@ -12,7 +12,7 @@ MODULE mo_pheno_update_phenology
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,          ONLY: wp, eps4
+  USE mo_kind,          ONLY: wp, eps4, l_true, l_false, l_test
   USE mo_jsb_control,   ONLY: debug_on
   USE mo_exception,     ONLY: message
 
@@ -78,7 +78,7 @@ CONTAINS
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     ! PHENO_
-    dsl4jsb_Logical2D_onChunk   :: growing_season
+    dsl4jsb_Real2D_onChunk      :: l_growing_season
     dsl4jsb_Real2D_onChunk      :: gdd
     dsl4jsb_Real2D_onChunk      :: nd_dormance
     ! ASSIMI_
@@ -114,7 +114,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)          ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(ASSIMI_)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)               ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_, gdd)                            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)                    ! inout
     ! ---------------------------
@@ -158,7 +158,7 @@ CONTAINS
                         mean_leaf_age(:)                   , &
                         gpp_tlabile_mavg(:)                , &
                         maint_respiration_tlabile_mavg(:)  , &
-                        growing_season(:)                  , &  ! inout
+                        l_growing_season(:)                , &  ! inout
                         growth_req_n_tlabile_mavg(:)       , &
                         growth_req_p_tlabile_mavg(:)       , &
                         nd_dormance(:)                     , &
@@ -193,7 +193,7 @@ CONTAINS
                                       mean_leaf_age                   , &
                                       gpp_tlabile_mavg                , &
                                       maint_respiration_tlabile_mavg  , &
-                                      growing_season                  , &
+                                      l_growing_season                , &
                                       growth_req_n_tlabile_mavg       , &
                                       growth_req_p_tlabile_mavg       , &
                                       nd_dormance                     , &
@@ -224,7 +224,7 @@ CONTAINS
                                                    mean_leaf_age                   , & !< mean leaf age
                                                    gpp_tlabile_mavg                , & !< moving average gpp over tlabile
                                                    maint_respiration_tlabile_mavg      !< moving average maintenance respiration over tlabile
-    LOGICAL,                      INTENT(inout) :: growing_season                      !< growing season Yes/No
+    REAL(wp),                     INTENT(inout) :: l_growing_season                    !< growing season Yes/No
     REAL(wp),                     INTENT(inout) :: growth_req_n_tlabile_mavg       , & !< moles N required for a unit of C growth to determine labile pool size
                                                    growth_req_p_tlabile_mavg       , & !< moles P required for a unit of N growth to determine labile pool size
                                                    nd_dormance                     , & !< number of days in dormancy since last growing season
@@ -243,12 +243,12 @@ CONTAINS
 
     !> 1.0 check growing season has started or ended
     !! 
-    IF(.NOT.growing_season) THEN ! If not in growing season, check whether growing season has started
+    IF(l_growing_season < l_test) THEN ! If not in growing season, check whether growing season has started
        SELECT CASE (phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
             IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN 
-                  growing_season = .TRUE.
+                  l_growing_season = l_true
                   growth_req_n_tlabile_mavg = 1._wp / cn_leaf
                   growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
@@ -256,7 +256,7 @@ CONTAINS
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
             hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1) THEN 
-                  growing_season = .TRUE.
+                  l_growing_season = l_true
                   growth_req_n_tlabile_mavg = 1._wp / cn_leaf
                   growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
@@ -264,7 +264,7 @@ CONTAINS
             hlp1 = gdd_req_max * exp( - k_gdd_dormance * nd_dormance ) 
             IF(gdd > hlp1 .AND. &
                beta_soil_gs_tphen_mavg > beta_soil_flush)THEN 
-                  growing_season = .TRUE.
+                  l_growing_season = l_true
                   growth_req_n_tlabile_mavg = 1._wp / cn_leaf
                   growth_req_p_tlabile_mavg = 1._wp / np_leaf
             ENDIF
@@ -275,20 +275,20 @@ CONTAINS
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
             IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. & 
                mean_leaf_age > min_leaf_age ) & 
-                  growing_season = .FALSE.
+                  l_growing_season = l_false
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
             ! leaves have been out a given number of days
             IF(t_air_week_mavg < t_air_month_mavg .AND. &
                t_air_tphen_mavg < t_air_senescence .AND. & 
                mean_leaf_age > min_leaf_age) & 
-                  growing_season = .FALSE.
+                  l_growing_season = l_false
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
             IF((t_air_tphen_mavg < t_air_senescence .OR. & 
                 beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
                 gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. &
                 mean_leaf_age > min_leaf_age) &
-                  growing_season = .FALSE.
+                  l_growing_season = l_false
        END SELECT
     ENDIF   
 
@@ -301,7 +301,7 @@ CONTAINS
 
     !> 2.2 nd_dormance counter
     !! 
-    IF (growing_season) THEN 
+    IF (l_growing_season > l_test) THEN 
       gdd         = 0.0_wp
       nd_dormance = 0.0_wp
     ELSE

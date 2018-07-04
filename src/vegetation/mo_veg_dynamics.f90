@@ -11,7 +11,7 @@ MODULE mo_veg_dynamics
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                 ONLY: wp, eps4, eps8
+  USE mo_kind,                 ONLY: wp, eps4, eps8, l_false, l_true, l_test
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message
 
@@ -82,11 +82,11 @@ CONTAINS
     ! RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! PHENO_
-    dsl4jsb_Logical2D_onChunk   :: growing_season
+    dsl4jsb_Real2D_onChunk      :: l_growing_season
     ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     ! VEG_
-    dsl4jsb_Logical2D_onChunk   :: l_do_cohort_harvest
+    dsl4jsb_Real2D_onChunk      :: l_do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter 
     dsl4jsb_Real2D_onChunk      :: height 
@@ -121,7 +121,7 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)     ! in
     ! ---------------------------
@@ -182,9 +182,9 @@ CONTAINS
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
         CASE ("cohort")
           cohort_age(:)          = cohort_age(:) + base_config%dtime / (one_year * one_day)
-          l_do_cohort_harvest(:) = .FALSE.                                                    ! per default it is set to FALSE
+          l_do_cohort_harvest(:) = l_false                                               ! per default it is set to FALSE
           WHERE (cohort_age(:) > dsl4jsb_Config(VEG_)%cohort_harvest_interval)
-            l_do_cohort_harvest(:) = .TRUE.
+            l_do_cohort_harvest(:) = l_true
             cohort_age(:)          = 0.0_wp
           ENDWHERE
       ENDSELECT
@@ -208,8 +208,9 @@ CONTAINS
 
     !> 2.1 Calculate stand harvest_rate and veg\%litterfall
     !! 
+    !! if either logical is true
     !! @todo update_veg_dynamics() l_do_cohort_harvest dimension should be used as nc
-    IF (base_config%l_do_stand_replacing_harvest .OR. l_do_cohort_harvest(options%ics)) THEN
+    IF (base_config%l_do_stand_replacing_harvest .OR. l_do_cohort_harvest(options%ics) > l_test) THEN
       CALL calc_veg_harvest(options                                     , & ! in
                             veg_pool                                    , &
                             veg_litterfall                              , & ! inout
@@ -230,7 +231,7 @@ CONTAINS
                                       lctlib                          , & 
                                       dsl4jsb_Config(ASSIMI_)%ncanopy , &
                                       w_soil_root_theta(:)            , &
-                                      growing_season(:)               , &
+                                      l_growing_season(:)             , &
                                       t_air_week_mavg(:)              , &
                                       fpc(:)                          , &
                                       rfr_ratio_boc_tvegdyn_mavg(:)   , &
@@ -246,7 +247,7 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population","cohort")
       !! @todo update_veg_dynamics() l_do_cohort_harvest dimension should be used as nc
-      IF(.NOT. base_config%l_do_stand_replacing_harvest .AND. .NOT. l_do_cohort_harvest(options%ics)) THEN 
+      IF(.NOT. base_config%l_do_stand_replacing_harvest .AND. l_do_cohort_harvest(options%ics) < l_test) THEN 
         IF(lctlib%growthform == itree) THEN
            delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size           , & 
                                                    dens_ind(:)                , &
@@ -516,7 +517,7 @@ CONTAINS
                                     lctlib                      , &
                                     ncanopy                     , &
                                     w_soil_root_theta           , &
-                                    growing_season              , &
+                                    l_growing_season            , &
                                     t_air_week_mavg             , &
                                     fpc                         , & 
                                     rfr_ratio_boc_tvegdyn_mavg  , &
@@ -538,7 +539,7 @@ CONTAINS
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     INTEGER,                          INTENT(in)    :: ncanopy                      !< number of canopy layer
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum] 
-    LOGICAL , DIMENSION(options%nc),  INTENT(in)    :: growing_season               !< growing season 
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: l_growing_season               !< growing season 
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: fpc                          !<  ...
     REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy 
@@ -570,7 +571,7 @@ CONTAINS
     !> 1.2 temperature and soil moisture limitation 
     !! 
     !! OBS: should be top soil moisture!
-    WHERE((t_air_week_mavg(:) - Tzero) < 0.0_wp .OR..NOT. growing_season(:))
+    WHERE((t_air_week_mavg(:) - Tzero) < 0.0_wp .OR. l_growing_season(:) < l_test)
       flim_temp(:) = 0.0_wp
     ELSEWHERE
       flim_temp(:) = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero))**k_est_temp)

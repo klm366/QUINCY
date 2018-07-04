@@ -13,7 +13,6 @@ MODULE mo_shared_update_time_averages
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                    ONLY: wp, eps8
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -46,6 +45,8 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_time_averages(tile, options, time_day, timestep_prop_day)
+
+    USE mo_kind,                    ONLY: wp
 
     IMPLICIT NONE
     ! ---------------------------
@@ -94,6 +95,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_daytime_averages(tile, options, time_day, timestep_prop_day)
 
+    USE mo_kind,                    ONLY: wp, eps8
     USE mo_jsb_class,               ONLY: Get_model
 
     ! Use of process configurations (t_PROC_config)
@@ -364,6 +366,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mavg(current_avg, new_value, avg_period_length, do_calc, avg_period_unit) RESULT(new_avg)
 
+    USE mo_kind,                ONLY: wp
     USE mo_base_constants,      ONLY: dtime, one_day, one_year
 
     IMPLICIT NONE
@@ -429,6 +432,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_moving_averages(tile, options)
 
+    USE mo_kind,                    ONLY: wp, eps8, l_test
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_shared_constants,        ONLY: mavg_period_weekly, mavg_period_monthly, &
                                           mavg_period_tlabile, mavg_period_tphen, mavg_period_tuptake, mavg_period_tfrac, &
@@ -459,9 +463,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options            !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER         :: model            !< instance of the model
-    TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
-    REAl(wp),DIMENSION(options%nc)          :: hlp
+    TYPE(t_jsb_model),      POINTER         :: model             !< instance of the model
+    TYPE(t_lctlib_element), POINTER         :: lctlib            !< land-cover-type library - parameter across pft's
+    REAl(wp),DIMENSION(options%nc)          :: hlp               !< helper
+    LOGICAL ,DIMENSION(options%nc)          :: growing_s_logical !< l_growing_season LOGICAL needed for calc_mavg(), see section 0.9
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
     ! ---------------------------
@@ -477,7 +482,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: l_growing_season           ! PHENO_
     dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: ga
@@ -627,7 +632,7 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)           ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
@@ -770,6 +775,16 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+
+    !> 0.9 transform REAL l_growing_season(:) into LOGICAL growing_s_logical(:)
+    !! 
+    WHERE (l_growing_season(:) > l_test)
+      growing_s_logical(:) = .TRUE.
+    ELSEWHERE
+      growing_s_logical(:) = .FALSE.
+    ENDWHERE
+
+
     !> 1.0
     !! calc_mavg(current average, new value, length of avg_period, do_calc=.FALSE., avg_period_unit='day')
     !!           returns: new current average
@@ -801,7 +816,7 @@ CONTAINS
     demand_uptake_p_tuptake_mavg(:)     = calc_mavg(demand_uptake_p_tuptake_mavg(:), f_p_demand(:), &
                                                      mavg_period_tuptake, do_calc=(veg_pool%fine_root%carbon > eps8))
     cost_n_fixation_tuptake_mavg(:)     = calc_mavg(cost_n_fixation_tuptake_mavg(:), cost_n_fixation(:), &
-                                                     mavg_period_tuptake, do_calc=growing_season(:))
+                                                     mavg_period_tuptake, do_calc=growing_s_logical(:))
     growth_req_n_tuptake_mavg(:)        = calc_mavg(growth_req_n_tuptake_mavg(:), growth_req_n(:), &
                                                      mavg_period_tuptake, do_calc=(growth_req_n(:) > eps8))
     growth_req_p_tuptake_mavg(:)        = calc_mavg(growth_req_p_tuptake_mavg(:), growth_req_p(:), &
@@ -810,11 +825,14 @@ CONTAINS
     !> 1.4 averages at the time-scale of within-leaf N allocation fractions
     !! 
     ppfd_sunlit_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
-                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  mavg_period_tfrac, &
+                                                  do_calc=SPREAD(growing_s_logical(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     ppfd_shaded_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
-                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  mavg_period_tfrac, &
+                                                  do_calc=SPREAD(growing_s_logical(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     fleaf_sunlit_tfrac_mavg_cl(:,:)   = calc_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
-                                                  mavg_period_tfrac, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  mavg_period_tfrac, &
+                                                  do_calc=SPREAD(growing_s_logical(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     t_air_tfrac_mavg(:)               = calc_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
                                                   mavg_period_tfrac)
     press_srf_tfrac_mavg(:)           = calc_mavg(press_srf_tfrac_mavg(:), press_srf_daytime(:), &
@@ -835,51 +853,54 @@ CONTAINS
     !> 1.5 averages at the time-scale of leaf N allocation fractions
     !!
     ppfd_sunlit_tcnl_mavg_cl(:,:)    = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
-                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  mavg_period_tcnl, &
+                                                  do_calc=SPREAD(growing_s_logical(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     ppfd_shaded_tcnl_mavg_cl(:,:)    = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
-                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  mavg_period_tcnl, &
+                                                  do_calc=SPREAD(growing_s_logical(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     fleaf_sunlit_tcnl_mavg_cl(:,:)   = calc_mavg(fleaf_sunlit_tcnl_mavg_cl(:,:), fleaf_sunlit_cl(:,:), &
-                                                  mavg_period_tcnl, do_calc=SPREAD(growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  mavg_period_tcnl, &
+                                                  do_calc=SPREAD(growing_s_logical(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
     t_air_tcnl_mavg(:)               = calc_mavg(t_air_tcnl_mavg(:), t_air(:), &
-                                                  mavg_period_tcnl, do_calc=growing_season(:))
+                                                  mavg_period_tcnl, do_calc=growing_s_logical(:))
     press_srf_tcnl_mavg(:)           = calc_mavg(press_srf_tcnl_mavg(:), press_srf(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     co2_mixing_ratio_tcnl_mavg(:)    = calc_mavg(co2_mixing_ratio_tcnl_mavg(:), co2_mixing_ratio(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     ga_tcnl_mavg(:)                  = calc_mavg(ga_tcnl_mavg(:), ga(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     beta_soil_ps_tcnl_mavg(:)        = calc_mavg(beta_soil_ps_tcnl_mavg(:), beta_soil_ps(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     beta_sinklim_ps_tcnl_mavg(:)     = calc_mavg(beta_sinklim_ps_tcnl_mavg(:), beta_sinklim_ps(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     beta_soil_gs_tcnl_mavg(:)        = calc_mavg(beta_soil_gs_tcnl_mavg(:), beta_soil_gs(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     beta_air_tcnl_mavg(:)            = calc_mavg(beta_air_tcnl_mavg(:), beta_air(:), &
-                                                  mavg_period_tcnl,  do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_s_logical(:))
     uptake_n_tcnl_mavg               = calc_mavg(uptake_n_tcnl_mavg, &
                                                   unit_uptake_n_pot(:)*veg_pool%fine_root%carbon + n_fixation(:), &
-                                                  mavg_period_tgrowth, do_calc=growing_season(:))
+                                                  mavg_period_tgrowth, do_calc=growing_s_logical(:))
 
     WHERE (growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
     ELSEWHERE
        hlp(:) = 0._wp
     ENDWHERE
-    growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
-    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tgrowth,  do_calc=growing_season(:))
+    growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tgrowth,  do_calc=growing_s_logical(:))
+    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tgrowth,  do_calc=growing_s_logical(:))
    
     labile_carbon_tcnl_mavg(:)        = calc_mavg(labile_carbon_tcnl_mavg(:), veg_pool%labile%carbon, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     labile_nitrogen_tcnl_mavg(:)      = calc_mavg(labile_nitrogen_tcnl_mavg(:), veg_pool%labile%nitrogen, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     reserve_carbon_tcnl_mavg(:)       = calc_mavg(reserve_carbon_tcnl_mavg(:), veg_pool%reserve%carbon, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     reserve_nitrogen_tcnl_mavg(:)     = calc_mavg(reserve_nitrogen_tcnl_mavg(:), veg_pool%reserve%nitrogen, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
-    npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), npp(:), mavg_period_talloc, do_calc=growing_season(:))
+    npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), npp(:), mavg_period_talloc, do_calc=growing_s_logical(:))
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
          WHERE (n_fixation(:) > 0._wp)
@@ -888,42 +909,42 @@ CONTAINS
             hlp(:) = 0.0_wp
          ENDWHERE
          n_fixation_talloc_mavg(:)      = calc_mavg(n_fixation_talloc_mavg(:), hlp(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
       CASE DEFAULT
          n_fixation_talloc_mavg(:)      = calc_mavg(n_fixation_talloc_mavg(:), n_fixation(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     ENDSELECT
     unit_npp_talloc_mavg(:)             = calc_mavg(unit_npp_talloc_mavg(:), unit_npp(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     transpiration_talloc_mavg(:)        = calc_mavg(transpiration_talloc_mavg(:), transpiration(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     unit_transpiration_talloc_mavg(:)   = calc_mavg(unit_transpiration_talloc_mavg(:), unit_transpiration(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     dphi_talloc_mavg(:)                 = calc_mavg(dphi_talloc_mavg(:), dphi(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     unit_uptake_n_talloc_mavg(:)        = calc_mavg(unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     unit_uptake_p_talloc_mavg(:)        = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg_pool%labile%carbon, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg_pool%labile%nitrogen, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg_pool%labile%phosphorus, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg_pool%reserve%carbon, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg_pool%reserve%nitrogen, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
     reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg_pool%reserve%phosphorus, &
-                                                      mavg_period_talloc, do_calc=growing_season(:))
+                                                      mavg_period_talloc, do_calc=growing_s_logical(:))
 
     WHERE(growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
     ELSEWHERE
        hlp(:) = 0._wp
     END WHERE
-    growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_season(:))
+    growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_s_logical(:))
 
     WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
        hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
@@ -931,7 +952,7 @@ CONTAINS
        hlp(:) = 0._wp
     END WHERE
 
-    growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_season(:))
+    growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=growing_s_logical(:))
 
     !> 1.7 averages at the time-scale of root life-time
     !!
@@ -945,13 +966,13 @@ CONTAINS
                                                        (veg_pool%fine_root%carbon > eps8), &
                                                avg_period_unit='year')
     unit_npp_troot_mavg(:)           = calc_mavg(unit_npp_troot_mavg(:), unit_npp(:), lctlib%tau_fine_root, &
-                                               do_calc=growing_season(:), avg_period_unit='year')
+                                               do_calc=growing_s_logical(:), avg_period_unit='year')
     unit_uptake_n_pot_troot_mavg(:)  = calc_mavg(unit_uptake_n_pot_troot_mavg(:), unit_uptake_n_pot(:), lctlib%tau_fine_root, &
-                                               do_calc=growing_season(:), avg_period_unit='year')
+                                               do_calc=growing_s_logical(:), avg_period_unit='year')
     unit_uptake_p_pot_troot_mavg(:)  = calc_mavg(unit_uptake_p_pot_troot_mavg(:), unit_uptake_p_pot(:), lctlib%tau_fine_root, &
-                                               do_calc=growing_season(:), avg_period_unit='year')
+                                               do_calc=growing_s_logical(:), avg_period_unit='year')
     fmaint_rate_troot_mavg(:)        = calc_mavg(fmaint_rate_troot_mavg(:), fmaint_rate(:), lctlib%tau_fine_root, &
-                                               do_calc=growing_season(:), avg_period_unit='year')
+                                               do_calc=growing_s_logical(:), avg_period_unit='year')
 
     !> 1.8 averages at the vegetation dynamics time-scale
     !! 

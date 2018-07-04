@@ -9,13 +9,12 @@
 !!
 MODULE mo_veg_memory_class
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: wp, l_false
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
-                                       t_jsb_var_logical2d                        , &           ! *slmjsb4
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &           ! *slmjsb4
                                        t_jsb_struct, t_jsb_n_struct                             ! *slmjsb4
 
   USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
@@ -195,8 +194,8 @@ MODULE mo_veg_memory_class
                                     target_lai        , &            !< LAI implied from sap wood area
                                     kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
 
-    ! logical
-    TYPE(t_jsb_var_logical2d)       :: &
+    ! used as logical: 0 = FALSE / 1 = TRUE
+    TYPE(t_jsb_var_real2d)          :: &
                                     l_do_cohort_harvest              !< logical to identify whether the cohort may be harvested (only for veg_dynamics_scheme="cohort")
 
     ! basic plant 3D 
@@ -1157,7 +1156,7 @@ CONTAINS
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
-            initval_r=.FALSE.) ! initvalue
+            initval_r=l_false) ! initvalue
 
       CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
             hgrid, surface, &

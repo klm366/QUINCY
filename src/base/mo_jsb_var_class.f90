@@ -19,7 +19,6 @@ MODULE mo_jsb_var_class
   PRIVATE
   PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
   PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! *slmjsb4
-  PUBLIC :: t_jsb_var_logical2d                                               ! *slmjsb4
   PUBLIC :: REAL2D, REAL3D
 
 
@@ -48,19 +47,6 @@ MODULE mo_jsb_var_class
 !#pragma GCC diagnostic push
 !#pragma GCC diagnostic ignored "-Wsurprising"
 
-  !-----------------------------------------------------------------------------------------------------!
-  ! 2D                                                                                                  !
-  !-----------------------------------------------------------------------------------------------------!
-
-! *slmjsb4
-  !-----------------------------------------------------------------------------------------------------
-  !> 2D LOGICAL Variable TYPE - t_jsb_var_logical2d
-  !! 
-  !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_logical2d
-    LOGICAL, ALLOCATABLE :: ptr(:,:)
-  END TYPE t_jsb_var_logical2d
 
   !-----------------------------------------------------------------------------------------------------
   !> 2D REAL Variable TYPE
@@ -72,10 +58,6 @@ MODULE mo_jsb_var_class
   CONTAINS
     FINAL     :: finalize_jsb_var_real2d
   END TYPE t_jsb_var_real2d
-
-  !-----------------------------------------------------------------------------------------------------!
-  ! 3D                                                                                                  !
-  !-----------------------------------------------------------------------------------------------------!
 
   !-----------------------------------------------------------------------------------------------------
   !> 3D REAL Variable TYPE
