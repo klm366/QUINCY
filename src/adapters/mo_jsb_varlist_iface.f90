@@ -88,7 +88,11 @@ CONTAINS
                     lpost=loutput, lpout=loutput, lrerun=lrestart            &
                    )
 
-    CALL default_stream_setting(this_list, table=table_loc, lpost=loutput, lrerun=lrestart)
+    !@todo: hardcoded FALSE for now to reduce output size when running with ECHAM
+    !       until the "in_groups" behavior is also implemented for ECHAM!
+    ! - now: for required vars loutput needs to be set to true! (+ see namelist selector in jsb3 sitelevel)
+    !@todo: implement the "in_groups" behavior for ECHAM!
+    CALL default_stream_setting(this_list, table=table_loc, lpost=.FALSE., lrerun=lrestart)
 #endif
 
   END SUBROUTINE new_var_list
@@ -167,6 +171,7 @@ CONTAINS
         ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
+        lpost=loutput, lrerun=lrestart, contnorest=lrestart_cont, &
         lmiss=lmiss, missval=missval_r, p4=p4, verbose=verbose &
         )
     ELSE
@@ -174,6 +179,7 @@ CONTAINS
         ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
+        lpost=loutput, lrerun=lrestart, contnorest=lrestart_cont, &
         lmiss=lmiss, missval=missval_r, verbose=verbose &
         )
     END IF
