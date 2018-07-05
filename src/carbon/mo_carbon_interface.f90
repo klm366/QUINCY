@@ -810,61 +810,10 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    ! non-yasso-pools
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_green,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_woods,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg,  weighted_by_fract)
-    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow,       weighted_by_fract)
-    ! ag1 and bg1
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1,         weighted_by_fract)
-    !ag2 and bg2
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2,         weighted_by_fract)
-    ! sums
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum,              weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ag_sum_1,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum,               weighted_by_fract)
-    ! fluxes
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean,         weighted_by_fract)
+
     dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb,  weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen, weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm, weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm,      weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_test,  weighted_by_fract)
 
-
+    !@todo Those commented out are currently not calculated
     ! same for ta variables
     ! non-yasso-pools
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,            weighted_by_fract)
@@ -899,15 +848,15 @@ CONTAINS
     ! sums
     dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
     ! fluxes
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP_ta,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean_ta,         weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean_ta,          weighted_by_fract)

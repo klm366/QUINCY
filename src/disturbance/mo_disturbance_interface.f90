@@ -594,23 +594,6 @@ CONTAINS
     !dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m,           weighted_by_fract)
 
     IF ( tile%Is_process_active(CARBON_) ) THEN
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_green,              weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods,              weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil, weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_woods_2_soil,  weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag1,           weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag1,          weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag1,        weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag1,     weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag2,           weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag2,          weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag2,        weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag2,     weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm, weighted_by_fract)
-
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)
