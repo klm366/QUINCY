@@ -20,7 +20,7 @@ MODULE mo_atmland_interface
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,          ONLY: t_jsb_task_options
   USE mo_jsb_var_class,           ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -34,11 +34,11 @@ MODULE mo_atmland_interface
 !!  USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 !!  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE, Contains_lct
 
-!!  dsl4jsb_Use_processes A2L_, SEB_, TURB_, SOIL_, HYDRO_, RAD_
+!!  dsl4jsb_Use_processes A2L_, SEB_, TURB_, SSE_, HYDRO_, RAD_
 !!  dsl4jsb_Use_memory(A2L_)
 !!  dsl4jsb_Use_memory(SEB_)
 !!  dsl4jsb_Use_memory(TURB_)
-!!  dsl4jsb_Use_memory(SOIL_)
+!!  dsl4jsb_Use_memory(SSE_)
 !!  dsl4jsb_Use_memory(HYDRO_)
 !!  dsl4jsb_Use_memory(RAD_)
 

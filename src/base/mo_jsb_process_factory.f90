@@ -22,7 +22,7 @@ MODULE mo_jsb_process_factory
   USE mo_l2a_memory_class, ONLY: t_l2a_memory
 !!  USE mo_seb_memory_class,     ONLY: t_seb_memory
 !!  USE mo_turb_memory_class,    ONLY: t_turb_memory
-  USE mo_soil_memory_class,    ONLY: t_soil_memory
+  USE mo_sse_memory_class,    ONLY: t_sse_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
 !!  USE mo_hydro_memory_class,   ONLY: t_hydro_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
@@ -38,8 +38,8 @@ MODULE mo_jsb_process_factory
 !!  USE mo_seb_config_class,     ONLY: t_seb_config
 !!  USE mo_turb_interface,       ONLY: Register_turb_tasks
 !!  USE mo_turb_config_class,    ONLY: t_turb_config
-!!  USE mo_soil_interface,       ONLY: Register_soil_tasks
-  USE mo_soil_config_class,    ONLY: t_soil_config
+!!  USE mo_sse_interface,       ONLY: Register_sse_tasks
+  USE mo_sse_config_class,    ONLY: t_sse_config
 !!  USE mo_hydro_interface,      ONLY: Register_hydro_tasks
 !!  USE mo_hydro_config_class,   ONLY: t_hydro_config
 !!  USE mo_veg_interface,        ONLY: Register_veg_tasks
@@ -55,7 +55,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_hd_config_class,      ONLY: t_hd_config
 !!#endif
 
-  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -91,9 +91,9 @@ CONTAINS
   !  CASE (TURB_)
   !    CALL Register_turb_tasks(return_ptr, model_id)
   !    ALLOCATE(t_turb_config::return_ptr%config)
-   CASE (SOIL_)
-!     CALL Register_soil_tasks(return_ptr, model_id)
-     ALLOCATE(t_soil_config::return_ptr%config)
+   CASE (SSE_)
+!     CALL Register_sse_tasks(return_ptr, model_id)
+     ALLOCATE(t_sse_config::return_ptr%config)
   !  CASE (HYDRO_)
   !    CALL Register_hydro_tasks(return_ptr, model_id)
   !    ALLOCATE(t_hydro_config::return_ptr%config)
@@ -130,7 +130,7 @@ CONTAINS
     USE mo_l2a_memory_class, ONLY: max_no_of_l2a_vars => max_no_of_vars
 !!    USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
 !!    USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
-    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars      => max_no_of_vars
+    USE mo_sse_memory_class,    ONLY: max_no_of_sse_vars      => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars        => max_no_of_vars, &
                                        max_no_of_sb_structs     => max_no_of_structs, &    ! *slmjsb4
                                        max_no_of_sb_n_structs   => max_no_of_n_structs     ! *slmjsb4
@@ -166,9 +166,9 @@ CONTAINS
 !!    CASE (TURB_)
 !!      ALLOCATE(t_turb_memory::return_ptr)
 !!      return_ptr%max_no_of_vars = max_no_of_turb_vars
-    CASE (SOIL_)
-      ALLOCATE(t_soil_memory::return_ptr)
-      return_ptr%max_no_of_vars      = max_no_of_soil_vars
+    CASE (SSE_)
+      ALLOCATE(t_sse_memory::return_ptr)
+      return_ptr%max_no_of_vars      = max_no_of_sse_vars
     CASE (SB_)
       ALLOCATE(t_sb_memory::return_ptr)
       return_ptr%max_no_of_vars      = max_no_of_sb_vars

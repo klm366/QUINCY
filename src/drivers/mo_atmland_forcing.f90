@@ -87,7 +87,7 @@ CONTAINS
                                   &  )
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
     USE mo_jsb_grid,              ONLY: Get_Grid
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -103,7 +103,7 @@ CONTAINS
                                         declination, frac_vis_swtot_srf, frac_par_swvis_srf
 
     ! Use of process memories
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
@@ -208,7 +208,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
     ! VEG_ 2D
@@ -216,7 +216,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: f_p_demand
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
@@ -232,16 +232,16 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(VEG_,  f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_,  f_p_demand)
     dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall

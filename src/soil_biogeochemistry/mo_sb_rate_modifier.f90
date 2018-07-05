@@ -37,7 +37,7 @@ CONTAINS
   SUBROUTINE update_sb_rate_modifier(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -49,7 +49,7 @@ CONTAINS
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
     IMPLICIT NONE
     ! ---------------------------
@@ -66,7 +66,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
     ! Declare pointers to variables in memory
     ! SB_
     dsl4jsb_Real3D_onChunk :: rtm_decomposition 
@@ -87,7 +87,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_nitrification
     dsl4jsb_Real3D_onChunk :: rmm_gasdiffusion
     dsl4jsb_Real3D_onChunk :: anaerobic_volume_fraction_sl 
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -108,7 +108,7 @@ CONTAINS
 !    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
@@ -132,10 +132,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_gasdiffusion)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       anaerobic_volume_fraction_sl)! out 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sat_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_fc_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sat_sl)               ! in
 
 
 

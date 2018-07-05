@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for the soil processes
+!! @brief Contains the memory class for the sse processes
 !!
 !! @author
 !!  Jan Engel, MPI-BGC Jena (based on the JSBACH4 version from Rainer Schneck, MPI-M Hamburg)
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Jan Engel (20160913)
 !!
-MODULE mo_soil_memory_class
+MODULE mo_sse_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
@@ -20,19 +20,19 @@ MODULE mo_soil_memory_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_soil_memory, max_no_of_vars
+  PUBLIC :: t_sse_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars      = 50 
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Type definition for soil memory
+  !> Type definition for sse memory
   !!
   !! @par includes: \n
-  !!    soil variables soil\%VAR
+  !!    sse variables sse\%VAR
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_memory) :: t_soil_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
 
 
     TYPE(t_jsb_var_real2d)          :: &
@@ -54,7 +54,7 @@ MODULE mo_soil_memory_class
                                     drainage,         & !< drainage        [kg / m2 / s]
                                     drainage_fraction   !< water mass fraction lost from the soil column by drainage [1 / s] 
 
-    ! Additional variables for soil
+    ! Additional variables for sse
     TYPE(t_jsb_var_real2d)          :: &
                                     w_skin,           & !< Water content in skin reservoir                                          [m]
                                     w_soil_root,      & !< Water content in root zone of the soil                                   [m]
@@ -110,21 +110,21 @@ MODULE mo_soil_memory_class
 
 
   CONTAINS
-    PROCEDURE :: Init => Init_soil_memory
-  END TYPE t_soil_memory
+    PROCEDURE :: Init => Init_sse_memory
+  END TYPE t_sse_memory
 
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_memory_class'
 
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize memory for the processes in: soil
+  !> initialize memory for the processes in: sse
   !!
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
@@ -135,7 +135,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1.InOut
-    CLASS(t_soil_memory), INTENT(inout), TARGET :: mem             !> soil memory
+    CLASS(t_sse_memory), INTENT(inout), TARGET :: mem              !> sse memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> ?
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> ?
     INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
@@ -148,7 +148,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER                    :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_memory'
 
     model => Get_model(model_id)
 
@@ -162,9 +162,9 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%soil_depth%ptr)) THEN
 
-      !> add variables to soil memory soil\%VAR
+      !> add variables to sse memory sse\%VAR
       !! 
-      !! soil\%VAR
+      !! sse\%VAR
       !!  
       CALL jsb_add_var(mem, 'soil_depth', mem%soil_depth, &
             hgrid, surface, &
@@ -488,7 +488,7 @@ CONTAINS
 
     END IF
 
-  END SUBROUTINE Init_soil_memory
+  END SUBROUTINE Init_sse_memory
 
 #endif
-END MODULE mo_soil_memory_class
+END MODULE mo_sse_memory_class

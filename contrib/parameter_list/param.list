@@ -21,7 +21,7 @@
   mavg_period_tacclim=NAN
   mavg_period_tmic=NAN
 /
-&SOIL_CTL
+&SSE_CTL
   ! tba
 /
 &SB_CTL

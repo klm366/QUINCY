@@ -108,7 +108,7 @@ CONTAINS
     USE mo_jsb_tile_class,                ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                ONLY: t_jsb_process_task
     USE mo_jsb_model_class,               ONLY: t_jsb_model
-    USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_, &
+    USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_, &
                                                 Get_process_name
     USE mo_hsm_class,                     ONLY: t_Message
     USE mo_base_config_class,             ONLY: base_config
@@ -118,7 +118,7 @@ CONTAINS
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_veg_util,                      ONLY: reset_veg_fluxes
     USE mo_sb_util,                       ONLY: reset_sb_fluxes
-    USE mo_soil_util,                     ONLY: reset_soil_fluxes
+    USE mo_sse_util,                      ONLY: reset_sse_fluxes
     USE mo_assimi_util,                   ONLY: reset_assimi_fluxes
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model
 
@@ -126,7 +126,7 @@ CONTAINS
     USE mo_rad_interface
     USE mo_veg_interface
     USE mo_assimi_interface
-    USE mo_soil_interface
+    USE mo_sse_interface
     USE mo_sb_interface
     USE mo_pheno_interface
 
@@ -294,7 +294,7 @@ CONTAINS
       CALL reset_assimi_fluxes    (tile,model%options)! mo_assimi_util
       CALL reset_veg_fluxes       (tile, model%options)  ! mo_veg_util
       CALL reset_sb_fluxes        (tile, model%options)   ! mo_sb_util
-      CALL reset_soil_fluxes      (tile, model%options) ! mo_soil_util
+      CALL reset_sse_fluxes       (tile, model%options) ! mo_sse_util
 
       !! run Tasks
       !!
@@ -302,7 +302,7 @@ CONTAINS
       CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
-      CALL update_soil_physics    (tile, model%options)
+      CALL update_sse_physics     (tile, model%options)
 
       ! update_phenology
         msg  => t_Message('', model%Get_action('INTEGRATE'))
@@ -354,14 +354,14 @@ CONTAINS
       !!
       CALL reset_assimi_fluxes(tile,model%options)! mo_assimi_util
       CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
-      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
+      CALL reset_sse_fluxes(tile, model%options) ! mo_sse_util
 
       !! run Tasks
       !!
       CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
-      CALL update_soil_physics    (tile, model%options)
+      CALL update_sse_physics    (tile, model%options)
 
       ! update_phenology
         msg  => t_Message('', model%Get_action('INTEGRATE'))
@@ -405,7 +405,7 @@ CONTAINS
       !! init/reset fluxes (with/to zero)
       !!
       CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
-      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
+      CALL reset_sse_fluxes(tile, model%options) ! mo_sse_util
 
       CALL update_sb_rate_modifier    (tile, model%options)
       SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
@@ -437,7 +437,7 @@ CONTAINS
       !! init/reset fluxes (with/to zero)
       !!
        CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
-      CALL reset_soil_fluxes(tile, model%options) ! mo_soil_util
+      CALL reset_sse_fluxes(tile, model%options) ! mo_sse_util
 
 
 
@@ -446,7 +446,7 @@ CONTAINS
       CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
-      CALL update_soil_physics    (tile, model%options)
+      CALL update_sse_physics    (tile, model%options)
 
       ! update_phenology
         msg  => t_Message('', model%Get_action('INTEGRATE'))

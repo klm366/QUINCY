@@ -38,7 +38,7 @@ CONTAINS
   SUBROUTINE update_sb_pools(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -58,8 +58,8 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,       ONLY: sb_pool, sb_formation, sb_loss, sb_transport, sb_delta_pools, sb_mycorrhiza_export
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_sse_memory
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_pool
     dsl4jsb_Use_memory(A2L_)
@@ -85,8 +85,8 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
-    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
+    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
     ! A2L
@@ -237,7 +237,7 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
     ! Get process variables (Set pointers to variables in memory)
@@ -249,14 +249,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,      f_n_demand)                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_,      f_p_demand)                  ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_org_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_om_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     silt_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     clay_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     soil_depth_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     percolation_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_org_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_po4_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_po4_om_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     silt_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     clay_sl)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out

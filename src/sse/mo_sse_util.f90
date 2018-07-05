@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the utilities for the soil process
+!! @brief Contains the utilities for the sse process
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !! Second version by Jan Engel (2016-12-08 jsbach4:git) - integration into SLM, no code changes though
 !!
-MODULE mo_soil_util
+MODULE mo_sse_util
 #ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
@@ -20,9 +20,9 @@ MODULE mo_soil_util
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: soil_depth_to_layers_2d, calc_qmax_texture
-  PUBLIC :: reset_soil_fluxes           ! called in the land model interface prior to all Tasks
+  PUBLIC :: reset_sse_fluxes           ! called in the land model interface prior to all Tasks
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_util'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_util'
 
 CONTAINS
 
@@ -96,16 +96,16 @@ CONTAINS
   !! 
   !! called in the land model interface prior to all Tasks
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE reset_soil_fluxes(tile, options)
+  SUBROUTINE reset_sse_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process memories
-    dsl4jsb_Use_memory(SOIL_)        !  USE mo_soil_memory_class,      ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
 
     IMPLICIT NONE
     ! ---------------------------
@@ -117,13 +117,13 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     !TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_soil_fluxes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_sse_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(SOIL_)                          ! TYPE(t_soil_memory),      POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                          ! TYPE(t_sse_memory),      POINTER :: sse__mem
     ! Declare pointers to variables in memory
-    ! SOIL_ 2D
+    ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: transpiration
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -132,19 +132,19 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(SOIL_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
-!    dsl4jsb_Get_config(SOIL_)
+!    dsl4jsb_Get_config(SSE_)
     ! Get process memories
-    dsl4jsb_Get_memory(SOIL_)           ! soil__mem => soil_memory
+    dsl4jsb_Get_memory(SSE_)           ! sse__mem => sse_memory
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     !lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
 
 
 
@@ -160,7 +160,7 @@ CONTAINS
     ! ...
 
 
-  END SUBROUTINE reset_soil_fluxes
+  END SUBROUTINE reset_sse_fluxes
 
 #endif
-END MODULE mo_soil_util
+END MODULE mo_sse_util

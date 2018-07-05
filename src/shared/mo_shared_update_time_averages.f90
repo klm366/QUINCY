@@ -15,7 +15,7 @@ MODULE mo_shared_update_time_averages
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
-  USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,          ONLY: t_jsb_task_options
@@ -453,7 +453,7 @@ CONTAINS
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
 
     IMPLICIT NONE
@@ -480,7 +480,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk      :: l_growing_season           ! PHENO_
     dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
@@ -605,7 +605,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg      ! SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
-    dsl4jsb_Real2D_onChunk      :: transpiration                    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: transpiration                    ! SSE_
     dsl4jsb_Real2D_onChunk      :: t_soil_root 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -630,7 +630,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)           ! in
     ! ---------------------------
@@ -762,8 +762,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, transpiration)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)
+    dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
     ! Get process memory pool structures
 #define Get_veg_pool
 #include "slm_pools_a_incl.f90"

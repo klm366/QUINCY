@@ -1,5 +1,5 @@
 !>
-!! @brief Contains constants for the soil process
+!! @brief Contains constants for the sse process
 !!
 !! @author
 !!  Sönke Zaehle, MPI-BGC Jena
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-07-21)
 !!
-MODULE mo_soil_constants
+MODULE mo_sse_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -55,15 +55,15 @@ MODULE mo_soil_constants
     kdiff_sat_max               !< maximum diffusivity of soil at saturation (m/s)
 
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_soil_constants'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize constants from soil 
+  !> initialize constants from sse 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_soil_constants
+  SUBROUTINE init_sse_constants
 
     IMPLICIT NONE
     ! ---------------------------
@@ -71,7 +71,7 @@ CONTAINS
     ! 
     ! ---------------------------
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_constants'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_sse_constants'
 
 
     soil_heat_cap           = 1480.0_wp     ! textbook for wet sandy soil
@@ -110,7 +110,7 @@ CONTAINS
     k_sat_dt        = 0.043_wp
     kdiff_sat_max   = 1930.0_wp / 1000.0_wp / 3600._wp ! m/s
 
-  END SUBROUTINE init_soil_constants
+  END SUBROUTINE init_sse_constants
 
 #endif
-END MODULE mo_soil_constants
+END MODULE mo_sse_constants

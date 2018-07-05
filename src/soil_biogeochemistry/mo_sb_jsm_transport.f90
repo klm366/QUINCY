@@ -702,7 +702,7 @@ CONTAINS
     DO isoil = 1,options%nsoil_sb-1
        WHERE(percolation_sl(:,isoil) > 0.0_wp)
           hlp1(:) = percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil) * soil_depth_sl(:,isoil)
-!! BLARPP for now no upward transport - need to properly think about this in update_soil_physics
+!! BLARPP for now no upward transport - need to properly think about this in update_sse_physics
        ELSEWHERE
           hlp1(:) = 0.0_wp ! percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil+1) * soil_depth_sl(:,isoil+1)
        ENDWHERE

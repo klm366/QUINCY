@@ -36,7 +36,7 @@ AR      = ar -r
 #---------------------------------------------------------------------
 # The VPATH is a list of directories to be searched for missing source files.
 # The list can be separated by spaces or colons - the best approach is probably to use spaces as this works across all platforms.
-VPATH = ../src/adapters ../src/atmland ../src/echam ../src/base ../src/drivers ../src/shared ../src/assimilation ../src/radiation ../src/soil ../src/soil_biogeochemistry ../src/phenology ../src/vegetation $(OBJDIR)
+VPATH = ../src/adapters ../src/atmland ../src/echam ../src/base ../src/drivers ../src/shared ../src/assimilation ../src/radiation ../src/sse ../src/soil_biogeochemistry ../src/phenology ../src/vegetation $(OBJDIR)
 # 
 MODS = $(shell find ../src/adapters/ -name '*.f90' -print)
 MODS += $(shell find ../src/atmland/ -name '*.f90' -print)
@@ -46,7 +46,7 @@ MODS += $(shell find ../src/drivers/ -name 'mo*.f90' -print)
 MODS += $(shell find ../src/shared/ -name '*.f90' -print)
 MODS += $(shell find ../src/assimilation/ -name '*.f90' -print)
 MODS += $(shell find ../src/radiation/ -name '*.f90' -print)
-MODS += $(shell find ../src/soil/ -name '*.f90' -print)
+MODS += $(shell find ../src/sse/ -name '*.f90' -print)
 MODS += $(shell find ../src/soil_biogeochemistry/ -name '*.f90' -print)
 MODS += $(shell find ../src/phenology/ -name '*.f90' -print)
 MODS += $(shell find ../src/vegetation/ -name '*.f90' -print)
@@ -99,7 +99,7 @@ include ../src/atmland/Make.inc.deps
 include ../src/shared/Make.inc.deps
 include ../src/assimilation/Make.inc.deps
 include ../src/radiation/Make.inc.deps
-include ../src/soil/Make.inc.deps
+include ../src/sse/Make.inc.deps
 include ../src/soil_biogeochemistry/Make.inc.deps
 include ../src/phenology/Make.inc.deps
 include ../src/vegetation/Make.inc.deps

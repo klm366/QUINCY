@@ -1,13 +1,13 @@
-mo_soil_interface.o: \
+mo_sse_interface.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_soil_update_turbulence.o \
-  mo_soil_update_physics.o
+  mo_sse_update_turbulence.o \
+  mo_sse_update_physics.o
 
-mo_soil_constants.o: \
+mo_sse_constants.o: \
   mo_kind.o
 
-mo_soil_memory_class.o: \
+mo_sse_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_io.o \
@@ -18,14 +18,14 @@ mo_soil_memory_class.o: \
   mo_jsb_var_class.o \
   mo_slm_varlist.o
 
-mo_soil_config_class.o: \
+mo_sse_config_class.o: \
   mo_kind.o \
   mo_namelist.o \
   mo_exception.o \
   mo_io_units.o \
   mo_jsb_config_class.o
 
-mo_soil_init.o: \
+mo_sse_init.o: \
   mo_kind.o \
   mo_jsb_control.o \
   mo_exception.o \
@@ -36,13 +36,13 @@ mo_soil_init.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_soil_util.o \
-  mo_soil_constants.o \
-  mo_soil_config_class.o \
-  mo_soil_memory_class.o \
+  mo_sse_util.o \
+  mo_sse_constants.o \
+  mo_sse_config_class.o \
+  mo_sse_memory_class.o \
   mo_veg_memory_class.o
 
-mo_soil_util.o: \
+mo_sse_util.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_control.o \
@@ -51,9 +51,9 @@ mo_soil_util.o: \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_process_class.o \
-  mo_soil_memory_class.o
+  mo_sse_memory_class.o
 
-mo_soil_update_physics.o: \
+mo_sse_update_physics.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_control.o \
@@ -73,13 +73,13 @@ mo_soil_update_physics.o: \
   mo_phy_schemes.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \
-  mo_soil_memory_class.o \
-  mo_soil_constants.o \
-  mo_soil_config_class.o \
+  mo_sse_memory_class.o \
+  mo_sse_constants.o \
+  mo_sse_config_class.o \
   mo_assimi_memory_class.o \
-  mo_soil_update_turbulence.o
+  mo_sse_update_turbulence.o
 
-mo_soil_update_turbulence.o: \
+mo_sse_update_turbulence.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_control.o \
@@ -98,7 +98,7 @@ mo_soil_update_turbulence.o: \
   mo_phy_schemes.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \
-  mo_soil_config_class.o \
-  mo_soil_memory_class.o \
-  mo_soil_constants.o \
+  mo_sse_config_class.o \
+  mo_sse_memory_class.o \
+  mo_sse_constants.o \
   mo_assimi_memory_class.o

@@ -31,10 +31,10 @@
   latitude=50.0
   longitude=0.0
 /
-&SOIL_CTL
+&SSE_CTL
   ! flags for the soil process
   !   no flags yet
-  ! soil process options
+  ! sse process options
   !  number of soil layers [default is 5] [energy==water]
   nsoil_energy=5
   nsoil_water=5

@@ -41,7 +41,7 @@ CONTAINS
     USE mo_base_config_class,     ONLY: base_config
     USE mo_base_constants,        ONLY: one_year, one_day
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_veg_constants,         ONLY: itree
 
@@ -55,7 +55,7 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall, veg_establishment
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
     IMPLICIT NONE
     ! ---------------------------
@@ -77,13 +77,13 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
-    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
     ! Declare pointers to variables in memory
     ! RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: l_growing_season
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: l_do_cohort_harvest
@@ -117,13 +117,13 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)                              ! rad__mem => rad_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
-    dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
+    dsl4jsb_Get_memory(SSE_)                             ! sse__mem => sse_memory
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)     ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)     ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, l_do_cohort_harvest)    ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)               ! in

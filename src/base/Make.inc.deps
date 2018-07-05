@@ -58,11 +58,11 @@ mo_jsb_process_factory.o: \
   mo_l2a_memory_class.o \
   mo_veg_memory_class.o \
   mo_pheno_memory_class.o \
-  mo_soil_memory_class.o \
+  mo_sse_memory_class.o \
   mo_sb_memory_class.o \
   mo_rad_memory_class.o \
   mo_assimi_memory_class.o \
-  mo_soil_config_class.o \
+  mo_sse_config_class.o \
   mo_veg_config_class.o \
   mo_assimi_config_class.o \
   mo_pheno_config_class.o \
@@ -100,9 +100,9 @@ mo_jsb_model_init.o: \
   mo_veg_memory_class.o \
   mo_pheno_constants.o \
   mo_pheno_init.o \
-  mo_soil_constants.o \
-  mo_soil_config_class.o \
-  mo_soil_init.o \
+  mo_sse_constants.o \
+  mo_sse_config_class.o \
+  mo_sse_init.o \
   mo_sb_constants.o \
   mo_sb_memory_class.o \
   mo_sb_init.o \
@@ -120,7 +120,7 @@ mo_slm_varlist.o: \
   mo_jsb_var_class.o \
   mo_jsb_model_class.o \
   mo_assimi_config_class.o \
-  mo_soil_config_class.o \
+  mo_sse_config_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_grid_class.o \
   mo_jsb_io.o

@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for the Task update_soil_physics
+!! @brief Contains the routines for the Task update_sse_physics
 !!
 !! @author
 !!  Sönke Zaehle, MPI-BGC Jena 
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Sönke Zaehle (20160104)
 !!
-MODULE mo_soil_update_physics
+MODULE mo_sse_update_physics
 
 #include "dsl_jsbach.inc"
 
@@ -17,9 +17,9 @@ MODULE mo_soil_update_physics
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_soil_physics
+  PUBLIC :: update_sse_physics
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_update_physics'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_update_physics'
 
 CONTAINS
 
@@ -32,24 +32,24 @@ CONTAINS
   !! 
   !! two cases considered: \n a) dynamic water uptake calculation, \n b) prescribed values from namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_soil_physics(tile, options)
+  SUBROUTINE update_sse_physics(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(SOIL_)
+    dsl4jsb_Use_config(SSE_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class,      ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -63,16 +63,16 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
     INTEGER                               :: iblk, ics, ice, nc, nsoil_sb, isoil
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_physics'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sse_physics'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(SOIL_)
+    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                        !     TYPE(t_l2a_memory),      POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
     ! A2L_
@@ -96,7 +96,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: net_radiation
     dsl4jsb_Real2D_onChunk                :: latent_heat_flx
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
-    ! SOIL_ 2D
+    ! SSE_ 2D
     dsl4jsb_Real2D_onChunk                :: t_srf_old
     dsl4jsb_Real2D_onChunk                :: zril_old
     dsl4jsb_Real2D_onChunk                :: root_depth
@@ -114,7 +114,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: runoff
     dsl4jsb_Real2D_onChunk                :: drainage
     dsl4jsb_Real2D_onChunk                :: drainage_fraction
-    ! SOIL_ 3D        
+    ! SSE_ 3D        
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk                :: heat_capa_sl
@@ -148,20 +148,20 @@ CONTAINS
     nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(SOIL_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-    dsl4jsb_Get_config(SOIL_)
+    dsl4jsb_Get_config(SSE_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
@@ -185,39 +185,39 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)      ! out
     dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! out
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, t_srf_old)           ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, zril_old)            ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)          ! in
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)     ! in
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)      ! in
-    dsl4jsb_Get_var2D_onChunk(SOIL_, transpiration)       ! out
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)   ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)     ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_skin)              ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)         ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)         ! inout
-    dsl4jsb_Get_var2D_onChunk(SOIL_, pet)                 ! out
-    dsl4jsb_Get_var2D_onChunk(SOIL_, interception)        ! out
-    dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)         ! out
-    dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)              ! out
-    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)            ! out
-    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage_fraction)   ! out
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sat_sl)       ! in 
-    dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonA)             ! in 
-    dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonB)             ! in 
-    dsl4jsb_Get_var3D_onChunk(SOIL_, saxtonC)             ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, kdiff_sat_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)           ! inout
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pot_sl)       ! inout
-    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)      ! out
-    dsl4jsb_Get_var3D_onChunk(SOIL_, drainage_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)           ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_srf_old)           ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, zril_old)            ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, root_depth)          ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pwp)     ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)      ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)       ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)   ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)     ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_skin)              ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, pet)                 ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, interception)        ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, evaporation)         ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, runoff)              ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, drainage)            ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, drainage_fraction)   ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pwp_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_fc_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sat_sl)       ! in 
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonA)             ! in 
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonB)             ! in 
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonC)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, kdiff_sat_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pot_sl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)      ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, drainage_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)           ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
     ! ---------------------------
@@ -254,7 +254,7 @@ CONTAINS
     !> 3.0 Calculate soil hydrology processes
     !!
     CALL calc_soil_hydrology(options, lctlib, &
-                             dsl4jsb_Config(SOIL_)%soil_depth_water(:), & 
+                             dsl4jsb_Config(SSE_)%soil_depth_water(:), & 
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
                              soil_depth_sl(:,:),w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), & 
@@ -270,10 +270,10 @@ CONTAINS
        t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
     ENDDO
 
-  END SUBROUTINE update_soil_physics
+  END SUBROUTINE update_sse_physics
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to update_soil_physics
+  ! Sub Task to update_sse_physics
   !
   !-----------------------------------------------------------------------------------------------------
   !> Routine to provide an update of the soil temperature given the net radiation, surface drag, \n
@@ -299,8 +299,8 @@ CONTAINS
     USE mo_base_constants,            ONLY: dtime
     USE mo_atmland_constants,         ONLY: min_wind, max_wind 
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
-    USE mo_soil_constants,            ONLY: w_skin_max
-    USE mo_soil_update_turbulence,    ONLY: calc_filtered_drag_coefficient
+    USE mo_sse_constants,            ONLY: w_skin_max
+    USE mo_sse_update_turbulence,    ONLY: calc_filtered_drag_coefficient
     USE mo_shared_constants,          ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
     USE mo_phy_schemes,               ONLY: heat_transfer_coef, surface_dry_static_energy
     
@@ -536,7 +536,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to update_soil_physics
+  ! Sub Task to update_sse_physics
   !
   !-----------------------------------------------------------------------------------------------------
   !> Routine to provide an update of the soil water given rates of rain and snow fall \n
@@ -559,7 +559,7 @@ CONTAINS
     USE mo_base_constants,              ONLY: dtime
     USE mo_shared_constants,            ONLY: grav
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
-    USE mo_soil_constants,              ONLY: drain_frac, fdrain_runoff, InterceptionEfficiency, w_skin_max, wpot_min
+    USE mo_sse_constants,               ONLY: drain_frac, fdrain_runoff, InterceptionEfficiency, w_skin_max, wpot_min
 
 
     IMPLICIT NONE
@@ -915,4 +915,4 @@ CONTAINS
 !!
 !!
 
-END MODULE mo_soil_update_physics
+END MODULE mo_sse_update_physics

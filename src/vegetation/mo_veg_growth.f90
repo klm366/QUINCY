@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_respiration,         ONLY: temperature_response_respiration, calc_maintenance_respiration 
     USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
     USE mo_veg_constants,           ONLY: fmaint_rate_base
@@ -61,7 +61,7 @@ CONTAINS
     USE mo_veg_memory_class,        ONLY: veg_pool, veg_growth, veg_falloc, veg_exudation, veg_reserve_use
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,         ONLY: sb_pool, sb_mycorrhiza_export
@@ -93,7 +93,7 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! PHENO_
@@ -125,10 +125,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_po4_sl
-    ! SOIL_ 2D
+    ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk      :: t_soil_root
-    ! SOIL_ 3D
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -262,7 +262,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)                 ! in
@@ -294,9 +294,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_no3_n15_sl)             ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_po4_sl)                 ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)                 ! in
-    dsl4jsb_Get_var2D_onChunk(SOIL_, t_soil_root)                       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                     ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)                 ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)                       ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)                     ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in

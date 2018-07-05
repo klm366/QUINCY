@@ -37,7 +37,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -52,7 +52,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
     ! Process interfaces:
     USE mo_atmland_interface                ! update_a2l
@@ -120,7 +120,7 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem
     dsl4jsb_Def_memory(RAD_)                          !   TYPE(t_rad_memory),    POINTER      :: rad__mem
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory),    POINTER      :: veg__mem
-    dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory),   POINTER      :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                         !   TYPE(t_sse_memory),   POINTER      :: sse__mem
     ! Declare pointers to variables in memory
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: net_assimilation 
@@ -129,7 +129,7 @@ CONTAINS
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta 
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: lai 
@@ -171,7 +171,7 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
@@ -180,7 +180,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)

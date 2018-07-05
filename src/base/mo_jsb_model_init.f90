@@ -120,7 +120,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
     USE mo_jsb_grid,              ONLY: Get_Grid
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: Read_lctlib
     USE mo_base_config_class,     ONLY: base_config
     ! shared 
@@ -131,7 +131,7 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: Init_veg_pools_elements_a
     ! process init
     USE mo_veg_init,              ONLY: veg_init
-    USE mo_soil_init,             ONLY: soil_init
+    USE mo_sse_init,              ONLY: sse_init
     USE mo_sb_init,               ONLY: sb_init
     USE mo_rad_init,              ONLY: rad_init
     USE mo_assimi_init,           ONLY: assimi_init
@@ -144,10 +144,10 @@ CONTAINS
     USE mo_assimi_constants,      ONLY: init_assimi_constants
     USE mo_pheno_constants,       ONLY: init_pheno_constants
     USE mo_veg_constants,         ONLY: init_veg_constants
-    USE mo_soil_constants,        ONLY: init_soil_constants
+    USE mo_sse_constants,         ONLY: init_sse_constants
     USE mo_sb_constants,          ONLY: init_sb_constants
     ! process config
-    dsl4jsb_Use_config(SOIL_)
+    dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(VEG_)        
     
     IMPLICIT NONE
@@ -172,7 +172,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(SOIL_)
+    dsl4jsb_Def_config(SSE_)
     ! the according Get_config is called below
 
 
@@ -200,7 +200,7 @@ CONTAINS
     !> 3.0 model init 
     !! 
     ! get process configs needed for model_init
-    dsl4jsb_Get_config(SOIL_)
+    dsl4jsb_Get_config(SSE_)
     ! Set model options
     model%options%dtime        = base_config%dtime  ! length of one time step
     model%options%steplen      = base_config%dtime  ! ..
@@ -208,10 +208,10 @@ CONTAINS
     model%options%ics          = ics                ! Index of chunk start
     model%options%ice          = ice                ! Index of chunk end
     model%options%nc           = nc                 ! Length of chunk  (end-number - start-number + 1)
-    model%options%nsoil_energy = dsl4jsb_Config(SOIL_)%nsoil_energy  ! number of soil layers for soil energy calculations
-    model%options%nsoil_water  = dsl4jsb_Config(SOIL_)%nsoil_water   ! number of soil layers for soil moisture calculations
-    model%options%nsoil_sb     = dsl4jsb_Config(SOIL_)%nsoil_water   ! number of soil layers used in SB_ - equals nsoil_water
-    nsoil_sb                   = dsl4jsb_Config(SOIL_)%nsoil_water   ! SUBROUTINE output for land_model_driver -> open_pool_output_files()
+    model%options%nsoil_energy = dsl4jsb_Config(SSE_)%nsoil_energy  ! number of soil layers for soil energy calculations
+    model%options%nsoil_water  = dsl4jsb_Config(SSE_)%nsoil_water   ! number of soil layers for soil moisture calculations
+    model%options%nsoil_sb     = dsl4jsb_Config(SSE_)%nsoil_water   ! number of soil layers used in SB_ - equals nsoil_water
+    nsoil_sb                   = dsl4jsb_Config(SSE_)%nsoil_water   ! SUBROUTINE output for land_model_driver -> open_pool_output_files()
 
 
     !> 4.0 Grid init
@@ -229,7 +229,7 @@ CONTAINS
     CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
     CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
     CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
-    CALL init_soil_constants
+    CALL init_sse_constants
     CALL init_sb_constants
     CALL init_pheno_constants
 
@@ -324,11 +324,11 @@ CONTAINS
       IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) > 0) THEN
         CALL veg_init(tile, model%options)
       END IF
-      ! soil_init
+      ! sse_init
       IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy' ]) > 0) THEN
-        CALL soil_init(tile, model%options)
+        CALL sse_init(tile, model%options)
       END IF
-      ! sb_init (needs soil_init to be finished)
+      ! sb_init (needs sse_init to be finished)
       IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil' ]) > 0) THEN
         CALL sb_init(tile, model%options)
       END IF

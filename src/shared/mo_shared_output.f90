@@ -94,7 +94,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
@@ -304,7 +304,7 @@ CONTAINS
             WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
             WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
          ENDDO
-         ! soilpoolPhysics_lay  ( output per soil_layer for two SOIL_ variables )
+         ! soilpoolPhysics_lay  ( output per soil_layer for two SSE_ variables )
          WRITE(lun,'(3a)') 'Time ',TRIM(p1str), TRIM(p2str)
          lun=lun+1
          ! soilpoolOrg         
@@ -520,7 +520,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -533,7 +533,7 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_total_biomass
     USE mo_sb_memory_class,       ONLY: sb_pool
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
@@ -570,7 +570,7 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
-    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                              ! TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! PHENO_
@@ -578,10 +578,10 @@ CONTAINS
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
-    ! SOIL_ 2D
+    ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root 
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
-    ! SOIL_ 3D
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
@@ -652,7 +652,7 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
-    dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
+    dsl4jsb_Get_memory(SSE_)                              ! sse__mem => sse_memory
     dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)
@@ -662,11 +662,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, jmax_cl)
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, vcmax_cl)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, height)
@@ -1201,7 +1201,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
@@ -1558,7 +1558,7 @@ CONTAINS
   SUBROUTINE write_output_flux(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
@@ -1566,7 +1566,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
-    USE mo_soil_config_class,     ONLY: max_soil_layers
+    USE mo_sse_config_class,      ONLY: max_soil_layers
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_atmland_constants,     ONLY: eps_vpd
 
@@ -1583,7 +1583,7 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use
     USE mo_sb_memory_class,       ONLY: sb_transport, sb_mycorrhiza_export, sb_delta_pools
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
 
@@ -1767,7 +1767,7 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                !     TYPE(t_assimi_memory), POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                   !     TYPE(t_veg_memory),    POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                   !     TYPE(t_rad_memory),    POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)                  !     TYPE(t_soil_memory),   POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                   !     TYPE(t_sse_memory),   POINTER :: sse__mem
     dsl4jsb_Def_memory(SB_)                    !     TYPE(t_sb_memory),     POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! A2L_
@@ -1800,12 +1800,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
     dsl4jsb_Real2D_onChunk      :: canopy_cond
-    ! SOIL_ 2D
+    ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: drainage
     dsl4jsb_Real2D_onChunk      :: runoff 
     dsl4jsb_Real2D_onChunk      :: evaporation 
     dsl4jsb_Real2D_onChunk      :: transpiration
-    ! SOIL_ 3D
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
     dsl4jsb_Real2D_onChunk      :: appfd
@@ -1914,7 +1914,7 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
@@ -1947,13 +1947,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, evaporation)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, interception)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, pet)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(SSE_, evaporation)
+    dsl4jsb_Get_var2D_onChunk(SSE_, interception)
+    dsl4jsb_Get_var2D_onChunk(SSE_, pet)
+    dsl4jsb_Get_var2D_onChunk(SSE_, runoff)
+    dsl4jsb_Get_var2D_onChunk(SSE_, drainage)
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
+    dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
     ! ---------------------------
@@ -2738,7 +2738,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
@@ -2863,7 +2863,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
 
     ! Use of process memories
@@ -2871,7 +2871,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,        ONLY: veg_pool, veg_litterfall
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2898,7 +2898,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)                        ! TYPE(t_a2l_memory),     POINTER :: a2l__mem
     dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
-    dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),    POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                        ! TYPE(t_sse_memory),    POINTER :: sse__mem
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: nhx_deposition 
@@ -2911,7 +2911,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
@@ -2934,7 +2934,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SOIL_)                         
+    dsl4jsb_Get_memory(SSE_)                         
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_,  noy_deposition)
@@ -2946,9 +2946,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,  demand_uptake_p_tuptake_mavg)
     dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_litterfall

@@ -11,7 +11,7 @@ MODULE mo_jsb_model_usecases
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, RAD_, ASSIMI_, VEG_, PHENO_, SOIL_, SB_, &
+  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, RAD_, ASSIMI_, VEG_, PHENO_, SSE_, SB_, &
                                     ON_LEAFS_, ON_TILE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
 
@@ -44,7 +44,7 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_,      ASSIMI_,   VEG_,      PHENO_,    SOIL_,     SB_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_,      ASSIMI_,   VEG_,      PHENO_,    SSE_,     SB_/), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile

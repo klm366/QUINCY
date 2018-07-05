@@ -36,7 +36,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config  
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_atmland_constants,     ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14, &
@@ -45,20 +45,20 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_sb_jsm_processes
-    USE mo_soil_util,                       ONLY: calc_qmax_texture
+    USE mo_sse_util,                       ONLY: calc_qmax_texture
     USE mo_sb_jsm_transport
     USE mo_veg_constants,                   ONLY: itree
     USE mo_sb_constants                     ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
-    dsl4jsb_Use_config(SOIL_)
+    dsl4jsb_Use_config(SSE_)
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SB_)
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,       ONLY: sb_pool
-    dsl4jsb_Use_memory(SOIL_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
 
     IMPLICIT NONE
@@ -80,14 +80,14 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_config(SOIL_)
+    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
     ! VEG_
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
-    ! SOIL_ 3D
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
@@ -130,21 +130,21 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(SOIL_)
+    dsl4jsb_Get_config(SSE_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_org_min_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_min_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     qmax_po4_om_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     silt_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     clay_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_org_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_po4_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_po4_om_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     silt_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     clay_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)
@@ -211,15 +211,15 @@ CONTAINS
           hlp5 = 10000._wp ! g C m-2 slow SOM
 
           IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-             sb_pool%soluable_litter%carbon(:,1) = hlp1 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%soluable_litter%carbon(:,1) = hlp1 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
+             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
              IF(lctlib%growthform==itree) &
-                sb_pool%woody_litter%carbon(:,1) = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb_pool%residue%carbon(:,1) = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+                sb_pool%woody_litter%carbon(:,1) = hlp3 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
+             sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
+             sb_pool%residue%carbon(:,1) = hlp5 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
 
-             nh4_solute(:,1) = nh4_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1)
-             no3_solute(:,1) = no3_solute_prescribe / dsl4jsb_Config(SOIL_)%dz_water(1)
+             nh4_solute(:,1) = nh4_solute_prescribe / dsl4jsb_Config(SSE_)%dz_water(1)
+             no3_solute(:,1) = no3_solute_prescribe / dsl4jsb_Config(SSE_)%dz_water(1)
 
 
              ! inital Qmax based on current soil carbon content
@@ -239,24 +239,24 @@ CONTAINS
                                     po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
                                     po4_occluded(:,:), po4_primary(:,:))
           ELSE 
-             sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+             sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
-             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              IF(lctlib%growthform==itree) &
-                sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
-             sb_pool%microbial%carbon(:,1)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+                sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
+             sb_pool%microbial%carbon(:,1)        = hlp4 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * &
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
-             sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * & 
+             sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * & 
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              DO isoil=2,options%nsoil_sb
-                sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
-                sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
-                sb_pool%microbial%carbon(:,isoil)        = hlp4 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+                sb_pool%microbial%carbon(:,isoil)        = hlp4 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
-                sb_pool%residue%carbon(:,isoil)          = hlp5 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * & 
+                sb_pool%residue%carbon(:,isoil)          = hlp5 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * & 
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil)
 
              ENDDO
@@ -264,8 +264,8 @@ CONTAINS
 !       this is because here I'm trying to enure that the models are initialised with the same amount of nutrient
 !       whereas in the prescribed option the target is unlimiting concentrations across the profile. The latter leads
 !       to more nutrient in the soil column in 1d compared to 0d
-             nh4_solute(:,:) = nh4_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
-             no3_solute(:,:) = no3_solute_prescribe / SUM(dsl4jsb_Config(SOIL_)%dz_water(:))
+             nh4_solute(:,:) = nh4_solute_prescribe / SUM(dsl4jsb_Config(SSE_)%dz_water(:))
+             no3_solute(:,:) = no3_solute_prescribe / SUM(dsl4jsb_Config(SSE_)%dz_water(:))
 
              ! inital bulk density and qmax_po4 based on current soil carbon content
              bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
@@ -339,24 +339,24 @@ CONTAINS
           hlp4 = 10.0_wp  ! g C m-2 microbial biomass
           hlp5 = 1000._wp ! g C m-2 microbial necromass
 
-          sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+          sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * &
                                                                     ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
-          sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1) * &
+          sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * &
                                                                     ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
           IF(lctlib%growthform==itree) &
-             sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(1)
+             sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1)
           DO isoil=2,nsoil_sb
-             sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+             sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
                                                                        (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
-             sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SOIL_)%dz_water(isoil) * &
+             sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
                                                                        (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
           ENDDO
 
           DO isoil=1,nsoil_sb
-             sb_pool%microbial%carbon(:,isoil) = MAX(hlp4/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil), &
+             sb_pool%microbial%carbon(:,isoil) = MAX(hlp4/dsl4jsb_Config(SSE_)%dz_water(isoil) * root_fraction_sl(:,isoil), &
                                                      min_mic_biomass)
-             sb_pool%residue%carbon(:,isoil) = hlp5/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
-             sb_pool%residue_assoc%carbon(:,isoil) = dsl4jsb_Config(SB_)%qmax_org_fine_particle/dsl4jsb_Config(SOIL_)%dz_water(isoil) * root_fraction_sl(:,isoil)
+             sb_pool%residue%carbon(:,isoil) = hlp5/dsl4jsb_Config(SSE_)%dz_water(isoil) * root_fraction_sl(:,isoil)
+             sb_pool%residue_assoc%carbon(:,isoil) = dsl4jsb_Config(SB_)%qmax_org_fine_particle/dsl4jsb_Config(SSE_)%dz_water(isoil) * root_fraction_sl(:,isoil)
           ENDDO
           sb_pool%soluable_litter%nitrogen(:,:)   = sb_pool%soluable_litter%carbon(:,:) / microbial_cn 
           sb_pool%soluable_litter%phosphorus(:,:) = sb_pool%soluable_litter%nitrogen(:,:) / microbial_np

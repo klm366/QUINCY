@@ -20,7 +20,7 @@ MODULE mo_jsb_process_class
   PRIVATE
   
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
-  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -42,8 +42,8 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
-    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    ! A2L_=1, L2A_=2, SSE_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   END ENUM
 
   ! Process actions
@@ -73,7 +73,7 @@ CONTAINS
      return_value = 'seb'
    CASE (TURB_)
      return_value = 'turb'
-    CASE (SOIL_)
+    CASE (SSE_)
       return_value = 'soil'
     CASE (SB_)
       return_value = 'soil_biogeochemistry'

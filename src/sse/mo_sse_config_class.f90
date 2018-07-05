@@ -1,5 +1,5 @@
 !>
-!! @brief Contains structures and methods for soil config
+!! @brief Contains structures and methods for sse config
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04);
 !! 2nd version by Jan Engel, MPI BGC (20160913) -> integration into SLM
 !!
-MODULE mo_soil_config_class
+MODULE mo_sse_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
@@ -18,14 +18,14 @@ MODULE mo_soil_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_soil_config, max_soil_layers
+  PUBLIC :: t_sse_config, max_soil_layers
 
   !-----------------------------------------------------------------------------------------------------
-  !> configuration of the soil process, derived from t_jsb_config
+  !> configuration of the sse process, derived from t_jsb_config
   !! 
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_config) :: t_soil_config
+  TYPE, EXTENDS(t_jsb_config) :: t_sse_config
     INTEGER               :: nsoil_energy         !< number of soil layers for soil energy calculations
     INTEGER               :: nsoil_water          !< number of soil layers for soil moisture calculations
     REAL(wp)              :: soil_depth           !< actual soil and rooting depth
@@ -42,28 +42,28 @@ MODULE mo_soil_config_class
     REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
     REAL(wp)              :: bulk_density    
   CONTAINS
-    PROCEDURE :: Init => Init_soil_config
-  END TYPE t_soil_config
+    PROCEDURE :: Init => Init_sse_config
+  END TYPE t_sse_config
 
   INTEGER, PARAMETER :: max_soil_layers = 20  ! consistent with JSBACH4
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_config_class'
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> configuration routine of t_soil_config
+  !> configuration routine of t_sse_config
   !! 
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_soil_config(config)
+  SUBROUTINE Init_sse_config(config)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_soil_config), INTENT(inout) :: config    !< config type for soil
+    CLASS(t_sse_config), INTENT(inout) :: config    !< config type for sse
     ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
@@ -88,7 +88,7 @@ CONTAINS
     REAL(wp)                    :: k_soil_profile  = 0.25_wp
     REAL(wp)                    :: min_layer_depth = 0.065_wp
 
-    NAMELIST /soil_ctl/       & 
+    NAMELIST /sse_ctl/       & 
                           active                  , &
                           ic_filename             , &
                           bc_filename             , &
@@ -109,14 +109,14 @@ CONTAINS
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
 
-    CALL message(TRIM(routine), 'Starting soil configuration')
+    CALL message(TRIM(routine), 'Starting sse configuration')
 
     ! Set defaults
     active                        = .TRUE.
-    ic_filename                   = 'ic_land_soil.nc'
-    bc_filename                   = 'bc_land_soil.nc'
+    ic_filename                   = 'ic_land_sse.nc'
+    bc_filename                   = 'bc_land_sse.nc'
     nsoil_energy                  = 5
     nsoil_water                   = 5
     dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
@@ -134,11 +134,11 @@ CONTAINS
     bulk_density                  = 1500.0_wp
 
     ! read the namelist
-    ! &SOIL_CTL
+    ! &SSE_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('SOIL_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, soil_ctl)
+    nml_unit = position_nml('SSE_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, sse_ctl)
 
     CALL close_nml(nml_handler)
 
@@ -150,9 +150,9 @@ CONTAINS
 
     ! check initialisation of number of soil layers
     IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) & 
-        CALL finish('Init_soil_config','Number of soil layers needs to be a number from the range 5 to 20.')
+        CALL finish('Init_sse_config','Number of soil layers needs to be a number from the range 5 to 20.')
     IF (nsoil_water .NE. nsoil_energy) & 
-        CALL finish('Init_soil_config','Initialization with different numbers of soil layers for energy and water not supported.')
+        CALL finish('Init_sse_config','Initialization with different numbers of soil layers for energy and water not supported.')
 
     ! If not using 5 layers, estimate depth profile to mimick standard JSB4 profile
     IF(nsoil_water > 5) THEN
@@ -168,8 +168,8 @@ CONTAINS
        dz_water(:) = dz_energy(:)
     ENDIF
 
-    IF (soil_depth .LE. 0.0_wp) CALL finish('Init_soil_config','Initialization with non positive soil depth')
-    IF (soil_depth .GT. SUM(dz_energy)) CALL finish('Init_soil_config','Initialization of soil depth larger than soil profile not possible')
+    IF (soil_depth .LE. 0.0_wp) CALL finish('Init_sse_config','Initialization with non positive soil depth')
+    IF (soil_depth .GT. SUM(dz_energy)) CALL finish('Init_sse_config','Initialization of soil depth larger than soil profile not possible')
 
     ! pass values as read from file
     config%active                    = active
@@ -201,11 +201,11 @@ CONTAINS
     config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
     IF(config%soil_clay < eps8) THEN
        WRITE(message_text,'(2a)') 'invalid proportion of soil_clay (value < eps8)',routine
-       CALL finish("mo_soil_config_class:init_soil_config",message_text)
+       CALL finish("mo_sse_config_class:init_sse_config",message_text)
     END IF
     config%bulk_density              = bulk_density
 
-  END SUBROUTINE Init_soil_config
+  END SUBROUTINE Init_sse_config
 
 #endif
-END MODULE mo_soil_config_class
+END MODULE mo_sse_config_class

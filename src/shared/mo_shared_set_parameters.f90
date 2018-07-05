@@ -374,7 +374,7 @@ CONTAINS
     !USE mo_atmland_constants
     !USE mo_rad_constants
     USE mo_shared_constants
-    !USE mo_soil_constants
+    !USE mo_sse_constants
     USE mo_sb_constants
     USE mo_veg_constants
 

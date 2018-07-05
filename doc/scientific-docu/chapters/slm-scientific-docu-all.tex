@@ -217,7 +217,7 @@ Generally the \texttt{update{\_}} routines make the variables available via a po
 
 In the \texttt{update{\_}} routines the necessary steps to make available a variable are:
 \begin{enumerate}
-	\item USE the process memory of the variable adding the statement: \\dsl4jsb{\_}Use{\_}memory(PROC{\_}) \\-> replace PROC with the large caps process abbreviation (i.e., A2L, L2A, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO, SB); \\add this statement above the line that says "IMPLICIT NONE"
+	\item USE the process memory of the variable adding the statement: \\dsl4jsb{\_}Use{\_}memory(PROC{\_}) \\-> replace PROC with the large caps process abbreviation (i.e., A2L, L2A, SEB, TURB, SSE, HYDRO, VEG, HD, RAD, ASSIMI, PHENO, SB); \\add this statement above the line that says "IMPLICIT NONE"
 	\item add to section 0.3 "Declare Memory : Declare process configuration and memory Pointers" the statement: \\dsl4jsb{\_}Def{\_}memory(PROC{\_})
 	\item add to section 0.3 "Declare Memory : Declare pointers to variables in memory" the statement: \\dsl4jsb{\_}Real2D{\_}onChunk :: variable{\_}name \\-> use dsl4jsb{\_}Real3D{\_}onChunk for 3D variables and dsl4jsb{\_}Logical2D{\_}onChunk for 2D logicals
 	\item add to section 0.5 "Get Memory : Get process memories" the statement: \\dsl4jsb{\_}Get{\_}memory(PROC{\_})
@@ -235,7 +235,7 @@ In the veg and sb memory, pools are defined as a TYPE that contains another TYPE
 
 For making pools available in the scientific code currently no such "statements" as available for variables (e.g., dsl4jsb{\_}Get{\_}var3D{\_}onChunk(PROC{\_}, variable{\_}name)) exist for pools or their variables. Pools from veg and sb memory should be made available in the \texttt{update{\_}} routines only, not in the \texttt{calc{\_}}, consistent with the usage of variables. Making pools available in an \texttt{update{\_}} routine includes the following steps:
 \begin{enumerate}
-	\item USE the process memory of the variable adding the statement: \\dsl4jsb{\_}Use{\_}memory(PROC{\_}) \\-> replace PROC with the large caps process abbreviation (i.e., A2L, L2A, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO, SB); \\add this statement above the line that says "IMPLICIT NONE"
+	\item USE the process memory of the variable adding the statement: \\dsl4jsb{\_}Use{\_}memory(PROC{\_}) \\-> replace PROC with the large caps process abbreviation (i.e., A2L, L2A, SEB, TURB, SSE, HYDRO, VEG, HD, RAD, ASSIMI, PHENO, SB); \\add this statement above the line that says "IMPLICIT NONE"
 	\item add to section 0.3 "Declare Memory : Declare process configuration and memory Pointers" the statement: \\dsl4jsb{\_}Def{\_}memory(PROC{\_})
 	\item add to section 0.3 "Declare Memory" right above the part "Get local variables from options argument" one of the two lines:
 \begin{itemize}
@@ -270,14 +270,3 @@ For making pools available in the scientific code currently no such "statements"
 		...
 \end{itemize}
 ~\\
-
-
-
-
-
-
-
-
-
-
-

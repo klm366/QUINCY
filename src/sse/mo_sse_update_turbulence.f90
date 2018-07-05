@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Sönke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
 !!
-MODULE mo_soil_update_turbulence
+MODULE mo_sse_update_turbulence
 
 #include "dsl_jsbach.inc"
 
@@ -19,7 +19,7 @@ MODULE mo_soil_update_turbulence
   PRIVATE
   PUBLIC :: update_soil_turbulence, calc_filtered_drag_coefficient
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_update_turbulence'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_update_turbulence'
 
 CONTAINS
 
@@ -35,7 +35,7 @@ CONTAINS
   SUBROUTINE update_soil_turbulence(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -46,14 +46,14 @@ CONTAINS
     USE mo_shared_constants,      ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(SOIL_)
+    dsl4jsb_Use_config(SSE_)
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
     dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -76,12 +76,12 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(SOIL_)
+    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                        !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)                        !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
     ! A2L_
@@ -100,7 +100,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: net_radiation
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real2D_onChunk                :: root_depth
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: heat_capa_sl
@@ -120,20 +120,20 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(SOIL_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-    dsl4jsb_Get_config(SOIL_)
+    dsl4jsb_Get_config(SSE_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
@@ -152,10 +152,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)      ! out
     dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! out
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)           ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)           ! out
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
     ! ---------------------------
@@ -416,4 +416,4 @@ CONTAINS
 
   END SUBROUTINE calc_drag_coefficient
 
-END MODULE mo_soil_update_turbulence
+END MODULE mo_sse_update_turbulence

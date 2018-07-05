@@ -32,7 +32,7 @@ mo_land_model_interface.o: \
   mo_shared_update_time_averages.o \
   mo_shared_output.o \
   mo_sb_util.o \
-  mo_soil_util.o \
+  mo_sse_util.o \
   mo_assimi_util.o \
   mo_veg_util.o \
   mo_sb_config_class.o \
@@ -40,7 +40,7 @@ mo_land_model_interface.o: \
   mo_veg_interface.o \
   mo_veg_canopy.o \
   mo_assimi_interface.o \
-  mo_soil_interface.o \
+  mo_sse_interface.o \
   mo_sb_interface.o \
   mo_pheno_interface.o
 
@@ -65,7 +65,7 @@ mo_test_canopy_model.o: \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \
   mo_assimi_memory_class.o \
-  mo_soil_memory_class.o
+  mo_sse_memory_class.o
 
 mo_atmland_forcing.o: \
   mo_kind.o \
@@ -85,7 +85,7 @@ mo_atmland_forcing.o: \
   mo_shared_constants.o \
   mo_atmland_util.o \
   mo_atmland_constants.o \
-  mo_soil_memory_class.o \
+  mo_sse_memory_class.o \
   mo_veg_memory_class.o
 
 mo_jsb4_forcing.o: \

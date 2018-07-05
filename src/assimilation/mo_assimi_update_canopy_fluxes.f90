@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_atmland_constants,     ONLY: min_wind
     USE mo_shared_constants,      ONLY: r_gas, Tzero
     USE mo_shared_isotope,        ONLY: calc_fractionation
@@ -58,7 +58,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory    
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
     IMPLICIT NONE
     ! ---------------------------
@@ -81,7 +81,7 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
     dsl4jsb_Def_memory(VEG_)          !   TYPE(t_veg_memory), POINTER      :: veg__mem
     dsl4jsb_Def_memory(RAD_)          !   TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SOIL_)         !   TYPE(t_soil_memory),      POINTER :: soil__mem
+    dsl4jsb_Def_memory(SSE_)         !   TYPE(t_sse_memory),      POINTER :: sse__mem
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
@@ -92,7 +92,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
-    ! SOIL_
+    ! SSE_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -151,7 +151,7 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SSE_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                          ! in
@@ -162,7 +162,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)             ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)             ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
