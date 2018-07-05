@@ -227,6 +227,7 @@ MODULE mo_sb_memory_class
                                     rtm_decomposition, &    !< rate modifier for decomposition processes [--]
                                     rtm_depolymerisation, & !< rate modifier for depolymerisation processes [--]
                                     rtm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
+                                    rtm_plant_uptake, &     !< rate modifier for plant uptake [--] 
                                     rtm_sorption, &         !< rate modifier for sorption [--]
                                     rtm_desorption, &       !< rate modifier for desorption [--]
                                     rtm_hsc, &              !< rate modifier for half-saturation constants [--] 
@@ -239,6 +240,7 @@ MODULE mo_sb_memory_class
                                     rmm_decomposition, &    !< rate modifier for decomposition processes [--]
                                     rmm_depolymerisation, & !< rate modifier for depolymerisation processes [--]
                                     rmm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
+                                    rmm_plant_uptake, &     !< rate modifier for plant uptake [--] 
                                     rmm_sorption, &         !< rate modifier for sorption [--]
                                     rmm_desorption, &       !< rate modifier for desorption [--]
                                     rmm_hsc, &              !< rate modifier for half-saturation constants [--] 
@@ -1408,6 +1410,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL jsb_add_var(mem, 'rtm_plant_uptake', mem%rtm_plant_uptake, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL jsb_add_var(mem, 'rtm_sorption', mem%rtm_sorption, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -1473,6 +1483,14 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_mic_uptake', mem%rmm_mic_uptake, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'rmm_plant_uptake', mem%rmm_plant_uptake, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &

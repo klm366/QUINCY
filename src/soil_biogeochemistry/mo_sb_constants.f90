@@ -32,10 +32,14 @@ MODULE mo_sb_constants
       ea_sorption, &          !< activation energy for sorption to mineral surfaces [J mol-1]
       ea_desorption, &        !< activation energy for desorption to mineral surfaces [J mol-1]
       ea_hsc, &               !< activation energy for half-saturation constants [J mol-1]
+      t_ref_decomposition, &  !< temperature of peak decomposition rate [K]
+      ea_decomposition, &     !< activation energy for decomposition [J mol-1]
+      ed_decomposition, &     !< de-activation energy for decomposition [J mol-1]
       k1_afps, &              !< scaling factor in the air-filled pore space to modifier response
       kmr_depolymerisation, & !< scaling factor for the sensitivity of depolymerisation to oxygen limitation 
       kmr_mic_uptake, &       !< scaling factor for the sensitivity of microbial uptake to oxygen limitation 
-      kmr_hsc                 !< scaling factor for the sensitivity of half-saturation constant to moisture limitation 
+      kmr_hsc, &              !< scaling factor for the sensitivity of half-saturation constant to moisture limitation
+      kmr_decomposition       !< minimum water potential for decomposition
 
   ! transport and sorption parameters
   REAL(wp), SAVE :: &
@@ -224,11 +228,11 @@ CONTAINS
 
     ! turnover times
     tau_soluable_litter   = 30._wp * one_day                ! 30 days 
-    tau_metabolic_litter  = 0.066_wp * one_year * one_day   ! 
-    tau_structural_litter = 0.245_wp * one_year * one_day   ! 
-    tau_woody_litter      = 7.5_wp * one_year * one_day     ! 
-    tau_fast              = 3._wp * one_year * one_day      ! 
-    tau_slow              = 150._wp * one_year * one_day    ! 
+    tau_metabolic_litter  = 0.033_wp * one_year * one_day   ! 
+    tau_structural_litter = 0.124_wp * one_year * one_day   ! 
+    tau_woody_litter      = 2.5_wp * one_year * one_day     ! 
+    tau_fast              = 2._wp * one_year * one_day      ! 
+    tau_slow              = 100._wp * one_year * one_day    ! 
     tau_biomineralisation = 5._wp * one_year * one_day      ! 
 
     ! temperature and moisture rate modifiers 
@@ -238,10 +242,14 @@ CONTAINS
     ea_sorption           = 5000._wp      ! B. Ahrens, pers. comm. 2016
     ea_desorption         = 20000._wp     ! B. Ahrens, pers. comm. 2016
     ea_hsc                = 30000._wp     ! B. Ahrens, pers. comm. 2016
+    ea_decomposition      = 53000._wp     !
+    ed_decomposition      = 100000.0_wp   !
+    t_ref_decomposition   = 313.15_wp     !
     k1_afps               = 4._wp / 3._wp ! B. Ahrens, pers. comm. 2016
     kmr_depolymerisation  = 0.001_wp      ! 
     kmr_mic_uptake        = 0.001_wp      ! 
     kmr_hsc               = 0.001_wp      ! 
+    kmr_decomposition     = -2.0_wp       !
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
     k_diff_org                = 0.15_wp / one_year / one_day                                ! 

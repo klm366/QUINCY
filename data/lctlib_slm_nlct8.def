@@ -168,12 +168,12 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
         
 #vmax_uptake_n: vmax of N uptake (~µmol N / mol C / s) [714.28_wp ? old value]        
 # tuned from OCN's 1.5 gN/gC/1800s        
-vmax_uptake_n 0.14 0.14 0.14 0.14 0.14 0.14 0.14 0.14
-        
+vmax_uptake_n 0.28 0.28 0.28 0.28 0.28 0.28 0.28 0.28       
+ 
 #vmax_uptake_p: vmax of P uptake (~µmol P / mol C / s)        
 # tuned from OCN's 1.5 gN/gC/1800s        
-vmax_uptake_p 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428
-        
+vmax_uptake_p 0.28 0.28 0.28 0.28 0.28 0.28 0.28 0.28       
+ 
 #bnf_base: base nitrogen fixation rate (g N / m2 / year)
 # converted internally to mumol N m-2 s-1        
 bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0
@@ -249,7 +249,7 @@ allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0
 allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5
         
 #phi_leaf_min: minimum leaf water potential (MPa)        
-phi_leaf_min -1.0 -1.0 -1.0 -1.0 -1.0 -1.0 -0.75 -0.75
+phi_leaf_min -1.5 -1.5 -1.5 -1.5 -1.5 -1.5 -0.75 -0.75
         
 #k_root: fine root hydraulic conductance (10^10 m3 mol-1 s-1 MPa-1)        
 # converted internally to m3 mol-1 s-1 MPa-1

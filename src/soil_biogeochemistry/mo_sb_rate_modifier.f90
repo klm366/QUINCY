@@ -45,7 +45,8 @@ CONTAINS
     USE mo_sb_constants,          ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
                                         kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, &
                                         ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
-                                        t_opt_nitrification, lambda_anvf, k_anvf
+                                        t_opt_nitrification, lambda_anvf, k_anvf, &
+                                        ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -72,6 +73,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rtm_decomposition 
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
+    dsl4jsb_Real3D_onChunk :: rtm_plant_uptake
     dsl4jsb_Real3D_onChunk :: rtm_sorption
     dsl4jsb_Real3D_onChunk :: rtm_desorption
     dsl4jsb_Real3D_onChunk :: rtm_hsc
@@ -81,6 +83,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_decomposition 
     dsl4jsb_Real3D_onChunk :: rmm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rmm_mic_uptake
+    dsl4jsb_Real3D_onChunk :: rmm_plant_uptake
     dsl4jsb_Real3D_onChunk :: rmm_sorption
     dsl4jsb_Real3D_onChunk :: rmm_desorption
     dsl4jsb_Real3D_onChunk :: rmm_hsc
@@ -92,6 +95,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_pot_sl
 
     ! Get local variables from options argument
     iblk  = options%iblk
@@ -116,6 +120,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)              ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_plant_uptake)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)                ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)                     ! out
@@ -125,6 +130,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)              ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_plant_uptake)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)                     ! out
@@ -136,6 +142,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_fc_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sat_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_pot_sl)               ! in
 
 
 
@@ -144,8 +151,15 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !> 1.0 calc modifiers
-
+    !> 1.0 soil organic rate calc modifiers
+    !!
+    !> 1.1 simple model
+    !!
+    rtm_decomposition    = calc_peaked_temperature_rate_modifier(t_soil_sl,ea_decomposition, &
+                                                                 ed_decomposition,t_ref_decomposition)
+    rmm_decomposition    = MAX(1._wp - w_soil_pot_sl/kmr_decomposition,0.0_wp)
+    !> 1.2 JSM
+    !!
     rtm_depolymerisation(:,:) = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_depolymerisation) 
     rtm_mic_uptake(:,:)       = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_mic_uptake)
     rtm_sorption(:,:)         = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_sorption) 
@@ -158,21 +172,21 @@ CONTAINS
     rmm_desorption(:,:)       = calc_convert_bulk_to_liquid(w_soil_sl(:,:)) 
     rmm_hsc(:,:)              = calc_substrate_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_hsc) 
 
-    !> 2.0 simple soil model 
+    !> 2.0 nitrification-denitrification model
     !!
-    rtm_decomposition(:,:)    = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_depolymerisation) 
-    rmm_decomposition(:,:)    = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_depolymerisation) * &
-                           calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:))
-
-    !> 3.0 nitrification-denitrification model
-    !!
-    rtm_nitrification(:,:)    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:),ea_nitrification,ed_nitrification, &
-                                                                      t_opt_nitrification) 
+    rtm_nitrification(:,:)    = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:),ea_nitrification, & 
+                                                                 ed_nitrification,t_opt_nitrification) 
     rtm_denitrification(:,:)  = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_denitrification) 
     rtm_gasdiffusion(:,:)     = calc_temperature_rate_modifier(t_soil_sl(:,:),ea_gasdiffusion) 
     rmm_nitrification(:,:)    = calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:)) 
     rmm_gasdiffusion(:,:)     = 1.0_wp - calc_moisture_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:)) 
-    anaerobic_volume_fraction_sl(:,:) = calc_anaerobic_volume_fraction(w_soil_sl(:,:),w_soil_sat_sl,lambda_anvf,k_anvf) 
+    anaerobic_volume_fraction_sl(:,:) = calc_anaerobic_volume_fraction(w_soil_sl(:,:),w_soil_sat_sl(:,:),lambda_anvf,k_anvf) 
+
+    !> 3.0 root model
+    !!
+    rtm_plant_uptake     = calc_peaked_temperature_rate_modifier(t_soil_sl(:,:),ea_decomposition, &
+                                                                 ed_decomposition,t_ref_decomposition)
+    rmm_plant_uptake     = MAX(1._wp - w_soil_pot_sl/lctlib%phi_leaf_min,0.0_wp)
 
   END SUBROUTINE update_sb_rate_modifier
 
