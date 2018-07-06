@@ -8,6 +8,8 @@
 ##  cd contrib/forcing_scripts/
 ##  Rscript --vanilla ./generate_fluxnet_static_slm_forcing.R
 ## 
+## note: allsiteinfo is ./generate_fluxnet_site_list.dat 
+## 
 ## output may be generated per default in:
 ##  ./new_fluxnet_static_met_forcing/
 ## 
