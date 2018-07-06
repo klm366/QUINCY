@@ -944,10 +944,8 @@ CONTAINS
     & c_green,                        & ! inout, optional
     & c_woods,                        & ! inout, optional
     & c_reserve,                      & ! inout, optional
-    & cflux_dist_greenreserve_2_soil, & ! out, because relocate_carbon_damage is 
-                                        ! called before relocate_carbon_fire!
-    & cflux_dist_woods_2_soil,        & ! out, because relocate_carbon_damage is
-                                        ! called before relocate_carbon_fire!
+    & cflux_dist_greenreserve_2_soil, & ! inout
+    & cflux_dist_woods_2_soil,        & ! inout
     & c_acid_ag1,                     & ! inout
     & c_water_ag1,                    & ! inout
     & c_ethanol_ag1,                  & ! inout
@@ -978,11 +976,11 @@ CONTAINS
     real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(out)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage 
-                                                                ! (and later also by fire)
-    real(wp),intent(out)   :: cflux_dist_woods_2_soil(:)  ! Amount of carbon relocated by wind damage 
-                                                                ! (and later also by fire)
-                                                                ! .. to the green litter pools [mol(C)/m^2(canopy)]
+    real(wp),intent(inout)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage
+                                                                  ! (and later also by fire)
+    real(wp),intent(inout)   :: cflux_dist_woods_2_soil(:)        ! Amount of carbon relocated by wind damage
+                                                                  ! (and later also by fire)
+                                                                  ! .. to the green litter pools [mol(C)/m^2(canopy)]
 
     !   YASSO
     ! Size class 1: green
@@ -1018,8 +1016,8 @@ CONTAINS
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
 
-    cflux_dist_woods_2_soil(:)  = c_woods(:) * damaged_fract(:)
-    cflux_dist_greenreserve_2_soil(:) = (c_green(:) + c_reserve(:)) * damaged_fract(:)
+    cflux_dist_woods_2_soil(:) = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:)
+    cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + (c_green(:) + c_reserve(:)) * damaged_fract(:)
 
     ! Add aboveground damaged green and reserve
     factor(:) = (c_green(:) + c_reserve(:)) * fract_green_aboveGround * damaged_fract(:)

@@ -324,6 +324,8 @@ CONTAINS
     END IF
 
     IF (is_newday()) THEN ! only once per day
+      cflux_dist_greenreserve_2_soil(:) = 0._wp
+      cflux_dist_woods_2_soil(:) = 0._wp
 
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) & 
@@ -343,7 +345,7 @@ CONTAINS
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_grass
             ENDIF
 
-            CALL burned_fract_jsbach(                           &
+            CALL burned_fract_jsbach(                            &
               & dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
               & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
               & fire_minimum,                                    & ! in
@@ -354,12 +356,12 @@ CONTAINS
               & )
 
           CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
+            CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
           CASE (3)
-            CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
+            CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown fire algorithm')
+            CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
 
       END IF
@@ -449,10 +451,10 @@ CONTAINS
               & dummy_flux(:), cconservation_wind(:))
 
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown windbreak algorithm')
+            CALL finish('disturbed_fract','Unknown windbreak algorithm')
         END SELECT
 
-        cflux_fire_all_2_atm_ta = 0._wp
+        cflux_fire_all_2_atm = 0._wp
         SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
           CASE (0) !! No fire algorithm
           CASE (1) !! jsbach algorithm
@@ -513,12 +515,12 @@ CONTAINS
               & -cflux_fire_all_2_atm_ta(:), cconservation_fire(:))
 
           CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_frac','Arora & Boer algorithm not implemented yet.')
+            CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
           CASE (3)
-            CALL finish('disturbed_frac','Thornicke spit fire not implemented yet.')
+            CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
           CASE DEFAULT
-            CALL finish('disturbed_frac','Unknown fire algorithm')
+            CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
 
         ! R: This corresponds to JS3, but I did not understand it...
