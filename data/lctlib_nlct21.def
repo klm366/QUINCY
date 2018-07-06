@@ -102,7 +102,7 @@ LAI_shed_constant 0.0 0.000342 0.000456 0.0 0.0 0.0 0.0 0.0 0.0 0.00183 0.0 0.00
                      
 #Max_C_content_woods: Maximum carbon content in woody parts [mol(C)/m^2]                      
 #                     (values from IPCC-TAR, S. 192)                     
-Max_C_content_woods 0.0 2997.25 2997.25 1998.2 1498.6 1998.2 1498.6 1998.2 1498.6 582.8 416.2 0.0 0.0 0.0 0.0 0.0 416.2 416.2 0.0 0.0 0.0
+Max_C_content_woods 0.0 2997.25 2997.25 2397.8 1798.3 2397.8 1798.3 2397.8 1798.3 582.8 416.2 0.0 0.0 0.0 0.0 0.0 416.2 416.2 0.0 0.0 0.0
                      
 #reserveC2leafC: Factor by which the maximum carbon content of the reserve pool is larger than MAXLAI /SLA                     
 reserveC2leafC 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 4.0 4.0 4.0 4.0 4.0 2.0 2.0 4.0 4.0 4.0
