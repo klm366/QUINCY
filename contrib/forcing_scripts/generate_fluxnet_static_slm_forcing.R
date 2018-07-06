@@ -1,14 +1,16 @@
 #!/usr/bin/env Rscript
 
-##
-## generate met forcing for Fluxnet sites
-##
-
-
 #########################################################################################
+##
+## generate > static < met forcing for Fluxnet sites
+##
 ## run this script by:
-## cd contrib/forcing_scripts/
-## Rscript --vanilla ./generate_SLM_forcing_from_FLUXNET.R
+##  cd contrib/forcing_scripts/
+##  Rscript --vanilla ./generate_SLM_forcing_from_FLUXNET.R
+## 
+## output may be generated per default in:
+##  ./new_fluxnet_met_forcing/
+## 
 #########################################################################################
 
 
