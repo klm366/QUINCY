@@ -230,7 +230,7 @@ CONTAINS
   !! @par History
   !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
   !!
-  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
+  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, evapo_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
     & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
@@ -239,7 +239,7 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
-    REAL(wp), INTENT(IN)  :: evap_act2pot_proc(:,:)
+    REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
     REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)
     REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
     REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
@@ -345,10 +345,10 @@ CONTAINS
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
       IF (forcing_options%air_temperature_as_timestep) THEN
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evap_act2pot_proc(:,:), &
+        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evapo_act2pot_proc(:,:), &
           & MINVAL(forcing_input%air_temp%data_read(:,:,:), DIM=3), t_air(:,:))
       ELSE
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evap_act2pot_proc(:,:), tmin_data(:,:), t_air(:,:))
+        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air(:,:))
       ENDIF
       q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
 
