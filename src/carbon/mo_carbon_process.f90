@@ -18,7 +18,7 @@ MODULE mo_carbon_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso
+  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, get_per_tile
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -73,7 +73,7 @@ CONTAINS
     & NPP_act_yDayMean,           & ! out
     !
     ! & fract_litter_wood_new,      & ! inout, optional; R: only for spitfire
-    ! &  Yasso variables
+    ! Yasso variables
     & temp2_30d,                  & ! in, optional, necessary with yasso
     & precip_30d,                 & ! in, optional, necessary with yasso
     !
@@ -136,8 +136,8 @@ CONTAINS
     REAL(wp), INTENT(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
     REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
     !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
-    INTEGER,  INTENT(in)     :: pheno_type             ! crop =5
-    INTEGER,  INTENT(in)     :: time_steps_per_day
+    INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
+    INTEGER,  INTENT(in)    :: time_steps_per_day
     REAL(wp), INTENT(in)    :: dtime
     !
     REAL(wp), INTENT(inout) :: c_green            ! Green carbon pool: on input last value; updated on output 
@@ -1518,6 +1518,24 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE yasso
+
+  ! --- get_per_tile() ---------------------------------------------------------------------------------------------------
+  !
+  ! calculate per tile density from density per canopy m2 
+  !
+  ELEMENTAL SUBROUTINE get_per_tile(  &
+    & Cpool_per_tile,                 & ! in
+    & Cpool_per_canopy,               & ! in
+    & veg_fract_correction,           & ! in
+    & fract_fpc_max)                    ! in
+
+    REAL(wp), INTENT(IN) ::  fract_fpc_max, veg_fract_correction
+    REAL(wp), INTENT(IN) ::  Cpool_per_canopy
+    REAL(wp), INTENT(OUT)::  Cpool_per_tile
+
+    Cpool_per_tile = Cpool_per_canopy * veg_fract_correction * fract_fpc_max
+
+  END SUBROUTINE get_per_tile
 
 #endif
 END MODULE mo_carbon_process
