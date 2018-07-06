@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-05)
-!! Julia Nabel (2018):
+!! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age cohorts
 !!      ++ subroutines for cpool sums and c conservation test
 !!
 MODULE mo_carbon_interface
@@ -18,7 +18,7 @@ MODULE mo_carbon_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, message_text, finish
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -35,6 +35,7 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(DISTURB_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -50,8 +51,8 @@ MODULE mo_carbon_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC ::  Register_carbon_tasks
-  PUBLIC ::  recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, calculate_current_c_ta_state_sum, &
-           & check_carbon_conservation
+  PUBLIC ::  recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, rescale_carbon_upon_reference_area_change, &
+           & calculate_current_c_ta_state_sum, check_carbon_conservation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -133,12 +134,14 @@ CONTAINS
     REAL(wp)                     :: dtime
     INTEGER                      :: i, itile
     REAL(wp), allocatable        :: precip_total(:)
+    REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
@@ -305,6 +308,7 @@ CONTAINS
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
@@ -490,6 +494,15 @@ CONTAINS
       ! Save other variables (for yasso) as "previous days"
       pseudo_temp_yDay   = pseudo_temp
       pseudo_precip_yDay = pseudo_precip
+      
+      ! In case of l_forestRegrowth = true the maximum LAI can change over time
+      IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+         MaxLai(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
+      ELSE
+        ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
+        ! which is for each vegetated tile taken from MaxLAI in the lct library.
+        MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
+      END IF
 
       !Calculate current sum before operation for c conservation test
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
@@ -498,6 +511,7 @@ CONTAINS
       CALL calc_Cpools( &
         &  LAI_yDayMean,                                      & ! in
         &  LAI_yyDayMean,                                     & ! in
+        &  MaxLai,                                            & ! in
         &  NPP_pot_yDayMean,                                  & ! in
         &  topSoilTemp_yDayMean,                              & ! in
         &  alpha_yDayMean,                                    & ! in
@@ -515,7 +529,6 @@ CONTAINS
         &  dsl4jsb_Lctlib_param(Max_C_content_woods),         & ! in
         &  dsl4jsb_Lctlib_param(specificLeafArea_C),          & ! in
         &  dsl4jsb_Lctlib_param(reserveC2leafC),              & ! in
-        &  dsl4jsb_Lctlib_param(MaxLAI),                      & ! in
         &  dsl4jsb_Lctlib_param(PhenologyType),               & ! in  R: is it crop? If yes then this is 5!
         &  time_steps_per_day(),                              & ! in
         &  dtime,                                             & ! in
@@ -754,6 +767,144 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_C_NPP_pot_allocation
+
+
+!##########################################################################################################################
+! other subroutines (no further tasks)
+!##########################################################################################################################
+
+  ! ================================================================================================================================
+  !>
+  !! @brief scales all carbon state variables upon reference area change
+  !!
+  !! @todo discuss how to make more general, e.g. get the info on which state variables to scale from somewhere else?
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  ! 
+  SUBROUTINE rescale_carbon_upon_reference_area_change(tile, options, oldRefArea, newRefArea)
+
+    USE mo_util,                ONLY: real2string
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)            :: options
+    REAL(wp),                   INTENT(in)            :: oldRefArea(:),  &
+                                                         newRefArea(:)
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    ! Local variables
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
+    INTEGER                     :: ics, ice, iblk
+
+    dsl4jsb_Real2D_onChunk ::  c_green
+    dsl4jsb_Real2D_onChunk ::  c_reserve 
+    dsl4jsb_Real2D_onChunk ::  c_woods 
+    dsl4jsb_Real2D_onChunk ::  c_crop_harvest
+
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag1
+    dsl4jsb_Real2D_onChunk ::  c_water_ag1
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1 
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg1
+    dsl4jsb_Real2D_onChunk ::  c_water_bg1 
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1 
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1
+    dsl4jsb_Real2D_onChunk ::  c_humus_1 
+
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag2
+    dsl4jsb_Real2D_onChunk ::  c_water_ag2
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg2
+    dsl4jsb_Real2D_onChunk ::  c_water_bg2
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
+    dsl4jsb_Real2D_onChunk ::  c_humus_2
+
+    ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1 
+    IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN 
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: Reference areas (here old) need to be >0 and <=1 - min: '&
+        & //real2string(MINVAL(oldRefArea)) //'; max: '//real2string(MAXVAL(oldRefArea))  )
+    ENDIF
+    IF ( ANY(newRefArea .LE. 0) .OR. ANY(newRefArea .GT. 1) ) THEN 
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: Reference areas (here new) need to be >0 and <=1 - min: '&
+        & //real2string(MINVAL(newRefArea)) //'; max: '//real2string(MAXVAL(newRefArea))  )
+    ENDIF
+
+    dsl4jsb_Get_memory(CARBON_)
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )               ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)         ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)      ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)            ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)           ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)         ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)      ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)             ! inout 
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2)           ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2)          ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2)        ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout 
+
+    c_green           = c_green           * (oldRefArea / newRefArea)
+    c_woods           = c_woods           * (oldRefArea / newRefArea)
+    c_reserve         = c_reserve         * (oldRefArea / newRefArea)
+    c_crop_harvest    = c_crop_harvest    * (oldRefArea / newRefArea)
+
+    c_acid_ag1       = c_acid_ag1       * (oldRefArea / newRefArea)
+    c_water_ag1      = c_water_ag1      * (oldRefArea / newRefArea)
+    c_ethanol_ag1    = c_ethanol_ag1    * (oldRefArea / newRefArea)
+    c_nonsoluble_ag1 = c_nonsoluble_ag1 * (oldRefArea / newRefArea)
+    c_acid_bg1       = c_acid_bg1       * (oldRefArea / newRefArea)
+    c_water_bg1      = c_water_bg1      * (oldRefArea / newRefArea)
+    c_ethanol_bg1    = c_ethanol_bg1    * (oldRefArea / newRefArea)
+    c_nonsoluble_bg1 = c_nonsoluble_bg1 * (oldRefArea / newRefArea)
+    c_humus_1        = c_humus_1        * (oldRefArea / newRefArea)
+    c_acid_ag2       = c_acid_ag2       * (oldRefArea / newRefArea)
+    c_water_ag2      = c_water_ag2      * (oldRefArea / newRefArea)
+    c_ethanol_ag2    = c_ethanol_ag2    * (oldRefArea / newRefArea)
+    c_nonsoluble_ag2 = c_nonsoluble_ag2 * (oldRefArea / newRefArea)
+    c_acid_bg2       = c_acid_bg2       * (oldRefArea / newRefArea)
+    c_water_bg2      = c_water_bg2      * (oldRefArea / newRefArea)
+    c_ethanol_bg2    = c_ethanol_bg2    * (oldRefArea / newRefArea)
+    c_nonsoluble_bg2 = c_nonsoluble_bg2 * (oldRefArea / newRefArea)
+    c_humus_2        = c_humus_2        * (oldRefArea / newRefArea)
+
+    CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
+    CALL recalc_per_tile_vars(tile, options, &
+      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
+      & c_crop_harvest = c_crop_harvest(:), &
+      & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
+      & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+      & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
+      & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+      & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
+      & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+      & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
+      & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:))
+
+  END SUBROUTINE rescale_carbon_upon_reference_area_change
 
 
   ! ================================================================================================================================

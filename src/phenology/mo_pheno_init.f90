@@ -6,9 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-29)
+!! Julia Nabel (2018-01-10): l_forestRegrowth flag 
 !!
-
-
 
 MODULE mo_pheno_init
 #ifndef __NO_JSBACH__
@@ -136,12 +135,18 @@ CONTAINS
 
     CALL input_file%Close()
 
-    ! R: veg_fract_correction is used in many modules in JS3 (e.g. in the albedo calculations). However, in JS4
-    !    it is only necessary for the assimilation and for the carbon distribution of the tile (and in the
-    !    disturbance process to calcultate fuel). As it is calculated for each tile from two corresponding values
-    !    of the lctlib, it is not necesseary to calculate it for each time step again as in JSBACH3.
-    ! Calculate veg_fract_correction
-    IF ( tile%lcts(1)%lib_id /= 0 ) THEN ! only if the present tile is a pft!
+    !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
+    !             later one might think about allometric relation ships in other multi annual plants, too? 
+    IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+      dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
+    END IF
+
+    !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
+    IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+        & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
+    !@todo: do not rely on the lib_id but use a flag instead?
+    ELSE IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
         & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
     END IF
@@ -187,7 +192,12 @@ CONTAINS
         dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
           & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
       ELSE
-        dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+        IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN 
+          dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+        ELSE
+          dsl4jsb_var2D_onDomain(PHENO_, lai) = &
+            & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
+        END IF
         dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
           & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
           & dsl4jsb_Lctlib_param(ClumpinessFactor))

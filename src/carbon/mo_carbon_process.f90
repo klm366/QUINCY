@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
+!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
 !!
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
@@ -28,6 +29,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_Cpools( &
     & LAI,                        & ! in
     & LAI_previous,               & ! in
+    & max_LAI,                    & ! in
     & NPP_pot_yDayMean,           & ! in
     & topSoilTemp,                & ! in
     & alpha_yDayMean,             & ! in
@@ -46,7 +48,6 @@ CONTAINS
     & Max_C_content_woods,        & ! in
     & specific_leaf_area_C,       & ! in
     & reserveC2leafC,             & ! in
-    & max_LAI,                    & ! in
     ! & is_vegetation,              & ! in
     & pheno_type,                 & ! in
     & time_steps_per_day,         & ! in
@@ -116,6 +117,7 @@ CONTAINS
     ! Arguments
     REAL(wp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
     REAL(wp), INTENT(in)    :: LAI_previous           ! The day before yesterdays mean LAI
+    REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
     REAL(wp), INTENT(in)    :: NPP_pot_yDayMean       ! Yesterdays mean NPP rate [mol(C)/m^2 s]
     REAL(wp), INTENT(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
     REAL(wp), INTENT(in)    :: alpha_yDayMean         ! Yesterdays mean water stress factor (between 0 and 1)
@@ -134,7 +136,6 @@ CONTAINS
     REAL(wp), INTENT(in)    :: Max_C_content_woods    ! Maximum carbon content of wood pool (from lctLib)
     REAL(wp), INTENT(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     REAL(wp), INTENT(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
-    REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
     !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
     INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
     INTEGER,  INTENT(in)    :: time_steps_per_day

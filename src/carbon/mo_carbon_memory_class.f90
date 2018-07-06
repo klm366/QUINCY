@@ -19,6 +19,12 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
+  ! Use of prcesses in this module
+  dsl4jsb_Use_processes PHENO_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(PHENO_)
+
   IMPLICIT NONE
   PRIVATE
 
@@ -130,11 +136,17 @@ MODULE mo_carbon_memory_class
       cflux_herb_2_atm,      & ! ..part of cflux_c_green_2_herb that goes into atmosphere
       !
       cflux_dist_greenreserve_2_soil,  & ! R: should be later renamed to C_2_GreenLitterPools
-      cflux_dist_woods_2_soil,   & ! R: should be later renamed to C_2_WoodLitterPools
-      cflux_fire_all_2_atm                ! R: should be later renamed to C_2_atmos
+      cflux_dist_woods_2_soil,    & ! R: should be later renamed to C_2_WoodLitterPools
+      cflux_fire_all_2_atm,       & ! R: should be later renamed to C_2_atmos
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool 
+
+  !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
+      current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)] 
+                                    ! since last maxLAI calculation
+      veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)] 
+                                    ! at the time of the green pool maximum (current_max_green)
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
@@ -242,6 +254,8 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(PHENO_)
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
@@ -256,6 +270,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
     !canopy_layer => Get_vgrid('canopy_layer')
+
+    dsl4jsb_Get_config(PHENO_)
 
     IF (.NOT. ASSOCIATED(mem%pseudo_temp%ptr)) THEN
 
@@ -1202,6 +1218,21 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+
+      IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &
+            & hgrid, surface,                                                    &
+            & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          CALL jsb_add_var( mem,'max_green_veg_c', mem%veg_carbon_at_max_green, &
+            & hgrid, surface,                                                    &
+            & t_cf('veg_carbon_at_max_green', 'mol(C) m-2(canopy)', 'Total vegetation carbon at green pool maximum'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      ENDIF
 
     END IF
 

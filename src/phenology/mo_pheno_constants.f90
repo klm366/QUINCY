@@ -6,6 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
+!! Julia Nabel (2018-01-10): added params for optional functionality: forest regrowth (l_forestRegrowth)
+!!                           (derive maxLAI from biomass via allometric relationships)
 !!
 MODULE mo_pheno_constants
 #ifndef __NO_JSBACH__
@@ -143,16 +145,27 @@ MODULE mo_pheno_constants
   END TYPE t_crop_param
 !  PUBLIC :: t_crop_param
 
+  TYPE t_forestRegrowth_param          ! Parameters only required in case of l_forestRegrowth = true -- TODO-JN discuss with KIM
+     REAL(wp)            ::                             &
+                           & m2toha = 10000.,           & ! TODO-JN: this is a more general constant -> move to somewhere else?
+                           & kgCtokg = 2.,              & ! TODO-JN: same
+                           & min_c   = 1.,              & ! JN: minimum C in wood and veg biomass for the maxLAI calculation
+                           & min_zero = 1.e-8,          & ! TODO-JN: describe
+                           & log_maxind = 9.5,          & ! TODO-JN: describe
+                           & min_maxLAI = 0.5             ! TODO-JN: describe + why not "PhenoParam%all%laiSeed"?
+  END TYPE t_forestRegrowth_param
+
   TYPE t_PhenologyParameters                            ! Collects all parameters in a single structure
-     TYPE(t_GeneralParams)      :: all                  ! Parameters common to all phenology types
-     TYPE(t_EG_SG_common_param) :: EG_SG                ! Parameters common to the evergreen (EG) and summergreen (SG) phenology types
-     TYPE(t_evergreen_param)    :: EG                   ! Parameters applying to the evergreen (EG) phenology type only
-     TYPE(t_summergreen_param)  :: SG                   ! Parameters applying to the summergreen (SG) phenology type only 
-     TYPE(t_raingreen_param)    :: RG                   ! Parameters applying to the raingreen (RG) phenology type only
-     TYPE(t_grass_param)        :: GRS                  ! Parameters applying to the grass (GRS) phenology type only 
-     TYPE(t_crop_param)         :: CRP                  ! Parameters applying to the crop (CRP) phenology type only
-!     TYPE(rdata_type), POINTER   :: memory(:)  => NULL() ! pointer to serial array containing the parameter values physically
-!     logical                     :: initialized =.FALSE. ! .true. indicates that phenology parameters have been initialized.
+     TYPE(t_GeneralParams)        :: all                  ! Parameters common to all phenology types
+     TYPE(t_EG_SG_common_param)   :: EG_SG                ! Parameters common to the evergreen (EG) and summergreen (SG) phenology types
+     TYPE(t_evergreen_param)      :: EG                   ! Parameters applying to the evergreen (EG) phenology type only
+     TYPE(t_summergreen_param)    :: SG                   ! Parameters applying to the summergreen (SG) phenology type only 
+     TYPE(t_raingreen_param)      :: RG                   ! Parameters applying to the raingreen (RG) phenology type only
+     TYPE(t_grass_param)          :: GRS                  ! Parameters applying to the grass (GRS) phenology type only 
+     TYPE(t_crop_param)           :: CRP                  ! Parameters applying to the crop (CRP) phenology type only
+     TYPE(t_forestRegrowth_param) :: FR                   ! Parameters only required in case of l_forestRegrowth = true
+!     TYPE(rdata_type), POINTER     :: memory(:)  => NULL() ! pointer to serial array containing the parameter values physically
+!     logical                       :: initialized =.FALSE. ! .true. indicates that phenology parameters have been initialized.
   END TYPE t_PhenologyParameters
   PUBLIC :: t_PhenologyParameters
 
