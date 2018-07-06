@@ -6,10 +6,10 @@
 ##
 ## run this script by:
 ##  cd contrib/forcing_scripts/
-##  Rscript --vanilla ./generate_SLM_forcing_from_FLUXNET_transient.R
+##  Rscript --vanilla ./generate_fluxnet_transient_slm_forcing.R
 ## 
 ## output may be generated per default in:
-##  ./new_fluxnet_met_forcing_transient/
+##  ./new_fluxnet_transient_met_forcing/
 ## 
 #########################################################################################
 
@@ -21,16 +21,16 @@ library(ncdf4)
 set.seed(123)
 
 ## create out folder & set in/out path
-dir.create("./new_fluxnet_met_forcing_transient", showWarnings=T, recursive=T)
+dir.create("./new_fluxnet_transient_met_forcing", showWarnings=T, recursive=T)
 ipath1 <- "/Net/Groups/BGI/model/OCN/input/point/FLUXNET/v2/"
-opath  <- "./new_fluxnet_met_forcing_transient/"
+opath  <- "./new_fluxnet_transient_met_forcing/"
 #opath  <- "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/met_forcing/"
 
 ## general extension of the site-specific forcing input file, e.g., DE-Hai.2000-2006.metforcing.nc  in folder ipath1
 infile_ext <- ".metforcing.nc"
 
 ## read site info file (produced using OCN ?)
-allsiteinfo      <- read.table(paste0(ipath1,"site_list.dat"),stringsAsFactor=F,header=T)
+allsiteinfo      <- read.table("generate_fluxnet_site_list.dat", stringsAsFactor=F, header=T)  # file is originally from ipath1
 allsitename      <- allsiteinfo[,1]
 allsitestartyear <- allsiteinfo[,2]
 allsiteendyear   <- allsiteinfo[,3]
