@@ -44,9 +44,6 @@ MODULE mo_pheno_memory_class
                                     lai_max                 !< maximum lai - from site specific lai data
 
 
-    !! test variable introduced by Steffen to have a test for the pheno_interface aggregate & integrate routines !!
-    TYPE(t_jsb_var_real2d)          :: testvar
-
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
   END TYPE t_pheno_memory
@@ -99,14 +96,6 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%l_growing_season%ptr)) THEN
 
-    !! test variable introduced by Steffen to have a test for the pheno_interface aggregate & integrate routines !!
-    CALL jsb_add_var( mem, 'testvar', mem%testvar,      &
-          hgrid, surface,                               &
-          t_cf('testvariable', '', ''),                 &
-          t_grib1(table, 255, grib_bits),               &
-          t_grib2(255, 255, 255, grib_bits),            &
-          prefix, suffix,                               &
-          initval_r=0.0_wp )
 
       !> add variables to pheno memory pheno\%VAR
       !! 

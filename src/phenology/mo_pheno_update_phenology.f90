@@ -193,7 +193,7 @@ CONTAINS
                                       mean_leaf_age                   , &
                                       gpp_tlabile_mavg                , &
                                       maint_respiration_tlabile_mavg  , &
-                                      l_growing_season                , &
+                                      l_growing_season                , & ! inout
                                       growth_req_n_tlabile_mavg       , &
                                       growth_req_p_tlabile_mavg       , &
                                       nd_dormance                     , &

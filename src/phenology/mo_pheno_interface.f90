@@ -29,13 +29,14 @@ MODULE mo_pheno_interface
   USE mo_jsb_task_class,          ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  USE mo_jsb_process_class, ONLY: SEB_, A2L_, RAD_, HYDRO_, ASSIMI_, PHENO_
+  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(VEG_)
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -112,6 +113,7 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(VEG_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -134,13 +136,19 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(PHENO_)
-
     dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(VEG_)
 
     IF (tile%Has_children()) THEN
       weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-      dsl4jsb_Aggregate_onChunk(PHENO_, testvar, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, l_growing_season            , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, gdd                         , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, nd_dormance                 , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, lai_max                     , weighted_by_fract)    ! note: currently this var is not changed after init
+      ! ---------------------------
+      dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tlabile_mavg     , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tlabile_mavg     , weighted_by_fract)
     END IF
 
     !X Implementation: Start your process scheme here...
