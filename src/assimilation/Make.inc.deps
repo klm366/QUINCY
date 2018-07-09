@@ -1,7 +1,15 @@
 mo_assimi_interface.o: \
   mo_kind.o \
+  mo_jsb_control.o \
   mo_exception.o \
-  mo_assimi_update_canopy_fluxes.o
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_process_class.o \
+  mo_assimi_update_canopy_fluxes.o \
+  mo_assimi_config_class.o \
+  mo_assimi_memory_class.o
 
 mo_assimi_update_canopy_fluxes.o: \
   mo_kind.o \

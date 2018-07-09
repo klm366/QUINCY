@@ -44,7 +44,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_hydro_config_class,   ONLY: t_hydro_config
 !!  USE mo_veg_interface,        ONLY: Register_veg_tasks
   USE mo_veg_config_class,     ONLY: t_veg_config
-!!  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
+  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_pheno_interface,      ONLY: Register_pheno_tasks
   USE mo_pheno_config_class,   ONLY: t_pheno_config  
@@ -101,7 +101,7 @@ CONTAINS
 !     CALL Register_veg_tasks(return_ptr, model_id)
      ALLOCATE(t_veg_config::return_ptr%config)
    CASE (ASSIMI_)
-!     CALL Register_assimi_tasks(return_ptr, model_id)
+     CALL Register_assimi_tasks(return_ptr, model_id)
      ALLOCATE(t_assimi_config::return_ptr%config)
    CASE (PHENO_)
      CALL Register_pheno_tasks(return_ptr, model_id)

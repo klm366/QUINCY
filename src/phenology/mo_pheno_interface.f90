@@ -93,7 +93,7 @@ CONTAINS
 
     ALLOCATE(tsk_update_phenology::return_ptr)
 
-    return_ptr%name           = 'pheno'
+    return_ptr%name           = "pheno"
     return_ptr%process_id     = PHENO_
     return_ptr%owner_model_id = model_id
 

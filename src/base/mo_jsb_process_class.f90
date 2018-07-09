@@ -25,7 +25,7 @@ MODULE mo_jsb_process_class
 
   TYPE t_jsb_process
     INTEGER                      :: id = 0
-    CHARACTER(LEN=10)            :: name = ''
+    CHARACTER(LEN=10)            :: name = '' 
     CLASS(t_jsb_config), POINTER :: config => NULL()
     TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_list(:)
     INTEGER                      :: owner_model_id
@@ -74,9 +74,9 @@ CONTAINS
    CASE (TURB_)
      return_value = 'turb'
     CASE (SSE_)
-      return_value = 'soil'
+      return_value = 'sse'
     CASE (SB_)
-      return_value = 'soil_biogeochemistry'
+      return_value = 'sb'
    CASE (HYDRO_)
      return_value = 'hydro'
     CASE (VEG_)

@@ -301,7 +301,16 @@ CONTAINS
       CALL update_sb_rate_modifier(tile, model%options)
       CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
-      CALL update_canopy_fluxes   (tile, model%options)
+
+      ! update_canopy_fluxes
+        msg  => t_Message('', model%Get_action('INTEGRATE'))
+        task => model%processes(ASSIMI_)%p%Get_task(TRIM(Get_process_name(ASSIMI_)))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+        msg  => t_Message('', model%Get_action('AGGREGATE'))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+
       CALL update_sse_physics     (tile, model%options)
 
       ! update_phenology
@@ -360,7 +369,16 @@ CONTAINS
       !!
       CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
-      CALL update_canopy_fluxes   (tile, model%options)
+
+      ! update_canopy_fluxes
+        msg  => t_Message('', model%Get_action('INTEGRATE'))
+        task => model%processes(ASSIMI_)%p%Get_task(TRIM(Get_process_name(ASSIMI_)))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+        msg  => t_Message('', model%Get_action('AGGREGATE'))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+
       CALL update_sse_physics    (tile, model%options)
 
       ! update_phenology
@@ -436,16 +454,23 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-       CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
-      CALL reset_sse_fluxes(tile, model%options) ! mo_sse_util
-
-
+      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
+      CALL reset_sse_fluxes(tile, model%options)  ! mo_sse_util
 
       !! run Tasks
       !!
       CALL update_soil_turbulence (tile, model%options)
       CALL update_radiation       (tile, model%options)
-      CALL update_canopy_fluxes   (tile, model%options)
+
+      ! update_canopy_fluxes
+        msg  => t_Message('', model%Get_action('INTEGRATE'))
+        task => model%processes(ASSIMI_)%p%Get_task(TRIM(Get_process_name(ASSIMI_)))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+        msg  => t_Message('', model%Get_action('AGGREGATE'))
+        CALL task%Do_it(msg, tile, model%options)
+        DEALLOCATE(msg)
+
       CALL update_sse_physics    (tile, model%options)
 
       ! update_phenology

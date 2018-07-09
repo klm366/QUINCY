@@ -162,7 +162,7 @@ CONTAINS
                         growth_req_n_tlabile_mavg(:)       , &
                         growth_req_p_tlabile_mavg(:)       , &
                         nd_dormance(:)                     , &
-                        gdd(:)                             )
+                        gdd(:)                             )    ! inout
 
   END SUBROUTINE update_phenology 
 

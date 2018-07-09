@@ -67,6 +67,7 @@ mo_jsb_process_factory.o: \
   mo_assimi_config_class.o \
   mo_pheno_config_class.o \
   mo_sb_config_class.o \
+  mo_assimi_interface.o \
   mo_pheno_interface.o
 
 mo_jsb_model_init.o: \

@@ -162,7 +162,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)             ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)              ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
@@ -263,7 +263,7 @@ CONTAINS
                                  maint_respiration_leaf_cl(:,icanopy)  , &
                                  canopy_cond_cl(:,icanopy)             , &
                                  co2_conc_leaf_cl(:,icanopy)           , &
-                                 hlp1(:), hlp1(:), hlp1(:)             )
+                                 hlp1(:), hlp1(:), hlp1(:)             )   ! out
 
         gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
 
