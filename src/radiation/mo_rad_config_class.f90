@@ -11,14 +11,16 @@
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
 
+  USE mo_exception,         ONLY: message, finish, message_text
   USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_rad_config !, Get_rad_config
+  PUBLIC :: t_rad_config
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the radiation process, derived from t_jsb_config

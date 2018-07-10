@@ -32,8 +32,8 @@ MODULE mo_jsb_process_factory
 !!#ifndef __NO_JSBACH_HD__
 !!  USE mo_hd_memory_class,      ONLY: t_hd_memory
 !!#endif
-!!  USE mo_rad_interface,        ONLY: Register_rad_tasks
-!!  USE mo_rad_config_class,     ONLY: t_rad_config
+  USE mo_rad_interface,        ONLY: Register_rad_tasks
+  USE mo_rad_config_class,     ONLY: t_rad_config
 !!  USE mo_seb_interface,        ONLY: Register_seb_tasks
 !!  USE mo_seb_config_class,     ONLY: t_seb_config
 !!  USE mo_turb_interface,       ONLY: Register_turb_tasks
@@ -82,9 +82,9 @@ CONTAINS
    return_ptr%owner_model_id = model_id
 
    SELECT CASE (iproc)
-!   CASE (RAD_)
-!     CALL Register_rad_tasks(return_ptr, model_id)
-!     ALLOCATE(t_rad_config::return_ptr%config)
+   CASE (RAD_)
+     CALL Register_rad_tasks(return_ptr, model_id)
+     ALLOCATE(t_rad_config::return_ptr%config)
   !  CASE (SEB_)
   !    CALL Register_seb_tasks(return_ptr, model_id)
   !    ALLOCATE(t_seb_config::return_ptr%config)

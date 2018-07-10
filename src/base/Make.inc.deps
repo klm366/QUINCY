@@ -56,19 +56,21 @@ mo_jsb_process_factory.o: \
   mo_jsb_memory_class.o \
   mo_a2l_memory_class.o \
   mo_l2a_memory_class.o \
-  mo_veg_memory_class.o \
-  mo_pheno_memory_class.o \
-  mo_sse_memory_class.o \
-  mo_sb_memory_class.o \
-  mo_rad_memory_class.o \
   mo_assimi_memory_class.o \
-  mo_sse_config_class.o \
-  mo_veg_config_class.o \
   mo_assimi_config_class.o \
-  mo_pheno_config_class.o \
-  mo_sb_config_class.o \
   mo_assimi_interface.o \
-  mo_pheno_interface.o
+  mo_pheno_memory_class.o \
+  mo_pheno_config_class.o \
+  mo_pheno_interface.o \
+  mo_rad_memory_class.o \
+  mo_rad_config_class.o \
+  mo_rad_interface.o \
+  mo_veg_memory_class.o \
+  mo_veg_config_class.o \
+  mo_sse_memory_class.o \
+  mo_sse_config_class.o \
+  mo_sb_memory_class.o \
+  mo_sb_config_class.o
 
 mo_jsb_model_init.o: \
   mo_kind.o \
