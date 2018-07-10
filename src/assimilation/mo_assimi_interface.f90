@@ -90,11 +90,8 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_canopy_fluxes::return_ptr)
-
-    return_ptr%name           = "assimi"
-    return_ptr%process_id     = ASSIMI_
-    return_ptr%owner_model_id = model_id
-
+    CALL return_ptr%Construct(name='update_canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
+    
   END FUNCTION Create_task_update_canopy_fluxes
 
 

@@ -92,10 +92,7 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_phenology::return_ptr)
-
-    return_ptr%name           = "pheno"
-    return_ptr%process_id     = PHENO_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='update_phenology', process_id=PHENO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_update_phenology
 

@@ -51,7 +51,8 @@ MODULE mo_jsb_task_class
   CONTAINS
     PROCEDURE(Integrate_task), DEFERRED, NOPASS :: Integrate
     PROCEDURE(Aggregate_task), DEFERRED, NOPASS :: Aggregate
-    PROCEDURE :: Do_it
+    PROCEDURE                                   :: Do_it
+    PROCEDURE                                   :: Construct => Construct_task
   END TYPE t_jsb_process_task
 
   ABSTRACT INTERFACE
@@ -85,6 +86,25 @@ MODULE mo_jsb_task_class
 
 
 CONTAINS
+
+  SUBROUTINE Construct_task(this, name, process_id, owner_model_id)
+
+    CLASS(t_jsb_process_task), INTENT(inout) :: this
+    CHARACTER(len=*),          INTENT(in)    :: name
+    INTEGER,                   INTENT(in)    :: process_id
+    INTEGER,                   INTENT(in)    :: owner_model_id
+
+    ! ALLOCATE(t_jsb_process_task::task)
+    this%name = name
+    this%process_id = process_id
+    this%owner_model_id = owner_model_id
+
+    ! IF (timer_on('all')) THEN
+    !   this%timer_integrate = new_timer('jsb:update_'//TRIM(name))
+    !   this%timer_aggregate = new_timer('jsb:aggregate_'//TRIM(name))
+    ! END IF
+
+  END SUBROUTINE Construct_task
 
   SUBROUTINE Do_it(this, msg, tile, options)
 
