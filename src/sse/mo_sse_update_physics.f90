@@ -49,7 +49,7 @@ CONTAINS
     dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class,      ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -180,44 +180,44 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)             ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx_old)  ! inout
-    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)        ! out
-    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)      ! out
-    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)      ! out
-    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! out
+    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)        ! inout
+    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)      ! inout
+    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)      ! inout
+    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SSE_, t_srf_old)           ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, zril_old)            ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, root_depth)          ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pwp)     ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)      ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)       ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)   ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)     ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_skin)              ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)         ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)         ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_, pet)                 ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_, interception)        ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_, evaporation)         ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_, runoff)              ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_, drainage)            ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_, drainage_fraction)   ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pwp_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_fc_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sat_sl)       ! in 
-    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonA)             ! in 
-    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonB)             ! in 
-    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonC)             ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, kdiff_sat_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)           ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pot_sl)       ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)      ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_, drainage_sl)         ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)           ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_srf_old)            ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, zril_old)             ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, root_depth)           ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pwp)      ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)       ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)        ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)    ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)      ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_skin)               ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)          ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)          ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_, pet)                  ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, interception)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, evaporation)          ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, runoff)               ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, drainage)             ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_, drainage_fraction)    ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pwp_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_fc_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sat_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonA)              ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonB)              ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonC)              ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, kdiff_sat_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)            ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pot_sl)        ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, drainage_sl)          ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)            ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
     ! ---------------------------
@@ -245,11 +245,11 @@ CONTAINS
                                      press_srf(:),wind_10m(:), & 
                                      height(:),lai(:),w_skin(:),canopy_cond(:),rel_hum(:),& 
                                      soil_depth_sl(:,:),heat_capa_sl(:,:),therm_cond_sl(:,:),bulk_dens_sl(:,:), &
-                                     ga(:),drag_srf(:),pch(:), & 
-                                     ground_heat_flx_old(:),zril_old(:),t_srf_old(:), & 
-                                     pet(:),evaporation(:),interception(:),transpiration(:), & 
-                                     sensible_heat_flx(:),latent_heat_flx(:),ground_heat_flx(:), & 
-                                     net_radiation(:),t_soil_sl(:,:))
+                                     ga(:),drag_srf(:),pch(:), &                                    ! inout
+                                     ground_heat_flx_old(:),zril_old(:),t_srf_old(:), &             ! inout
+                                     pet(:),evaporation(:),interception(:),transpiration(:), &      ! inout
+                                     sensible_heat_flx(:),latent_heat_flx(:),ground_heat_flx(:), &  ! inout
+                                     net_radiation(:),t_soil_sl(:,:))                               ! inout
 
     !> 3.0 Calculate soil hydrology processes
     !!
@@ -259,9 +259,9 @@ CONTAINS
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
                              soil_depth_sl(:,:),w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), & 
                              saxtonA(:,:),saxtonB(:,:),saxtonC(:,:),kdiff_sat_sl(:,:),root_fraction_sl(:,:),&
-                             w_skin(:),w_soil_root(:),w_soil_root_theta(:),w_soil_root_pot(:), &
-                             runoff(:),drainage(:),drainage_fraction(:), &
-                             w_soil_sl(:,:),w_soil_pot_sl(:,:),drainage_sl(:,:),percolation_sl(:,:))
+                             w_skin(:),w_soil_root(:),w_soil_root_theta(:),w_soil_root_pot(:), &      ! inout
+                             runoff(:),drainage(:),drainage_fraction(:), &                            ! inout
+                             w_soil_sl(:,:),w_soil_pot_sl(:,:),drainage_sl(:,:),percolation_sl(:,:))  ! inout
 
     !> 4.0 diagnose root temperature
     !!
@@ -289,18 +289,18 @@ CONTAINS
                                          press_srf,wind_10m, & 
                                          height,lai,w_skin,canopy_cond,rel_hum,& 
                                          soil_depth_sl,heat_capa_sl,therm_cond_sl,bulk_dens_sl, &
-                                         ga,drag_srf,pch, & 
-                                         ground_heat_flx_old,zril_old,t_srf_old, & 
-                                         pet,evaporation,interception,transpiration, & 
-                                         sensible_heat_flx,latent_heat_flx,ground_heat_flx,net_radiation,t_soil_sl)
+                                         ga,drag_srf,pch, &                                                         ! inout
+                                         ground_heat_flx_old,zril_old,t_srf_old, &                                  ! inout
+                                         pet,evaporation,interception,transpiration, &                              ! inout
+                                         sensible_heat_flx,latent_heat_flx,ground_heat_flx,net_radiation,t_soil_sl) ! inout
 
     USE mo_jsb_task_class,            ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,          ONLY: t_lctlib_element
     USE mo_base_constants,            ONLY: dtime
     USE mo_atmland_constants,         ONLY: min_wind, max_wind 
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
-    USE mo_sse_constants,            ONLY: w_skin_max
-    USE mo_sse_update_turbulence,    ONLY: calc_filtered_drag_coefficient
+    USE mo_sse_constants,             ONLY: w_skin_max
+    USE mo_sse_update_turbulence,     ONLY: calc_filtered_drag_coefficient
     USE mo_shared_constants,          ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
     USE mo_phy_schemes,               ONLY: heat_transfer_coef, surface_dry_static_energy
     
@@ -550,9 +550,9 @@ CONTAINS
                                  w_soil_root_fc,w_soil_root_pwp,lai,root_depth, & 
                                  soil_depth_sl,w_soil_sat_sl,w_soil_fc_sl,w_soil_pwp_sl, & 
                                  saxtonA,saxtonB,saxtonC,kdiff_sat_sl,root_fraction_sl,&
-                                 w_skin,w_soil_root,w_soil_root_theta,w_soil_root_pot, &
-                                 runoff,drainage,drainage_fraction, &
-                                 w_soil_sl,w_soil_pot_sl,drainage_sl,percolation_sl)
+                                 w_skin,w_soil_root,w_soil_root_theta,w_soil_root_pot, &  ! inout
+                                 runoff,drainage,drainage_fraction, &                     ! inout
+                                 w_soil_sl,w_soil_pot_sl,drainage_sl,percolation_sl)      ! inout
 
     USE mo_jsb_task_class,              ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element    

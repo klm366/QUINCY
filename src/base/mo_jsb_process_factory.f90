@@ -38,7 +38,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_seb_config_class,     ONLY: t_seb_config
 !!  USE mo_turb_interface,       ONLY: Register_turb_tasks
 !!  USE mo_turb_config_class,    ONLY: t_turb_config
-!!  USE mo_sse_interface,       ONLY: Register_sse_tasks
+  USE mo_sse_interface,       ONLY: Register_sse_tasks
   USE mo_sse_config_class,    ONLY: t_sse_config
 !!  USE mo_hydro_interface,      ONLY: Register_hydro_tasks
 !!  USE mo_hydro_config_class,   ONLY: t_hydro_config
@@ -92,7 +92,7 @@ CONTAINS
   !    CALL Register_turb_tasks(return_ptr, model_id)
   !    ALLOCATE(t_turb_config::return_ptr%config)
    CASE (SSE_)
-!     CALL Register_sse_tasks(return_ptr, model_id)
+     CALL Register_sse_tasks(return_ptr, model_id)
      ALLOCATE(t_sse_config::return_ptr%config)
   !  CASE (HYDRO_)
   !    CALL Register_hydro_tasks(return_ptr, model_id)
