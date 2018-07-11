@@ -121,9 +121,9 @@ MODULE mo_sb_constants
       km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
 
    ! additional jsm parameters
    REAL(wp), SAVE :: &
@@ -252,7 +252,7 @@ CONTAINS
     kmr_decomposition     = -2.0_wp       !
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
-    k_diff_org                = 0.15_wp / one_year / one_day                                ! 
+    k_diff_org                = 0.15_wp / one_year / one_day                                ! [m2 (kg m-3) s-1]
     rho_bulk_org              = 150.3935_wp                                                 ! 
     carbon_per_dryweight_SOM  = 0.4271_wp                                                   !! COMISSION for Hainich
     qmax_po4_fine_particle    = 0.5_wp / molar_mass_P                                       ! [mol P kg-1 soil], 
@@ -262,7 +262,8 @@ CONTAINS
     k_desorpt_det             = 2065.491_wp / one_year / one_day                            ! 
     k_adsorpt_nh4             = 0.0_wp                                                      !  
     k_desorpt_nh4             = 0.0_wp                                                      !  
-    k_adsorpt_po4             = 0.001_wp / 30.0_wp / one_day                                ! [s-1], simple model, Yang et al. 2014
+    k_adsorpt_po4             = 0.00022_wp * 8._wp/9._wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
+                                                                                            ! assuming labile and slow P in equilibrium (Yang et al. 2013)
     k_desorpt_po4             = 0.00022_wp / 30.0_wp / one_day                              ! [s-1], simple model, Yang et al. 2014
     k_adsorpt_f_po4           = 2000._wp * 57.9_wp / 3600._wp                               ! [kg soil mol-1 P s-1], based on Van der Zee et al. 1989
     k_desorp_f_po4            = 0.14_wp / 3600._wp                                          ! [s-1], Van der Zee et al. 1989
@@ -322,12 +323,13 @@ CONTAINS
 
     ! nutrient uptake kinetics
     ! simple model
-    km1_up_nh4 = 0.0416_wp                  ! 
-    km2_up_nh4 = 1.0_wp                     ! 
-    km1_up_no3 = 0.0416_wp                  ! 
-    km2_up_no3 = 1.0_wp                     ! 
-    km1_up_po4 = 0.0416_wp                  ! 
-    km2_up_po4 = 1.0_wp                     ! 
+    km1_up_nh4 = 0.0416_wp
+    km2_up_nh4 = 1.0_wp 
+    km1_up_no3 = 0.0416_wp
+    km2_up_no3 = 1.0_wp
+    km1_up_po4 = 0.0689_wp / 0.0003_wp     ! L/mol, corrected low affinity half-saturation, estimated based on Kavka and Polle 2016, 
+                                           ! assuming Km for low-affinity transporter is 300 µmol/L
+    km2_up_po4 = 22.0_wp / 1000000._wp     ! mol/L, Kavka and Polle 2016
 
     ! additional jsm parameters 
     vmax_mic_uptake_nh4     = 10._wp * 48.0_wp / 3600._wp * molar_mass_C  ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily times 10

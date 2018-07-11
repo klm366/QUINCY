@@ -128,6 +128,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
     dsl4jsb_Real3D_onChunk :: percolation_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_solute
@@ -270,6 +271,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_,     soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_,     percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sl)                   ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute) 
@@ -407,6 +409,7 @@ CONTAINS
                                TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                soil_depth_sl(:,:), &
                                bulk_dens_sl(:,:), &
+                               w_soil_sl(:,:), &
                                nh4_solute(:,:), &
                                root_fraction_sl(:,:), &
                                rtm_decomposition(:,:), &
@@ -891,6 +894,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                     sb_model_scheme, &
                                     soil_depth_sl, &
                                     bulk_dens_sl, &
+                                    w_soil_sl, &
                                     nh4_solute, &
                                     root_fraction_sl, &
                                     rtm_decomposition, &
@@ -950,6 +954,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3] 
+                                                                w_soil_sl, &                 !< water content of a layer [m] 
                                                                 nh4_solute, &                !< NH4 content of a layer [mol m-3] 
                                                                 root_fraction_sl, &          !< fraction of root mass in layer
                                                                 rtm_decomposition, &         !< temperature response scalar for decomposition
@@ -1022,10 +1027,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       WHERE(root_depth_avg(:) > eps8) 
          km1_uptake_nh4_act(:,1) = km1_up_nh4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
          km1_uptake_no3_act(:,1) = km1_up_no3 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
-         km1_uptake_po4_act(:,1) = km1_up_po4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
+         km1_uptake_po4_act(:,1) = km1_up_po4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:) / &
+                                   1000._wp / (w_soil_sl(:,1) / soil_depth_sl(:,1))
          km2_uptake_nh4_act(:,1) = km2_up_nh4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
          km2_uptake_no3_act(:,1) = km2_up_no3 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
-         km2_uptake_po4_act(:,1) = km2_up_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
+         km2_uptake_po4_act(:,1) = km2_up_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:) * &
+                                   1000._wp * (w_soil_sl(:,1) / soil_depth_sl(:,1))
          km_dip_biochem_po4_act(:,1) = km_dip_biochem_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
          km_denitrification_c_act(:,1) = km_denitrification_c / soil_depth_sl(:,1) * root_depth_avg(:)
          km_denitrification_no3_act(:,1) = km_denitrification_no3 / soil_depth_sl(:,1) * root_depth_avg(:)
@@ -1096,10 +1103,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
       km1_uptake_nh4_act(:,:) = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:))
       km1_uptake_no3_act(:,:) = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:))
-      km1_uptake_po4_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:))
+      km1_uptake_po4_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
       km2_uptake_nh4_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:)
       km2_uptake_no3_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:)
-      km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:)
+      km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
       km_dip_biochem_po4_act(:,:) = km_dip_biochem_po4 * rtm_hsc(:,:) * rmm_hsc(:,:)
       km_denitrification_c_act(:,:) = km_denitrification_c
       km_denitrification_no3_act(:,:) = km_denitrification_no3
@@ -2410,7 +2417,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%residue%nitrogen(:,:) - &
                                                                 frac_slow2fast_som / apparent_mic_cn(:,:) * &
                                                                 sb_loss%residue%carbon(:,:)
-    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
+    ! update the loss of residue phosphorus due to biochem_mineralisation_po4, restricted by the CNP ratio of slow SOM
+    biochem_mineralisation_po4(:,:) = MIN(biochem_mineralisation_po4(:,:), sb_loss%residue%phosphorus(:,:) - &
+                                         frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:))
+    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - biochem_mineralisation_po4(:,:) - &
                                                                 frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * &
                                                                 sb_loss%residue%carbon(:,:)
     ! store net mineralisation of 15N for later use
@@ -2423,9 +2433,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     sb_loss%residue%nitrogen15(:,:) = sb_loss%residue%nitrogen15(:,:) - & 
                                       (sb_loss%residue%nitrogen15(:,:) - hlp1(:,:) - hlp2(:,:))
 
-    !> 3.1 update the loss of residue phosphorus due to biochem_mineralisation_po4
-    sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
-                                                     biochem_mineralisation_po4(:,:)
 
   END SUBROUTINE calc_SOM_formation  
   
