@@ -171,9 +171,9 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
 vmax_uptake_n 0.28 0.28 0.28 0.28 0.28 0.28 0.28 0.28       
  
 #vmax_uptake_p: vmax of P uptake (~µmol P / mol C / s)        
-# tuned from OCN's 1.5 gN/gC/1800s        
-vmax_uptake_p 0.28 0.28 0.28 0.28 0.28 0.28 0.28 0.28       
- 
+# tuned from OCN's 1.5 gN/gC/1800s  ==>Kavka and Polle 2016, 0.01  µmol P / g fine root / min    
+vmax_uptake_p 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044
+        
 #bnf_base: base nitrogen fixation rate (g N / m2 / year)
 # converted internally to mumol N m-2 s-1        
 bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0
