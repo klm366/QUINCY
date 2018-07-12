@@ -67,11 +67,13 @@ mo_jsb_process_factory.o: \
   mo_rad_interface.o \
   mo_veg_memory_class.o \
   mo_veg_config_class.o \
+  mo_veg_interface.o \
   mo_sse_memory_class.o \
   mo_sse_config_class.o \
   mo_sse_interface.o \
   mo_sb_memory_class.o \
-  mo_sb_config_class.o
+  mo_sb_config_class.o \
+  mo_sb_interface.o
 
 mo_jsb_model_init.o: \
   mo_kind.o \
