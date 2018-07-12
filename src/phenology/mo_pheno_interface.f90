@@ -150,7 +150,7 @@ CONTAINS
     IF (tile%Has_children()) THEN
       weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-      dsl4jsb_Aggregate_onChunk(PHENO_, l_growing_season            , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, growing_season              , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(PHENO_, gdd                         , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(PHENO_, nd_dormance                 , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(PHENO_, lai_max                     , weighted_by_fract)    ! *slmdev note: currently this var is not changed after init

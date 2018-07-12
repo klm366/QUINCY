@@ -51,10 +51,10 @@ MODULE mo_kind
   REAL(wp), PARAMETER :: eps4  = 0.0001_wp
 
   ! SLM convenience       *slmjsb4
-  REAL(wp), PARAMETER :: zero     = 0.0_wp    !< just zero
-  REAL(wp), PARAMETER :: l_false  = 0.0_wp    !< just zero
-  REAL(wp), PARAMETER :: l_true   = 1.0_wp    !< just one
-  REAL(wp), PARAMETER :: l_test   = 0.5_wp    !< just 0.5, inbetween l_false and l_true, for easy IF (TRUE/FALSE)
+  REAL(wp), PARAMETER :: zero             = 0.0_wp    !< just zero
+  REAL(wp), PARAMETER :: false            = 0.0_wp    !< just zero
+  REAL(wp), PARAMETER :: true             = 1.0_wp    !< just one
+  REAL(wp), PARAMETER :: test_false_true  = 0.5_wp    !< just 0.5, inbetween false and true, for easy IF (FALSE/TRUE)
 
   ! Integer section
 

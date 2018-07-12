@@ -12,7 +12,7 @@ MODULE mo_pheno_init
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                    ONLY: wp, l_true, l_false
+  USE mo_kind,                    ONLY: wp, true, false
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 
@@ -62,7 +62,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)                          !   TYPE(t_pheno_memory), POINTER      :: pheno__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk    :: l_growing_season
+    dsl4jsb_Real2D_onChunk    :: growing_season
     dsl4jsb_Real2D_onChunk    :: lai_max
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -82,7 +82,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(PHENO_)
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)
 
 
@@ -92,9 +92,9 @@ CONTAINS
 
     ! set growing season flag depending on whether this is a evergreen plant (TRUE) or not (FALSE)
     IF(lctlib%phenology_type == ievergreen) THEN
-      l_growing_season(:) = l_true
+      growing_season(:) = true
     ELSE
-      l_growing_season(:) = l_false
+      growing_season(:) = false
     ENDIF
 
     ! set lai_max from the site specific LAI from all_site_list.dat (saved in pheno_config:lai_max) and check for sensible values

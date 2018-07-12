@@ -574,7 +574,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
     ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: l_growing_season
+    dsl4jsb_Real2D_onChunk      :: growing_season
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
@@ -655,7 +655,7 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)                              ! sse__mem => sse_memory
     dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
@@ -1017,7 +1017,7 @@ CONTAINS
                 hlp1,l2r,s2c, bcf, &
                 target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
                 growth_cn_talloc_mavg(ipoi), npp_talloc_mavg(ipoi), &
-                l_growing_season(ipoi), & 
+                growing_season(ipoi), & 
                 cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
               lun=lun+1

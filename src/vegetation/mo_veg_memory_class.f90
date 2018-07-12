@@ -9,7 +9,7 @@
 !!
 MODULE mo_veg_memory_class
 
-  USE mo_kind,                   ONLY: wp, l_false
+  USE mo_kind,                   ONLY: wp, false
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
 
@@ -196,7 +196,7 @@ MODULE mo_veg_memory_class
 
     ! used as logical: 0 = FALSE / 1 = TRUE
     TYPE(t_jsb_var_real2d)          :: &
-                                    l_do_cohort_harvest              !< logical to identify whether the cohort may be harvested (only for veg_dynamics_scheme="cohort")
+                                    do_cohort_harvest                !< logical to identify whether the cohort may be harvested (only for veg_dynamics_scheme="cohort")
 
     ! basic plant 3D 
     TYPE(t_jsb_var_real3d)          :: &
@@ -1150,13 +1150,13 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'l_do_cohort_harvest', mem%l_do_cohort_harvest, &
+      CALL jsb_add_var(mem, 'do_cohort_harvest', mem%do_cohort_harvest, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
-            initval_r=l_false) ! initvalue
+            initval_r=false) ! initvalue
 
       CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
             hgrid, surface, &

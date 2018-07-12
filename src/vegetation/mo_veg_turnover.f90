@@ -65,7 +65,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     ! Declare pointers to variables in memory
     ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: l_growing_season
+    dsl4jsb_Real2D_onChunk      :: growing_season
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_lai
@@ -103,7 +103,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, l_growing_season)           ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
@@ -144,7 +144,7 @@ CONTAINS
                                   target_np_fine_root(:)                , &
                                   target_cn_leaf(:)                     , &
                                   target_np_leaf(:)                     , &
-                                  l_growing_season(:)                   , &
+                                  growing_season(:)                     , &
                                   veg_pool                              , & ! in
                                   recycling_leaf_n(:)                   , & ! inout
                                   recycling_fine_root_n(:)              , &
@@ -157,7 +157,7 @@ CONTAINS
     !!  
     CALL calc_turnover( options                               , & ! in 
                         lctlib                                , & ! in 
-                        l_growing_season(:)                   , & ! in
+                        growing_season(:)                     , & ! in
                         lai(:)                                , & ! in
                         target_lai(:)                         , & ! in
                         recycling_leaf_n(:)                   , & ! inout
@@ -200,7 +200,7 @@ CONTAINS
                                       target_np_fine_root               , &
                                       target_cn_leaf                    , &
                                       target_np_leaf                    , &
-                                      l_growing_season                  , &
+                                      growing_season                    , &
                                       veg_pool                          , &
                                       recycling_leaf_n                  , &
                                       recycling_fine_root_n             , &
@@ -209,7 +209,7 @@ CONTAINS
                                       recycling_leaf_n15                , &
                                       recycling_fine_root_n15           )
 
-    USE mo_kind,                  ONLY: wp, eps8, l_test
+    USE mo_kind,                  ONLY: wp, eps8, test_false_true
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -225,7 +225,7 @@ CONTAINS
                                                        target_np_fine_root               , &  !< target N:P of fine_roots 
                                                        target_cn_leaf                    , &  !< ..
                                                        target_np_leaf                         !< ..
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: l_growing_season                       !< whether the plant is in the growing season
+    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: growing_season                         !< whether the plant is in the growing season
     TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool
     REAL(wp), DIMENSION(options%nc),  INTENT(inout) :: recycling_leaf_n                  , & 
                                                        recycling_fine_root_n             , & 
@@ -243,7 +243,7 @@ CONTAINS
 
     !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
     !!
-    WHERE (l_growing_season(:) > l_test)
+    WHERE (growing_season(:) > test_false_true)
        recycling_leaf(:)      = (veg_pool%leaf%nitrogen(:) - & 
                                  veg_pool%leaf%carbon(:) / target_cn_leaf(:)) / tau_nutrient_recycling / &
                                  one_day * dtime
@@ -308,7 +308,7 @@ CONTAINS
        recycling_leaf_p(:)        = recycling_leaf_p(:)        + recycling_leaf(:)
        recycling_fine_root_p(:)   = recycling_fine_root_p(:)   + recycling_fine_root(:)
    
-    END WHERE ! l_growing_season(:) > l_test
+    END WHERE ! growing_season(:) > test_false_true
 
   END SUBROUTINE calc_nutrient_recycling
 
@@ -323,7 +323,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_turnover( options                   , &
                             lctlib                    , &
-                            l_growing_season          , &
+                            growing_season            , &
                             lai                       , &
                             target_lai                , &
                             recycling_leaf_n          , &
@@ -337,7 +337,7 @@ CONTAINS
                             net_growth                , &
                             veg_litterfall            )
 
-    USE mo_kind,                  ONLY: wp, eps4, l_test
+    USE mo_kind,                  ONLY: wp, eps4, test_false_true
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -350,7 +350,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),        INTENT(in)    :: options                      !< model options
     TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: l_growing_season             !< whether the plant is in the growing season
+    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: growing_season               !< whether the plant is in the growing season
     REAL(wp), DIMENSION(options%nc), INTENT(in)    :: lai                      , & !< the plant's LAI
                                                       target_lai                   !< the plant's annual maximum LAI
     REAL(wp), DIMENSION(options%nc), INTENT(inout) :: recycling_leaf_n         , & !< foliar N returning to labile pool 
@@ -381,7 +381,7 @@ CONTAINS
       CASE (ievergreen)
          fturn_leaf(:)      = 1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime
       CASE (iraingreen, isummergreen)
-         WHERE(l_growing_season(:) > l_test)
+         WHERE(growing_season(:) > test_false_true)
             fturn_leaf(:)   = 0.0_wp              ! herbivory
          ELSEWHERE
            WHERE(lai(:) > eps4)
@@ -391,7 +391,7 @@ CONTAINS
            END WHERE
          END WHERE
       CASE (iperennial)
-         WHERE(l_growing_season(:) > l_test)
+         WHERE(growing_season(:) > test_false_true)
            fturn_leaf(:)    = 1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime
          ELSEWHERE
            WHERE(lai(:) > eps4)

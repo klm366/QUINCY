@@ -10,7 +10,7 @@
 MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp, l_false
+  USE mo_kind,                   ONLY: wp, false
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -35,7 +35,7 @@ MODULE mo_pheno_memory_class
 
     ! used as logical: 0 = FALSE / 1 = TRUE
     TYPE(t_jsb_var_real2d)          :: &
-                                    l_growing_season        !< logical to identify whether the plant is in the growing season or not
+                                    growing_season          !< logical to identify whether the plant is in the growing season or not
 
 
     TYPE(t_jsb_var_real2d)          :: &
@@ -94,20 +94,20 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%l_growing_season%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%growing_season%ptr)) THEN
 
 
       !> add variables to pheno memory pheno\%VAR
       !! 
       !! jsb_add_var -> jsb_add_var_list_element_r1d    *slmtemp 1D -> 2D
       !!  
-      CALL jsb_add_var(mem, 'l_growing_season', mem%l_growing_season, &
+      CALL jsb_add_var(mem, 'growing_season', mem%growing_season, &
             hgrid, surface, &
             t_cf('', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
-            initval_r=l_false) ! initvalue
+            initval_r=false) ! initvalue
 
       CALL jsb_add_var(mem, 'gdd', mem%gdd, &
             hgrid, surface, &
