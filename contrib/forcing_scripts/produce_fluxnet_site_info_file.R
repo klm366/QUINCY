@@ -52,6 +52,9 @@ for (s in 1:length(site_list)) {
   if(pftid==13) pft[s]<-"TrC"
   # exception AU-Fog
   if(allsitename[s]=='AU-Fog') pft[s]<-"TeH"
+  # exception ZA-Kru (#424, change from TrH to TrBR)
+  if(allsitename[s]=='ZA-Kru') pft[s]<-"TrBR"
+  
   # get lon/lat from the metforcing.nc of this site 
   fid <- nc_open(paste0(ipath,site_list[s],".",allsitestartyear[s],"-",allsiteendyear[s],".metforcing.nc"))
     lon_orig[s]<-ncvar_get(fid,"x")
