@@ -715,6 +715,15 @@ else # the default case: $customSiteList == "F"
     else 
       siteListFileName="flux_all_sites_1901-2006_list.dat"
     fi
+    ## SLM baseline paper 2018 using a specific set of fluxnet sites per default for usecases 80 81 82
+    if [ ! -z "$usecase" ]  # if $usecase is not empty
+     then
+       if [ "$usecase" -gt 79 ] &&  [ "$usecase" -lt 83 ]  # if usecase 80 or 81 or 82
+        then
+          siteListFileName="flux_baseline_sites_1901-2006_list.dat"
+          echo " You use u80/81/82. Setting site list file to flux_baseline_sites_1901-2006_list.dat."
+       fi
+    fi
     ;;
   "cruncep")
     case "$siteSelection" in
