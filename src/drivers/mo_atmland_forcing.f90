@@ -92,7 +92,6 @@ CONTAINS
     USE mo_jsb_grid,              ONLY: Get_Grid
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_config_class,     ONLY: base_config
     USE mo_shared_constants,      ONLY: molar_mass_N, molar_mass_P, grav
     USE mo_base_constants,        ONLY: one_day
     USE mo_jsb4_forcing,          ONLY: forcing_options
@@ -304,7 +303,7 @@ CONTAINS
     !! #############################################################################################
     !! LAND PLANT CANOPY
     !! #############################################################################################
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(TRIM(model%config%slm_model_name))
     CASE('land','plant','canopy')
 
       !> 1.0 orbital parameters
@@ -316,7 +315,7 @@ CONTAINS
       !> 2.0 read data
       !!
       !! read line by line from file until file end and start again at beginning of file \n
-      !! if base_config%flag_climate_forcing_one_year = TRUE then 
+      !! if model%config%flag_climate_forcing_one_year = TRUE then 
       !!        read only the data of the 1st year of climate forcing and start again at beginning of file
 
       ! day of the year: previous time step
@@ -335,7 +334,7 @@ CONTAINS
       
       ! if this flag is set TRUE, check whether the current time step is a new year, if so 
       ! set stat = -1 to indicate "end of file" which invokes the re-reading of the climate forcing input file at line 1
-      IF(base_config%flag_climate_forcing_one_year) THEN
+      IF(model%config%flag_climate_forcing_one_year) THEN
         IF( ABS(doy_old - doy_new - 364.0_wp) < eps8 ) THEN
           stat = -1
         END IF
@@ -343,7 +342,7 @@ CONTAINS
 
       ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
       ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
-      IF(base_config%l_transient_spinup_rewind_forcing) THEN
+      IF(model%config%l_transient_spinup_rewind_forcing) THEN
         stat = -1
       END IF
 
@@ -351,7 +350,7 @@ CONTAINS
       IF(IS_IOSTAT_END(stat)) THEN 
         ! start reading from line one & read header into dummy
         REWIND(lun)
-        CALL read_forcing_header(lun)
+        CALL read_forcing_header(lun, TRIM(model%config%slm_model_name))
         READ(lun,*) year, day, hour, &
                        swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                        press_srf_r,        rain_r,        snow_r,     wind_air_r, &
@@ -473,7 +472,7 @@ CONTAINS
 
       ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
       ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
-      IF(base_config%l_transient_spinup_rewind_forcing) THEN
+      IF(model%config%l_transient_spinup_rewind_forcing) THEN
         stat = -1
       END IF
 
@@ -481,7 +480,7 @@ CONTAINS
       IF(IS_IOSTAT_END(stat)) THEN 
         ! start reading from line one & read header into dummy
         REWIND(lun)
-        CALL read_forcing_header(lun)
+        CALL read_forcing_header(lun, TRIM(model%config%slm_model_name))
         READ(lun,*) time_hlp, &
                        leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
                        leaf_dC13_r, leaf_DC14_r, leaf_dN15_r  , &
@@ -515,14 +514,14 @@ CONTAINS
 
       ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
       ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
-      IF(base_config%l_transient_spinup_rewind_forcing) THEN
+      IF(model%config%l_transient_spinup_rewind_forcing) THEN
         stat = -1
       END IF
 
       IF(IS_IOSTAT_END(stat)) THEN 
         ! start reading from line one & read header into dummy
         REWIND(lun)
-        CALL read_forcing_header(lun)
+        CALL read_forcing_header(lun, TRIM(model%config%slm_model_name))
         READ(lun,*) time_hlp, &
                        t_soil_sl_r(1:nsoil_sb), w_soil_sl_r(1:nsoil_sb), &
                        percolation_sl_r(1:nsoil_sb), root_fraction_sl_r(1:nsoil_sb), &
@@ -659,15 +658,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !! 
   !! note: lun is set to 20 for land plant canopy input; and 20/21 for soil input
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_forcing_input_file
+  SUBROUTINE open_forcing_input_file(slm_model_name)
 
     USE mo_exception,                       ONLY: finish
-    USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    ! 
+    CHARACTER(len=*)    ,INTENT(in)     :: slm_model_name
     ! ---------------------------
     ! 0.2 Local
     LOGICAL         :: file_exists
@@ -676,7 +674,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_forcing_input_file'
 
 
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
         !> 1.1 open file for READ
         !! 
@@ -689,7 +687,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
           OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
         !> 1.2 read the two header lines into dummy variables
         !! to advance to line 3
-          CALL read_forcing_header(lun)
+          CALL read_forcing_header(lun, slm_model_name)
         ELSE
           CALL finish(TRIM(routine), 'climate forcing: climate.dat could not be opened, file does not exist')
         END IF
@@ -706,7 +704,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
           OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
         !> 2.2 read the header line into dummy variable
         !! to advance to line 2
-          CALL read_forcing_header(lun)
+          CALL read_forcing_header(lun, slm_model_name)
         ELSE
           CALL finish(TRIM(routine), 'soil forcing: soil_forcing_litterfall.dat could not be opened, file does not exist')
         END IF
@@ -722,7 +720,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
           OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
         !> 3.2 read the header line into dummy variable
         !! to advance to line 2
-          CALL read_forcing_header(lun)
+          CALL read_forcing_header(lun, slm_model_name)
         ELSE
           CALL finish(TRIM(routine), 'soil forcing: soil_forcing_soilphysics.dat could not be opened, file does not exist')
         END IF
@@ -739,19 +737,17 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !! 
   !! called in the driver
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE close_forcing_input_file
-
-    USE mo_base_config_class,               ONLY: base_config
+  SUBROUTINE close_forcing_input_file(slm_model_name)
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    ! 
+    CHARACTER(len=*)    ,INTENT(in)     :: slm_model_name
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':close_forcing_input_file'
 
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
         CLOSE(20)    ! climate
 
@@ -768,21 +764,20 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !! 
   !! consider this a helper subroutine to the read_forcing subroutine
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE read_forcing_header(lun)
-
-    USE mo_base_config_class,               ONLY: base_config
+  SUBROUTINE read_forcing_header(lun, slm_model_name)
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER,INTENT(in)  :: lun 
+    INTEGER             ,INTENT(in)     :: lun
+    CHARACTER(len=*)    ,INTENT(in)     :: slm_model_name
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(200)      :: header_dummy1 = "header"
     CHARACTER(500)      :: header_dummy2 = "header_long"
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_forcing_header'
 
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
       !> 1.0 read 2 header lines of one file
       !! lun = 9

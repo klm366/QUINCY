@@ -38,7 +38,6 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_base_config_class,     ONLY: base_config
     USE mo_base_constants,        ONLY: one_year, one_day
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -161,16 +160,16 @@ CONTAINS
     ENDSELECT
 
 
-    !> 1.1 check stand harvest year (if this functionality is enabled: base_config\%flag_stand_harvest)
+    !> 1.1 check stand harvest year (if this functionality is enabled: model%config\%flag_stand_harvest)
     !! 
     !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
-    IF (base_config%flag_stand_harvest .AND. .NOT. base_config%l_transient_spinup) THEN
-      base_config%l_do_stand_replacing_harvest = .FALSE.                                      ! per default this flag is FALSE
+    IF (model%config%flag_stand_harvest .AND. .NOT. model%config%l_transient_spinup) THEN
+      model%config%l_do_stand_replacing_harvest = .FALSE.                                      ! per default this flag is FALSE
       ! set stand_harvest to TRUE for the 1st timestep of the stand_replacing_year only
-      IF (forcing_options%forcing_year .EQ. base_config%stand_replacing_year .AND. &
+      IF (forcing_options%forcing_year .EQ. model%config%stand_replacing_year .AND. &
           forcing_options%forcing_doy  .EQ. 1                                .AND. &
           forcing_options%forcing_hour .LT. eps4                                    ) THEN
-        base_config%l_do_stand_replacing_harvest = .TRUE. 
+        model%config%l_do_stand_replacing_harvest = .TRUE. 
       END IF
     END IF
 
@@ -178,10 +177,10 @@ CONTAINS
     !> 1.2 Increase age of the cohort [years] & check if cohort harvest is reached
     !! 
     !! apply this only after spinup of transient mode has finished
-    IF (.NOT. base_config%l_transient_spinup) THEN
+    IF (.NOT. model%config%l_transient_spinup) THEN
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
         CASE ("cohort")
-          cohort_age(:)        = cohort_age(:) + base_config%dtime / (one_year * one_day)
+          cohort_age(:)        = cohort_age(:) + model%config%dtime / (one_year * one_day)
           do_cohort_harvest(:) = false                                               ! per default it is set to FALSE
           WHERE (cohort_age(:) > dsl4jsb_Config(VEG_)%cohort_harvest_interval)
             do_cohort_harvest(:)   = true
@@ -210,7 +209,7 @@ CONTAINS
     !! 
     !! if either logical is true
     !! @todo update_veg_dynamics() do_cohort_harvest dimension should be used as nc
-    IF (base_config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(options%ics) > test_false_true) THEN
+    IF (model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(options%ics) > test_false_true) THEN
       CALL calc_veg_harvest(options                                     , & ! in
                             veg_pool                                    , &
                             veg_litterfall                              , & ! inout
@@ -226,7 +225,7 @@ CONTAINS
         !!  the dens_ind is set to 1.0 and veg_pool%reserve gets some amount of CNP same as during the veg_init \n 
         !!  in the routine update_veg_pools section 3.0
       CASE ("population")
-        IF(.NOT. base_config%l_do_stand_replacing_harvest) THEN 
+        IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN 
           CALL calc_veg_establishment(options                         , & ! in
                                       lctlib                          , & 
                                       dsl4jsb_Config(ASSIMI_)%ncanopy , &
@@ -247,7 +246,7 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population","cohort")
       !! @todo update_veg_dynamics() do_cohort_harvest dimension should be used as nc
-      IF(.NOT. base_config%l_do_stand_replacing_harvest .AND. do_cohort_harvest(options%ics) < test_false_true) THEN 
+      IF(.NOT. model%config%l_do_stand_replacing_harvest .AND. do_cohort_harvest(options%ics) < test_false_true) THEN 
         IF(lctlib%growthform == itree) THEN
            delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size           , & 
                                                    dens_ind(:)                , &

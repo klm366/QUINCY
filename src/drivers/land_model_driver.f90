@@ -19,7 +19,6 @@ PROGRAM land_model_driver
   ! base
   USE mo_base_constants,          ONLY: one_year
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
-  USE mo_base_config_class,       ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
                                         fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
@@ -129,12 +128,12 @@ PROGRAM land_model_driver
 
   !! 1.0 -----------------------------------------------------------------------------------------------
   !! 
-  !! Create Tile & Model init & Define iblk, ics, ice
+  !! Create Tile and Model & run Init & Define iblk, ics, ice, ...
   !! 
-  TYPE(t_jsb_model), POINTER          :: model
-  CLASS(t_jsb_tile_abstract), POINTER :: tile !< data structure for dynamic vegetation and soil variables
-                                              !! in jsbach4 tile is created in mo_jsb_model_usecases
-  ! define default values
+  TYPE(t_jsb_model)         , POINTER :: model  !< local pointer to model
+  CLASS(t_jsb_tile_abstract), POINTER :: tile   !< local data structure for dynamic vegetation and soil variables
+                                                !! in jsbach4 tile is created in mo_jsb_model_usecases
+  !! 1.1  define default values
   nproca   = 1
   nprocb   = 1
   nprocio  = 0
@@ -146,10 +145,13 @@ PROGRAM land_model_driver
   nc       = ice - ics + 1                 ! (end-number - start-number + 1)
   nsoil_sb = -1                            ! namelist parameter
 
-  ! init
-  CALL init_base()
+  !! 1.2  create new model: jsbach%models(model_id)%m => current    ('current' is of TYPE(t_jsb_model))
+  CALL init_base() 
+  
+  !! 1.3  model init
   CALL init_model(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, ics, ice, nc)
 
+  !! 1.4  get model and tile
   model => get_model(model_id)
   tile  => model%Get_top_tile()
 
@@ -226,15 +228,15 @@ PROGRAM land_model_driver
   ! l_forcing is set in init_slm() depending on the specific SLM model
   ! for SLM soil different input is used than for land plant canopy
   IF (l_forcing) THEN
-    CALL open_forcing_input_file
+    CALL open_forcing_input_file(TRIM(model%config%slm_model_name))
   END IF
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
-  SELECT CASE(TRIM(base_config%slm_model_name))
+  SELECT CASE(TRIM(model%config%slm_model_name))
     CASE('land','plant','soil','canopy')
       CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
       CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
-      IF (base_config%flag_generate_soil_forcing) THEN
+      IF (model%config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
       END IF
     CASE('test_canopy')
@@ -247,16 +249,16 @@ PROGRAM land_model_driver
   !! settings for the transient forcing_mode
   !! 
   ! init with default values
-  base_config%l_transient_forcing_mode          = .FALSE.
-  base_config%l_transient_spinup                = .FALSE.
-  base_config%l_transient_spinup_rewind_forcing = .FALSE.
+  model%config%l_transient_forcing_mode          = .FALSE.
+  model%config%l_transient_spinup                = .FALSE.
+  model%config%l_transient_spinup_rewind_forcing = .FALSE.
   itimestep                         = 0         ! default start of time loop
   transient_spinup_itimestep_period = 0  
   ! set simulation values
   IF ( TRIM(forcing_options%forcing_mode) == "transient" ) THEN
     ! set logicals to TRUE
-    base_config%l_transient_forcing_mode  = .TRUE.
-    base_config%l_transient_spinup        = .TRUE.  ! transient forcing_mode always starts with a spinup
+    model%config%l_transient_forcing_mode  = .TRUE.
+    model%config%l_transient_spinup        = .TRUE.  ! transient forcing_mode always starts with a spinup
     ! number of spinup timesteps
     itimestep = itimestep - forcing_options%transient_spinup_timesteps_all
     ! init spinup period counter
@@ -295,20 +297,20 @@ PROGRAM land_model_driver
     !! 4.3 control variables for transient forcing_mode
     !! 
     !! 
-    IF (base_config%l_transient_forcing_mode) THEN
-      base_config%l_transient_spinup_rewind_forcing = .FALSE.
+    IF (model%config%l_transient_forcing_mode) THEN
+      model%config%l_transient_spinup_rewind_forcing = .FALSE.
       ! control spinup
-      IF (base_config%l_transient_spinup) THEN
+      IF (model%config%l_transient_spinup) THEN
         transient_spinup_itimestep_period = transient_spinup_itimestep_period + 1
         ! if one spinup period has finished
         IF (transient_spinup_itimestep_period .GT. forcing_options%transient_spinup_timesteps_repeat) THEN
           transient_spinup_itimestep_period             = 1
-          base_config%l_transient_spinup_rewind_forcing = .TRUE.
+          model%config%l_transient_spinup_rewind_forcing = .TRUE.
         END IF
         ! if complete spinup has ended and the simulation should start
         IF (itimestep .EQ. 1) THEN
-          base_config%l_transient_spinup_rewind_forcing = .TRUE.
-          base_config%l_transient_spinup                = .FALSE.           ! do not enter the "control spinup" IF statement anymore
+          model%config%l_transient_spinup_rewind_forcing = .TRUE.
+          model%config%l_transient_spinup                = .FALSE.           ! do not enter the "control spinup" IF statement anymore
           time_day                                      = timestep_prop_day ! equals 1.0 at the last simulated timestep of the day
           time_year                                     = 1                 ! the 1st year of a simulation == 1 (not zero)
         END IF
@@ -450,12 +452,12 @@ PROGRAM land_model_driver
 
     !! 4.6 special case: fluxnet output
     !! 
-    IF(base_config%fluxnet_output) THEN
+    IF(model%config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
           fluxnet_output_status = 2                       ! status update: currently writing output data
           CALL close_output_files 
-          base_config%output_interval_pool   = 'timestep' 
-          base_config%output_interval_flux   = 'timestep' 
+          model%config%output_interval_pool   = 'timestep' 
+          model%config%output_interval_flux   = 'timestep' 
           CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
           CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
 
@@ -474,8 +476,8 @@ PROGRAM land_model_driver
   !! Close output and forcing files
   !! 
   IF (fluxnet_output_status == 0) CALL close_output_files
-  IF (l_forcing) CALL close_forcing_input_file ! only if forcing is enabled at all (land plant canopy soil)
-  IF (base_config%flag_generate_soil_forcing) THEN
+  IF (l_forcing) CALL close_forcing_input_file(TRIM(model%config%slm_model_name)) ! only if forcing is enabled at all (land plant canopy soil)
+  IF (model%config%flag_generate_soil_forcing) THEN
     CALL close_output_files_soil_forcing
   END IF
 

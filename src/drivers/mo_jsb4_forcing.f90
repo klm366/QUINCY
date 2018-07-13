@@ -192,27 +192,30 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Get_timstep_number(this) RESULT(timesteps)
+  FUNCTION Get_timstep_number(this, dtime) RESULT(timesteps)
 
     USE mo_base_constants,                  ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
-    USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE 
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_forcing_options), INTENT(inout)  :: this 
+    REAL(wp)                , INTENT(in)     :: dtime
+    ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: timesteps   
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_timstep_number' 
+
 
     !< 1.0
     !! timesteps of the simulation length
     SELECT CASE(this%simulation_length_unit)
       CASE('y') ! years
-        timesteps = NINT(this%simulation_length_number * one_year   * one_day / base_config%dtime)
+        timesteps = NINT(this%simulation_length_number * one_year   * one_day / dtime)
       CASE('w') ! weeks
-        timesteps = NINT(this%simulation_length_number * 7.0_wp     * one_day / base_config%dtime)
+        timesteps = NINT(this%simulation_length_number * 7.0_wp     * one_day / dtime)
       CASE('d') ! days
-        timesteps = NINT(this%simulation_length_number              * one_day / base_config%dtime)
+        timesteps = NINT(this%simulation_length_number              * one_day / dtime)
       CASE DEFAULT
         timesteps = 1
     END SELECT 
@@ -223,9 +226,9 @@ CONTAINS
     this%transient_spinup_timesteps_all     = 1
     this%transient_spinup_timesteps_repeat  = 1
     IF ( TRIM(this%forcing_mode) == "transient" ) THEN
-      this%transient_spinup_timesteps_all     = NINT(this%transient_spinup_years * one_year * one_day / base_config%dtime)
+      this%transient_spinup_timesteps_all     = NINT(this%transient_spinup_years * one_year * one_day / dtime)
       this%transient_spinup_timesteps_repeat  = NINT( (this%transient_spinup_end_year - this%transient_spinup_start_year + 1 ) * &
-                                                     one_year * one_day / base_config%dtime)
+                                                     one_year * one_day / dtime)
       
     END IF
 

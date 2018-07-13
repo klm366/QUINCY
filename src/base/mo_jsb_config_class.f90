@@ -44,7 +44,7 @@ MODULE mo_jsb_config_class
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
     LOGICAL           :: flag_generate_soil_forcing       !< all litterfall pools + some soilphysics 
-                                                          !! at period: base_config%output_start_first_day_year .. output_end_last_day_year
+                                                          !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
     LOGICAL           :: flag_stand_harvest

@@ -111,7 +111,6 @@ CONTAINS
     USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_, &
                                                 Get_process_name
     USE mo_hsm_class,                     ONLY: t_Message
-    USE mo_base_config_class,             ONLY: base_config
     USE mo_jsb4_forcing,                  ONLY: forcing_options
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
@@ -285,7 +284,7 @@ CONTAINS
     !! land plant soil canopy \n 
     !! test_canopy is a species case and runs for only one timestep
     !! 
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(TRIM(model%config%slm_model_name))
     !! land ---------------------------------------------------------------------------------------
     CASE('land')
 
@@ -334,7 +333,7 @@ CONTAINS
       !! output litterfall and soilphysics: usually this would be output at each timstep
       !!
       !!
-      IF (base_config%flag_generate_soil_forcing) THEN
+      IF (model%config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
 
@@ -377,7 +376,7 @@ CONTAINS
       !! output litterfall and soilphysics: usually this would be output at each timstep
       !!
       !!
-      IF (base_config%flag_generate_soil_forcing) THEN
+      IF (model%config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
 

@@ -35,8 +35,7 @@ mo_sb_config_class.o: \
   mo_namelist.o \
   mo_exception.o \
   mo_io_units.o \
-  mo_jsb_config_class.o \
-  mo_base_config_class.o 
+  mo_jsb_config_class.o
 
 mo_sb_init.o: \
   mo_kind.o \
@@ -45,7 +44,6 @@ mo_sb_init.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_base_config_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
@@ -88,7 +86,6 @@ mo_sb_update_pools.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_base_config_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
@@ -146,7 +143,6 @@ mo_sb_simple_model.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_base_config_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o \

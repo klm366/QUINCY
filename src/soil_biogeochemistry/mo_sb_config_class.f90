@@ -79,7 +79,6 @@ CONTAINS
   SUBROUTINE Init_sb_config(config)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
-    USE mo_base_config_class,  ONLY: base_config
 
     IMPLICIT NONE
     ! ---------------------------
@@ -208,15 +207,6 @@ CONTAINS
         flag_sb_CLE_po4             = .TRUE.
         flag_sb_LK_po4              = .TRUE.
         sb_adsorp_scheme            = "eca_full"        
-      CASE ("jsm")
-         IF(TRIM(base_config%slm_model_name) /= "soil") THEN
-            WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 
-                                       ' currently only works for the standalone soil model'
-            CALL finish("mo_sb_config_class:init_sb_config",message_text) 
-         ENDIF 
-      CASE DEFAULT
-        WRITE(message_text,'(2a)') 'invalid sb_model_scheme',sb_model_scheme
-        CALL finish("mo_sb_config_class:init_sb_config",message_text) 
     ENDSELECT
 
     ! pass values as read from file

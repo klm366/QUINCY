@@ -43,7 +43,6 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_constants,        ONLY: dtime
-    USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_constants
@@ -396,7 +395,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !> 0.8 correct the plant uptake of nh4, no3 and po4 for soil model 
-    IF (TRIM(base_config%slm_model_name)=='soil') THEN
+    IF (TRIM(model%config%slm_model_name)=='soil') THEN
         DO isoil = 1,options%nsoil_sb
           plant_uptake_nh4_sl(:,isoil)     = plant_uptake_nh4_sl(:,isoil)     * f_n_demand(:)
           plant_uptake_nh4_n15_sl(:,isoil) = plant_uptake_nh4_n15_sl(:,isoil) * f_n_demand(:)
@@ -638,7 +637,7 @@ CONTAINS
        !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
        po4_assoc_slow(:,:)   = po4_assoc_slow(:,:) + &
                                (slow_sorption_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime/1.e6_wp
-       IF (base_config%l_transient_spinup) THEN
+       IF (model%config%l_transient_spinup) THEN
          po4_occluded(:,:)   = po4_occluded(:,:)   + transport_po4_occluded(:,:) * dtime / 1.e6_wp
          po4_primary(:,:)    = po4_primary(:,:)    + transport_po4_primary(:,:)  * dtime / 1.e6_wp
        ELSE

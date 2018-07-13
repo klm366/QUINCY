@@ -28,7 +28,6 @@ CONTAINS
 
     USE mo_jsb_control,         ONLY: get_no_of_models
     USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model
-    USE mo_base_config_class,   ONLY: base_config
 
     CHARACTER(len=*), INTENT(in), OPTIONAL :: master_namelist_filename
 
@@ -45,7 +44,7 @@ CONTAINS
     jsbach%no_of_models = no_of_models
 
     model_id = 1
-      current => new_model(model_id, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! model_id, name, shortname, description, namelist_filename
+      current => new_model(model_id, "slm_nm", "slm_snm", "slm_descr", "namelist.slm") ! model_id, name, shortname, description, namelist_filename
       jsbach%models(model_id)%m => current
 
     IF (debug_on()) CALL message(TRIM(routine), 'done basic initialization')

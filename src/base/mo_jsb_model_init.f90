@@ -15,7 +15,7 @@ MODULE mo_jsb_model_init
 #include "dsl_jsbach.inc"
 
   USE mo_kind,             ONLY: wp
-  USE mo_exception,        ONLY: message, finish
+  USE mo_exception,        ONLY: message_text, message, finish
   USE mo_jsb_base,         ONLY: jsbach
   USE mo_jsb_model_class,  ONLY: t_jsb_model
 
@@ -123,7 +123,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: Read_lctlib
     USE mo_jsb_config_class,      ONLY: new_model_config
-    USE mo_base_config_class,     ONLY: base_config
     ! shared 
     USE mo_util,                  ONLY: one_of
     USE mo_shared_set_parameters, ONLY: parameters_from_file    !< TYPE t_parameters_from_file
@@ -148,8 +147,9 @@ CONTAINS
     USE mo_sse_constants,         ONLY: init_sse_constants
     USE mo_sb_constants,          ONLY: init_sb_constants
     ! process config
+    dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SSE_)
-    dsl4jsb_Use_config(VEG_)        
+    dsl4jsb_Use_config(SB_)
     
     IMPLICIT NONE
     ! ---------------------------
@@ -174,6 +174,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(SB_)
     ! the according Get_config is called below
 
 
@@ -193,9 +194,21 @@ CONTAINS
     DO iproc=1,max_no_of_processes
       model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
     END DO
-    base_config%namelist_filename = model%namelist_filename
-    CALL base_config%Init                            ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL model%Configure_processes()
+    !> 1.3 Get selected process configs
+    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(SB_)
+    !> 1.4 error catching
+    !! 
+    SELECT CASE (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
+      CASE ("jsm")
+        IF(TRIM(model%config%slm_model_name) /= "soil") THEN
+          WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), & 
+                                     ' currently only works for the standalone soil model'
+          CALL finish(routine, message_text) 
+        ENDIF 
+    ENDSELECT
     
     
     !> 2.0 forcing config
@@ -205,11 +218,8 @@ CONTAINS
 
     !> 3.0 model init 
     !! 
-    ! get process configs needed for model_init
-    dsl4jsb_Get_config(SSE_)
-    ! Set model options
-    model%options%dtime        = base_config%dtime  ! length of one time step
-    model%options%steplen      = base_config%dtime  ! ..
+    model%options%dtime        = model%config%dtime ! length of one time step
+    model%options%steplen      = model%config%dtime ! ..
     model%options%iblk         = iblk               ! Number of current chunk that consists of multiple grid boxes
     model%options%ics          = ics                ! Index of chunk start
     model%options%ice          = ice                ! Index of chunk end
@@ -223,8 +233,8 @@ CONTAINS
     !> 4.0 Grid init
     !!
     grid => Get_grid(model%grid_id)
-    grid%lat = base_config%lat
-    grid%lon = base_config%lon
+    grid%lat = model%config%lat
+    grid%lon = model%config%lon
 
 
     !> 5.0 Constants init
@@ -241,7 +251,7 @@ CONTAINS
 
     !> 5.1 Constants modification for parameter sensitivity analysis
     !!
-    IF (base_config%set_parameter_values_from_file) CALL parameters_from_file%set_param
+    IF (model%config%set_parameter_values_from_file) CALL parameters_from_file%set_param
 
 
     !> 6.0 Memory init -> pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload
@@ -260,8 +270,6 @@ CONTAINS
 
     !> 8.0 Init tiles
     !!
-    ! get process configs needed for tile init
-    dsl4jsb_Get_config(VEG_)
     ! Shortcut model configuration through usecase
     CALL init_usecase(model)
     ! At this point, the model configuration and tile structure is set up.
@@ -297,7 +305,7 @@ CONTAINS
       !!
       !! enable/ disable forcing
       !! note: the soil model gets a different forcing than land plant canopy, see mo_atmland_forcing
-      SELECT CASE(TRIM(base_config%slm_model_name))
+      SELECT CASE(TRIM(model%config%slm_model_name))
         CASE('land','plant','canopy','soil')
           l_forcing = .TRUE.
         CASE DEFAULT
@@ -311,31 +319,31 @@ CONTAINS
       !! a certain sequence of proc_init (i.e. the below sequence) is needed to correctly setup the processes, because of some 
       !!  dependencies across two or three processes
       ! test model name
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) == -1) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) == -1) THEN
         CALL finish(routine,'Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
       END IF
       ! pheno_init
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','canopy' ]) > 0) THEN
         CALL pheno_init(tile, model%options)
       END IF
       ! assimi_init
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','canopy','test_canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','canopy','test_canopy' ]) > 0) THEN
         CALL assimi_init(tile, model%options)
       END IF
       ! rad_init
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','canopy','test_canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','canopy','test_canopy' ]) > 0) THEN
         CALL rad_init(tile, model%options)
       END IF
       ! veg_init
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) > 0) THEN
         CALL veg_init(tile, model%options)
       END IF
       ! sse_init
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy' ]) > 0) THEN
         CALL sse_init(tile, model%options)
       END IF
       ! sb_init (needs sse_init to be finished)
-      IF (one_of(base_config%slm_model_name, [character(len=20) :: 'land','plant','soil' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil' ]) > 0) THEN
         CALL sb_init(tile, model%options)
       END IF
       ! next tile
@@ -351,11 +359,11 @@ CONTAINS
 
     !> 9.0 Time init for e.g. the time loop in the land_model_driver
     !!
-    time_day          = 0.0_wp                      !! equals 1.0 after one day has passed (i.e. start with zero)
-    time_year         = 1                           !! the 1st year of a simulation == 1 (not zero)
-    dtime             = base_config%dtime           !! time step length in seconds, default: 1800.0 == 30 minutes, mo_base_constants
-    ntimestep         = forcing_options%Timesteps() !! number of time steps (considers the simulation_mode static & transient)
-    timestep_prop_day = dtime/one_day               !! proportion of one day that is simulated with one timestep
+    time_day          = 0.0_wp                                        !! equals 1.0 after one day has passed (i.e. start with zero)
+    time_year         = 1                                             !! the 1st year of a simulation == 1 (not zero)
+    dtime             = model%config%dtime                            !! time step length in seconds, default: 1800.0 == 30 minutes, mo_base_constants
+    ntimestep         = forcing_options%Timesteps(model%config%dtime) !! number of time steps (considers the simulation_mode static & transient)
+    timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 
 
     !> 10.0 Initialise: Fluxnet specific simulation output
@@ -363,10 +371,10 @@ CONTAINS
     !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
     !!
     fluxnet_output_status = 0
-    IF (base_config%fluxnet_output) THEN
+    IF (model%config%fluxnet_output) THEN
       fluxnet_output_status = 1
       ! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
-      fluxnet_output_length = NINT(base_config%fluxnet_output_length * one_year * one_day / base_config%dtime)
+      fluxnet_output_length = NINT(model%config%fluxnet_output_length * one_year * one_day / model%config%dtime)
       IF (fluxnet_output_length > ntimestep) THEN
         CALL finish('land_model_driver-init_routine','Simulation is too short for fluxnet output of one full forcing period')
       END IF
@@ -377,10 +385,11 @@ CONTAINS
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
 
       ! check whether general output start and stop covers the 'Fluxnet specific simulation output'
-      IF ( (base_config%output_end_last_day_year * one_year * one_day / base_config%dtime) < fluxnet_output_stop) THEN
+      IF ( (model%config%output_end_last_day_year * one_year * one_day / model%config%dtime) < fluxnet_output_stop) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
-      IF ( (((base_config%output_start_first_day_year - 1) * one_year * one_day + 1) / base_config%dtime) > fluxnet_output_start) THEN
+      IF ( (((model%config%output_start_first_day_year - 1) * one_year * one_day + 1) / model%config%dtime) > &
+           fluxnet_output_start) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
     END IF

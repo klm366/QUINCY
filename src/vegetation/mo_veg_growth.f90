@@ -459,6 +459,7 @@ CONTAINS
     !!
     CALL calc_actual_nutrient_uptake_rate(options, & 
                                           lctlib, &
+                                          TRIM(model%config%slm_model_name), &
                                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                                           TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                           dsl4jsb_Config(SB_)%flag_mycorrhiza, &
@@ -921,6 +922,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_actual_nutrient_uptake_rate(options, & 
                                               lctlib, &
+                                              slm_model_name, &
                                               bnf_scheme, &
                                               sb_model_scheme, &
                                               flag_mycorrhiza  , &
@@ -966,7 +968,6 @@ CONTAINS
                                               exudation_carbon)
                        
     USE mo_kind,                    ONLY: wp, eps8
-    USE mo_base_config_class,       ONLY: base_config
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_shared_constants,        ONLY: Tzero, molar_mass_C, molar_mass_N
@@ -981,6 +982,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),             INTENT(in)    :: options                      !< model options
     TYPE(t_lctlib_element),               INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*),                     INTENT(in)    :: slm_model_name               !< model name: land plant soil canopy test_canopy
     CHARACTER(len=*),                     INTENT(in)    :: bnf_scheme                   !< from veg config 
     CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme              !< from sb config
     LOGICAL,                              INTENT(in)    :: flag_mycorrhiza              !< from sb config
@@ -1055,7 +1057,7 @@ CONTAINS
     !!
     !> 1.1 in case of the plant-only model, prescribe amount of N and P taken up
     !!
-    IF(TRIM(base_config%slm_model_name)=='plant')THEN
+    IF(slm_model_name == 'plant')THEN
        ! in case of the plant-only model, prescribe N and P uptake to match demand
        plant_uptake_nh4_sl(:,1)     = MAX(labile_carbon(:) / lctlib%cn_leaf - labile_nitrogen(:), &
                                           0.0_wp) / soil_depth_sl(:,1)

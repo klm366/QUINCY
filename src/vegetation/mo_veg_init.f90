@@ -31,7 +31,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE veg_init(tile, options)
 
-    USE mo_base_config_class,               ONLY: base_config
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
@@ -259,7 +258,7 @@ CONTAINS
     !> 1.0 vegetation init specific to the SLM model
     !!
     !! SLM models: land, plant,soil (case 1) and canopy (case 2)
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(TRIM(model%config%slm_model_name))
 
       !> 1.1 Land & Plant & Soil
       !!

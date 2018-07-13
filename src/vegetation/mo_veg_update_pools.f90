@@ -40,7 +40,6 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_base_constants,                  ONLY: dtime, one_day
-    USE mo_base_config_class,               ONLY: base_config
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_constants,                ONLY: lambda_C14, rhoh2o, grav
     USE mo_shared_isotope,                  ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
@@ -293,7 +292,7 @@ CONTAINS
     !> 1.0 for plant and land model, update vegetation pools with fluxes
     !! 
     !!
-    SELECT CASE(TRIM(base_config%slm_model_name))
+    SELECT CASE(TRIM(model%config%slm_model_name))
     CASE('plant','land')
    
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
@@ -441,12 +440,12 @@ CONTAINS
     !!
     !! in case of complete harvest, set all pools to zero
     !! (to account for wood extraction, which would otherwise leave some wood, and reset the key plant diagnostics)
-    IF(base_config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(options%ics) > test_false_true) THEN 
+    IF(model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(options%ics) > test_false_true) THEN 
       !! differ between cohort & population scheme
       IF (do_cohort_harvest(options%ics) > test_false_true) THEN    ! -> cohort scheme
         dens_ind(:)                    = 1.0_wp
         veg_pool%reserve%carbon(:)     = 1.0_wp
-      ELSE ! base_config%l_do_stand_replacing_harvest -> population scheme
+      ELSE ! model%config%l_do_stand_replacing_harvest -> population scheme
         dens_ind(:)                    = 0.1_wp
         veg_pool%reserve%carbon(:)     = 0.1_wp
       ENDIF
