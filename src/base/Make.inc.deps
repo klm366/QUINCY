@@ -11,8 +11,10 @@ mo_base_util.o: \
   mo_kind.o
 
 mo_jsb_config_class.o: \
+  mo_kind.o \
   mo_io_units.o \
-  mo_exception.o
+  mo_exception.o \
+  mo_namelist.o
 
 mo_base_config_class.o: \
   mo_kind.o \
@@ -87,6 +89,7 @@ mo_jsb_model_init.o: \
   mo_jsb_model_usecases.o \
   mo_jsb_grid_class.o \
   mo_jsb_grid.o \
+  mo_jsb_config_class.o \
   mo_base_config_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_lct_class.o \
@@ -139,6 +142,7 @@ mo_jsb_model_class.o: \
   mo_exception.o \
   mo_io_units.o \
   mo_hsm_class.o \
+  mo_jsb_config_class.o \
   mo_jsb_task_class.o \
   mo_jsb_tile_class.o \
   mo_jsb_lctlib_class.o \

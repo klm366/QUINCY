@@ -15,7 +15,7 @@ MODULE mo_jsb_model_class
   USE mo_io_units,          ONLY: filename_max
 !  USE mo_jsb_parallel,      ONLY: Get_omp_no_of_threads, Get_omp_thread
   USE mo_hsm_class,         ONLY: t_Hsm, t_State, t_Message, t_Action
-!  USE mo_jsb_config_class,  ONLY: t_jsb_model_config, t_jsb_config_p
+  USE mo_jsb_config_class,  ONLY: t_jsb_model_config, t_jsb_config_p
   USE mo_jsb_process_class, ONLY: t_jsb_process_p       ! , t_jsb_process, 
   USE mo_jsb_task_class,    ONLY: t_jsb_task_options    ! , t_jsb_process_task, t_jsb_process_task_p, t_Task_queue
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
@@ -47,7 +47,7 @@ MODULE mo_jsb_model_class
     CHARACTER(len=10)                  :: shortname         !< Model short name
     CHARACTER(len=132)                 :: description       !< Model description
     CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
-!    TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
+    TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
 !    TYPE(t_jsb_task_options),  ALLOCATABLE :: options(:)    !< Options needed by tasks
     TYPE(t_jsb_task_options)           :: options           !< Options needed by tasks    *slmtemp
     INTEGER                            :: grid_id

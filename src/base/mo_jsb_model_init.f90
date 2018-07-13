@@ -122,6 +122,7 @@ CONTAINS
     USE mo_jsb_grid,              ONLY: Get_Grid
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: Read_lctlib
+    USE mo_jsb_config_class,      ONLY: new_model_config
     USE mo_base_config_class,     ONLY: base_config
     ! shared 
     USE mo_util,                  ONLY: one_of
@@ -181,7 +182,12 @@ CONTAINS
     no_omp_thread = 1
 
 
-    !> 1.0 process config
+    !> 1.0 configuration
+    !!
+    !> 1.1 model config
+    !!
+    model%config => new_model_config(model%namelist_filename)
+    !> 1.2 process config
     !!
     ALLOCATE(model%processes(max_no_of_processes))
     DO iproc=1,max_no_of_processes
