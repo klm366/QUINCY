@@ -606,7 +606,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg      ! SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
     dsl4jsb_Real2D_onChunk      :: transpiration                    ! SSE_
-    dsl4jsb_Real2D_onChunk      :: t_soil_root 
+    dsl4jsb_Real2D_onChunk      :: t_soil_root
+    dsl4jsb_Real2D_onChunk      :: growth_respiration
+    dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -758,6 +761,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)       ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
@@ -900,7 +906,9 @@ CONTAINS
     
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
-    npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), npp(:), mavg_period_talloc, do_calc=l_growing_season(:))
+    hlp(:) =  gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:))     - & 
+         growth_respiration(:)     - maint_respiration(:)     - n_processing_respiration(:) 
+    npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), hlp(:), mavg_period_talloc, do_calc=l_growing_season(:))
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
          WHERE (n_fixation(:) > 0._wp)

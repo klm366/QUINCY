@@ -846,6 +846,7 @@ CONTAINS
     REAL(wp),DIMENSION(options%nc)                     :: lai_new
     REAL(wp),DIMENSION(options%nc)                     :: net_assimilation_new
     REAL(wp),DIMENSION(options%nc)                     :: canopy_cond_new
+    REAL(wp),DIMENSION(options%nc)                     :: beta_sinklim_local
     REAL(wp),DIMENSION(options%nc,ncanopy)             :: lai_new_cl           , &
                                                           cumm_lai_new_cl      , &
                                                           loc_ppfd_sunlit_cl   , &
@@ -874,7 +875,7 @@ CONTAINS
     fn_et_new_cl(:,:)         = fn_et_cl(:,:)
     fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
     fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
-
+    beta_sinklim_local = 1._wp
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -949,7 +950,7 @@ CONTAINS
                                     beta_air(:)                     , &
                                     beta_soa(:)                     , &
                                     beta_soil_ps(:)                 , &
-                                    beta_sinklim_ps(:)              , &
+                                    beta_sinklim_local(:)              , &
                                     beta_soil_gs(:)                 , &
                                     fn_chl_new_cl(:,icanopy)        , &
                                     fn_et_new_cl(:,icanopy)         , &
@@ -1106,7 +1107,7 @@ CONTAINS
     REAL(wp)                                              :: anl, agl, rl
     REAL(wp)                                              :: hlp1
     REAL(wp)                                              :: direction
-    REAL(wp), DIMENSION(options%nc)                       :: ns_carbon,ns_nitrogen
+    REAL(wp), DIMENSION(options%nc)                       :: ns_carbon,ns_nitrogen, beta_sinklim_ps_local
     INTEGER                                               :: icanopy, dd, ipoint    ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
@@ -1116,6 +1117,7 @@ CONTAINS
     loc_ppfd_sunlit_cl(:,:)   = ppfd_sunlit_tcnl_mavg_cl(:,:)
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_tcnl_mavg_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_tcnl_mavg_cl(:,:)
+    beta_sinklim_ps_local(:) = 1._wp
 
     SELECT CASE (lctlib%phenology_type)
       CASE (ievergreen)
@@ -1204,7 +1206,7 @@ CONTAINS
                        beta_air_tcnl_mavg(ipoint)                    , &
                        beta_soa_tphen_mavg(ipoint)                   , &
                        beta_soil_ps_tcnl_mavg(ipoint)                , &
-                       beta_sinklim_ps_tcnl_mavg(ipoint)             , &
+                       beta_sinklim_ps_local(ipoint)             , &
                        beta_soil_gs_tcnl_mavg(ipoint)                , &
                        fn_chl_new_cl(ipoint,icanopy)                 , &
                        fn_et_new_cl(ipoint,icanopy)                  , &
@@ -1229,7 +1231,7 @@ CONTAINS
 
       IF ((uptake_n(ipoint) * lctlib%tau_fine_root * one_year*one_day*1e-6_wp + ns_nitrogen(ipoint)) * growth_cn(ipoint) < &
           (npp(ipoint)*lctlib%tau_leaf * 1e-6_wp * one_year*one_day + ns_carbon(ipoint))) THEN
-          leaf_cn_direction(ipoint) = - 1._wp
+          leaf_cn_direction(ipoint) = 0._wp
       ENDIF
 
     ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
