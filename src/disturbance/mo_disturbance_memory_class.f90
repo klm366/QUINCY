@@ -124,14 +124,14 @@ CONTAINS
         & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
-        & lrestart=.TRUE., initval_r=0.0_wp ) 
+        & lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,              &
         & hgrid, surface,                                                           &
         & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & lrestart=.FALSE., initval_r=0.0_wp ) 
+        & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,              &
         & hgrid, surface,                                                           &
@@ -139,7 +139,7 @@ CONTAINS
           & 'Test for c conservation on relocation for wind damaged area.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,              &
         & hgrid, surface,                                                           &
@@ -147,7 +147,7 @@ CONTAINS
           & 'Test for c conservation on relocation for burned area.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
     END IF
 

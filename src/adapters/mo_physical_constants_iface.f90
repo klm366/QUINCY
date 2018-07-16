@@ -74,7 +74,7 @@ MODULE mo_physical_constants_iface
 !#endif
   REAL(wp), PARAMETER :: tpfac1 = cvdifts
   REAL(wp), PARAMETER :: tpfac2 = 1._wp / tpfac1
-  REAL(wp), PARAMETER :: tpfac3 = 1._wp - tpfac2 
+  REAL(wp), PARAMETER :: tpfac3 = 1._wp - tpfac2
 
 #endif
 END MODULE mo_physical_constants_iface

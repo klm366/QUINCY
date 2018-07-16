@@ -49,10 +49,10 @@ CONTAINS
       & N_pseudo_soil_temp
 
     dsl4jsb_Def_memory(SEB_)
-    
+
     CALL seb_init_bc(tile)
     !CALL seb_init_ic(tile)
-    
+
     ! Initial values for the calculation of pseudo_soil_temp in SUBROUTINE calc_pseudo_soil_temp
     dsl4jsb_Get_memory(SEB_)
 
@@ -65,7 +65,7 @@ CONTAINS
       F_pseudo_soil_temp = EXP(-timeStep_in_days()/PhenoParam%EG_SG%tau_pseudo_soil)
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
     END IF
-    
+
   END SUBROUTINE seb_init
 
   SUBROUTINE seb_init_bc(tile)

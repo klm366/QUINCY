@@ -53,7 +53,7 @@ CONTAINS
     USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids
 
     TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: vgrid
-  
+
     TYPE(t_jsb_vgrid_ptr), ALLOCATABLE :: vgrids_temp(:)
     INTEGER :: i, n, length
 

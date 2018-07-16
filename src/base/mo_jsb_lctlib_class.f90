@@ -77,7 +77,7 @@ MODULE mo_jsb_lctlib_class
     ! ++ additional parameters required when l_forestRegrowth = true  --------------------------------------------------------
     REAL(wp) :: alpha_nr_ind          !! Parameter of self-thinning relationship
     REAL(wp) :: beta_nr_ind           !! Parameter of self-thinning relationship
-    REAL(wp) :: alpha_leaf            !! Parameter of relationship between total biomass per ind and leaf biomass 
+    REAL(wp) :: alpha_leaf            !! Parameter of relationship between total biomass per ind and leaf biomass
     REAL(wp) :: beta_leaf             !! Parameter of relationship between total biomass per ind and leaf biomass
 
      ! --- Parameters used in Knorr Phenology scheme ---------------------------------------------------------------------------

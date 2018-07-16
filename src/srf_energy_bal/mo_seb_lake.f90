@@ -309,7 +309,7 @@ CONTAINS
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, clw, rhoi, rhos, als, alf, ki, ks, ci, cs
-    
+
     REAL(wp), INTENT(inout) :: t_lice
     REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
     REAL(wp), INTENT(out)   :: hflx_cond_ice
@@ -496,7 +496,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     ! Get model
     model => Get_model(tile%owner_model_id)
 
@@ -524,10 +524,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
-    
+
     ! ---------------------------
     ! Go
-    
+
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 

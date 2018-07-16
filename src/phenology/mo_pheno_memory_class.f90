@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth 
+!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
 
 MODULE mo_pheno_memory_class
@@ -66,13 +66,13 @@ MODULE mo_pheno_memory_class
                                           ! at previous day, because not known for current day; updated at ..
                                           ! the beginning of each new day (stream)
 
-                                          !! JN: variables required when l_forestRegrowth = true, i.e. when the 
+                                          !! JN: variables required when l_forestRegrowth = true, i.e. when the
                                           !      maxLAI is derived from biomass via allometric relationships
       & number_of_individuals,          & ! Number of individuals in last calculation [trees ha-1]
       & biomass_per_individual,         & ! Biomass per individual according to allometric relationships [kg/tree]
 
-      & cconservation_allom,            & ! Tester for c conservation upon rescaling due to changed max lai 
-      & maxLAI_allom,                   & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]: 
+      & cconservation_allom,            & ! Tester for c conservation upon rescaling due to changed max lai
+      & maxLAI_allom,                   & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]:
                                           ! Current max LAI according to allometric relationships --> only changes ones a year!
 
       ! & laiMax_dyn,                    & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
@@ -92,9 +92,9 @@ MODULE mo_pheno_memory_class
       & veg_fract_correction              ! Factor representing clumpyness of vegetation (for each tile type).
                                           ! To write it in the output file we define it as 2d even when there is no change
                                           ! between gridcells as it is in fact a 1d constant for each tile.
-                                          !   JN: with l_forestRegrowth = true veg_fract_correction can change over time  
+                                          !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
                                           !       and is spatially variable
-                                          !       if l_forestRegrowth = false there is still no change between gridcells 
+                                          !       if l_forestRegrowth = false there is still no change between gridcells
                                           !       and it is a 1d constant for each tile in this case.
                                           ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                           ! canopy area = veg_fract_correction * tile area.
@@ -339,7 +339,7 @@ CONTAINS
               & 'Test for c conservation on rescaling of c states for allom.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
-            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
         END IF
 

@@ -59,11 +59,11 @@ MODULE mo_carbon_memory_class
       cconservation_calcCpools,   &
       cflux_c_greenwood_2_litter, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                     !    [mol(C)/m^2(canopy) s]
-      c_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
+      c_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
                                     ! .. of vegetation [mol(C)/m^2(canopy)]
       c_woods,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                     ! .. plants [mol(C)/m^2(canopy)]
-      c_reserve,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
+      c_reserve,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive
                                     ! .. bad times[mol(C)/m^2(canopy)]
 !@todo why is the c_crop_harvest realised as a density and not as a per tile variable in the first place?
 ! ++ only required for crop pfts, or?
@@ -114,7 +114,7 @@ MODULE mo_carbon_memory_class
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
       soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
                                     ! Without N limitation!
-      NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance 
+      NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(canopy) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
                                     ! correction arises either because otherwise the reserve pool would get
@@ -125,7 +125,7 @@ MODULE mo_carbon_memory_class
       LAI_yDayMean,               & ! previous day mean
       NPP_pot_yDayMean,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(canopy) s)]
       NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after N-limitation and excess carbon drop.
-                                    ! "yDayMean" because the actual NPP depends on/is calculated from results of the 
+                                    ! "yDayMean" because the actual NPP depends on/is calculated from results of the
                                     ! previous day.
       GPP_yDayMean,               & !
       topSoilTemp_yDayMean,       & !
@@ -140,25 +140,25 @@ MODULE mo_carbon_memory_class
       cflux_fire_all_2_atm,       & ! R: should be later renamed to C_2_atmos
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool 
+      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool
 
   !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
-      current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)] 
+      current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)]
                                     ! since last maxLAI calculation
-      veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)] 
+      veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)]
                                     ! at the time of the green pool maximum (current_max_green)
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
       cflux_c_greenwood_2_litter_ta, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                        !    [mol(C)/m^2(tile area) s]
-      c_green_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts 
+      c_green_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
                                        ! .. of vegetation [mol(C)/m^2(tile area)]
       c_woods_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                        ! .. plants [mol(C)/m^2(tile area)]
-      c_reserve_ta,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive 
+      c_reserve_ta,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive
                                        ! .. bad times[mol(C)/m^2(tile area)]
-      c_crop_harvest_ta,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]     
+      c_crop_harvest_ta,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
       c_litter_green_ag_ta,      & ! C-pool for above ground non-woody litter especially from leaves
                                        !     [mol(C)/m^2(tile area)]
       c_litter_green_bg_ta,      & ! C-pool for below ground non-woody litter especially from fine roots
@@ -196,9 +196,9 @@ MODULE mo_carbon_memory_class
       !@todo: NPP_pot_sum_ta, GPP_sum_ta, LAI_yyDayMean_ta and LAI_yDayMean_ta are never calculated
 !      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
 !      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
-      soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)]. 
+      soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)].
                                        ! Without N limitation!
-      NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance 
+      NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(tile area) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
                                     ! correction arises either because otherwise the reserve pool would get
@@ -222,7 +222,7 @@ MODULE mo_carbon_memory_class
                                     ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
 
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool 
+      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool
       ! former (JS3) local variables. R: nur auf tile area benötigt!
       cflux_npp_2_atm_ta,            & ! [kg(CO2)/m^2 s]  tile averages of net CO2 fluxes between
       cflux_soilresp_2_atm_ta,       & !  .. biosphere (due to NPP, soil respiration and
@@ -337,7 +337,7 @@ CONTAINS
         & prefix, suffix,                                                                              &
         & lrestart=.TRUE., initval_r=3.0E-5_wp ) ! initval taken from JSBACH3, arbitary.
 
-!@todo: relict from CBALANCE, (currently) not required for YASSO 
+!@todo: relict from CBALANCE, (currently) not required for YASSO
       CALL jsb_add_var( mem, 'topsoiltemp', mem%topSoilTemp,                                           &
         & hgrid, surface,                                                                              &
         & t_cf('topSoilTemp', 'K', 'Top soil temperature.'),                                           &
@@ -346,7 +346,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
 
-!@todo: relict from CBALANCE, (currently) not required for YASSO 
+!@todo: relict from CBALANCE, (currently) not required for YASSO
       CALL jsb_add_var( mem, 'alpha', mem%alpha,                                                       &
         & hgrid, surface,                                                                              &
         & t_cf('alpha', '-', 'Water Stress Coefficient. Relative soil moisture.'),                     &
@@ -436,7 +436,7 @@ CONTAINS
 !CBAL         & prefix, suffix,                                                                                  &
 !CBAL         & output_level=FULL,                                                                             &
 !CBAL         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3 from cbalance%c_slow.
-!CBAL                                               ! Note for cbalone this value would be: 
+!CBAL                                               ! Note for cbalone this value would be:
 !CBAL                                               ! mo_cbalone_memory.f90:247: cbalance%c_slow(:,:) = 0.0_dp
 
       ! Yasso 1
@@ -591,7 +591,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=FULL,                                                             &
-        & lrestart=.TRUE., initval_r=0.0_wp ) 
+        & lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'c_ag_sum_1', mem%c_ag_sum_1,                                       &
         & hgrid, surface,                                                                        &
@@ -599,7 +599,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=FULL,                                                                     &
-        & lrestart=.TRUE., initval_r=0.0_wp ) 
+        & lrestart=.TRUE., initval_r=0.0_wp )
 
 !      CALL jsb_add_var( mem, 'c_sum_natural', mem%C_sum_natural,                      &
 !        & hgrid, surface,                                                             &
@@ -866,7 +866,7 @@ CONTAINS
 !CBAL         & prefix, suffix,                                                                             &
 !CBAL         & output_level=BASIC,                                                                            &
 !CBAL         & lrestart=.FALSE., initval_r=2400.0_wp ) ! initval taken from JSBACH3 from cbalance%c_slow.
-!CBAL                                                  ! Note for cbalone this value would be: 
+!CBAL                                                  ! Note for cbalone this value would be:
 !CBAL                                                  ! mo_cbalone_memory.f90:247: cbalance%c_slow(:,:) = 0.0_dp
 
       ! Yasso 1
@@ -1159,7 +1159,7 @@ CONTAINS
 !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
 !         & prefix, suffix,                                                                                          &
 !         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-! 
+!
 !       CALL jsb_add_var( mem, 'cflux_herb_2_atm_ta', mem%cflux_herb_2_atm_ta,                              &
 !         & hgrid, surface,                                                                                           &
 !         & t_cf('cflux_herb_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into atmosphere &
@@ -1217,7 +1217,7 @@ CONTAINS
           & 'Test for c conservation on allocation and respiration.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &

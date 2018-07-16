@@ -20,8 +20,8 @@ MODULE mo_jsb_time_iface
   USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
     &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                       &
     &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                       &
-    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &   
-    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        & 
+    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &
+    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        &
     &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
     &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
     &                                  divideDatetimeDifferenceInSeconds, isCurrentEventActive
@@ -246,7 +246,7 @@ CONTAINS
 
 #ifdef __ICON__
     TYPE(divisionquotienttimespan) :: tq
-    
+
     CALL divideDatetimeDifferenceInSeconds(time_config%tc_stopdate,    &
          &                                 time_config%tc_startdate,   &
          &                                 time_config%tc_dt_model, tq)
@@ -308,9 +308,9 @@ CONTAINS
   !! @brief Get time at previous time step
   !!
   FUNCTION get_time_previous() RESULT(previous)
-    TYPE(t_datetime) :: previous 
+    TYPE(t_datetime) :: previous
 #ifdef __ICON__
-    previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model 
+    previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model
 #else
     previous = previous_date
 #endif
@@ -323,7 +323,7 @@ CONTAINS
   FUNCTION get_time_next() RESULT(next)
     TYPE(t_datetime) :: next
 #ifdef __ICON__
-    next = time_config%tc_current_date + (1) * time_config%tc_dt_model 
+    next = time_config%tc_current_date + (1) * time_config%tc_dt_model
 #else
     next = next_date
 #endif
@@ -420,7 +420,7 @@ CONTAINS
     INTEGER, INTENT(in) :: istep
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':finish_timestep'
-    
+
 #ifdef __ICON__
     WRITE(message_text,'(a,i10)') 'JSBACH: Finish TIME STEP n: ', istep
     CALL message(TRIM(routine),message_text)
@@ -503,7 +503,7 @@ CONTAINS
   !! Get day in year
   !!
   !! Function returns the day of the year for a given date.
-  !! The seconds in the day are given as fraction of the day. 
+  !! The seconds in the day are given as fraction of the day.
   !!
 #ifdef __ICON__
   REAL(wp) FUNCTION get_year_day(date)
@@ -524,7 +524,7 @@ CONTAINS
     INTEGER, INTENT(out)  :: n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_interpolation_weights'
-    
+
 #ifdef __ICON__
     TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights
 
@@ -592,7 +592,7 @@ CONTAINS
 
     TYPE(FILE_INFO) :: IO_file
     INTEGER :: IO_file_id
-    INTEGER :: forecast_date, verification_date   ! YYYYMMDD 
+    INTEGER :: forecast_date, verification_date   ! YYYYMMDD
     INTEGER :: forecast_time, verification_time   ! HHMMSS
     TYPE(time_native) :: date_nat
 
@@ -617,7 +617,7 @@ CONTAINS
           IO_timestep = delta_time
        ENDIF
     ENDIF
-       
+
     IF (p_parallel) THEN
        CALL p_bcast(istep, p_io, comm=mpi_comm)
        CALL p_bcast(IO_timestep, p_io, comm=mpi_comm)
@@ -628,7 +628,7 @@ CONTAINS
           CALL p_bcast(verification_time, p_io, comm=mpi_comm)
        ENDIF
     ENDIF
-       
+
     IF (lresume) THEN
        CALL inp_convert_date(forecast_date, forecast_time, start_date)
        CALL inp_convert_date(verification_date, verification_time, resume_date)

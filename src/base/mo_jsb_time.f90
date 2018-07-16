@@ -292,7 +292,7 @@ CONTAINS
 
   END FUNCTION get_year_at_model_start
 
-  
+
   REAL(wp) FUNCTION timeStep_in_days() ! EXPRESS the time step in days (as fraction of day)
     USE mo_jsb_time_iface,   ONLY: get_time_dt
 
@@ -322,6 +322,6 @@ CONTAINS
 
   END FUNCTION time_steps_per_day
 
-   
+
 #endif
 END MODULE mo_jsb_time

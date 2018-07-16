@@ -548,10 +548,10 @@ CONTAINS
   !! JN: Initial parts copied from jsbach3 mo_jsbach_grid.f90:init_grid
   !!
   SUBROUTINE get_nlon_nlat_from_file(grid_filename, return_nlon, return_nlat) !filename
-  
+
     USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
-#ifndef __ICON__  
+#ifndef __ICON__
     USE mo_control,   ONLY: nlon, ngl, nhgl, nvclev, vct
     USE mo_io,        ONLY: IO_READ, IO_open, IO_close
     USE mo_netCDF,    ONLY: file_info, io_inq_dimid, io_inq_dimlen
@@ -562,14 +562,14 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_nlon_nlat_from_file'
 
-#ifndef __ICON__  
+#ifndef __ICON__
     TYPE(file_info) :: grid_file
     INTEGER :: IO_dim_id
 #endif
 
     INTEGER :: read_nlon, read_nlat
 
-#ifdef __ICON__  
+#ifdef __ICON__
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
 #else
 
@@ -687,7 +687,7 @@ CONTAINS
   !!
   SUBROUTINE jsbalone_init_decomp (nlon, nlat, nproca, nprocb, npedim, decomposition)
 
-#ifndef __ICON__  
+#ifndef __ICON__
     USE mo_decomposition, ONLY : decompose, local_decomposition, global_decomposition
     USE mo_mpi,           ONLY : p_nprocs, p_parallel_io, p_pe
     USE mo_transpose,     ONLY : indx
@@ -699,16 +699,16 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbalone_init_decomp'
 
 
-#ifndef __ICON__  
+#ifndef __ICON__
     INTEGER :: debug_parallel, i, p
     LOGICAL :: lrot
 #endif
 
 
-#ifdef __ICON__  
+#ifdef __ICON__
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
 #else
-    lrot          = .TRUE.  ! true: no rotation of longitudes           
+    lrot          = .TRUE.  ! true: no rotation of longitudes
 
     ! nprocb has to be 1, otherwise the consistency checks in
     ! mo_decomposition will fail (nprocb - must be < nlev).
@@ -728,7 +728,7 @@ CONTAINS
     ALLOCATE(global_decomposition(1:p_nprocs))
 
     ! The truncation is set to nproca, otherwise the consistency checks in
-    ! mo_decomposition will fail 
+    ! mo_decomposition will fail
     CALL decompose(global_decomposition, npedim, nproca, nprocb, nlat, nlon, norot=lrot, nlev=1, &
                    nm=nproca, nn=nproca, nk=nproca, nadvec=0, debug=debug_parallel)
 
@@ -756,7 +756,7 @@ CONTAINS
        WRITE(nout,*) '---------------------------------------------'
     ENDIF
 
-    ! Copy content of local_decomposition to output 
+    ! Copy content of local_decomposition to output
     decomposition = local_decomposition
 #endif
   END SUBROUTINE jsbalone_init_decomp

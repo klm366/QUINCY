@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interface to varlists/streams 
+!! @brief Contains the interface to varlists/streams
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg

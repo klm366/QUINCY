@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interface to io 
+!! @brief Contains the interface to io
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -221,7 +221,7 @@ CONTAINS
         CALL nf(nf_inq_vardimid(file_id, varid, dim_id(1:ndims)), TRIM(routine))
         CALL nf(nf_inq_dimlen(file_id, dim_id(1), var_size(1)), TRIM(routine))
       END IF
-      
+
       CALL p_bcast(var_size(1), p_io, mpi_comm)
 
       ALLOCATE(tmp_array(var_size(1)))

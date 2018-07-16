@@ -320,7 +320,7 @@ PROGRAM jsb4_driver
   CALL open_output_streams
 
   ! - Main loop
-  main_loop:DO 
+  main_loop:DO
 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN
@@ -359,7 +359,7 @@ PROGRAM jsb4_driver
 
     DO iblk = 1, nblks
       CALL model%Set_options(iblk=iblk)
- 
+
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN

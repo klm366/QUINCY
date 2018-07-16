@@ -328,7 +328,7 @@ CONTAINS
       cflux_dist_woods_2_soil(:) = 0._wp
 
       burned_fract(:) = 0._wp
-      IF (      dsl4jsb_Lctlib_param(dynamic_PFT) & 
+      IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
           .OR. (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. dsl4jsb_Lctlib_param(pasture_PFT)) &
          ) THEN
 
@@ -336,7 +336,7 @@ CONTAINS
           CASE (0) !! No fire algorithm
           CASE (1) !! jsbach algorithm
 
-            ! Calculate burned area. Woody and grass types call the subroutine with different parameters 
+            ! Calculate burned area. Woody and grass types call the subroutine with different parameters
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! Woody Type
               fire_minimum = dsl4jsb_Config(DISTURB_)%fire_minimum_woody
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_woody
@@ -445,7 +445,7 @@ CONTAINS
               & cflux_dist_greenreserve_2_soil = cflux_dist_greenreserve_2_soil(:),       &
               & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
 
-            ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
+            ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp
             dummy_flux = 0._wp
             CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
               & dummy_flux(:), cconservation_wind(:))

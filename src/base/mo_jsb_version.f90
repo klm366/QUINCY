@@ -25,7 +25,7 @@ MODULE mo_jsb_version
 
   IMPLICIT NONE
 
-  PRIVATE 
+  PRIVATE
 
   PUBLIC :: jsbach_version, jsbach_init_version, jsbach_label_run
 
@@ -41,7 +41,7 @@ CONTAINS
   !! Define JSBACH version and labels
   !!
   !! Define JSBACH version number and get some information about a simulation
-  !! at model initialization. 
+  !! at model initialization.
   !!
   !! @par Revision History
   !! Initial version derived from ECHAM6 mo_version::init_version by Reiner Schnur, MPI Met (2011-02-10)
@@ -151,7 +151,7 @@ CONTAINS
   SUBROUTINE jsbach_label_run(standalone)
 
     USE mo_util_string,        ONLY: separator
- 
+
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
     LOGICAL :: l_standalone !< true: offline JSBACH, false: ECHAM/JSBACH

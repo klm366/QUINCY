@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth 
+!! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
 !!
 MODULE mo_pheno_config_class

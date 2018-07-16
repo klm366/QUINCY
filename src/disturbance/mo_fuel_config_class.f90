@@ -48,7 +48,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     INTEGER                     :: fuel_algorithm
- 
+
     NAMELIST /jsb_fuel_nml/     &
          active,                &
          ic_filename,           &
