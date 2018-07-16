@@ -131,7 +131,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: t_air                        ! A2L_
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
@@ -139,7 +140,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onChunk      :: beta_air                     ! ASSIMI_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime
@@ -149,13 +151,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl               ! RAD_
+    ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
-    dsl4jsb_Real2D_onChunk      :: daytime_counter              ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
@@ -169,6 +173,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
+    ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
@@ -453,7 +458,7 @@ CONTAINS
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
 
 
     IMPLICIT NONE
@@ -480,14 +485,17 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
+    dsl4jsb_Def_memory(SSE_)                        !     TYPE(t_sse_memory),      POINTER :: sse__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: growing_season           ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
+    ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: growing_season
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation         ! ASSIMI_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
@@ -505,7 +513,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc              ! RAD_
+    ! RAD_
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
@@ -515,7 +524,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
-    dsl4jsb_Real2D_onChunk      :: n_fixation                 ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: n_fixation 
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation
@@ -599,17 +609,20 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_respiration
+    dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
+    ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
-    dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg      ! SB_
+    ! SB_
+    dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
-    dsl4jsb_Real2D_onChunk      :: transpiration                    ! SSE_
+    ! SSE_
+    dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: t_soil_root
-    dsl4jsb_Real2D_onChunk      :: growth_respiration
-    dsl4jsb_Real2D_onChunk      :: maint_respiration
-    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -635,7 +648,7 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SSE_)
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
@@ -673,6 +686,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
     ! ---------------------------
+    ! 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
@@ -757,13 +771,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
+    ! 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)              ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)       ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
@@ -906,9 +921,9 @@ CONTAINS
     
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
-    hlp(:) =  gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:))     - & 
-         growth_respiration(:)     - maint_respiration(:)     - n_processing_respiration(:) 
-    npp_talloc_mavg(:)      = calc_mavg(npp_talloc_mavg(:), hlp(:), mavg_period_talloc, do_calc=l_growing_season(:))
+    hlp(:)              = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - & 
+                          growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
+    npp_talloc_mavg(:)  = calc_mavg(npp_talloc_mavg(:), hlp(:), mavg_period_talloc, do_calc=l_growing_season(:))
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
       CASE("optimal")
          WHERE (n_fixation(:) > 0._wp)

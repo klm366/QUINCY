@@ -286,7 +286,7 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_assimi_fluxes    (tile,model%options)    ! mo_assimi_util
+      CALL reset_assimi_fluxes    (tile, model%options)   ! mo_assimi_util
       CALL reset_veg_fluxes       (tile, model%options)   ! mo_veg_util
       CALL reset_sb_fluxes        (tile, model%options)   ! mo_sb_util
       CALL reset_sse_fluxes       (tile, model%options)   ! mo_sse_util
@@ -338,9 +338,9 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_assimi_fluxes(tile,model%options)! mo_assimi_util
-      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
-      CALL reset_sse_fluxes(tile, model%options)  ! mo_sse_util
+      CALL reset_assimi_fluxes    (tile, model%options)  ! mo_assimi_util
+      CALL reset_veg_fluxes       (tile, model%options)  ! mo_veg_util
+      CALL reset_sse_fluxes       (tile, model%options)  ! mo_sse_util
 
       !! run Tasks
       !!
@@ -381,8 +381,8 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_sb_fluxes(tile, model%options)   ! mo_sb_util
-      CALL reset_sse_fluxes(tile, model%options) ! mo_sse_util
+      CALL reset_sb_fluxes            (tile, model%options)   ! mo_sb_util
+      CALL reset_sse_fluxes           (tile, model%options)   ! mo_sse_util
 
       CALL update_sb_rate_modifier    (tile, model%options)
       SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
@@ -413,8 +413,8 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
-      CALL reset_veg_fluxes(tile, model%options)  ! mo_veg_util
-      CALL reset_sse_fluxes(tile, model%options)  ! mo_sse_util
+      CALL reset_veg_fluxes       (tile, model%options)  ! mo_veg_util
+      CALL reset_sse_fluxes       (tile, model%options)  ! mo_sse_util
 
       !! run Tasks
       !!

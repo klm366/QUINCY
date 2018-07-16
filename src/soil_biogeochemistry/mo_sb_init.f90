@@ -461,7 +461,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: i, nsoil_sb
-    REAL                                             :: rhlp1, rhlp2
+    REAL(wp)                                         :: rhlp1, rhlp2
     LOGICAL,  DIMENSION(options%nc)                  :: aflag
     REAL(wp), DIMENSION(options%nc)                  :: soil_p_weight, soil_weight_0d        !< total soil weight up to the soil_p_depth/soil_depth_0d, [kg]
     REAL(wp), DIMENSION(options%nc)                  :: hlp1, hlp2, soil_depth_0d

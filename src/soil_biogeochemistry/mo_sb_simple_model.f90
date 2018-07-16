@@ -2420,13 +2420,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! update the loss of residue phosphorus due to biochem_mineralisation_po4, restricted by the CNP ratio of slow SOM
     biochem_mineralisation_po4(:,:) = MIN(biochem_mineralisation_po4(:,:), sb_loss%residue%phosphorus(:,:) - &
                                          frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:))
-    net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - biochem_mineralisation_po4(:,:) - &
-                                                                frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * &
-                                                                sb_loss%residue%carbon(:,:)
+    net_mineralisation_po4(:,:)     = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
+                                      biochem_mineralisation_po4(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) / &
+                                      microbial_np * sb_loss%residue%carbon(:,:)
     ! store net mineralisation of 15N for later use
     hlp2(:,:) = (sb_loss%residue%nitrogen(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)) * & 
-                calc_fractionation(sb_loss%residue%nitrogen(:,:), &
-                                   sb_loss%residue%nitrogen15(:,:),eta_ammonification)
+                calc_fractionation(sb_loss%residue%nitrogen(:,:), sb_loss%residue%nitrogen15(:,:),eta_ammonification)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp2(:,:)
 
     ! adjust slow 15N loss rate to account for discrimination during ammonification
