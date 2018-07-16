@@ -7,6 +7,7 @@ mo_sb_interface.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_process_class.o \
+  mo_sb_util.o \
   mo_sb_rate_modifier.o \
   mo_sb_simple_model.o \
   mo_sb_jsm_main.o \

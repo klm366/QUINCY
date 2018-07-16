@@ -115,10 +115,6 @@ CONTAINS
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
-    USE mo_veg_util,                      ONLY: reset_veg_fluxes
-    USE mo_sb_util,                       ONLY: reset_sb_fluxes
-    USE mo_sse_util,                      ONLY: reset_sse_fluxes
-    USE mo_assimi_util,                   ONLY: reset_assimi_fluxes
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model
 
     ! Process interfaces:

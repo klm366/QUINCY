@@ -7,6 +7,7 @@ mo_sse_interface.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_process_class.o \
+  mo_sse_util.o \
   mo_sse_update_turbulence.o \
   mo_sse_update_physics.o \
   mo_sse_config_class.o \

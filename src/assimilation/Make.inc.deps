@@ -7,6 +7,7 @@ mo_assimi_interface.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_process_class.o \
+  mo_assimi_util.o \
   mo_assimi_update_canopy_fluxes.o \
   mo_assimi_config_class.o \
   mo_assimi_memory_class.o
