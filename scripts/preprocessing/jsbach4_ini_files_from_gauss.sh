@@ -496,7 +496,7 @@ function crosscheck_vars {
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
-  debug_file ${grid_name}_soil_field_remap.nc
+  debug_file ${grid_name}_soil_depth_remap.nc
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
