@@ -176,7 +176,8 @@ MODULE mo_sb_constants
       fnit_nmin, &               !< fractional nitrification per unit N mineralisation 
       fleach_nh4, &              !< fraction of NH4 amenable to leaching
       fleach_po4, &              !< fraction of PO4 amenable to leaching
-      soil_n_threshold_bnf       !< maximum soil N at which BNF occurs in standard scheme (mol N / m2) 
+      soil_n_threshold_bnf, &    !< maximum soil N at which BNF occurs in standard scheme (mol N / m2) 
+      standard_bnf_max_rate      !< global maximum rate for standard BNF scheme (mol N / m2 / s) 
 
    ! Isoptope stuff
    REAL(wp), SAVE :: & 
@@ -389,6 +390,7 @@ CONTAINS
     fleach_nh4            = 0.1_wp                            ! 
     fleach_po4            = 0.001_wp                          ! 
     soil_n_threshold_bnf  = 0.05_wp                           ! 
+    standard_bnf_max_rate = 3.0_wp / molar_mass_N / one_year / one_day * 1000000.0_wp
 
     ! All values from Robinson 2001, TREE
     eta_mic_uptake_nh4     = 17._wp                           ! 

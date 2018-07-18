@@ -3240,7 +3240,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                          asymb_n_fixation_n15)                              ! out
 
     USE mo_shared_isotope,     ONLY: calc_mixing_ratio_N15N14
-    USE mo_sb_constants,       ONLY: soil_n_threshold_bnf
+    USE mo_sb_constants,       ONLY: soil_n_threshold_bnf, standard_bnf_max_rate
     USe mo_veg_constants,      ONLY: eta_nfixation
 
     IMPLICIT NONE
@@ -3275,11 +3275,19 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDDO 
     hlp1_2d(:,:) = SPREAD(hlp1,2,options%nsoil_sb)
 
-    !> 1.1 calculate mean N fixation rate (mol / m3 / s)
+    !> 1.1 calculate mean N fixation rate (µmol / m3 / s)
     !!     to all soil layers
     !!
-    hlp2(:) = lctlib%bnf_base / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
-    hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb)
+    SELECT CASE(TRIM(sb_bnf_scheme))
+       CASE("fixed") 
+         hlp2(:) = lctlib%bnf_base / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+         hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb)
+       CASE("standard")
+         hlp2(:) = standard_bnf_max_rate / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+         hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb) * rtm_fixation_act(:,:) * rmm_fixation_act(:,:)
+       CASE default
+         hlp2_2d(:,:) = 0.0_wp
+    END SELECT
 
     !> 1.2 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
     !!
@@ -3288,8 +3296,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
           WHERE(hlp1_2d(:,:) < soil_n_threshold_bnf .AND. & 
                 sb_pool_microbial_carbon(:,:) > eps4 .AND. & 
                 soil_depth_sl(:,:) > eps8)
-             asymb_n_fixation(:,:) = rtm_fixation_act(:,:) * rmm_fixation_act(:,:) * &
-                                     root_fraction_act_sl(:,:) * hlp2_2d(:,:) 
+             asymb_n_fixation(:,:) = root_fraction_act_sl(:,:) * hlp2_2d(:,:) 
           ENDWHERE
        CASE("unlimited")
           asymb_n_fixation(:,:) = asymb_n_fixation(:,:) / dtime * 1000000._wp
