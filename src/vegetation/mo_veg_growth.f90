@@ -1829,14 +1829,16 @@ CONTAINS
                                          1._wp/leaf2root_mass_ratio_mavg(:)/lctlib%tau_fine_root ) * &
                                         (1._wp + fresp_growth)
     target_reserve_pool_nitrogen(:)   = lctlib%fstore_target * target_lai / lctlib%sla * & 
-                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) * (1._wp - resorp_fract_leaf) / &
+                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) / &
                                          target_cn_leaf(:) + 1._wp/leaf2root_mass_ratio_mavg(:) / &
-                                         lctlib%tau_fine_root / target_cn_fine_root(:))
+                                         lctlib%tau_fine_root / target_cn_fine_root(:)) * & 
+                                        (1._wp + fresp_growth)
     target_reserve_pool_phosphorus(:) = lctlib%fstore_target * target_lai(:) / lctlib%sla * & 
-                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) * (1._wp - resorp_fract_leaf) / &
+                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) / &
                                          target_cn_leaf(:) / target_np_leaf(:) + & 
                                          1._wp / leaf2root_mass_ratio_mavg(:)/ lctlib%tau_fine_root / &
-                                         target_cn_fine_root(:) / target_np_fine_root(:))
+                                         target_cn_fine_root(:) / target_np_fine_root(:)) * & 
+                                        (1._wp + fresp_growth)
 
     !> 2.1 limit target size of the reserve pool to the size of the storage organs
     !!
@@ -2137,7 +2139,7 @@ CONTAINS
               ( target_labile_pool_phosphorus / (k_cnp_sinklim_ps * target_labile_pool_carbon)) 
 
        ! take the minimum of the limit imposed by either N or P
-       beta_sinklim_ps = beta_sinklim_ps * MIN(MIN(hlp1,hlp2), 1.0_wp)
+       beta_sinklim_ps = MAX(beta_sinklim_ps_min,beta_sinklim_ps * MIN(MIN(hlp1,hlp2), 1.0_wp))
     ENDIF
 
   END FUNCTION calc_beta_sinklimitation
