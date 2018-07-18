@@ -461,7 +461,8 @@ CONTAINS
     IF (ABS(this%f_mic_carrier_po4      - missval) > eps8)  f_mic_carrier_po4      = this%f_mic_carrier_po4
     IF (ABS(this%f_plant_carrier_po4    - missval) > eps8)  f_plant_carrier_po4    = this%f_plant_carrier_po4
     IF (ABS(this%qmax_po4_mineral       - missval) > eps8)  qmax_po4_mineral       = this%qmax_po4_mineral / molar_mass_P
-    IF (ABS(this%km_adsorpt_mineral_po4 - missval) > eps8)  km_adsorpt_mineral_po4 = this%km_adsorpt_mineral_po4 / molar_mass_P
+    IF (ABS(this%km_adsorpt_mineral_po4 - missval) > eps8)  km_adsorpt_mineral_po4 = this%km_adsorpt_mineral_po4 / 1000._wp / &
+                                                                                       molar_mass_P
 
 
   END SUBROUTINE set_parameter_values_with_list_values

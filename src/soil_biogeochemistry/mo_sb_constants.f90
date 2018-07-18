@@ -323,18 +323,18 @@ CONTAINS
 
     ! nutrient uptake kinetics
     ! simple model
-    km1_up_nh4 = 0.0416_wp
-    km2_up_nh4 = 1.0_wp 
-    km1_up_no3 = 0.0416_wp
-    km2_up_no3 = 1.0_wp
+    km1_up_nh4 = 0.0416_wp                 ! 
+    km2_up_nh4 = 1.0_wp                    ! 
+    km1_up_no3 = 0.0416_wp                 ! 
+    km2_up_no3 = 1.0_wp                    ! 
     km1_up_po4 = 0.0689_wp / 0.0003_wp     ! L/mol, corrected low affinity half-saturation, estimated based on Kavka and Polle 2016, 
                                            ! assuming Km for low-affinity transporter is 300 µmol/L
     km2_up_po4 = 22.0_wp / 1000000._wp     ! mol/L, Kavka and Polle 2016
 
     ! additional jsm parameters 
-    vmax_mic_uptake_nh4     = 10._wp * 48.0_wp / 3600._wp * molar_mass_C  ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily times 10
+    vmax_mic_uptake_nh4     = 480.0_wp / 3600._wp * molar_mass_C          ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily 48 times 10 !
     km_mic_uptake_nh4       = 1.2_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein    
-    vmax_mic_uptake_no3     = 10._wp * 39.0_wp / 3600._wp * molar_mass_C  ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily times 10
+    vmax_mic_uptake_no3     = 390.0_wp / 3600._wp * molar_mass_C  ! µmol / mol / s from Zhu et al. 2017, and references therein         !temporarily 39 times 10 !
     km_mic_uptake_no3       = 1.8_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein   
     f_mic_carrier_n         = 0.05_wp                                     ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     vmax_plant_uptake_nh4   = 9.7_wp / 3600._wp * molar_mass_C            ! µmol / mol / s from Zhu et al. 2017, and references therein
@@ -350,12 +350,12 @@ CONTAINS
     k_plant_uptake_nh4      = 120._wp / one_day                           ! [s-1], Zhu et al. 2016
     k_mic_uptake_no3        = 1000._wp / one_day                          ! [s-1], Zhu et al. 2016
     k_plant_uptake_no3      = 2._wp / one_day                             ! [s-1], Zhu et al. 2016
-    k_mic_uptake_po4        = 10.0_wp * 400._wp / 10000._wp / one_day     ! [s-1], Zhu et al. 2016, and references therein  !temporarily times 10
-    k_plant_uptake_po4      = 12._wp / 100._wp / one_day                  ! [s-1], Zhu et al. 2016, and references therein/ 100._wp
+    k_mic_uptake_po4        = 0.4_wp / one_day                            ! [s-1], Zhu et al. 2016, and references therein              !temporarily times 10, i.e., 10.0_wp * 400._wp / 10000._wp !
+    k_plant_uptake_po4      = 0.12_wp / one_day                           ! [s-1], Zhu et al. 2016, and references therein divided by 100._wp
     f_mic_carrier_po4       = 0.0015_wp                                   ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-    f_plant_carrier_po4     = 0.1_wp / 80._wp                             ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
+    f_plant_carrier_po4     = 0.00125_wp                                  ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     qmax_po4_mineral        = 0.5_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
-    km_adsorpt_mineral_po4  = 0.225_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], 
+    km_adsorpt_mineral_po4  = 0.225_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil] 
 
    ! soil Pi fluxes
     k_weath_mineral       = 0.01_wp / molar_mass_P / 1254._wp / one_year /one_day ! [mol P m-3 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
