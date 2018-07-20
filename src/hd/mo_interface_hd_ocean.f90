@@ -74,7 +74,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':interface_hd_ocean'
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain ::discharge_ocean

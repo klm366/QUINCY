@@ -22,9 +22,9 @@ MODULE mo_jsb_varlist
                                   t_var_metadata, t_list_element,   &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
                                   VARNAME_LEN
-  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, missval, &
-                                  FILETYPE_NC2, tables
+  USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
+  USE mo_jsb_process_class, ONLY: Get_process_name
 
   IMPLICIT NONE
   PRIVATE
@@ -32,12 +32,17 @@ MODULE mo_jsb_varlist
   PUBLIC :: t_jsb_varlist
   PUBLIC :: jsb_add_var, Get_varlist
   PUBLIC :: VARNAME_LEN
+  PUBLIC :: BASIC, MEDIUM, FULL
 
   INTERFACE jsb_add_var
     MODULE PROCEDURE jsb_add_var_list_element_r2d
     MODULE PROCEDURE jsb_add_var_list_element_r3d
     MODULE PROCEDURE jsb_add_var_list_element_r2d_tile
   END INTERFACE jsb_add_var
+
+  ENUM, BIND(C)
+    ENUMERATOR :: BASIC=1, MEDIUM, FULL
+  END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_varlist'
 
@@ -54,8 +59,8 @@ CONTAINS
     IF (.NOT. ASSOCIATED(return_ptr)) THEN
       ALLOCATE(return_ptr)
       CALL jsb_new_var_list(return_ptr, TRIM(name), patch_id, &
-        & loutput=.TRUE., output_type=FILETYPE_NC2, &
-        & lrestart=.TRUE., restart_type=FILETYPE_NC2, table=tables(1))
+        & loutput=.TRUE., &
+        & lrestart=.TRUE., table=tables(1))
     END IF
 
   END FUNCTION Get_varlist
@@ -65,7 +70,7 @@ CONTAINS
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source, &
-    info, verbose, new_element, cdiTimeID                       &
+    info, output_level, verbose, new_element, cdiTimeID         &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -91,6 +96,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
@@ -104,8 +110,10 @@ CONTAINS
     REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
+    CHARACTER(len=:), ALLOCATABLE :: output_level_name
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -117,7 +125,7 @@ CONTAINS
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
@@ -129,14 +137,31 @@ CONTAINS
     var%ptr => var%field(:,:,1,1,1)
     p5 => var%field
 
+    IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
+      ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
+      ! All variables are put into these three catch-all groups
+      groups(1) = 'ALL'
+      groups(2) = 'jsb_all'
+      ! var group jsb_<process>_all
+      groups(3) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all'
+      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+        output_level_name = Get_var_group_name(output_level)
+        groups(4) = 'jsb_all_'//output_level_name ! var group jsb_all_<level>
+        groups(5) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name ! var group jsb_<process>_<level>
+      END IF
+    ELSE
+      ALLOCATE(groups(1))
+      groups(1) = 'ALL'
+    END IF
+
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5, in_groups=groups)
 
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
@@ -164,7 +189,7 @@ CONTAINS
     extra_dim_n, loutput, lcontainer,                            &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source,  &
-    info, verbose, new_element, cdiTimeID                        &
+    info, output_level, verbose, new_element, cdiTimeID          &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -190,6 +215,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER,   OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
@@ -203,8 +229,10 @@ CONTAINS
     REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
+    CHARACTER(len=:), ALLOCATABLE :: output_level_name
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r3d'
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -216,7 +244,7 @@ CONTAINS
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     gdims(1) = hgrid%dims_g(1)
@@ -244,14 +272,31 @@ CONTAINS
     var%ptr => var%field(:,:,:,1,1)
     p5 => var%field
 
-   CALL add_var_list_element_r3d( &
-      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+    IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
+      ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
+      ! All variables are put into these three catch-all groups
+      groups(1) = 'ALL'
+      groups(2) = 'jsb_all'
+      ! var group jsb_<process>_all
+      groups(3) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all'
+      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+        output_level_name = Get_var_group_name(output_level)
+        groups(4) = 'jsb_all_'//output_level_name ! var group jsb_all_<level>
+        groups(5) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name ! var group jsb_<process>_<level>
+      END IF
+    ELSE
+      ALLOCATE(groups(1))
+      groups(1) = 'ALL'
+    END IF
+
+    CALL add_var_list_element_r3d( &
+      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5, in_groups=groups)
 
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
@@ -315,8 +360,9 @@ CONTAINS
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -328,7 +374,7 @@ CONTAINS
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
@@ -336,15 +382,36 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(varlist_name), hgrid%patch%id)
 
+    ALLOCATE(groups(3))
+    groups(1) = 'ALL'
+    groups(2) = 'jsb_all'
+    groups(3) = 'jsb_tile_fractions'
+
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      lmiss=lmiss_loc, missval_r=missval_r_loc)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups)
 
   END SUBROUTINE jsb_add_var_list_element_r2d_tile
+
+  FUNCTION Get_var_group_name(id) RESULT(group_name)
+
+    INTEGER, INTENT(in) :: id
+    CHARACTER(len=:), ALLOCATABLE :: group_name
+
+    SELECT CASE (id)
+    CASE(BASIC)
+      group_name = 'basic'
+    CASE(MEDIUM)
+      group_name = 'medium'
+    CASE(FULL)
+      group_name = 'full'
+    END SELECT
+
+  END FUNCTION
 
 #endif
 END MODULE mo_jsb_varlist

@@ -92,7 +92,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, hd_o, hd_b, hd_r  ! Vertical grids
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_hd_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_memory'
 
     table = tables(1)
 

@@ -17,7 +17,8 @@ MODULE mo_physical_constants_iface
     stbo,            & !< Stephan-Boltzmann constant             [W/(m2 K4)]
     argas,           & !< Molar/universal/ideal gas constant     [J/(K mol)]
     zemiss_def,      & !< Long-wave surface emissivity factor    []
-    rd,              & !< Gas constant                           [J/(K kg)]
+    rd,              & !< Gas constant for dry air               [J/(K kg)]
+    rv,              & !< Gas constant for water vapor           [J/(K*kg)]
     cpd,             & !< Specific heat at constant pressure     [J/(K kg)]
     cvd,             & !< Specific heat at constant volume       [J/(K kg)]
     rhoh2o,          & !< Density of liquid water                [kg/m3]
@@ -30,6 +31,7 @@ MODULE mo_physical_constants_iface
 #ifdef __ICON__
     clw,             & !< Specific heat capacity of liquid water [J/(K kg)]
     ci,              & !< Specific heat capacity of ice          [J/(K kg)]
+    !cs,              & !< Specific heat capacity of snow         [J/(K kg)]
     rhoi,            & !< Density of (sea) ice                   [kg/m3]
     rhos,            & !< Density of snow                        [kg/m3]
     ki,              & !< Heat conductivity of ice               [J/(m s K)]

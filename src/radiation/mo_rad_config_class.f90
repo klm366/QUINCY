@@ -103,7 +103,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
 
@@ -113,12 +113,13 @@ CONTAINS
     ic_filename         = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
-    use_alb_soil_organic_C    = 'none'
+    use_alb_soil_organic_C    = ''
     use_alb_soil_litter       = .FALSE.
     use_alb_soil_scheme       = .FALSE.
-    use_alb_canopy            = .TRUE.
+    use_alb_canopy            = .FALSE.
     albedo_age_weight         = 0.5_wp
 
+    ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
     nml_unit = position_nml('jsb_rad_nml', nml_handler, STATUS=istat)
@@ -126,6 +127,7 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
+    ! Write resulting values in config memory
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename

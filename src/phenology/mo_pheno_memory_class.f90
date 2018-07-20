@@ -19,6 +19,7 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
@@ -35,48 +36,57 @@ MODULE mo_pheno_memory_class
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
-    TYPE(t_jsb_var_real2d)           ::                   &
-      & lai,                        & !< Leaf area index
-      & fract_fpc,                  & !< Foliage projected cover 
-                                      !  (fraction of ground area occupied by the vertical projection of foliage)
-      & fract_fpc_max,              & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
-      & fract_forest,               & !< Forest fraction
-      & growth_phase_SG,            & ! For summergreen only: values are:
-                                      !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
-                                      !    0.0  .. during growth phase (i.e. some weeks after spring event)
-                                      !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
-                                      ! Updated every day by the subroutine "update_growth_phase()".
-      & growth_phase_EG,            & ! For evergreen only: values are:
-                                      !    0.0  .. during growth phase (i.e. some weeks after spring event)
-                                      !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
-                                      ! Updated every day by the subroutine "update_growth_phase()".
-      & growth_phase_CRP,           & ! For extra-tropical crops only: values are:
-                                      !     -2.0  .. during rest phase of winter crops (i.e. from spring to autumn)
-                                      !     -1.0  .. during rest phase of summer crops (i.e. from autumn to spring)
-                                      !      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
-                                      !      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
-                                      !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
-                                      ! Updated every day by the subroutine "update_growth_phase()".
-      & days_since_growth_begin_EG, & ! For summergreen and evergreen only: serves to remember the number of
-                                      ! days elapsed since the growth phase began
-      & days_since_growth_begin_SG, & ! (as real numbers to save it in a stream).
-      & previous_day_NPP_rate,      & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
-                                      ! at previous day, because not known for current day; updated at ..
-                                      ! the beginning of each new day (stream)
-      ! & laiMax_dyn,                 & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
-      !                                 ! coming from JSBACH, but smaller than that value when NPP is negative for more
-      !                                 ! than 1 year. (stream)
-      ! & year_NPP_sum,               & ! This field sums the NPP-rate during the whole year, starting on Jan,1, in the
-      !                                 ! northern hemisphere and at July,1, in the southern hemisphere. A negative value
-      !                                 ! indicates that summation has not yet started.
-      & day_NPP_sum,                & ! sum of NPP since midnight (needed to compute previous_day_NPP_rate(:,:)) [mol(CO2)/m^2]
-      & heat_sum_EG,                & ! Heat sums --- needed for the phenology of summergreens, evergreens and crops.
-      & heat_sum_SG,                & ! Where heat summation has not yet started, "heat_sum" is set to a value < -1.
-      & heat_sum_CRP,               & ! For summer crops heat summation starts with "0".
-      & heat_sum_winter,            & ! For winter crops heat summation starts with EPSILON(1.) and is positive in the
-                                      ! growing period (autumn to spring) and negative during summer. (stream)
-      & chill_days_SG,              & ! Number of chill days --- needed for the phenology of summer- and
-      & chill_days_EG                 ! evergreens (stream)
+    TYPE(t_jsb_var_real2d)           :: &
+      & lai,                            & !< Leaf area index
+      & fract_fpc,                      & !< Foliage projected cover of the pft
+                                          !  (fraction of ground area occupied by the vertical projection of foliage)
+      & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
+      & fract_forest,                   & !< Forest fraction
+      & growth_phase_SG,                & ! For summergreen only: values are:
+                                          !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
+                                          !    0.0  .. during growth phase (i.e. some weeks after spring event)
+                                          !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
+                                          ! Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_EG,                & ! For evergreen only: values are:
+                                          !    0.0  .. during growth phase (i.e. some weeks after spring event)
+                                          !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
+                                          ! Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_CRP,               & ! For extra-tropical crops only: values are:
+                                          !     -2.0  .. during rest phase of winter crops (i.e. from spring to autumn)
+                                          !     -1.0  .. during rest phase of summer crops (i.e. from autumn to spring)
+                                          !      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
+                                          !      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
+                                          !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
+                                          ! Updated every day by the subroutine "update_growth_phase()".
+      & days_since_growth_begin_EG,     & ! For summergreen and evergreen only: serves to remember the number of
+                                          ! days elapsed since the growth phase began
+      & days_since_growth_begin_SG,     & ! (as real numbers to save it in a stream).
+      & previous_day_NPP_pot_rate_ca,   & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
+                                          ! at previous day, because not known for current day; updated at ..
+                                          ! the beginning of each new day (stream)
+      ! & laiMax_dyn,                    & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
+      !                                    ! coming from JSBACH, but smaller than that value when NPP is negative for more
+      !                                    ! than 1 year. (stream)
+      ! & year_NPP_sum,                  & ! This field sums the NPP-rate during the whole year, starting on Jan,1, in the
+      !                                    ! northern hemisphere and at July,1, in the southern hemisphere. A negative value
+      !                                    ! indicates that summation has not yet started.
+      & day_NPP_sum,                    & ! sum of NPP since midnight (needed to compute previous_day_NPP_pot_rate_ca(:,:)) [mol(CO2)/m^2]
+      & heat_sum_EG,                    & ! Heat sums --- needed for the phenology of summergreens, evergreens and crops.
+      & heat_sum_SG,                    & ! Where heat summation has not yet started, "heat_sum" is set to a value < -1.
+      & heat_sum_CRP,                   & ! For summer crops heat summation starts with "0".
+      & heat_sum_winter,                & ! For winter crops heat summation starts with EPSILON(1.) and is positive in the
+                                          ! growing period (autumn to spring) and negative during summer. (stream)
+      & chill_days_SG,                  & ! Number of chill days --- needed for the phenology of summer- and
+      & chill_days_EG,                  & ! evergreens (stream)
+      & veg_fract_correction              ! Factor representing clumpyness of vegetation (for each tile type).
+                                          ! To write it in the output file we define it as 2d even when there is no change
+                                          ! between gridcells as it is in fact a 1d constant for each tile.
+                                          ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
+                                          ! canopy area = veg_fract_correction * tile area.
+                                          ! var (tile area) = veg_fract_correction * var(canopy area).
+                                          ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
+                                          !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
+                                          ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
@@ -114,7 +124,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
 
     ! ---------------------------
     ! Go
@@ -135,47 +145,60 @@ CONTAINS
       &  )                                       &
       & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'lai', mem%lai,                             &
-        & hgrid, surface,                                                 &
-        & t_cf('leaf_area_index', '', ''),                                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
       ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
       ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
 
-      CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                 &
-        & hgrid, surface,                                                 &
-        & t_cf('foliage_projected_cover', '', ''),                                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                       &
+        & hgrid, surface,                                                      &
+        & t_cf('foliage_projected_cover', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,         &
-        & hgrid, surface,                                                 &
-        & t_cf('maximum_fpc', '', ''),                                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,               &
+        & hgrid, surface,                                                      &
+        & t_cf('maximum_fpc', '', ''),                                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'fract_forest', mem%fract_forest,           &
-        & hgrid, surface,                                                 &
-        & t_cf('forest_fraction', '', ''),                                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      CALL jsb_add_var( mem, 'fract_forest', mem%fract_forest,                 &
+        & hgrid, surface,                                                      &
+        & t_cf('forest_fraction', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
+        & hgrid, surface,                                                      &
+        & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=FULL,                                                   &
+        & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
-        CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,            &
+        CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,          &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_SummerGreen', '', ''),                          &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & initval_r=-1.0_wp) ! Start in rest phase for summergreens
 
-        CALL jsb_add_var( mem,'growth_phase_eg', mem%growth_phase_EG,            &
+        CALL jsb_add_var( mem,'growth_phase_eg', mem%growth_phase_EG,          &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_EverGreen', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -203,11 +226,11 @@ CONTAINS
           & prefix, suffix,                                                                 &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'prev_day_npp_rate', mem%previous_day_NPP_rate, &
-          & hgrid, surface,                                                       &
-          & t_cf('previous_day_NPP_rate', '', ''),                                &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-          & prefix, suffix,                                                       &
+        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
+          & hgrid, surface,                                                              &
+          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),                &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &
@@ -238,35 +261,35 @@ CONTAINS
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp)
 
-        CALL jsb_add_var( mem,'heat_sum_sg', mem%heat_sum_SG,                   &
+        CALL jsb_add_var( mem,'heat_sum_sg', mem%heat_sum_SG,                  &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_SG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
 
-        CALL jsb_add_var( mem,'heat_sum_crp', mem%heat_sum_CRP,                 &
+        CALL jsb_add_var( mem,'heat_sum_crp', mem%heat_sum_CRP,                &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_CRP', '', ''),                                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=9999.0_wp)
 
-        CALL jsb_add_var( mem,'heat_sum_winter', mem%heat_sum_winter,           &
+        CALL jsb_add_var( mem,'heat_sum_winter', mem%heat_sum_winter,          &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_winter', '', ''),                                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
 
-        CALL jsb_add_var( mem,'chill_days_eg', mem%chill_days_EG,               &
+        CALL jsb_add_var( mem,'chill_days_eg', mem%chill_days_EG,              &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_EG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
-        CALL jsb_add_var( mem,'chill_days_sg', mem%chill_days_SG,               &
+        CALL jsb_add_var( mem,'chill_days_sg', mem%chill_days_SG,              &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_SG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &

@@ -70,7 +70,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_<PROCESS_NAME_LOWER_CASE>_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_<PROCESS_NAME_LOWER_CASE>_config'
 
     CALL message(TRIM(routine), 'Starting <PROCESS_NAME_LOWER_CASE> configuration')
 

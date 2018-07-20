@@ -13,7 +13,7 @@ MODULE mo_jsb_time
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_time_iface, ONLY: t_datetime, get_date_components, get_time_current, get_time_start, &
-                               is_time_experiment_start, is_time_restart, &
+                               get_time_dt, is_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
                                is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
 
@@ -24,7 +24,8 @@ MODULE mo_jsb_time
   PUBLIC :: init_time
   PUBLIC :: update_time_at_beginloop, update_time_at_endloop
   PUBLIC :: t_datetime
-  PUBLIC :: get_date_components, get_time_current, get_time_start, is_time_experiment_start, &
+  PUBLIC :: get_date_components, get_time_current, get_time_start, get_time_dt, &
+            is_time_experiment_start, is_time_restart, &
             get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: is_newday, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &
             get_year, get_month, &
@@ -61,7 +62,7 @@ CONTAINS
 
     USE mo_jsb_time_iface, ONLY: read_time_namelist, & !, configure_time
                                  configure_time_and_events, &
-                                 get_time_nsteps, get_time_dt, &
+                                 get_time_nsteps, &
                                  get_time_start, get_time_stop
 
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: namelist_filename
@@ -70,7 +71,7 @@ CONTAINS
 
     REAL(wp) :: eps
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
 
     !TODO? currently the time is initalised from the namelist of the first processed model
     !      but then used globally for all models!
@@ -131,7 +132,7 @@ CONTAINS
 !!$    TYPE(t_datetime), INTENT(in) :: end_datetime
 !!$    REAL(wp),         INTENT(in) :: dtime
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
+!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
 !!$
 !!$    number_timesteps = nsteps
 !!$    timestep_length  = dtime
@@ -282,7 +283,7 @@ CONTAINS
 
   INTEGER FUNCTION get_year_at_model_start()
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_year_at_model_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_year_at_model_start'
 
     IF (.NOT. time_initialized) &
       CALL finish(TRIM(routine), 'Time not initialized yet.')

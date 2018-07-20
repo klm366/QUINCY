@@ -7,13 +7,14 @@
 !! @par Revision History
 !! First version                                              by Reiner Schnur (2013-02-06)
 !! New subroutines and some adaptations for jsb4 standalone   by Julia Nabel (2016-02-20)
+!! Added ltimer although this doesn't really belong here      by Reiner Schnur (2018-06-04)
 !!
 MODULE mo_jsb_time_iface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: finish, message, message_text
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
   USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
@@ -32,8 +33,9 @@ MODULE mo_jsb_time_iface
   USE mo_ha_dyn_config,          ONLY: ha_dyn_config
   USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
     &                                  calculate_time_interpolation_weights
-  USE mo_mpi_phy_config,         ONLY: mpi_phy_config, mpi_phy_tc, dt_zero
+  USE mo_echam_phy_config,       ONLY: echam_phy_tc, dt_zero
   USE mo_master_config,          ONLY: isRestart
+  USE mo_run_config,             ONLY: l_timer_host => ltimer
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
@@ -42,6 +44,7 @@ MODULE mo_jsb_time_iface
   USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date, next_date, lstart, lresume, l_trigradm1
   USE mo_interpo,         ONLY: wgt1, wgt2, nmw1, nmw2
   USE mo_semi_impl,       ONLY: eps
+  USE mo_control,         ONLY: l_timer_host => ltimer
 
 #ifdef STANDALONE
   USE mo_time_event,      ONLY: io_time_event, TIME_INC_DAYS, TIME_INC_MONTHS, TRIG_FIRST, TRIG_LAST
@@ -68,6 +71,7 @@ MODULE mo_jsb_time_iface
   PUBLIC :: get_date_components
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
+  PUBLIC :: l_timer_host
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time_iface'
 
@@ -88,7 +92,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(in) :: filename
     LOGICAL, INTENT(IN) :: restart_jsbach
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_time_namelist'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_time_namelist'
 
 #ifdef STANDALONE
     INTEGER :: nml_handler, nml_unit, istat
@@ -146,16 +150,16 @@ CONTAINS
     IF (my_process_is_mpi_parallel()) THEN
     ! jsb3 text: The following are used from ECHAM5 modules and ... need
     ! to be broadcast if running in standalone mode so that the modules can use them
-      CALL p_bcast(no_cycles, p_io)
-      CALL p_bcast(dt_start, p_io)
-      CALL p_bcast(dt_resume, p_io)
-      CALL p_bcast(dt_stop, p_io)
-      CALL p_bcast(no_days, p_io)
-      CALL p_bcast(no_steps, p_io)
-      CALL p_bcast(delta_time, p_io)
-      CALL p_bcast_event(putdata, p_io)
-      CALL p_bcast_event(trigfiles, p_io)
-      CALL p_bcast_event(putrerun, p_io)
+      CALL p_bcast(no_cycles, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_start, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_resume, p_io, comm=mpi_comm)
+      CALL p_bcast(dt_stop, p_io, comm=mpi_comm)
+      CALL p_bcast(no_days, p_io, comm=mpi_comm)
+      CALL p_bcast(no_steps, p_io, comm=mpi_comm)
+      CALL p_bcast(delta_time, p_io, comm=mpi_comm)
+      CALL p_bcast_event(putdata, p_io, comm=mpi_comm)
+      CALL p_bcast_event(trigfiles, p_io, comm=mpi_comm)
+      CALL p_bcast_event(putrerun, p_io, comm=mpi_comm)
     ENDIF
 #endif
 
@@ -171,7 +175,7 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':configure_time_and_events'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':configure_time_and_events'
     INTEGER :: IO_timestep, istep
 
 #ifdef STANDALONE
@@ -201,7 +205,7 @@ CONTAINS
 #ifndef __ICON__
     USE mo_time_control, ONLY: delta_time
 #endif
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_dt'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_dt'
     REAL(wp) :: ztime
 
 #ifdef __ICON__
@@ -233,7 +237,7 @@ CONTAINS
     USE mo_time_conversion, ONLY: TC_get
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_nsteps'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_nsteps'
 
 #ifndef __ICON__
     INTEGER :: start_day, start_second, stop_day, stop_second
@@ -341,8 +345,8 @@ CONTAINS
     INTEGER          :: dt_rad
 
     current = get_time_current()
-    IF (mpi_phy_tc(model_id)%dt_rad > dt_zero) THEN
-      dt_rad = getTotalSecondsTimeDelta(mpi_phy_tc(model_id)%dt_rad, current)
+    IF (echam_phy_tc(model_id)%dt_rad > dt_zero) THEN
+      dt_rad = getTotalSecondsTimeDelta(echam_phy_tc(model_id)%dt_rad, current)
       ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(current), dt_rad) == 0
     ELSE
       ltrig_rad_m1 = .FALSE.
@@ -369,7 +373,8 @@ CONTAINS
   LOGICAL FUNCTION is_time_restart()
 
 #ifdef __ICON__
-    is_time_restart = isRestart()
+    ! In ICON, the first computed time step is one time step after the restart date
+    is_time_restart = .NOT. is_time_experiment_start() .AND. (get_time_previous() == time_config%tc_startdate)
 #else
     is_time_restart = lresume
 #endif
@@ -384,7 +389,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':start_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':start_timestep'
 
 #ifdef __ICON__
     !
@@ -412,7 +417,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finish_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finish_timestep'
     
 #ifdef __ICON__
     WRITE(message_text,'(a,i10)') 'JSBACH: Finish TIME STEP n: ', istep
@@ -516,7 +521,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: w1, w2
     INTEGER, INTENT(out)  :: n1, n2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_interpolation_weights'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_interpolation_weights'
     
 #ifdef __ICON__
     TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights
@@ -612,13 +617,13 @@ CONTAINS
     ENDIF
        
     IF (p_parallel) THEN
-       CALL p_bcast(istep, p_io)
-       CALL p_bcast(IO_timestep, p_io)
+       CALL p_bcast(istep, p_io, comm=mpi_comm)
+       CALL p_bcast(IO_timestep, p_io, comm=mpi_comm)
        IF (lresume) THEN
-          CALL p_bcast(forecast_date, p_io)
-          CALL p_bcast(forecast_time, p_io)
-          CALL p_bcast(verification_date, p_io)
-          CALL p_bcast(verification_time, p_io)
+          CALL p_bcast(forecast_date, p_io, comm=mpi_comm)
+          CALL p_bcast(forecast_time, p_io, comm=mpi_comm)
+          CALL p_bcast(verification_date, p_io, comm=mpi_comm)
+          CALL p_bcast(verification_time, p_io, comm=mpi_comm)
        ENDIF
     ENDIF
        

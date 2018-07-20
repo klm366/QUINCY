@@ -17,7 +17,7 @@ MODULE mo_sse_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: relative_humidity, init_soil_temperature, &
+  PUBLIC :: relative_humidity_soil, init_soil_temperature, &
     & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_snow_temperature, &
     & calc_soiltemp_old, Get_liquid_max
 
@@ -198,24 +198,25 @@ CONTAINS
 
   END FUNCTION calc_thermal_conductivity
 
-  REAL(wp) ELEMENTAL FUNCTION relative_humidity(ws, fc)
+  REAL(wp) ELEMENTAL FUNCTION relative_humidity_soil(ws, fc)
 
     USE mo_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in) :: &
-      ws, & !< moisture content
-      fc    !< field capacity (maximum moisture content)
+      ws, & !< moisture content [m], e.g. of uppermost soil layer
+      fc    !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
 
     REAL(wp) :: moisture
 
     moisture = MIN(ws, fc)
     IF (moisture > 0._wp) THEN
-      relative_humidity = 0.5_wp * (1._wp - COS(moisture * pi / fc))
+      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and lower fc
+                                                                     ! Note, fc has to be  >= than moisture!
     ELSE
-      relative_humidity = 0._wp
+      relative_humidity_soil = 0._wp
     END IF
 
-  END FUNCTION relative_humidity
+  END FUNCTION relative_humidity_soil
 
   !>
   !
@@ -264,7 +265,7 @@ CONTAINS
 
     REAL(wp), PARAMETER :: cmid_offset = 0.07_wp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_temperature'
 
     ndim  = SIZE(tsoil,1)
     nsoil = SIZE(tsoil,2)

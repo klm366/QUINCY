@@ -16,10 +16,10 @@ MODULE mo_rad_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: &
-    & calc_radiation_surface_net, &
-    & calc_par, calc_fapar_lai_cl, &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, &
+  PUBLIC ::                        &
+    & calc_radiation_surface_net,  &
+    & calc_par,                    &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
     & calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
@@ -46,22 +46,22 @@ CONTAINS
     & lw_net         & ! output, optional
     & )
 
-    USE mo_phy_schemes,          ONLY: lwnet_from_lwdown
+    USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
     REAL(wp),  INTENT(in) :: &
-      & swvis_down, &
-      & swnir_down, &
-      & alb_vis,    &
-      & alb_nir,    &
-      & lw_down,    &
+      & swvis_down,          &
+      & swnir_down,          &
+      & alb_vis,             &
+      & alb_nir,             &
+      & lw_down,             &
       & t
 
     REAL(wp),  INTENT(out) :: &
       & rad_net
     REAL(wp),  INTENT(out), OPTIONAL :: &
-      & swvis_net, & ! net shortwave radiation in visible range
-      & swnir_net, & ! net shortwave radiation in near infrared range
-      & sw_net,    &
+      & swvis_net,                      & ! net shortwave radiation in visible range
+      & swnir_net,                      & ! net shortwave radiation in near infrared range
+      & sw_net,                         &
       & lw_net
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
@@ -85,156 +85,103 @@ CONTAINS
   END SUBROUTINE calc_radiation_surface_net
 
   ELEMENTAL SUBROUTINE calc_par( &
-     & dtime,                    & ! in
-     & ncanopy,                  & ! in
-     & icanopy,                  & ! in
-     & use_alb_veg_simple,       & ! in
-     & par,                      & ! in
-     & alb_vis_soil,             & ! in
-     & lai,                      & ! in
-     & cos_zenith_angle,         & ! in
-     & frac_par_direct,          & ! in
-     & canopy_bound_lai,         & ! in
-     & canopy_bound_lai_delta,   & ! in
-     & B4_layer_above,           & ! inout
-     & par_down_mol,             & ! output, used outside for photosynthesis
-     & soil_reflectivity_par,    & ! output, R: could also be local as it is not used outside in the moment,
-                                   ! however I want it in the model output and thus it has to be updated by returning it
-     & faPAR_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
-                                   ! however I want it in the model output and thus it has to be updated by returning it
-     & lai_cl,                   & ! output, R: could also be local as it is not used outside in the moment,
-                                   ! however I want it in the model output and thus it has to be updated by returning it
-     & apar_per_lai_cl  )          ! output, used outside for assimilation
+    & ncanopy,                  & ! in
+    & icanopy,                  & ! in
+    & use_alb_veg_simple,       & ! in
+    & par,                      & ! in
+    & alb_vis_soil,             & ! in
+    & lai,                      & ! in
+    & cos_zenith_angle,         & ! in
+    & fract_par_direct,         & ! in
+    & canopy_bound_lai,         & ! in
+    & canopy_bound_lai_delta,   & ! in
+    & B4_layer_above,           & ! inout
+    & par_down_mol,             & ! output, used outside for photosynthesis
+    & soil_reflectivity_par,    & ! output, R: could also be local as it is not used outside in the moment,
+                                  ! however I want it in the model output and thus it has to be updated by returning it
+    & faPAR_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
+                                  ! however I want it in the model output and thus it has to be updated by returning it
+    & lai_cl,                   & ! output, R: could also be local as it is not used outside in the moment,
+                                  ! however I want it in the model output and thus it has to be updated by returning it
+    & apar_per_lai_cl  )          ! output, used outside for assimilation
 
-      ! Use declarations
-      USE mo_rad_constants,  ONLY: Epar,                  & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
-                                   SoilReflectivityParMin   ! Minimum soil reflectivity in PAR region
+    ! Use declarations
+    USE mo_rad_constants,  ONLY: &
+      & Epar,                    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
+      & SoilReflectivityParMin,  & ! Minimum soil reflectivity in PAR region
+      & FcMax, FcMin, ZenithMinPar, LaiMin, LaiLimit
 
-      ! Arguments
-      INTEGER,  INTENT(in)     :: ncanopy, &
-                                  icanopy
+    ! Arguments
+    INTEGER,  INTENT(in)     :: ncanopy, &
+                                icanopy
 
-      LOGICAL,  INTENT(in)     :: use_alb_veg_simple
+    LOGICAL,  INTENT(in)     :: use_alb_veg_simple
 
-      REAL(wp),  INTENT(in)    :: dtime,                 &  ! time step in seconds e.g. for one day=86400
-                                  par,                   &
-                                  alb_vis_soil,          &
-                                  lai,                   &
-                                  cos_zenith_angle,      &
-                                  frac_par_direct,       &
-                                  canopy_bound_lai,      &
-                                  canopy_bound_lai_delta
+    REAL(wp),  INTENT(in)    ::                        &
+                                par,                   &
+                                alb_vis_soil,          &
+                                lai,                   &
+                                cos_zenith_angle,      &
+                                fract_par_direct,      &
+                                canopy_bound_lai,      &
+                                canopy_bound_lai_delta
 
-      REAL(wp),  INTENT(inout) :: B4_layer_above
+    REAL(wp),  INTENT(inout) :: B4_layer_above
 
-      REAL(wp),  INTENT(out)   :: par_down_mol,          &
-                                  soil_reflectivity_par, &
-                                  faPAR_cl,              &
-                                  lai_cl,                &
-                                  apar_per_lai_cl
+    REAL(wp),  INTENT(out)   :: par_down_mol,          &
+                                soil_reflectivity_par, &
+                                faPAR_cl,              &
+                                lai_cl,                &
+                                apar_per_lai_cl
 
+    REAL(wp) :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
+                EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
+                ZP0, EKL0, EHL0, X0, X1, X2, F    ! These variables do not vary per grid cell
 
-      ! ---------------------------
-      ! Go
+    REAL(wp), PARAMETER :: OMEGA = 0.12_wp   ! single leaf scattering albedo
+
+    ! ---------------------------
+    ! Go
       
-      ! Expresse radiation in  mol(photons)/(m^2 s)
-      par_down_mol = par / Epar
+    ! Expresse radiation in  mol(photons)/(m^2 s)
+    par_down_mol = par / Epar
 
-      ! Compute soil reflectivity of PAR
-      IF (.NOT. use_alb_veg_simple) THEN
-        ! soil reflectivity is set to soil albedo of the visible range
-        soil_reflectivity_par = alb_vis_soil
+    ! Compute soil reflectivity of PAR
+    IF (.NOT. use_alb_veg_simple) THEN
+      ! soil reflectivity is set to soil albedo of the visible range
+      soil_reflectivity_par = alb_vis_soil
 !        soil_reflectivity_par = alb_background ! USE ONLY FOR COMPARISON WITH JSBACH3
-      ELSE
-        ! soil reflectivity is derived from background albedo of the whole solar spectrum (compare eq. (122) in Knorr)
-        soil_reflectivity_par = MAX(0.92_wp * alb_vis_soil - 0.015_wp, SoilReflectivityParMin)
+    ELSE
+      ! soil reflectivity is derived from background albedo of the whole solar spectrum (compare eq. (122) in Knorr)
+      soil_reflectivity_par = MAX(0.92_wp * alb_vis_soil - 0.015_wp, SoilReflectivityParMin)
 !        soil_reflectivity_par = MAX(0.92_wp * alb_background - 0.015_wp, SoilReflectivityParMin)  ! USE ONLY FOR COMPARISON WITH JSBACH3
-      END IF
+    END IF
 
-      CALL calc_fapar_lai_cl(ncanopy,                &
-                             icanopy,                &
-                             lai,                    &
-                             soil_reflectivity_par,  &
-                             cos_zenith_angle,       &
-                             frac_par_direct,        &
-                             canopy_bound_lai,       &
-                             canopy_bound_lai_delta, &
-                             B4_layer_above,         & ! <- inout
-                             faPAR_cl,               & ! <- out
-                             lai_cl  )                 ! <- out
+    ! Initialize ABSORBED PAR PER LEAF AREA,  IF cos_zenith_angle<1e-3
+    ! Spread LAI equally around the three layers
+    faPAR_cl = 0._wp
+    apar_per_lai_cl = 0._wp
+    lai_cl   = lai * canopy_bound_lai_delta
+    lai_cl   = MAX(lai_cl, LaiMin) ! ensure minimum LAI
 
-    ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
-    ! par and fraction of absorbed PAR
-    apar_per_lai_cl = par_down_mol * faPAR_cl / (MAX(lai_cl,1.e-10_wp))
+    ! IF (cos_zenith_angle < ZenithMinPar) THEN ! do not calculate PAR for zenith angles below ZenithMinPar (0.001)
+    !   RETURN
+    ! ELSE
+    !   IF (icanopy > 1) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+    !     B4 = B4_layer_above                 !    with the second level use level above...
+    !   ENDIF
+    ! END IF
 
-   END SUBROUTINE calc_par
+    ! Compute "fractional vegetation cover" per grid cell
+    ! (not the same as fractional cover in JSBACH!)
+    IF (lai < LaiLimit) THEN
+      FC = lai/LaiLimit * FcMax
+    ELSE
+      FC = FcMax
+    END IF
+    FC = MAX(FC, FcMin)
 
-
-   ELEMENTAL SUBROUTINE calc_fapar_lai_cl( &
-     & ncanopy,                & ! in
-     & icanopy,                & ! in
-     & lai,                    & ! in
-     & soil_reflectivity_par,  & ! in
-     & cos_zenith_angle,       & ! in
-     & frac_par_direct,        & ! in
-     & canopy_bound_lai,       & ! in
-     & canopy_bound_lai_delta, & ! in
-     & B4_layer_above,         & ! inout
-     & faPAR_cl,               & ! out
-     & lai_cl )                  ! out
-
-     ! Use declarations
-     USE mo_rad_constants,   ONLY: FcMax, FcMin, ZenithMinPar, LaiMin, LaiLimit
-
-     ! Arguments
-     INTEGER,  intent(in)    :: ncanopy,                & ! Number of canopy layers (constant)
-                                icanopy                   ! Actual numer of the canopy layer.  (Varies only for each canopy layer.)
-
-     REAL(wp), intent(in)    :: lai,                    & ! Total LAI. (Varies only per grid cell.)
-                                soil_reflectivity_par,  & ! Soil albedo. (Varies only per grid cell.)
-                                cos_zenith_angle,       & ! Cosine of solar zenith angle. (Varies only per grid cell.)
-                                frac_par_direct,        & ! Direct (meaning in contrast to diffuse) part of total Irradiance (e.g. 0.8)
-                                                          ! (Varies only per grid cell.)
-                                canopy_bound_lai,       & ! Canopy layer border in units of LAI.
-                                                          ! (Varies only for each canopy layer, e.g. (0, 1/3, 2/3, 1).)
-                                canopy_bound_lai_delta    ! Difference between this canopy_bound_lai and the one before.
-                                                          ! (Varies only with each canopy layer.)
-     REAL(wp), intent(inout) :: B4_layer_above
-
-     REAL(wp), intent(out)   :: faPAR_cl, & ! Fraction of absorbed PAR per leaf area (Varies per grid cell and for each canopy layer.)
-                                lai_cl      ! LAI. (Varies per grid cell and for each canopy layer.)
-
-     ! Local variables
-     REAL(wp)            :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
-                            EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
-                            ZP0, EKL0, EHL0, X0, X1, X2, F    ! These variables do not vary per grid cell
-
-     REAL(wp), PARAMETER :: OMEGA = 0.12_wp   ! single leaf scattering albedo
-
-     ! ---------------------------
-     ! Go
-
-     ! initialize output variables
-     lai_cl   = 0._wp
-     faPAR_cl = 0._wp
-
-     ! Compute "fractional vegetation cover" per grid cell
-     ! (not the same as fractional cover in JSBACH!)
-
-     IF (lai< LaiLimit) THEN
-        FC = lai/LaiLimit  * FcMax
-     ELSE
-        FC = FcMax
-     END IF
-     FC = MAX(FC, FcMin)
-
-     ! COMPUTE ABSORBED PAR PER LEAF AREA (!) AND lai PARTITIONING
-     ! Initialize ABSORBED PAR PER LEAF AREA,  IF cos_zenith_angle<1e-3
-     ! Spread LAI equally around the three layers
-
-     faPAR_cl = 0._wp
-     lai_cl   = lai * canopy_bound_lai_delta
-     lai_cl   = MAX(lai_cl, LaiMin) ! ensure minimum LAI
+    ! COMPUTE ABSORBED PAR PER LEAF AREA (!) AND lai PARTITIONING
 
      !--------------------------------------------------------------------
      ! The Absorbed Par per laef Area which is used later for the Net Assimilation,
@@ -338,8 +285,8 @@ CONTAINS
         ! k = 0.5/mu
         !----------------------------------
         K0 = 0.5_wp / cos_zenith_angle
-        IF (K0.EQ.ZH)  K0 = K0 + 1E-12_wp
-        IF (K0.EQ.-ZH) K0 = K0 + 1E-12_wp
+        IF (K0 == ZH)  K0 = K0 + 1.E-12_wp
+        IF (K0 == -ZH) K0 = K0 + 1.E-12_wp
         !--------------------------------------------------------------
         ! denominator of q1 and q2
         !--------------------------------------------------------------
@@ -382,41 +329,42 @@ CONTAINS
         ! => F*RPAR = Rd + q1*R0
         ! i.e. calculation takes RPAR=1
         !-----------------------------------------------------------
-        F = 1._wp - frac_par_direct + Q1 * frac_par_direct
+        F = 1._wp - fract_par_direct + Q1 * fract_par_direct
         !-------------------------------------------------------------
         ! B1*RPAR = B1, B2*RPAR = B2, B4*RPAR = R(0) + Rdown(0) - Rup(0)
         !  B1 = + ( eta*R0 - (Rd+q1*R0) * gamma2 )/(gamma1 - gamma2)
         !------------------------------------------------------------
-        B1 = (X2 * frac_par_direct - F * X0) / (X1 - X0)
+        B1 = (X2 * fract_par_direct - F * X0) / (X1 - X0)
         !-----------------------------------------------------------
         !  B2 = - ( eta*R0 - (Rd+q1*R0) * gamma1 )/(gamma1 - gamma2)
         !     = eta*R0/(gamma2-gamma1) + (Rd+q1*R0) / (1-gamma2/gamma1)
         !  Note: the second form is used to avoid compiler-dependent ambiguity in the
         !        result of gamma1/(gamma1-gamma2) if gamma1 = infinity
         !-----------------------------------------------------------
-        B0 = X2 * frac_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
+        B0 = X2 * fract_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
         !-----------------------------------------------------------
         !  R(l)+Rdown-Rup = (1-q1-q2)* R0*EXP(-kl) + (1-p1)* B1*EXP(hl) + (1-p2)* B2*EXP(-hl)
         !----------------------------------------------------------------------------
-        B4 = (1._wp - Q0 - Q1) * frac_par_direct &
-             + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
-     ENDIF ! cos_zenith_angle
+        B4 =   (1._wp - Q0 - Q1) * fract_par_direct &
+          &  + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
 
-     !------------------------------------------------------------
-     ! Only Layers-1, i.e. except the lower boundary calculation
-     !------------------------------------------------------------
+      END IF ! cos_zenith_angle
 
-     IF (B4_layer_above .NE. 7777777) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
-        B4 = B4_layer_above                 !    with the second level use level above...
-     ENDIF
+        ! IF (icanopy < ncanopy) THEN
+           !------------------------------------------------------------
+           ! Only Layers-1, i.e. except the lower boundary calculation
+           !------------------------------------------------------------
+      IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+        B4 = B4_layer_above                  !    with the second level use level above...
+      ENDIF
 
-     IF (cos_zenith_angle .GE. ZenithMinPar) THEN  ! do not calculate PAR for zenith angles below ZenithMinPar
-        IF (icanopy .LT. ncanopy) THEN
+      IF (cos_zenith_angle .GE. ZenithMinPar) THEN  ! do not calculate PAR for zenith angles below ZenithMinPar
+        IF (icanopy < ncanopy) THEN
            !----------------------------------------------------------------------------
            ! p2=1/p1
            !----------------------------------------------------------------------------
            ZP0 = 1._wp / ZP1
-           !----------------------------------------------------------------------------
+          !----------------------------------------------------------------------------
            ! EXP(-k*l/fc)
            ! with l=LAI*canopy_bound_lai, i.e. l is element of [0,LAI], i.e. 0,LAI/3,2LAI/3,LAI
            !----------------------------------------------------------------------------
@@ -430,7 +378,7 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kl)+(1-p1)*B1*EXP(hl)+(1-p2)*B2*EXP(-hl)
            !  i.e. X0*RPAR = above
            !----------------------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL0 * frac_par_direct &
+           X0 = (1._wp - Q0 - Q1) * EKL0 * fract_par_direct &
                 + (1._wp - ZP1) * B1 / EHL0 &
                 + (1._wp - ZP0) * B0 * EHL0
            !----------------------------------------------------------------
@@ -455,7 +403,7 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kLAI)+(1-p1)*B1*EXP(hLAI)+(1-p2)*B2*EXP(-hLAI)
            !  i.e. X0*RPAR = above for the lower boundary
            !------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL * frac_par_direct &
+           X0 = (1._wp - Q0 - Q1) * EKL * fract_par_direct &
                 + (1._wp - ZP1) * B1 / EHL &
                 + (1._wp - ZP0) * B0 * EHL          ! these variables do not change with canopy level
            !------------------------------------------------------------------
@@ -472,20 +420,20 @@ CONTAINS
      ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
      ! division is made outside FfaPAR_clL and is still the old l ???
      !------------------------------------------------------------
-
      IF (cos_zenith_angle .GE. ZenithMinPar) THEN
-        faPAR_cl=faPAR_cl*FSHD
-     ENDIF
+       faPAR_cl = faPAR_cl * FSHD
+     END IF
 
-     RETURN
+    ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
+    ! par and fraction of absorbed PAR
+    apar_per_lai_cl = par_down_mol * faPAR_cl / (MAX(lai_cl, 1.e-10_wp))
 
-   END SUBROUTINE calc_fapar_lai_cl
-  !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  END SUBROUTINE calc_par
+
   !
   PURE ELEMENTAL SUBROUTINE calc_alb_lwtr( &
-    & l_day,       &
-    & alb_lwtr     &
+    & l_day,                               &
+    & alb_lwtr                             &
     & )
 
     ! Use declarations
@@ -580,12 +528,12 @@ CONTAINS
 
     ! Arguments
     LOGICAL,  INTENT(in)    :: &
-      & l_day          
+      & l_day
     REAL(wp), INTENT(in)    :: &
       & t
     REAL(wp), INTENT(inout) :: &
-      & alb_vis, & ! Albedo of canopy in the VIS range without snow cover.
-      & alb_nir    ! Albedo of canopy in the NIR range without snow cover.
+      & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
+      & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
 
     ! ---------------------------
     ! Go
@@ -600,10 +548,10 @@ CONTAINS
        alb_vis = AlbedoGlacierVisMax
        alb_nir = AlbedoGlacierNirMax
     ELSE
-       alb_vis = AlbedoGlacierVisMin + &
+       alb_vis = AlbedoGlacierVisMin +                                  &
             (tmelt - t) * (AlbedoGlacierVisMax - AlbedoGlacierVisMin) / &
             TempAlbedoGlacierMax
-       alb_nir = AlbedoGlacierNirMin + &
+       alb_nir = AlbedoGlacierNirMin +                                  &
             (tmelt - t) * (AlbedoGlacierNirMax - AlbedoGlacierNirMin) / &
              TempAlbedoGlacierMax
     END IF
@@ -619,7 +567,7 @@ CONTAINS
   ! boxC_litter_green_ag and boxC_slow (canopy) of all tiles and builds a whole grid cell average. (This is done in subroutine update_albedo.
   ! Note, the glacier tile implementation of the scheme is arbitary as JSBACH3 could never handle a glacier tile.) Then:
   ! From boxC_slow an albedo reduction may be calculated for the soil (linear or log).
-  ! From Cpool_litter_green_ag the albedo of litter may be calculted (linear).
+  ! From c_litter_green_ag/c_ag_sum_1 the albedo of litter may be calculted (linear).
   ! Then soil and litter albedos may be summed up according to the litter view fraction.
   ! However, the JSBACH3 scheme is not useable for the new JSBACH4 concept of child tiles. To keep the JSBACH3 concept in JSBACH4
   ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful albedo.
@@ -635,8 +583,8 @@ CONTAINS
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
-    & Cpool_litter_green_ag,     &
-    & Cpool_slow,                &
+    & c_ag_sum_1,                &
+    & c_bg_sum,                  &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
     & alb_background,            &
@@ -650,23 +598,22 @@ CONTAINS
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for alb_vis_mineralsoil
 
     ! Arguments
-    LOGICAL,      INTENT(in)    :: l_day
-    LOGICAL,      INTENT(in)    :: use_alb_mineralsoil_const
-    CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
-    LOGICAL,      INTENT(in)    :: use_alb_soil_litter
-
-    REAL(wp),     INTENT(in)    :: Cpool_litter_green_ag, & 
-                                   Cpool_slow,            &
-                                   SpecificLeafArea_C,    &
-                                   AlbedoLitterVIS,       & 
-                                   alb_background
-   
-    REAL(wp),     INTENT(inout) ::                        &
-                                   alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                                                ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
-                                   alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
-                                   alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-                                   alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+    LOGICAL,          INTENT(in)  :: l_day
+    LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
+    CHARACTER(LEN=*), INTENT(in)  :: use_alb_soil_organic_C
+    LOGICAL,          INTENT(in)  :: use_alb_soil_litter
+    REAL(wp),         INTENT(in)  :: &
+      & c_ag_sum_1,         &
+      & c_bg_sum,           &
+      & SpecificLeafArea_C, &
+      & AlbedoLitterVIS,    &
+      & alb_background
+    REAL(wp),         INTENT(inout) :: &
+      & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
+                                 ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
+      & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
+      & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
+      & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
 
 
     ! Local variables
@@ -688,7 +635,7 @@ CONTAINS
     ! Go
 
     IF (.NOT. l_day) RETURN
-    
+
     ! use constant mineral soil albedos?
     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
        alb_vis_mineralsoil = AlbedoSoilConstVis
@@ -711,11 +658,11 @@ CONTAINS
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
-      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(Cpool_slow,Soil_C_min)
-      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(Cpool_slow,Soil_C_min)
+      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_bg_sum,Soil_C_min)
+      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_bg_sum,Soil_C_min)
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.1_wp)
+      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.2_wp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,
@@ -730,7 +677,7 @@ CONTAINS
 
     ! albedo of litter on soil
     IF(use_alb_soil_litter) THEN
-      litter_area = Cpool_litter_green_ag * specificLeafArea_C
+      litter_area = c_ag_sum_1 * specificLeafArea_C
       alb_vis_litter = litter_area * AlbedoLitterVIS
 
       IF (litter_area <= EPSILON(1._wp)) THEN
@@ -816,7 +763,7 @@ CONTAINS
     alb_nir_snow_temp = 0.0_wp
     alb_vis_snow      = 0.0_wp
     alb_nir_snow      = 0.0_wp
-    
+
     ! ---------------------------
     ! Go
 
@@ -876,8 +823,8 @@ CONTAINS
     & fract_fpc_max,      & ! in
     & cos_zenith_angle,   & ! in
     & StemArea,           & ! in
-    & sky_view_fract,     & ! out
-    & sky_view_fract_stem & ! out
+    & sky_view_fract,     & ! inout
+    & sky_view_fract_stem & ! inout
     & )
 
     ! Use declarations
@@ -889,9 +836,10 @@ CONTAINS
                              fract_fpc_max,    & ! maximum foliage projected cover
                              cos_zenith_angle, & ! cosinus of zenith angle of incoming radiation
                              StemArea
-    REAL(wp), INTENT(out) :: sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
-                                                 ! (Falling with rising LAI.)
-                             sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
+    REAL(wp), INTENT(inout) :: &
+      & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
+                            ! (Falling with rising LAI.)
+      & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
 
     ! ---------------------------
     ! Go
@@ -956,7 +904,7 @@ CONTAINS
       & alb_vis_nostems, & ! albedo vis of surface without considering the snow cover
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
-      
+
     ! ---------------------------
     ! Go
 

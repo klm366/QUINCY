@@ -42,7 +42,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':seb_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init'
 
     dsl4jsb_Real2D_onDomain :: &
       & F_pseudo_soil_temp,    &
@@ -74,7 +74,7 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':seb_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -98,7 +98,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':seb_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init_ic'
 
     model => get_model(tile%owner_model_id)
 

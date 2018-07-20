@@ -82,10 +82,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_soil_temp_and_hydro::return_ptr)
-
-    return_ptr%name = 'soil_temperature'
-    return_ptr%process_id = SSE_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='soil_temperature', process_id=SSE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_temperature
   
@@ -101,10 +98,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_soil_properties::return_ptr)
-
-    return_ptr%name = 'soil_properties'
-    return_ptr%process_id = SSE_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='soil_properties', process_id=SSE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_properties
   
@@ -193,7 +187,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_temperature'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -217,9 +211,6 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
-
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
     ! Get reference to variables for current block
     !
@@ -464,7 +455,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_temperature'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -535,13 +526,17 @@ CONTAINS
 
     ! Locally allocated vectors
     !
+    dsl4jsb_Real3D_onChunk :: &
+      & fract_water,           &
+      & fract_ice
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     INTEGER  :: iblk, ics, ice, nc
     INTEGER  :: nsoil
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -595,29 +590,38 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
+      ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
+      WHERE (soil_depth_sl(:,:) > 0._wp)
+        fract_water(:,:) = dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl) / soil_depth_sl(:,:)
+        fract_ice  (:,:) = dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:)
+      ELSE WHERE
+        fract_water(:,:) = 0._wp
+        fract_ice  (:,:) = 0._wp
+      END WHERE
       vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
-        &                             SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
-        &                                     fract_org_sl(:,:)                                                  , &
-        & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
-        & MERGE(dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:), 0._wp, soil_depth_sl(:,:) > 0._wp), &
-        &                                     soil_depth_sl(:,:)                                                 , &
-        &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
+        &                        SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
+        &                                fract_org_sl(:,:)                                                  , &
+        &                                fract_water(:,:), &
+        &                                fract_ice  (:,:), &
+        &                                soil_depth_sl(:,:)                                                 , &
+        &                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         & )
+      DEALLOCATE(fract_water, fract_ice)
     ELSE
       vol_heat_cap_sl(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
     ENDIF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       heat_cond_sl (:,:) = calc_thermal_conductivity( &
-        &                             SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl)                                                         , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl)                                                          , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
-        &       dsl4jsb_var3D_onChunk(HYDRO_, vol_field_cap_sl)                                                  , &
-        &                                     fract_org_sl(:,:)                                                  , &
-        &                                     soil_depth_sl(:,:)                                                 , &
-        &                             SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
+        &                        SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, w_soil_sl)                                                         , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, w_ice_sl)                                                          , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, vol_porosity_sl)                                                   , &
+        &  dsl4jsb_var3D_onChunk(HYDRO_, vol_field_cap_sl)                                                  , &
+        &                                fract_org_sl(:,:)                                                  , &
+        &                                soil_depth_sl(:,:)                                                 , &
+        &                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         & )
     ELSE
       heat_cond_sl(:,:) = SPREAD(heat_cond(:), DIM=2, ncopies=nsoil)
@@ -677,7 +681,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_properties'
 
     INTEGER :: iblk, ics, ice, nc
 

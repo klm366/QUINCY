@@ -100,10 +100,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>::return_ptr)
-
-    return_ptr%name = '<PROCESS_NAME_LOWER_CASE>_<TASK>'
-    return_ptr%process_id = <PROCESS_NAME_UPPER_CASE>
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='<PROCESS_NAME_LOWER_CASE>_<TASK>', process_id=<PROCESS_NAME_UPPER_CASE>, owner_model_id=model_id)
 
   END FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>
   
@@ -142,7 +139,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_<PROCESS_NAME_LOWER_CASE>'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_<PROCESS_NAME_LOWER_CASE>'
 
 
     ! Declare process memories
@@ -195,7 +192,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_<PROCESS_NAME_LOWER_CASE>'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_<PROCESS_NAME_LOWER_CASE>'
     
     ! Get local variables from options argument
     iblk = options%iblk

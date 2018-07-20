@@ -14,7 +14,7 @@ MODULE mo_jsb_io_netcdf_iface
   USE mo_exception,          ONLY: finish, message
   USE mo_io_units,           ONLY: filename_max
   USE mo_jsb_domain_iface,   ONLY: t_patch, pe_decomposed
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel, my_process_is_stdio, p_bcast, p_io
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel, my_process_is_stdio, p_bcast, p_io, mpi_comm
 #ifdef __ICON__
   USE mo_read_interface, ONLY: read_1D, read_2D, read_2D_time, read_2D_extdim, openInputFile, closeFile, on_cells, &
                                t_stream_id, read_netcdf_broadcast_method
@@ -29,6 +29,7 @@ MODULE mo_jsb_io_netcdf_iface
   TYPE t_input_file
     INTEGER           :: TYPE                ! 1: ICON infrastructure, 2: ECHAM infrastructure
     CHARACTER(len=filename_max) :: filename  ! Name of input file
+    LOGICAL           :: is_open = .FALSE.
 #ifdef __ICON__
     TYPE(t_stream_id) :: stream_id  ! ICON stream_id structure (for > 1D)
     INTEGER :: file_id              ! netcdf file id (for 1D)
@@ -46,6 +47,8 @@ MODULE mo_jsb_io_netcdf_iface
     PROCEDURE :: Read_2d        => netcdf_read_real_2d
     PROCEDURE :: Read_2d_time   => netcdf_read_real_2d_time
     PROCEDURE :: Read_2d_extdim => netcdf_read_real_2d_extdim
+    PROCEDURE :: Has_dim        => netcdf_file_has_dim
+    PROCEDURE :: Has_var        => netcdf_file_has_var
   END TYPE t_input_file
 
   INTERFACE netcdf_open_input
@@ -81,7 +84,7 @@ CONTAINS
 
     INTEGER :: file_id, return_status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_open_input_generic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_open_input_generic'
 
     netcdf_open_input_generic%filename = TRIM(filename)
 
@@ -89,12 +92,14 @@ CONTAINS
       netcdf_open_input_generic%type      = 1
       ! netcdf_open_input%stream_id = openInputFile(TRIM(filename), patch, read_netcdf_broadcast_method)
       netcdf_open_input_generic%file_id = openInputFile(TRIM(filename))
+      netcdf_open_input_generic%is_open = netcdf_open_input_generic%file_id > 0
 #else
       netcdf_open_input_generic%type = 2
 
       IF (my_process_is_stdio()) THEN
         return_status = nf_open(TRIM(filename), NF_NOWRITE, file_id)
         CALL nf(return_status, TRIM(routine)//':'//TRIM(filename))
+        netcdf_open_input_generic%is_open = .TRUE.
       ELSE
         return_status = 1
         file_id = -1
@@ -113,7 +118,7 @@ CONTAINS
 
     INTEGER :: file_id, return_status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_open_input_patch'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_open_input_patch'
 
     netcdf_open_input_patch%filename = TRIM(filename)
 
@@ -122,6 +127,8 @@ CONTAINS
       netcdf_open_input_patch%type      = 1
       ! netcdf_open_input_patch%stream_id = openInputFile(TRIM(filename), patch, read_netcdf_broadcast_method)
       netcdf_open_input_patch%stream_id = openInputFile(TRIM(filename), patch)
+      netcdf_open_input_patch%file_id   = netcdf_open_input_patch%stream_id%file_id
+      netcdf_open_input_patch%is_open   = netcdf_open_input_patch%file_id > 0
 #else
       CALL finish(TRIM(routine), 'Incompatible combination patch/no-ICON')
 #endif
@@ -134,6 +141,7 @@ CONTAINS
       IF (my_process_is_stdio()) THEN
         return_status = nf_open(TRIM(filename), NF_NOWRITE, file_id)
         CALL nf(return_status, TRIM(routine)//':'//TRIM(filename))
+        netcdf_open_input_patch%is_open = .TRUE.
       ELSE
         return_status = 1
         file_id = -1
@@ -159,7 +167,7 @@ CONTAINS
 
     CLASS(t_input_file), INTENT(inout) :: input_file
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_close_file'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_close_file'
 
 #ifdef __ICON__
     IF (ALLOCATED(input_file%stream_id%read_info)) THEN
@@ -172,22 +180,9 @@ CONTAINS
       CALL nf(nf_close(input_file%file_id), TRIM(routine)//':'//TRIM(input_file%filename))
 #endif
 
+      input_file%is_open = .FALSE.
+
   END SUBROUTINE netcdf_close_file
-
-  SUBROUTINE netcdf_close_stream(input_file)
-
-    CLASS(t_input_file), INTENT(inout) :: input_file
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_close_stream'
-
-#ifdef __ICON__
-    CALL closeFile(input_file%stream_id)
-#else
-    IF (my_process_is_stdio()) &
-      CALL nf(nf_close(input_file%file_id), TRIM(routine)//':'//TRIM(input_file%filename))
-#endif
-
-  END SUBROUTINE netcdf_close_stream
 
   FUNCTION netcdf_read_real_1d(input_file, variable_name, fill_array)
 
@@ -203,7 +198,7 @@ CONTAINS
     INTEGER :: var_size(MAX_VAR_DIMS)
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_1d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_1d'
 
     NULLIFY(netcdf_read_real_1d)
 
@@ -227,7 +222,7 @@ CONTAINS
         CALL nf(nf_inq_dimlen(file_id, dim_id(1), var_size(1)), TRIM(routine))
       END IF
       
-      CALL p_bcast(var_size(1), p_io)
+      CALL p_bcast(var_size(1), p_io, mpi_comm)
 
       ALLOCATE(tmp_array(var_size(1)))
 
@@ -236,7 +231,7 @@ CONTAINS
 
         CALL nf(nf_get_var_double(file_id, var_id, tmp_array), TRIM(routine))
       END IF
-      CALL p_bcast(tmp_array, p_io)
+      CALL p_bcast(tmp_array, p_io, mpi_comm)
 
       IF (PRESENT(fill_array)) THEN
         fill_array(:) = tmp_array(:)
@@ -264,7 +259,7 @@ CONTAINS
     REAL(wp), POINTER :: tmp_array(:,:)
     INTEGER :: file_id, var_id
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d'
 
     NULLIFY(netcdf_read_real_2d)
 
@@ -314,7 +309,7 @@ CONTAINS
     INTEGER, OPTIONAL,  INTENT(in)    :: start_time_step, end_time_step
     REAL(wp), POINTER                 :: netcdf_read_real_2d_time(:,:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d_time'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d_time'
 
     netcdf_read_real_2d_time => netcdf_read_real_2d_extdim( &
       input_file, variable_name, fill_array,    &
@@ -337,7 +332,7 @@ CONTAINS
     INTEGER :: file_id, var_id, var_ndims, var_dim_ids(1:3), var_extdim_size, start_read_index(1:3), count_read_index(1:3)
     CHARACTER(LEN=NF_MAX_NAME) :: var_extdim_name
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d_extdim'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d_extdim'
 
     NULLIFY(netcdf_read_real_2d_extdim)
 
@@ -369,7 +364,7 @@ CONTAINS
         END IF
       END IF
 
-      CALL p_bcast(var_extdim_size, p_io)
+      CALL p_bcast(var_extdim_size, p_io, mpi_comm)
 
       IF (PRESENT(start_extdim)) THEN
         start_step = start_extdim
@@ -415,6 +410,46 @@ CONTAINS
     END IF
 
   END FUNCTION netcdf_read_real_2d_extdim
+
+  LOGICAL FUNCTION netcdf_file_has_dim(input_file, dimname)
+
+    CLASS(t_input_file), INTENT(in) :: input_file
+    CHARACTER(LEN=*),    INTENT(in) :: dimname
+
+    INTEGER :: dimid, status
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_file_has_dim'
+
+    IF (my_process_is_stdio()) THEN
+      IF (.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
+
+      status = nf_inq_dimid(input_file%file_id, TRIM(dimname), dimid)
+      netcdf_file_has_dim = (status == NF_NOERR)
+    END IF
+
+    CALL p_bcast(netcdf_file_has_dim, p_io, mpi_comm)
+
+  END FUNCTION netcdf_file_has_dim
+
+  LOGICAL FUNCTION netcdf_file_has_var(input_file, varname)
+
+    CLASS(t_input_file), INTENT(in) :: input_file
+    CHARACTER(LEN=*),    INTENT(in) :: varname
+
+    INTEGER :: varid, status
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_file_has_var'
+
+    IF (my_process_is_stdio()) THEN
+      IF(.NOT. input_file%is_open) CALL finish(TRIM(routine), 'NetCDF file not open')
+
+      status = nf_inq_varid(input_file%file_id, TRIM(varname), varid)
+      netcdf_file_has_var = (status == NF_NOERR)
+    END IF
+
+    CALL p_bcast(netcdf_file_has_var, p_io, mpi_comm)
+
+  END FUNCTION netcdf_file_has_var
 
   SUBROUTINE nf(status, routine, warnonly, silent)
 

@@ -53,7 +53,7 @@ CONTAINS
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
-    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
 
     CLASS(t_sse_config), INTENT(inout) :: config
@@ -80,7 +80,7 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: soil_vgrid, snow_vgrid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
 
@@ -197,7 +197,7 @@ CONTAINS
       END DO
       mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
 
-      snow_vgrid  => new_vgrid('snow_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsnow, &
+      snow_vgrid  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
         & levels  = mids                 (1:nsnow  ),                         &
         & lbounds = depths               (1:nsnow  ),                         &
         & ubounds = depths               (2:nsnow+1),                         &

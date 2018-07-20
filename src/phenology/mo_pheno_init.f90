@@ -22,7 +22,6 @@ MODULE mo_pheno_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
 
-
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_memory(PHENO_)
@@ -37,22 +36,26 @@ MODULE mo_pheno_init
 CONTAINS
 
   SUBROUTINE pheno_init(tile)
-    
+
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    
+
     ! Local variables
     TYPE(t_jsb_model), POINTER  :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
 
     ! Declare pointers for process configuration and memory
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Get_memory(PHENO_)
+    !dsl4jsb_Def_config(PHENO_)
+    !dsl4jsb_Get_config(PHENO_)
 
     ! Declare pointers for variables in memory
 
     ! ---------------------------
     ! Go
-    
+
     model => get_model(tile%owner_model_id)
 
     CALL pheno_init_bc(tile)
@@ -75,7 +78,7 @@ CONTAINS
 
     TYPE(t_input_file) :: input_file
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -88,6 +91,7 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
 
     ! Leaf area index climatology
+    IF (debug_on()) CALL message(TRIM(routine), 'reading lai_clim ...')
     ptr_mon => input_file%Read_2d_time(    &
       & variable_name='lai_clim')
     ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
@@ -95,7 +99,9 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
+
     ! Foliage projected cover climatology
+    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
     ptr_mon => input_file%Read_2d_time(    &
       & variable_name='veg_fract')
     ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
@@ -106,8 +112,9 @@ CONTAINS
 
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE.
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='forest_fract',            &
+    IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='forest_fract',  &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
@@ -117,9 +124,11 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
 
     ! Maximum foliage projected cover
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='veg_ratio_max',           &
+    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='veg_ratio_max', &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
 
@@ -127,6 +136,16 @@ CONTAINS
 
     CALL input_file%Close()
 
+    ! R: veg_fract_correction is used in many modules in JS3 (e.g. in the albedo calculations). However, in JS4
+    !    it is only necessary for the assimilation and for the carbon distribution of the tile (and in the
+    !    disturbance process to calcultate fuel). As it is calculated for each tile from two corresponding values
+    !    of the lctlib, it is not necesseary to calculate it for each time step again as in JSBACH3.
+    ! Calculate veg_fract_correction
+    IF ( tile%lcts(1)%lib_id /= 0 ) THEN ! only if the present tile is a pft!
+      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+        & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+    END IF
+    
   END SUBROUTINE pheno_init_bc
 
   SUBROUTINE pheno_init_ic(tile)
@@ -144,7 +163,7 @@ CONTAINS
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
 

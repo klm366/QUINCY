@@ -18,6 +18,7 @@ MODULE mo_jsb_varlist_iface
                                    get_var_list,                      &
                                    add_var_icon => add_var,           &
                                    find_list_element
+  USE mo_var_metadata,       ONLY: groups
   USE mo_var_metadata_types, ONLY: t_var_metadata, VARNAME_LEN
   USE mo_linked_list,        ONLY: t_var_list, t_list_element
 #else
@@ -32,7 +33,6 @@ MODULE mo_jsb_varlist_iface
 #endif
 
   USE mo_jsb_io_iface, ONLY: t_cf_var, t_grib2_var
-  USE mo_jsb_io_iface, ONLY: GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 
   IMPLICIT NONE
   PRIVATE
@@ -97,14 +97,16 @@ CONTAINS
     hgrid, vgrid, cf, grib2, code, table, ldims, gdims, levelindx, loutput, lcontainer, &
     lrestart, lrestart_cont, initval_r, isteptype,                                      &
     resetval_r, lmiss, missval_r, tlev_source, info, p5,                                &
-    verbose, new_element                                                                &
+    in_groups, verbose, new_element                                                     &
     )
 
     TYPE(t_var_list),     INTENT(inout)        :: this_list           ! list
     CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
     REAL(wp),             POINTER              :: ptr(:,:)            ! reference to field
     INTEGER,              INTENT(in)           :: hgrid               ! horizontal grid type
-    INTEGER,              INTENT(in)           :: vgrid               ! vertical grid type (cdiZaxisID)
+    INTEGER,              INTENT(in)           :: vgrid               ! vertical grid type
+                                                                      ! ICON: zaxis type (ZA_*)
+                                                                      ! ECHAM: cdi zaxis ID
     TYPE(t_cf_var),       INTENT(in)           :: cf                  ! CF related metadata
     TYPE(t_grib2_var),    INTENT(in)           :: grib2               ! GRIB2 related metadata
     INTEGER,              INTENT(in)           :: code                ! GRIB1 code number
@@ -124,6 +126,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
+    CHARACTER(len=VARNAME_LEN), INTENT(in), OPTIONAL :: in_groups(:)  ! groups to which a variable belongs
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
 
@@ -133,7 +136,7 @@ CONTAINS
 
     TYPE (t_list_element), POINTER :: element
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':add_var_list_element_r2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r2d'
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
@@ -144,15 +147,20 @@ CONTAINS
     END IF
 
 #ifdef __ICON__
-    CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_SURFACE, cf, grib2, &
-      ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
-      initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
-      tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
-
-      element => find_list_element(this_list, TRIM(name))
-      element%field%info%cdiZaxisID = vgrid
-      element%field%info%ndims = 2
-      element%field%info%used_dimensions(1:2) = ldims(1:2)
+    IF (PRESENT(in_groups)) THEN
+      CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
+        ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
+        initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
+        tlev_source=tlev_source, info=info, p5=p5, in_group=groups(in_groups), verbose=verbose, new_element=new_element)
+    ELSE
+      CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
+        ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
+        initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
+        tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
+    END IF
+    element => find_list_element(this_list, TRIM(name))
+    element%field%info%ndims = 2
+    element%field%info%used_dimensions(1:2) = ldims(1:2)
 #else
     IF (PRESENT(p5)) THEN
       CALL add_stream_element(this_list, TRIM(name), ptr, &
@@ -183,14 +191,16 @@ CONTAINS
     hgrid, vgrid, cf, grib2, code, table, ldims, gdims, levelindx, loutput, lcontainer, &
     lrestart, lrestart_cont, initval_r, isteptype,                                      &
     resetval_r, lmiss, missval_r, tlev_source, info, p5,                                &
-    verbose, new_element                                                                &
+    in_groups, verbose, new_element                                                     &
     )
 
     TYPE(t_var_list),     INTENT(inout)        :: this_list           ! list
     CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
     REAL(wp),             POINTER              :: ptr(:,:,:)          ! reference to field
     INTEGER,              INTENT(in)           :: hgrid               ! horizontal grid type
-    INTEGER,              INTENT(in)           :: vgrid               ! vertical grid type (cdiZaxisID)
+    INTEGER,              INTENT(in)           :: vgrid               ! vertical grid type
+                                                                      ! ICON: zaxis type (ZA_*)
+                                                                      ! ECHAM: cdi zaxis ID
     TYPE(t_cf_var),       INTENT(in)           :: cf                  ! CF related metadata
     TYPE(t_grib2_var),    INTENT(in)           :: grib2               ! GRIB2 related metadata
     INTEGER,              INTENT(in)           :: code                ! GRIB1 code number
@@ -210,6 +220,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
+    CHARACTER(len=VARNAME_LEN), INTENT(in), OPTIONAL :: in_groups(:)  ! groups to which a variable belongs
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
 
@@ -219,7 +230,7 @@ CONTAINS
 
     TYPE (t_list_element), POINTER :: element
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':add_var_list_element_r3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r3d'
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
@@ -230,15 +241,20 @@ CONTAINS
     END IF
 
 #ifdef __ICON__
-    CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_DEPTH_BELOW_LAND, cf, grib2, &
-      ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
-      initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
-      tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
-
-      element => find_list_element(this_list, TRIM(name))
-      element%field%info%cdiZaxisID = vgrid
-      element%field%info%ndims = 3
-      element%field%info%used_dimensions(1:3) = ldims(1:3)
+    IF (PRESENT(in_groups)) THEN
+      CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
+        ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
+        initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
+        tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, in_group=groups(in_groups), new_element=new_element)
+    ELSE
+      CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
+        ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
+        initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
+        tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
+    END IF
+    element => find_list_element(this_list, TRIM(name))
+    element%field%info%ndims = 3
+    element%field%info%used_dimensions(1:3) = ldims(1:3)
 #else
     IF (PRESENT(p5)) THEN
       CALL add_stream_element(this_list, TRIM(name), ptr, &

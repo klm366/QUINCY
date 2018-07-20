@@ -78,7 +78,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean    
-    dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
+    dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
@@ -140,7 +140,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_land'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
     iblk = options%iblk
     ics  = options%ics
@@ -230,11 +230,11 @@ CONTAINS
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
                                      time_steps_per_day(),      & ! Input
-                                     previous_day_temp_mean(:), & ! Output (for summer- and evergreen)
+                                     previous_day_temp_mean(:), & ! InOut (for summer- and evergreen)
                                      day_temp_sum(:),           & ! InOut
-                                     previous_day_temp_min(:),  & ! Output (for crop)
+                                     previous_day_temp_min(:),  & ! InOut (for crop)
                                      day_temp_min(:),           & ! InOut
-                                     previous_day_temp_max(:),  & ! Output (for crop)
+                                     previous_day_temp_max(:),  & ! InOut (for crop)
                                      day_temp_max(:) )            ! InOut
 
     ! Update of pseudo-soil temperature for each time step
@@ -440,7 +440,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin_land'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
     iblk = options%iblk
     ics  = options%ics
@@ -500,7 +500,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: latent_hflx_lnd
     dsl4jsb_Real2D_onChunk :: sensible_hflx_lnd
     dsl4jsb_Real2D_onChunk :: evapopot
-    dsl4jsb_Real2D_onChunk :: evapotranspiration
+    dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: fract_snow
 
     ! Locally allocated vectors
@@ -514,7 +514,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes_land'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
     iblk    = options%iblk
     ics     = options%ics
@@ -539,7 +539,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)            ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotranspiration)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
 
@@ -561,7 +561,7 @@ CONTAINS
 
     ! Compute latent heat flux
     !
-    latent_hflx(:) = alv * evapotranspiration(:) + (als - alv) * fract_snow(:) * evapopot(:)
+    latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
 
     ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
     sensible_hflx_lnd(:) = sensible_hflx(:)
@@ -578,11 +578,11 @@ CONTAINS
                                                    t_air_in_Celcius,       & ! Input
                                                    !dtime,                  & ! Input
                                                    time_steps_per_day,     & ! Input
-                                                   previous_day_temp_mean, & ! Output
+                                                   previous_day_temp_mean, & ! InOut
                                                    day_temp_sum,           & ! InOut
-                                                   previous_day_temp_min,  & ! Output
+                                                   previous_day_temp_min,  & ! InOut
                                                    day_temp_min,           & ! InOut
-                                                   previous_day_temp_max,  & ! Output
+                                                   previous_day_temp_max,  & ! InOut
                                                    day_temp_max )            ! InOut
 
     !-----------------------------------------------------------------------
@@ -597,8 +597,8 @@ CONTAINS
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
-    REAL(wp),  intent(out)   :: previous_day_temp_mean, &
-                                previous_day_temp_min,  &
+    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! "in" because if it is not calculated new, it should remain
+                                previous_day_temp_min,  & ! as before. Without "in" it would be NaN in the output.
                                 previous_day_temp_max
 
     REAL(wp),  intent(inout) :: day_temp_sum,           &

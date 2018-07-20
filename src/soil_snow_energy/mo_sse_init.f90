@@ -49,7 +49,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
     CALL sse_init_bc(tile)
     CALL sse_init_ic(tile)
@@ -73,7 +73,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -146,7 +146,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e
     INTEGER :: iblk
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_ic'
 
     model => get_model(tile%owner_model_id)
 
@@ -217,13 +217,17 @@ CONTAINS
 
     ! Locally allocated vectors
     !
+    dsl4jsb_Real3D_onDomain :: &
+      & fract_water,           &
+      & fract_ice
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     LOGICAL  :: l_compat401
     INTEGER  :: nsoil, nproma, nblks
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
     model => Get_model(tile%owner_model_id)
 
@@ -267,15 +271,24 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
+      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
+      WHERE (soil_depth_sl(:,:,:) > 0._wp)
+        fract_water(:,:,:) = dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) / soil_depth_sl(:,:,:)
+        fract_ice  (:,:,:) = dsl4jsb_var3D_onDomain(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:,:)
+      ELSE WHERE
+        fract_water(:,:,:) = 0._wp
+        fract_ice  (:,:,:) = 0._wp
+      END WHERE
       vol_heat_cap_sl (:,:,:) = calc_vol_heat_capacity( &
-        &                              SPREAD( vol_heat_cap(:,:),                 DIM=2, ncopies=nsoil)               , &
-        &       dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)                                                       , &
-        &                                      fract_org_sl(:,:,:)                                                    , &
-        & MERGE(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) / soil_depth_sl(:,:,:), 0._wp, soil_depth_sl(:,:,:) > 0._wp), &
-        & MERGE(dsl4jsb_var3D_onDomain(HYDRO_, w_ice_sl ) / soil_depth_sl(:,:,:), 0._wp, soil_depth_sl(:,:,:) > 0._wp), &
-        &                                      soil_depth_sl(:,:,:)                                                   , &
-        &                       SPREAD(SPREAD( soil_e%dz(:),                       DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
+        &                         SPREAD( vol_heat_cap     (:,:),   DIM=2, ncopies=nsoil)                        , &
+        &  dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)                                                       , &
+        &                                 fract_org_sl     (:,:,:)                                               , &
+        &                                 fract_water      (:,:,:)                                               , &
+        &                                 fract_ice        (:,:,:)                                               , &
+        &                                 soil_depth_sl    (:,:,:)                                               , &
+        &                   SPREAD(SPREAD(soil_e%dz        (:),     DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
         & )
+      DEALLOCATE(fract_water, fract_ice)
     ELSE
       vol_heat_cap_sl(:,:,:) = SPREAD( vol_heat_cap(:,:), DIM=2, ncopies=nsoil)
     END IF

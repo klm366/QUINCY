@@ -77,7 +77,8 @@ MODULE mo_assimi_interface
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !aggregate_assimilation_waterlimited !< Aggregates computed task variables
+                                                             ! This is the water limited case!
+    PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !< Aggregates computed task variables
   END TYPE tsk_assimilation
 
   !> Constructor interface for assimilation task
@@ -102,10 +103,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_assimilation_scaling_factors::return_ptr)
-
-    return_ptr%name = 'assimilation_scaling_factors'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='assimilation_scaling_factors', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation_scaling_factors
 
@@ -121,10 +119,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
-
-    return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='canopy_cond_unstressed', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_unstressed
 
@@ -140,10 +135,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_assimilation::return_ptr)
-
-    return_ptr%name = 'assimilation'
-    return_ptr%process_id = ASSIMI_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='assimilation', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation
 
@@ -208,7 +200,7 @@ CONTAINS
     INTEGER                      :: ncanopy          ! number of canopy layers
     REAL(wp),          POINTER   :: canopy_bound_lai(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':assimilation_scaling_factors'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':assimilation_scaling_factors'
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -258,11 +250,11 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
         CALL calc_assimilation_scaling_factors( &
-          & declination,                 & ! input
-          & canopy_bound_lai(i-1),       & ! input
-          & lai(:),                      & ! input
-          & lat(:),                      & ! input
-          & assimi_scaling_fact_cl(:,i)  & ! output
+          & declination,                        & ! input
+          & canopy_bound_lai(i-1),              & ! input
+          & lai(:),                             & ! input
+          & lat(:),                             & ! input
+          & assimi_scaling_fact_cl(:,i)         & ! output
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
@@ -292,7 +284,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_assimilation_scaling_factors'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation_scaling_factors'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -334,11 +326,11 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp) :: dtime
-    INTEGER  :: iblk, ics, ice, nc
-    INTEGER                             :: icanopy
+    REAL(wp)                                  :: dtime
+    INTEGER                                   :: iblk, ics, ice, nc
+    INTEGER                                   :: icanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     ! Declare process memories
     dsl4jsb_Def_memory(ASSIMI_)
@@ -407,7 +399,9 @@ CONTAINS
 
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterunlimited( &
-        & dsl4jsb_Lctlib,                    & ! in
+        & dsl4jsb_Lctlib_param(C4Flag),      &
+        & dsl4jsb_Lctlib_param(CarboxRate),  &
+        & dsl4jsb_Lctlib_param(ETransport),  &
         & t_air(:),                          & ! in
         & press_srf(:),                      & ! in
         & par_down_mol(:),                   & ! in
@@ -445,7 +439,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_unstressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_unstressed'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -481,7 +475,7 @@ CONTAINS
   !!
   SUBROUTINE update_assimilation(tile, options)
 
-    USE mo_assimi_process,      ONLY: calc_assimilation_waterlimited, calc_NPP_rate
+    USE mo_assimi_process,      ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -493,13 +487,14 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER                             :: icanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(ASSIMI_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
@@ -516,19 +511,22 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
 
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction  ! factor to convert from tile to canopy area
+    dsl4jsb_Real2D_onChunk :: gross_assimilation_ca
     dsl4jsb_Real2D_onChunk :: gross_assimilation
+    dsl4jsb_Real2D_onChunk :: dark_respiration_ca
+    dsl4jsb_Real3D_onChunk :: dark_respiration_cl
     dsl4jsb_Real2D_onChunk :: dark_respiration
-    dsl4jsb_Real2D_onChunk :: NPP_rate
+    dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
     dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl ! Input.
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl         ! InOut for water limited case here.
     dsl4jsb_Real3D_onChunk :: gross_assimilation_cl  ! Output.
-    dsl4jsb_Real3D_onChunk :: dark_respiration_cl    ! Output.
     dsl4jsb_Real3D_onChunk :: carbox_rate_max_cl     ! Output. Maximum carboxylation rate of canopy layer (=VCmax)
                                                          ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
                                                          ! and actual temperature.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output.
-    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output.
-    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output.
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_max_cl ! Output
+    dsl4jsb_Real3D_onChunk :: carbox_rate_cl          ! Output
+    dsl4jsb_Real3D_onChunk :: e_transport_rate_cl     ! Output
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
@@ -558,6 +556,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(PHENO_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                   ! in
@@ -569,13 +568,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)             ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)     ! in
 
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_over_time)   ! inout
 
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   gross_assimilation_ca)   ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   gross_assimilation)      ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   dark_respiration_ca)     ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   dark_respiration)        ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_rate)                ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)         ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   gross_assimilation_cl)   ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   dark_respiration_cl)     ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_max_cl)      ! out
@@ -587,8 +589,8 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder für assimilation noch wo anderst verwendet wird.
-    !    Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
+    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder für assimilation noch wo anderst
+    !    verwendet wird. Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
     ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
     !                                                             CO2_conc_leaf_cl * dtime
 
@@ -600,23 +602,25 @@ CONTAINS
     END DO
 
     DO icanopy=1,ncanopy
-       CALL calc_assimilation_waterlimited(                      &
-                             dsl4jsb_Lctlib,                     & ! in
-                             t_air(:),                           & ! in
-                             press_srf(:),                       & ! in
-                             par_down_mol(:),                    & ! in
-                             apar_per_lai_cl(:,icanopy),         & ! in
-                             CO2_air_mol(:),                     & ! in
-                             assimi_scaling_fact_cl(:,icanopy),  & ! in
-                             CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
-                             canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
-                             gross_assimilation_cl(:,icanopy),   & ! out
-                             dark_respiration_cl(:,icanopy),     & ! out
-                             carbox_rate_max_cl(:,icanopy),      & ! out
-                             e_transport_rate_max_cl(:,icanopy), & ! out
-                             carbox_rate_cl(:,icanopy),          & ! out
-                             e_transport_rate_cl(:,icanopy)      & ! out
-                             )
+      CALL calc_assimilation_waterlimited(    &
+        & dsl4jsb_Lctlib_param(C4Flag),       &
+        & dsl4jsb_Lctlib_param(CarboxRate),   &
+        & dsl4jsb_Lctlib_param(ETransport),   &
+        & t_air(:),                           & ! in
+        & press_srf(:),                       & ! in
+        & par_down_mol(:),                    & ! in
+        & apar_per_lai_cl(:,icanopy),         & ! in
+        & CO2_air_mol(:),                     & ! in
+        & assimi_scaling_fact_cl(:,icanopy),  & ! in
+        & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
+        & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
+        & gross_assimilation_cl(:,icanopy),   & ! out
+        & dark_respiration_cl(:,icanopy),     & ! out
+        & carbox_rate_max_cl(:,icanopy),      & ! out
+        & e_transport_rate_max_cl(:,icanopy), & ! out
+        & carbox_rate_cl(:,icanopy),          & ! out
+        & e_transport_rate_cl(:,icanopy)      & ! out
+        & )
     END DO
 
 
@@ -627,26 +631,27 @@ CONTAINS
     ! Integrate over time
     canopy_cond_over_time(:) = canopy_cond_over_time(:) + canopy_cond(:) * dtime
 
-    ! Same for gross_assimilation
+    ! Same for gross_assimilation_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
     !gross_assimilation(:) = 0._wp
     !DO icanopy=1,ncanopy
     !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
     !END DO
 
-    gross_assimilation(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2)
+    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy ground area
+    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) ! convert from canopy area to tile box area
 
-    ! Same for dark_respiration
+    ! Same for dark_respiration_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
-    !dark_respiration(:) = 0._wp
+    !dark_respiration_ca(:) = 0._wp
     !DO icanopy=1,ncanopy
-    !   dark_respiration(:) =  dark_respiration(:) + dark_respiration_cl(:,icanopy) * lai_cl(:,icanopy)
+    !   dark_respiration_ca(:) =  dark_respiration_ca(:) + dark_respiration_cl(:,icanopy) * lai_cl(:,icanopy)
     !END DO
 
-    dark_respiration(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
+    dark_respiration_ca(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
+    dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) ! convert from canopy area to tile box area
 
-
-    CALL calc_NPP_rate(gross_assimilation, dark_respiration, NPP_rate)
+    CALL calc_NPP_pot_rate(gross_assimilation_ca, dark_respiration_ca, NPP_pot_rate_ca)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -673,7 +678,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_assimilation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation'
 
     ! Get local variables from options argument
     iblk = options%iblk
@@ -689,18 +694,18 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_over_time,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration_cl,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_rate,                weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, CO2_conc_leaf_cl,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_cl,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_max_cl,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, e_transport_rate_cl,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, e_transport_rate_max_cl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_over_time,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_ca,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration_ca,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_pot_rate_ca,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, CO2_conc_leaf_cl,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_cl,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_max_cl,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, e_transport_rate_cl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, e_transport_rate_max_cl,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

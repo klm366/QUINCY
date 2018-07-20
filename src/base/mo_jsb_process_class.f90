@@ -20,7 +20,7 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
-  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_
+  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -42,7 +42,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_
+    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, FUEL_
   END ENUM
 
   ! Process actions
@@ -78,11 +78,17 @@ CONTAINS
     CASE (ASSIMI_)
       return_value = 'assimi'
     CASE (PHENO_)
-      return_value = 'pheno'      
+      return_value = 'pheno'
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
       return_value = 'hd'
 #endif
+    CASE (CARBON_)
+      return_value = 'carbon'
+    CASE (DISTURB_)
+      return_value = 'disturb'
+    CASE (FUEL_)
+      return_value = 'fuel'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -94,15 +100,23 @@ CONTAINS
     CLASS(t_jsb_process),     INTENT(inout) :: this
     CLASS(t_jsb_process_task), TARGET, INTENT(in)    :: task
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_task'
+    TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_temp(:)
+    INTEGER :: n
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Register_task'
 
     IF (this%id /= task%process_id) &
       CALL finish(TRIM(routine), 'Task is for another process')
 
     IF (.NOT. ALLOCATED(this%task_list)) THEN
-      this%task_list = (/ t_jsb_process_task_p(task) /)
+      ALLOCATE(this%task_list(1))
+      this%task_list(1) = t_jsb_process_task_p(task)
     ELSE
-      this%task_list = (/ this%task_list, t_jsb_process_task_p(task) /)
+      n = SIZE(this%task_list)
+      ALLOCATE(task_temp(n+1))
+      task_temp(1:n) = this%task_list
+      task_temp(n+1) = t_jsb_process_task_p(task)
+      CALL MOVE_ALLOC(task_temp, this%task_list)
     END IF
 
     IF (debug_on()) CALL message(TRIM(routine), 'Registered task "'//TRIM(task%name)// &
@@ -118,7 +132,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_task'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_task'
 
     return_ptr => NULL()
     DO i=1,SIZE(this%task_list)
@@ -140,7 +154,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Configure_process'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Configure_process'
 
     IF (.NOT. ASSOCIATED(this%config)) RETURN
 
@@ -153,7 +167,7 @@ CONTAINS
     INTEGER, INTENT(in) :: iact
     CHARACTER(len=:), ALLOCATABLE :: return_value
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_name'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_action_name'
 
     SELECT CASE(iact)
     CASE (SKIP_)

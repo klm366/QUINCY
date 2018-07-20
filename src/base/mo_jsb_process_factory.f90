@@ -26,6 +26,9 @@ MODULE mo_jsb_process_factory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_pheno_memory_class,   ONLY: t_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
+  USE mo_carbon_memory_class,  ONLY: t_carbon_memory
+  USE mo_disturb_memory_class, ONLY: t_disturb_memory
+  USE mo_fuel_memory_class,    ONLY: t_fuel_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -47,8 +50,15 @@ MODULE mo_jsb_process_factory
   USE mo_hd_interface,         ONLY: Register_hd_tasks
   USE mo_hd_config_class,      ONLY: t_hd_config
 #endif
-
-  USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_
+  USE mo_carbon_interface,      ONLY: Register_carbon_tasks
+  USE mo_carbon_config_class,   ONLY: t_carbon_config  
+  USE mo_disturb_interface,     ONLY: Register_disturb_tasks
+  USE mo_disturb_config_class,  ONLY: t_disturb_config  
+  USE mo_fuel_interface,        ONLY: Register_fuel_tasks
+  USE mo_fuel_config_class,     ONLY: t_fuel_config  
+  
+  USE mo_jsb_process_class, ONLY: &
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_
 
   IMPLICIT NONE
   PRIVATE
@@ -102,6 +112,15 @@ CONTAINS
       CALL Register_hd_tasks(return_ptr, model_id)
       ALLOCATE(t_hd_config::return_ptr%config)
 #endif
+    CASE (CARBON_)
+      CALL Register_carbon_tasks(return_ptr, model_id)
+      ALLOCATE(t_carbon_config::return_ptr%config)
+    CASE (DISTURB_)
+      CALL Register_disturb_tasks(return_ptr, model_id)
+      ALLOCATE(t_disturb_config::return_ptr%config)
+    CASE (FUEL_)
+      CALL Register_fuel_tasks(return_ptr, model_id)
+      ALLOCATE(t_fuel_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -123,6 +142,9 @@ CONTAINS
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
+    USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
+    USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
+    USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -163,6 +185,15 @@ CONTAINS
       ALLOCATE(t_hd_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_hd_vars
 #endif
+    CASE (CARBON_)
+      ALLOCATE(t_carbon_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_carbon_vars
+    CASE (DISTURB_)
+      ALLOCATE(t_disturb_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_disturb_vars
+    CASE (FUEL_)
+      ALLOCATE(t_fuel_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_fuel_vars
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))

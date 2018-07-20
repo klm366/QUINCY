@@ -67,7 +67,7 @@ CONTAINS
 
   SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -86,7 +86,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
 
     model => Get_model(model_id)
 
@@ -165,6 +165,7 @@ CONTAINS
       & t_cf('soil_temperature', 'K', ''),                                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & output_level=BASIC, &
       & initval_r=280.0_wp )
 
     CALL jsb_add_var( mem, 't_soil_acoef', mem%t_soil_acoef,                     &
@@ -188,6 +189,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
+        & output_level=MEDIUM, &
         & initval_r=0._wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 't_snow', mem%t_snow,                                 &
@@ -195,6 +197,7 @@ CONTAINS
         & t_cf('snow_temperature', 'K', ''),                                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & output_level=BASIC, &
         & initval_r=273.15_wp )
 
       CALL jsb_add_var( mem, 't_snow_acoef', mem%t_snow_acoef,                     &
@@ -217,6 +220,7 @@ CONTAINS
       & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & output_level=BASIC, &
       & initval_r=1.3e5_wp )
 
     CALL jsb_add_var( mem, 'hcap_grnd_old', mem%hcap_grnd_old,&
@@ -225,6 +229,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=1.3e5_wp )
 
     CALL jsb_add_var( mem, 'grnd_hflx', mem%grnd_hflx,                            &
@@ -232,6 +237,7 @@ CONTAINS
       & t_cf('grnd_hflx', '', 'Ground heat flux'),                                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & output_level=BASIC, &
       & initval_r=10.0_wp )
 
     CALL jsb_add_var( mem, 'grnd_hflx_old', mem%grnd_hflx_old,                    &
@@ -240,6 +246,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
       & initval_r=10.0_wp )
 
     CALL jsb_add_var( mem, 'thaw_depth', mem%thaw_depth,                            &
@@ -248,6 +255,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
 
     END SUBROUTINE Init_sse_memory

@@ -81,6 +81,7 @@ MODULE mo_hsm_class
     PROCEDURE :: Has_siblings       => Has_siblings_state
     PROCEDURE :: Is_first_child     => Is_first_child_state
     PROCEDURE :: Is_last_child      => Is_last_child_state
+    PROCEDURE :: Reset_all          => Reset_all_state
     PROCEDURE :: Print_state
     PROCEDURE :: Is_equal           => Is_equal_state
     GENERIC   :: OPERATOR(==)       => Is_equal
@@ -122,7 +123,8 @@ MODULE mo_hsm_class
     PROCEDURE :: Get_next          => Get_next_state_hsm
     PROCEDURE :: Get_state         => Get_state_hsm
     PROCEDURE :: Start_state       => Start_state_hsm
-    PROCEDURE :: Reset             => Reset_hsm
+    PROCEDURE :: Reset_state       => Reset_state_hsm
+    PROCEDURE :: Reset_all         => Reset_all_hsm
     PROCEDURE :: Register_action   => Register_action_hsm
     PROCEDURE :: Get_action        => Get_action_hsm
     PROCEDURE :: Print_actions     => Print_actions_hsm
@@ -347,10 +349,9 @@ CONTAINS
 
   END FUNCTION Is_first_child_state
 
-  SUBROUTINE Set_no_of_children_state(this, no_of_children)
+  SUBROUTINE Set_no_of_children_state(this)
 
     CLASS(t_State), INTENT(inout) :: this
-    INTEGER,        INTENT(in)    :: no_of_children
 
     CLASS(t_State), POINTER :: current
 
@@ -373,26 +374,16 @@ CONTAINS
 
   FUNCTION Get_no_of_children_state(this) RESULT(return_value)
 
-    CLASS(t_State), INTENT(in)    :: this
+    CLASS(t_State), INTENT(inout) :: this
     INTEGER                       :: return_value
 
     CLASS(t_State), POINTER :: current
 
-    IF (this%no_of_children >= 0) THEN
-      return_value = this%no_of_children
-      RETURN
+    IF (this%no_of_children < 0) THEN
+      CALL this%Set_no_of_children()
     END IF
 
-    IF (this%Has_children()) THEN
-      return_value = 1
-      current => this%first_child
-      DO WHILE (.NOT. current%Is_last_child())
-        current => current%next_sibling
-        return_value = return_value + 1
-      END DO
-    ELSE
-      return_value = 0
-    END IF
+    return_value = this%no_of_children
 
   END FUNCTION Get_no_of_children_state
 
@@ -412,6 +403,32 @@ CONTAINS
     return_value = this%path(depth)
 
   END FUNCTION
+
+  ! Resets %visited(:) to .FALSE. for state and all states below
+  ! So, calling this on the top state resets all states
+  RECURSIVE SUBROUTINE Reset_all_state(this)
+
+    CLASS(t_State), INTENT(inout) :: this
+
+    CLASS(t_State), POINTER :: current
+    INTEGER :: nthreads
+
+#ifdef _OPENMP
+    nthreads = omp_get_max_threads()
+#else
+    nthreads = 1
+#endif
+
+    this%visited(1:nthreads) = .FALSE.
+
+    IF (this%Has_children()) THEN
+      CALL this%first_child%Reset_all()
+    END IF
+    IF (ASSOCIATED(this%next_sibling)) THEN
+      CALL this%next_sibling%Reset_all()
+    END IF
+
+  END SUBROUTINE Reset_all_state
 
   SUBROUTINE Print_state(this)
 
@@ -498,7 +515,7 @@ CONTAINS
     CLASS(t_Message), INTENT(in),   POINTER :: msg
     CLASS(t_Message), POINTER       :: return_ptr
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_state'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_message_state'
 
     INTEGER :: no_omp_thread
 
@@ -609,7 +626,7 @@ CONTAINS
 
   END FUNCTION Get_current_hsm
 
-  SUBROUTINE Reset_hsm(this)
+  SUBROUTINE Reset_state_hsm(this)
 
     CLASS(t_hsm), INTENT(inout) :: this
 
@@ -624,7 +641,29 @@ CONTAINS
     this%current(no_omp_thread)%p => this%top
     this%top%visited(no_omp_thread) = .FALSE.
 
-  END SUBROUTINE Reset_hsm
+  END SUBROUTINE Reset_state_hsm
+
+  ! Resets %visited(:) to .FALSE. and sets hsm%current to top state for all tiles and all OMP threasds
+  SUBROUTINE Reset_all_hsm(this)
+
+    CLASS(t_hsm), INTENT(inout) :: this
+
+    CLASS(t_State), POINTER :: current
+    INTEGER :: nthreads, i
+
+#ifdef _OPENMP
+    nthreads = omp_get_max_threads()
+#else
+    nthreads = 1
+#endif
+
+    CALL this%top%Reset_all()
+
+    DO i=1,nthreads
+      this%current(i)%p => this%top
+    END DO
+
+  END SUBROUTINE Reset_all_hsm
 
   ! Get next state in pre-order traversal
   FUNCTION Get_next_state_hsm(this) RESULT(return_ptr)
@@ -691,7 +730,7 @@ CONTAINS
     INTEGER,      INTENT(in) :: path(:)
     CLASS(t_State), POINTER  :: return_ptr
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_state_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_state_hsm'
 
     INTEGER :: depth, i, j
 
@@ -726,7 +765,7 @@ CONTAINS
 
     LOGICAL :: l_debug
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Goto_state_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Goto_state_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -766,7 +805,7 @@ CONTAINS
 
     CLASS(t_State), POINTER :: sstate, tstate
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_levels_to_LCA_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_levels_to_LCA_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -806,7 +845,7 @@ CONTAINS
     CLASS(t_Hsm),   INTENT(inout)      :: this
     CLASS(t_State), INTENT(in), TARGET :: that
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_state_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Start_state_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -833,7 +872,7 @@ CONTAINS
     CLASS(t_Message), POINTER :: start_msg, entry_msg
     CLASS(t_Message), POINTER :: tmp_msg
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Start_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -896,7 +935,7 @@ CONTAINS
     !CLASS(t_Hsm),     POINTER :: hsm
     LOGICAL :: l_debug
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_message_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -972,13 +1011,13 @@ CONTAINS
       IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
       DO WHILE (ASSOCIATED(state))
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
-        this%source(no_omp_thread)%p => state
+        this%source(no_omp_thread)%p => state  ! Set source always to the previous state. This is to find back again later.
         tmp_msg => state%Process_message(this, new_msg)
         IF (ASSOCIATED(new_msg)) THEN
         !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
           DEALLOCATE(new_msg)
         END IF
-        new_msg => tmp_msg
+        new_msg => tmp_msg ! Set new message to the "result" of last message
         CALL this%Process_exit_to_LCA()
         IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN      ! State transition taken (i.e. already exited to LCA)
           ! Execute entry and start messages to target
@@ -1046,7 +1085,7 @@ CONTAINS
     TYPE(t_State_p) :: entrypath(MAX_STATE_NESTING)
     INTEGER         :: i, j
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_entry_to_next'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_entry_to_next'
 
     INTEGER :: no_omp_thread
 
@@ -1105,7 +1144,7 @@ CONTAINS
     CLASS(t_State),   POINTER :: state
     INTEGER                   :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_exit_to_lca'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_exit_to_lca'
 
     INTEGER :: no_omp_thread
 
@@ -1162,7 +1201,7 @@ CONTAINS
     INTEGER :: i
     LOGICAL :: l_debug
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_action_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Register_action_hsm'
 
     l_debug = .FALSE.
     IF (PRESENT(debug)) l_debug = debug
@@ -1188,7 +1227,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_action_hsm'
 
     !return_ptr => NULL()
 
@@ -1212,7 +1251,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Print_actions_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Print_actions_hsm'
 
     message_text = "State machine actions:"
     DO i=1,MAX_ACTIONS

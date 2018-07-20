@@ -12,9 +12,9 @@ MODULE mo_jsb_task_class
 
   USE mo_kind,        ONLY: wp
   USE mo_exception,   ONLY: message, finish
-  USE mo_timer,       ONLY: timer_start, timer_stop
+  USE mo_timer,       ONLY: new_timer, timer_start, timer_stop
 
-  USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, l_timer, debug_on
+  USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, timer_on, debug_on
 
   ! USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
   USE mo_hsm_class,       ONLY: t_Message
@@ -45,30 +45,24 @@ MODULE mo_jsb_task_class
     CHARACTER(len=50)              :: name
     INTEGER                        :: process_id     = 0
     INTEGER                        :: owner_model_id = 0
+    INTEGER                        :: timer_integrate = 0
     INTEGER                        :: timer_aggregate = 0
     !CLASS(t_jsb_task_msg), POINTER :: msg => NULL()
 !!$    PROCEDURE(Integrate_task), POINTER, NOPASS :: Integrate
 !!$    PROCEDURE(Aggregate_task), POINTER, NOPASS :: Aggregate
   CONTAINS
-    PROCEDURE(Integrate_task), DEFERRED, NOPASS :: Integrate
-    PROCEDURE(Aggregate_task), DEFERRED, NOPASS :: Aggregate
-    PROCEDURE :: Do_it
+    PROCEDURE(Interface_task), DEFERRED, NOPASS :: Integrate
+    PROCEDURE(Interface_task), DEFERRED, NOPASS :: Aggregate
+    PROCEDURE                                   :: Do_it
+    PROCEDURE                                   :: Construct => Construct_task
   END TYPE t_jsb_process_task
 
   ABSTRACT INTERFACE
-    SUBROUTINE Integrate_task(tile, options)
+    SUBROUTINE Interface_task(tile, options)
       IMPORT :: t_jsb_tile_abstract, t_jsb_task_options
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_task_options),   INTENT(in) :: options
-    END SUBROUTINE Integrate_task
-  END INTERFACE
-
-  ABSTRACT INTERFACE
-    SUBROUTINE Aggregate_task(tile, options)
-      IMPORT :: t_jsb_tile_abstract, t_jsb_task_options
-      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-      TYPE(t_jsb_task_options),   INTENT(in) :: options
-    END SUBROUTINE Aggregate_task
+    END SUBROUTINE Interface_task
   END INTERFACE
 
   TYPE t_jsb_process_task_p
@@ -86,6 +80,25 @@ MODULE mo_jsb_task_class
 
 CONTAINS
 
+  SUBROUTINE Construct_task(this, name, process_id, owner_model_id)
+
+    CLASS(t_jsb_process_task), INTENT(inout) :: this
+    CHARACTER(len=*),          INTENT(in)    :: name
+    INTEGER,                   INTENT(in)    :: process_id
+    INTEGER,                   INTENT(in)    :: owner_model_id
+
+    ! ALLOCATE(t_jsb_process_task::task)
+    this%name = name
+    this%process_id = process_id
+    this%owner_model_id = owner_model_id
+
+    IF (timer_on('all')) THEN
+      this%timer_integrate = new_timer('jsb:update_'//TRIM(name))
+      this%timer_aggregate = new_timer('jsb:aggregate_'//TRIM(name))
+    END IF
+
+  END SUBROUTINE Construct_task
+
   SUBROUTINE Do_it(this, msg, tile, options)
 
     CLASS(t_jsb_process_task),  INTENT(in)    :: this
@@ -94,7 +107,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Do_it'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
     ! If process the task belongs to is not active on this tile, do nothing.
     IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
@@ -113,13 +126,25 @@ CONTAINS
 !!$
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
-        IF (l_timer .AND. debug_on()) CALL timer_start(timer_integrate(this%owner_model_id))
+        IF (timer_on('detail')) THEN
+          CALL timer_start(timer_integrate(this%owner_model_id))
+          IF (this%timer_integrate > 0) CALL timer_start(this%timer_integrate)
+        END IF
         CALL this%Integrate(tile, options)
-        IF (l_timer .AND. debug_on()) CALL timer_stop(timer_integrate(this%owner_model_id))
+        IF (timer_on('detail')) THEN
+          IF (this%timer_integrate > 0) CALL timer_stop(this%timer_integrate)
+          CALL timer_stop(timer_integrate(this%owner_model_id))
+        END IF
       CASE ('AGGREGATE')
-        IF (l_timer .AND. debug_on()) CALL timer_start(timer_aggregate(this%owner_model_id))
+        IF (timer_on('detail')) THEN
+          CALL timer_start(timer_aggregate(this%owner_model_id))
+          IF (this%timer_aggregate > 0) CALL timer_start(this%timer_aggregate)
+        END IF
         CALL this%Aggregate(tile, options)
-        IF (l_timer .AND. debug_on()) CALL timer_stop(timer_aggregate(this%owner_model_id))
+        IF (timer_on('detail')) THEN
+          IF (this%timer_aggregate > 0) CALL timer_stop(this%timer_aggregate)
+          CALL timer_stop(timer_aggregate(this%owner_model_id))
+        END IF
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unknown action for task'//TRIM(this%name))
       END SELECT
@@ -136,7 +161,7 @@ CONTAINS
 
     CLASS(t_Task_queue), POINTER :: current, next
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Append_task'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Append_task'
 
     IF (.NOT. ASSOCIATED(this%task)) THEN
       ! If queue is empty just add task as first element

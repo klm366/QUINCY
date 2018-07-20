@@ -53,7 +53,7 @@ CONTAINS
 
     INTEGER :: res, nres_max
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reservoir_cascade'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_cascade'
 
     WHERE (nres > 0)       !< land - without internal drainage cells
       ! unit conversions: [day] -> [seconds]

@@ -22,7 +22,7 @@ MODULE mo_jsb_var_class
     INTEGER                    :: type            ! REAL2D / REAL3D
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
-    INTEGER, ALLOCATABLE       :: child_idx(:)
+    INTEGER, ALLOCATABLE       :: child_idx(:)    ! Position-numbers of same variable for for the child tiles (according to mem%vars(:)).
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                   ! of those where variable doesn't exist
@@ -73,7 +73,7 @@ CONTAINS
 
     TYPE(t_jsb_var_real2d) :: this
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finalize_jsb_var_real2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real2d'
 
     !CALL message(routine, 'Finalizing '//TRIM(this%name))
 
@@ -89,7 +89,7 @@ CONTAINS
 
     TYPE(t_jsb_var_real3d) :: this
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finalize_jsb_var_real3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real3d'
 
     !CALL message(routine, 'Finalizing '//TRIM(this%name))
 
@@ -162,7 +162,7 @@ CONTAINS
   !   REAL(wp),                INTENT(in) :: field(:,:)
   !   TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
-  !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real2d_and_field'
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real2d_and_field'
 
   !   IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
   !     & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -214,7 +214,7 @@ CONTAINS
   !   REAL(wp),                INTENT(in) :: field(:,:,:)
   !   TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
-  !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real3d_and_field'
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real3d_and_field'
 
   !   IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
   !     & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -235,7 +235,7 @@ CONTAINS
   !   REAL(wp),                INTENT(in) :: field(:,:)
   !   TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
-  !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real2d_with_field'
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real2d_with_field'
 
   !   IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
   !     & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -256,7 +256,7 @@ CONTAINS
   !   REAL(wp),                INTENT(in) :: field(:,:,:)
   !   TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
-  !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real3d_with_field'
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real3d_with_field'
 
   !   IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
   !     & CALL finish(TRIM(routine), 'Dimension mismatch')

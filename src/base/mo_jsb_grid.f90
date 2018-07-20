@@ -1,53 +1,47 @@
 MODULE mo_jsb_grid
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,      ONLY: message, finish
-  USE mo_jsb_control,    ONLY: debug_on
+  USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_grid_class, ONLY: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
-  USE mo_jsb_control,    ONLY: max_no_of_grids => max_no_of_models
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: Register_grid, Register_vgrid, Get_grid, Get_vgrid
 
-  ! INTEGER, PARAMETER :: max_no_of_grids = 1
-  INTEGER, PARAMETER :: max_no_of_vgrids = 10
-
-  TYPE(t_jsb_grid_ptr),  SAVE :: jsbach_grids(max_no_of_grids)
-  TYPE(t_jsb_vgrid_ptr), SAVE :: jsbach_vgrids(max_no_of_vgrids)
+  TYPE(t_jsb_grid_ptr),  ALLOCATABLE, SAVE :: jsbach_grids(:)
 
 CONTAINS
 
   SUBROUTINE Register_grid(grid)
 
+    USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids
+
     TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid
 
-    INTEGER :: i, idx
+    INTEGER :: i, n
+    TYPE(t_jsb_grid_ptr), ALLOCATABLE :: grids_temp(:)
+
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_grid'
 
-    IF (debug_on()) CALL message(TRIM(routine), 'going to register new JSBACH grid instance')
-
-    idx = 0
-
-    DO i=1,max_no_of_grids
-      IF (ASSOCIATED(jsbach_grids(i)%p)) THEN
-        IF (jsbach_grids(i)%p%id == grid%id) EXIT
-      END IF
-    END DO
-    IF (idx /= 0) RETURN        ! axis already exists and is already registered for model
-
-    ! Find free slot for vgrid
-    idx = 0
-    DO i=1,max_no_of_grids
-      IF (.NOT. ASSOCIATED(jsbach_grids(i)%p)) THEN
-        idx = i
-        EXIT
-      END IF
-    END DO
-    IF(idx == 0) CALL finish(TRIM(routine), 'Max no of grids reached')
-
-    jsbach_grids(idx)%p => grid
+    IF (ALLOCATED(jsbach_grids)) THEN
+      DO i=1,SIZE(jsbach_grids)
+        IF (ASSOCIATED(jsbach_grids(i)%p)) THEN
+          IF (jsbach_grids(i)%p%id == grid%id) THEN
+            RETURN ! grid already exists and is already registered
+          END IF
+        END IF
+      END DO
+      ! grid is new
+      n = SIZE(jsbach_grids)
+      ALLOCATE(grids_temp(n+1))
+      grids_temp(1:n) = jsbach_grids
+      grids_temp(n+1) = t_jsb_grid_ptr(grid)
+      CALL MOVE_ALLOC(grids_temp, jsbach_grids)
+    ELSE
+      ALLOCATE(jsbach_grids(1))
+      jsbach_grids(1) = t_jsb_grid_ptr(grid)
+    END IF
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
 
@@ -55,43 +49,43 @@ CONTAINS
 
   SUBROUTINE Register_vgrid(vgrid)
 
-    TYPE(t_jsb_vgrid), POINTER, INTENT(in)    :: vgrid
+    USE mo_jsb_io_iface, ONLY: Create_zaxis
+    USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids
 
-    INTEGER :: i, idx
+    TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: vgrid
+  
+    TYPE(t_jsb_vgrid_ptr), ALLOCATABLE :: vgrids_temp(:)
+    INTEGER :: i, n, length
+
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_vgrid'
 
-    idx = 0
-    DO i=1,max_no_of_vgrids
-      IF (ASSOCIATED(jsbach_vgrids(i)%p)) THEN
-        IF (jsbach_vgrids(i)%p%cdiZaxisID == vgrid%cdiZaxisID) EXIT
-      END IF
-    END DO
-    IF (idx /= 0) RETURN        ! axis already exists and is already registered for model
+    IF (ALLOCATED(jsbach_vgrids)) THEN
+      DO i=1,SIZE(jsbach_vgrids)
+        IF (ASSOCIATED(jsbach_vgrids(i)%p)) THEN
+          IF (jsbach_vgrids(i)%p%ZaxisID == vgrid%ZaxisID) THEN
+            RETURN ! axis already exists and is already registered
+          END IF
+        END IF
+      END DO
+      ! Axis is new
+      n = SIZE(jsbach_vgrids)
+      ALLOCATE(vgrids_temp(n+1))
+      vgrids_temp(1:n) = jsbach_vgrids
+      vgrids_temp(n+1) = t_jsb_vgrid_ptr(vgrid)
+      CALL MOVE_ALLOC(vgrids_temp, jsbach_vgrids)
+    ELSE
+      ALLOCATE(jsbach_vgrids(1))
+      jsbach_vgrids(1) = t_jsb_vgrid_ptr(vgrid)
+    END IF
+    vgrid%id = SIZE(jsbach_vgrids)
 
-    ! Find free slot for vgrid
-    idx = 0
-    DO i=1,max_no_of_vgrids
-      IF (.NOT. ASSOCIATED(jsbach_vgrids(i)%p)) THEN
-        idx = i
-        EXIT
-      END IF
-    END DO
-    IF(idx == 0) CALL finish(TRIM(routine), 'Max no of vgrids reached')
+    length = vgrid%n_levels
+    CALL Create_zaxis(vgrid%ZaxisID, vgrid%echamZaxisIdx, &
+      & vgrid%cdi_axis_type, length, vgrid%name, vgrid%levels(1:length), vgrid%units, vgrid%longname, &
+      & vgrid%lbounds(1:length), vgrid%ubounds(1:length))
 
-    jsbach_vgrids(idx)%p => vgrid
-
-!!$    self%vgrids(idx)%id         = vgrid%id
-!!$    self%vgrids(idx)%name       = TRIM(vgrid%name)
-!!$    self%vgrids(idx)%longname   = TRIM(vgrid%longname)
-!!$    self%vgrids(idx)%units      = TRIM(vgrid%units)
-!!$    self%vgrids(idx)%n_levels   = vgrid%n_levels
-!!$    self%vgrids(idx)%cdiZaxisID = vgrid%cdiZaxisID
-!!$    ALLOCATE(self%vgrids(idx)%levels (vgrid%n_levels))
-!!$    ALLOCATE(self%vgrids(idx)%lbounds(vgrid%n_levels))
-!!$    ALLOCATE(self%vgrids(idx)%ubounds(vgrid%n_levels))
-!!$    self%vgrids(idx)%levels(:)  = vgrid%levels(:)
-!!$    self%vgrids(idx)%lbounds(:) = vgrid%lbounds(:)
-!!$    self%vgrids(idx)%ubounds(:) = vgrid%ubounds(:)
+    WRITE(message_text, '(A,A,2I3)') 'Registered new vgrid: name, ID, length= ',TRIM(vgrid%name), vgrid%ZaxisID, length
+    CALL message(TRIM(routine), message_text)
 
   END SUBROUTINE Register_vgrid
 
@@ -100,7 +94,7 @@ CONTAINS
     INTEGER, INTENT(in)        :: id
     TYPE(t_jsb_grid), POINTER  :: grid
 
-    INTEGER :: i, idx
+    INTEGER :: i
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Get_grid'
 
     grid => NULL()
@@ -121,10 +115,12 @@ CONTAINS
 
   FUNCTION Get_vgrid(name) RESULT(vgrid)
 
+    USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids
+
     CHARACTER(len=*),           INTENT(in)    :: name
     TYPE(t_jsb_vgrid), POINTER                :: vgrid
 
-    INTEGER :: i, idx
+    INTEGER :: i
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Get_vgrid'
 
     vgrid => NULL()

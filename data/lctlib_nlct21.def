@@ -54,10 +54,10 @@ NitrogenScalingFlag 0 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
 #C4flag: Photosynthetic pathway (C3: 0; C4: 1)                      
 C4flag 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 1
                      
-#CarboxRate: Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2/s] (s. Kattge et al. 2009)                     
+#CarboxRate: Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2 leafarea/s] (s. Kattge et al. 2009, V_max^25 mean)
 CarboxRate 0.0 39.0 31.0 44.0 66.0 61.4 57.7 62.5 39.1 61.7 54.0 78.2 8.0 78.2 78.2 8.0 21.6 40.6 100.7 100.7 39.0
                      
-#ETransport: Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s] (Jmax=1.9*Vmax for C3 plants)                     
+#ETransport: Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2 leafarea/s] (Jmax=1.9*V_max^25 for C3 plants)                     
 ETransport 0.0 74.1 58.9 83.6 125.4 116.7 109.7 118.8 74.3 117.2 102.6 148.6 140.0 148.6 148.6 140.0 41.0 77.1 191.3 191.3 700.0
                      
 #VegHeight: Vegetation height [m]; for non-vegetation value is arbitrary                     
@@ -72,30 +72,30 @@ MinVegRoughness 0.005 2.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.3 0.3 0.005 0.005 0.005 
 #MaxVegRoughness: Vegetation roughness length at LAI=LAI_max [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero                     
 MaxVegRoughness 0.010 5.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 1.0 1.0 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.10
                      
-#Frac_npp_2_woodPool: Maximum fraction of NPP used for buildup of woody parts                     
-Frac_npp_2_woodPool 0.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.0 0.0 0.0 0.0 0.0 0.3 0.3 0.0 0.0 0.0
+#Fract_npp_2_woodPool: Maximum fraction of NPP used for buildup of woody parts                     
+Fract_npp_2_woodPool 0.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.0 0.0 0.0 0.0 0.0 0.3 0.3 0.0 0.0 0.0
                      
-#Frac_npp_2_reservePool: Maximum fraction of NPP put into the storage pool                     
-Frac_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.15 0.15 0.15 0.15 0.1 0.1 0.2 0.2 0.2
+#Fract_npp_2_reservePool: Maximum fraction of NPP put into the storage pool                     
+Fract_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.15 0.15 0.15 0.15 0.1 0.1 0.2 0.2 0.2
                      
-#Frac_npp_2_exudates: Maximum fraction of NPP put into the root exudates                     
-Frac_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+#Fract_npp_2_exudates: Maximum fraction of NPP put into the root exudates                     
+Fract_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
                      
-#Frac_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
-Frac_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
+#Fract_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
+Fract_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
                      
-#Frac_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
+#Fract_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
 #                   (The rest enters slow pool.)                      
-Frac_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
+Fract_C_litter_green2atmos 1.0 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.5 0.5 0.5 0.5 0.5 0.85 0.85 0.5 0.5 0.5
                      
-#Tau_Cpool_litter_leaf: Life time of leaf litter [days]                     
-Tau_Cpool_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
+#Tau_c_litter_leaf: Life time of leaf litter [days]                     
+Tau_c_litter_leaf 1.0 870.0 590.0 900.0 750.0 900.0 750.0 900.0 750.0 660.0 660.0 660.0 820.0 660.0 660.0 820.0 660.0 660.0 660.0 660.0 660.0
                      
-#Tau_Cpool_litter_wood: Life time of woody litter [days]                     
-Tau_Cpool_litter_wood 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0
+#Tau_c_litter_wood: Life time of woody litter [days]                     
+Tau_c_litter_wood 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0 10950.0
                      
-#Tau_Cpool_woods: Time scale of the Cpool_woods and vegetation dynamics [years]                      
-Tau_Cpool_woods 1.0 30.0 30.0 60.0 60.0 60.0 60.0 60.0 60.0 12.0 24.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+#Tau_c_woods: Time scale of the Cpool_woods and vegetation dynamics [years]                      
+Tau_c_woods 1.0 30.0 30.0 60.0 60.0 60.0 60.0 60.0 60.0 12.0 24.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
                      
 #LAI_shed_constant: Time in which leaves are constantly shedded [days-1]                     
 LAI_shed_constant 0.0 0.000342 0.000456 0.0 0.0 0.0 0.0 0.0 0.0 0.00183 0.0 0.00548 0.00548 0.00548 0.00548 0.00548 0.0 0.0 0.00274 0.00274 0.00274
@@ -107,14 +107,14 @@ Max_C_content_woods 0.0 2997.25 2997.25 1998.2 1498.6 1998.2 1498.6 1998.2 1498.
 #reserveC2leafC: Factor by which the maximum carbon content of the reserve pool is larger than MAXLAI /SLA                     
 reserveC2leafC 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 4.0 4.0 4.0 4.0 4.0 2.0 2.0 4.0 4.0 4.0
                      
-#frac_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
-frac_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+#fract_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                     
+fract_wood_2_onsite 1.0 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.6 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
                      
-#frac_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
-frac_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+#fract_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
+fract_wood_2_paper 0.0 0.4 0.4 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
-#frac_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
-frac_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+#fract_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
+fract_wood_2_construction 0.0 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #MaxLAI: Maximum LAI used in the LogoP scheme [m2/m2]                     
 MaxLAI 0.0 7.0 7.0 5.0 5.0 6.0 5.0 5.0 5.0 2.0 2.0 3.0 3.0 3.0 3.0 3.0 1.5 3.0 4.0 4.0 4.0
@@ -129,10 +129,10 @@ specificLeafArea_C 0.0 0.264 0.376 0.110 0.304 0.152 0.307 0.110 0.301 0.184 0.3
 ClumpinessFactor 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 3.0 3.0 3.0
                      
 #AlbedoCanopyVIS: Albedo of the canopy in the visible range                     
-AlbedoCanopyVIS 0 0.03 0.04 0.04 0.05 0.05 0.07 0.05 0.05 0.05 0.05 0.08 0.08 0.08 0.08 0.08 0.08 0.05 0.08 0.08 0.08
+AlbedoCanopyVIS 0 0.03 0.04 0.04 0.05 0.05 0.07 0.05 0.05 0.05 0.05 0.08 0.06 0.08 0.08 0.06 0.08 0.05 0.08 0.08 0.08
                      
 #AlbedoCanopyNIR: Albedo of the canopy in the near infrared range                     
-AlbedoCanopyNIR 0 0.22 0.23 0.23 0.26 0.25 0.28 0.26 0.26 0.25 0.28 0.33 0.33 0.33 0.33 0.33 0.33 0.25 0.33 0.33 0.33
+AlbedoCanopyNIR 0 0.22 0.23 0.23 0.26 0.25 0.28 0.26 0.26 0.25 0.28 0.35 0.33 0.33 0.35 0.33 0.33 0.25 0.33 0.35 0.33
                      
 #AlbedoLitterVIS: Albedo of litter in the visible range                     
 AlbedoLitterVIS 0.0 0.09 0.10 0.10 0.11 0.11 0.13 0.11 0.11 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.11 0.34 0.34 0.34
