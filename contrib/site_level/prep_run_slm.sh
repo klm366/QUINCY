@@ -23,15 +23,13 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select set of sites: FLUXNET or CRUNCEPv7
 # forcing data and fluxnet/cruncep/face site info *list.dat for the specific set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet cruncep face
+# options: fluxnet cruncep face manip
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
 forcingMode="static"
 # set the specific set of sites of the forcingDataSet you want to use
-#  fluxnet:  (currently no options)
 #  cruncep: all cue spp
-#  face:     (currently no options)
 siteSelection="cue"
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
@@ -43,7 +41,7 @@ customSiteListFileName=""
 # note: this option must be empty (i.e., singleSiteName="" ) to run multiple sites
 # Site-ID must be consistent with the forcingDataSet option above
 # get the Site-ID from the 1st column of the particular "site list .dat"
-# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"
+# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"
 singleSiteName=""
 
 
@@ -184,6 +182,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=face"
       forcingDataSet="face"
       ;;
+    "ma")
+      echo "   forcingDataSet=manip"
+      forcingDataSet="manip"
+      ;;
     esac
     ;;
   "c")
@@ -300,6 +302,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       fl: FLUXNET"
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
+    echo "       ma: MANIP tree and grassland sites"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -441,7 +444,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet cruncep face"
+validateForcingDataSet="fluxnet cruncep face manip"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
@@ -594,7 +597,7 @@ if [ $paramSensitivitySim == "T" ]; then
 fi
 
 
-## site data-set: FLUXNET / CRUNCEPv7 / FACE ##
+## site data-set: FLUXNET / CRUNCEPv7 / FACE / MANIP ##
 case "$forcingDataSet" in
 "fluxnet")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/"
@@ -608,14 +611,20 @@ case "$forcingDataSet" in
 "face")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FACE/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
-  if [ $slmModel == "soil" ]
-    then
-      echo " Sorry, no soil_forcing files for FACE sites yet."
-      echo " EXIT!"
-      exit 1
-  fi
   ;;
+"manip")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MANIP/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;  
 esac
+# no soil forcing for FACE & MANIP
+if [ "$slmModel" == "soil" ]; then
+  if [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "manip" ]; then
+    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
+    echo " EXIT!"
+    exit 1
+  fi
+fi
 
 
 ## SLM model forcing: land/plant/canopy/soil (only 15 soil layer forcing for SLM soil )
@@ -759,6 +768,17 @@ else # the default case: $customSiteList == "F"
       siteListFileName="face_sites_1996-2008_list.dat"
     else
       siteListFileName="face_sites_1901-2015_list.dat"
+    fi
+    ;;
+  "manip")
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="manip_sites_2009-2017_list.dat"
+    else
+      echo " Sorry. Transient forcing for MANIP sites not yet available."
+      echo " EXIT!"
+      exit 1
+      #siteListFileName="manip_sites_xxxx-2017_list.dat"
     fi
     ;;
   esac
@@ -918,6 +938,17 @@ case "$forcingDataSet" in
     forcingModeFileID="_199"
   else
     forcingModeFileID="_190"
+  fi
+  ;;
+"manip")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_2009"         # ES-MaG_2009-2017.dat & ES-MaT_2009-2017.dat
+  else
+    echo " ... set forcing filename ID for manip transient"
+    echo " EXIT1"
+    exit 1
+    forcingModeFileID="_xxxx"
   fi
   ;;
 esac
