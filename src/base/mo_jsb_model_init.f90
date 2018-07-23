@@ -306,8 +306,6 @@ CONTAINS
         CYCLE
       END IF
 
-      CALL tile%Set_no_of_children(tile%Get_no_of_children())
-
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
