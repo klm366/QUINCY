@@ -73,9 +73,9 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet"        # options: fluxnet cruncep face none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet"        # options: fluxnet cruncep face manip none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
-                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "HAI_01" "ILO_05" "NAU_02"  [FACE] "DK-AMB" "OR-ELE"
+                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "HAI_01" "ILO_05" "NAU_02"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -123,6 +123,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "fa")
       echo "   forcingDataSet=face"
       forcingDataSet="face"
+      ;;
+    "ma")
+      echo "   forcingDataSet=manip"
+      forcingDataSet="manip"
       ;;
     "no")
       echo "   forcingDataSet=none"
@@ -221,6 +225,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       fl: FLUXNET"
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
+    echo "       ma: MANIP tree and grassland sites"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -288,7 +293,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet cruncep face none"
+validateForcingDataSet="fluxnet cruncep face manip none"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
 ## validate user-defined model-options ##
@@ -350,14 +355,19 @@ case "$forcingDataSet" in
   ;;
 "face")
   siteDataSet="FACE/"
-  if [ $slmModel == "soil" ]
-    then
-      echo " Sorry, no soil_forcing_slX for FACE sites yet."
-      echo " EXIT!"
-      exit 1
-  fi
+  ;;
+"manip")
+  siteDataSet="MANIP/"
   ;;
 esac
+# no soil forcing for FACE & MANIP
+if [ "$slmModel" == "soil" ]; then
+  if [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "manip" ]; then
+    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
+    echo " EXIT!"
+    exit 1
+  fi
+fi
 
 
 ## test number of soil levels and set dirname for soil_forcing files
@@ -397,23 +407,27 @@ case "$forcingDataSet" in
 "face")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"face_sites_1996-2008_list.dat
   ;;
+"manip")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"manip_sites_2009-2017_list.dat
+  ;;
 esac
 
 
 ## test if siteName exists in site info file
-if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "cruncep" ] || [ "$forcingDataSet" == "face" ]
- then 
-  # validate if $singleSiteName is not empty
-  if [ ! -z "$siteName" ]
-   then
-    # note for cruncep site limitation
-    if [ $slmModel == "soil" ] && [ "$forcingDataSet" == "cruncep" ]; then
-      echo -e '\n'"  Your are using SLM soil for a cruncep site."
-      echo    "  Note, soil forcing is available only for cue and spp sites."
-    fi
-    # actual test
-    allSites=$(cat "$allSiteInfoFile" | awk '{print $1}')
-    validateUserConfigValues "$siteName" "$allSites" "siteName"
+if [ "$forcingDataSet" != "none" ]; then
+  # validate if $siteName variable has some (any) content
+  if [ -z "$siteName" ]; then
+    echo -e '\n'"  You did not set a site name. Variable siteName is empty."
+    echo "EXIT!"
+    exit 1
+  fi
+  # perform search for siteName in site list
+  allSites=$(cat "$allSiteInfoFile" | awk '{print $1}')
+  validateUserConfigValues "$siteName" "$allSites" "siteName"
+  # in addition: show a note for cruncep site limitation of soil forcing available to cue and spp sites, but do not explicitly test for that
+  if [ $slmModel == "soil" ] && [ "$forcingDataSet" == "cruncep" ]; then
+    echo -e '\n'"  Your are using SLM soil for a cruncep site."
+    echo    "  Note, soil forcing is available only for cue and spp sites."
   fi
 fi
 
@@ -430,6 +444,9 @@ case "$forcingDataSet" in
   ;;
 "face")
   siteNameStatMetForc="$siteName""_199"
+  ;;
+"manip")
+  siteNameStatMetForc="$siteName""_2009"              # ES-MaG_2009-2017.dat & ES-MaT_2009-2017.dat
   ;;
 esac
 
@@ -497,7 +514,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
           else # land plant canopy
             cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
         fi 
-      # forcingDataSet == fluxnet / cruncep / face
+      # forcingDataSet == fluxnet / cruncep / face / manip
       else 
         if [ $slmModel == "soil" ]
           then
