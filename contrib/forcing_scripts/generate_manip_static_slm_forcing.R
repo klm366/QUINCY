@@ -1,14 +1,43 @@
 #!/usr/bin/env Rscript
-library(ncdf)
-load("ES_LMa_2009-2017_gf.Rdata")
 
-opath="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/met_forcing/"
+#########################################################################################
+##
+## generate > static < met forcing for Manip sites
+##
+## run this script by:
+##  cd contrib/forcing_scripts/
+##  Rscript --vanilla ./generate_manip_static_slm_forcing.R
+## 
+## note: allsiteinfo is ./generate_manip_site_list.dat  (manually created from BGI/people/szaehle/Projects/QUINCY/GenerateMANP_Forcing_2018/site_info.dat)
+## 
+## output may be generated per default in:
+##  ./new_manip_static_met_forcing/
+## 
+#########################################################################################
 
-allsiteinfo<-read.table('site_info.dat',stringsAsFactor=F,header=T)
-allsitestartyear<-allsiteinfo[,5]
-allsiteendyear<-allsiteinfo[,6]
-allsitename<-allsiteinfo[,1]
-site_list<-allsitename
+
+## library
+library(ncdf4)
+
+
+
+
+## create out folder & set in/out path
+dir.create("./new_manip_static_met_forcing", showWarnings=T, recursive=T)
+ipath1 <- "/Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateMANP_Forcing_2018/"
+opath  <- "./new_manip_static_met_forcing/"
+#opath  <- "/Net/Groups/BGI/data/Model/SLM1/input/point/MANIP/met_forcing/"
+
+## define & load input file (data provided by Tarek telmad@bgc-jena.mpg.de)
+infile="ES_LMa_2009-2017_gf.Rdata"
+load(paste0(ipath1, infile))
+
+## read site info file (manually created from BGI/people/szaehle/Projects/QUINCY/GenerateMANP_Forcing_2018/site_info.dat)
+allsiteinfo       <- read.table("generate_manip_site_list.dat", stringsAsFactor=F, header=T)
+allsitestartyear  <- allsiteinfo[,5]
+allsiteendyear    <- allsiteinfo[,6]
+allsitename       <- allsiteinfo[,1]
+site_list         <- allsitename
 
 doy=ceiling(seq(1/48,365,1/48))
 hod=rep(seq(0,23.5,0.5),365)
@@ -36,10 +65,9 @@ print(site_list[s])
   #if(stat3) {
     if (file.exists(outname)) file.remove(outname) 
     # write header
-    write.table(t(cbind(header1,header2)),file=outname,append=TRUE,quote=FALSE,col.names=FALSE,
-              row.names=FALSE,sep=' ') 
+    write.table(t(cbind(header1,header2)),file=outname,append=TRUE,
+                quote=FALSE,col.names=FALSE,row.names=FALSE,sep=' ') 
       # meteo data
-  #    fid<-open.ncdf(paste(ipath1,site_list[s],'.',startyear,'-',endyear,'.',infile_ext,sep=''))
        lonsite<-allsiteinfo[allsitename==site_list[s],2]
        latsite<-allsiteinfo[allsitename==site_list[s],3]
        swdown<-df[,4]
@@ -52,38 +80,38 @@ print(site_list[s])
        wind<-df[,11]
        wind[wind<0.1]<-0.1
       # P deposition data
-      fid<-open.ncdf(paste("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc",sep=''))
-       lonpdep<-as.numeric(get.var.ncdf(fid,'lon'))
-       latpdep<-as.numeric(get.var.ncdf(fid,'lat'))
+      fid<-nc_open("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc")
+       lonpdep<-as.numeric(ncvar_get(fid,'lon'))
+       latpdep<-as.numeric(ncvar_get(fid,'lat'))
        latx<-which.min(abs(latpdep-latsite))
        lonx<-which.min(abs(lonpdep-lonsite))
-       p_dummy<-get.var.ncdf(fid,'pdep')[lonx,latx]/365
+       p_dummy<-ncvar_get(fid,'pdep')[lonx,latx]/365
        pdep<-numeric(length(swdown))
        pdep[]<-p_dummy
-      close.ncdf(fid)
+      nc_close(fid)
       # N deposition data
     year_out=co2=co2_dC13=co2_DC14=noy=nhx<-numeric(length(swdown))
     for (year in c(startyear:endyear)) {
       print(c(site_list[s],year))
       if(year<2017) {
-         fid<-open.ncdf(paste("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc",sep=''))
+         fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc"))
       } else {
-         fid<-open.ncdf(paste("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_2016.nc",sep=''))
+         fid<-nc_open("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_2016.nc")
       }
-       lonndep<-get.var.ncdf(fid,'lon')
-       latndep<-get.var.ncdf(fid,'lat')
+       lonndep<-ncvar_get(fid,'lon')
+       latndep<-ncvar_get(fid,'lat')
        latx<-which.min(abs(latndep-as.numeric(latsite)))
        lonx<-which.min(abs(lonndep-as.numeric(lonsite)))
-       nhx_dummy<-get.var.ncdf(fid,'NHx_deposition')[lonx,latx,]*86400*1000*1000
-       noy_dummy<-get.var.ncdf(fid,'NOy_deposition')[lonx,latx,]*86400*1000*1000
+       nhx_dummy<-ncvar_get(fid,'NHx_deposition')[lonx,latx,]*86400*1000*1000
+       noy_dummy<-ncvar_get(fid,'NOy_deposition')[lonx,latx,]*86400*1000*1000
        nhx[1:(dpm[1]*48)+365*48*(year-startyear)]<-rep(nhx_dummy[1],dpm[1]*48)
        noy[1:(dpm[1]*48)+365*48*(year-startyear)]<-rep(noy_dummy[1],dpm[1]*48)
        for (m in 2:12) {
          nhx[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(nhx_dummy[m],dpm[m]*48)
          noy[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(noy_dummy[m],dpm[m]*48)
        }
-      close.ncdf(fid)
-      #CO2
+      nc_close(fid)
+      # CO2
       if(year<2017) {
         co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==year,2],17520)
       } else {
@@ -107,31 +135,17 @@ print(site_list[s])
       doy_out<-(rep(doy,nyear))
       hod_out<-(rep(hod,nyear))
       nstep<-length(doy_out)
+      
+      # combine individual variables into one array for output
       forcing<-cbind(year_out[1:nstep],doy_out,hod_out,swdown[1:nstep],lwdown[1:nstep],tair[1:nstep],qair[1:nstep],
                      press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
                      nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
-      write.table(format(round(forcing,digits=4),nsmall=1),file=outname,append=TRUE,quote=FALSE,col.names=FALSE,
-              row.names=FALSE,sep=' ')
-     #generate site list
-#     pftid<-which.max(allsiteinfo[allsitename==site_list[s],15:27])
-#     if(pftid==2) pft="TrBE"
-#     if(pftid==3) pft="TrBR"
-#     if(pftid==4) pft="TeNE"
-#     if(pftid==5) pft="TeBE"
-#     if(pftid==6) pft="TeBS"
-#     if(pftid==7) pft="BNE"
-#     if(pftid==8) pft="BBS"
-#     if(pftid==9) pft="BNS"
-#     if(pftid==10) pft="TeH"
-#     if(pftid==11) pft="TrH"
-#     if(pftid==12) pft="TeC"
-#     if(pftid==13) pft="TrC"
-     #slm_site_list[s,]<-unlist(c(site_list[s],lonsite,latsite,pft,startyear,endyear,allsiteinfo[allsitename==site_list[s],4:14]))
-  #} else {
-  #     print('site not available')
-  #}
- 
+                     
+      # write output
+      write.table(format(round(forcing,digits=4),nsmall=1), file=outname, append=TRUE, quote=FALSE,
+                  col.names=FALSE, row.names=FALSE, sep=" ")
+
 }
 
-#colnames(slm_site_list)<-header_site_list
-#write.table(slm_site_list,file=paste(opath,'all_site_list.dat',sep=''),quote=FALSE,row.names=FALSE)
+
+## end ##
