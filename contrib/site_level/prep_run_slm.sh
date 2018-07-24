@@ -38,9 +38,9 @@ customSiteList="F"
 # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 customSiteListFileName=""
 ## run a single site: provide the Site-ID 
-# note: this option must be empty (i.e., singleSiteName="" ) to run multiple sites
-# Site-ID must be consistent with the forcingDataSet option above
-# get the Site-ID from the 1st column of the particular "site list .dat"
+# this option must be empty (i.e., singleSiteName="" ) to run multiple sites !
+# Site-ID must be consistent with the forcingDataSet option above, i.e., fluxnet, cruncep, face, manip
+# you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
 # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"
 singleSiteName=""
 
@@ -64,11 +64,11 @@ compareSimCRUNCEPvsGFDB="F"
 spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
-# you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
+# you can run a set of sensitivity simulations for one site
 # T (True) or F (False) [large caps]
 paramSensitivitySim="F"
-# please provide the line number of the site you want to use in your "customSiteListFileName" >> line 2 to ...  (there is a header at line 1)
-paramSensitivitySiteNumber=2
+# please provide the Site-ID   (examples:  [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT")
+paramSensitivitySiteName="DE-Hai"
 
 
 ##>> default usecases <<################################################################################
@@ -486,7 +486,7 @@ slmParamTableFilename="parameter_table.txt"
  slmCleanupScript="$slmCleanupScriptFolder""$slmCleanupScriptFilename"      ## cleanup script started as extra job after simulations are done
  slmNamelist="$slmNamelistFolder""$slmNamelistFilename"                     ## just one namelist for all models
  slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                           ## Landcovertype library for SLM with 8 PFTs
- slmParamListDefault="$slmParamSensiFolder""$slmParamListRunFilename"       ## kind of namelist with only the parameter of which the value is varied
+ slmParamListRun="$slmParamSensiFolder""$slmParamListRunFilename"           ## kind of namelist with only the parameter of which the value is varied
  slmParamTable="$slmParamSensiFolder""$slmParamTableFilename"               ## table with values of the parameter(s)
 # R scripts
  slmRscript="../r_script/postprocessing_""$slmModel"".R"                       ## R-Script for postprocessing output data
@@ -664,9 +664,8 @@ esac
 # parameter sensitivity: set customSiteList to "T" and delete any name in singleSiteName (see the IF[] for starting the job very below)
 if [ $paramSensitivitySim == "T" ]; then
   echo ""
-  echo " You aim at parameter sensitivity simulations for one specific site from your customSiteList."
-  echo " Simulations will be done for the parameter combinations you specified in contrib/parameter_list/parameter_table.txt"
-  customSiteList="T"
+  echo " You aim at parameter sensitivity simulations for the site: ""$paramSensitivitySiteName"
+  echo " Simulations will be done for each of the parameter combination you specified in contrib/parameter_list/parameter_table.txt"
   singleSiteName=""
 fi
 # test default and custom site list
@@ -725,7 +724,7 @@ else # the default case: $customSiteList == "F"
       siteListFileName="flux_all_sites_1901-2006_list.dat"
     fi
     ## SLM baseline paper 2018 using a specific set of fluxnet sites per default for usecases 80 81 82
-    if [ ! -z "$usecase" ]  # if $usecase is not empty
+    if [ "$usecase" != "none" ] # if a $usecase is defined
      then
        if [ "$usecase" -gt 79 ] &&  [ "$usecase" -lt 83 ]  # if usecase 80 or 81 or 82
         then
@@ -1012,31 +1011,35 @@ fi
 ## validate options linked with specialFluxnetOutput ##
 if [ $specialFluxnetOutput == "T" ]
  then
-    # check SLM model
-    if [ $slmModel == "soil" ]
-      then
-        echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
-        rm -r "$simFold"  # deleting the already created simulation folder
-        exit 1
-      else
-        echo " "
-        echo " You just started simulations to generate FLUXNET diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
-        # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
-        #if $singleSiteName is not empty
-        if [ ! -z "$singleSiteName" ]
-         then
-           echo " Simulation is done for one site: ""$singleSiteName"
-           echo " "
-         else
-           echo " Simulations are done for all sites listed in: ""$siteListFileName"
-           echo " "
-        fi
-    fi
     # check site data set
-    if [ $forcingDataSet != "fluxnet" ] 
-      then
-        echo "EXIT! You might want to use FLUXNET sites when enabling special FLUXNET-Simulation output :) ."
-        exit 1
+    if [ $forcingDataSet != "fluxnet" ]; then
+      echo "EXIT! You might want to use FLUXNET sites when enabling special FLUXNET-Simulation output :) ."
+      exit 1
+    fi
+    # check SLM model
+    if [ $slmModel == "soil" ]; then
+      echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
+      rm -r "$simFold"  # deleting the already created simulation folder
+      exit 1
+    fi
+    # give info on screen
+    echo " "
+    echo " You just started simulations to generate FLUXNET diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
+    # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
+    # if $singleSiteName is not empty
+    if [ ! -z "$singleSiteName" ]; then
+      echo " Simulation is done for one site: ""$singleSiteName"
+      echo " "
+    fi
+    # parameter sensitivity simulations
+    if [ $paramSensitivitySim == "T" ]; then
+      echo " Multiple parameter sensitivity simulations are done for the site: ""$paramSensitivitySiteName"
+      echo " "
+    fi
+    # $singleSiteName is empty and no parameter sensitivity simulations
+    if [ -z "$singleSiteName" ] && [ $paramSensitivitySim == "F" ]; then
+       echo " Simulations are done for all sites listed in: ""$siteListFileName"
+       echo " "
     fi
 fi
 
@@ -1118,7 +1121,7 @@ if [ "$numberCpuMax" -lt "$lowestCpu" ]
   fi
 fi
 
-## convert $emailNotification into a bsup option ##
+## convert $emailNotification into a bsub option ##
 emailSwitch=""
 if [ "$emailNotification" == "yes" ]
   then
@@ -1152,22 +1155,19 @@ if [ ! -e "$slmRscript" ]    # exit if non-existing
 	exit 1
 fi
 # in case of parameter sensitivity
-if [ $paramSensitivitySim == "T" ]
-  then
-    # parameter_slm_run.list
-    if [ ! -e "$slmParamListDefault" ]    # exit if non-existing
-      then
-    	echo "EXIT! the default parameter List (parameter_slm_run.list) is missing though needed for Parameter Sensitivity Simulations."
-      echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create this file."
-    	exit 1
-    fi
-    # parameter_table.txt
-    if [ ! -e "$slmParamTable" ]    # exit if non-existing
-      then
-    	echo "EXIT! the parameter Table (parameter_table.txt) is missing though needed for Parameter Sensitivity Simulations."
-      echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create the table."
-    	exit 1
-    fi	
+if [ $paramSensitivitySim == "T" ]; then
+  # parameter_slm_run.list - exit if non-existing
+  if [ ! -e "$slmParamListRun" ]; then
+  	echo "EXIT! the default parameter List (parameter_slm_run.list) is missing though needed for Parameter Sensitivity Simulations."
+    echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create this file."
+  	exit 1
+  fi
+  # parameter_table.txt - exit if non-existing
+  if [ ! -e "$slmParamTable" ]; then
+  	echo "EXIT! the parameter Table (parameter_table.txt) is missing though needed for Parameter Sensitivity Simulations."
+    echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create the table."
+  	exit 1
+  fi	
 fi
 
 ## validate $singleSiteName for running SLM at one specific site only ##
@@ -1178,19 +1178,23 @@ if [ ! -z "$singleSiteName" ]
   validateUserConfigValues "$singleSiteName" "$allSites" "singleSiteName"
 fi
 
-## parameter sensitivity: get the number of different parameter combinations ##
-if [ $paramSensitivitySim == "T" ]
-  then
-    paramSensi_NumberCombinations=$(wc -l "$slmParamTable" | awk '{print $1}')
-    paramSensi_NumberCombinations=$(($paramSensi_NumberCombinations -1))  # not counting the header of the table
-    # validate number of parameter combinations
-    if [ $paramSensi_NumberCombinations -gt 994 ]
-      then
-        echo "EXIT !  You want to do ""$paramSensi_NumberCombinations"" simulations. That is too much. A number lower than 995 is necessary."
-        exit 1
-      else
-        echo "The number of combinations of parameter values (i.e. simulations) is: ""$paramSensi_NumberCombinations"
-    fi
+## parameter sensitivity: validate $paramSensitivitySiteName and get the number of parameter-sets/simulations ##
+if [ $paramSensitivitySim == "T" ]; then
+  # validate $paramSensitivitySiteName
+  allSites=$(cat "$siteList" | awk '{print $1}')
+  validateUserConfigValues "$paramSensitivitySiteName" "$allSites" "paramSensitivitySiteName"
+  # get line number of site in the siteList, needed for the run_slm.sh to get the site-specific data from the site list info file
+  paramSensitivitySiteLineNumber=$(grep -n "$paramSensitivitySiteName" "$siteList" | cut -f1 -d ":")
+  # calculate number of parameter-sets/simulations, needed also for the bsub job array
+  paramSensi_NumberCombinations=$(wc -l "$slmParamTable" | awk '{print $1}')
+  paramSensi_NumberCombinations=$(($paramSensi_NumberCombinations -1))  # not counting the header of the table
+  # validate number of parameter combinations
+  if [ $paramSensi_NumberCombinations -gt 994 ]; then
+    echo "EXIT !  You want to do ""$paramSensi_NumberCombinations"" simulations. That is too much. A number lower than 995 is necessary."
+    exit 1
+   else
+    echo " The number of combinations of parameter values (i.e. simulations) is: ""$paramSensi_NumberCombinations"
+  fi
 fi
 
 ## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
@@ -1211,7 +1215,7 @@ echo "$fluxnetTransientSim"" ""$transient_simulation_start_year"  >> "$simFoldDe
 
 # pass extra info about parameter sensitivity simulations to folder
 if [ $paramSensitivitySim == "T" ]; then
-  echo "$paramSensitivitySiteNumber"            >  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$paramSensitivitySiteLineNumber"         >  "$simFoldParamSensiFiles""param_config.txt"
   echo "$slmParamListRunFilename"               >>  "$simFoldParamSensiFiles""param_config.txt"
   echo "$slmParamTableFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
   #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
@@ -1230,8 +1234,8 @@ if [ $specialFluxnetOutput == "T" ]; then
   cp "$slmRscript4fluxdiag" "$simFoldDefaultFiles"
 fi
 if [ $paramSensitivitySim == "T" ]; then
-  cp "$slmParamListDefault" "$simFoldParamSensiFiles"
-  cp "$slmParamTable"       "$simFoldParamSensiFiles"
+  cp "$slmParamListRun"   "$simFoldParamSensiFiles"
+  cp "$slmParamTable"     "$simFoldParamSensiFiles"
 fi
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   cp "$slmRscriptCompCruncepGfdb1" "$simFoldDefaultFiles"
@@ -1430,7 +1434,7 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   siteNumber=$(wc -l "$siteList" | awk '{print $1}')
   # overwrite siteNumber with number of parameter combinations for parameter sensitivity
   if [ $paramSensitivitySim == "T" ]; then
-    siteNumber=$(($paramSensi_NumberCombinations +1)) # 2 to number+1
+    siteNumber=$(($paramSensi_NumberCombinations +1)) # jobArray generally starts with 2 and goes to number+1
   fi
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
