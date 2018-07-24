@@ -479,15 +479,15 @@ slmNamelistFilename="namelist.slm"
 slmLctlibFolder="../../data/"
 slmLctlibFilename="lctlib_slm_nlct8.def"
 slmParamSensiFolder="../parameter_list/"
-slmParamListDefaultFilename="param.listD"
-slmParamTableFilename="param_table.txt"
+slmParamListRunFilename="parameter_slm_run.list"
+slmParamTableFilename="parameter_table.txt"
 # runscript cleanupscript namelist lctlib & parameter-variation files
  slmRunScriptJob="$slmRunScriptJobFolder""$slmRunScriptJobFilename"         ## runscript runing a job
  slmCleanupScript="$slmCleanupScriptFolder""$slmCleanupScriptFilename"      ## cleanup script started as extra job after simulations are done
  slmNamelist="$slmNamelistFolder""$slmNamelistFilename"                     ## just one namelist for all models
  slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                           ## Landcovertype library for SLM with 8 PFTs
- slmParamListDefault="$slmParamSensiFolder""param.listD"                    ## kind of namelist with only the parameter of which the value is varied
- slmParamTable="$slmParamSensiFolder""param_table.txt"                      ## table with values of this parameter
+ slmParamListDefault="$slmParamSensiFolder""$slmParamListRunFilename"       ## kind of namelist with only the parameter of which the value is varied
+ slmParamTable="$slmParamSensiFolder""$slmParamTableFilename"               ## table with values of the parameter(s)
 # R scripts
  slmRscript="../r_script/postprocessing_""$slmModel"".R"                       ## R-Script for postprocessing output data
  slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"                       ## R-Script for converting output for FLUXNET 
@@ -665,7 +665,7 @@ esac
 if [ $paramSensitivitySim == "T" ]; then
   echo ""
   echo " You aim at parameter sensitivity simulations for one specific site from your customSiteList."
-  echo " Simulations will be done for the parameter combinations you specified in contrib/parameter_list/param_table.txt"
+  echo " Simulations will be done for the parameter combinations you specified in contrib/parameter_list/parameter_table.txt"
   customSiteList="T"
   singleSiteName=""
 fi
@@ -1125,7 +1125,7 @@ if [ "$emailNotification" == "yes" ]
     emailSwitch="-N"
 fi
 
-## test if namelist binary siteList R-Script (and param.listD + param_table.txt) exists ##
+## test if namelist binary siteList R-Script (and parameter_slm_run.list + parameter_table.txt) exists ##
 if [ ! -e "$slmBinary" ]     # exit if non-existing
   then
 	echo "EXIT! binary is missing"
@@ -1154,17 +1154,17 @@ fi
 # in case of parameter sensitivity
 if [ $paramSensitivitySim == "T" ]
   then
-    # param.listD
+    # parameter_slm_run.list
     if [ ! -e "$slmParamListDefault" ]    # exit if non-existing
       then
-    	echo "EXIT! the default parameter List (param.listD) is missing though needed for Parameter Sensitivity Simulations."
+    	echo "EXIT! the default parameter List (parameter_slm_run.list) is missing though needed for Parameter Sensitivity Simulations."
       echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create this file."
     	exit 1
     fi
-    # param_table.txt
+    # parameter_table.txt
     if [ ! -e "$slmParamTable" ]    # exit if non-existing
       then
-    	echo "EXIT! the parameter Table (param_table.txt) is missing though needed for Parameter Sensitivity Simulations."
+    	echo "EXIT! the parameter Table (parameter_table.txt) is missing though needed for Parameter Sensitivity Simulations."
       echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create the table."
     	exit 1
     fi	
@@ -1212,7 +1212,7 @@ echo "$fluxnetTransientSim"" ""$transient_simulation_start_year"  >> "$simFoldDe
 # pass extra info about parameter sensitivity simulations to folder
 if [ $paramSensitivitySim == "T" ]; then
   echo "$paramSensitivitySiteNumber"            >  "$simFoldParamSensiFiles""param_config.txt"
-  echo "$slmParamListDefaultFilename"           >>  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamListRunFilename"               >>  "$simFoldParamSensiFiles""param_config.txt"
   echo "$slmParamTableFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
   #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
   #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"

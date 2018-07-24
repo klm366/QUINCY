@@ -1,0 +1,3 @@
+mavg_period_tlabile 6 10 4
+tau_fast 1.2 3.6 5
+vmax_bnf 5.0 6.0 2

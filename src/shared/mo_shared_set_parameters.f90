@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for reading parameters from param.list and replace parameter-values as defined in mo_PROC_constants
+!! @brief Contains the routines for reading parameters from parameter_slm.list and replace parameter-values as defined in mo_PROC_constants
 !!
 !! @author
 !!  Jan Engel, MPI-BGC Jena 
@@ -18,13 +18,13 @@ MODULE mo_shared_set_parameters
   PUBLIC :: parameters_from_file
 
   !-----------------------------------------------------------------------------------------------------
-  !> parameter values from file param.list - replacing the values from mo_PROC_constants
+  !> parameter values from file parameter_slm.list - replacing the values from mo_PROC_constants
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_parameters_from_file
     !LOGICAL            :: active   ! de/activate this TYPE (this is non-functional for now 20161004)
-    CHARACTER(LEN=10)  :: filename = 'param.list'                 ! filename 
+    CHARACTER(LEN=30)  :: filename = 'parameter_slm_run.list'                 ! filename 
     ! SHARED_CTL
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
@@ -391,7 +391,7 @@ CONTAINS
     !! 
     CALL this%read_param
 
-    !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by param.list
+    !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm.list
     !! 
     ! SHARED_CTL
     IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
@@ -411,14 +411,15 @@ CONTAINS
                                                                                       (molar_mass_C/molar_mass_N)
     IF (ABS(this%cost_n_fixation_min    - missval) > eps8)  cost_n_fixation_min   = this%cost_n_fixation_min / &
                                                                                       (molar_mass_C/molar_mass_N)
-    IF (ABS(this%vmax_bnf               - missval) > eps8)  vmax_bnf              = this%vmax_bnf / &
+    IF (ABS(this%vmax_bnf               - missval) > eps8)  vmax_bnf              = this%vmax_bnf * 0.0225_wp / &
                                                                                       (molar_mass_N/molar_mass_C) / &
-                                                                                      (one_day*one_year) *1.e6_wp
+                                                                                      (one_day*one_year) * 1.e6_wp
     IF (ABS(this%k_bnf                  - missval) > eps8)  k_bnf                 = this%k_bnf / &
                                                                                       (molar_mass_C/molar_Mass_N)
-    IF (ABS(this%offset_bnf             - missval) > eps8)  offset_bnf            = this%offset_bnf * 2.0_wp * & 
-                                                                                      (transform_cost_nh4*transform_cost_no3)/ &
-                                                                                      (transform_cost_nh4+transform_cost_no3)
+    IF (ABS(this%offset_bnf             - missval) > eps8)  offset_bnf            = this%offset_bnf * & 
+                                                                                      (f_nacq_nh4 * transform_cost_nh4 + &
+                                                                                       f_nacq_no3 * transform_cost_no3)
+
     IF (ABS(this%f_resp_acclim          - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base       - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 

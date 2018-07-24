@@ -98,7 +98,7 @@ fi
 # define a site-specific job-folder within the simulation folder
 siteName="$(awk '{print $1}' <<< "$siteData")"
 jobFold="$simFold""$siteName""/"
-# for parameter sensitivity simulations prepend a number (where 1001 == 1st set of parameter value combinations in param_table.txt)
+# for parameter sensitivity simulations prepend a number (where 1001 == 1st set of parameter value combinations in parameter_table.txt)
 if [ $doParamSensitivitySim == "T" ]; then
   paramSimNumber=$((1000 + $jobIndex - 1))
   jobFold="$simFold""$paramSimNumber""_""$(awk '{print $1}' <<< "$siteData")""/"
@@ -150,9 +150,9 @@ case "$slmModel" in
   cp "$siteDataFoldForcing""$forcingSiteFileID""$forcingModeFileID"*_sph.dat      ./"$forceSoilPhysicFile"
   ;;
 esac
-# parameter sensitivity files
+# copy the "parameter sensitivity namelist" i.e. the input file for parameter values for SLM as used in mo_shared_set_parameters
 if [ $doParamSensitivitySim == "T" ]; then
-  slmParameterList="param.list"
+  slmParameterList="parameter_slm_run.list"       # this name must be identical to the filename set in mo_shared_set_parameters:t_parameters_from_file
   cp ../"$simParamSensiFiles""$slmParameterListDefault"           ./"$slmParameterList"
 fi
 
@@ -253,10 +253,10 @@ if [ $fluxnetTransientSim == "T" ]; then
 fi
 
 
-## manipulate the param.list if parameter sensitivity simulations should be done ##
+## manipulate the parameter_slm.list if parameter sensitivity simulations should be done ##
 if [ $doParamSensitivitySim == "T" ]; then
 
-  # define function that sets the actual values per parameter in ./param.list
+  # define function that sets the actual values per parameter in ./parameter_slm.list
   function changeParamListValue {
     sed -i /"$1"/s/ACTIVE/"$2"/ ./"$slmParameterList"   # replace the placeholder "ACTIVE" for parameter $1 with value $2
   return 0                                            # get return value with: return_value=$?
@@ -264,11 +264,16 @@ if [ $doParamSensitivitySim == "T" ]; then
   # number of parameters
   paraNumber=$(sed -n 1p ../"$simParamSensiFiles""$slmParameterSensiTable" | grep -o " " | wc -l) # count the number of separators between columns
 
+  # loop over parameter names in the header of $slmParameterSensiTable
   for ((i = 0 ; i < $paraNumber ; i++))
     do
+      # loop from 0 to nParameter-1; the 1st parameter is in column 2
       paraCount=$(($i +2))
+      # get the parameter name
       paraName=$(sed -n 1p ../"$simParamSensiFiles""$slmParameterSensiTable" | awk -v c="$paraCount" '{print $c}' )
+      # get the value of this parameter for this specific run
       paraValue=$(sed -n "$jobIndex"p ../"$simParamSensiFiles""$slmParameterSensiTable" | awk -v c="$paraCount" '{print $c}' ) 
+      # set the value for this parameter (replacing the key word 'ACTIVE')
       changeParamListValue $paraName $paraValue
   done
 fi

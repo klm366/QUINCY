@@ -1,29 +1,30 @@
 #!/bin/bash
 
-##
-## Info: 
-##      * run this script to create the two files needed for starting the parameter sensitivity analysis with the prep_run_slm.sh [option: paramSensitivitySim]
-##      * the prep_run_slm.sh expects these files to be located here (contrib/parameter_list/ ) in case you set the option: paramSensitivitySim="T"
-##      * this folder (contrib/parameter_list/ ) already contains the two files: generate_parameter_table.sh & param.list
-##      * the variables you want to use for your parameter sensitivity analysis must already be present in the param.list, if not, ask Jan or Sönke
-##      * you need to create an additional input file (see below for details)
-##      * set the mainTask to 1, 2 or 3 (see below for details)
-##      * for mainTask 3 you can select the distribution of values (uniform/normal) and the SD of the normal distribution
+########################################################################################################
+####### general info - see also the QUINCY wiki ########################################################
+########################################################################################################
+
+##  * run this script to create the two files needed for starting the parameter sensitivity analysis with the prep_run_slm.sh [option: paramSensitivitySim]
+##  * the prep_run_slm.sh expects these files to be located here (contrib/parameter_list/ ) in case you set the option: paramSensitivitySim="T"
+##  * this folder (contrib/parameter_list/ ) already contains the two files: generate_parameter_table.sh & parameter_slm.list
+##  * the variables you want to use for your parameter sensitivity analysis must already be present in the parameter_slm.list, if not, ask Jan or Sönke
+##  * you need to create an additional input file (see below for details)
+##  * set the mainTask to 1, 2 or 3 (see below for details)
+##  * for mainTask 3 you can select the distribution of values (uniform/normal) and the SD of the normal distribution
 ## 
 ## Input you have to create:   
-##      slm_parameter_sensitivity_input.txt 
+##      generate_parameter_table_input.txt 
 ##        * content of this file must comply with the Main Task: https://projects.bgc-jena.mpg.de/QUINCY/wiki/SLMParameterSensitivitySimulations
+##        * see example files for the three mainTasks: generate_parameter_table_input_m[1,3].txt
 ##        * you could use a different file name and set the option paramInputFile accordingly
 ## 
 ## Output created by this script:  
-##      param.listD           
-##        * this is a namelist containing the variables you use with value "ACTIVE", is a subset of the variables in param.list
-##      param_table.txt
+##      parameter_slm_run.list
+##        * this is a namelist containing the variables you use with value/keyword "ACTIVE"; it is a subset of the variables in parameter_slm.list
+##      parameter_table.txt
 ##        * this file contains sets of parameter value combinations used as input for SLM parameter sensitivity simulations
 ##        * this file is also meant as documentation of the parameter values, a copy is saved in the simulation results folder
 ##
-## 1st version: Jan Engel MPI-BGC Jena 20161006
-## 2nd version: Jan Engel MPI-BGC Jena 20180403 add LHS
 ##
 
 ########################################################################################################
@@ -31,19 +32,20 @@
 ########################################################################################################
 
 # Main Tasks
-#   1: you provide parameters and specific values per parameter (up to 4 parameters, number of values can differ between parameters)
-#   2: you provide parameters, min and max values and number of values per parameter (same conditions as for 1)
-#   3: you provide parameters, min and max values and number of parameter sets / simulations, the rest is done by LHS using R
-# Note: you can pass the mainTask number as argument to this script; for Main Task 2: ./contrib/generate_parameter_table.sh 2
-mainTask=1
+#       1: you provide parameters and specific values per parameter                      (up to 4 parameters, number of values can differ between parameters)
+#       2: you provide parameters, min and max values and number of values per parameter (up to 4 parameters, number of values can differ between parameters)
+#       3: you provide parameters, min and max values, and overall number of parameter-sets/simulations, the rest is done by LHS using R
+# see example files for the three mainTasks: generate_parameter_table_input_m[1,3].txt
+# you can pass the mainTask number as argument to this script, e.g.: ./contrib/generate_parameter_table.sh 2
+mainTask=3
 
 # Main Task 3 options:
-m3ProbDistr="u"       # [u]niform  [n]ormal distribution of values
+m3ProbDistr="n"       # [u]niform  [n]ormal distribution of values
 m3NormalSD=0.1        # SD of the normal distribution -> applied to values within range [0,1]
 
 # Input file for this script
-#   defaults to: ./slm_parameter_sensitivity_input.txt
-#   leave paramInputFile blank to use the default
+#   defaults to: ./generate_parameter_table_input.txt
+#   leave 'paramInputFile' blank to use this default
 #   you can overwrite this default by providing a valid filename located in this folder, such as, my_param_sens_01.txt
 paramInputFile="" 
 
@@ -67,7 +69,7 @@ fi
 ## test and set input file ##
 if [ -z "$paramInputFile" ] # if $paramInputFile is empty
   then
-    paramInputFile="./slm_parameter_sensitivity_input.txt"
+    paramInputFile="./generate_parameter_table_input.txt"
   else
     if [ ! -e "$paramInputFile" ]     # exit if non-existing
       then
@@ -92,17 +94,17 @@ fi
 echo " "
 echo "You selected Main Task ""$mainTask"
 
-## validate existence of param.list ##
-if [ ! -e ./param.list ]     # exit if non-existing
+## validate existence of parameter_slm.list ##
+if [ ! -e ./parameter_slm.list ]     # exit if non-existing
   then
-    echo "EXIT!  I cannot find the file contrib/parameter_list/param.list."
+    echo "EXIT!  I cannot find the file contrib/parameter_list/parameter_slm.list."
     exit 1
 fi
 
 ## set filenames and variables##
-paramList="./param.list"
-paramListDefault="./param.listD"
-paramTable="./param_table.txt"
+paramList="./parameter_slm.list"
+paramListRun="./parameter_slm_run.list"
+paramTable="./parameter_table.txt"
 
 paramNumber=0
 paramValSets=0
@@ -114,9 +116,9 @@ sed -i '/^\s*$/d' "$paramInputFile"
 sync
 
 ## remove previous versions of output files ##
-rm -f $paramListDefault
+rm -f $paramListRun
 rm -f $paramTable
-echo "Previous output files have been removed (param.listD & param_table.txt, if existent)."
+echo "Previous output files have been removed (parameter_slm_run.list & parameter_table.txt, if existent)."
 echo " "
 
 ## get the number of lines that is the number of parameters and create an array with size of number of parameters ##
@@ -129,7 +131,7 @@ declare -a paramValueNumbersA=($paramNumber)
 for (( a=1; a<=$paramNumber; a++ )) # each line number
   do
     parameterName=$(sed -n "$a"p "$paramInputFile" | awk '{print $1}')  # -n  == quiet/silent
-    if ! cat $paramList | grep $parameterName > /dev/null  # if parameter name not found in file param.list
+    if ! cat $paramList | grep $parameterName > /dev/null  # if parameter name not found in file parameter_slm.list
       then
         echo "EXIT!  The parameter >""$parameterName""< from your ""$paramInputFile"" does not exist in ""$paramList"" !"
         echo " Please add it to both files: ""$paramList"" and mo_shared_set_parameters.f90."
@@ -173,10 +175,10 @@ if [ $paramValSets -gt 994 ]
     echo "The number of parameter sets (i.e. simulations) is: ""$paramValSets"
 fi
 
-## create the param.listD file ##
+## create the parameter_slm_run.list file ##
 valDefault="NAN"
 paramActive="ACTIVE"
-cp $paramList $paramListDefault
+cp $paramList $paramListRun
 sync
 
 # mark all used parameters with ACTIVE 
@@ -184,11 +186,11 @@ for ((i = 0 ; i < $paramNumber ; i++))
 do
   line=$(($i + 1))
   paramName=$(sed -n "$line"p "$paramInputFile" | awk '{print $1}')
-  sed -i /$paramName/s/$valDefault/"$paramActive"/ $paramListDefault
+  sed -i /$paramName/s/$valDefault/"$paramActive"/ $paramListRun
 done
 
 # delete the parameters not used
-sed -i "/$valDefault/d" "$paramListDefault"
+sed -i "/$valDefault/d" "$paramListRun"
 
 return 0 
 }  # end function ####################################################
@@ -430,7 +432,7 @@ do
     then
       echo "Something seems wrong with your input file in line number ""$line""."
       echo " You selected Main Task 3, so each line may contain: Variable_name Min_value Max_value (space separated)."
-      echo " With the last line containing in addition the keyword param_sets and the number of parameter sets / simulations."
+      echo " With the last line containing in addition the keyword parameter_sets and the number of parameter sets / simulations."
       echo " EXIT!  Please check your input file (""$paramInputFile"")."
       exit 1
   fi
@@ -439,18 +441,25 @@ done
 ## validate and get number of samples ##
 paramSetsLineNum=$(($paramNumber + 1))
 validParamSetsKeyword=$(sed -n "$paramSetsLineNum"p "$paramInputFile" | awk '{print $1}')
-if [ "$validParamSetsKeyword" == "param_sets" ]; then
+if [ "$validParamSetsKeyword" == "parameter_sets" ]; then
   paramSets=$(sed -n "$paramSetsLineNum"p "$paramInputFile" | awk '{print $2}')
 else
-  echo "The keyword < param_sets > is missing from your input file."
-  echo "You are using Main Tasks 3, where the last line of your input file may contain: param_sets X (X being a number)."
+  echo "The keyword < parameter_sets > is missing from your input file."
+  echo "You are using Main Tasks 3, where the last line of your input file may contain: parameter_sets X (X may be an integer number)."
   echo "EXIT !"
   exit 1
 fi
 
 ## pass the number of parameter sets to the variable used in the function f_showNumberSetsPrepParamlistD ##
-paramValSets="$paramSets"
-
+# test if $paramSets is larger zero
+if [ "$paramSets" -gt 0 ]; then
+  paramValSets="$paramSets"
+else
+  echo " You defined a number of parameter sets (i.e., number of SLM simulations for one site) less than 1."
+  echo " Please set a more reasonable number."
+  echo " EXIT!"
+  exit 1
+fi
 ## call function
 f_showNumberSetsPrepParamlistD
 
@@ -525,7 +534,7 @@ fi                          #
 
 echo " "
 echo "OK. The script has finished."
-echo "  Two new files have been created (param.listD & param_table.txt)."
+echo "  Two new files have been created (parameter_slm_run.list & parameter_table.txt)."
 echo "  You could now run the prep_run_slm.sh with paramSensitivitySim == T."
 echo " "
 
