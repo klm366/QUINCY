@@ -332,7 +332,7 @@ CONTAINS
          lun=lun+1
          ! veg_diagnostics
          WRITE(lun,'(2a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp', & 
-                           ' growing_season cost_nup cost_bnf unit_transp transp'
+                           ' growing_season cost_nup cost_bnf unit_transp Ndemand sinklim'
          lun=lun+1
     END SELECT
 
@@ -605,6 +605,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
@@ -687,6 +689,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
@@ -1019,13 +1023,13 @@ CONTAINS
                  bcf = 0._wp
               ENDIF
 
-              write(lun,'(22F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
+              write(lun,'(23F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
                 hlp1,l2r,s2c, bcf, &
                 target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
                 growth_cn_talloc_mavg(ipoi), npp_talloc_mavg(ipoi), &
                 growing_season(ipoi), & 
                 cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
-                unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, growth_req_n_tuptake_mavg(ipoi)
+                unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, demand_uptake_n_tuptake_mavg(ipoi), beta_sinklim_ps(ipoi)
               lun=lun+1
            END IF  ! write output T/F (l_land_plant_canopy_out)
     END SELECT  ! select land/plant & canopy
@@ -1395,10 +1399,10 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxN
-        WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15'
+        WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN'
         lun=lun+1
         ! vegfluxP
-        WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP'
+        WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP'
         lun=lun+1
     END SELECT
 
@@ -1408,7 +1412,7 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
         ! vegfluxC
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC'
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC GrowthC'
         lun=lun+1 
         ! vegfluxdC13DC14
         WRITE(lun,'(a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
@@ -1585,7 +1589,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     dsl4slm_Use_memory_a_sb
-    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use
+    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use, veg_growth
     USE mo_sb_memory_class,       ONLY: sb_transport, sb_mycorrhiza_export, sb_delta_pools
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
@@ -1654,6 +1658,9 @@ CONTAINS
     REAL(wp), SAVE                        :: qg_acc              = 0.0_wp
     REAL(wp), SAVE                        :: albedo_acc          = 0.0_wp
     REAL(wp), SAVE                        :: appfd_acc           = 0.0_wp
+    REAL(wp), SAVE                        :: growth_c_acc        = 0.0_wp
+    REAL(wp), SAVE                        :: growth_n_acc        = 0.0_wp
+    REAL(wp), SAVE                        :: growth_p_acc        = 0.0_wp
     ! soil - local accumulation variables (partly also used for land output)
     REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
@@ -2047,6 +2054,7 @@ CONTAINS
 #define Get_veg_litterfall
 #define Get_veg_exudation
 #define Get_veg_reserve_use
+#define Get_veg_growth
 #define Get_sb_transport
 #define Get_sb_mycorrhiza_export
 #define Get_sb_delta_pools
@@ -2054,6 +2062,7 @@ CONTAINS
 #undef Get_veg_litterfall
 #undef Get_veg_exudation
 #undef Get_veg_reserve_use
+#undef Get_veg_growth
 #undef Get_sb_transport
 #undef Get_sb_mycorrhiza_export
 #undef Get_sb_delta_pools
@@ -2131,6 +2140,15 @@ CONTAINS
              exudationC_acc       = exudationC_acc        + veg_exudation%carbon(ipoi)      * dtime_one *1000000._wp/dtime      
              npp_acc              = npp_acc               + npp(ipoi)                       * dtime_one
              res_use_c_acc        = res_use_c_acc         + veg_reserve_use%carbon(ipoi)    * dtime_one *1000000._wp/dtime
+             growth_c_acc         = growth_c_acc          + (veg_growth%leaf%carbon(ipoi) + & 
+                  veg_growth%fine_root%carbon(ipoi)   + &
+                  veg_growth%coarse_root%carbon(ipoi) + & 
+                  veg_growth%sap_wood%carbon(ipoi)  + & 
+                  veg_growth%heart_wood%carbon(ipoi)  + & 
+                  veg_growth%labile%carbon(ipoi)      + & 
+                  veg_growth%reserve%carbon(ipoi)     + & 
+                  veg_growth%fruit%carbon(ipoi)) * dtime_one *1000000._wp/dtime
+                     
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(ipoi)    * dtime_one
              growth_resp_C13_acc  = growth_resp_C13_acc   + growth_respiration_c13(ipoi)    * dtime_one
              maint_resp_C13_acc   = maint_resp_C13_acc    + maint_respiration_c13(ipoi)     * dtime_one
@@ -2146,12 +2164,29 @@ CONTAINS
                                                                                               dtime_one *1000000._wp/dtime
              res_use_n_acc        = res_use_n_acc         + veg_reserve_use%nitrogen(ipoi)  * dtime_one *1000000._wp/dtime
              n_fixation_acc       = n_fixation_acc        + n_fixation(ipoi)                * dtime_one 
-             n_fixation_n15_acc   = n_fixation_n15_acc    + n_fixation_n15(ipoi)            * dtime_one 
+             n_fixation_n15_acc   = n_fixation_n15_acc    + n_fixation_n15(ipoi)            * dtime_one
+              growth_n_acc         = growth_n_acc          + (veg_growth%leaf%nitrogen(ipoi) + & 
+                  veg_growth%fine_root%nitrogen(ipoi)   + &
+                  veg_growth%coarse_root%nitrogen(ipoi) + & 
+                  veg_growth%sap_wood%nitrogen(ipoi)  + & 
+                  veg_growth%heart_wood%nitrogen(ipoi)  + & 
+                  veg_growth%labile%nitrogen(ipoi)      + & 
+                  veg_growth%reserve%nitrogen(ipoi)     + & 
+                  veg_growth%fruit%nitrogen(ipoi)) * dtime_one *1000000._wp/dtime
              uptake_po4_acc       = uptake_po4_acc        + uptake_po4(ipoi)                * dtime_one
              recycling_p_acc      = recycling_p_acc       + ( recycling_leaf_p(ipoi) + recycling_fine_root_p(ipoi) + &
-                                                                                       recycling_heart_wood_p(ipoi)) * &
+                                                                                                 recycling_heart_wood_p(ipoi)) * &
                                                                                                 dtime_one *1000000._wp/dtime
+             growth_p_acc         = growth_p_acc          + (veg_growth%leaf%phosphorus(ipoi) + & 
+                  veg_growth%fine_root%phosphorus(ipoi)   + &
+                  veg_growth%coarse_root%phosphorus(ipoi) + & 
+                  veg_growth%sap_wood%phosphorus(ipoi)  + & 
+                  veg_growth%heart_wood%phosphorus(ipoi)  + & 
+                  veg_growth%labile%phosphorus(ipoi)      + & 
+                  veg_growth%reserve%phosphorus(ipoi)     + & 
+                  veg_growth%fruit%phosphorus(ipoi)) * dtime_one *1000000._wp/dtime     
              res_use_p_acc        = res_use_p_acc         + veg_reserve_use%phosphorus(ipoi)  * dtime_one *1000000._wp/dtime
+             
              IF(output_interval_flux < 1.0_wp) THEN  ! if interval == timestep (output_interval_flux is smaller 1.0 only for timestep interval)
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))  
                 interception_acc = interception_acc  + interception(ipoi)       
@@ -2233,11 +2268,11 @@ CONTAINS
                                           res_use_n_acc, n_fixation_acc, & 
                                           calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
                                           calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
-                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc)
+                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc), growth_n_acc
 
                    lun=lun+1
                    ! vegfluxP
-                   write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc
+                   write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc
                    lun=lun+1
                END SELECT ! land/plant & canopy
 
@@ -2249,7 +2284,7 @@ CONTAINS
                    ! vegfluxC
                    write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                           n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                          npp_acc, res_use_c_acc, exudationC_acc
+                                          npp_acc, res_use_c_acc, exudationC_acc, growth_c_acc
                    lun=lun+1
                    ! vegfluxdC13DC14
                    dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
@@ -2303,6 +2338,7 @@ CONTAINS
                exudationC_acc             = 0.0_wp
                npp_acc                    = 0.0_wp
                res_use_c_acc              = 0.0_wp
+               growth_c_acc               = 0.0_wp
                gpp_C13_acc                = 0.0_wp
                growth_resp_C13_acc        = 0.0_wp
                maint_resp_C13_acc         = 0.0_wp
@@ -2311,11 +2347,13 @@ CONTAINS
                maint_resp_C14_acc         = 0.0_wp
                recycling_n_acc            = 0.0_wp
                res_use_n_acc              = 0.0_wp
+               growth_n_acc               = 0.0_wp
                n_fixation_acc             = 0.0_wp
                n_fixation_n15_acc         = 0.0_wp
                uptake_po4_acc             = 0.0_wp
                recycling_p_acc            = 0.0_wp
                res_use_p_acc              = 0.0_wp
+               growth_p_acc               = 0.0_wp
                precip_acc                 = 0.0_wp
                evaporation_acc            = 0.0_wp
                interception_acc           = 0.0_wp
@@ -2710,6 +2748,7 @@ CONTAINS
 #define Passback_veg_litterfall
 #define Passback_veg_exudation
 #define Passback_veg_reserve_use
+#define Passback_veg_growth
 #define Passback_sb_transport
 #define Passback_sb_mycorrhiza_export
 #define Passback_sb_delta_pools
@@ -2717,6 +2756,7 @@ CONTAINS
 #undef Passback_veg_litterfall
 #undef Passback_veg_exudation
 #undef Passback_veg_reserve_use
+#undef Passback_veg_growth
 #undef Passback_sb_transport
 #undef Passback_sb_mycorrhiza_export
 #undef Passback_sb_delta_pools
