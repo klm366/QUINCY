@@ -604,7 +604,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     ! VEG_ 3D
@@ -688,7 +687,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
@@ -990,7 +988,7 @@ CONTAINS
                 calc_delta_N15(nh4_solute(ipoi,1),nh4_n15_solute(ipoi,1)), &
                 calc_delta_N15(no3_solute(ipoi,1),no3_n15_solute(ipoi,1))
               lun=lun+1
-
+              ! veg_diagnostics
               IF(lctlib%growthform == itree) THEN 
                  IF (veg_pool%sap_wood%carbon(ipoi) > eps8) THEN
                     hlp1 = lai(ipoi)/(veg_pool%sap_wood%carbon(ipoi) / height(ipoi) / lctlib%wood_density)
@@ -1022,9 +1020,8 @@ CONTAINS
               ELSE
                  bcf = 0._wp
               ENDIF
-
-              write(lun,'(23F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
-                hlp1,l2r,s2c, bcf, &
+              write(lun,'(20F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
+                hlp1, l2r, s2c, bcf, &
                 target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
                 growth_cn_talloc_mavg(ipoi), npp_talloc_mavg(ipoi), &
                 growing_season(ipoi), & 
@@ -1394,7 +1391,7 @@ CONTAINS
     END SELECT
 
 
-    !! land/plant & canopy
+    !! land & plant
     !! 
     SELECT CASE(slm_model_name)
       CASE('land','plant') ! additional to CASE('land')
@@ -1407,7 +1404,7 @@ CONTAINS
     END SELECT
 
 
-    !! land/plant/canopy
+    !! land & plant & canopy
     !! 
     SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
@@ -2140,15 +2137,14 @@ CONTAINS
              exudationC_acc       = exudationC_acc        + veg_exudation%carbon(ipoi)      * dtime_one *1000000._wp/dtime      
              npp_acc              = npp_acc               + npp(ipoi)                       * dtime_one
              res_use_c_acc        = res_use_c_acc         + veg_reserve_use%carbon(ipoi)    * dtime_one *1000000._wp/dtime
-             growth_c_acc         = growth_c_acc          + (veg_growth%leaf%carbon(ipoi) + & 
-                  veg_growth%fine_root%carbon(ipoi)   + &
-                  veg_growth%coarse_root%carbon(ipoi) + & 
-                  veg_growth%sap_wood%carbon(ipoi)  + & 
-                  veg_growth%heart_wood%carbon(ipoi)  + & 
-                  veg_growth%labile%carbon(ipoi)      + & 
-                  veg_growth%reserve%carbon(ipoi)     + & 
-                  veg_growth%fruit%carbon(ipoi)) * dtime_one *1000000._wp/dtime
-                     
+             growth_c_acc         = growth_c_acc          + (veg_growth%leaf%carbon(ipoi)        + & 
+                                                             veg_growth%fine_root%carbon(ipoi)   + &
+                                                             veg_growth%coarse_root%carbon(ipoi) + & 
+                                                             veg_growth%sap_wood%carbon(ipoi)    + & 
+                                                             veg_growth%heart_wood%carbon(ipoi)  + & 
+                                                             veg_growth%labile%carbon(ipoi)      + & 
+                                                             veg_growth%reserve%carbon(ipoi)     + & 
+                                                             veg_growth%fruit%carbon(ipoi)) * dtime_one *1000000._wp/dtime
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(ipoi)    * dtime_one
              growth_resp_C13_acc  = growth_resp_C13_acc   + growth_respiration_c13(ipoi)    * dtime_one
              maint_resp_C13_acc   = maint_resp_C13_acc    + maint_respiration_c13(ipoi)     * dtime_one
@@ -2165,28 +2161,26 @@ CONTAINS
              res_use_n_acc        = res_use_n_acc         + veg_reserve_use%nitrogen(ipoi)  * dtime_one *1000000._wp/dtime
              n_fixation_acc       = n_fixation_acc        + n_fixation(ipoi)                * dtime_one 
              n_fixation_n15_acc   = n_fixation_n15_acc    + n_fixation_n15(ipoi)            * dtime_one
-              growth_n_acc         = growth_n_acc          + (veg_growth%leaf%nitrogen(ipoi) + & 
-                  veg_growth%fine_root%nitrogen(ipoi)   + &
-                  veg_growth%coarse_root%nitrogen(ipoi) + & 
-                  veg_growth%sap_wood%nitrogen(ipoi)  + & 
-                  veg_growth%heart_wood%nitrogen(ipoi)  + & 
-                  veg_growth%labile%nitrogen(ipoi)      + & 
-                  veg_growth%reserve%nitrogen(ipoi)     + & 
-                  veg_growth%fruit%nitrogen(ipoi)) * dtime_one *1000000._wp/dtime
+              growth_n_acc         = growth_n_acc         + (veg_growth%leaf%nitrogen(ipoi)        + & 
+                                                             veg_growth%fine_root%nitrogen(ipoi)   + &
+                                                             veg_growth%coarse_root%nitrogen(ipoi) + & 
+                                                             veg_growth%sap_wood%nitrogen(ipoi)    + & 
+                                                             veg_growth%heart_wood%nitrogen(ipoi)  + & 
+                                                             veg_growth%labile%nitrogen(ipoi)      + & 
+                                                             veg_growth%reserve%nitrogen(ipoi)     + & 
+                                                             veg_growth%fruit%nitrogen(ipoi)) * dtime_one *1000000._wp/dtime
              uptake_po4_acc       = uptake_po4_acc        + uptake_po4(ipoi)                * dtime_one
-             recycling_p_acc      = recycling_p_acc       + ( recycling_leaf_p(ipoi) + recycling_fine_root_p(ipoi) + &
-                                                                                                 recycling_heart_wood_p(ipoi)) * &
-                                                                                                dtime_one *1000000._wp/dtime
+             recycling_p_acc      = recycling_p_acc       + (recycling_leaf_p(ipoi) + recycling_fine_root_p(ipoi) + &
+                                                             recycling_heart_wood_p(ipoi))  * dtime_one *1000000._wp/dtime
              growth_p_acc         = growth_p_acc          + (veg_growth%leaf%phosphorus(ipoi) + & 
-                  veg_growth%fine_root%phosphorus(ipoi)   + &
-                  veg_growth%coarse_root%phosphorus(ipoi) + & 
-                  veg_growth%sap_wood%phosphorus(ipoi)  + & 
-                  veg_growth%heart_wood%phosphorus(ipoi)  + & 
-                  veg_growth%labile%phosphorus(ipoi)      + & 
-                  veg_growth%reserve%phosphorus(ipoi)     + & 
-                  veg_growth%fruit%phosphorus(ipoi)) * dtime_one *1000000._wp/dtime     
+                                                             veg_growth%fine_root%phosphorus(ipoi)   + &
+                                                             veg_growth%coarse_root%phosphorus(ipoi) + & 
+                                                             veg_growth%sap_wood%phosphorus(ipoi)    + & 
+                                                             veg_growth%heart_wood%phosphorus(ipoi)  + & 
+                                                             veg_growth%labile%phosphorus(ipoi)      + & 
+                                                             veg_growth%reserve%phosphorus(ipoi)     + & 
+                                                             veg_growth%fruit%phosphorus(ipoi)) * dtime_one *1000000._wp/dtime     
              res_use_p_acc        = res_use_p_acc         + veg_reserve_use%phosphorus(ipoi)  * dtime_one *1000000._wp/dtime
-             
              IF(output_interval_flux < 1.0_wp) THEN  ! if interval == timestep (output_interval_flux is smaller 1.0 only for timestep interval)
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))  
                 interception_acc = interception_acc  + interception(ipoi)       
@@ -2259,7 +2253,7 @@ CONTAINS
                    lun=lun+1
                END SELECT
 
-               !! land/plant & canopy
+               !! land & plant
                !! 
                SELECT CASE(TRIM(model%config%slm_model_name))
                  CASE('land','plant')
@@ -2268,13 +2262,14 @@ CONTAINS
                                           res_use_n_acc, n_fixation_acc, & 
                                           calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
                                           calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
-                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc), growth_n_acc
+                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc), &
+                                          growth_n_acc
 
                    lun=lun+1
                    ! vegfluxP
-                   write(lun,'(4F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc
+                   write(lun,'(5F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc
                    lun=lun+1
-               END SELECT ! land/plant & canopy
+               END SELECT
 
 
                !! land & plant & canopy
