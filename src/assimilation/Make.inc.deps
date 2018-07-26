@@ -30,6 +30,7 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_pheno_constants.o \
   mo_phy_schemes.o \
   mo_rad_memory_class.o \
+  mo_sse_memory_class.o \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_respiration.o \
