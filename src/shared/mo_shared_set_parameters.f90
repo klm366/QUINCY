@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for reading parameters from parameter_slm.list and replace parameter-values as defined in mo_PROC_constants
+!! @brief Contains the routines for reading parameters from parameter_slm_run.list and replace parameter-values as defined in mo_PROC_constants
 !!
 !! @author
 !!  Jan Engel, MPI-BGC Jena 
@@ -15,14 +15,14 @@ MODULE mo_shared_set_parameters
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: parameters_from_file
+  PUBLIC :: parameters_slm_from_file                        ! it's an object
+  PUBLIC :: set_parameter_lctlib_values_with_list_values    ! it's a subroutine
 
   !-----------------------------------------------------------------------------------------------------
-  !> parameter values from file parameter_slm.list - replacing the values from mo_PROC_constants
-  !! 
+  !> SLM process parameter values from file parameter_slm_run.list - replacing the values from mo_PROC_constants
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE t_parameters_from_file
+  TYPE t_parameters_slm_from_file
     !LOGICAL            :: active   ! de/activate this TYPE (this is non-functional for now 20161004)
     CHARACTER(LEN=30)  :: filename = 'parameter_slm_run.list'                 ! filename 
     ! SHARED_CTL
@@ -80,11 +80,36 @@ MODULE mo_shared_set_parameters
                           qmax_po4_mineral, &       
                           km_adsorpt_mineral_po4 
   CONTAINS
-    PROCEDURE :: read_param => read_parameter_list
-    PROCEDURE :: set_param => set_parameter_values_with_list_values
-  END Type t_parameters_from_file
+    PROCEDURE :: read_param => read_parameter_slm_list
+    PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
+  END TYPE t_parameters_slm_from_file
 
-  TYPE(t_parameters_from_file), SAVE :: parameters_from_file
+  TYPE(t_parameters_slm_from_file), SAVE :: parameters_slm_from_file
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> lctlib parameter values from file parameter_slm_run.list - replacing the values from lctlib_slm_*.def file
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_parameters_lctlib_from_file
+    !LOGICAL            :: active   
+    CHARACTER(LEN=30)   :: filename = 'parameter_slm_run.list'                 ! filename 
+
+    REAL(wp)            :: sla
+    REAL(wp)            :: sigma_vis
+    REAL(wp)            :: sigma_nir
+    REAL(wp)            :: c0_allom
+
+  END TYPE t_parameters_lctlib_from_file
+
+  TYPE(t_parameters_lctlib_from_file) :: param_pft1_from_file,  &
+                                         param_pft2_from_file,  &
+                                         param_pft3_from_file,  &
+                                         param_pft4_from_file,  &
+                                         param_pft5_from_file,  &
+                                         param_pft6_from_file,  &
+                                         param_pft7_from_file,  &
+                                         param_pft8_from_file
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_set_parameters'
@@ -93,18 +118,18 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> read parameter values from file
+  !> read SLM parameter values from file
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Read_parameter_list(this)
+  SUBROUTINE read_parameter_slm_list(this)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_parameters_from_file), INTENT(inout) :: this
+    CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
     ! ---------------------------
     ! 0.2 Local
     ! SHARED_CTL
@@ -162,7 +187,7 @@ CONTAINS
                           qmax_po4_mineral, &       
                           km_adsorpt_mineral_po4 
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
     ! Namelist definition of section parameters
     ! 
@@ -359,15 +384,15 @@ CONTAINS
     this%qmax_po4_mineral            = qmax_po4_mineral             
     this%km_adsorpt_mineral_po4      = km_adsorpt_mineral_po4
 
-  END SUBROUTINE Read_parameter_list
+  END SUBROUTINE read_parameter_slm_list
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> replace hard coded parameter values with values from file
+  !> replace hard coded SLM parameter values with values from file
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE set_parameter_values_with_list_values(this)
+  SUBROUTINE set_parameter_slm_values_with_list_values(this)
 
     USE mo_base_constants,                  ONLY: one_day, one_year, dtime
     !USE mo_assimi_constants
@@ -381,17 +406,17 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_parameters_from_file), INTENT(inout) :: this
+    CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
     ! ---------------------------
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_values_with_list_values'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_slm_values_with_list_values'
 
 
     !> 1.0 read parameter values from file
     !! 
     CALL this%read_param
 
-    !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm.list
+    !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm_run.list
     !! 
     ! SHARED_CTL
     IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
@@ -464,9 +489,345 @@ CONTAINS
     IF (ABS(this%qmax_po4_mineral       - missval) > eps8)  qmax_po4_mineral       = this%qmax_po4_mineral / molar_mass_P
     IF (ABS(this%km_adsorpt_mineral_po4 - missval) > eps8)  km_adsorpt_mineral_po4 = this%km_adsorpt_mineral_po4 / 1000._wp / &
                                                                                        molar_mass_P
+  END SUBROUTINE set_parameter_slm_values_with_list_values
 
 
-  END SUBROUTINE set_parameter_values_with_list_values
+  !-----------------------------------------------------------------------------------------------------
+  !> read lctlib parameter values from file
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE read_parameter_lctlib_list
+
+    USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    !  just working on the above defined (private) objects 'param_pft1_from_file' etc.
+    ! ---------------------------
+    ! 0.2 Local
+    ! PFT 1
+    REAL(wp)            :: sla_p1
+    REAL(wp)            :: sigma_vis_p1
+    REAL(wp)            :: sigma_nir_p1
+    REAL(wp)            :: c0_allom_p1
+    ! PFT 2
+    REAL(wp)            :: sla_p2
+    REAL(wp)            :: sigma_vis_p2
+    REAL(wp)            :: sigma_nir_p2
+    REAL(wp)            :: c0_allom_p2
+    ! PFT 3
+    REAL(wp)            :: sla_p3
+    REAL(wp)            :: sigma_vis_p3
+    REAL(wp)            :: sigma_nir_p3
+    REAL(wp)            :: c0_allom_p3
+    ! PFT 4
+    REAL(wp)            :: sla_p4
+    REAL(wp)            :: sigma_vis_p4
+    REAL(wp)            :: sigma_nir_p4
+    REAL(wp)            :: c0_allom_p4        
+    ! PFT 5
+    REAL(wp)            :: sla_p5
+    REAL(wp)            :: sigma_vis_p5
+    REAL(wp)            :: sigma_nir_p5
+    REAL(wp)            :: c0_allom_p5
+    ! PFT 6
+    REAL(wp)            :: sla_p6
+    REAL(wp)            :: sigma_vis_p6
+    REAL(wp)            :: sigma_nir_p6
+    REAL(wp)            :: c0_allom_p6
+    ! PFT 7
+    REAL(wp)            :: sla_p7
+    REAL(wp)            :: sigma_vis_p7
+    REAL(wp)            :: sigma_nir_p7
+    REAL(wp)            :: c0_allom_p7
+    ! PFT 8
+    REAL(wp)            :: sla_p8
+    REAL(wp)            :: sigma_vis_p8
+    REAL(wp)            :: sigma_nir_p8
+    REAL(wp)            :: c0_allom_p8
+
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_lctlib_list'
+
+    ! Namelist definitions for each PFT
+    ! 
+    NAMELIST /LCTLIB_PFT1_CTL/      &  
+          sla_p1                  , &
+          sigma_vis_p1            , &
+          sigma_nir_p1            , &
+          c0_allom_p1             
+    NAMELIST /LCTLIB_PFT2_CTL/      &  
+          sla_p2                  , &
+          sigma_vis_p2            , &
+          sigma_nir_p2            , &
+          c0_allom_p2             
+    NAMELIST /LCTLIB_PFT3_CTL/      &  
+          sla_p3                  , &
+          sigma_vis_p3            , &
+          sigma_nir_p3            , &
+          c0_allom_p3             
+    NAMELIST /LCTLIB_PFT4_CTL/      &  
+          sla_p4                  , &
+          sigma_vis_p4            , &
+          sigma_nir_p4            , &
+          c0_allom_p4             
+    NAMELIST /LCTLIB_PFT5_CTL/      &  
+          sla_p5                  , &
+          sigma_vis_p5            , &
+          sigma_nir_p5            , &
+          c0_allom_p5             
+    NAMELIST /LCTLIB_PFT6_CTL/      &  
+          sla_p6                  , &
+          sigma_vis_p6            , &
+          sigma_nir_p6            , &
+          c0_allom_p6             
+    NAMELIST /LCTLIB_PFT7_CTL/      &  
+          sla_p7                  , &
+          sigma_vis_p7            , &
+          sigma_nir_p7            , &
+          c0_allom_p7             
+    NAMELIST /LCTLIB_PFT8_CTL/      &  
+          sla_p8                  , &
+          sigma_vis_p8            , &
+          sigma_nir_p8            , &
+          c0_allom_p8             
+
+
+    ! variables for reading model-options from namelist
+    ! 
+    INTEGER  :: nml_handler, nml_unit, istat
+
+    CALL message(TRIM(routine), 'Starting to read parameter list')
+
+    ! Set defaults
+    ! 
+    ! PFT 1
+    sla_p1                    = missval
+    sigma_vis_p1              = missval
+    sigma_nir_p1              = missval
+    c0_allom_p1               = missval
+    ! PFT 2
+    sla_p2                    = missval
+    sigma_vis_p2              = missval
+    sigma_nir_p2              = missval
+    c0_allom_p2               = missval
+    ! PFT 3
+    sla_p3                    = missval
+    sigma_vis_p3              = missval
+    sigma_nir_p3              = missval
+    c0_allom_p3               = missval
+    ! PFT 4
+    sla_p4                    = missval
+    sigma_vis_p4              = missval
+    sigma_nir_p4              = missval
+    c0_allom_p4               = missval
+    ! PFT 5
+    sla_p5                    = missval
+    sigma_vis_p5              = missval
+    sigma_nir_p5              = missval
+    c0_allom_p5               = missval
+    ! PFT 6
+    sla_p6                    = missval
+    sigma_vis_p6              = missval
+    sigma_nir_p6              = missval
+    c0_allom_p6               = missval
+    ! PFT 7
+    sla_p7                    = missval
+    sigma_vis_p7              = missval
+    sigma_nir_p7              = missval
+    c0_allom_p7               = missval
+    ! PFT 8
+    sla_p8                    = missval
+    sigma_vis_p8              = missval
+    sigma_nir_p8              = missval
+    c0_allom_p8               = missval
+
+
+    ! read the namelist (parameters of all PFT are stored in the same namelist file using param_pft1_from_file%filename here)
+    ! 
+    ! &LCTLIB_PFT1_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT1_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT1_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT2_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT2_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT2_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT3_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT3_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT3_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT4_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT4_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT4_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT5_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT5_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT5_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT6_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT6_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT6_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT7_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT7_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT7_CTL)
+    CALL close_nml(nml_handler)
+    ! &LCTLIB_PFT8_CTL
+    nml_handler = open_nml(TRIM(param_pft1_from_file%filename))
+    nml_unit = position_nml('LCTLIB_PFT8_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, LCTLIB_PFT8_CTL)
+    CALL close_nml(nml_handler)
+
+
+    ! pass values as read from file
+    ! 
+    ! LCTLIB_PFT1_CTL
+    param_pft1_from_file%sla                    = sla_p1      
+    param_pft1_from_file%sigma_vis              = sigma_vis_p1
+    param_pft1_from_file%sigma_nir              = sigma_nir_p1
+    param_pft1_from_file%c0_allom               = c0_allom_p1 
+    ! LCTLIB_PFT2_CTL
+    param_pft2_from_file%sla                    = sla_p2      
+    param_pft2_from_file%sigma_vis              = sigma_vis_p2
+    param_pft2_from_file%sigma_nir              = sigma_nir_p2
+    param_pft2_from_file%c0_allom               = c0_allom_p2 
+    ! LCTLIB_PFT3_CTL
+    param_pft3_from_file%sla                    = sla_p3      
+    param_pft3_from_file%sigma_vis              = sigma_vis_p3
+    param_pft3_from_file%sigma_nir              = sigma_nir_p3
+    param_pft3_from_file%c0_allom               = c0_allom_p3 
+    ! LCTLIB_PFT4_CTL
+    param_pft4_from_file%sla                    = sla_p4      
+    param_pft4_from_file%sigma_vis              = sigma_vis_p4
+    param_pft4_from_file%sigma_nir              = sigma_nir_p4
+    param_pft4_from_file%c0_allom               = c0_allom_p4 
+    ! LCTLIB_PFT5_CTL
+    param_pft5_from_file%sla                    = sla_p5      
+    param_pft5_from_file%sigma_vis              = sigma_vis_p5
+    param_pft5_from_file%sigma_nir              = sigma_nir_p5
+    param_pft5_from_file%c0_allom               = c0_allom_p5 
+    ! LCTLIB_PFT6_CTL
+    param_pft6_from_file%sla                    = sla_p6      
+    param_pft6_from_file%sigma_vis              = sigma_vis_p6
+    param_pft6_from_file%sigma_nir              = sigma_nir_p6
+    param_pft6_from_file%c0_allom               = c0_allom_p6 
+    ! LCTLIB_PFT7_CTL
+    param_pft7_from_file%sla                    = sla_p7      
+    param_pft7_from_file%sigma_vis              = sigma_vis_p7
+    param_pft7_from_file%sigma_nir              = sigma_nir_p7
+    param_pft7_from_file%c0_allom               = c0_allom_p7 
+    ! LCTLIB_PFT8_CTL
+    param_pft8_from_file%sla                    = sla_p8      
+    param_pft8_from_file%sigma_vis              = sigma_vis_p8
+    param_pft8_from_file%sigma_nir              = sigma_nir_p8
+    param_pft8_from_file%c0_allom               = c0_allom_p8 
+
+  END SUBROUTINE read_parameter_lctlib_list
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> replace hard coded lctlib parameter values with values from file
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE set_parameter_lctlib_values_with_list_values(model)
+
+    USE mo_jsb_model_class,                 ONLY: t_jsb_model
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    TYPE(t_jsb_model), INTENT(inout) :: model
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER                     :: pft_id 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_lctlib_values_with_list_values'
+
+
+    !> 1.0 read parameter lctlib values from file
+    !! 
+    CALL read_parameter_lctlib_list
+
+    !> 2.0 replace parameter lctlib values for each PFT individually
+    !! 
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(1), param_pft1_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(2), param_pft2_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(3), param_pft3_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(4), param_pft4_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(5), param_pft5_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(6), param_pft6_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(7), param_pft7_from_file)
+    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(8), param_pft8_from_file)
+
+  END SUBROUTINE set_parameter_lctlib_values_with_list_values
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> replace hard coded lctlib parameter values for one PFT with values from file
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE replace_pft_specific_lctlib_parameter_values(lctlib, param_pft_from_file)
+
+    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    USE mo_base_constants,          ONLY: one_day, one_year
+    USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    TYPE(t_lctlib_element),               INTENT(inout) :: lctlib
+    TYPE(t_parameters_lctlib_from_file),  INTENT(in)    :: param_pft_from_file
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':replace_pft_specific_lctlib_parameter_values'
+
+
+    !> 1.0 replace lctlib parameter-value for the particular PFT if a new value is provided
+    !! 
+!   IF (ABS(param_pft_from_file%frac_sapwood_branch       - missval) > eps8) &
+!      lctlib%frac_sapwood_branch = param_pft_from_file%frac_sapwood_branch
+
+    IF (ABS(param_pft_from_file%sla                       - missval) > eps8) &
+       lctlib%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * param_pft_from_file%sla
+
+
+
+    IF (ABS(param_pft_from_file%sigma_vis                 - missval) > eps8) &
+       lctlib%sigma_vis = param_pft_from_file%sigma_vis
+    IF (ABS(param_pft_from_file%sigma_nir                 - missval) > eps8) &
+       lctlib%sigma_nir = param_pft_from_file%sigma_nir
+
+
+
+    ! IF (ABS(param_pft_from_file%k_root                    - missval) > eps8 .OR. &
+    !     ABS(param_pft_from_file%k_sapwood                 - missval) > eps8 .OR. &
+    !     ABS(param_pft_from_file%tau_sap_wood              - missval) > eps8 .OR. &
+    !     ABS(param_pft_from_file%tau_fine_root             - missval) > eps8 .OR. &
+    !     ABS(param_pft_from_file%wood_density              - missval) > eps8        ) THEN
+    !   IF(lctlib%growthform == itree) THEN
+    !     lctlib%c0_allom = SQRT(lctlib%k_root / lctlib%k_sapwood * lctlib%tau_sap_wood / lctlib%tau_fine_root * &
+    !                            lctlib%wood_density) * & 
+    !                       lctlib%tau_fine_root / lctlib%tau_sap_wood
+    !   ELSE
+    !     lctlib%c0_allom = 0.0_wp
+    !   ENDIF
+    ! ENDIF
+
+
+
+  END SUBROUTINE replace_pft_specific_lctlib_parameter_values
+
 
 
 END MODULE mo_shared_set_parameters

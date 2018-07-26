@@ -125,7 +125,8 @@ CONTAINS
     USE mo_jsb_config_class,      ONLY: new_model_config
     ! shared 
     USE mo_util,                  ONLY: one_of
-    USE mo_shared_set_parameters, ONLY: parameters_from_file    !< TYPE t_parameters_from_file
+    USE mo_shared_set_parameters, ONLY: parameters_slm_from_file, &                   !< object of TYPE t_parameters_slm_from_file
+                                        set_parameter_lctlib_values_with_list_values  !< it's a subroutine
     ! process memory
     USE mo_sb_memory_class,       ONLY: Init_sb_pools_elements_a
     USE mo_veg_memory_class,      ONLY: Init_veg_pools_elements_a
@@ -237,7 +238,7 @@ CONTAINS
     grid%lon = model%config%lon
 
 
-    !> 5.0 Constants init
+    !> 5.0 Process-constants init
     !!
     CALL init_base_constants          ! may be 1st of the 'init constants'
     CALL init_shared_constants        ! may be 2nd of the 'init constants'
@@ -249,9 +250,9 @@ CONTAINS
     CALL init_sb_constants
     CALL init_pheno_constants
 
-    !> 5.1 Constants modification for parameter sensitivity analysis
-    !!
-    IF (model%config%set_parameter_values_from_file) CALL parameters_from_file%set_param
+    !> 5.1 Process-constants & pft-specific lcltib-parameter modification for parameter sensitivity analysis
+    !! see 7.1 for LCTLIB parameters
+    IF (model%config%set_parameter_values_from_file) CALL parameters_slm_from_file%set_param
 
 
     !> 6.0 Memory init -> pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload
@@ -266,6 +267,10 @@ CONTAINS
     !!
     model%lctlib => Read_lctlib('lctlib_slm_nlct8.def')
     CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_slm_nlct8.def')
+
+    !> 7.1 PFT-specific lcltib-parameter modification for parameter sensitivity analysis
+    !! see 5.1 for mo_PROC_constants
+    IF (model%config%set_parameter_values_from_file) CALL set_parameter_lctlib_values_with_list_values(model)
 
 
     !> 8.0 Init tiles

@@ -21,9 +21,6 @@
   mavg_period_tacclim=NAN
   mavg_period_tmic=NAN
 /
-&SSE_CTL
-  ! tba
-/
 &SB_CTL
   floss_nmin=NAN
   tau_fast=NAN
@@ -59,6 +56,9 @@
   qmax_po4_mineral=NAN
   km_adsorpt_mineral_po4=NAN
 /
+&SSE_CTL
+  ! tba
+/
 &VEGETATION_CTL
   delta_n_fraction=NAN
   delta_n_leaf=NAN
@@ -69,4 +69,52 @@
   offset_bnf=NAN
   f_resp_acclim=NAN 
   fmaint_rate_base=NAN
+/
+&LCTLIB_PFT1_CTL
+  sla_p1=NAN
+  sigma_vis_p1=NAN
+  sigma_nir_p1=NAN
+  c0_allom_p1=NAN
+/
+&LCTLIB_PFT2_CTL
+  sla_p2=NAN
+  sigma_vis_p2=NAN
+  sigma_nir_p2=NAN
+  c0_allom_p2=NAN
+/
+&LCTLIB_PFT3_CTL
+  sla_p3=NAN
+  sigma_vis_p3=NAN
+  sigma_nir_p3=NAN
+  c0_allom_p3=NAN
+/
+&LCTLIB_PFT4_CTL
+  sla_p4=NAN
+  sigma_vis_p4=NAN
+  sigma_nir_p4=NAN
+  c0_allom_p4=NAN
+/
+&LCTLIB_PFT5_CTL
+  sla_p5=NAN
+  sigma_vis_p5=NAN
+  sigma_nir_p5=NAN
+  c0_allom_p5=NAN
+/
+&LCTLIB_PFT6_CTL
+  sla_p6=NAN
+  sigma_vis_p6=NAN
+  sigma_nir_p6=NAN
+  c0_allom_p6=NAN
+/
+&LCTLIB_PFT7_CTL
+  sla_p7=NAN
+  sigma_vis_p7=NAN
+  sigma_nir_p7=NAN
+  c0_allom_p7=NAN
+/
+&LCTLIB_PFT8_CTL
+  sla_p8=NAN
+  sigma_vis_p8=NAN
+  sigma_nir_p8=NAN
+  c0_allom_p8=NAN
 /

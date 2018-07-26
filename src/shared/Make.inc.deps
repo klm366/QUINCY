@@ -39,6 +39,8 @@ mo_shared_set_parameters.o: \
   mo_namelist.o \
   mo_exception.o \
   mo_jsb_io.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
   mo_base_constants.o \
   mo_shared_constants.o \
   mo_sb_constants.o \
