@@ -363,7 +363,8 @@ MODULE mo_veg_memory_class
                                     labile_phosphorus_talloc_mavg   ,&  !< moving average of labile phosphorus pool neeeded for allometry calculations
                                     reserve_carbon_talloc_mavg  ,&  !< moving average of reserve carbon needed for optimal allocation
                                     reserve_nitrogen_talloc_mavg,&  !< moving average of reserve nitrogen needed for optimal allocation
-                                    reserve_phosphorus_talloc_mavg  !< moving average of reserve phosphorus needed for optimal allocation
+                                    reserve_phosphorus_talloc_mavg,&  !< moving average of reserve phosphorus needed for optimal allocation
+                                    w_root_lim_talloc_mavg                      !< moving average of 
                                     
                                     
     ! 1.7 memory over root life time 
@@ -2166,6 +2167,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL jsb_add_var(mem, 'w_root_lim_talloc_mavg', mem%w_root_lim_talloc_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=1.0_wp) ! initvalue
+      
       CALL jsb_add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &

@@ -42,7 +42,7 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_shared_constants,                ONLY: molar_mass_N
-    USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, background_mort_rate_grass
+    USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, background_mort_rate_grass, w_root_lim_max
     USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, itree
@@ -145,6 +145,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
@@ -239,6 +240,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)
     ! 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
@@ -421,6 +423,7 @@ CONTAINS
     reserve_carbon_talloc_mavg(:)       = 0.0_wp
     reserve_nitrogen_talloc_mavg(:)     = 0.0_wp
     reserve_phosphorus_talloc_mavg(:)   = 0.0_wp
+    w_root_lim_talloc_mavg(:)           = w_root_lim_max
 
     ! N fraction optimisation
     fleaf_sunlit_tfrac_mavg_cl(:,:)     = 0.5_wp

@@ -185,6 +185,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg 
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
@@ -352,6 +353,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)                    ! in
@@ -646,13 +648,14 @@ CONTAINS
                         unit_uptake_p_talloc_mavg(:)                      , &
                         dphi_talloc_mavg(:)                               , &
                         kstar_labile(:)                                   , &
+                        w_root_lim_talloc_mavg                          , &
                         dheight(:)                                        , &  ! out
                         leaf2sapwood_mass_ratio(:)                        , & 
                         leaf2root_mass_ratio(:)                           , &
                         k1_opt(:)                                         , &
                         k2_opt(:)                                         )
 
-    
+   
     !> 4.0 calculate reserve & labile pool dynamics
     !! 
     !> 4.1 calculate desired sizes of LAI, reserve and labile pool 
@@ -1422,6 +1425,7 @@ CONTAINS
                                             unit_uptake_p                 , &
                                             dphi                          , &
                                             kstar_labile                  , &
+                                            w_root_lim                    , &
                                             dheight                       , &
                                             leaf2sapwood_mass_ratio       , &
                                             leaf2root_mass_ratio          , &
@@ -1430,7 +1434,7 @@ CONTAINS
 
     USE mo_base_constants,          ONLY: pi
     USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
-    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass
+    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
@@ -1471,6 +1475,7 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (µmol P m-2 s-1 mol-1 root C)
     REAL(wp),              INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa) 
     REAL(wp),              INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
+    REAL(wp),              INTENT(in)  :: w_root_lim
     REAL(wp),              INTENT(out) :: dheight                      !< change in height (m) resulting from a small change in woody biomass
     REAL(wp),              INTENT(out) :: leaf2sapwood_mass_ratio      !< leaf to sapwood mass ratio 
     REAL(wp),              INTENT(out) :: leaf2root_mass_ratio         !< leaf to root mass ratio
@@ -1483,6 +1488,7 @@ CONTAINS
                             k2_opt_w
     REAL(wp)             :: k1_opt_n  , &
                             k1_opt_p
+    REAL(wp)             :: n_l2r_scal, p_l2r_scal, w_l2r_scal
     REAL(wp)             :: ns_carbon,ns_nitrogen,ns_phosphorus
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
 
@@ -1588,11 +1594,19 @@ CONTAINS
              ENDIF
                
              ! Compare root increments for a hypothetical unit of leaf growth 
-             !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+             IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
                 ! water is limiting 
-             !   k1_opt = k1_opt_w 
-             !   k2_opt = k2_opt_w 
-             !ENDIF 
+                k1_opt = k1_opt_w 
+                k2_opt = k2_opt_w 
+             ENDIF
+          CASE("dynamic")
+             ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+             n_l2r_scal = growth_cn / MAX(eps8, ns_carbon / MAX(eps8, ns_nitrogen))
+             p_l2r_scal = growth_cp / MAX(eps8, ns_carbon / MAX(eps8, ns_phosphorus))
+             w_l2r_scal = w_root_lim / w_root_lim_max
+             ! actual ratio is given by the minimum of the three factors
+             leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+                  k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
           CASE("fixed")
              ! scaling factor for root to leaf mass
              ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
@@ -1656,7 +1670,11 @@ CONTAINS
               k1_opt = k1_opt_w 
               k2_opt = k2_opt_w 
             ENDIF 
-
+         CASE("dynamic")
+             n_l2r_scal = growth_cn / MAX(eps8, ns_carbon / MAX(eps8, ns_nitrogen))
+             p_l2r_scal = growth_cp / MAX(eps8, ns_carbon / MAX(eps8, ns_phosphorus))
+             w_l2r_scal = w_root_lim / w_root_lim_max
+             leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)
           CASE("fixed")
             leaf2root_mass_ratio = sm2lm_grass * k_rtos 
         END SELECT ! biomass_alloc_scheme
@@ -2311,7 +2329,7 @@ CONTAINS
                 coarse_root_carbon_inc(:) = 0.0_wp
               END WHERE
             END WHERE
-          CASE("fixed")
+          CASE("fixed", "dynamic")
             WHERE(b_inc(:) > eps8)
               !! needed for stability - to be checked BLARPP! 
               !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc(:)
@@ -2363,7 +2381,7 @@ CONTAINS
             root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
             sap_wood_carbon_inc(:)    = ( leaf_carbon_inc(:) + leaf_carbon(:) ) / leaf2sapwood_mass_ratio(:) - sap_wood_carbon(:)
             coarse_root_carbon_inc(:) = 0.0_wp
-          CASE("fixed")
+          CASE("fixed", "dynamic")
             leaf_carbon_inc(:)        = MAX((b_inc(:) - leaf_carbon(:) / leaf2root_mass_ratio(:) + &
                                              sap_wood_carbon(:) + root_carbon(:)) / & 
                                             (1.0_wp + 1._wp / leaf2sapwood_mass_ratio(:) + 1._wp / leaf2root_mass_ratio(:)), &

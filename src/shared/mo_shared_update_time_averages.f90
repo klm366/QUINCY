@@ -441,7 +441,7 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_shared_constants,        ONLY: mavg_period_weekly, mavg_period_monthly, &
                                           mavg_period_tlabile, mavg_period_tphen, mavg_period_tuptake, mavg_period_tfrac, &
-                                          mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_tvegdyn, &
+                                          mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_talloc_dynamic, mavg_period_tvegdyn, &
                                           mavg_period_tacclim, mavg_period_tmic, mavg_period_tsoa, &
                                           Tzero
 
@@ -470,7 +470,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model             !< instance of the model
     TYPE(t_lctlib_element), POINTER         :: lctlib            !< land-cover-type library - parameter across pft's
-    REAl(wp),DIMENSION(options%nc)          :: hlp               !< helper
+    REAl(wp),DIMENSION(options%nc)          :: hlp, mavg_period_hlp               !< helper
     LOGICAL ,DIMENSION(options%nc)          :: l_growing_season  !< growing_season LOGICAL needed for calc_mavg(), see section 0.9
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
@@ -609,6 +609,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
@@ -623,6 +624,8 @@ CONTAINS
     ! SSE_
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: t_soil_root
+    dsl4jsb_Real2D_onChunk      :: w_soil_root
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -771,6 +774,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
@@ -785,6 +789,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
     dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)
     ! Get process memory pool structures
 #define Get_veg_pool
 #include "slm_pools_a_incl.f90"
@@ -948,34 +954,50 @@ CONTAINS
     unit_uptake_n_talloc_mavg(:)        = calc_mavg(unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
                                                       mavg_period_talloc, do_calc=l_growing_season(:))
     unit_uptake_p_talloc_mavg(:)        = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
-    labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg_pool%labile%carbon, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
-    labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg_pool%labile%nitrogen, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
-    labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg_pool%labile%phosphorus, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
-    reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg_pool%reserve%carbon, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
-    reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg_pool%reserve%nitrogen, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
-    reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg_pool%reserve%phosphorus, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
+         mavg_period_talloc, do_calc=l_growing_season(:))
 
-    WHERE(growth_req_n(:) > 0._wp)
-       hlp(:) = 1._wp/growth_req_n(:)
-    ELSEWHERE
-       hlp(:) = 0._wp
-    END WHERE
-    growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=l_growing_season(:))
+    SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
+    CASE ("optimal", "fixed")
+       mavg_period_hlp = mavg_period_talloc
+    CASE ("dynamic")
+       mavg_period_hlp = mavg_period_talloc_dynamic
+    END SELECT
+    
+          labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg_pool%labile%carbon, &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
+          labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg_pool%labile%nitrogen, &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
+          labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg_pool%labile%phosphorus, &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
+          reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg_pool%reserve%carbon, &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
+          reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg_pool%reserve%nitrogen, &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
+          reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg_pool%reserve%phosphorus, &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
+          w_root_lim_talloc_mavg(:)           = calc_mavg(w_root_lim_talloc_mavg(:), w_soil_root(:)/w_soil_root_fc(:), &
+                                                      mavg_period_hlp, do_calc=l_growing_season(:))
 
-    WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
-       hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
-    ELSEWHERE
-       hlp(:) = 0._wp
-    END WHERE
-
-    growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_tgrowth, do_calc=l_growing_season(:))
+          SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
+          CASE ("optimal", "fixed")
+             mavg_period_hlp = mavg_period_tgrowth
+          CASE ("dynamic")
+             mavg_period_hlp = mavg_period_talloc_dynamic
+          END SELECT
+          
+          WHERE(growth_req_n(:) > 0._wp)
+             hlp(:) = 1._wp/growth_req_n(:)
+          ELSEWHERE
+             hlp(:) = 0._wp
+          END WHERE
+          growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
+          
+          WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
+             hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
+          ELSEWHERE
+             hlp(:) = 0._wp
+          END WHERE
+          growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
 
     !> 1.7 averages at the time-scale of root life-time
     !!
