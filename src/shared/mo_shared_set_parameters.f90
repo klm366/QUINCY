@@ -53,6 +53,11 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: mycorrhiza_cue        
+    REAL(wp)           :: mycorrhiza_cn         
+    REAL(wp)           :: mycorrhiza_np         
+    REAL(wp)           :: f_maxresp_myc         
+    REAL(wp)           :: f_surface_myc2fineroot
     REAL(wp)           :: k_diff_org
     ! additional jsm parameters
     REAL(wp)           :: vmax_mic_uptake_nh4, &    
@@ -216,6 +221,11 @@ CONTAINS
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_min
     REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: mycorrhiza_cue        
+    REAL(wp)           :: mycorrhiza_cn         
+    REAL(wp)           :: mycorrhiza_np         
+    REAL(wp)           :: f_maxresp_myc         
+    REAL(wp)           :: f_surface_myc2fineroot
     REAL(wp)           :: k_diff_org
     ! additional jsm parameters
     REAL(wp)           :: vmax_mic_uptake_nh4, &    
@@ -277,6 +287,11 @@ CONTAINS
         microbial_cue             , & 
         microbial_cue_min         , &      
         microbial_cue_max         , &
+        mycorrhiza_cue            , &
+        mycorrhiza_cn             , &
+        mycorrhiza_np             , &
+        f_maxresp_myc             , &
+        f_surface_myc2fineroot    , &
         k_diff_org                , &
         vmax_mic_uptake_nh4       , &    
         km_mic_uptake_nh4         , &      
@@ -340,6 +355,11 @@ CONTAINS
     microbial_cue               = missval
     microbial_cue_min           = missval
     microbial_cue_max           = missval
+    mycorrhiza_cue              = missval
+    mycorrhiza_cn               = missval
+    mycorrhiza_np               = missval
+    f_maxresp_myc               = missval
+    f_surface_myc2fineroot      = missval
     k_diff_org                  = missval
     vmax_mic_uptake_nh4         = missval    
     km_mic_uptake_nh4           = missval      
@@ -414,6 +434,11 @@ CONTAINS
     this%microbial_cue               = microbial_cue
     this%microbial_cue_min           = microbial_cue_min
     this%microbial_cue_max           = microbial_cue_max
+    this%mycorrhiza_cue              = mycorrhiza_cue        
+    this%mycorrhiza_cn               = mycorrhiza_cn         
+    this%mycorrhiza_np               = mycorrhiza_np         
+    this%f_maxresp_myc               = f_maxresp_myc         
+    this%f_surface_myc2fineroot      = f_surface_myc2fineroot
     this%k_diff_org                  = k_diff_org
     this%vmax_mic_uptake_nh4         = vmax_mic_uptake_nh4       
     this%km_mic_uptake_nh4           = km_mic_uptake_nh4           
@@ -513,6 +538,15 @@ CONTAINS
     IF (ABS(this%microbial_cue          - missval) > eps8)  microbial_cue          = this%microbial_cue
     IF (ABS(this%microbial_cue_min      - missval) > eps8)  microbial_cue_min      = this%microbial_cue_min
     IF (ABS(this%microbial_cue_max      - missval) > eps8)  microbial_cue_max      = this%microbial_cue_max
+
+    IF (ABS(this%mycorrhiza_cue         - missval) > eps8)  mycorrhiza_cue         = this%mycorrhiza_cue
+    IF (ABS(this%mycorrhiza_cn          - missval) > eps8)  mycorrhiza_cn          = this%mycorrhiza_cn * molar_mass_N / &
+                                                                                       molar_mass_C
+    IF (ABS(this%mycorrhiza_np          - missval) > eps8)  mycorrhiza_np          = this%mycorrhiza_np * molar_mass_P / &
+                                                                                       molar_mass_N
+    IF (ABS(this%f_maxresp_myc          - missval) > eps8)  f_maxresp_myc          = this%f_maxresp_myc
+    IF (ABS(this%f_surface_myc2fineroot - missval) > eps8)  f_surface_myc2fineroot = this%f_surface_myc2fineroot
+
     IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org             = this%k_diff_org / one_year / one_day
     IF (ABS(this%vmax_mic_uptake_nh4    - missval) > eps8)  vmax_mic_uptake_nh4    = this%vmax_mic_uptake_nh4 / &
                                                                                        3600._wp * molar_mass_C

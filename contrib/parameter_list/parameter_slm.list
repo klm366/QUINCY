@@ -29,6 +29,11 @@
   microbial_cue=NAN
   microbial_cue_min=NAN
   microbial_cue_max=NAN
+  mycorrhiza_cue=NAN
+  mycorrhiza_cn=NAN
+  mycorrhiza_np=NAN
+  f_maxresp_myc=NAN
+  f_surface_myc2fineroot=NAN
   k_diff_org=NAN
   ! additional jsm parameters
   vmax_mic_uptake_nh4=NAN
