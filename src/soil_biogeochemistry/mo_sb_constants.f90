@@ -109,7 +109,7 @@ MODULE mo_sb_constants
 
    ! mycorrhizal parameters
    REAL(wp), SAVE :: & 
-      mycorrhizal_cue, &         !< mycorrhizal carbon-use efficiency
+      mycorrhiza_cue, &          !< mycorrhizal carbon-use efficiency
       mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fung
       mycorrhiza_np, &           !< molar ratio of N:P of mycorrhizal fungi
       f_maxresp_myc, &           !< maximum fraction of mycorrhizal carbon used for N transformation [1/day]
@@ -316,7 +316,7 @@ CONTAINS
     lc_seed_bed          = 0.22_wp / molar_mass_C * molar_mass_N      ! 
 
     ! mycorrhizal parameters
-    mycorrhizal_cue         = 0.7_wp                                  !! ??? SOURCE
+    mycorrhiza_cue          = 0.7_wp                                  !! ??? SOURCE
     mycorrhiza_cn           = 10.0_wp * molar_mass_N / molar_mass_C   !! 
     mycorrhiza_np           = 14.0_wp * molar_mass_P / molar_mass_N   !! 
     f_maxresp_myc           = 0.4_wp                                  !! ??? SOURCE

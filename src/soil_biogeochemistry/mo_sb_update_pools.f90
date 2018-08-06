@@ -480,7 +480,7 @@ CONTAINS
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
     sb_formation%mycorrhiza%carbon(:,1)     = sb_formation%mycorrhiza%carbon(:,1) + &
-                                                             veg_exudation%carbon(:) * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon(:) * mycorrhiza_cue / soil_depth_sl(:,1)
     sb_formation%mycorrhiza%nitrogen(:,1)   = sb_formation%mycorrhiza%nitrogen(:,1) + &
                                                              veg_exudation%nitrogen(:) / soil_depth_sl(:,1) + &
                                                              (mycorrhiza_uptake_nh4_sl(:,1) + mycorrhiza_uptake_no3_sl(:,1)) * & !+ mycorrhiza_uptake_norg_sl(:,1)) * &
@@ -489,9 +489,9 @@ CONTAINS
                                                              veg_exudation%phosphorus(:) / soil_depth_sl(:,1) + &
                                                              mycorrhiza_uptake_po4_sl(:,1) * dtime / 1000000._wp
     sb_formation%mycorrhiza%carbon13(:,1)   = sb_formation%mycorrhiza%carbon13(:,1) + &
-                                                             veg_exudation%carbon13(:) * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon13(:) * mycorrhiza_cue / soil_depth_sl(:,1)
     sb_formation%mycorrhiza%carbon14(:,1)   = sb_formation%mycorrhiza%carbon14(:,1) + &
-                                                             veg_exudation%carbon14(:) * mycorrhizal_cue / soil_depth_sl(:,1)
+                                                             veg_exudation%carbon14(:) * mycorrhiza_cue / soil_depth_sl(:,1)
     sb_formation%mycorrhiza%nitrogen15(:,1) = sb_formation%mycorrhiza%nitrogen15(:,1) + &
                                                      veg_exudation%nitrogen15(:) / soil_depth_sl(:,1) + &
                                                      (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
@@ -511,11 +511,11 @@ CONTAINS
                                                         sb_mycorrhiza_export%nitrogen15(:,1)
 
     DO isoil = 1,nsoil_sb
-      het_respiration(:,isoil)     = het_respiration(:,isoil)     + (1._wp - mycorrhizal_cue) * veg_exudation%carbon(:)   / &
+      het_respiration(:,isoil)     = het_respiration(:,isoil)     + (1._wp - mycorrhiza_cue) * veg_exudation%carbon(:)   / &
                                       dtime * 1000000._wp                          
-      het_respiration_c13(:,isoil) = het_respiration_c13(:,isoil) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon13(:) / &
+      het_respiration_c13(:,isoil) = het_respiration_c13(:,isoil) + (1._wp - mycorrhiza_cue) * veg_exudation%carbon13(:) / &
                                       dtime * 1000000._wp
-      het_respiration_c14(:,isoil) = het_respiration_c14(:,isoil) + (1._wp - mycorrhizal_cue) * veg_exudation%carbon14(:) / &
+      het_respiration_c14(:,isoil) = het_respiration_c14(:,isoil) + (1._wp - mycorrhiza_cue) * veg_exudation%carbon14(:) / &
                                       dtime * 1000000._wp
     END DO
 
