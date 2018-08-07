@@ -1565,7 +1565,7 @@ CONTAINS
                 k1_opt_n = (npp*tau_leaf*one_year*one_day + &
                             (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
                             n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
-                           MAX( MAX(unit_uptake_n, 0.05_wp) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+                           MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
                  
                 k1_opt_p = (npp*tau_leaf*one_year*one_day + &
                             (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
