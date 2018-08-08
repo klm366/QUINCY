@@ -6,7 +6,10 @@
 # run: from within the exp_xx/parameter_list/ folder 
 #      Rscript --vanilla ./parameter_summary_figs.R
 #
-
+#
+# Note! if more than one parameter is varied in sensitivity simulations, then 
+#       the variation shown for one parameter in the figures created here may be affected by other parameters !
+#
 
 
 ## define output file of which the variables should be used for fig creation
@@ -14,8 +17,8 @@
 outputFileName <- "vegpoolC_"
 
 ## show results of all simulations in the figure, set this variable to "T"
-#  if set to "F" only the simulation with min and max values and some in between will be plotted
-allSimulations <- "F"
+#  if set to "F" only the simulation with min and max values and about 8 values in between will be plotted
+allSimulations <- "T"
 
 
 
@@ -35,6 +38,9 @@ if(!grepl("parameter_table.txt",fileListTest)) {
   print(" EXIT!")
   exit("1")
 }
+
+## load library needed for color legend, using legend.gradient() function
+library(SDMTools)
 
 ## create output folder for the figures
 opath <- paste0(outputFileName,"sensi_figs")
@@ -116,18 +122,31 @@ for (v in 2:(nOutVar+1)){
     varData[,s]    <- outputFile[,v]
   }
 
+  ## prepare figure creation
+  yMinData <- min(varData)
+  yMaxData <- max(varData)
+  xMinData <- 0
+  xMaxData <- nOutValues + (nOutValues * 0.09)  # add 9% to get space for legend
+  xLegend1 <- nOutValues + (nOutValues * 0.025)
+  xLegend2 <- nOutValues + (nOutValues * 0.055)
+  yLegend1 <- yMinData + (yMaxData * 0.3)
+  yLegend2 <- yMaxData - (yMaxData * 0.05)
+  pnts     <- cbind(x = c(xLegend1,xLegend2,xLegend2,xLegend1), y =c(yLegend2,yLegend2,yLegend1,yLegend1))
+    
   ## create figure
   plot(1:nOutValues, varData[,1], 
        type='l', lwd=0.6,
        col=colGrad[1],
-       ylim=c(min(varData), max(varData)),
+       ylim=c(yMinData, yMaxData),
+       xlim=c(xMinData, xMaxData),
        xlab=tStepPool, 
        ylab=colnames(outputFile)[v],
-       main=paste0("Variation of ",parameterName," from ",sortParamTable[1,2]," to ",sortParamTable[nSim,2]," (red < yellow < blue)"),
+       main=paste0("Variation of ",parameterName,"  (see legend for values)"),
        tck=0.01, mgp=c(1.5, 0.2, 0))
   for (s in plotSim){
     lines(1:nOutValues, varData[,s], col=colGrad[s])
   }
+  legend.gradient(pnts, colGrad, c(sortParamTable[1,2],sortParamTable[nSim,2]), title="values")
   
 } # end loop output variables
 
