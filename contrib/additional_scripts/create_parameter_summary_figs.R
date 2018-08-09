@@ -129,8 +129,8 @@ for (v in 2:(nOutVar+1)){
   xMaxData <- nOutValues + (nOutValues * 0.09)  # add 9% to get space for legend
   xLegend1 <- nOutValues + (nOutValues * 0.025)
   xLegend2 <- nOutValues + (nOutValues * 0.055)
-  yLegend1 <- yMinData + (yMaxData * 0.3)
-  yLegend2 <- yMaxData - (yMaxData * 0.05)
+  yLegend1 <- yMinData + ((yMaxData-yMinData) * 0.3)
+  yLegend2 <- yMaxData - ((yMaxData-yMinData) * 0.05)
   pnts     <- cbind(x = c(xLegend1,xLegend2,xLegend2,xLegend1), y =c(yLegend2,yLegend2,yLegend1,yLegend1))
     
   ## create figure
