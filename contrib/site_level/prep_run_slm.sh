@@ -478,9 +478,11 @@ slmNamelistFolder="../namelist/"
 slmNamelistFilename="namelist.slm"
 slmLctlibFolder="../../data/"
 slmLctlibFilename="lctlib_slm_nlct8.def"
+slmAdditionalDir="../additional_scripts/"
+slmParamFigureFilename="create_parameter_summary_figs.R"  ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
 slmParamSensiFolder="../parameter_list/"
 slmParamListRunFilename="parameter_slm_run.list"
-slmParamTableFilename="parameter_table.txt"
+slmParamTableFilename="parameter_table.txt"               ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
 # runscript cleanupscript namelist lctlib & parameter-variation files
  slmRunScriptJob="$slmRunScriptJobFolder""$slmRunScriptJobFilename"         ## runscript runing a job
  slmCleanupScript="$slmCleanupScriptFolder""$slmCleanupScriptFilename"      ## cleanup script started as extra job after simulations are done
@@ -488,6 +490,7 @@ slmParamTableFilename="parameter_table.txt"
  slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                           ## Landcovertype library for SLM with 8 PFTs
  slmParamListRun="$slmParamSensiFolder""$slmParamListRunFilename"           ## kind of namelist with only the parameter of which the value is varied
  slmParamTable="$slmParamSensiFolder""$slmParamTableFilename"               ## table with values of the parameter(s)
+ slmParamFigureScript="$slmAdditionalDir""$slmParamFigureFilename"          ## R script to create overview figures
 # R scripts
  slmRscript="../r_script/postprocessing_""$slmModel"".R"                       ## R-Script for postprocessing output data
  slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"                       ## R-Script for converting output for FLUXNET 
@@ -503,10 +506,10 @@ if [ -z $experimentalID ]
   experimentalID=$(date +%Y%m%d_%H%M%S)
 fi
 # define job name
-jobName="exp_""$experimentalID"  # name of the job(array) -> must start with a character make work (see below): bsub -w "ended($jobName)"
+jobName="exp_""$experimentalID"                       # name of the job(array) -> must start with a character make work (see below): bsub -w "ended($jobName)"
 simFold="$bgiScratchUserFold""$jobName""/"
 simDefaultFiles="default_files/"
-simParamSensiFiles="parameter_sensitivity_files/"
+simParamSensiFiles="parameter_sensitivity_files/"     # this folder name is also used/defined in the cleanup_slm_hpc_run.sh script
 simFoldDefaultFiles="$simFold""$simDefaultFiles"
 simFoldParamSensiFiles="$simFold""$simParamSensiFiles"
 simFoldOut="$simFold""out""/"
@@ -1234,8 +1237,9 @@ if [ $specialFluxnetOutput == "T" ]; then
   cp "$slmRscript4fluxdiag" "$simFoldDefaultFiles"
 fi
 if [ $paramSensitivitySim == "T" ]; then
-  cp "$slmParamListRun"   "$simFoldParamSensiFiles"
-  cp "$slmParamTable"     "$simFoldParamSensiFiles"
+  cp "$slmParamListRun"       "$simFoldParamSensiFiles"
+  cp "$slmParamTable"         "$simFoldParamSensiFiles"
+  cp "$slmParamFigureScript"  "$simFoldParamSensiFiles"
 fi
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   cp "$slmRscriptCompCruncepGfdb1" "$simFoldDefaultFiles"

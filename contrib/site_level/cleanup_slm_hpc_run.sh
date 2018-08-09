@@ -76,7 +76,8 @@ mkdir -p "$simFold"x_binary
 mv "$simFold"default_files/*.x "$simFold"x_binary
 if [ $paramSensitivitySim == T ]; then
   mkdir -p "$simFold"parameter_list
-  mv "$simFold"parameter_sensitivity_files/parameter_table.txt "$simFold"parameter_list
+  mv "$simFold"parameter_sensitivity_files/parameter_table.txt              "$simFold"parameter_list
+  mv "$simFold"parameter_sensitivity_files/create_parameter_summary_figs.R  "$simFold"parameter_list
 fi
 
 ## run two R Scripts for comparing simulated CRUNCEP data with global forest data base data at daily basis
