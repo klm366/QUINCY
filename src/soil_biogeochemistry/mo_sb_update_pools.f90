@@ -657,8 +657,9 @@ CONTAINS
     qmax_org(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:),0._wp,qmax_org_min_sl(:,:))
     qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:),qmax_po4_om_sl(:,:), &
                     qmax_po4_min_sl(:,:))
+    qmax_po4(:,:) = qmax_po4(:,:) * rmm_sorption(:,:)
     km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
-                        km_adsorpt_mineral_po4/1000._wp,km_adsorpt_mineral_po4)
+                        km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
 
     ! NH4
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
@@ -963,7 +964,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       ENDWHERE
     !> 1.1 Langmuir equilibrium between soluble P and labile P, 0d model
     !!
-      fast_adsorption_po4(:,:) = 0.0_wp
       hlp1(:,:) = 0.0_wp
       hlp2(:,:) = 0.0_wp
       hlp4(:,:) = 0.0_wp
@@ -971,8 +971,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       hlp1(:,1) = (po4_solute(:,1) + km_adsorpt_po4_act(:,1))**2.0_wp / &
                   ((po4_solute(:,1) + km_adsorpt_po4_act(:,1))**2.0_wp + qmax_po4_mineral_act(:,1) * km_adsorpt_po4_act(:,1))
       hlp2(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + &
-                   transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
-            (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_sorption_po4(:,1))) * dtime / 1000000._wp
+                  transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
+                  (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_sorption_po4(:,1))) * dtime / 1000000._wp
 
       WHERE (po4_solute(:,1) < (-hlp2(:,1)) .OR. po4_assoc_fast(:,1) < (-hlp2(:,1)))
         hlp1(:,1) = po4_solute(:,1)/(po4_solute(:,1)+po4_assoc_fast(:,1))

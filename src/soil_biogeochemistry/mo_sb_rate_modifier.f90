@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_sb_constants,          ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
-                                        kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, &
+                                        kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, kmr_sorption, &
                                         ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
                                         t_opt_nitrification, lambda_anvf, k_anvf, &
                                         ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition
@@ -96,6 +96,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sat_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pot_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
     ! Get local variables from options argument
     iblk  = options%iblk
@@ -143,6 +144,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_fc_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sat_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_pot_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     soil_depth_sl)               ! in
 
 
 
@@ -168,8 +170,8 @@ CONTAINS
      
     rmm_depolymerisation(:,:) = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_depolymerisation) 
     rmm_mic_uptake(:,:)       = calc_oxygen_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_mic_uptake)
-    rmm_sorption(:,:)         = calc_convert_bulk_to_liquid(w_soil_sl(:,:))
-    rmm_desorption(:,:)       = calc_convert_bulk_to_liquid(w_soil_sl(:,:)) 
+    rmm_sorption(:,:)         = calc_convert_bulk_to_liquid(w_soil_sl(:,:),soil_depth_sl(:,:),kmr_sorption)
+    rmm_desorption(:,:)       = calc_convert_bulk_to_liquid(w_soil_sl(:,:),soil_depth_sl(:,:),kmr_sorption) 
     rmm_hsc(:,:)              = calc_substrate_rate_modifier(w_soil_sl(:,:),w_soil_fc_sl(:,:),kmr_hsc) 
 
     !> 2.0 nitrification-denitrification model
@@ -337,21 +339,28 @@ CONTAINS
   !!
   !! Output: conversion modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl) RESULT(factor)
+  ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl, soil_depth_sl, param) RESULT(factor)
 
     IMPLICIT NONE
     ! ---------------------------
     !0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
-    REAL(wp)              :: factor              !< conversion factor [unitless] 
+    REAL(wp), INTENT(in)  :: soil_depth_sl       !< soil depth [m]
+    REAL(wp), INTENT(in)  :: param               !< 
+    REAL(wp)              :: hlp1, factor        !< conversion factor [unitless] 
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_convert_bulk_to_liquid'
 
-    IF(w_soil_sl > eps4) THEN
-      factor = 1._wp / w_soil_sl 
+    IF(param>eps8.AND.w_soil_sl > eps8) THEN
+      hlp1 = (w_soil_sl / soil_depth_sl)
+      IF (hlp1 < param) THEN
+        factor = param
+      ELSE
+        factor = hlp1
+      ENDIF
     ELSE
-       factor = 1._wp / eps4 
+       factor = 1._wp
     ENDIF
 
   END FUNCTION calc_convert_bulk_to_liquid
@@ -421,7 +430,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)              :: air_filled_pore_space
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_anaerobic_volume_fraction'
 
     air_filled_pore_space = (w_soil_sat_sl - w_soil_sl ) / w_soil_sat_sl
     IF(air_filled_pore_space > eps4) THEN

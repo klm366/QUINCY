@@ -76,6 +76,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
                                              apparent_mic_cn      , &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
+                                             fine_root_carbon, &
                                              rtm_decomposition_act, &
                                              rmm_decomposition_act, & 
                                              rtm_plant_uptake_act, &
@@ -589,12 +590,21 @@ CONTAINS
 
     !> 2.7 Calculate the potential PO4 flux rate: biomineralisation, weathering, slow sorption, occlusion 
     !!
+    DO isoil = 1,nsoil_sb
+       WHERE(soil_depth_sl(:,isoil) > eps8)
+         fine_root_carbon(:,isoil) = root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+       ELSEWHERE
+         fine_root_carbon(:,isoil) = 0.0_wp
+       ENDWHERE
+    ENDDO
+     
     CALL calc_potential_p_flux_rate(options, &                  
                                     dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &
                                     rtm_decomposition_act(:,:), &
                                     rmm_decomposition_act(:,:), &
                                     km_dip_biochem_po4_act(:,:), &
-                                    bulk_dens_corr_sl(:,:), &
+                                    bulk_dens_corr_sl(:,:), & 
+                                    fine_root_carbon(:,:), &
                                     po4_solute(:,:), &
                                     po4_assoc_fast(:,:), &
                                     po4_assoc_slow(:,:), &
@@ -995,7 +1005,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 rtm_gasdiffusion_act, &      !< actual temperature response scalar for gas diffusion
                                                                 rmm_gasdiffusion_act, &      !< actual moisture response scalar for gas diffusion
                                                                 p_deposition_act, &          !< actual p deposition, [mol m-3 timestep-1]
-                                                                k_weath_mineral_act, &       !< actual weathering rate for primary P [s-1]
+                                                                k_weath_mineral_act, &       !< actual weathering rate for primary P [mol P kg-1 s-1]
                                                                 k_adsorpt_po4_act, &         !< actual adsorption rate for fast_assoc_po4 [s-1]
                                                                 k_desorpt_po4_act, &         !< actual desorption rate for slow_assoc_po4 [s-1]
                                                                 km_dip_biochem_po4_act, &    !< actual km for soluble P control on biochem_mineralisation_po4
@@ -1095,8 +1105,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                          rmm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
       ENDDO
       k_weath_mineral_act(:,1) = rtm_hsc_act(:) / rmm_hsc_act(:) * k_weath_mineral
-      k_adsorpt_po4_act(:,1) = rtm_sorption_act(:) * rmm_sorption_act(:) * k_adsorpt_po4
-      k_desorpt_po4_act(:,1) = rtm_desorption_act(:) * rmm_desorption_act(:) * k_desorpt_po4
+      k_adsorpt_po4_act(:,1) = rtm_sorption_act(:) * k_adsorpt_po4
+      k_desorpt_po4_act(:,1) = rtm_desorption_act(:) * k_desorpt_po4
     !> 2.0 Case of 1d model, simply copy values
     !!
     ELSE 
@@ -1123,8 +1133,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       rtm_gasdiffusion_act(:,:) = rtm_gasdiffusion(:,:)
       rmm_gasdiffusion_act(:,:) = rmm_gasdiffusion(:,:) 
       k_weath_mineral_act(:,:) = rtm_hsc(:,:) / rmm_hsc(:,:) * k_weath_mineral
-      k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * rmm_sorption(:,:) * k_adsorpt_po4
-      k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * rmm_desorption(:,:) * k_desorpt_po4
+      k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * k_adsorpt_po4
+      k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * k_desorpt_po4
       anaerobic_volume_fraction_act(:,:) = anaerobic_volume_fraction_sl(:,:) 
 
     ENDIF
@@ -1704,6 +1714,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                    rmm_decomposition_act, &
                                                    km_dip_biochem_po4_act, &
                                                    bulk_dens_corr_sl, &
+                                                   root_carbon_sl, &
                                                    po4_solute, &
                                                    po4_assoc_fast, &
                                                    po4_assoc_slow, &
@@ -1719,6 +1730,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                    biochem_mineralisation_po4 )         ! out 
 
     USE mo_sb_constants,            ONLY: tau_biomineralisation, k_occlude_po4
+    dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1729,12 +1741,13 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                      rmm_decomposition_act, &   !< moisture response of decomposition
                                                                      km_dip_biochem_po4_act, &  !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
                                                                      bulk_dens_corr_sl, &       !< bulk density of the soil layer, [kg/m3]
+                                                                     root_carbon_sl, &          !< carbon of fine roots per soil layer, [mol/m3]
                                                                      po4_solute, &              !< soluble PO4 pool [mol/m3]
                                                                      po4_assoc_fast, &          !< fast minerally associated PO4 pool [mol/m3]
                                                                      po4_assoc_slow, &          !< slow minerally associated PO4 pool [mol/m3]
                                                                      po4_occluded, &            !< occluded PO4 pool [mol/m3]
                                                                      po4_primary, &             !< primary PO4 pool [mol/m3]
-                                                                     k_weath_mineral_act, &     !< actual weathering rate for primary P [s-1]
+                                                                     k_weath_mineral_act, &     !< actual weathering rate for primary P [mol P kg-1 s-1]
                                                                      k_adsorpt_po4_act, &       !< actual adsorption rate for fast_assoc_po4 [s-1]
                                                                      k_desorpt_po4_act, &       !< actual desorption rate for slow_assoc_po4 [s-1]
                                                                      sb_pool_residue_phosphorus !< slow SOM P pool [mol / m3] 
@@ -1744,12 +1757,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                      biochem_mineralisation_po4 !< potential biomineralisation rate [mol / m3 / timestep]
     ! 0.2 Local
     ! 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_p_flux_rate'
 
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !!
-    weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * dtime
+    weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * root_carbon_sl(:,:)/ (10._wp + root_carbon_sl(:,:)) * dtime
     WHERE (weathering_po4(:,:) > po4_primary(:,:)) 
       weathering_po4(:,:) = po4_primary(:,:)
     ENDWHERE
@@ -1764,8 +1777,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!
     IF(.NOT.flag_sb_prescribe_po4) THEN
        hlp1(:,:)                       = km_dip_biochem_po4_act(:,:) / (km_dip_biochem_po4_act(:,:) + po4_solute(:,:))
+
+       WHERE (root_carbon_sl(:,:)>eps8)
+           hlp2(:,:)                   = root_carbon_sl(:,:)/ (20._wp + root_carbon_sl(:,:))
+       ELSEWHERE
+           hlp2(:,:)                   = 0._wp
+       ENDWHERE
        biochem_mineralisation_po4(:,:) = rtm_decomposition_act(:,:) * rmm_decomposition_act(:,:) / tau_biomineralisation * & 
-                                         sb_pool_residue_phosphorus(:,:) * hlp1(:,:) * dtime
+                                         sb_pool_residue_phosphorus(:,:) * hlp1(:,:) * hlp2(:,:) * dtime
     ELSE
        biochem_mineralisation_po4(:,:) = 0.0_wp
     ENDIF 

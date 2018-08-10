@@ -493,6 +493,7 @@ CONTAINS
             p3str=''
             p4str=''
             p5str=''
+            p6str=''
             DO isoil = 1,nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -504,8 +505,9 @@ CONTAINS
               WRITE(p3str,'(a)') TRIM(p3str)//' CUEmic_L'//TRIM(layerstr)
               WRITE(p4str,'(a)') TRIM(p4str)//' QmaxPo4_L'//TRIM(layerstr)
               WRITE(p5str,'(a)') TRIM(p5str)//' KmPo4_L'//TRIM(layerstr)
+              WRITE(p6str,'(a)') TRIM(p6str)//' RootC_L'//TRIM(layerstr)
             ENDDO
-            WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str)
+            WRITE(lun,'(7a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
             lun=lun+1                 
         END SELECT
     END SELECT
@@ -615,6 +617,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk      :: nh4_solute
     dsl4jsb_Real3D_onChunk      :: nh4_n15_solute
@@ -695,6 +698,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_,  nh4_solute)
     dsl4jsb_Get_var3D_onChunk(SB_,  nh4_n15_solute)
@@ -1170,7 +1174,7 @@ CONTAINS
           lun=lun+1
           ! soil_diagnostics_lay
           write(lun,'(101F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), &
-                                 qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:)
+                                 qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:), veg_pool%fine_root%carbon(ipoi)*root_fraction_sl(ipoi,:)/soil_depth_sl(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_canopy_out .OR. l_soil_output

@@ -39,6 +39,7 @@ MODULE mo_sb_constants
       kmr_depolymerisation, & !< scaling factor for the sensitivity of depolymerisation to oxygen limitation 
       kmr_mic_uptake, &       !< scaling factor for the sensitivity of microbial uptake to oxygen limitation 
       kmr_hsc, &              !< scaling factor for the sensitivity of half-saturation constant to moisture limitation
+      kmr_sorption, &         !< scaling factor for the sensitivity of surface adsorption to moisture limitation
       kmr_decomposition       !< minimum water potential for decomposition
 
   ! transport and sorption parameters
@@ -250,6 +251,7 @@ CONTAINS
     kmr_depolymerisation  = 0.001_wp      ! 
     kmr_mic_uptake        = 0.001_wp      ! 
     kmr_hsc               = 0.001_wp      ! 
+    kmr_sorption          = 0.001_wp      ! 
     kmr_decomposition     = -2.0_wp       !
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
@@ -263,9 +265,9 @@ CONTAINS
     k_desorpt_det             = 2065.491_wp / one_year / one_day                            ! 
     k_adsorpt_nh4             = 0.0_wp                                                      !  
     k_desorpt_nh4             = 0.0_wp                                                      !  
-    k_adsorpt_po4             = 0.00022_wp * 8._wp/9._wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
+    k_adsorpt_po4             = 0.022_wp * 8._wp/9._wp / 30.0_wp / one_day                  ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
                                                                                             ! assuming labile and slow P in equilibrium (Yang et al. 2013)
-    k_desorpt_po4             = 0.00022_wp / 30.0_wp / one_day                              ! [s-1], simple model, Yang et al. 2014
+    k_desorpt_po4             = 0.022_wp / 30.0_wp / one_day                                ! [s-1], simple model, Yang et al. 2014 * 100
     k_adsorpt_f_po4           = 2000._wp * 57.9_wp / 3600._wp                               ! [kg soil mol-1 P s-1], based on Van der Zee et al. 1989
     k_desorp_f_po4            = 0.14_wp / 3600._wp                                          ! [s-1], Van der Zee et al. 1989
     k_desorp_s_po4            = 0.0_wp                                                      ! [kg soil mol-1 P s-1], McGechan and Lewis 2002
@@ -355,11 +357,12 @@ CONTAINS
     k_plant_uptake_po4      = 0.12_wp / one_day                           ! [s-1], Zhu et al. 2016, and references therein divided by 100._wp
     f_mic_carrier_po4       = 0.0015_wp                                   ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4     = 0.00125_wp                                  ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
-    qmax_po4_mineral        = 0.5_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
-    km_adsorpt_mineral_po4  = 0.225_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil] 
+    qmax_po4_mineral        = 1.2_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
+    km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mol P L-1 soil solution], 
+                                                                          ! with .33 m wc and 1560 kg/m3 bulk density
 
    ! soil Pi fluxes
-    k_weath_mineral       = 0.01_wp / molar_mass_P / 1254._wp / one_year /one_day ! [mol P m-3 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
+    k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
     eq_sorp_mineral_po4   = 80._wp / molar_mass_P                                 ! [mol P m-3] ! random guess based on init value of assoc_slow
     k_occlude_po4         = 1.e-6_wp / 30._wp / one_day                           ! [s-1], Yang et al. 2014
     vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [s-1], estimated from Bunemann et al. 2016, LUS site
