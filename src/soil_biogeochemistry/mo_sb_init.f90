@@ -48,7 +48,6 @@ CONTAINS
     USE mo_sb_jsm_transport
     USE mo_veg_constants,                   ONLY: itree
     USE mo_sb_constants                     ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
-    USE mo_sb_rate_modifier,      ONLY: update_sb_rate_modifier
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
@@ -89,6 +88,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
@@ -113,7 +113,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ph_sl
     dsl4jsb_Real3D_onChunk :: lithology_class_sl
     dsl4jsb_Real3D_onChunk :: po4_primary
-    dsl4jsb_Real3D_onChunk :: rmm_sorption
     dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
     ! Get local variables from options argument
     iblk      = options%iblk
@@ -140,6 +139,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_,     w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_,     soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_org_min_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_,     qmax_po4_min_sl)
@@ -164,7 +164,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       ph_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       lithology_class_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff_tmic_mavg)
     ! Get process memory pool structures
 #define Get_sb_pool
@@ -196,7 +195,6 @@ CONTAINS
     ph_sl(:,:)              = dsl4jsb_Config(SB_)%soil_ph
     lithology_class_sl(:,:) = dsl4jsb_Config(SB_)%lithology_class
 
-    CALL update_sb_rate_modifier(tile, options) 
     !> 2.0 differentiate soil model init
     !! 
     hlp6 = 0.6_wp   ! fraction of production not roots 
@@ -231,7 +229,7 @@ CONTAINS
              qmax_po4_om_sl(:,:)      = qmax_po4_min_sl(:,:)/100._wp
              qmax_po4(:,:)            = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
                                         qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
-             qmax_po4(:,:)            = qmax_po4(:,:) * rmm_sorption(:,:)
+             qmax_po4(:,:)            = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                                       km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
              ! initialise mineral soil P pools
@@ -277,7 +275,7 @@ CONTAINS
              qmax_po4_om_sl(:,:) = qmax_po4_min_sl(:,:)/100._wp
              qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), & 
                                       qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
-             qmax_po4(:,:)            = qmax_po4(:,:) * rmm_sorption(:,:)
+             qmax_po4(:,:)            = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                                       km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
              ! initialise mineral soil P pools
@@ -404,7 +402,7 @@ CONTAINS
                          0._wp,qmax_org_min_sl(:,:))
          qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                          qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
-         qmax_po4(:,:)            = qmax_po4(:,:) * rmm_sorption(:,:)
+         qmax_po4(:,:)            = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
          km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                          km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
   

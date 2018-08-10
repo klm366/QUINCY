@@ -1173,8 +1173,9 @@ CONTAINS
                             sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
           ! soil_diagnostics_lay
-          write(lun,'(101F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), &
-                                 qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:), veg_pool%fine_root%carbon(ipoi)*root_fraction_sl(ipoi,:)/soil_depth_sl(ipoi,:)
+          write(lun,'(121F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), &
+                                 qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:), &
+                                 veg_pool%fine_root%carbon(ipoi) * root_fraction_sl(ipoi,:) / soil_depth_sl(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_canopy_out .OR. l_soil_output
