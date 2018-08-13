@@ -659,7 +659,7 @@ CONTAINS
                     qmax_po4_min_sl(:,:))
     qmax_po4(:,:) = qmax_po4(:,:) * rmm_sorption(:,:)
     km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
-                        km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
+                        km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
 
     ! NH4
     IF(dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN

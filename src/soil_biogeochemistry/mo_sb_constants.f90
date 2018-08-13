@@ -151,7 +151,8 @@ MODULE mo_sb_constants
       f_mic_carrier_po4, &       !< ratio between microbial P transport and microbial biomass, []
       f_plant_carrier_po4, &     !< ratio between plant P transport and fine root biomass, []
       qmax_po4_mineral, &        !< Maximum PO4 sorption capacity of mineral soil [mol P kg-1 soil], ECA and Langmuir
-      km_adsorpt_mineral_po4     !< Half-saturation concentration for PO4 mineral soil adsorption [mol P kg-1 fine mineral soil], ECA and Langmuir
+      km_adsorpt_mineral_po4, &  !< Half-saturation concentration for PO4 adsorption to mineral soil [mol P kg-1 fine mineral soil], ECA and Langmuir
+      km_adsorpt_OM_po4          !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
 
    ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
    REAL(wp), SAVE :: & 
@@ -199,7 +200,9 @@ MODULE mo_sb_constants
       k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [s-1]
       vmax_biochem_po4, &        !< Maximum PO4 biochemical mineralization rate [s-1], MM kinetics (potentially also for ECA)
       km_mic_biochem_po4, &      !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
-      km_dip_biochem_po4         !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
+      km_dip_biochem_po4, &      !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
+      km_rootc_biochem_po4, &    !< Half-saturation root C biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
+      km_rootc_weath_po4         !< Half-saturation root C biomass for PO4 weathering [mol C m-3], MM kinetics-alike
 
 
    !! only temporarily, mol / m2 !!
@@ -358,8 +361,9 @@ CONTAINS
     f_mic_carrier_po4       = 0.0015_wp                                   ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4     = 0.00125_wp                                  ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     qmax_po4_mineral        = 1.2_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
-    km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mol P L-1 soil solution], 
-                                                                          ! with .33 m wc and 1560 kg/m3 bulk density
+    km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mol P L-1 soil solution]  
+                                                                          ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
+    km_adsorpt_OM_po4       = 14._wp / 1000._wp / molar_mass_P            ! 200 times of km_adsorpt_mineral_po4, from literature data analysis
 
    ! soil Pi fluxes
     k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
@@ -368,6 +372,8 @@ CONTAINS
     vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [s-1], estimated from Bunemann et al. 2016, LUS site
     km_mic_biochem_po4    = 0.1_wp / molar_mass_C                                 ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
     km_dip_biochem_po4    = 0.001_wp                                              ! estimated
+    km_rootc_biochem_po4  = 20._wp                                                ! 
+    km_rootc_weath_po4    = 10._wp                                                !
 
     ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
     ea_nitrification       = 80000._wp                        ! Xu-Ri & Prentice, 2008, to fit their function

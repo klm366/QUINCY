@@ -231,7 +231,7 @@ CONTAINS
                                         qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
              qmax_po4(:,:)            = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
-                                      km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
+                                      km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
              ! initialise mineral soil P pools
              CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
                                     dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
@@ -277,7 +277,7 @@ CONTAINS
                                       qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
              qmax_po4(:,:)            = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
-                                      km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
+                                      km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
              ! initialise mineral soil P pools
              CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
                                     dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
@@ -404,7 +404,7 @@ CONTAINS
                          qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
          qmax_po4(:,:)            = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
          km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
-                         km_adsorpt_mineral_po4*200._wp,km_adsorpt_mineral_po4)
+                         km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
   
           ! initialise diffusion by bioturbation
 !@todo: SZ: why should this be necessary? It's updated before use in JSM

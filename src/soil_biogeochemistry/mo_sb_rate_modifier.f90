@@ -347,10 +347,11 @@ CONTAINS
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
     REAL(wp), INTENT(in)  :: soil_depth_sl       !< soil depth [m]
     REAL(wp), INTENT(in)  :: param               !< 
-    REAL(wp)              :: hlp1, factor        !< conversion factor [unitless] 
+    REAL(wp)              :: factor              !< conversion factor [unitless] 
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_convert_bulk_to_liquid'
+    REAL(wp)              :: hlp1
 
     IF(param>eps8.AND.w_soil_sl > eps8) THEN
       hlp1 = (w_soil_sl / soil_depth_sl)

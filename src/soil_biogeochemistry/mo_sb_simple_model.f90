@@ -1729,7 +1729,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                    slow_sorption_po4, &
                                                    biochem_mineralisation_po4 )         ! out 
 
-    USE mo_sb_constants,            ONLY: tau_biomineralisation, k_occlude_po4
+    USE mo_sb_constants,            ONLY: tau_biomineralisation, k_occlude_po4, km_rootc_biochem_po4, km_rootc_weath_po4
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
@@ -1762,7 +1762,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !!
-    weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * root_carbon_sl(:,:)/ (10._wp + root_carbon_sl(:,:)) * dtime
+    weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * root_carbon_sl(:,:) / & 
+                          (km_rootc_weath_po4 + root_carbon_sl(:,:)) * dtime
     WHERE (weathering_po4(:,:) > po4_primary(:,:)) 
       weathering_po4(:,:) = po4_primary(:,:)
     ENDWHERE
@@ -1779,7 +1780,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        hlp1(:,:)                       = km_dip_biochem_po4_act(:,:) / (km_dip_biochem_po4_act(:,:) + po4_solute(:,:))
 
        WHERE (root_carbon_sl(:,:)>eps8)
-           hlp2(:,:)                   = root_carbon_sl(:,:)/ (20._wp + root_carbon_sl(:,:))
+           hlp2(:,:)                   = root_carbon_sl(:,:)/ (km_rootc_biochem_po4 + root_carbon_sl(:,:))
        ELSEWHERE
            hlp2(:,:)                   = 0._wp
        ENDWHERE
