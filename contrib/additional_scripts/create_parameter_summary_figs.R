@@ -6,9 +6,11 @@
 # run: from within the exp_xx/parameter_list/ folder 
 #      Rscript --vanilla ./parameter_summary_figs.R
 #
-#
-# Note! if more than one parameter is varied in sensitivity simulations, then 
-#       the variation shown for one parameter in the figures created here may be affected by other parameters !
+# note: Each figure shows the variation in results for a particular output variable covering 
+#       the full parameter space created with the LHS and considering all parameters. 
+#       The colors highlight the distribution of the values of the particular parameter across 
+#       the range of output values of the variable, however, this does not necessarily indicate 
+#       the effect of the parameter value on the variation of the output variable.
 #
 
 
@@ -141,7 +143,7 @@ for (v in 2:(nOutVar+1)){
        xlim=c(xMinData, xMaxData),
        xlab=tStepPool, 
        ylab=colnames(outputFile)[v],
-       main=paste0("Variation of ",parameterName,"  (see legend for values)"),
+       main=paste0("Distribution of ", parameterName," values across the simulation results (see legend)"),
        tck=0.01, mgp=c(1.5, 0.2, 0))
   for (s in plotSim){
     lines(1:nOutValues, varData[,s], col=colGrad[s])
