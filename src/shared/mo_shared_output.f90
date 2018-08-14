@@ -1401,7 +1401,8 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxN
-        WRITE(lun,'(a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN'
+        WRITE(lun,'(2a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN ', &
+                          'FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN'
         lun=lun+1
         ! vegfluxP
         WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP'
@@ -1439,16 +1440,18 @@ CONTAINS
       CASE('land','soil')
         !! all soil models (simple_0d and simple_1d and jsm)
         ! soilfluxCdC13DC14
-        WRITE(lun,'(2a)') 'Time Litterfall HetResp LeachingDOM Litterfall_dC13 HetResp_dC13 LeachingDOM_dC13 ', &
+        WRITE(lun,'(3a)') 'Time Litterfall_C ', &
+                          'HetResp LeachingDOM_C Litterfall_dC13 HetResp_dC13 LeachingDOM_dC13 ', &
                           'Litterfall_DC14 HetResp_DC14 LeachingDOM_DC14'
         lun=lun+1
         ! soilfluxN
-        WRITE(lun,'(2a)') 'Time Litterfall NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
-                          'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM' 
+        WRITE(lun,'(3a)') 'Time Litterfall_N ', &
+                          'NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
+                          'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM_N' 
         lun=lun+1
         ! soilfluxP
-        WRITE(lun,'(3a)') 'Time Litterfall ', &
-                          'PDeposition Leaching_PO4 Leaching_DOM Net_Mineralisation_PO4 PlantUptake_PO4 Weathering_PO4 ', &
+        WRITE(lun,'(3a)') 'Time Litterfall_P ', &
+                          'PDeposition Leaching_PO4 LeachingDOM_P Net_Mineralisation_PO4 PlantUptake_PO4 Weathering_PO4 ', &
                           'Occlusion_PO4 Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
         lun=lun+1
         ! soilfluxdN
