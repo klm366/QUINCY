@@ -4,7 +4,7 @@
 ## script to cleanup temporary files and folders after a whole job-array of slm simulations was completed
 ## 
 ## this script is copied to /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ by the prep_run_slm.sh
-##  and the bsup runs it from there
+##  and the bsub runs it from there
 ## 
 
 
@@ -22,9 +22,10 @@ array=$2                          # was an job array or just one job simulated  
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                    # SLM model: land plant soil canopy
-paramSensitivitySim=$(sed -n 9p "$simFold""default_files/config.txt" | awk '{print $1}')      # T/F  -> parameter sensitivity
-compareSimCRUNCEPvsGFDB=$(sed -n 10p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
+slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                      # SLM model: land plant soil canopy
+specialFluxnetOutput=$(sed -n 6p "$simFold""default_files/config.txt")                          # T/F  -> fluxnet diagnostics from timestep output
+paramSensitivitySim=$(sed -n 9p "$simFold""default_files/config.txt" | awk '{print $1}')        # T/F  -> parameter sensitivity
+compareSimCRUNCEPvsGFDB=$(sed -n 10p "$simFold""default_files/config.txt" | awk '{print $1}')   # T/F  -> compare with global forest data base
 
 
 ## move job specific error & out files into the particular job folder ##
@@ -83,12 +84,20 @@ fi
 ## run two R Scripts for comparing simulated CRUNCEP data with global forest data base data at daily basis
 if [ $compareSimCRUNCEPvsGFDB == T ]; then
   echo " starting sim_cruncep_vs_gfdb-process_daily.R"
-  Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-process_daily.R $simFold  # creates two .csv files
+  Rscript --vanilla "$simFold"default_files/sim_cruncep_vs_gfdb-process_daily.R $simFold  # creates two .csv files
   sync
   echo " starting sim_cruncep_vs_gfdb-create_figs.R"
-  Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-create_figs.R $simFold    # creates a .pdf with multiple figures
+  Rscript --vanilla "$simFold"default_files/sim_cruncep_vs_gfdb-create_figs.R $simFold    # creates a .pdf with multiple figures
   sync
   echo " finished cruncep vs gfdb data processing and figure creation"
+fi
+
+## run one R Script for postprocessing the fluxnet diagnostics with barplots
+if [ "$specialFluxnetOutput" == T ]; then
+  echo " sim_fluxnet_diagnostics-process_timestep.R"
+  Rscript --vanilla "$simFold"default_files/sim_fluxnet_diagnostics-process_timestep.R $simFold  # creates two .csv files
+  sync
+  echo " finished barplot figure creation of the fluxnet diagnostics"
 fi
 
 ## remove some folders not needed anymore ##

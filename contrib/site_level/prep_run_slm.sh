@@ -492,11 +492,12 @@ slmParamTableFilename="parameter_table.txt"               ## this filename is al
  slmParamTable="$slmParamSensiFolder""$slmParamTableFilename"               ## table with values of the parameter(s)
  slmParamFigureScript="$slmAdditionalDir""$slmParamFigureFilename"          ## R script to create overview figures
 # R scripts
- slmRscript="../r_script/postprocessing_""$slmModel"".R"                       ## R-Script for postprocessing output data
- slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"                       ## R-Script for converting output for FLUXNET 
- slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"              ## R-Script for FLUXNET diagnostics 
- slmRscriptCompCruncepGfdb1="../r_script/sim_cruncep_vs_gfdb-process_daily.R"  ## R-Script for postprocessing simulation data for CRUNCEP vs GFDB
- slmRscriptCompCruncepGfdb2="../r_script/sim_cruncep_vs_gfdb-create_figs.R"    ## R-Script for creating comparision figures CRUNCEP vs GFDB
+ slmRscript="../r_script/postprocessing_""$slmModel"".R"                          ## R-Script for postprocessing output data
+ slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"                          ## R-Script for converting output for FLUXNET 
+ slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"                 ## R-Script for FLUXNET diagnostics 
+ slmRscript4fluxBarPlots="../r_script/sim_fluxnet_diagnostics-process_timestep.R" ## R-Script for postprocessing FLUXNET diagnostics as barplots
+ slmRscriptCompCruncepGfdb1="../r_script/sim_cruncep_vs_gfdb-process_daily.R"     ## R-Script for postprocessing simulation data for CRUNCEP vs GFDB
+ slmRscriptCompCruncepGfdb2="../r_script/sim_cruncep_vs_gfdb-create_figs.R"       ## R-Script for creating comparision figures CRUNCEP vs GFDB
 
 
 ## experimental ID & simulation specific folders at scratch ##
@@ -1233,8 +1234,9 @@ cp "$slmNamelist"       "$simFoldDefaultFiles"
 cp "$slmLctlib"         "$simFoldDefaultFiles"
 cp "$slmRscript"        "$simFoldDefaultFiles"
 if [ $specialFluxnetOutput == "T" ]; then 
-  cp "$slmRscript4fluxfile" "$simFoldDefaultFiles"
-  cp "$slmRscript4fluxdiag" "$simFoldDefaultFiles"
+  cp "$slmRscript4fluxfile"       "$simFoldDefaultFiles"
+  cp "$slmRscript4fluxdiag"       "$simFoldDefaultFiles"
+  cp "$slmRscript4fluxBarPlots"   "$simFoldDefaultFiles"
 fi
 if [ $paramSensitivitySim == "T" ]; then
   cp "$slmParamListRun"       "$simFoldParamSensiFiles"
