@@ -147,39 +147,51 @@ CONTAINS
     lun = 100 
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant')
+         ! vegpoolC
          fname = 'vegpoolC'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! vegpooldC13DC14
          fname = 'vegpooldC13DC14'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! vegpoolN
          fname = 'vegpoolN'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! vegpoolP
          fname = 'vegpoolP'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! vegpooldN15
          fname = 'vegpooldN15'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! soilpoolPhysics
          fname = 'soilpoolPhysics'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! soilpoolPhysics_lay
          fname = 'soilpoolPhysics_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! soilpoolOrg
          fname = 'soilpoolOrg'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! soilpoolInOrg
          fname = 'soilpoolInOrg'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! ecopoolCNP
          fname = 'ecopoolCNP'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! soilpooldC13DC14dN15
          fname = 'soilpooldC13DC14dN15'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         ! veg_diagnostics
          fname = 'veg_diagnostics'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
@@ -190,6 +202,7 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','canopy')
+        ! veg_canopy
         fname = 'veg_canopy'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
@@ -202,30 +215,39 @@ CONTAINS
       CASE('land','soil')
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
+            ! soilpoolCOrg_lay
             fname = 'soilpoolCOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpoolNOrg_lay
             fname = 'soilpoolNOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpoolPOrg_lay
             fname = 'soilpoolPOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpoolInNOrg_lay
             fname = 'soilpoolInNOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpoolInPOrg_lay
             fname = 'soilpoolInPOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpooldC13org_lay
             fname = 'soilpooldC13org_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpoolDC14org_lay
             fname = 'soilpoolDC14org_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soilpooldN15org_lay
             fname = 'soilpooldN15org_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
+            ! soil_diagnostics_lay
             fname = 'soil_diagnostics_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
@@ -275,7 +297,7 @@ CONTAINS
     lun = 100
     SELECT CASE(slm_model_name)
       CASE('land','plant')
-         ! vegpoolC
+         ! vegpoolC  [mol C / m2]
          WRITE(lun,'(2a)') 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
                           'Fruit_C Labile_C Reserve_C SeedBank_C Total_C Total_C13 Total_C14'
          lun=lun+1
@@ -285,11 +307,11 @@ CONTAINS
                           'SapWood_DC14 HeartWood_DC14 CoarseRoot_DC14 Fruit_DC14 Labile_DC14 ', &
                           'Reserve_DC14 SeedBank_DC14'
          lun=lun+1
-         ! vegpoolN
+         ! vegpoolN  [mol N / m2]
          WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
                           'Fruit_N Labile_N Reserve_N SeedBank_N Total_N'
          lun=lun+1
-         ! vegpoolP
+         ! vegpoolP  [mol P / m2]
          WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                           'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
          lun=lun+1
@@ -297,7 +319,7 @@ CONTAINS
          WRITE(lun,'(2a)') 'Time Leaf_dN15 FineRoot_dN15 SapWood_dN15 HeartWood_dN15 CoarseRoot_dN15 ', & 
                           'Fruit_dN15 Labile_dN15 Reserve_dN15 SeedBank_dN15 Total_dN15'
          lun=lun+1
-         ! soilpoolPhysics
+         ! soilpoolPhysics  [m, m, na, na]
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS '
          lun=lun+1
          p1str=''
@@ -311,18 +333,18 @@ CONTAINS
             WRITE(p1str,'(a)') TRIM(p1str)//' WaterContentSoil_L'//TRIM(layerstr)
             WRITE(p2str,'(a)') TRIM(p2str)//' TemperatureSoil_L'//TRIM(layerstr)
          ENDDO
-         ! soilpoolPhysics_lay  ( output per soil_layer for two SSE_ variables )
+         ! soilpoolPhysics_lay  [m, K]( output per soil_layer for two SSE_ variables )
          WRITE(lun,'(3a)') 'Time ',TRIM(p1str), TRIM(p2str)
          lun=lun+1
-         ! soilpoolOrg         
+         ! soilpoolOrg [mol / m2]
          WRITE(lun,'(3a)') 'Time MetLitterC MetLitterN MetLitterP StrLitterC StrLitterN StrLitterP', &
                            ' WodLitterC WodLitterN WodLitterP',&
                            ' FastC FastN FastP SlowC SlowN SlowP MycC MycN MycP'
          lun=lun+1
-         ! soilpoolInOrg
+         ! soilpoolInOrg [mol / m2]
          WRITE(lun,'(a)') 'Time MineralNH4 MineralNO3 MineralP NOY N2O N2'
          lun=lun+1
-         ! ecopoolCNP
+         ! ecopoolCNP [mol / m2]
          WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN EcoP EcoN15'
          lun=lun+1
          ! soilpooldC13DC14dN15
@@ -330,7 +352,7 @@ CONTAINS
                            ' WodLitterDC14 FastDC14 SlowDC14 MycDC14',&
                            ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
-         ! veg_diagnostics
+         ! veg_diagnostics [???]
          WRITE(lun,'(2a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp', & 
                            ' growing_season cost_nup cost_bnf unit_transp Ndemand sinklim'
          lun=lun+1
@@ -341,7 +363,7 @@ CONTAINS
     !! 
     SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
-        ! veg_canopy
+        ! veg_canopy [???]
         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen jmax vcmax'
         lun=lun+1
     END SELECT
@@ -353,7 +375,7 @@ CONTAINS
       CASE('land','soil')
         SELECT CASE(TRIM(sb_model_scheme))
           CASE('simple_1d','jsm')
-            ! soilpoolCOrg_lay
+            ! soilpoolCOrg_lay [mol C / m3]
             p1str=''
             p2str=''
             p3str=''
@@ -385,17 +407,17 @@ CONTAINS
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1
             
-            !soilpoolNOrg_lay
+            !soilpoolNOrg_lay [mol N / m3]
             WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1
             
-            !soilpoolPOrg_lay
+            !soilpoolPOrg_lay [mol P / m3]
             WRITE(lun,'(11a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1
             
-            !soilpoolInNOrg_lay
+            !soilpoolInNOrg_lay [mol N / m3]
             p1str=''
             p2str=''
             p3str=''
@@ -425,7 +447,7 @@ CONTAINS
                TRIM(p7str),TRIM(p8str),TRIM(p9str)
             lun=lun+1
             
-            !soilpoolInPOrg_lay
+            !soilpoolInPOrg_lay [mol P / m3]
             p1str=''
             p2str=''
             p3str=''
@@ -487,7 +509,7 @@ CONTAINS
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1 
             
-            ! soil_diagnostics_lay
+            ! soil_diagnostics_lay [mol C / m3, kg/m3, na, mol P / m3, mol P / m3, mol C / m3]
             p1str=''
             p2str=''
             p3str=''
@@ -788,7 +810,7 @@ CONTAINS
       CASE('land','plant')
         ! output T/F
         IF (l_land_plant_canopy_out) THEN 
-
+              ! vegpoolC
               write(lun,'(13F12.6)') time_d,veg_pool%leaf%carbon(ipoi),&
                 veg_pool%fine_root%carbon(ipoi),veg_pool%sap_wood%carbon(ipoi),&
                 veg_pool%heart_wood%carbon(ipoi),veg_pool%coarse_root%carbon(ipoi),&
@@ -806,6 +828,7 @@ CONTAINS
               dC13reserve     = calc_delta_C13(veg_pool%reserve%carbon(ipoi),veg_pool%reserve%carbon13(ipoi))
               dC13seed_bed    = calc_delta_C13(veg_pool%seed_bed%carbon(ipoi),veg_pool%seed_bed%carbon13(ipoi))
               lun=lun+1   ! increase lun by 1 after each write statement
+              ! vegpooldC13DC14
               write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
                 dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
                 calc_delta_C14(veg_pool%leaf%carbon(ipoi),veg_pool%leaf%carbon14(ipoi),dC13leaf),&
@@ -818,6 +841,7 @@ CONTAINS
                 calc_delta_C14(veg_pool%reserve%carbon(ipoi),veg_pool%reserve%carbon14(ipoi),dC13reserve),&
                 calc_delta_C14(veg_pool%seed_bed%carbon(ipoi),veg_pool%seed_bed%carbon14(ipoi),dC13seed_bed)
               lun=lun+1
+              ! vegpoolN
               write(lun,'(12F12.6)') time_d,veg_pool%leaf%nitrogen(ipoi),&
                 veg_pool%fine_root%nitrogen(ipoi),veg_pool%sap_wood%nitrogen(ipoi),&
                 veg_pool%heart_wood%nitrogen(ipoi),veg_pool%coarse_root%nitrogen(ipoi),&
@@ -825,6 +849,7 @@ CONTAINS
                 veg_pool%reserve%nitrogen(ipoi),veg_pool%seed_bed%nitrogen(ipoi),&
                 veg_total_biomass%nitrogen(ipoi)
               lun=lun+1
+              ! vegpoolP
               write(lun,'(11F12.6)') time_d,veg_pool%leaf%phosphorus(ipoi),&
                 veg_pool%fine_root%phosphorus(ipoi),veg_pool%sap_wood%phosphorus(ipoi),&
                 veg_pool%heart_wood%phosphorus(ipoi),veg_pool%coarse_root%phosphorus(ipoi),&
@@ -832,6 +857,7 @@ CONTAINS
                 veg_pool%reserve%phosphorus(ipoi),veg_pool%seed_bed%phosphorus(ipoi),& 
                 veg_total_biomass%phosphorus(ipoi)
               lun=lun+1
+              ! vegpooldN15
                 write(lun,'(12F12.6)') time_d, &
                 calc_delta_N15(veg_pool%leaf%nitrogen(ipoi),veg_pool%leaf%nitrogen15(ipoi)), &
                 calc_delta_N15(veg_pool%fine_root%nitrogen(ipoi),veg_pool%fine_root%nitrogen15(ipoi)), &
@@ -852,6 +878,7 @@ CONTAINS
               ! soilpoolPhysics_lay (max of 20 soil layers)
               write(lun,'(41F16.6)') time_d, w_soil_sl(ipoi,:), t_soil_sl(ipoi,:)
               lun=lun+1
+              ! soilpoolOrg
               write(lun,'(30F16.6)') time_d, &
                                      SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))      , & 
                                      SUM(sb_pool%soluable_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))    , & 
@@ -872,6 +899,7 @@ CONTAINS
                                      SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         , &
                                      SUM(sb_pool%mycorrhiza%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))       
               lun=lun+1
+              ! soilpoolInOrg
               write(lun,'(30F16.6)') time_d, &
                                      SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
                                      SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
@@ -880,6 +908,7 @@ CONTAINS
                                      SUM(n2o(ipoi,:)*soil_depth_sl(ipoi,:))                              , &
                                      SUM(n2(ipoi,:)*soil_depth_sl(ipoi,:))  
               lun=lun+1
+              ! ecopoolCNP
               write(lun,'(30F16.6)') time_d, &
                                      SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     + & 
                                       SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     + & 
@@ -942,6 +971,7 @@ CONTAINS
                                       SUM(n2_n15(ipoi,:)*soil_depth_sl(ipoi,:))                                        + &     
                                       veg_total_biomass%nitrogen15(ipoi)
               lun=lun+1 
+              ! soilpooldC13DC14dN15
               dC13soluable_litter(ipoi,1)  = calc_delta_C13(SUM(sb_pool%soluable_litter%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
                                               SUM(sb_pool%soluable_litter%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
@@ -1278,9 +1308,11 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
+        ! vegfluxN
         fname = 'vegfluxN'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! vegfluxP
         fname = 'vegfluxP'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
@@ -1291,18 +1323,23 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','canopy')
+        ! vegfluxC
         fname = 'vegfluxC'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! vegfluxdC13DC14
         fname = 'vegfluxdC13DC14'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1        
+        ! vegfluxH2O
         fname = 'vegfluxH2O'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! vegfluxEnergy
         fname = 'vegfluxEnergy'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+        ! atm_forcing
         fname = 'atm_forcing'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
@@ -1390,7 +1427,7 @@ CONTAINS
     !! land 
     SELECT CASE(slm_model_name)
       CASE('land')
-        ! mycofluxCNP
+        ! mycofluxCNP [mol / m2 / interval]
         WRITE(lun,'(a)') 'Time mycoExportC mycoExportN mycoExportP mycoExportC13 mycoExportC14 mycoExportN15'
         lun=lun+1
     END SELECT
@@ -1400,11 +1437,11 @@ CONTAINS
     !! 
     SELECT CASE(slm_model_name)
       CASE('land','plant') ! additional to CASE('land')
-        ! vegfluxN
+        ! vegfluxN [mol N / m2 / interval]
         WRITE(lun,'(2a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN ', &
                           'FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN'
         lun=lun+1
-        ! vegfluxP
+        ! vegfluxP [mol P / m2 / interval]
         WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP'
         lun=lun+1
     END SELECT
@@ -1414,19 +1451,19 @@ CONTAINS
     !! 
     SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
-        ! vegfluxC
+        ! vegfluxC [mol C / m2 / interval]
         WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC GrowthC'
         lun=lun+1 
         ! vegfluxdC13DC14
         WRITE(lun,'(a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
         lun=lun+1
-        ! vegfluxH2O
+        ! vegfluxH2O [kg/m2/interval, ... , m/interval, m/interval ]
         WRITE(lun,'(a)') 'Time Precip PET Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
-        ! vegfluxEnergy
+        ! vegfluxEnergy [MJ/m2/interval, ???]
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
         lun=lun+1        
-        ! atm_forcing
+        ! atm_forcing [???]
         WRITE(lun,'(2a)') 'Time sum_Precip mean_AirTemperature mean_Wind mean_SWdown mean_LWdown mean_VPD', &
                           ' atm_CO2 atm_CO2_dC13 atm_CO2_DC14'
         lun=lun+1
@@ -1439,17 +1476,17 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','soil')
         !! all soil models (simple_0d and simple_1d and jsm)
-        ! soilfluxCdC13DC14
+        ! soilfluxCdC13DC14 [mol C /m2 / interval]
         WRITE(lun,'(3a)') 'Time Litterfall_C ', &
                           'HetResp LeachingDOM_C Litterfall_dC13 HetResp_dC13 LeachingDOM_dC13 ', &
                           'Litterfall_DC14 HetResp_DC14 LeachingDOM_DC14'
         lun=lun+1
-        ! soilfluxN
+        ! soilfluxN [mol N /m2 /interval]
         WRITE(lun,'(3a)') 'Time Litterfall_N ', &
                           'NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
                           'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM_N' 
         lun=lun+1
-        ! soilfluxP
+        ! soilfluxP [mol P /m2 /interval]
         WRITE(lun,'(3a)') 'Time Litterfall_P ', &
                           'PDeposition Leaching_PO4 LeachingDOM_P Net_Mineralisation_PO4 PlantUptake_PO4 Weathering_PO4 ', &
                           'Occlusion_PO4 Slow_sorption_PO4 Fast_adsorption_PO4 Biochem_mineralisation_PO4' 
@@ -1465,7 +1502,7 @@ CONTAINS
         !! simple_1d & jsm layer-data
         SELECT CASE(TRIM(sb_model_scheme))
           CASE('simple_1d','jsm')
-            ! soilfluxC_lay
+            ! soilfluxC_lay [mol C /m3 /interval]
             p1str=''
             p2str=''
             p3str=''
@@ -1483,7 +1520,7 @@ CONTAINS
             END DO
             WRITE(lun,'(5a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)
             lun=lun+1
-            ! soilfluxN_lay
+            ! soilfluxN_lay [mol N /m3 /interval]
             p1str=''
             p2str=''
             p3str=''
@@ -1515,7 +1552,7 @@ CONTAINS
                                TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
                                TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1
-            ! soilfluxP_lay
+            ! soilfluxP_lay  [mol P /m3 /interval]
             p1str=''
             p2str=''
             p3str=''
