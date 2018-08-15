@@ -50,6 +50,7 @@ for (s in 1:nsite) {
    nflux              <- read.table(paste0(dirnames[[s]],'output/','vegfluxN_timestep.txt'), header=T, sep="")
    pflux              <- read.table(paste0(dirnames[[s]],'output/','vegfluxP_timestep.txt'), header=T, sep="")
    cnp_soilpool       <- read.table(paste0(dirnames[[s]],'output/','soilpoolOrg_timestep.txt'), header=T, sep="")
+   soilpool_inorg     <- read.table(paste0(dirnames[[s]],'output/','soilpoolInOrg_timestep.txt'), header=T, sep="")
    c13c14n15_soilpool <- read.table(paste0(dirnames[[s]],'output/','soilpooldC13DC14dN15_timestep.txt'), header=T, sep="")
    cc13c14_soilflux   <- read.table(paste0(dirnames[[s]],'output/','soilfluxCdC13DC14_timestep.txt'), header=T, sep="")
    n_soilflux         <- read.table(paste0(dirnames[[s]],'output/','soilfluxN_timestep.txt'), header=T, sep="")  
@@ -64,6 +65,7 @@ for (s in 1:nsite) {
    nnfluxvar              <- dim(nflux)[2]-1
    npfluxvar              <- dim(pflux)[2]-1
    ncnpsoilpoolvar        <- dim(cnp_soilpool)[2]-1
+   nsoilpoolinorgvar      <- dim(soilpool_inorg)[2]-1
    nc13c14n15soilpoolvar  <- dim(c13c14n15_soilpool)[2]-1
    ncsoilfluxvar          <- dim(cc13c14_soilflux)[2]-1
    nnsoilfluxvar          <- dim(n_soilflux)[2]-1
@@ -238,7 +240,7 @@ for (s in 1:nsite) {
      diag_std[s,which(colnames(diag_mean)==colnames(diags)[var])]<-sd(hlp1$x[startYrDat:lastYrDat],na.rm=TRUE)
    }
 
-   # soil organic pools
+   # soil organic pools C/N/P
    if(s==1) { 
       cnp_soilpool_mean<-array(NA,c(nsite,ncnpsoilpoolvar))
       colnames(cnp_soilpool_mean)<-colnames(cnp_soilpool)[1+1:ncnpsoilpoolvar]
@@ -249,6 +251,18 @@ for (s in 1:nsite) {
      cnp_soilpool_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
      cnp_soilpool_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
    }
+   # soil inorganic pools N/P
+   if(s==1) { 
+      soilpool_inorg_mean<-array(NA,c(nsite,nsoilpoolinorgvar))
+      colnames(soilpool_inorg_mean)<-colnames(soilpool_inorg)[1+1:nsoilpoolinorgvar]
+      soilpool_inorg_std<-soilpool_inorg_mean
+   }
+   for (var in 1:nsoilpoolinorgvar) {
+     hlp1<-aggregate(soilpool_inorg[,var+1],list(yearidx),max) 
+     soilpool_inorg_mean[s,var]<-mean(hlp1$x[startYrDat:lastYrDat])
+     soilpool_inorg_std[s,var]<-sd(hlp1$x[startYrDat:lastYrDat])
+   }
+   
    # isotopic signature soil organic pools
    if(s==1) { 
       c13c14n15_soilpool_mean<-array(NA,c(nsite,nc13c14n15soilpoolvar))
@@ -359,7 +373,7 @@ print(" Write data into files slm_site_mean.csv and slm_site_sd.csv.")
 
 # mean values:         slm_site_mean.csv
 out_mean<-cbind(site_str,cpool_mean,npool_mean,ppool_mean,
-                         stoch_mean,diag_mean,cnp_soilpool_mean,
+                         stoch_mean,diag_mean,cnp_soilpool_mean,soilpool_inorg_mean,
                          cflux_mean,nflux_mean,n_soilflux_mean,pflux_mean,p_soilflux_mean,h2oflux_mean,
                          c_isotope_mean,n_isotope_mean,soil_org_isotope_mean,cc13c14_soilflux_mean,
                          soilwater_mean,atm_forcing_mean)
@@ -367,7 +381,7 @@ write.csv(out_mean, file='slm_site_mean.csv', quote=F, row.names=F)
 
 # standard deviation:  slm_site_sd.csv
 out_std<-cbind(site_str,cpool_std,npool_std,ppool_std,
-                         stoch_std,diag_std,cnp_soilpool_std,
+                         stoch_std,diag_std,cnp_soilpool_std,soilpool_inorg_std,
                          cflux_std,nflux_std,n_soilflux_std,pflux_std,p_soilflux_std,h2oflux_std,
                          c_isotope_std,n_isotope_std,soil_org_isotope_std,cc13c14_soilflux_std,
                          soilwater_std,atm_forcing_std)
@@ -381,11 +395,18 @@ remove(out_std)
 print(" Create bar plots for some variables over all sites.")
 
 varBarPlot <- c(
-              # C/N/P pools for budget (converted to gC/N/P/m2)
-                "Total_C"                   ,
-                "Total_N"                   ,
-                "Total_P"                   ,
-                
+              # C/N/P pools (converted to gC/N/P/m2)
+                "Total_vegPool_C"           , # Total_C
+                "Total_vegPool_N"           , # Total_N
+                "Total_vegPool_P"           , # Total_P
+                "Total_litterPool_C"        , # MetLitterC + StrLitterC + WodLitterC
+                "Total_litterPool_N"        , # MetLitterN + StrLitterN + WodLitterN
+                "Total_litterPool_P"        , # MetLitterP + StrLitterP + WodLitterP
+                "Total_SoilOrgPool_C"       , # FastC      + SlowC      + MycC
+                "Total_SoilOrgPool_N"       , # FastN      + SlowN      + MycN
+                "Total_SoilOrgPool_P"       , # FastP      + SlowP      + MycP
+                "Total_SoilInorgPool_N"     , # MineralNH4 MineralNO3 NOY N2O N2
+                "Total_SoilInorgPool_P"     , # MineralP
                 
               # C fluxes (gC/m2/yr)
                 "GPP"                       ,
@@ -400,20 +421,10 @@ varBarPlot <- c(
                 "FixationN"                 ,
                 "NDeposition"               ,
                 "Litterfall_N"              ,
-                "Ngasloss"                  ,
-                 #"Emission_NOY"              , # sum to Ngasloss
-                 #"Emission_N2O"              , # sum to Ngasloss
-                 #"Emission_N2"               , # sum to Ngasloss
-                "Nleachingloss"             ,
-                 #"LeachingNH4"               , # sum to Nleachingloss
-                 #"LeachingNO3"               , # sum to Nleachingloss
-                 #"LeachingDOM_N"             , # sum to Nleachingloss
-                "Nplantuptake"              ,
-                 #"PlantUptakeNH4"            , # sum to Nplantuptake
-                 #"PlantUptakeNO3"            , # sum to Nplantuptake
-                "NetMineral"                ,
-                 #"NetMinNH4"                 , # sum to NetMineral
-                 #"NetMinNO3"                 , # sum to NetMineral
+                "Ngasloss"                  , # Emission_NOY   + Emission_N2O   + Emission_N2
+                "Nleachingloss"             , # LeachingNH4    + LeachingNO3    + LeachingDOM_N
+                "Nplantuptake"              , # PlantUptakeNH4 + PlantUptakeNO3
+                "NetMineral"                , # NetMinNH4      + NetMinNO3
 
               # P fluxes (gP/m2/yr)
                 "PlantUptake_PO4"           ,
@@ -421,9 +432,7 @@ varBarPlot <- c(
                 "PDeposition"               ,
                 "Litterfall_P"              ,
                 "Weathering_PO4"            ,
-                "Pleachingloss"
-                 #"Leaching_PO4"              , # sum to Pleachingloss
-                 #"LeachingDOM_P"               # sum to Pleachingloss
+                "Pleachingloss"               # Leaching_PO4 + LeachingDOM_P
                 )
 
 ## figure creation from above mean values for variable in varBarPlot
@@ -433,19 +442,39 @@ mVal      <- read.table("slm_site_mean.csv", header=T, sep=",")
 nSite     <- nrow(mVal)
 
 # calculate values for new aggregate-variables
-aggVar           <- c("Ngasloss", "Nleachingloss", "Nplantuptake", "NetMineral", "Pleachingloss")
+aggVar           <- c("Total_vegPool_C", "Total_vegPool_N", "Total_vegPool_P",
+                      "Total_litterPool_C", "Total_litterPool_N", "Total_litterPool_P",
+                      "Total_SoilOrgPool_C", "Total_SoilOrgPool_N", "Total_SoilOrgPool_P", 
+                      "Total_SoilInorgPool_N", "Total_SoilInorgPool_P",
+                      "Ngasloss", "Nleachingloss", "Nplantuptake", "NetMineral", "Pleachingloss")
 addVal           <- array(NA,c(nSite,length(aggVar)))
 addVal           <- as.data.frame(addVal)
 colnames(addVal) <- aggVar
 
-addVal$Ngasloss      <- mVal$Emission_NOY   + mVal$Emission_N2O   + mVal$Emission_N2
-addVal$Nleachingloss <- mVal$LeachingNH4    + mVal$LeachingNO3    + mVal$LeachingDOM_N
-addVal$Nplantuptake  <- mVal$PlantUptakeNH4 + mVal$PlantUptakeNO3
-addVal$NetMineral    <- mVal$NetMinNH4      + mVal$NetMinNO3
-addVal$Pleachingloss <- mVal$Leaching_PO4   + mVal$LeachingDOM_P
+addVal$Total_vegPool_C        <- mVal$Total_C
+addVal$Total_vegPool_N        <- mVal$Total_N
+addVal$Total_vegPool_P        <- mVal$Total_P
+addVal$Total_litterPool_C     <- mVal$MetLitterC     + mVal$StrLitterC     + mVal$WodLitterC
+addVal$Total_litterPool_N     <- mVal$MetLitterN     + mVal$StrLitterN     + mVal$WodLitterN
+addVal$Total_litterPool_P     <- mVal$MetLitterP     + mVal$StrLitterP     + mVal$WodLitterP
+addVal$Total_SoilOrgPool_C    <- mVal$FastC          + mVal$SlowC          + mVal$MycC
+addVal$Total_SoilOrgPool_N    <- mVal$FastN          + mVal$SlowN          + mVal$MycN
+addVal$Total_SoilOrgPool_P    <- mVal$FastP          + mVal$SlowP          + mVal$MycP
+addVal$Total_SoilInorgPool_N  <- mVal$MineralNH4     + mVal$MineralNO3     + mVal$NOY   + mVal$N2O   + mVal$N2
+addVal$Total_SoilInorgPool_P  <- mVal$MineralP
+addVal$Ngasloss               <- mVal$Emission_NOY   + mVal$Emission_N2O   + mVal$Emission_N2
+addVal$Nleachingloss          <- mVal$LeachingNH4    + mVal$LeachingNO3    + mVal$LeachingDOM_N
+addVal$Nplantuptake           <- mVal$PlantUptakeNH4 + mVal$PlantUptakeNO3
+addVal$NetMineral             <- mVal$NetMinNH4      + mVal$NetMinNO3
+addVal$Pleachingloss          <- mVal$Leaching_PO4   + mVal$LeachingDOM_P
 
 # combine new variables into dataframe
 mVal <- cbind(mVal, addVal)
+
+# create new array gathering all data shown in barplots and write out as file after barplots created
+outBarPlotVar           <- array(NA,c(nSite,length(varBarPlot)))
+colnames(outBarPlotVar) <- varBarPlot
+outVarCount             <- 1  # see barplot loop
 
 # create output file
 pdf("slm_site_barplots.pdf", paper="a4", height=12, width=8, pointsize=10, 
@@ -467,12 +496,24 @@ for (outv in varBarPlot){
         col="gray40")
   abline(v=median(mVal[,colNum]), col="sienna", lty=1, lwd=0.8)
   legend("topright", legend="Median all sites", cex=0.8, col="sienna", lty=1, box.col="gray90")
+  
+  # store data in additional output array
+  outBarPlotVar[,outVarCount] <- mVal[,colNum]
+  outVarCount                 <- outVarCount + 1
 }
 
 trash <- dev.off()
 
 
-print(" Figures created!")
+# add site_id column to additional output array
+outBarPlotVar              <- as.data.frame(outBarPlotVar)
+outBarPlotVar              <- cbind(mVal$Site_ID, outBarPlotVar)
+colnames(outBarPlotVar)[1] <- "Site_ID"
+# write file
+write.csv(outBarPlotVar, file='slm_site_mean_barplots.csv', quote=F, row.names=F)
+
+
+print(" Figures created & additional file written!")
 
 
 ## fin ##
