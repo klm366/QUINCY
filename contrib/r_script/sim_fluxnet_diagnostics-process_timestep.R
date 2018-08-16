@@ -394,8 +394,9 @@ remove(out_std)
 
 print(" Create bar plots for some variables over all sites.")
 
+# list variables for barplot output
 varBarPlot <- c(
-              # C/N/P pools (converted to gC/N/P/m2)
+              # C/N/P pools (converted from mol to gC/N/P/m2)
                 "Total_vegPool_C"           , # Total_C
                 "Total_vegPool_N"           , # Total_N
                 "Total_vegPool_P"           , # Total_P
@@ -408,7 +409,7 @@ varBarPlot <- c(
                 "Total_SoilInorgPool_N"     , # MineralNH4 MineralNO3 NOY N2O N2
                 "Total_SoilInorgPool_P"     , # MineralP
                 
-              # C fluxes (gC/m2/yr)
+              # C fluxes (converted from mol to gC/m2/yr)
                 "GPP"                       ,
                 "NPP"                       ,
                 "Litterfall_C"              ,
@@ -416,7 +417,7 @@ varBarPlot <- c(
                 "MaintResp"                 ,
                 "NTransformResp"            ,
 
-              # N fluxes (gN/m2/yr)
+              # N fluxes (converted from mol to gN/m2/yr)
                 "Nfix_asymb"                ,
                 "FixationN"                 ,
                 "NDeposition"               ,
@@ -426,13 +427,61 @@ varBarPlot <- c(
                 "Nplantuptake"              , # PlantUptakeNH4 + PlantUptakeNO3
                 "NetMineral"                , # NetMinNH4      + NetMinNO3
 
-              # P fluxes (gP/m2/yr)
+              # P fluxes (converted from mol to gP/m2/yr)
                 "PlantUptake_PO4"           ,
                 "Net_Mineralisation_PO4"    ,
                 "PDeposition"               ,
                 "Litterfall_P"              ,
                 "Weathering_PO4"            ,
                 "Pleachingloss"               # Leaching_PO4 + LeachingDOM_P
+                )
+
+# define molar mass for C/N/P for conversion from mol to g by: X mol * molar_mass = Y g
+# values from SLM mo_shared_constants
+molar_mass_C   <- 12.0112
+molar_mass_N   <- 14.0072
+molar_mass_P   <- 30.997
+
+# list of factors (CNP molar_mass) for variable unit conversion for barplot output
+varBarPlotUnitConv <- c(
+              # C/N/P pools (converted from mol to gC/N/P/m2)
+                molar_mass_C    , #"Total_vegPool_C"      
+                molar_mass_N    , #"Total_vegPool_N"      
+                molar_mass_P    , #"Total_vegPool_P"      
+                molar_mass_C    , #"Total_litterPool_C"   
+                molar_mass_N    , #"Total_litterPool_N"   
+                molar_mass_P    , #"Total_litterPool_P"   
+                molar_mass_C    , #"Total_SoilOrgPool_C"  
+                molar_mass_N    , #"Total_SoilOrgPool_N"  
+                molar_mass_P    , #"Total_SoilOrgPool_P"  
+                molar_mass_N    , #"Total_SoilInorgPool_N"
+                molar_mass_P    , #"Total_SoilInorgPool_P"
+                
+              # C fluxes (converted from mol to gC/m2/yr)
+                molar_mass_C    , #"GPP"               
+                molar_mass_C    , #"NPP"               
+                molar_mass_C    , #"Litterfall_C"      
+                molar_mass_C    , #"GrowthResp"        
+                molar_mass_C    , #"MaintResp"         
+                molar_mass_C    , #"NTransformResp"    
+
+              # N fluxes (converted from mol to gN/m2/yr)
+                molar_mass_N    , #"Nfix_asymb"     
+                molar_mass_N    , #"FixationN"      
+                molar_mass_N    , #"NDeposition"    
+                molar_mass_N    , #"Litterfall_N"   
+                molar_mass_N    , #"Ngasloss"       
+                molar_mass_N    , #"Nleachingloss"  
+                molar_mass_N    , #"Nplantuptake"   
+                molar_mass_N    , #"NetMineral"     
+
+              # P fluxes (converted from mol to gP/m2/yr)
+                molar_mass_P    , #"PlantUptake_PO4"        
+                molar_mass_P    , #"Net_Mineralisation_PO4" 
+                molar_mass_P    , #"PDeposition"            
+                molar_mass_P    , #"Litterfall_P"           
+                molar_mass_P    , #"Weathering_PO4"         
+                molar_mass_P      #"Pleachingloss"          
                 )
 
 ## figure creation from above mean values for variable in varBarPlot
@@ -484,12 +533,25 @@ par(las=1)           # make label text perpendicular to y-axis
 par(mar=c(4,6,4,4))  # modify margins
 
 for (outv in varBarPlot){
+  # column number from mVal
   colNum <- which(colnames(mVal) == outv)
   
+  # unit conversion (generally mol to gramm by multiplication with molar_massX)
+  mVal[,colNum] <- mVal[,colNum] * varBarPlotUnitConv[outVarCount]
+  
+  # set unit for x-Axis label (by simply checking for "Total_" in variable name)
+  xUnit <- "unknown - please check for error"
+  if(grepl("Total_",colnames(mVal)[colNum])) {
+    xUnit <- "yearly timestep max value in gramm X /m2"
+  } else{
+    xUnit <- "yearly sum in gramm X /m2 / year"
+  }
+  
+  # create barplot
   barplot(mVal[,colNum],
         horiz=TRUE,
-        xlab=colnames(mVal)[colNum],
-        main=paste0(colnames(mVal)[colNum],"  mean of yearly max (pools) / yearly sum (fluxes) per site"),
+        xlab=paste0(colnames(mVal)[colNum],"  [",xUnit,"]"),
+        main=paste0(colnames(mVal)[colNum],"  mean of yearly values per site (last forcing period)"),
         names.arg=mVal$Site_ID,
         cex.names=0.8, 
         axis.lty=1,
@@ -510,7 +572,7 @@ outBarPlotVar              <- as.data.frame(outBarPlotVar)
 outBarPlotVar              <- cbind(mVal$Site_ID, outBarPlotVar)
 colnames(outBarPlotVar)[1] <- "Site_ID"
 # write file
-write.csv(outBarPlotVar, file='slm_site_mean_barplots.csv', quote=F, row.names=F)
+write.csv(outBarPlotVar, file='slm_site_mean_in_gramm_barplots.csv', quote=F, row.names=F)
 
 
 print(" Figures created & additional file written!")
