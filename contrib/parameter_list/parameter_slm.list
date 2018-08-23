@@ -60,6 +60,15 @@
   f_plant_carrier_po4=NAN
   qmax_po4_mineral=NAN
   km_adsorpt_mineral_po4=NAN
+  km_adsorpt_OM_po4=NAN
+  k_weath_mineral=NAN
+  eq_sorp_mineral_po4=NAN
+  k_occlude_po4=NAN
+  vmax_biochem_po4=NAN
+  km_mic_biochem_po4=NAN
+  km_dip_biochem_po4=NAN
+  km_rootc_biochem_po4=NAN
+  km_rootc_weath_po4=NAN
 /
 &SSE_CTL
   ! tba

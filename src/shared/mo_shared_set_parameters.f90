@@ -83,7 +83,16 @@ MODULE mo_shared_set_parameters
                           f_mic_carrier_po4, &      
                           f_plant_carrier_po4, &    
                           qmax_po4_mineral, &       
-                          km_adsorpt_mineral_po4 
+                          km_adsorpt_mineral_po4, &
+                          km_adsorpt_OM_po4, &
+                          k_weath_mineral, &
+                          eq_sorp_mineral_po4, &
+                          k_occlude_po4, &
+                          vmax_biochem_po4, &
+                          km_mic_biochem_po4, &
+                          km_dip_biochem_po4, &
+                          km_rootc_biochem_po4, &
+                          km_rootc_weath_po4
   CONTAINS
     PROCEDURE :: read_param => read_parameter_slm_list
     PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
@@ -251,7 +260,16 @@ CONTAINS
                           f_mic_carrier_po4, &      
                           f_plant_carrier_po4, &    
                           qmax_po4_mineral, &       
-                          km_adsorpt_mineral_po4 
+                          km_adsorpt_mineral_po4, &
+                          km_adsorpt_OM_po4, &
+                          k_weath_mineral, &
+                          eq_sorp_mineral_po4, &
+                          k_occlude_po4, &
+                          vmax_biochem_po4, &
+                          km_mic_biochem_po4, &
+                          km_dip_biochem_po4, &
+                          km_rootc_biochem_po4, &
+                          km_rootc_weath_po4
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
@@ -316,7 +334,16 @@ CONTAINS
         f_mic_carrier_po4         , &      
         f_plant_carrier_po4       , &    
         qmax_po4_mineral          , &       
-        km_adsorpt_mineral_po4 
+        km_adsorpt_mineral_po4    , &
+        km_adsorpt_OM_po4         , &
+        k_weath_mineral           , &
+        eq_sorp_mineral_po4       , &
+        k_occlude_po4             , &
+        vmax_biochem_po4          , &
+        km_mic_biochem_po4        , &
+        km_dip_biochem_po4        , &
+        km_rootc_biochem_po4      , &
+        km_rootc_weath_po4
 
 
     ! variables for reading model-options from namelist
@@ -385,6 +412,15 @@ CONTAINS
     f_plant_carrier_po4         = missval    
     qmax_po4_mineral            = missval       
     km_adsorpt_mineral_po4      = missval
+    km_adsorpt_OM_po4           = missval
+    k_weath_mineral             = missval
+    eq_sorp_mineral_po4         = missval
+    k_occlude_po4               = missval
+    vmax_biochem_po4            = missval
+    km_mic_biochem_po4          = missval
+    km_dip_biochem_po4          = missval
+    km_rootc_biochem_po4        = missval
+    km_rootc_weath_po4          = missval
 
     ! read the namelist
     ! 
@@ -464,6 +500,15 @@ CONTAINS
     this%f_plant_carrier_po4         = f_plant_carrier_po4       
     this%qmax_po4_mineral            = qmax_po4_mineral             
     this%km_adsorpt_mineral_po4      = km_adsorpt_mineral_po4
+    this%km_adsorpt_OM_po4           = km_adsorpt_OM_po4
+    this%k_weath_mineral             = k_weath_mineral
+    this%eq_sorp_mineral_po4         = eq_sorp_mineral_po4
+    this%k_occlude_po4               = k_occlude_po4
+    this%vmax_biochem_po4            = vmax_biochem_po4
+    this%km_mic_biochem_po4          = km_mic_biochem_po4
+    this%km_dip_biochem_po4          = km_dip_biochem_po4
+    this%km_rootc_biochem_po4        = km_rootc_biochem_po4
+    this%km_rootc_weath_po4          = km_rootc_weath_po4
 
   END SUBROUTINE read_parameter_slm_list
 
@@ -498,6 +543,8 @@ CONTAINS
     CALL this%read_param
 
     !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm_run.list
+    !! 
+    !! template: IF (ABS(this%x    - missval) > eps8)   x   = this%x
     !! 
     ! SHARED_CTL
     IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
@@ -579,6 +626,20 @@ CONTAINS
     IF (ABS(this%qmax_po4_mineral       - missval) > eps8)  qmax_po4_mineral       = this%qmax_po4_mineral / molar_mass_P
     IF (ABS(this%km_adsorpt_mineral_po4 - missval) > eps8)  km_adsorpt_mineral_po4 = this%km_adsorpt_mineral_po4 / 1000._wp / &
                                                                                        molar_mass_P
+    IF (ABS(this%km_adsorpt_OM_po4      - missval) > eps8)  km_adsorpt_OM_po4      = this%km_adsorpt_OM_po4 / 1000._wp / &
+                                                                                       molar_mass_P
+    IF (ABS(this%k_weath_mineral        - missval) > eps8)  k_weath_mineral        = this%k_weath_mineral / molar_mass_P / &
+                                                                                       1254._wp / one_year /one_day
+    IF (ABS(this%eq_sorp_mineral_po4    - missval) > eps8)  eq_sorp_mineral_po4    = this%eq_sorp_mineral_po4 / molar_mass_P
+    IF (ABS(this%k_occlude_po4          - missval) > eps8)  k_occlude_po4          = this%k_occlude_po4 / 1000000._wp / &
+                                                                                       30._wp / one_day
+    IF (ABS(this%vmax_biochem_po4       - missval) > eps8)  vmax_biochem_po4       = this%vmax_biochem_po4 / 40.0_wp / one_day
+    IF (ABS(this%km_mic_biochem_po4     - missval) > eps8)  km_mic_biochem_po4     = this%km_mic_biochem_po4  / molar_mass_C
+    IF (ABS(this%km_dip_biochem_po4     - missval) > eps8)  km_dip_biochem_po4     = this%km_dip_biochem_po4
+    IF (ABS(this%km_rootc_biochem_po4   - missval) > eps8)  km_rootc_biochem_po4   = this%km_rootc_biochem_po4
+    IF (ABS(this%km_rootc_weath_po4     - missval) > eps8)  km_rootc_weath_po4     = this%km_rootc_weath_po4
+
+
   END SUBROUTINE set_parameter_slm_values_with_list_values
 
 

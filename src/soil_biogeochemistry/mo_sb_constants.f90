@@ -368,7 +368,7 @@ CONTAINS
    ! soil Pi fluxes
     k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
     eq_sorp_mineral_po4   = 80._wp / molar_mass_P                                 ! [mol P m-3] ! random guess based on init value of assoc_slow
-    k_occlude_po4         = 1.e-6_wp / 30._wp / one_day                           ! [s-1], Yang et al. 2014
+    k_occlude_po4         = 1.0_wp / 1000000._wp / 30._wp / one_day               ! [s-1], Yang et al. 2014
     vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [s-1], estimated from Bunemann et al. 2016, LUS site
     km_mic_biochem_po4    = 0.1_wp / molar_mass_C                                 ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
     km_dip_biochem_po4    = 0.001_wp                                              ! estimated
