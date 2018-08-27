@@ -100,15 +100,14 @@ if [ "$specialFluxnetOutput" == T ]; then
   echo " finished barplot figure creation of the fluxnet diagnostics"
 fi
 
-## remove some folders not needed anymore ##
-rm -r "$simFold"default_files
-rm -r "$simFold"error
-rm -r "$simFold"out
-if [ $paramSensitivitySim == T ]; then
-  rm -r "$simFold"parameter_sensitivity_files
-fi
 
-## create one pdf file from the postprocessing pdf of all sites ##
+## create one .pdf file with figs from one output file for all sites, for example, vegpoolC
+cp "$simFold"default_files/postprocessing_site_overview.R  "$simFold"
+cd "$simFold"
+Rscript --vanilla ./postprocessing_site_overview.R
+
+
+## create one .pdf file from the postprocessing .pdf of all sites ##
 # currently only for the *plots.pdf but not the *plots_lay.pdf
 cd "$simFold"
 mkdir -p ./pdftmp
@@ -135,5 +134,15 @@ for site in $(ls -d ./*/)
 done
 pdftk ./pdftmp/*.pdf output ./postprocessing_all_sites.pdf
 rm -r ./pdftmp
+
+
+## remove some folders not needed anymore ##
+rm -r "$simFold"default_files        # includes this cleanup script
+rm -r "$simFold"error
+rm -r "$simFold"out
+if [ $paramSensitivitySim == T ]; then
+  rm -r "$simFold"parameter_sensitivity_files
+fi
+
 
 # end cleanup #

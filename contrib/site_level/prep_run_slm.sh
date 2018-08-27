@@ -479,7 +479,8 @@ slmNamelistFilename="namelist.slm"
 slmLctlibFolder="../../data/"
 slmLctlibFilename="lctlib_slm_nlct8.def"
 slmAdditionalDir="../additional_scripts/"
-slmParamFigureFilename="create_parameter_summary_figs.R"  ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
+slmParamFigureFilename="create_parameter_summary_figs.R"    ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
+slmDefOutOverviewFilename="postprocessing_site_overview.R"  ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
 slmParamSensiFolder="../parameter_list/"
 slmParamListRunFilename="parameter_slm_run.list"
 slmParamTableFilename="parameter_table.txt"               ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
@@ -490,7 +491,8 @@ slmParamTableFilename="parameter_table.txt"               ## this filename is al
  slmLctlib="$slmLctlibFolder""$slmLctlibFilename"                           ## Landcovertype library for SLM with 8 PFTs
  slmParamListRun="$slmParamSensiFolder""$slmParamListRunFilename"           ## kind of namelist with only the parameter of which the value is varied
  slmParamTable="$slmParamSensiFolder""$slmParamTableFilename"               ## table with values of the parameter(s)
- slmParamFigureScript="$slmAdditionalDir""$slmParamFigureFilename"          ## R script to create overview figures
+ slmParamFigureScript="$slmAdditionalDir""$slmParamFigureFilename"          ## R script to create overview figures from parameter variation simulations
+ slmDefOutOverviewScript="$slmAdditionalDir""$slmDefOutOverviewFilename"    ## R script to create a .pdf with figs from one output file for all sites
 # R scripts
  slmRscript="../r_script/postprocessing_""$slmModel"".R"                          ## R-Script for postprocessing output data
  slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"                          ## R-Script for converting output for FLUXNET 
@@ -1227,12 +1229,13 @@ if [ $paramSensitivitySim == "T" ]; then
 fi
 
 ## copy namelist binary R-Scripts to simulation folder: /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ ##
-cp "$slmRunScriptJob"   "$simFoldDefaultFiles"
-cp "$slmCleanupScript"  "$simFoldDefaultFiles"
-cp "$slmBinary"         "$simFoldDefaultFiles"
-cp "$slmNamelist"       "$simFoldDefaultFiles"
-cp "$slmLctlib"         "$simFoldDefaultFiles"
-cp "$slmRscript"        "$simFoldDefaultFiles"
+cp "$slmRunScriptJob"           "$simFoldDefaultFiles"
+cp "$slmCleanupScript"          "$simFoldDefaultFiles"
+cp "$slmBinary"                 "$simFoldDefaultFiles"
+cp "$slmNamelist"               "$simFoldDefaultFiles"
+cp "$slmLctlib"                 "$simFoldDefaultFiles"
+cp "$slmRscript"                "$simFoldDefaultFiles"
+cp "$slmDefOutOverviewScript"   "$simFoldDefaultFiles"
 if [ $specialFluxnetOutput == "T" ]; then 
   cp "$slmRscript4fluxfile"       "$simFoldDefaultFiles"
   cp "$slmRscript4fluxdiag"       "$simFoldDefaultFiles"
