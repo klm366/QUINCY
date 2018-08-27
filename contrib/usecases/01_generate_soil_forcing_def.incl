@@ -4,9 +4,9 @@
 #  creating: veg litterfall + some soilphysics output used as input by the (standalone) soil model
 #  options apply specifically to the generation of soil forcing using the SLM land model
 #
-# necessary settings for the prep_run_slm.sh:
-#  forcingDataSet fluxnet/cruncep
-#  siteSelection  cue/spp
+# prep_run_slm.sh necessary settings:
+#  forcingDataSet fluxnet/cruncep/face
+#  siteSelection  cue/spp (for cruncep)
 #
 
 echo " Simulation runs for soil_forcing creation:"
@@ -14,10 +14,11 @@ echo "  usecase='01_generate_soil_forcing_def' applying special settings to some
 echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
 echo "    FLUXNET (all sites)"
 echo "    CRUNCEP with siteSelection cue & spp"
+echo "    FACE (all four sites)"
 echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing is set to TRUE for u01 automatically"
 echo " "
 echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
-echo "   (this script updates the soil forcing for teh site sets, "
+echo "   (this script updates the soil forcing for the site sets, "
 echo "    and renames the experimentalID of soil_forcing simulations leaving the renamed folders in your scratch)"
 echo " "
 

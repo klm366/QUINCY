@@ -621,9 +621,9 @@ case "$forcingDataSet" in
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;  
 esac
-# no soil forcing for FACE & MANIP
+# no soil forcing for MANIP
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "manip" ]; then
+  if [ "$forcingDataSet" == "manip" ]; then
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1

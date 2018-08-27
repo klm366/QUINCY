@@ -360,9 +360,9 @@ case "$forcingDataSet" in
   siteDataSet="MANIP/"
   ;;
 esac
-# no soil forcing for FACE & MANIP
+# no soil forcing for MANIP
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "manip" ]; then
+  if [ "$forcingDataSet" == "manip" ]; then
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1
@@ -443,7 +443,7 @@ case "$forcingDataSet" in
   siteNameStatMetForc="$crunSiteNameShort""_1984"
   ;;
 "face")
-  siteNameStatMetForc="$siteName""_199"
+  siteNameStatMetForc="$siteName""_199"               # selects the static focing file such as DK-AMB_1996-2007 but not the transient DK-AMB_1901-2015
   ;;
 "manip")
   siteNameStatMetForc="$siteName""_2009"              # ES-MaG_2009-2017.dat & ES-MaT_2009-2017.dat
