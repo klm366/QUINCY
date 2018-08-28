@@ -34,6 +34,14 @@ MODULE mo_veg_constants
       f_resp_acclim     , &   !< respiration temperature acclimation factor 
       t_acclim_zero           !< base temperature for respiration acclimation 
 
+  ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
+  REAL(wp), SAVE :: &      
+      k0_fn_pepc_C3     , &  !< fraction of N in PEP and PPDK (C3 plants) 
+      k0_fn_pepc_C4     , &  !< fraction of N in PEP and PPDK (C4 plants) (Makino et al. 2003 / Tazoe et al. PCE 2006, 29, 691-700)
+      ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
+      jmax2vcmax_C3     , &  !< text book; ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
+      jmax2vcmax_C4          !< calibrated to have Jmax=vcmax at 25 deg; ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
+
   ! Labile pool parameters 
   REAL(wp), SAVE :: &
       ! default turnover time of the labile carbo-hydrates (in days)
@@ -98,6 +106,14 @@ MODULE mo_veg_constants
       k_bnf                , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
       offset_bnf           , & !< factor for BNF response in resistance approach (mol C / mol N)
       eta_nfixation            !< fractionation of N15 due to N fixation (per mill), parameter value from Robinson, Tree 2001
+
+  ! parameters to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp), SAVE :: &     
+      k0_fn_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      k0_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      k1_fn_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      k1_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      kfn_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
 
   ! parameters used for phenology calculations
   REAL(wp), SAVE :: & 
@@ -190,6 +206,12 @@ CONTAINS
       f_resp_acclim     = -0.008_wp
       t_acclim_zero     = 283.15_wp 
 
+  ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
+      k0_fn_pepc_C3     = 0.0_wp 
+      k0_fn_pepc_C4     = 0.045_wp 
+      jmax2vcmax_C3     = 1.92_wp / 4._wp
+      jmax2vcmax_C4     = 1.4_wp  
+
   ! Labile pool parameters 
       tau_labile              = 5.0_wp  
       lambda_labile_temp      = 0.5_wp 
@@ -242,6 +264,13 @@ CONTAINS
       k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
       offset_bnf          = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
       eta_nfixation       = 3.0_wp  ! Robinson, Tree 2001
+
+  ! parameters to describe the varying fraction of N in chlorophyll through the canopy
+      k0_fn_chl_C3        = 6.0_wp
+      k0_fn_chl_C4        = 15.0_wp
+      k1_fn_chl_C3        = 3.6_wp
+      k1_fn_chl_C4        = 4.4_wp
+      kfn_chl             = 0.7_wp
 
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp

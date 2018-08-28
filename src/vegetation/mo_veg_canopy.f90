@@ -68,10 +68,10 @@ CONTAINS
 
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf 
-    USE mo_assimi_constants,        ONLY: jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc, &
-                                          jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, &
-                                          kn, chl2n, ic4phot, jmax2n, k1_fn_struc, kfn_chl, vcmax2n
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, &
+                                          jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4, &
+                                          jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
+    USE mo_assimi_constants,        ONLY: kn, chl2n, ic4phot, jmax2n, k1_fn_struc, vcmax2n
     USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P
 
     IMPLICIT NONE
@@ -133,18 +133,16 @@ CONTAINS
     leaf_nitrogen_cl(:,:) = 0._wp
 
     !> 0.9.1  set pathway specific constants 
-    !! @todo use lctlib for pathway specific constants in calc_canopy_layers
-    !! set pathway specific constants (BLARRP!! this should not be here -> lctlib)
     IF(lctlib%ps_pathway == ic4phot) THEN
         jmax2vcmax = jmax2vcmax_C4
         k0_fn_chl  = k0_fn_chl_C4
         k1_fn_chl  = k1_fn_chl_C4
-        f_pepc     = k0_fn_pepc
+        f_pepc     = k0_fn_pepc_C4
     ELSE
         jmax2vcmax = jmax2vcmax_C3
         k0_fn_chl  = k0_fn_chl_C3
         k1_fn_chl  = k1_fn_chl_C3
-        f_pepc     = 0.0_wp
+        f_pepc     = k0_fn_pepc_C3
     ENDIF
 
     !> 0.9.2 configure options for fractions optimisation

@@ -23,7 +23,6 @@ MODULE mo_assimi_constants
       ! Values from Niinemets 1997 (SC 01/16)
       jmax2n        ,     &  !< electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
       vcmax2n       ,     &  !< Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
-      k0_fn_pepc   ,     &  !< fraction of N in PEP and PPDK (Makino et al. 2003 / Tazoe et al. PCE 2006, 29, 691-700)
       ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C, derived from k = 0.7 mol m-2 s-1 (Collatz et al. 1992)
       ! assuming 157 mmol N / m-2 leaf N and 4.5 % of leaf N in PS 
       pepc2n        ,     & !< PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
@@ -31,11 +30,7 @@ MODULE mo_assimi_constants
       ! values from Evans 1989, Oecologia, 78: 9-19 (Table 2)
       chl2n         ,     & !< µmol Chloroplast per mmol N (light harvesting complex)
       ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
-      k1_fn_struc  ,     & !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
-      ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
-      jmax2vcmax_C3 ,     &  !< text book; ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
-      jmax2vcmax_C4          !< calibrated to have Jmax=vcmax at 25 deg; ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
-      ! moved to mo_veg_constants tau_canopy_acclimation = 10._wp  ,     & !< time scale of acclimation of canopy processes (N, P, T) (days)
+      k1_fn_struc           !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
 
   ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
   REAL(wp), SAVE :: &
@@ -92,13 +87,7 @@ MODULE mo_assimi_constants
   ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
   REAL(wp), SAVE :: &     
       ka             ,   &  !< Extinction coefficient for PAR on chlorophyll
-      kn             ,   &  !< extinction coefficient to describe decline of N within the canopy
-      ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-      k0_fn_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
-      k0_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
-      k1_fn_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
-      k1_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
-      kfn_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      kn                    !< extinction coefficient to describe decline of N within the canopy
 
   REAL(wp), SAVE :: &     
       soa_min_temp  ,   &  !< min Temperature [°C] used to calculate spring recovery period for coniferous forests
@@ -133,13 +122,9 @@ CONTAINS
     ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
       jmax2n        = 17.6_wp/4.0_wp
       vcmax2n       = 1.8_wp       
-      k0_fn_pepc    = 0.045_wp 
       pepc2n        = 98777.97_wp 
       chl2n         = 1000._wp/39.8_wp 
       k1_fn_struc   = 71.4_wp * molar_mass_N / 1000000._wp 
-      jmax2vcmax_C3 = 1.92_wp / 4._wp
-      jmax2vcmax_C4 = 1.4_wp  
-      ! moved to mo_veg_constants tau_canopy_acclimation = 10._wp  ,     & !< time scale of acclimation of canopy processes (N, P, T) (days)
 
   ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
       E0kc            = 38.05_wp 
@@ -177,11 +162,6 @@ CONTAINS
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
       ka            = 0.005_wp 
       kn            = 0.11_wp
-      k0_fn_chl_C3  = 6.0_wp
-      k0_fn_chl_C4  = 15.0_wp
-      k1_fn_chl_C3  = 3.6_wp
-      k1_fn_chl_C4  = 4.4_wp
-      kfn_chl       = 0.7_wp
 
       soa_min_temp  = -5.0_wp
       soa_max_temp  = 5.0_wp
