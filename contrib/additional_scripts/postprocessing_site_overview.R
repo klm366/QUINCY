@@ -14,7 +14,8 @@ simOutFile <- "vegpoolC"
 
 ###################################################################################################
 
-print(" Create one .pdf file with figs from one output file for all sites; default is vegpoolC .")
+print(" Create one .pdf file with figs from one output file for all sites. default is vegpoolC.  ")
+print("   The default is vegpoolC for SLM land/plant/canopy, and soilfluxCdC13DC14 for SLM soil. ")
 
 ## detect sites within the folder this script is located
 # get all directories names
@@ -47,6 +48,10 @@ if(grepl("flux", simOutFile)) {
   tstep <- tstep_flux
   xAxis <- tstep_flux
 }
+
+# read the SLM model from the namelist, set a diff default output for SLM soil
+slmModel <- trim(namelist[trim(namelist[,1])=="slm_model_name",2])
+if(slmModel == "soil" & simOutFile == "vegpoolC") simOutFile <- "soilfluxCdC13DC14"
 
 ## open output file
 pdf(paste0(simOutFile, "_site_overview.pdf"), paper="a4", height=10, width=8, pointsize=12, 
