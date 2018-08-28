@@ -856,10 +856,10 @@ CONTAINS
                                                           fn_et_new_cl         , &
                                                           fn_rub_new_cl        , &
                                                           fn_pepc_new_cl
-    REAL(wp),DIMENSION(options%nc)                     :: ag_cl                , &  ! here _cl means value per canopy layer
-                                                          an_cl                , &
-                                                          r_cl                 , &
-                                                          gs_cl                , &
+    REAL(wp),DIMENSION(options%nc)                     :: ag                   , & 
+                                                          an                   , &
+                                                          resp                 , &
+                                                          gs                   , &
                                                           q_sat                , &
                                                           hlp1
     INTEGER                                            :: icanopy                    ! looping
@@ -957,17 +957,17 @@ CONTAINS
                                     lai_new_cl(:,icanopy)           , &   ! used for: IF statement whether this routine may run or not
                                     leaf_nitrogen_new_cl(:,icanopy) , &
                                     t_jmax_opt_mavg(:)              , &
-                                    ag_cl(:)                        , & ! out (values per canopy layer)
-                                    an_cl(:)                        , &
-                                    r_cl(:)                         , &
-                                    gs_cl(:)                        , &
+                                    ag(:)                           , & ! out (values per canopy layer)
+                                    an(:)                           , &
+                                    resp(:)                         , &
+                                    gs(:)                           , &
                                     hlp1(:)                         , &
                                     hlp1(:)                         , &
                                     hlp1(:)                         , &
                                     hlp1(:)                         )
 
-      net_assimilation_new(:) = net_assimilation_new(:) + an_cl(:) * lai_new_cl(:,icanopy)
-      canopy_cond_new(:)      = canopy_cond_new(:)      + gs_cl(:) * lai_new_cl(:,icanopy)
+      net_assimilation_new(:) = net_assimilation_new(:) + an(:) * lai_new_cl(:,icanopy)
+      canopy_cond_new(:)      = canopy_cond_new(:)      + gs(:) * lai_new_cl(:,icanopy)
     ENDDO
 
 
