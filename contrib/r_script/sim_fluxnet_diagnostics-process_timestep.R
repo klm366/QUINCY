@@ -441,6 +441,7 @@ varBarPlot <- c(
 molar_mass_C   <- 12.0112
 molar_mass_N   <- 14.0072
 molar_mass_P   <- 30.997
+fluxConversion <- 1800 * 1e-6   # output values are given in µmol m-2 s-1 for timestep output
 
 # list of factors (CNP molar_mass) for variable unit conversion for barplot output
 varBarPlotUnitConv <- c(
@@ -457,31 +458,31 @@ varBarPlotUnitConv <- c(
                 molar_mass_N    , #"Total_SoilInorgPool_N"
                 molar_mass_P    , #"Total_SoilInorgPool_P"
                 
-              # C fluxes (converted from mol to gC/m2/yr)
-                molar_mass_C    , #"GPP"               
-                molar_mass_C    , #"NPP"               
-                molar_mass_C    , #"Litterfall_C"      
-                molar_mass_C    , #"GrowthResp"        
-                molar_mass_C    , #"MaintResp"         
-                molar_mass_C    , #"NTransformResp"    
+              # C fluxes (converted from mumol to gC/m2/yr)
+                molar_mass_C * fluxConversion    , #"GPP"               
+                molar_mass_C * fluxConversion    , #"NPP"               
+                molar_mass_C * fluxConversion    , #"Litterfall_C"      
+                molar_mass_C * fluxConversion    , #"GrowthResp"        
+                molar_mass_C * fluxConversion    , #"MaintResp"         
+                molar_mass_C * fluxConversion    , #"NTransformResp"    
 
-              # N fluxes (converted from mol to gN/m2/yr)
-                molar_mass_N    , #"Nfix_asymb"     
-                molar_mass_N    , #"FixationN"      
-                molar_mass_N    , #"NDeposition"    
-                molar_mass_N    , #"Litterfall_N"   
-                molar_mass_N    , #"Ngasloss"       
-                molar_mass_N    , #"Nleachingloss"  
-                molar_mass_N    , #"Nplantuptake"   
-                molar_mass_N    , #"NetMineral"     
+              # N fluxes (converted from mumol to gN/m2/yr)
+                molar_mass_N * fluxConversion    , #"Nfix_asymb"     
+                molar_mass_N * fluxConversion    , #"FixationN"      
+                molar_mass_N * fluxConversion    , #"NDeposition"    
+                molar_mass_N * fluxConversion    , #"Litterfall_N"   
+                molar_mass_N * fluxConversion    , #"Ngasloss"       
+                molar_mass_N * fluxConversion    , #"Nleachingloss"  
+                molar_mass_N * fluxConversion    , #"Nplantuptake"   
+                molar_mass_N * fluxConversion    , #"NetMineral"     
 
-              # P fluxes (converted from mol to gP/m2/yr)
-                molar_mass_P    , #"PlantUptake_PO4"        
-                molar_mass_P    , #"Net_Mineralisation_PO4" 
-                molar_mass_P    , #"PDeposition"            
-                molar_mass_P    , #"Litterfall_P"           
-                molar_mass_P    , #"Weathering_PO4"         
-                molar_mass_P      #"Pleachingloss"          
+              # P fluxes (converted from mumol to gP/m2/yr)
+                molar_mass_P * fluxConversion    , #"PlantUptake_PO4"        
+                molar_mass_P * fluxConversion    , #"Net_Mineralisation_PO4" 
+                molar_mass_P * fluxConversion    , #"PDeposition"            
+                molar_mass_P * fluxConversion    , #"Litterfall_P"           
+                molar_mass_P * fluxConversion    , #"Weathering_PO4"         
+                molar_mass_P * fluxConversion      #"Pleachingloss"          
                 )
 
 ## figure creation from above mean values for variable in varBarPlot
