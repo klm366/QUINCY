@@ -1226,7 +1226,6 @@ CONTAINS
 
       ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
   !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
-  !! @todo:leaf_cn_direction rename to veg%opt_leaf_cn_direction
       leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
 
       IF ((uptake_n(ipoint) * lctlib%tau_fine_root * one_year*one_day*1e-6_wp + ns_nitrogen(ipoint)) * growth_cn(ipoint) < &
