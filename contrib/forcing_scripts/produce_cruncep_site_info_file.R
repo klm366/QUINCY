@@ -665,17 +665,23 @@ write.table(sitedata,file=paste0("global_forest_database_cue_sites_",Sys.Date(),
 ##
 
 ## define the two sites (no input file needed)
-spp_site_list<-c('BBR','LUE')
+spp_site_list <- c('BBR','LUE','VES')
+sppSiteNum    <- length(spp_site_list)
 
 ## get the lon/lat of these two sites from the metsites object (with list of siteID in metsite_list), file siteinfo_noheader.dat
 #  new values for lon_orig & lat_orig  (above they contain lon/lat of all sites in forestsite_list from info_forest.csv)
-lon_orig <- numeric(2)
-lat_orig <- numeric(2)
+lon_orig <- numeric(sppSiteNum)
+lat_orig <- numeric(sppSiteNum)
 i<-1
 for (spp_site in spp_site_list) {
-  idx         <- spp_site==metsite_list
-  lon_orig[i] <- metsites[idx,2]
-  lat_orig[i] <- metsites[idx,3]
+  if (spp_site == "VES"){
+    lon_orig[i] <- 10.46
+    lat_orig[i] <- 50.36
+  } else {
+    idx         <- spp_site==metsite_list
+    lon_orig[i] <- metsites[idx,2]
+    lat_orig[i] <- metsites[idx,3]
+  }
   i<-i+1
 }
 
@@ -691,19 +697,19 @@ lat_sg <- ncvar_get(ncid,'latitude')
 nc_close(ncid)
 
 ## create new (empty) vectors/arrays for output
-awc          <- numeric(2)
-clay         <- numeric(2)
-silt         <- numeric(2)
-sand         <- numeric(2)
-taxnwrb      <- numeric(2)
-taxousda     <- numeric(2)
-depth        <- numeric(2)
-ph           <- numeric(2)
-bulk_density <- numeric(2)
-awc_sl       <- array(NA,c(2,7))
+awc          <- numeric(sppSiteNum)
+clay         <- numeric(sppSiteNum)
+silt         <- numeric(sppSiteNum)
+sand         <- numeric(sppSiteNum)
+taxnwrb      <- numeric(sppSiteNum)
+taxousda     <- numeric(sppSiteNum)
+depth        <- numeric(sppSiteNum)
+ph           <- numeric(sppSiteNum)
+bulk_density <- numeric(sppSiteNum)
+awc_sl       <- array(NA,c(sppSiteNum,7))
 
 ## loop over the two sites and get soil data from above read netcdf files
-for (s in 1:2) {
+for (s in 1:sppSiteNum) {
   lonidx <- which.min(abs(lon_sg-lon_orig[s]))
   latidx <- which.min(abs(lat_sg-lat_orig[s]))
   
@@ -719,10 +725,10 @@ for (s in 1:2) {
   #silt[s]         <- weighted.mean(silt_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
 }
 ## set remaining parameter from known data
-sand <- c(22.59, 76.6) /100
-silt <- c(51.31, 17.13) /100
+sand <- c(22.59, 76.6, 0.47) /100
+silt <- c(51.31, 17.13, 0.43) /100
 clay <- 1 - sand - silt
-ph   <- c(5.2, 4.3)
+ph   <- c(5.2, 4.3, 4.7)
 
 
 ## read lithology map
@@ -734,11 +740,11 @@ ncid            <- nc_open(paste0(ipath,"GLim.720.360.nc"))
 lon_glim        <- ncvar_get(ncid,'lon')
 lat_glim        <- ncvar_get(ncid,'lat')
 glim_class      <- ncvar_get(ncid,'GLim')
-glim_class_site <- numeric(2)
+glim_class_site <- numeric(sppSiteNum)
 nc_close(ncid)
 
 ## loop over sites: get soil data
-for (s in 1:2) {
+for (s in 1:sppSiteNum) {
   lonidx             <- which.min(abs(lon_glim-lon_orig[s]))
   latidx             <- which.min(abs(lat_glim-lat_orig[s]))
   glim_class_site[s] <- glim_class[lonidx,latidx]
@@ -756,14 +762,14 @@ lat_sg           <- ncvar_get(ncid,'latitude')
 nc_close(ncid)
 
 ## create empty vectors for site-data
-soilP_depth_site   <- numeric(2)
-soilP_labile_site  <- numeric(2)
-soilP_slow_site    <- numeric(2)
-soilP_occlud_site  <- numeric(2)
-soilP_primary_site <- numeric(2)
+soilP_depth_site   <- numeric(sppSiteNum)
+soilP_labile_site  <- numeric(sppSiteNum)
+soilP_slow_site    <- numeric(sppSiteNum)
+soilP_occlud_site  <- numeric(sppSiteNum)
+soilP_primary_site <- numeric(sppSiteNum)
 
 ## loop over the two sites: get soil P data from nearest location
-for (s in 1:2) {
+for (s in 1:sppSiteNum) {
   # get neares lon/lat in soil map
   lonidx                <- which.min(abs(lon_sg-lon_orig[s]))
   latidx                <- which.min(abs(lat_sg-lat_orig[s]))
@@ -790,10 +796,10 @@ lat_sg       <- ncvar_get(ncid,'latitude')
 nc_close(ncid)
 
 ## create empty vectors for site-data
-qmaxorg_site <- numeric(2)
+qmaxorg_site <- numeric(sppSiteNum)
 
 ## loop over the two sites: get NWRB cat data from nearest location & get according Qmax_org
-for (s in 1:2) {
+for (s in 1:sppSiteNum) {
   # get neares lon/lat in soil map
   lonidx <- which.min(abs(lon_sg-lon_orig[s]))
   latidx <- which.min(abs(lat_sg-lat_orig[s]))
@@ -814,12 +820,12 @@ for (s in 1:2) {
 
 # output file
 siteParam <- 27
-siteinfo  <- array(NA,c(2,siteParam))
+siteinfo  <- array(NA,c(sppSiteNum,siteParam))
 
 # loop over gfdb spp selected sites
 i <- 1
 for (spp_site in spp_site_list) {
-  idx  <- spp_site==metsite_list
+
     siteinfo[i,1]<-paste0(spp_site,"_01")
     siteinfo[i,2]<-lon_orig[i]
     siteinfo[i,3]<-lat_orig[i]
