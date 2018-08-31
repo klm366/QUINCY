@@ -44,7 +44,7 @@ CONTAINS
     & iblk, ics, ice, dtime, steplen, &
     & t_air,            &
     & q_air,            &
-    & rain,             &  
+    & rain,             &
     & snow,             &
     & wind_air,         &
     & wind_10m,         &

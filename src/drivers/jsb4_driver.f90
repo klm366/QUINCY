@@ -358,7 +358,7 @@ PROGRAM jsb4_driver
   CALL open_output_streams
 
   ! - Main loop
-  main_loop:DO 
+  main_loop:DO
 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN

@@ -199,7 +199,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure 
+      & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure
                                  !    at sea level as value to start with...
 
     CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf,                         &

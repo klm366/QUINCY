@@ -38,7 +38,7 @@ MODULE mo_seb_interface
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
-  
+
   IMPLICIT NONE
   PRIVATE
 
@@ -90,7 +90,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_energy task
   !!
@@ -154,7 +154,7 @@ CONTAINS
     CALL return_ptr%Construct(name='surface_fluxes', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_fluxes
-  
+
   ! =======================================================================================================
   !> Register tasks for surface energy process
   !!
@@ -176,7 +176,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "surface energy"
-  !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat, 
+  !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat,
   !! net radiation, ground heat).
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -348,7 +348,7 @@ CONTAINS
       IF (.NOT. is_time_experiment_start()) THEN
 
         ! Correction for snowmelt
-        t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:) 
+        t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:)
 
         IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
           heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
@@ -416,7 +416,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_snowmelt_correction
-  
+
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "asselin_filter"
@@ -496,7 +496,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_asselin
-  
+
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "surface fluxes"
@@ -535,7 +535,7 @@ CONTAINS
   !! Implementation of "aggregate" for task "surface_fluxes"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.  
+  !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_surface_fluxes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

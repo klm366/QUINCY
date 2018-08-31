@@ -83,20 +83,20 @@ CONTAINS
     !
   END FUNCTION toupper
 
-  !> Function for convenience 
+  !> Function for convenience
   !
   !  If "in_str" is matching one of the arguments "arg(i)" return the
   !  index "i". Returns "-1" if none of the strings matches.
   !
   !  Copied from ICON module shared/mo_util_string
-  !  
+  !
   FUNCTION one_of_str(in_str, arg)
     INTEGER :: one_of_str
     CHARACTER(len=*), INTENT(IN)           :: in_str    ! input string
     CHARACTER(len=*), INTENT(IN)           :: arg(:)
     ! local variables:
     INTEGER :: i
-    
+
     one_of_str = -1
     DO i=1,SIZE(arg)
       IF (toupper(TRIM(in_str)) == toupper(TRIM(arg(i))))  one_of_str=i
@@ -120,7 +120,7 @@ CONTAINS
   ! returns integer n as a string (often needed in printing messages)
   !
   ! Copied from ICON module shared/mo_util_string
-  !  
+  !
   FUNCTION int2string(n, opt_fmt)
     CHARACTER(len=10)   :: int2string ! result
     INTEGER, INTENT(in) :: n

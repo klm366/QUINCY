@@ -85,7 +85,7 @@ CONTAINS
     CALL return_ptr%Construct(name='soil_temperature', process_id=SSE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_temperature
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for soil_properties task
   !!
@@ -101,7 +101,7 @@ CONTAINS
     CALL return_ptr%Construct(name='soil_properties', process_id=SSE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_properties
-  
+
   SUBROUTINE Register_sse_tasks(process, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: process
@@ -263,7 +263,7 @@ CONTAINS
     IF (lstart) THEN
       t_unfilt_corrected(:) = t_unfilt(:)
     ELSE
-      t_unfilt_corrected(:) = t_unfilt(:) - dsl4jsb_var2D_onChunk(HYDRO_, snowmelt) * dtime * alf / hcap_grnd(:) 
+      t_unfilt_corrected(:) = t_unfilt(:) - dsl4jsb_var2D_onChunk(HYDRO_, snowmelt) * dtime * alf / hcap_grnd(:)
     END IF
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -284,7 +284,7 @@ CONTAINS
         & t_soil                                (:,:), &
         & hcap_grnd                             (:),   &
         & grnd_hflx                             (:),   &
-        & SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &                
+        & SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
         & )
 
       RETURN
@@ -339,7 +339,7 @@ CONTAINS
         & itop_old           (:), &
         & itop               (:), &
         & t_unfilt_corrected (:), &
-        & vol_heat_cap_snow  (:), & 
+        & vol_heat_cap_snow  (:), &
         & heat_cond_snow     (:), &
         & vol_heat_cap_sl  (:,1), &
         & heat_cond_sl     (:,1), &
@@ -370,7 +370,7 @@ CONTAINS
       hcap_grnd_snow(:) = 0._wp
     END IF
 
-    ! @todo: move water/ice calculations to HYDRO_ process 
+    ! @todo: move water/ice calculations to HYDRO_ process
     IF (tile%is_glacier) THEN
       CALL calc_soil_temperature( &
         ! in
@@ -383,7 +383,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
-        & vol_heat_cap_sl                     (:,:), & 
+        & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
         & t_soil                              (:,:), &
@@ -406,7 +406,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
-        & vol_heat_cap_sl                     (:,:), & 
+        & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
         & t_soil                              (:,:), &
@@ -650,11 +650,11 @@ CONTAINS
             vol_heat_cap_snow(:) = ci * dens_snow_min
           END WHERE
         ELSE
-          vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow) 
+          vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow)
           heat_cond_snow   (:) = hcond_snow
         END IF
       ELSE
-        vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow) 
+        vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow)
         heat_cond_snow   (:) = hcond_snow
       END IF
     END IF
@@ -669,7 +669,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_soil_properties(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

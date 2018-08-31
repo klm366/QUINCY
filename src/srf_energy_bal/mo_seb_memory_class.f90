@@ -319,14 +319,14 @@ CONTAINS
         & hgrid, surface,                                                        &
         & t_cf('N_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &        
+        & prefix, suffix,                                                        &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
 
       CALL jsb_add_var( mem,'F_pseudo_soil_temp', mem%F_pseudo_soil_temp,        &
         & hgrid, surface,                                                        &
         & t_cf('F_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &        
+        & prefix, suffix,                                                        &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
 
     END IF

@@ -200,12 +200,12 @@ CONTAINS
 
     ! TBD: adapt names of variables in input files to names in memory
 
-    ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and 
+    ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and
     !       eventually in addition for each of the existing tile (6x21x14=5166 lines).
 
     ! If we do not want to read carbon pools for each tile we would have to add this
     ! case construct to choose the behaviour for each tile:
-    !SELECT CASE(tile%name) 
+    !SELECT CASE(tile%name)
     !CASE (box)
     !CASE (land)
     !CASE (veg)
@@ -217,7 +217,7 @@ CONTAINS
 
       SELECT CASE(Cpool_name(i))
       CASE ("c_green")
-        memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p 
+        memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
       CASE ("c_woods")
         memory_pointer => CARBON__mem%c_woods%ptr
       CASE ("c_reserve")

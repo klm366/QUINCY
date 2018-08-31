@@ -1761,8 +1761,8 @@ CONTAINS
   !
   ! === snow_and_rain_from_precip() ==============================================================================================
   !
-  ! Precipitation is divided into rain and snow according to a method by M.S. Wigmosta, L. Vail and D.P. Lettenmaier, "A 
-  ! distributed hydrology-vegetation model for complex terrain", Water Resources Research 30 (1994) 1665-1679: depending on 
+  ! Precipitation is divided into rain and snow according to a method by M.S. Wigmosta, L. Vail and D.P. Lettenmaier, "A
+  ! distributed hydrology-vegetation model for complex terrain", Water Resources Research 30 (1994) 1665-1679: depending on
   ! average day temperature "T", the snow part of precipitation "P_sn" is computed from the total precipitation "P" as:
   !               / P               for T < -1.1 Celsius
   ! (1)   P_sn = |  P*(3.3 - T)/4.4 for -1.1 Celsius <= T <= 3.3 Celsius

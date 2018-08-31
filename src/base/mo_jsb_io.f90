@@ -95,9 +95,9 @@ CONTAINS
   SUBROUTINE init_io(namelist_filename)
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
-    
+
     CALL read_io_namelist(TRIM(namelist_filename))
-  
+
   END SUBROUTINE init_io
 
 #endif

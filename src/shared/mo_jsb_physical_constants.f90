@@ -18,7 +18,7 @@ MODULE mo_jsb_physical_constants
   PUBLIC
 
   REAL(wp), PARAMETER :: &
-    & dens_soil          = 2700._wp,   & !< Density of soil particulate (Hillel 1980, Johansen 1977)           [kg/m3]  
+    & dens_soil          = 2700._wp,   & !< Density of soil particulate (Hillel 1980, Johansen 1977)           [kg/m3]
     & dens_org           = 1300._wp,   & !< Density of organic part of soil                                    [kg/m3]
     & dens_ice           = rhoi,       & !< Density of frozen water in soil (ice)                              [kg/m3]
     & dens_snow          = rhos,       & !< =300.0  Density of snow                                            [kg/m3]

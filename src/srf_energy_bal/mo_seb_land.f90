@@ -77,13 +77,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_min
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
-    dsl4jsb_Real2D_onChunk :: previous_day_temp_mean    
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
     dsl4jsb_Real2D_onChunk :: N_pseudo_soil_temp
     dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
-    
+
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: t_old
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -126,8 +126,8 @@ CONTAINS
       heat_tcoef,       & !< Heat transfer coefficient (rho*C_h*|v|)
       t_star,           &
       liquid_max,       &
-      t_air_in_Celcius  
-      
+      t_air_in_Celcius
+
     LOGICAL, DIMENSION(options%nc) :: &
       is_glacier, &
       has_snow_layer
@@ -147,7 +147,7 @@ CONTAINS
     nc   = options%nc
     steplen = options%steplen
     !dtime   = options%dtime
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
@@ -172,14 +172,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN
-    
+
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_min)           ! INOUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_max)           ! INOUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_min)  ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_max)  ! OUT
-    
+
     dsl4jsb_Get_var2D_onChunk(SEB_,   N_pseudo_soil_temp)     ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   F_pseudo_soil_temp)     ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   pseudo_soil_temp)       ! INOUT
@@ -244,7 +244,7 @@ CONTAINS
 
 
 
-    
+
     ! Save old surface temperature and saturation spec. humidity
     t_unfilt_old(:) = t_unfilt(:)
     t_old   (:) = t(:)
@@ -303,7 +303,7 @@ CONTAINS
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
 
-    ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of 
+    ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
     ! ice/water in the top soil layer that will happen during this time step
     ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
     t_star(:) = s_star(:) / t2s_conv(:)
@@ -524,7 +524,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block

@@ -14,7 +14,7 @@ MODULE mo_jsb_namelist_iface
 
 #ifdef __ICON__
   USE mo_namelist, ONLY: open_nml_icon => open_nml, close_nml_icon => close_nml, &
-                         position_nml_icon => position_nml 
+                         position_nml_icon => position_nml
   USE mo_io_units, ONLY: nnml
 #else
   USE mo_namelist, ONLY: open_nml, close_nml, position_nml_echam => position_nml

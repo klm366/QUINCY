@@ -34,7 +34,7 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_heat_cond_map !< T: USe soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing in thermal soil calculations
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
-    REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface 
+    REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
 
   CONTAINS

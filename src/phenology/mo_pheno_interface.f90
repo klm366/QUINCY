@@ -40,14 +40,14 @@ MODULE mo_pheno_interface
   dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_<process>_memory)
-  dsl4jsb_Use_memory(A2L_)  
+  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
-  dsl4jsb_Use_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true 
-  
+  dsl4jsb_Use_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true
+
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
 
@@ -84,7 +84,7 @@ MODULE mo_pheno_interface
 CONTAINS
   ! ================================================================================================================================
   !! Constructors for tasks
-  
+
   !> Constructor for update_phenology task
   !!
   !! @param[in]     model_id     Model id
@@ -99,7 +99,7 @@ CONTAINS
     CALL return_ptr%Construct(name='phenology', process_id=PHENO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_phenology
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for foliage_projected_cover task
   !!
@@ -139,7 +139,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  ! 
+  !
   SUBROUTINE update_phenology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -189,7 +189,7 @@ CONTAINS
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
                                        track_max_green_pool, derive_maxlai_according_to_allometric_relationships
-    USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day    
+    USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day
     USE mo_jsb_time,             ONLY: is_newyear, is_newday, timeStep_in_days, time_steps_per_day
     USE mo_pheno_constants,      ONLY: PhenoParam
     USE mo_jsb_grid_class,       ONLY: t_jsb_grid
@@ -224,7 +224,7 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true 
+    dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true
 
     ! Declare pointers for variables in memory
     INTEGER                :: ncanopy     ! number of canopy layers
@@ -257,7 +257,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
 
-    ! JN 10.01.18 only required with l_forestRegrowth = true 
+    ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
     dsl4jsb_Real2D_onChunk :: c_reserve
     dsl4jsb_Real2D_onChunk :: c_woods
@@ -347,10 +347,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_EG)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_CRP)           ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_winter)        ! inout
-    
+
     dsl4jsb_Get_var2D_onChunk(PHENO_,    days_since_growth_begin_SG) ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    days_since_growth_begin_EG) ! inout
-    
+
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_SG)        ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_EG)        ! inout
@@ -379,7 +379,7 @@ CONTAINS
     day_of_year  = INT(get_year_day(get_time_current()))
 
     w_soil_filling = w_soil_rel  ! Initialization of w_soil_filling for crops and raingreen
-                                 ! R: As in JSBACH3 all soil layers are set to the same relative_moisture(GP,tile) and only the average over 
+                                 ! R: As in JSBACH3 all soil layers are set to the same relative_moisture(GP,tile) and only the average over
                                  !    all layers or the uppermost layer is used, we do not need soil layers in the phenology.
 
     ! R: Note, in JSBACH3 the timestep was 1 day. Except of the former update_growth_phase which is now in the calc_XXX_phenology
@@ -406,7 +406,7 @@ CONTAINS
     ! JN 10.01.18
     IF ((dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag))) THEN
       ! to represent forest regrowth LAI needs to be dependant on the available leaf carbon
-      ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI 
+      ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear()) THEN
@@ -428,7 +428,7 @@ CONTAINS
           & maxLAI_allom(:)                           & ! <- InOut
           & )
 
-        ! redistribute 
+        ! redistribute
         CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
@@ -451,23 +451,23 @@ CONTAINS
     ENDIF
 
 
-    ! JN 10.01.18: if l_forestRegrowth = true, the maxLai of forest pfts can be variable over time and space, therefore 
+    ! JN 10.01.18: if l_forestRegrowth = true, the maxLai of forest pfts can be variable over time and space, therefore
     !              LaiMax_corrected is now a vector!
     ! R: laiMax_dyn was included to avoid longterm negative NPP. It is reduced if NPP is negative over a year and increased
     !    if NPP is positive (subroutine update_maximum_lai). So if NPP is negative the lai gets very small.
     !    As this scheme wasn't used, it is unnecessary to implement it into JSBACH4.
-    !      (LaiMax in JSBACH3 is initialized for vegetation always with a value from lctlib. When calling update_phenology from 
+    !      (LaiMax in JSBACH3 is initialized for vegetation always with a value from lctlib. When calling update_phenology from
     !       theLand%Vegetation%lai_max the laiMax_stat is created. Then NOT used in update_phenology:
     !       IF (ANY(laiMax_dyn(...) < 0._dp)) laiMax_dyn(...) =
     !       laiMax_stat(...) CALL update_maximum_lai(lat(...),laiMax_stat(...),lai(...)) )
-    !        
-    !    Therefore I replaced laiMax_dyn with LaiMax_corrected, which is not dynamic and only used to secure that 
+    !
+    !    Therefore I replaced laiMax_dyn with LaiMax_corrected, which is not dynamic and only used to secure that
     !    the maximum lai is at least PhenoParam%all%LAI_negligible if lctlib%LaiMax < PhenoParam%all%LAI_negligible
-    !    However, as lctlib%LaiMax will always be higher than PhenoParam%all%LAI_negligible we could skip this part. But to remind 
+    !    However, as lctlib%LaiMax will always be higher than PhenoParam%all%LAI_negligible we could skip this part. But to remind
     !    us that we should think about reimplementing a dynamic lai I keep this part in a way making reimplementation easy...
     !
     ! Set initially the dynamical maximum LAI to the static maximum LAI
-    !IF (ANY(laiMax_dyn(1545,:) < 0._dp)) laiMax_dyn(1545,:) = laiMax_stat(1:kidx,:) 
+    !IF (ANY(laiMax_dyn(1545,:) < 0._dp)) laiMax_dyn(1545,:) = laiMax_stat(1:kidx,:)
     ! Test if lai <= LaiMax_dyn
     ! IF (debug) THEN
     !   DO i=1,kidx
@@ -492,8 +492,8 @@ CONTAINS
        LaiMax_corrected(:) = dsl4jsb_Lctlib_param(MaxLAI)
     END IF
 
-    ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird: 
-    ! Secure minimum Max-LAI 
+    ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
+    ! Secure minimum Max-LAI
     WHERE (LaiMax_corrected(:) < PhenoParam%all%LAI_negligible)
        LaiMax_corrected(:) = PhenoParam%all%LAI_negligible
        lai(:) = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
@@ -702,7 +702,7 @@ CONTAINS
 
         !NOTE: despite changes, no aggregation of cpools necessary:
         ! with l_forestRegrowth PHENO changes Cpools only once a year at the beginning of a timestep,
-        ! and other processes (NPP alloc of carbon) aggregate them 
+        ! and other processes (NPP alloc of carbon) aggregate them
       ENDIF
     ENDIF
 

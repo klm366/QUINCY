@@ -52,7 +52,7 @@ CONTAINS
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
   !! @param [in]     skinres_canopy_max    capacity of the canopy skin reservoir [m]
-  !! @param [in]     skinres_max           
+  !! @param [in]     skinres_max
   !! @param [in]     sfract_srf            surface snow fraction []
   !! @param [in]     wfract_srf            skin reservoir fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
@@ -100,7 +100,7 @@ CONTAINS
     !  local variables
     !
     REAL(wp) ::               &
-      & rain_in_m,            & !< amount of rainfall within time step [m] 
+      & rain_in_m,            & !< amount of rainfall within time step [m]
       & new_snow,             & !< amount of snowfall within time step [m]
       & snow_soil_old,        & !< amount of snow prior to update [m]
       & evapotrans_in_m,      & !< amount of evapotranspiration within time step [m]
@@ -158,7 +158,7 @@ CONTAINS
     ! amount of snow remaining on the canopy
     new_snow_canopy = MIN(new_snow * InterceptionEfficiency, MAX(skinres_canopy_max - canopy_snow, 0._wp))
 
-    ! remaining snow falls on the ground 
+    ! remaining snow falls on the ground
     new_snow_soil = new_snow - new_snow_canopy
 
     ! update snow on the canopy
@@ -178,7 +178,7 @@ CONTAINS
     new_snow_soil = new_snow_soil + snow_blown
 
     ! Heating due to snow melt on canopy
-    ! @Todo Why is heating only computed for canopy? 
+    ! @Todo Why is heating only computed for canopy?
     q_snocpymlt = snow_melt_can * rhoh2o * alf / delta_time
 
     !  Snowfall and sublimation
@@ -313,7 +313,7 @@ CONTAINS
     !  local variables
     !
     REAL(wp) ::              &
-      & rain_in_m,           & !< amount of rainfall within time step [m] 
+      & rain_in_m,           & !< amount of rainfall within time step [m]
       & new_snow,            & !< amount of snowfall within time step [m]
       & evapotrans_in_m,     & !< amount of evapotranspiration within time step [m]
       & evapo_snow_in_m,     & !< amount of sublimation from snow within time step [m]
@@ -406,7 +406,7 @@ CONTAINS
   ! @param [out]     wsat_l             Maximum water storage in each soil layers [m]
   ! @param [out]     field_cap_l        Water content at field capacity in soil layers [m]
   ! @param [out]     p_wilt_l           Water content at permanent wilting point in soil layers [m]
-  ! @param [out]     runoff             Runoff 
+  ! @param [out]     runoff             Runoff
   ! @param [out]     drainage           Drainage
   !
   SUBROUTINE calc_soil_hydrology(                                                                                &
@@ -560,14 +560,14 @@ CONTAINS
     ! drainage and runoff
     ! ----------------------------------------------------------------------------------
 
-    ! initilalization of drainage 
+    ! initilalization of drainage
     drainage(:) = 0._wp
 
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
          field_cap_l, trans_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
 
-    ! For numerical reasons, half of the water is infiltrated 
+    ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
     infilt(:) = infilt(:) / 2._wp
 
@@ -646,7 +646,7 @@ CONTAINS
     REAL(wp) :: drain_crit(nidx)              ! drainage above a soil moisture of ws_crit [m/s]
     REAL(wp) :: ws_tmp(nidx)                  ! temporary array for soil moisture
     REAL(wp) :: drain_l(nidx)                 ! drainage from the current layer
-    LOGICAL  :: soil_above(nidx)              ! is there a soil layer above? 
+    LOGICAL  :: soil_above(nidx)              ! is there a soil layer above?
     LOGICAL  :: soil_below(nidx)              ! does the layer below have a soil fraction?
     REAL(wp) :: zda(nidx,nsoil)               ! diffusion coefficients
     REAL(wp) :: zdb(nidx,nsoil)               !     ''
@@ -780,7 +780,7 @@ CONTAINS
 
     END DO  ! soil level
 
-    !---------------------------------------------------------------------------------------------- 
+    !----------------------------------------------------------------------------------------------
     !  water diffusion
     ! -----------------
 
@@ -863,7 +863,7 @@ CONTAINS
       zdc(:,1) = zda(:,1) + zdb(:,1) + 1._wp
       ws_l(:,1) = ws_l(:,1) / zdc(:,1)
     END WHERE
- 
+
     ! decomposition and forward substitution
     DO i = 2, nsoil
       WHERE (dsoil(:,i) > 0._wp)
@@ -944,7 +944,7 @@ CONTAINS
     DO i = 1, nsoil
       WHERE (dsoil(:,i) > 0._wp .AND. percolation(:,i) > 0._wp)
         ws_min_drain(:) = zwdmin * field_cap_l(:,i)              ! minimum soil moisture for drainage
-        WHERE (ws_l(:,i)-percolation(:,i) < ws_min_drain(:))     ! more percolation than water available 
+        WHERE (ws_l(:,i)-percolation(:,i) < ws_min_drain(:))     ! more percolation than water available
           WHERE (ws_l(:,i) > ws_min_drain(:))                    !   there is water for perculation
             percolation(:,i) = ws_l(:,i) - ws_min_drain(:)       !   all available water perculates
             ws_l(:,i) = ws_min_drain(:)                          !   soil moisture is limited to minimum
@@ -994,7 +994,7 @@ CONTAINS
       w_soil_overflow(:) = w_soil_overflow(:) +  percolation(:,nsoil)
     END IF
 
-    ! Overflow from the surface layer enters drainage, resp. the overflow pool for TPE closed. 
+    ! Overflow from the surface layer enters drainage, resp. the overflow pool for TPE closed.
     ! This should not happen, this is just for security.
     IF (.NOT. ltpe_closed) THEN
       WHERE (ws_l(:,1) > field_cap_l(:,1))
@@ -1030,7 +1030,7 @@ CONTAINS
     !  Update soil moisture due to evaporation and transpiration fluxes. The fluxes had been
     !  calculated with the old bucket scheme, and are not necessarily consistent to soil moisture
     !  of the multi-layer scheme.
-    !  Therefore evaporation might need to be reduced (reduce_evapo). 
+    !  Therefore evaporation might need to be reduced (reduce_evapo).
     !  @todo: However this term is only
     !  exported for diagnostics and the water deficit is distributed between the soil layers.
     !----------------------------------------------------------------------------------------------
@@ -1066,7 +1066,7 @@ CONTAINS
 
     ! parameters
     ! @todo - take from mo_hydro_constants.f90
-    REAL(wp), PARAMETER :: zwilt  = 0.35_wp 
+    REAL(wp), PARAMETER :: zwilt  = 0.35_wp
 
     !----------------------------------------------------------------------------------------------
     !  update soil moisture due to evaporation and transpiration fluxes
@@ -1077,7 +1077,7 @@ CONTAINS
 
     deficit_evapo(:) = 0._wp   ! water missing for evaporation due to limited soil water
     WHERE (evapo_soil(:) < 0._wp)            ! pos. evaporation flux (not dew)
-      ws_l(:,1) = ws_l(:,1) + evapo_soil(:)  ! take water from uppermost soil layer 
+      ws_l(:,1) = ws_l(:,1) + evapo_soil(:)  ! take water from uppermost soil layer
       WHERE (ws_l(:,1) < 0._wp)             ! if there is not enough soil water
         deficit_evapo(:) = ws_l(:,1)         !    this is the amount of water missing
         ws_l(:,1) = 0._wp                   !    soil moisture cannot be negative
@@ -1101,8 +1101,8 @@ CONTAINS
       ! grid cell not sealed and positive transpiration (not dew)
       !    take water equally from all over the root zone
       WHERE (root_depth(:) > 0._wp .AND. trans_in_m(:) < 0._wp)
-          
-        ! water needed for transpiration from the current layer 
+
+        ! water needed for transpiration from the current layer
         trans_layer(:) = trans_in_m(:) * droot(:,jk)/root_depth(:)
 
         WHERE (droot(:,jk) > 0._wp)
@@ -1114,7 +1114,7 @@ CONTAINS
             remaining(:) = ws_l(:,jk) * rootfract(:) + trans_layer(:)  ! water that would remain after transpiration
             WHERE (remaining(:) < fixed(:))                                ! transpiration exceeds available water
               deficit_l(:) = remaining(:) - fixed(:)
-              ws_l(:,jk) = fixed(:)     + ws_l(:,jk) * (1._wp-rootfract(:))  
+              ws_l(:,jk) = fixed(:)     + ws_l(:,jk) * (1._wp-rootfract(:))
             ELSEWHERE                                                        ! enough soil water
               deficit_l(:) = 0._wp
               ws_l(:,jk) = remaining(:) + ws_l(:,jk) * (1._wp-rootfract(:))
@@ -1175,7 +1175,7 @@ CONTAINS
       CALL finish ('digest_evapotrans', message_text)
       ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
       ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
-    END IF 
+    END IF
 
   END SUBROUTINE digest_evapotrans
   !------------------------------------------------------------------------------------------------
@@ -1183,8 +1183,8 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
   SUBROUTINE digest_infilt (nidx, nsoil, ltpe_closed, field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
   !------------------------------------------------------------------------------------------------
-  !  The routine is based on routine soilchange by Stefan Hagemann. It replaces the part for 
-  !  infiltration changes (isch=2)   
+  !  The routine is based on routine soilchange by Stefan Hagemann. It replaces the part for
+  !  infiltration changes (isch=2)
   !------------------------------------------------------------------------------------------------
 
     ! arguments
@@ -1226,7 +1226,7 @@ CONTAINS
         excess(:) = 0._wp
       END IF
     END DO
-  
+
     ! if all soil layers are at field capacity and there is still excess water, it is added to drainage
     WHERE (excess(:) > 0._wp)
       drainage(:) = drainage(:) + excess(:)
@@ -1401,7 +1401,7 @@ CONTAINS
     END IF
     ! Same for water cover on soil
     IF (fract_water > 0._wp .AND. w_skin > EPSILON(1._wp)) THEN
-      fract_water = fract_water & 
+      fract_water = fract_water &
         & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), w_skin)))
     END IF
 

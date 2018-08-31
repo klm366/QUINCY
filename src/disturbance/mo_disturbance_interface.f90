@@ -335,7 +335,7 @@ CONTAINS
       cflux_dist_woods_2_soil(:) = 0._wp
 
       burned_fract(:) = 0._wp
-      IF (      dsl4jsb_Lctlib_param(dynamic_PFT) & 
+      IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
           .OR. (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. dsl4jsb_Lctlib_param(pasture_PFT)) &
          ) THEN
 
@@ -343,7 +343,7 @@ CONTAINS
           CASE (0) !! No fire algorithm
           CASE (1) !! jsbach algorithm
 
-            ! Calculate burned area. Woody and grass types call the subroutine with different parameters 
+            ! Calculate burned area. Woody and grass types call the subroutine with different parameters
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! Woody Type
               fire_minimum = dsl4jsb_Config(DISTURB_)%fire_minimum_woody
               fire_tau     = dsl4jsb_Config(DISTURB_)%fire_tau_woody
@@ -388,7 +388,7 @@ CONTAINS
               & damaged_fract(:)                            & ! out
               & )
           CASE DEFAULT
-            CALL finish('disturbed_fract','Unknown windbreak algorithm')
+            CALL finish('disturbed_frac','Unknown windbreak algorithm')
         END SELECT
 
       END IF
@@ -613,7 +613,6 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)
-
        dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil_ta, weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta, weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag1_ta,           weighted_by_fract)

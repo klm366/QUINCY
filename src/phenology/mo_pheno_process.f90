@@ -11,10 +11,10 @@
 !!
 MODULE mo_pheno_process
 #ifndef __NO_JSBACH__
- 
+
    USE mo_kind,      ONLY: wp
    USE mo_exception, ONLY: message
- 
+
    IMPLICIT NONE
    PRIVATE
 
@@ -24,9 +24,9 @@ MODULE mo_pheno_process
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
- CONTAINS   
+ CONTAINS
 
- 
+
 
   ELEMENTAL SUBROUTINE calc_previous_day_NPP(is_newday,                    & ! Input
                                              NPP_pot_rate_ca,              & ! Input
@@ -72,16 +72,16 @@ MODULE mo_pheno_process
   ! from autumn to spring event ("rest") --- the budburst and leaf fall dates itself are not needed. Hence, this routine does not
   ! provide these dates. Instead, it updates the field "growth_phase": A positive entry means that at the particular grid
   ! cell the evergreens and summergreens are growing, whereas a negative entry means that they are at rest.
-  ! 
-  ! For the spring event the "alternating model" of Murray et al. [1] is used: 
+  !
+  ! For the spring event the "alternating model" of Murray et al. [1] is used:
   ! Let "S(d)" denote the value of the heat sum at day "d":
   ! (1) S(d) = SUM(d'=d0,d) MAX(T(d')-T_alt,0),
   ! where "T(d)" is the mean day temperature at day "d", "T_alt" is the "alternating temperature" (which has the function of a
   ! cutoff temperature in the heat sum), and "d0" is the starting date for temperture summation. This starting date is determined
-  ! by a temperature criterion (see below) --- once  more we need not know the date, but only whether summation has started: 
-  ! this information is kept also in the field "heat_sum", which is set to a value smaller than -1 during times where no 
-  ! heat summation takes place. 
-  ! Another key quantity of the alternating model the number of chill days "C(d)": this is the number of days with a mean day 
+  ! by a temperature criterion (see below) --- once  more we need not know the date, but only whether summation has started:
+  ! this information is kept also in the field "heat_sum", which is set to a value smaller than -1 during times where no
+  ! heat summation takes place.
+  ! Another key quantity of the alternating model the number of chill days "C(d)": this is the number of days with a mean day
   ! temperature below the alternating temperature "T_alt", where counting is started here at the day "d_a" of the last autumn event:
   ! (2) C(d) = SUM(d'=d_a,d) STEP(T(d)-T_alt);
   ! here STEP() is the Heaviside step function. From C(d) a critical heatsum "S_crit(d)" is computed:
@@ -90,44 +90,44 @@ MODULE mo_pheno_process
   ! maximum range of the critical heatsum, whereas "C_decay" determines how fast "S_crit(d)" decreases with increasing number of
   ! chill days. Finally, the spring event happens when first
   ! (4)  S(d) >= S_crit(d).
-  ! Technically, at this date for the considered grid point the associated entry of the array growth_phase() is set to +1 and 
+  ! Technically, at this date for the considered grid point the associated entry of the array growth_phase() is set to +1 and
   ! "springEvent_flag" is set to "true" NO!!. Moreover the chill days count is reset to zero and heat_sum set to -99 to indicate
   ! that summation has stopped.
   !
-  ! The "autumn event" is calculated from a pseudo soil temperature: It happens when during the growth phase first the pseudo soil 
+  ! The "autumn event" is calculated from a pseudo soil temperature: It happens when during the growth phase first the pseudo soil
   ! temperature Ts(d) falls below the critical soil temperature "Ts_crit" (variable "autumn_event_temp"); to prevent that this
-  ! event is detected in spring the condition is added that the mean day air temperature T(d) is smaller than the soil temperature, 
+  ! event is detected in spring the condition is added that the mean day air temperature T(d) is smaller than the soil temperature,
   ! i.e. the autum event happens, when first
-  ! (5) T(d) < Ts(d) < Ts_crit 
+  ! (5) T(d) < Ts(d) < Ts_crit
   ! At this event for the considered grid point the associated entries of the array growth_phase() are set to "-1".
   !  --- An additional daylength-criterion has not implemented yet!
-  ! 
+  !
   ! It remains to determine the date "d0" for the start of heat summation: The idea is that heat summation starts when
   ! first the pseudo soil temperature during the rest phase gets larger than a critical temperature "heat_summation_start_temp"
   ! (a tuning parameter). Technically this means to initialize "heat_sum" at the particular grid point by zero; since this
-  ! value is larger than -1 it indicates that heat summation has started. 
+  ! value is larger than -1 it indicates that heat summation has started.
   !
   ! This routine requires that the soil temperature is updated before calling it.
   !
   !
-  ! [1] M.B. murray, M.G.R. Cannell and R.I. Smith, "Date of budburst of fifteen tree species in Britain following climatic 
+  ! [1] M.B. murray, M.G.R. Cannell and R.I. Smith, "Date of budburst of fifteen tree species in Britain following climatic
   !     warming", J. Appl. Ecology 26 (1989) 693-700). See also: A. Botta, N. Viovy, P. Ciais, P. Friedlingstein and P. Monfray,
   !     "A global prognostic scheme of leaf onset using satellite data", Global Change Biol. 6 (2000) 709-725.
-  !  
- 
+  !
+
 ! mo_jsbach_interface.f90: SUBROUTINE jsbach_inter_1d <-> mo_phenology.f90: SUBROUTINE update_phenology <->           JSBACH4
 !-------------------------------------------------------------------------------------------------------------------------------------
 !growth_Phase_SG
 ! nidx                           <->  INTEGER, INTENT(IN) :: kidx                                      <->            nc
 !                                     ! the number of elements in the current call (= kend - kstart +1)
-!                                             
+!
 !
 ! pheno_type(:, 1:ntiles)        <->  INTEGER, INTENT(in) :: pheno_type_of_tile(:,:)                   <->            lctlib%phenotype
-                                      ! The phenology types of the tiles of grid points (including      
+                                      ! The phenology types of the tiles of grid points (including
 !                                     ! "unvegetated"); dimension: (1:nidx,1:ntiles)
 !
 !
-! theLand%Vegetation%lai(kidx0:kidx1,1:ntiles) <-> REAL(dp),INTENT(inout),TARGET :: lai(:,:)           <->            lai 
+! theLand%Vegetation%lai(kidx0:kidx1,1:ntiles) <-> REAL(dp),INTENT(inout),TARGET :: lai(:,:)           <->            lai
                                                    ! Leaf area index to be recomputed. Dimension: (1:nidx,1:ntiles)
 !
 !
@@ -148,97 +148,97 @@ MODULE mo_pheno_process
 !
 !
 !theLand%cbalance%NPP_rate(kidx0:kidx1,1:ntiles) <-> REAL(dp),INTENT(in) :: NPP_pot_rate(:,:)              <->            NPP_pot_rate_ca
-                                                     ! Net primary production rate density 
+                                                     ! Net primary production rate density
                                                      ![mol(CO2)/m^2/s] for each PFT.
 !                                                    ! Needed to determine the shedding rate of raingreens and grasses.
-!                                                    ! Dimension: (1:nidx,1:ntiles) 
+!                                                    ! Dimension: (1:nidx,1:ntiles)
 ! R: kommt von theLand%cbalance%NPP_pot_rate
 !
 !
 ! specificLeafArea_C(1:nidx,1:ntiles) <-> REAL(dp),INTENT(in) :: specLeafArea(:,:)                     <->           lctlib%specificLeafArea_C
                                           ! Specific leaf area in molar units [m^2(leaf)/mol(Carbon)]
-!                                         ! Dimension: (1:nidx,1:ntiles) 
+!                                         ! Dimension: (1:nidx,1:ntiles)
 ! specificLeafArea_C ist lokale Variable die aus lctlib genommen wird: Do loop über Tiles:
 ! specificLeafArea_C(1:nidx,itile) = theLand%LctLibrary%specificLeafArea_C(theLand%Surface%cover_type(kidx0:kidx1,itile))
 !
 !
 ! theLand%Domain%lat(kidx0:kidx1)     <-> REAL(dp), INTENT(in) :: lat(:)                               <->           lat
                                           ! latitude of grid points(1:nidx)
-                                          
-                                          
+
+
    ELEMENTAL SUBROUTINE calc_summergreen_phenology(day_of_year,            & ! <- in
-                                                   is_newday,              & ! <- in 
+                                                   is_newday,              & ! <- in
                                                    timeStep_in_days,       & ! <- in
                                                    NPP_pot_rate_ca,        & ! <- in
                                                    lat,                    & ! <- in
                                                    previous_day_temp_mean, & ! <- in
                                                    pseudo_soil_temp,       & ! <- in
-                                                   LaiMax_corrected,       & ! <- in 
-                                                   days_since_growth_begin_SG, & ! <- inout                                                   
+                                                   LaiMax_corrected,       & ! <- in
+                                                   days_since_growth_begin_SG, & ! <- inout
                                                    chill_days_SG,          & ! <- inout
-                                                   heat_sum_SG,            & ! <- inout 
-                                                   growth_phase_SG,        & ! <- inout                                                   
+                                                   heat_sum_SG,            & ! <- inout
+                                                   growth_phase_SG,        & ! <- inout
                                                    lai )                     ! <- inout
-                                          
+
      !-----------------------------------------------------------------------
-     !  DECLARATIONS                               
+     !  DECLARATIONS
      USE mo_pheno_constants, ONLY: PhenoParam
 
-         
+
      !-----------------------------------------------------------------------
-     !  ARGUMENTS   
+     !  ARGUMENTS
      INTEGER,  intent(in)    ::                     &
                                 day_of_year
-                                
-     LOGICAL,  intent(in)    :: is_newday                                
-                             
+
+     LOGICAL,  intent(in)    :: is_newday
+
      REAL(wp), intent(in)    ::                     &
-                                timeStep_in_days,   &  
-                                NPP_pot_rate_ca,    &                               
+                                timeStep_in_days,   &
+                                NPP_pot_rate_ca,    &
                                 lat,                &
                                 previous_day_temp_mean, &
                                 LaiMax_corrected,   &
-                                pseudo_soil_temp                                
-                                     
-     REAL(wp), intent(inout) ::                     &   
-                                days_since_growth_begin_SG, &     
+                                pseudo_soil_temp
+
+     REAL(wp), intent(inout) ::                     &
+                                days_since_growth_begin_SG, &
                                 chill_days_SG,      &
                                 heat_sum_SG,        &
-                                growth_phase_SG,    &                                     
+                                growth_phase_SG,    &
                                 lai                   ! Total LAI.
-                                
- 
+
+
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp,   &  ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
-                          grRate     ! argument to calls of get_letItGrow                      
-                                                                        
-     !-----------------------------------------------------------------------    
+                          grRate     ! argument to calls of get_letItGrow
+
+     !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
-     
+
      !-----------------------------------------------------------------------
      ! CONTENT
-         
+
      ! Determine if heat summation for summergreen has to start with zero. Note, this is exactly the same as for evergreens.
-     IF  (growth_phase_SG < -0.5_wp                   & ! we are during REST PHASE ... 
+     IF  (growth_phase_SG < -0.5_wp                   & ! we are during REST PHASE ...
         .AND. heat_sum_SG < -1._wp                    & ! and heat summation has not yet started...
         .AND.                                         & ! and ...
          (                                            & ! ..
             (lat >= 0._wp .AND. day_of_year == 1)     & ! we are at northern hemisphere at January 1 ...
             .OR.                                      & !   or ...
-            (lat <  0._wp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ... 
-         )                                            & 
+            (lat <  0._wp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ...
+         )                                            &
          ) THEN                                         ! then  =>
            heat_sum_SG = 0._wp                          !          heat summation has to start, so initialize it by zero
      END IF
- 
+
      ! To do only at first time step of a day:
      ! Update output variables: days_since_growth_begin_SG, chill_days_EG, heat_sum_SG, growth_phase_SG
      IF (is_newday) THEN
- 
+
         ! Eventually update counter for days since last begin of growth phase. Note, this is the same as for evergreens.
         IF(days_since_growth_begin_SG > 0.0_wp .AND. days_since_growth_begin_SG < 365.0_wp) THEN
            days_since_growth_begin_SG = days_since_growth_begin_SG + 1.0_wp
@@ -250,33 +250,33 @@ MODULE mo_pheno_process
               chill_days_SG = chill_days_SG + 1._wp                     ! then => increment chill days counter
                                                                         !         and limit the number of chill days to prevent
                                                                         !         values beyond any limit in polar regions
-              chill_days_SG = MIN(REAL(chill_days_SG),REAL(PhenoParam%EG_SG%max_chill_days)) 
-           ELSE                                                       ! else 
+              chill_days_SG = MIN(REAL(chill_days_SG),REAL(PhenoParam%EG_SG%max_chill_days))
+           ELSE                                                       ! else
                                                                         ! then => increase heat sum:
-                                                                        !         add mean day temperature excess above 
+                                                                        !         add mean day temperature excess above
                                                                         !         alternating temperature
-              heat_sum_SG = heat_sum_SG + pseudo_soil_temp - PhenoParam%SG%alternation_temp 
+              heat_sum_SG = heat_sum_SG + pseudo_soil_temp - PhenoParam%SG%alternation_temp
            END IF
         END IF
 
 
-        ! Update growth_phase_SG:               
+        ! Update growth_phase_SG:
         ! Check begin and end of growth and vegetative phase
         ! For summergreen growth_phase_SG values are:
-        !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)        
+        !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
         !    0.0  .. during growth phase (i.e. some weeks after spring event)
         !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
         IF (growth_phase_SG < -0.5_wp ) THEN                                    ! IF we are in the REST PHASE
            IF (heat_sum_SG > -1._wp                                              & ! if heat summation has already started ...
                    .AND.                                                         & ! and ...
                  heat_sum_SG - PhenoParam%SG%heat_sum_min >                      & ! criticality condition is fulfilled ..
-                 PhenoParam%SG%heat_sum_range * EXP(-chill_days_SG / PhenoParam%SG%chill_decay_const)) & 
+                 PhenoParam%SG%heat_sum_range * EXP(-chill_days_SG / PhenoParam%SG%chill_decay_const)) &
                  THEN                                                              ! then =>
                  growth_phase_SG = 0._wp                                             ! --> growth phase starts
                  days_since_growth_begin_SG = 1.0_wp                                 !     start counting days since begin of growth phase
                  heat_sum_SG = -99._wp                                               ! --> set heat_sum to a value smaller than -1 to
                                                                                      !     indicate that heat summation is no more needed
-                 chill_days_SG = 0._wp                                               ! --> reset chill days count 
+                 chill_days_SG = 0._wp                                               ! --> reset chill days count
            END IF
 
         ELSE IF (growth_Phase_SG > 0.5_wp) THEN                                 ! IF we are in the VEGETATIVE PHASE
@@ -285,12 +285,12 @@ MODULE mo_pheno_process
                       .AND.                                                      & ! and ..
               pseudo_soil_temp < PhenoParam%SG%autumn_event_temp                 & ! soil temperature falls below critical ..
                       .AND.                                                      & ! and ..
-              days_since_growth_begin_SG > PhenoParam%SG%minLength_gvPhase)      & ! growth + vegetative phase have lasted the 
+              days_since_growth_begin_SG > PhenoParam%SG%minLength_gvPhase)      & ! growth + vegetative phase have lasted the
                                            THEN                                    ! minimum time ..
                     growth_phase_SG = -1._wp                                       ! --> rest phase starts
            ELSE
               IF (days_since_growth_begin_SG > PhenoParam%SG%maxLength_gvPhase)  & ! if growth + vegetative phase has reached maximum length
-                                       THEN                                        ! then => 
+                                       THEN                                        ! then =>
                     growth_phase_SG = -1._wp                                       ! --> rest phase starts
               END IF
            END IF
@@ -301,7 +301,7 @@ MODULE mo_pheno_process
            END IF
         END IF
      END IF ! from is_newday
- 
+
 
      !!!!!!!! FINALLY, what it is all for:
      ! Update the output variable lai
@@ -312,7 +312,7 @@ MODULE mo_pheno_process
         xtmp = PhenoParam%SG%shedRate_veget
         lai  = get_letItDie(timeStep_in_days,lai,xtmp)
      ELSE IF (growth_Phase_SG > -0.5_wp .AND. growth_Phase_SG < 0.5_wp ) THEN ! if we are in the GROWTH PHASE
-        IF (lai < PhenoParam%all%laiSeed) THEN  ! if lai is smaller as PhenoParam%all%laiSeed then 
+        IF (lai < PhenoParam%all%laiSeed) THEN  ! if lai is smaller as PhenoParam%all%laiSeed then
                                                 ! at least set it to PhenoParam%all%laiSeed but stay below laiMax
            lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),PhenoParam%all%laiSeed)
         ENDIF
@@ -328,12 +328,12 @@ MODULE mo_pheno_process
 
 
   ELEMENTAL SUBROUTINE calc_evergreen_phenology(day_of_year,            & ! <- in
-                                                is_newday,              & ! <- in 
+                                                is_newday,              & ! <- in
                                                 timeStep_in_days,       & ! <- in
                                                 lat,                    & ! <- in
                                                 previous_day_temp_mean, & ! <- in
-                                                pseudo_soil_temp,       & ! <- in 
-                                                LaiMax_corrected,       & ! <- in 
+                                                pseudo_soil_temp,       & ! <- in
+                                                LaiMax_corrected,       & ! <- in
                                                 days_since_growth_begin_EG, & ! <- inout
                                                 chill_days_EG,          & ! <- inout
                                                 heat_sum_EG,            & ! <- inout
@@ -345,7 +345,7 @@ MODULE mo_pheno_process
      USE mo_pheno_constants, ONLY: PhenoParam
 
      !-----------------------------------------------------------------------
-     !  ARGUMENTS   
+     !  ARGUMENTS
      INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
@@ -364,30 +364,30 @@ MODULE mo_pheno_process
                                 growth_phase_EG,    &
                                 lai                   ! Total LAI.
 
- 
+
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp,   &  ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
                           grRate     ! argument to calls of get_letItGrow
-                                                                        
-     !-----------------------------------------------------------------------    
+
+     !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
-     
+
      !-----------------------------------------------------------------------
      ! CONTENT
-                                                             
+
      ! Determine if HEAT SUMMATION FOR EVERGREEN HAS TO START from zero.  Note, this is nearly the same as for summergreens.
-     IF ( growth_phase_EG > 0.5_wp                   & ! we are during vegetative phase (Note: there is no rest phase for EG) 
-         .AND.                                       & ! and .. 
+     IF ( growth_phase_EG > 0.5_wp                   & ! we are during vegetative phase (Note: there is no rest phase for EG)
+         .AND.                                       & ! and ..
          heat_sum_EG < -1._wp                        & ! heat summation has not yet started
          .AND.                                       & ! and ..
          (                                           & ! ..
            (lat >= 0._wp .AND. day_of_year == 1)     & ! we are at northern hemisphere at January 1 ..
            .OR.                                      & ! or ..
-           (lat <  0._wp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) .. 
+           (lat <  0._wp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ..
          )                                           & ! ..
         ) THEN                                          ! --> heat summation has to start,
          heat_sum_EG = 0._wp                            !     so initialize it by zero
@@ -416,10 +416,10 @@ MODULE mo_pheno_process
 
          ! Check begin and end of growth and vegetative phase
          ! For evergreen growth_phase_EG values are:
-         !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)         
+         !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
          !    0.0  .. during growth phase (i.e. some weeks after spring event)
          ! DOES NOT EXIST FOR EVERGREEN:   -1.0  .. during rest phase (i.e. from autumn event to spring event)
-         !  -99 .. Heat summation has not yet started (at all or because growth phase started)         
+         !  -99 .. Heat summation has not yet started (at all or because growth phase started)
 
          IF(growth_phase_EG < 0.5_wp ) THEN                                       ! evergreens are during GROWTH
             IF(days_since_growth_begin_EG > PhenoParam%EG%growthPhaseLength) THEN ! growth phase of EGs has ended
@@ -437,7 +437,7 @@ MODULE mo_pheno_process
                heat_sum_EG = -99._wp                                              ! --> set heat_sum to a value smaller than
                                                                                   !     -1 to indicate that heat summation is
                                                                                   !     no more needed
-               chill_days_EG = 0._wp                                              ! --> reset chill days count 
+               chill_days_EG = 0._wp                                              ! --> reset chill days count
             END IF
          END IF
      END IF ! from is_newday
@@ -445,7 +445,7 @@ MODULE mo_pheno_process
 
      !!!!!!!! FINALLY, what it is all for:
      ! Update the output variable lai
-     IF(ABS(growth_phase_EG) < EPSILON(1.0_wp)) THEN    ! we are during the GROWTH PHASE 
+     IF(ABS(growth_phase_EG) < EPSILON(1.0_wp)) THEN    ! we are during the GROWTH PHASE
         IF (lai < PhenoParam%all%laiSeed) THEN
            ! start growth at least with seed value smaller than laiMax
            lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),PhenoParam%all%laiSeed)
@@ -502,7 +502,7 @@ MODULE mo_pheno_process
                                 previous_day_NPP_pot_rate_ca, &
                                 pseudo_soil_temp,      &
                                 w_soil_filling,        & ! Fractional filling of the soil water buckets.
-                                                         ! R: in JSBACH3 wurde für Crops immer der soil layer 1, d.h. der oberste Layer verwendet!   
+                                                         ! R: in JSBACH3 wurde für Crops immer der soil layer 1, d.h. der oberste Layer verwendet!
                                 previous_day_temp_min, &
                                 previous_day_temp_max, &
                                 lctlib_specificLeafArea_C
@@ -529,14 +529,14 @@ MODULE mo_pheno_process
 
      ! Process?
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
-     ! IF (one_of('calc_phenology', tile%components) < 1) RETURN 
+     ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
      ! NPP mask needed for crop growth phase and harvest
      ! R: In JSBACH3 we check grass or crop:
-     !    IF (pheno_type_of_tile(...) == 4 .OR. pheno_type_of_tile(...) == 5) THEN ! R: grass and crop     
+     !    IF (pheno_type_of_tile(...) == 4 .OR. pheno_type_of_tile(...) == 5) THEN ! R: grass and crop
      !       IF (previous_day_NPP_pot_rate_ca(...) > 0.0_wp) positive_NPP(...) = .true.
      !
-     !    NPP_positive is only used to decide if the mean day temperature shall be added to the 
+     !    NPP_positive is only used to decide if the mean day temperature shall be added to the
      !    heat sum for crops (heat_sum_CRP and heat_sum_winter), which are only used to decide
      !    if the crops are in the rest phase (lai gets low and C of leafes is put into the litter C
      !    pool, which represents "harvest") or if they are still in the growth phase.
@@ -552,9 +552,9 @@ MODULE mo_pheno_process
                               !    wenn die Umweltbedingungen so sind, dass crops zumindest
                               !    kein wesentlich negatives NPP hatten, dann heat sum bilden.
                               !    Beispielwerte von avg_NPP_yDayMean:
-                              !    2007-12-31 crop: -3.5039e-08  3.7397e-08  1.3059e-06 : 
+                              !    2007-12-31 crop: -3.5039e-08  3.7397e-08  1.3059e-06 :
      ELSE
-       NPP_positive = .FALSE. 
+       NPP_positive = .FALSE.
      END IF
 
      ! To do only at first time step of a day:
@@ -565,7 +565,7 @@ MODULE mo_pheno_process
         !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
         !      1.0  .. during growth phase of second crops (i.e. from summer to autumn)
         !      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
-        !     -1.0  .. during rest   phase of summer crops (i.e. from autumn to spring)        
+        !     -1.0  .. during rest   phase of summer crops (i.e. from autumn to spring)
         !     -2.0  .. during rest   phase of winter crops (i.e. from spring to autumn)
         ! Note, these phases exclude each other because there are either winter or summer crops for a grid cell (but never both).
         !
@@ -587,7 +587,7 @@ MODULE mo_pheno_process
         IF (lat >= 0._wp .AND. day_of_year == 70      & ! we are at northern hemisphere at March 11 (March 10 in leap years)
            .OR.                                       & ! or ..
            lat <  0._wp .AND. day_of_year == 252      & ! we are at southern hemisphere at September 9 (September 8 in leap years) ..
-           ) THEN 
+           ) THEN
              heat_sum_CRP = 0._wp                         ! => heat summation has to start, so initialize it by zero
              IF (ABS(growth_phase_CRP) < 1.5_wp) THEN     ! if there are no winter crops at all (neither in rest nor in growth) ..
                 growth_phase_CRP = -1._wp                 !     => crop phase is set to rest phase of summer crops
@@ -602,12 +602,12 @@ MODULE mo_pheno_process
 
              IF (ABS(growth_phase_CRP) < 1.5_wp .AND.           & ! if there are no winter crops at all (neither in rest nor in growth) ..
                  heat_sum_CRP > PhenoParam%CRP%heat_sum_harvest & ! and the heat sum is enough for harvesting
-                 ) THEN 
+                 ) THEN
                  heat_sum_CRP = 0._wp                                ! then heat summation has to start again, so initialize it by zero
                  growth_phase_CRP = 1._wp                            ! and crop phase is set to growth phase of double cropping
                                                                      ! (crops already have been harvested try double cropping.)
              ELSE IF (growth_phase_CRP > 1.5_wp) THEN             ! if there are winter crops still in the growing phase ..
-                growth_phase_CRP = -2._wp                         ! => then switch to the rest phase of winter crops 
+                growth_phase_CRP = -2._wp                         ! => then switch to the rest phase of winter crops
              END IF
              IF (heat_sum_winter > 0._wp)  THEN              ! Heat sum for winter is multiplied by -1 to indicate ..
                 heat_sum_winter = -1._wp * heat_sum_winter   ! => that there is no heat summation during summer
@@ -655,14 +655,14 @@ MODULE mo_pheno_process
                                                                       ! positive
              heat_sum_CRP = heat_sum_CRP + temp_min_max - PhenoParam%CRP%gdd_temp ! => add mean day temperature excess above critical
                                                                                   !     temperature to the heat sum for summer crops
-             IF (heat_sum_winter > 0._wp) THEN                           ! additionally, if we are in the growing period of 
+             IF (heat_sum_winter > 0._wp) THEN                           ! additionally, if we are in the growing period of
                                                                          ! winter crops
                 heat_sum_winter = heat_sum_winter + temp_min_max - PhenoParam%CRP%gdd_temp  ! => add mean day temperature excess above critical
                                                                                             !     temperature to the heat sum for winter crops
              END IF
        END IF
 
-       ! set growth phase for crops 
+       ! set growth phase for crops
        IF(pseudo_soil_temp > PhenoParam%CRP%crit_temp) THEN         ! it is warm enough for crop growth ..
           IF (ABS(growth_phase_CRP) < 1.5_wp) THEN                      ! .. and if there are no winter crops ..
              IF (heat_sum_CRP > PhenoParam%CRP%heat_sum_harvest) THEN     ! .. and the heat sum for summer crops is high enough
@@ -678,7 +678,7 @@ MODULE mo_pheno_process
                 growth_phase_CRP = 2._wp                                    ! => crops are still in the growth phase
              END IF
           END IF
-       END IF        
+       END IF
      END IF
 
      !!!!!!!! FINALLY, what it is all for:
@@ -692,7 +692,7 @@ MODULE mo_pheno_process
            w_soil_filling > PhenoParam%all%wilt_point + 1E-3_wp & ! soil water is above wilt point
            ) THEN
 
-                ! If also temperature is fine growth should start at least with seed value ( < laiMax) if upper soil layer 
+                ! If also temperature is fine growth should start at least with seed value ( < laiMax) if upper soil layer
                 ! has at least a little bit water
                 IF(pseudo_soil_temp > PhenoParam%CRP%crit_temp) THEN ! it is warm enough
                    IF(lai < PhenoParam%all%laiSeed .AND.           & ! the lai is smaller than lai of seed..
@@ -765,7 +765,7 @@ MODULE mo_pheno_process
      USE mo_pheno_constants, ONLY: PhenoParam
 
      !-----------------------------------------------------------------------
-     !  ARGUMENTS   
+     !  ARGUMENTS
 
      REAL(wp), intent(in)    ::                   &
                                 timeStep_in_days, &
@@ -783,7 +783,7 @@ MODULE mo_pheno_process
                           grRate, &       ! argument to calls of get_letItGrow
                           average_filling ! average filling of the soil buckets
 
-     !-----------------------------------------------------------------------    
+     !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
@@ -799,7 +799,7 @@ MODULE mo_pheno_process
         IF (lai < PhenoParam%all%laiSeed &                               ! IF LAI dropped below seed value..
                    .AND.                 &
             average_filling > PhenoParam%RG%bucketFill_leafout) THEN     ! and there is sufficient water
-               lai = MIN(LaiMax_corrected-EPSILON(1.0),PhenoParam%all%laiSeed) !     => then start growth at least with seed value but smaller 
+               lai = MIN(LaiMax_corrected-EPSILON(1.0),PhenoParam%all%laiSeed) !     => then start growth at least with seed value but smaller
         END IF
         IF(previous_day_NPP_pot_rate_ca > 0._wp) THEN   ! If yesterdays net production is positive
            grRate = PhenoParam%RG%growthRate
@@ -847,7 +847,7 @@ MODULE mo_pheno_process
                           grRate, &       ! argument to calls of get_letItGrow
                           average_filling ! average filling of the soil buckets
 
-     !-----------------------------------------------------------------------    
+     !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
@@ -858,18 +858,18 @@ MODULE mo_pheno_process
      ! Surprisingly the current concept for grasses is more restrictive than that for raingreens!
 
      IF (t_air_in_Celcius > PhenoParam%GRS%crit_temp           & ! IF temperature is fine..
-                      .AND.                                    & ! and.. 
+                      .AND.                                    & ! and..
          w_soil_filling > PhenoParam%all%wilt_point  + 1E-3_wp & ! there is sufficient moisture in upper soil layer
         ) THEN
 
           IF(lai < PhenoParam%all%laiSeed) THEN
              lai = MIN(LaiMax_corrected-EPSILON(1.0),PhenoParam%all%laiSeed) ! start growth at least with seed, value, but smaller than
                                                                              ! laiMax. (Note: addition of 1E-3_dp for numerical reasons)
-          ENDIF 
+          ENDIF
           IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN                    ! If yesterdays net production is positive
              xtmp = PhenoParam%GRS%growthRate
              lai  = get_letItGrow(timeStep_in_days, lai, xtmp, 0.0_wp, LaiMax_corrected)    ! let it grow
-          ELSE 
+          ELSE
              xtmp = PhenoParam%GRS%shedRate_growth
              lai  = get_letItGrow(timeStep_in_days, lai, 0.0_wp, xtmp, LaiMax_corrected)    ! no growth, only a bit of leaf shedding
           END IF
@@ -883,11 +883,12 @@ MODULE mo_pheno_process
   END SUBROUTINE calc_grass_phenology
 
 
+
   ! --- derive_maxLai_according_to_allometric_relationships() ---------------------------------------------------------------------------------------------------
   !
-  ! calculate the maximum LAI for current vegetation biomass and given pft dependant parameters 
+  ! calculate the maximum LAI for current vegetation biomass and given pft dependant parameters
   !
-  ELEMENTAL SUBROUTINE derive_maxLai_according_to_allometric_relationships( & 
+  ELEMENTAL SUBROUTINE derive_maxLai_according_to_allometric_relationships( &
                                           & lctlib_alpha_nr_ind,            & ! <- in
                                           & lctlib_beta_nr_ind,             & ! <- in
                                           & lctlib_alpha_leaf,              & ! <- in
@@ -909,17 +910,17 @@ MODULE mo_pheno_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    REAL(wp), intent(in)    ::  lctlib_alpha_nr_ind,            & 
-                              & lctlib_beta_nr_ind,             & 
-                              & lctlib_alpha_leaf,              & 
-                              & lctlib_beta_leaf,               & 
+    REAL(wp), intent(in)    ::  lctlib_alpha_nr_ind,            &
+                              & lctlib_beta_nr_ind,             &
+                              & lctlib_alpha_leaf,              &
+                              & lctlib_beta_leaf,               &
                               & lctlib_clumpinessFactor,        &
                               & lctlib_specificLeafArea_C,      &
                               & c_woods
-    REAL(wp), intent(inout) ::  current_max_green,              & 
-                              & veg_carbon_at_max_green,        & 
-                              & number_of_individuals,          & 
-                              & biomass_per_individual,         & 
+    REAL(wp), intent(inout) ::  current_max_green,              &
+                              & veg_carbon_at_max_green,        &
+                              & number_of_individuals,          &
+                              & biomass_per_individual,         &
                               & veg_fract_correction,            &
                               & maxLAI_allom
 
@@ -933,10 +934,10 @@ MODULE mo_pheno_process
     ! CONTENT
     kgPerHa = PhenoParam%FR%kgCtokg * molarMassC_kg * PhenoParam%FR%m2toha
 
-    !For numerical reasons funct_allometry%FOM_alloc_vegetation_carbon_at_max_green_pool cannot be zero. 
-    !We also want to set max_LAI to the minimum value after harvest, 
+    !For numerical reasons funct_allometry%FOM_alloc_vegetation_carbon_at_max_green_pool cannot be zero.
+    !We also want to set max_LAI to the minimum value after harvest,
     !    ie. when cbalance%c_woods(kidx0:kidx1,itile)=zero.
-    IF ((veg_carbon_at_max_green .GT. PhenoParam%FR%min_c) .AND. (c_woods .GT. PhenoParam%FR%min_c)) THEN 
+    IF ((veg_carbon_at_max_green .GT. PhenoParam%FR%min_c) .AND. (c_woods .GT. PhenoParam%FR%min_c)) THEN
 
       !calculate number of individuals, assuming that forest is at self-thinning
       number_of_individuals = exp(MIN((log(veg_carbon_at_max_green * kgPerHa) - lctlib_alpha_nr_ind) &
@@ -971,9 +972,9 @@ MODULE mo_pheno_process
 
   ! --- track_max_green_pool() ---------------------------------------------------------------------------------------------------
   !
-  ! track the maximum of the green pool and the according total vegetation carbon 
+  ! track the maximum of the green pool and the according total vegetation carbon
   !
-  ELEMENTAL SUBROUTINE track_max_green_pool( & 
+  ELEMENTAL SUBROUTINE track_max_green_pool( &
                                           & c_green,                    & ! <- in
                                           & c_woods,                    & ! <- in
                                           & c_reserve,                  & ! <- in
@@ -985,9 +986,9 @@ MODULE mo_pheno_process
      REAL(wp), intent(in)    :: c_green, c_woods, c_reserve
      REAL(wp), intent(inout) :: current_max_green, veg_carbon_at_max_green
 
-     IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN 
+     IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN
        current_max_green = c_green
-       veg_carbon_at_max_green = c_green + c_woods + c_reserve 
+       veg_carbon_at_max_green = c_green + c_woods + c_reserve
      ENDIF
 
      RETURN
@@ -999,7 +1000,7 @@ MODULE mo_pheno_process
   ! --- get_letItDie() ----------------------------------------------------------------------------------------------------------------
   !
   ! This is the function get_letItGrow() for growth rate k=0, i.e. it describes only leaf shedding:
-  !      x(t+tau) = x(t)*exp(-p*tau), 
+  !      x(t+tau) = x(t)*exp(-p*tau),
   ! where "tau" is the time step and "p" the leaf shedding rate. This function is introduced only to save computation time.
   REAL(wp) ELEMENTAL FUNCTION get_letItDie(timeStep_in_days,x,p)  !! returns x(t+tau)
 
@@ -1012,10 +1013,10 @@ MODULE mo_pheno_process
 
   END FUNCTION get_letItDie
 
-  
+
   ! --- get_letItGrow() ---------------------------------------------------------------------------------------------------------------
   !
-  ! Performs one time step for the growth of the phenology state. 
+  ! Performs one time step for the growth of the phenology state.
   ! The growth model for the phenology state (x=LAI/LaiMax_dyn) involves two elements: logistic growth and exponential leaf
   ! shedding. Logistic growth guarantees that growth stops at the carrying capacity (here equal 1, because this is the maximum
   ! value of the pheno state). Together with a term accounting for leaf shedding the growth equation is
@@ -1033,7 +1034,7 @@ MODULE mo_pheno_process
     REAL(wp),INTENT(in) ::                   &
                            timeStep_in_days, & ! the time step length (delta t) expressed in days
                            x,                & ! LAI at time t
-                           k,                & ! growth rate          (units: 1/days) 
+                           k,                & ! growth rate          (units: 1/days)
                            p,                & ! leaf shedding rate   (units: 1/days)
                            z                   ! maximum LAI
 
@@ -1057,7 +1058,7 @@ MODULE mo_pheno_process
   !
   ! Computes the shedding rate for the raingreens during wet season as a function of the soil water gauge
   ! The idea is, that for high water availability (bucket filling > bucketFill_critical) leafs are shedded only because of their
-  ! aging. Below this critical value the shedding rate increases because the plants adapt to lower water availability. At the 
+  ! aging. Below this critical value the shedding rate increases because the plants adapt to lower water availability. At the
   ! wilting point the shedding is so large, that it is larger than the assumed fixed growth rate.
   !
   REAL(wp) ELEMENTAL FUNCTION get_shedRate_RG(bucket_filling)
@@ -1068,7 +1069,7 @@ MODULE mo_pheno_process
 
     REAL(wp)             :: shedRate, slope
 
-    slope           = PhenoParam%RG%growthRate / (PhenoParam%RG%bucketFill_critical - PhenoParam%all%wilt_point) 
+    slope           = PhenoParam%RG%growthRate / (PhenoParam%RG%bucketFill_critical - PhenoParam%all%wilt_point)
     shedRate        = PhenoParam%RG%growthRate + PhenoParam%RG%shedRate_aging - slope * (bucket_filling - PhenoParam%all%wilt_point)
     get_shedRate_RG = MIN(MAX(PhenoParam%RG%shedRate_aging,shedRate),PhenoParam%RG%growthRate+PhenoParam%RG%shedRate_aging)
 

@@ -125,7 +125,7 @@ CONTAINS
     CALL return_ptr%Construct(name='radiation_par', process_id=RAD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_radiation_par
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for albedo task
   !!
@@ -212,16 +212,16 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
-    
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
@@ -355,7 +355,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_radiation
-  
+
   ! ================================================================================================================================
   !>
   !! @brief Implementation to update the photosynthetically active radiation
@@ -419,7 +419,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_radiation_par'
-    
+
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -430,10 +430,10 @@ CONTAINS
     IF (.NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     ! Get model
     model => Get_model(tile%owner_model_id)
-    
+
     ! Get pointers to process configs and memory
     dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_config(ASSIMI_)
@@ -447,7 +447,7 @@ CONTAINS
     ncanopy                     =  dsl4jsb_Config(ASSIMI_)%ncanopy
     use_alb_veg_simple          =  dsl4jsb_Config(RAD_)%use_alb_veg_simple
     canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI_)% canopy_bound_lai(0:ncanopy)
-    
+
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in (received from the atmosphere)
     dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)     ! in (received from the atmosphere)
@@ -584,7 +584,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_radiation_par
-  
+
   ! ================================================================================================================================
   !>
   !! @brief Implementation to update the albedo
@@ -945,7 +945,7 @@ CONTAINS
           & alb_nir_lnd(:)                    & ! inout
           & )
 
-      END IF ! use_alb_veg_simple 
+      END IF ! use_alb_veg_simple
     END IF ! tile%lcts(1)%id == ...
 
     IF (.NOT. tile%is_lake) THEN
@@ -960,7 +960,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_albedo
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "albedo"

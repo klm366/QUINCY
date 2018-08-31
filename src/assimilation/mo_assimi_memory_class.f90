@@ -33,7 +33,7 @@ MODULE mo_assimi_memory_class
       gross_assimilation_ca,      & ! Gross photosynthesis at each time step
                                     ! [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
                                     ! Note, this is the gross assimilation on the ground below canopy area.
-                                    ! This area is independent of the LAI. So even when the LAI is below 1 this area remains 
+                                    ! This area is independent of the LAI. So even when the LAI is below 1 this area remains
                                     ! the same (it is still "covered").
       gross_assimilation,         & ! ...on tile area
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
@@ -65,7 +65,7 @@ MODULE mo_assimi_memory_class
 !                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
 !                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes
 !                                         CO2_emission_harvest_acc,       & ! CO2 flux to the atmosphere from harvest
-!                                         CO2_flux_dynveg_acc               ! CO2 flux to the atmosphere from vegetation dynamics 
+!                                         CO2_flux_dynveg_acc               ! CO2 flux to the atmosphere from vegetation dynamics
 !                                                                           ! (disturbance?)
 !
 
@@ -88,7 +88,7 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & canopy_cond                 ! Canopy conductance without water limit  [m/s] (mean value)
 
-    ! R: This variable is needed for process DISTURB and should be later in the process vegdyn 
+    ! R: This variable is needed for process DISTURB and should be later in the process vegdyn
     !    However it has to exist on each pft, therefore I put it to this process for now!
     TYPE(t_jsb_var_real2d) :: &
       & cover_fract_pot             ! Potential Natural Land Cover Fraction

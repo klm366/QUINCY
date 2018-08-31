@@ -48,23 +48,24 @@ MODULE mo_jsb_process_factory
   USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_pheno_interface,      ONLY: Register_pheno_tasks
-  USE mo_pheno_config_class,   ONLY: t_pheno_config  
+  USE mo_pheno_config_class,   ONLY: t_pheno_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
   USE mo_hd_config_class,      ONLY: t_hd_config
 #endif
   USE mo_carbon_interface,      ONLY: Register_carbon_tasks
-  USE mo_carbon_config_class,   ONLY: t_carbon_config  
+  USE mo_carbon_config_class,   ONLY: t_carbon_config
   USE mo_disturb_interface,     ONLY: Register_disturb_tasks
-  USE mo_disturb_config_class,  ONLY: t_disturb_config  
+  USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
-  USE mo_fuel_config_class,     ONLY: t_fuel_config  
+<<<<<<< HEAD
+  USE mo_fuel_config_class,     ONLY: t_fuel_config
   USE mo_fage_interface,        ONLY: Register_fage_tasks
-  USE mo_fage_config_class,     ONLY: t_fage_config  
+  USE mo_fage_config_class,     ONLY: t_fage_config
   USE mo_fm_interface,          ONLY: Register_fm_tasks
-  USE mo_fm_config_class,       ONLY: t_fm_config  
+  USE mo_fm_config_class,       ONLY: t_fm_config
   USE mo_harv_interface,          ONLY: Register_harv_tasks
-  USE mo_harv_config_class,       ONLY: t_harv_config  
+  USE mo_harv_config_class,       ONLY: t_harv_config
 
   USE mo_jsb_process_class, ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , &
     & DISTURB_, FUEL_, FAGE_, FM_, HARV_

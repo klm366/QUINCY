@@ -313,7 +313,7 @@ CONTAINS
       ! Normally called before
       ! assimilation -> update_assimilation: -> calc_assimilation_waterlimited
       ! and before
-      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed: 
+      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed:
       !                                    -> calc_assimilation_waterunlimited
       CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
     END IF

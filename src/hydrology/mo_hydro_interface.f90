@@ -49,7 +49,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(ASSIMI_)
-  
+
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
   IMPLICIT NONE
@@ -187,7 +187,7 @@ CONTAINS
     CALL return_ptr%Construct(name='surface_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_hydrology
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for soil_properties task
   !!
@@ -203,7 +203,7 @@ CONTAINS
     CALL return_ptr%Construct(name='soil_properties', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_properties
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for soil_hydrology task
   !!
@@ -219,7 +219,7 @@ CONTAINS
     CALL return_ptr%Construct(name='soil_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_hydrology
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for canopy_cond_unstressed task
   !!
@@ -235,7 +235,7 @@ CONTAINS
     CALL return_ptr%Construct(name='canopy_cond_unstressed', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_unstressed
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for canopy_cond_stressed task
   !!
@@ -251,7 +251,7 @@ CONTAINS
     CALL return_ptr%Construct(name='canopy_cond_stressed', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_canopy_cond_stressed
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for evaporation task
   !!
@@ -267,7 +267,7 @@ CONTAINS
     CALL return_ptr%Construct(name='evaporation', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_evaporation
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow hydrology task
   !!
@@ -283,7 +283,7 @@ CONTAINS
     CALL return_ptr%Construct(name='snow_ice_hydrology', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snow_and_ice_hydrology
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow_and_skin_fraction task
   !!
@@ -315,7 +315,7 @@ CONTAINS
     CALL return_ptr%Construct(name='water_balance', process_id=HYDRO_, owner_model_id=model_id)
 
   END FUNCTION Create_task_water_balance
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for hydrology process
   !!
@@ -634,7 +634,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_surface_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -806,7 +806,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_soil_properties(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -964,7 +964,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, fract_water       ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
-      &                                t_soil        (:,1), &      
+      &                                t_soil        (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, trans             ), &
@@ -1005,7 +1005,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_soil_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1116,7 +1116,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_canopy_cond_unstressed(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1282,7 +1282,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_canopy_cond_stressed(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1483,7 +1483,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_evaporation(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1560,7 +1560,7 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_snow_and_ice_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1661,7 +1661,7 @@ CONTAINS
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(HYDRO_)
-    
+
     w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
 
     dsl4jsb_Get_memory(HYDRO_)
@@ -1746,7 +1746,7 @@ CONTAINS
       fract_snow(:) = fract_snow_soil(:)
    END IF
 
-    
+
     IF (tile%is_bare) THEN
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in

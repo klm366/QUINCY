@@ -100,7 +100,7 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
-        IF (model%config%use_glacier) THEN  
+        IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
@@ -179,7 +179,7 @@ CONTAINS
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
-        IF (model%config%use_glacier) THEN  
+        IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
@@ -193,11 +193,11 @@ CONTAINS
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
 
-          ! R: TBD: DISTURB_ ist kein Task von CARBON_, 
+          ! R: TBD: DISTURB_ ist kein Task von CARBON_,
           !         da es die cover fractions der pfts verändert und nur als Nebeneffekt auch die C-Pools
-          !         verändert. Er würde im Prinzip auch ablaufen ohne den Prozess CARBON_ und würde auch 
+          !         verändert. Er würde im Prinzip auch ablaufen ohne den Prozess CARBON_ und würde auch
           !         auf alle anderen Stoffpools wirken. Außerdem soll CARBON_ später wie NITROGEN_
-          !         oder andere Stoffpools gehandelt werden. Diese Prozesse haben bis 
+          !         oder andere Stoffpools gehandelt werden. Diese Prozesse haben bis
           !         auf ihre Fixierung kaum eigene Tasks sondern werden von anderen Prozessen verändert.
           !         => die Stoffpools sollten langfristig evtl. gar keine Prozesse sein
           !

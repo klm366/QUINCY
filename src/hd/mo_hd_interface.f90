@@ -522,7 +522,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: &
       & overlflow_res ,        &
       & baseflow_res  ,        &
-      & riverflow_res 
+      & riverflow_res
 
     LOGICAL,  POINTER ::    &
       & is_in_domain (:,:)      ! T: cell in domain (not halo)
