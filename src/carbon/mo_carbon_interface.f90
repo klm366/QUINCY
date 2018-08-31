@@ -7,8 +7,8 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-05)
 !! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age cohorts
-!!      ++ routines to check carbon conservation 
-!!      ++ task to apply c consequences of area changes among forest age cohorts 
+!!      ++ subroutines for cpool sums and c conservation test
+!!      ++ task to apply c consequences of area changes among forest age cohorts
 !!
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
@@ -52,14 +52,14 @@ MODULE mo_carbon_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC ::  Register_carbon_tasks ,                                                       &
-               & recalc_per_tile_vars,                                                     &
-               & calculate_current_c_ag_1_and_bg_sums,                                               &
-               & recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift,                &
-               & recalc_delta_carbon_rp_upon_disturbance,                                  &
-               & apply_delta_carbon_to_carbon_states,                                      &
-               & rescale_carbon_upon_reference_area_change, calculate_current_c_ta_state_sum, &
-               & check_carbon_conservation_for_operation
+  PUBLIC ::  Register_carbon_tasks
+  PUBLIC ::  recalc_per_tile_vars,                                                        &
+           & calculate_current_c_ag_1_and_bg_sums,                                        &
+           & recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift,                   &
+           & recalc_delta_carbon_rp_upon_disturbance,                                     &
+           & apply_delta_carbon_to_carbon_states,                                         &
+           & rescale_carbon_upon_reference_area_change, calculate_current_c_ta_state_sum, &
+           & check_carbon_conservation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -256,7 +256,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum          ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_ag_sum_1        ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
-
+    !
     !
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
@@ -290,8 +290,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  excess_NPP             ! That part of NPP that because of structural limits could not be
                                                       ! allocated in carbon pools [mol(CO2)/m^2(canopy) s]
 
-
-
     dsl4jsb_Real2D_onChunk ::  root_exudates          ! Total root exudates entering to the litter green pools
                                                       ! [mol(C)/m^2(canopy) s]
 
@@ -299,10 +297,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  biennial_avg_NPP 
     dsl4jsb_Real2D_onChunk ::  decennial_avg_NPP 
 
-    dsl4jsb_Real2D_onChunk ::  cflux_npp_2_atm_yday_ta  ! day CO2 flux from actual NPP, required for cconservation test
     dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb        !
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_littergreen     !
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_atm  !
+    dsl4jsb_Real2D_onChunk ::  cflux_npp_2_atm_yday_ta  ! day CO2 flux from actual NPP, required for cconservation test
     dsl4jsb_Real2D_onChunk ::  cflux_npp_2_atm_ta       ! grid cell averages of net CO2 fluxes between
     dsl4jsb_Real2D_onChunk ::  cflux_soilresp_2_atm_ta  ! .. biosphere (due to NPP, soil respiration and
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_atm_ta ! .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)] 
@@ -403,6 +401,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1)           ! inout
 
+    !
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  NPP_pot_rate_ca )           ! inout 
@@ -437,7 +436,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb )           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_littergreen  )       ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm )     ! inout
-
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_npp_2_atm_yday_ta )    ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_npp_2_atm_ta )         ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_soilresp_2_atm_ta )    ! out
@@ -550,9 +548,10 @@ CONTAINS
         MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
       END IF
 
+      !Calculate current sum before operation for c conservation test
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
-           ! Now update the C pools
+      ! Now update the C pools
       CALL calc_Cpools( &
         &  LAI_yDayMean,                                      & ! in
         &  LAI_yyDayMean,                                     & ! in
@@ -659,7 +658,6 @@ CONTAINS
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
 
-      ! C pools
       CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
       CALL recalc_per_tile_vars(tile, options,                                      &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
@@ -680,10 +678,10 @@ CONTAINS
 
 
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
-      ! therefore + here instead of -
+      ! therefore + here instead of - to reduce NPP by these fluxes
       current_fluxes = (NPP_act_yDayMean + cflux_herb_2_atm + soil_respiration) &
         & * sec_per_day * veg_fract_correction * fract_fpc_max
-      CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+      CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
 
       IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
@@ -716,10 +714,10 @@ CONTAINS
                (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                     * cflux_herb_2_atm )                          ! .. herbivory
 
-   cflux_npp_2_atm_yday_ta = molarMassCO2_kg *                & ! C conservarion test in jsb standalone driver 
-              (- veg_fract_correction * fract_fpc_max          & ! cannot deal with diurnal cycle of NPP, 
-                   * (NPP_act_yDayMean))                        ! therefore here additionaly the day mean
-                    
+   cflux_npp_2_atm_yday_ta = molarMassCO2_kg *                  & ! daily C conservarion  
+              (- veg_fract_correction * fract_fpc_max           & ! cannot deal with diurnal cycle of NPP, 
+                   * (NPP_act_yDayMean))                          ! therefore here additionaly the day mean
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
 
@@ -760,13 +758,11 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    
-    !@todo Those commented out are currently not used by other processes, 
-    !     some of them are even not used at all 
-    !     + they are not part of the recalc_per_tile_vars
-    !       i.e. anyways not updated! 
-    ! ++ I do not need them....
 
+    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean,          weighted_by_fract)
+
+    !@todo Those commented out are currently not calculated
+    ! same for ta variables
     ! non-yasso-pools
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,            weighted_by_fract)
@@ -798,17 +794,18 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,          weighted_by_fract)
     ! sums
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,           weighted_by_fract)
+! dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,      weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
+
     ! fluxes
     ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP_ta,            weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean_ta,         weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean_ta,         weighted_by_fract)
+!    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean_ta,          weighted_by_fract)
@@ -948,7 +945,6 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_apply_age_cohort_changes
-
 
 
 !##########################################################################################################################
@@ -1847,15 +1843,15 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE recalc_per_tile_vars(tile, options, &
-      & c_green , c_woods, c_reserve, c_crop_harvest, &
+  SUBROUTINE recalc_per_tile_vars(tile, options,                  &
+      & c_green , c_woods, c_reserve, c_crop_harvest,             &
       & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1, &
       & c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1, &
       & c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, &
       & c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2, &
-      & c_humus_1, c_humus_2, &
-      & soil_respiration, NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean, &
-      & GPP_yDayMean, root_exudates, cflux_c_green_2_herb, cflux_herb_2_atm, &
+      & c_humus_1, c_humus_2,                                     &
+      & soil_respiration, NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,     &
+      & GPP_yDayMean, root_exudates, cflux_c_green_2_herb, cflux_herb_2_atm,           &
       & cflux_dist_greenreserve_2_soil, cflux_dist_woods_2_soil, cflux_fire_all_2_atm)
 !cflux_c_greenwood_2_litter
 
@@ -1900,6 +1896,7 @@ CONTAINS
     REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
 !    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
+
     REAL(wp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_herb_2_atm(:)
@@ -1936,17 +1933,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2_ta
     dsl4jsb_Real2D_onChunk ::  c_humus_2_ta
 
-    dsl4jsb_Real2D_onChunk ::  cflux_dist_greenreserve_2_soil_ta  ! out
-    dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil_ta   ! out
-    dsl4jsb_Real2D_onChunk ::  cflux_fire_all_2_atm_ta  ! out
-    dsl4jsb_Real2D_onChunk ::  soil_respiration_ta      ! out
-    dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta      ! out
-    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta      ! out
-    dsl4jsb_Real2D_onChunk ::  NPP_flux_correction_ta   ! out
-    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean_ta          ! out
-!    dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter_ta           ! out
-    dsl4jsb_Real2D_onChunk ::  root_exudates_ta         ! out
-    dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb_ta       ! out
+    dsl4jsb_Real2D_onChunk ::  cflux_dist_greenreserve_2_soil_ta
+    dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil_ta
+    dsl4jsb_Real2D_onChunk ::  cflux_fire_all_2_atm_ta
+    dsl4jsb_Real2D_onChunk ::  soil_respiration_ta
+    dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta
+    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta
+    dsl4jsb_Real2D_onChunk ::  NPP_flux_correction_ta
+    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean_ta
+!    dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter_ta
+    dsl4jsb_Real2D_onChunk ::  root_exudates_ta
+    dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb_ta
 
     dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
 
@@ -1986,7 +1983,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! opt out 
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil_ta ) ! opt out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta )  ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta )   ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_fire_all_2_atm_ta )      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_ta )          ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean_ta )          ! opt out
@@ -1995,12 +1992,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean_ta )              ! opt out
 !    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_greenwood_2_litter_ta )               ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates_ta )             ! opt out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )           ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )      ! opt out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )         ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
 
     IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
@@ -2063,6 +2060,7 @@ CONTAINS
     IF (PRESENT(GPP_yDayMean)) CALL get_per_tile(GPP_yDayMean_ta(:), &
       & GPP_yDayMean(:), veg_fract_correction(:), fract_fpc_max(:))
 !    cflux_c_greenwood_2_litter_ta               = cflux_c_greenwood_2_litter * veg_fract_correction * fract_fpc_max
+
     IF (PRESENT(root_exudates)) CALL get_per_tile(root_exudates_ta(:), &
       & root_exudates(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
@@ -2473,7 +2471,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    !TODO-JN-COHORTS: could be done in mo_carbon_process
     current_c_state_sum = c_green_ta + c_woods_ta + c_reserve_ta + c_crop_harvest_ta + &
         & c_acid_ag1_ta + c_water_ag1_ta + c_ethanol_ag1_ta + c_nonsoluble_ag1_ta + &
         & c_acid_ag2_ta + c_water_ag2_ta + c_ethanol_ag2_ta + c_nonsoluble_ag2_ta + &
@@ -2533,8 +2530,8 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )               ! out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1 )               ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )             ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1 )           ! out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! in
@@ -2547,11 +2544,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)             ! in
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
     c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + &
@@ -2572,8 +2569,8 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  ! 
-  SUBROUTINE check_carbon_conservation_for_operation(tile, options, old_c_state_sum, cflux, Cconserve)
+  !
+  SUBROUTINE check_carbon_conservation(tile, options, old_c_state_sum, cflux, Cconserve)
 
     USE mo_util,                ONLY: real2string
 
@@ -2587,14 +2584,15 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation_for_operation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation'
     INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-    !TODO-JN-COHORTS: could be done in mo_carbon_process
+
     Cconserve = Cconserve - old_c_state_sum - cflux
 
-  END SUBROUTINE check_carbon_conservation_for_operation
+  END SUBROUTINE check_carbon_conservation
+
 
 #endif
 END MODULE mo_carbon_interface

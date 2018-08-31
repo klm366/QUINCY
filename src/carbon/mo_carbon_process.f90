@@ -137,7 +137,6 @@ CONTAINS
     REAL(wp), INTENT(in)    :: Max_C_content_woods    ! Maximum carbon content of wood pool (from lctLib)
     REAL(wp), INTENT(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     REAL(wp), INTENT(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
-
     !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
     INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
     INTEGER,  INTENT(in)    :: time_steps_per_day
@@ -979,7 +978,7 @@ CONTAINS
     real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(inout)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage 
+    real(wp),intent(inout)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage
                                                                   ! (and later also by fire)
     real(wp),intent(inout)   :: cflux_dist_woods_2_soil(:)        ! Amount of carbon relocated by wind damage
                                                                   ! (and later also by fire)
@@ -1019,7 +1018,7 @@ CONTAINS
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
 
-    cflux_dist_woods_2_soil(:)  = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:)
+    cflux_dist_woods_2_soil(:) = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:)
     cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + (c_green(:) + c_reserve(:)) * damaged_fract(:)
 
     ! Add aboveground damaged green and reserve

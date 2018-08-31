@@ -87,8 +87,11 @@ CONTAINS
                     post_suf=post_suf, rest_suf=rest_suf, init_suf=init_suf, &
                     lpost=loutput, lpout=loutput, lrerun=lrestart            &
                    )
-    !TODO-JN: hardcoded FALSE for now due to problems with output size when using forest age cohorts
-    ! - i.e. required vars need to be set to true! (+ see namelist selector in jsb3 sitelevel)
+
+    !@todo: hardcoded FALSE for now to reduce output size when running with ECHAM
+    !       until the "in_groups" behavior is also implemented for ECHAM!
+    ! - now: for required vars loutput needs to be set to true! (+ see namelist selector in jsb3 sitelevel)
+    !@todo: implement the "in_groups" behavior for ECHAM!
     CALL default_stream_setting(this_list, table=table_loc, lpost=.FALSE., lrerun=lrestart)
 #endif
 
@@ -170,7 +173,7 @@ CONTAINS
         code=code, table=table, &
         lpost=loutput, lrerun=lrestart, contnorest=lrestart_cont, &
         lmiss=lmiss, missval=missval_r, p4=p4, verbose=verbose &
-        ) 
+        )
     ELSE
       CALL add_stream_element(this_list, TRIM(name), ptr, &
         ldims=ldims, gdims=gdims, leveltype=levelindx, &

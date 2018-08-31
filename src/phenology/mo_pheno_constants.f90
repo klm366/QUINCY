@@ -8,6 +8,7 @@
 !! First version by Rainer Schneck (2015-09-09)
 !! Julia Nabel (2018-01-10): added params for optional functionality: forest regrowth (l_forestRegrowth)
 !!                           (derive maxLAI from biomass via allometric relationships)
+!!
 MODULE mo_pheno_constants
 #ifndef __NO_JSBACH__
 
@@ -163,8 +164,8 @@ MODULE mo_pheno_constants
      TYPE(t_grass_param)          :: GRS                  ! Parameters applying to the grass (GRS) phenology type only 
      TYPE(t_crop_param)           :: CRP                  ! Parameters applying to the crop (CRP) phenology type only
      TYPE(t_forestRegrowth_param) :: FR                   ! Parameters only required in case of l_forestRegrowth = true
-!     TYPE(rdata_type), POINTER   :: memory(:)  => NULL() ! pointer to serial array containing the parameter values physically
-!     logical                     :: initialized =.FALSE. ! .true. indicates that phenology parameters have been initialized.
+!     TYPE(rdata_type), POINTER     :: memory(:)  => NULL() ! pointer to serial array containing the parameter values physically
+!     logical                       :: initialized =.FALSE. ! .true. indicates that phenology parameters have been initialized.
   END TYPE t_PhenologyParameters
   PUBLIC :: t_PhenologyParameters
 

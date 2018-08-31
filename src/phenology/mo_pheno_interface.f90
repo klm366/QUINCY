@@ -30,7 +30,7 @@ MODULE mo_pheno_interface
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
   dsl4jsb_Use_processes SEB_, A2L_, RAD_, HYDRO_, ASSIMI_, PHENO_, CARBON_ 
-      ! JN 10.01.18 CARBON_: only required with l_forestRegrowth = true 
+      ! JN 10.01.18 CARBON_: only required with l_forestRegrowth = true
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(SEB_)
@@ -46,7 +46,6 @@ MODULE mo_pheno_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
-
   dsl4jsb_Use_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true 
   
   ! -------------------------------------------------------------------------------------------------------
@@ -186,7 +185,7 @@ CONTAINS
 
     ! Declarations
     USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, &
-                                       calculate_current_c_ta_state_sum, check_carbon_conservation_for_operation
+                                       & calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
                                        track_max_green_pool, derive_maxlai_according_to_allometric_relationships
@@ -435,18 +434,18 @@ CONTAINS
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
         dummy_flux = 0._wp
-        CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+        CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
           & dummy_flux(:), cconservation_allom(:))
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday()) THEN
-        CALL track_max_green_pool(&
+        CALL track_max_green_pool(            &
           & c_green(:),                       & ! <- in
           & c_reserve(:),                     & ! <- in
           & c_woods(:),                       & ! <- in
-          & current_max_green(:),                 & ! <- InOut
-          & veg_carbon_at_max_green(:)            & ! <- InOut
+          & current_max_green(:),             & ! <- InOut
+          & veg_carbon_at_max_green(:)        & ! <- InOut
           & )
       ENDIF
     ENDIF

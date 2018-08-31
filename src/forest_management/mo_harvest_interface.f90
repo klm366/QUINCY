@@ -109,8 +109,8 @@ CONTAINS
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
     USE mo_carbon_process,        ONLY: relocate_carbon_damage
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, &
-      & calculate_current_c_ta_state_sum, check_carbon_conservation_for_operation
-
+      & calculate_current_c_ta_state_sum, check_carbon_conservation
+      
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -297,7 +297,7 @@ CONTAINS
 
           ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
           dummy1 = 0._wp
-          CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+          CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
             & dummy1(:), cconservation_harvest(:))
 
         ENDIF

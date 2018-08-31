@@ -279,14 +279,19 @@ CONTAINS
 
     !------------------------ tasks that do not change area
 
+    !NOTE: JN changed the order of the processes
+    !- processes potentially changing the area of a tile are conducted first in the timestep.
+    !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
+
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
     CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
                                                           ! before C_NPP_pot_allocation
-                                                          ! and with area changes it should happen before assimi 
+                                                          ! and with area changes it should happen before assimi
                       ! --- before it was between humidity_scaling and foliage_projected_cover
                       ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
     CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(HYDRO_,  "soil_properties")
     CALL model%Queue_task(SEB_,    "surface_energy")

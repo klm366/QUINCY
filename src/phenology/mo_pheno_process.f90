@@ -21,7 +21,7 @@ MODULE mo_pheno_process
    PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, calc_previous_day_NPP, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
              get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool
-             
+
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
  CONTAINS   
@@ -883,6 +883,10 @@ MODULE mo_pheno_process
   END SUBROUTINE calc_grass_phenology
 
 
+  ! --- derive_maxLai_according_to_allometric_relationships() ---------------------------------------------------------------------------------------------------
+  !
+  ! calculate the maximum LAI for current vegetation biomass and given pft dependant parameters 
+  !
   ELEMENTAL SUBROUTINE derive_maxLai_according_to_allometric_relationships( & 
                                           & lctlib_alpha_nr_ind,            & ! <- in
                                           & lctlib_beta_nr_ind,             & ! <- in
@@ -965,7 +969,10 @@ MODULE mo_pheno_process
 
   END SUBROUTINE derive_maxLai_according_to_allometric_relationships
 
-
+  ! --- track_max_green_pool() ---------------------------------------------------------------------------------------------------
+  !
+  ! track the maximum of the green pool and the according total vegetation carbon 
+  !
   ELEMENTAL SUBROUTINE track_max_green_pool( & 
                                           & c_green,                    & ! <- in
                                           & c_woods,                    & ! <- in
@@ -986,6 +993,7 @@ MODULE mo_pheno_process
      RETURN
 
   END SUBROUTINE track_max_green_pool
+
 
 
   ! --- get_letItDie() ----------------------------------------------------------------------------------------------------------------

@@ -6,6 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2017-05-04)
+!! Julia Nabel (2018):
+!!      ++ c conservation test
 !!
 MODULE mo_disturb_interface
 #ifndef __NO_JSBACH__
@@ -122,7 +124,7 @@ CONTAINS
     USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, &
-      & calculate_current_c_ta_state_sum, check_carbon_conservation_for_operation
+                                      & calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
@@ -268,6 +270,9 @@ CONTAINS
     END IF 
 
     !
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)     ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
+    !
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_reserve)                ! inout
@@ -299,8 +304,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max )          ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)         ! in
 
-    ! for the conservation test 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm_ta)
+    !ta variable required for the carbon conservation test
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm_ta) ! out
 
     ! ---------------------------
     ! Go
@@ -411,9 +416,10 @@ CONTAINS
           SELECT CASE (dsl4jsb_Config(DISTURB_)%windbreak_algorithm)
             CASE (0) !! No windbreak algorithm
             CASE (1) !! jsbach algorithm
-            
+
+              !Calculate current sum before operation for c conservation test
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
-            
+  
               CALL relocate_carbon_damage(                 &
                 & damaged_fract(:),                        & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
@@ -460,9 +466,9 @@ CONTAINS
 
                 ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp 
                 dummy_flux = 0._wp
-                CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+                CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
                   & dummy_flux(:), cconservation_wind(:))
-                
+  
             CASE DEFAULT
               CALL finish('disturbed_fract','Unknown windbreak algorithm')
           END SELECT
@@ -471,38 +477,39 @@ CONTAINS
           SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
             CASE (0) !! No fire algorithm
             CASE (1) !! jsbach algorithm
-            
+
+              !Calculate current sum before operation for c conservation test
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
-            
-              CALL relocate_carbon_fire( &
-                & burned_fract(:),                & ! in, only for windbreak
+  
+              CALL relocate_carbon_fire(                    &
+                & burned_fract(:),                          & ! in, only for windbreak
                 & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
-                & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in
-                & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)), & ! in
-                & c_green(:),                              & ! inout
-                & c_woods(:),                              & ! inout
-                & c_reserve(:),                            & ! inout
-                & cflux_dist_greenreserve_2_soil(:),       & ! inout
-                & cflux_dist_woods_2_soil(:),              & ! inout
-                & c_acid_ag1(:),                           & ! inout
-                & c_water_ag1(:),                          & ! inout
-                & c_ethanol_ag1(:),                        & ! inout
-                & c_nonsoluble_ag1(:),                     & ! inout
-                & c_acid_ag2(:),                           & ! inout
-                & c_water_ag2(:),                          & ! inout
-                & c_ethanol_ag2(:),                        & ! inout
-                & c_nonsoluble_ag2(:),                     & ! inout
-                & c_acid_bg1(:),                           & ! inout
-                & c_water_bg1(:),                          & ! inout
-                & c_ethanol_bg1(:),                        & ! inout
-                & c_nonsoluble_bg1(:),                     & ! inout
-                & c_acid_bg2(:),                           & ! inout
-                & c_water_bg2(:),                          & ! inout
-                & c_ethanol_bg2(:),                        & ! inout
-                & c_nonsoluble_bg2(:),                     & ! inout
-                & c_humus_1(:),                            & ! inout
-                & c_humus_2(:),                            & ! inout
-                & cflux_fire_all_2_atm                     & ! out
+                & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)),  & ! in
+                & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)),  & ! in
+                & c_green(:),                               & ! inout
+                & c_woods(:),                               & ! inout
+                & c_reserve(:),                             & ! inout
+                & cflux_dist_greenreserve_2_soil(:),        & ! inout
+                & cflux_dist_woods_2_soil(:),               & ! inout
+                & c_acid_ag1(:),                            & ! inout
+                & c_water_ag1(:),                           & ! inout
+                & c_ethanol_ag1(:),                         & ! inout
+                & c_nonsoluble_ag1(:),                      & ! inout
+                & c_acid_ag2(:),                            & ! inout
+                & c_water_ag2(:),                           & ! inout
+                & c_ethanol_ag2(:),                         & ! inout
+                & c_nonsoluble_ag2(:),                      & ! inout
+                & c_acid_bg1(:),                            & ! inout
+                & c_water_bg1(:),                           & ! inout
+                & c_ethanol_bg1(:),                         & ! inout
+                & c_nonsoluble_bg1(:),                      & ! inout
+                & c_acid_bg2(:),                            & ! inout
+                & c_water_bg2(:),                           & ! inout
+                & c_ethanol_bg2(:),                         & ! inout
+                & c_nonsoluble_bg2(:),                      & ! inout
+                & c_humus_1(:),                             & ! inout
+                & c_humus_2(:),                             & ! inout
+                & cflux_fire_all_2_atm                      & ! out
                 & )
 
               CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
@@ -521,8 +528,9 @@ CONTAINS
                 & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),                     &
                 & cflux_fire_all_2_atm = cflux_fire_all_2_atm(:))
 
-              ! negate carbon_2_atmos_ta -- its a flux away from the land and therefore previously negative
-              CALL check_carbon_conservation_for_operation(tile, options, old_c_state_sum(:), &
+            !@todo: shouldn't cflux_fire_all_2_atm be negative since its a flux away from land?
+            !For conservation test: negate currently positve cflux_fire_all_2_atm (flux away from land!)
+              CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
                 & -cflux_fire_all_2_atm_ta(:), cconservation_fire(:))
 
             CASE (2) !! Arora & Boer algorithm

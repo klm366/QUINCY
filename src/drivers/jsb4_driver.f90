@@ -22,7 +22,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
 
-  USE mo_carbon_interface,   ONLY: check_carbon_conservation_for_operation, calculate_current_c_ta_state_sum
+  USE mo_carbon_interface,   ONLY: check_carbon_conservation, calculate_current_c_ta_state_sum
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_, CARBON_, FM_
@@ -328,9 +328,10 @@ PROGRAM jsb4_driver
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
-    
+
     DO iblk = 1, nblks
       CALL model%Set_options(iblk=iblk)
+
       t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
       fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
       fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
@@ -361,7 +362,7 @@ PROGRAM jsb4_driver
 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN
-      CALL write_date(current_date,'Calculate for: ')
+      CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
 
     IF (l_trigfiles) THEN
@@ -450,7 +451,7 @@ PROGRAM jsb4_driver
           CO2_flux_yday(:,iblk) = dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta) &
             & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta) &
             & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)
-          CALL check_carbon_conservation_for_operation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
+          CALL check_carbon_conservation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
             & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
           IF(.NOT. jsbach_is_restarted()) THEN
             !TODO-JN: where to put this cconservation test? 
@@ -485,6 +486,7 @@ PROGRAM jsb4_driver
           ENDIF
         ENDIF
       ENDIF
+
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN

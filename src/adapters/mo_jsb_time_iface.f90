@@ -255,17 +255,15 @@ CONTAINS
     CALL TC_get(start_date, start_day, start_second)
     CALL TC_get(stop_date, stop_day, stop_second)
 
-!JN: adapted isteps calculation (before I got an integer overflow for large difference between start and end date (>70y))
     idt = INT(get_time_dt())
     isteps =                                   &
-      &  (( IDAYLEN/idt * (stop_day - start_day - 1)) & ! Number of seconds in full days
-      &   + (stop_second                              & ! Number of seconds in last day
-      &       + (IDAYLEN - start_second - 1)          & ! Number of seconds in first day
-      &     ) / idt)
-
+      & (( IDAYLEN/idt * (stop_day - start_day - 1))   & ! Number of seconds in full days
+      &    + (stop_second                              & ! Number of seconds in last day
+      &       + (IDAYLEN - start_second - 1)           & ! Number of seconds in first day
+      &      ) / idt)
 #endif
 
-!@todo: error message is misleading! should be: error in istep calculation or comparable!? 
+!@todo: error message is misleading! should be: error in istep calculation or comparable!?
     IF (isteps <= 0) &
       CALL finish(routine, 'number of time steps not configured yet.')
 
