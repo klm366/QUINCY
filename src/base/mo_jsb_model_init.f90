@@ -286,6 +286,7 @@ CONTAINS
                                                           ! and with area changes it should happen before assimi 
                       ! --- before it was between humidity_scaling and foliage_projected_cover
                       ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
+    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(HYDRO_,  "soil_properties")
     CALL model%Queue_task(SEB_,    "surface_energy")
@@ -329,8 +330,6 @@ CONTAINS
     END IF
 
     CALL model%Queue_task(TURB_,   "humidity_scaling")
-
-    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
     CALL model%Queue_task(TURB_,   "surface_roughness")
     ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
     CALL model%Queue_task(RAD_,    "albedo")
