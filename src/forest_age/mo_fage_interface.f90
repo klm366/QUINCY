@@ -155,7 +155,7 @@ CONTAINS
   ! 
   SUBROUTINE update_calculate_ageing(tile, options)
 
-    USE mo_fage_process,         ONLY: update_fract_per_age_upon_ageing, correct_and_synchronise_fracts, &
+    USE mo_fage_process,         ONLY: recalc_fract_per_age_upon_ageing, correct_and_synchronise_fracts, &
       & weighted_avg_var_upon_area_change
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_of_source_and_sink_upon_area_shift, &
@@ -323,7 +323,7 @@ CONTAINS
       ENDDO
 
       ! update the area per age tracking vector - for ageing this can be done for all children at once
-      CALL update_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
+      CALL recalc_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
     ELSE
       tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
@@ -390,7 +390,7 @@ CONTAINS
 
     USE mo_jsb_time,             ONLY: is_newday
     USE mo_fage_util,            ONLY: get_mean_age
-    USE mo_fage_process,         ONLY: update_fract_per_age_equally_upon_disturbance
+    USE mo_fage_process,         ONLY: recalc_fract_per_age_equally_upon_disturbance
     USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: WIND, FIRE
 
@@ -516,7 +516,7 @@ CONTAINS
           disturbed_area(:,i) = damagedArea(:) + burnedArea(:)
           IF(ANY(disturbed_area(:,i) .GT. 0._wp)) THEN
             IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
-              CALL update_fract_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
+              CALL recalc_fract_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
                 & i, disturbed_area(:,i), cohort_max_age(:,:), fract_per_age(:,:))
             ELSE
               CALL finish(TRIM(routine), 'Currently only "static" implemented as forest ageing scheme')
@@ -594,7 +594,7 @@ CONTAINS
 
     USE mo_jsb_time,             ONLY: is_newyear
     USE mo_fage_util,            ONLY: get_mean_age
-    USE mo_fage_process,         ONLY: update_fract_per_age_and_determine_area_to_harvest_from_cohort
+    USE mo_fage_process,         ONLY: recalc_fract_per_age_and_determine_area_to_harvest_from_cohort
     USE mo_carbon_interface,     ONLY: recalc_delta_carbon_rp_upon_disturbance
     USE mo_carbon_constants,     ONLY: CLEARCUT
     USE mo_harvest_constants,    ONLY: HARVEST_OLDEST_TREES
@@ -701,7 +701,7 @@ CONTAINS
 
             ! Determine area to be harvested from this age cohort
             harvestFromThisAgeCohort = 0._wp
-            CALL update_fract_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
+            CALL recalc_fract_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
               & max_age, cohort_max_age(:,i), cohort_max_age(:,i-1), fract_per_age(:,:), &
               & harvestFromThisAgeCohort(:), stillToHarvest(:))
              

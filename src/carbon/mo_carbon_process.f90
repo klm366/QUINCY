@@ -20,7 +20,7 @@ MODULE mo_carbon_process
   PRIVATE
 
   PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, &
-    & update_delta_carbon_rp, update_state_reset_delta, get_per_tile
+    & recalc_delta_carbon_rp, recalc_state_and_reset_delta, get_per_tile
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -1521,12 +1521,12 @@ CONTAINS
   END SUBROUTINE yasso
 
 
-  ! --- update_delta_carbon_rp() ---------------------------------------------------------------------------------------------------
+  ! --- recalc_delta_carbon_rp() ---------------------------------------------------------------------------------------------------
   !
   ! updates delta carbon on area shift for a single pool
   ! - delta carbon is an absolute quantity 'to be moved' from source to sink
   !
-  ELEMENTAL SUBROUTINE update_delta_carbon_rp( &
+  ELEMENTAL SUBROUTINE recalc_delta_carbon_rp( &
     & org_Cpool,                  & ! in
     & delta_Cpool_source,         & ! inout
     & delta_Cpool_sink,           & ! inout
@@ -1543,14 +1543,14 @@ CONTAINS
         delta_Cpool_sink = delta_Cpool_sink + (org_Cpool * delta_fract * veg_fract_correction)
 !    ENDIF
 
-  END SUBROUTINE update_delta_carbon_rp
+  END SUBROUTINE recalc_delta_carbon_rp
 
 
-  ! --- update_state_reset_delta() ---------------------------------------------------------------------------------------------------
+  ! --- recalc_state_and_reset_delta() ---------------------------------------------------------------------------------------------------
   !
   ! add delta carbon to carbon state and reset to zero 
   !
-  ELEMENTAL SUBROUTINE update_state_reset_delta( &
+  ELEMENTAL SUBROUTINE recalc_state_and_reset_delta( &
     & org_Cpool,                   & ! inout
     & delta_Cpool,                 & ! inout
     & delta_fract,                 & ! in
@@ -1582,7 +1582,7 @@ CONTAINS
     ! TODO-JN, or should the densities not be altered and empty tiles can have non zero densities???
     ! -- what if with 1e-10 as smallest possible fraction?
 
-  END SUBROUTINE update_state_reset_delta
+  END SUBROUTINE recalc_state_and_reset_delta
 
 
   ! --- get_per_tile() ---------------------------------------------------------------------------------------------------
