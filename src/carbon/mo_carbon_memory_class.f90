@@ -145,7 +145,7 @@ MODULE mo_carbon_memory_class
   !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
       current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)]
                                     ! since last maxLAI calculation
-      veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)]
+      veg_carbon_at_max_green,    & ! Total vegetation carbon [mol(C) m-2(canopy)]
                                     ! at the time of the green pool maximum (current_max_green)
                                     
                                     !TODO-JN-COHORTS maybe I want them as ta variables also for easier plotting/comparison

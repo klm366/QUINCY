@@ -58,7 +58,6 @@ MODULE mo_jsb_process_factory
   USE mo_disturb_interface,     ONLY: Register_disturb_tasks
   USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
-<<<<<<< HEAD
   USE mo_fuel_config_class,     ONLY: t_fuel_config
   USE mo_fage_interface,        ONLY: Register_fage_tasks
   USE mo_fage_config_class,     ONLY: t_fage_config
