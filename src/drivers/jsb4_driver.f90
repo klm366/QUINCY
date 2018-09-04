@@ -11,7 +11,7 @@
 PROGRAM jsb4_driver
 #ifndef __ICON__
 
-  USE mo_jsb_interface,      ONLY: jsbach_interface
+  USE mo_jsb_interface,      ONLY: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
@@ -341,9 +341,8 @@ PROGRAM jsb4_driver
       evapo_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
-
-    CALL jsbach_init_after_restart(model_id)
   ENDIF
+  CALL jsbach_init_after_restart(model_id)
 
   !TODO-JN: Temporäre Lösung bis Stiigs module verfügbar ist!
   IF(tile%Is_process_active(FM_)) THEN
@@ -364,6 +363,8 @@ PROGRAM jsb4_driver
     IF(is_newday()) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
+
+    CALL jsbach_start_timestep(model_id)
 
     IF (l_trigfiles) THEN
       CALL close_output_streams
@@ -529,6 +530,8 @@ PROGRAM jsb4_driver
 !      evapo_act_sum_proc = 0._wp
 !      evapo_pot_sum_proc = 0._wp
 !    ENDIF
+
+    CALL jsbach_finish_timestep(model_id, time_step_len)
 
     CALL out_streams
 
