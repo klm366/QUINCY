@@ -335,15 +335,13 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id)
 
-    USE mo_jsb_time,          ONLY: is_time_experiment_start
+    USE mo_jsb_time,          ONLY: is_time_experiment_start, is_newday
     USE mo_jsb_time_iface,    ONLY: is_time_restart
     USE mo_util,              ONLY: one_of
+    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
     USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
 
     dsl4jsb_Use_processes CARBON_
-    dsl4jsb_Use_config(CARBON_)
-
-    dsl4jsb_Def_config(CARBON_)
 
     INTEGER,  INTENT(in) :: model_id
 
@@ -363,10 +361,16 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    dsl4jsb_Get_config(CARBON_)
-
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
+
+    ! Carbon conservation test    
+    tile => model%Get_top_tile()
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      IF(is_newday()) THEN
+        CALL yday_carbon_conservation_test(tile, model%options(no_omp_thread))
+      END IF
+    END IF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

@@ -30,7 +30,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, DISTURB_, FAGE_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, DISTURB_, FAGE_, L2A_
 
   ! Use of process configurations (t_carbon_config)
   dsl4jsb_Use_config(ASSIMI_)
@@ -46,6 +46,7 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(L2A_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -59,7 +60,7 @@ MODULE mo_carbon_interface
            & recalc_delta_carbon_rp_upon_disturbance,                                     &
            & apply_delta_carbon_to_carbon_states,                                         &
            & rescale_carbon_upon_reference_area_change, calculate_current_c_ta_state_sum, &
-           & check_carbon_conservation
+           & check_carbon_conservation, yday_carbon_conservation_test
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -700,6 +701,7 @@ CONTAINS
     !-------------------------------------------------------------------
     ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
+!@todo: they should be called co2_flux_npp_2_atm_ta, co2_flux_soilresp_2_atm_ta, ... since its CO2 not C
     cflux_npp_2_atm_ta = molarMassCO2_kg *                      & ! Conversion factor from mol to kg CO2
                (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                     * (NPP_pot_rate_ca                          & ! current (not actual) NPP rate
@@ -714,7 +716,7 @@ CONTAINS
                (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                     * cflux_herb_2_atm )                          ! .. herbivory
 
-   cflux_npp_2_atm_yday_ta = molarMassCO2_kg *                  & ! daily C conservarion
+    cflux_npp_2_atm_yday_ta = molarMassCO2_kg *                 & ! daily C conservarion
               (- veg_fract_correction * fract_fpc_max           & ! cannot deal with diurnal cycle of NPP,
                    * (NPP_act_yDayMean))                          ! therefore here additionaly the day mean
 
@@ -2563,7 +2565,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief conducts a carbon conservation test on current states and given old sum + fluxes
+  !! @brief conducts a carbon conservation test on this tiles current states and given old sum + fluxes
   !!        -> on ta! (per canopy vars are not aggregated!)
   !!
   !! @todo discuss how to make more general, e.g. get the info which are the c state variables from somewhere else?
@@ -2593,6 +2595,73 @@ CONTAINS
     Cconserve = Cconserve - old_c_state_sum - cflux
 
   END SUBROUTINE check_carbon_conservation
+
+
+  ! ================================================================================================================================
+  !>
+  !! @brief conducts a box carbon conservation test for the last day, called each new day -- (jsbach_start_timestep)
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !
+  SUBROUTINE yday_carbon_conservation_test(tile, options)
+
+    USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
+    USE mo_jsb_grid,           ONLY: Get_grid
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)         :: options
+
+    dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(L2A_)
+    dsl4jsb_Real2D_onChunk ::  carbon_conservation_test, yday_c_state_sum
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), DIMENSION(options%nc) :: C_flux_yday
+    INTEGER                :: ics, ice, iblk
+
+    dsl4jsb_Get_memory(L2A_)
+    dsl4jsb_Get_memory(CARBON_)
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+!    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    DO iblk = 1, grid%nblks
+      CALL model%Set_options(iblk=iblk)
+      dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
+      dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
+
+      ! Do not test as long as carbon_conservation_test still carries the initialisation value
+      IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
+      
+        !CO2 flux due to npp and respiration
+        C_flux_yday(:) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
+          & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)                   &
+          & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)) / molarMassCO2_kg) * sec_per_day
+
+        IF (model%processes(DISTURB_)%p%config%active) THEN
+          C_flux_yday(:) =  C_flux_yday(:) &
+            & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
+        ENDIF
+
+        CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
+        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
+
+      ELSE
+        carbon_conservation_test = 0._wp
+      ENDIF
+      CALL calculate_current_c_ta_state_sum(tile, options, yday_c_state_sum)
+    END DO
+
+  END SUBROUTINE yday_carbon_conservation_test
+
 
 
 #endif

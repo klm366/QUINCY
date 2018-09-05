@@ -235,7 +235,7 @@ MODULE mo_carbon_memory_class
       cflux_herb_2_atm_ta,      & !  .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
                                        ! .. (positive for emission to atmosphere,
                                        ! ..  negative for absorption by biosphere)
-      cflux_npp_2_atm_yday_ta          ! day CO2 flux from actual NPP, required for C conservation test
+      cflux_npp_2_atm_yday_ta          ! previous day CO2 flux from actual NPP, required for C conservation test
 
     ! Changes in state variables resulting due to area changes of the currently operating process 
     ! TODO-JN-COHORTS needs to be adapted for absolute fractions: currently in [mol(C)/m^2(parent)]
@@ -1187,12 +1187,13 @@ CONTAINS
         & output_level=MEDIUM,                                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
+!@todo: above it is stated "Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]" i.e. not in s-1!
       CALL jsb_add_var( mem, 'c2atmos_ta', mem%cflux_fire_all_2_atm_ta,                                    &
         & hgrid, surface,                                                                                   &
-        & t_cf('cflux_fire_all_2_atm_ta', 'mol(C) m-2 s-1', 'Total carbon flux from C pool green to herbivory.'), &
+        & t_cf('cflux_fire_all_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from C pools to atmosphere due to fire.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
         & prefix, suffix,                                                                                   &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
 !       CALL jsb_add_var( mem, 'cflux_herb_2_littergreen_ta', mem%cflux_herb_2_littergreen_ta,                                   &
@@ -1252,7 +1253,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=BASIC,                                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
         & hgrid, surface,                                                           &

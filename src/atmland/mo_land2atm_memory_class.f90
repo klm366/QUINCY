@@ -20,6 +20,8 @@ MODULE mo_l2a_memory_class
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
 
+  dsl4jsb_Use_processes CARBON_
+
   IMPLICIT NONE
   PRIVATE
 
@@ -43,7 +45,9 @@ MODULE mo_l2a_memory_class
       latent_hflx_wtr    , &
       sensible_hflx_wtr  , &
       latent_hflx_ice    , &
-      sensible_hflx_ice
+      sensible_hflx_ice  , &
+      carbon_conservation_test, &
+      yday_c_state_sum
   CONTAINS
     PROCEDURE :: Init => Init_l2a_memory
   END TYPE t_l2a_memory
@@ -200,6 +204,25 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp )
+
+    END IF
+
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL jsb_add_var( mem, 'carbon_conservation_test', mem%carbon_conservation_test, &
+        & hgrid, surface,                                                              &
+        & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & loutput = .TRUE., lrestart=.TRUE.,                                           &
+        & initval_r=-999.0_wp )
+
+      CALL jsb_add_var( mem, 'yday_c_state_sum', mem%yday_c_state_sum, &
+        & hgrid, surface,                                                                          &
+        & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & loutput = .TRUE., lrestart=.TRUE.,                                          &
         & initval_r=0.0_wp )
 
     END IF
