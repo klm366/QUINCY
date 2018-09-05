@@ -249,7 +249,7 @@ allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0
 allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5
         
 #phi_leaf_min: minimum leaf water potential (MPa)        
-phi_leaf_min -1.5 -1.5 -1.5 -1.5 -1.5 -1.5 -0.75 -0.75
+phi_leaf_min -2.0 -2.0 -2.0 -2.0 -2.0 -2.0 -1.5 -1.5
         
 #k_root: fine root hydraulic conductance (10^10 m3 mol-1 s-1 MPa-1)        
 # converted internally to m3 mol-1 s-1 MPa-1        

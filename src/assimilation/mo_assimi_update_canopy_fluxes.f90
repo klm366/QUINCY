@@ -94,6 +94,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     ! SSE_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -163,6 +164,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)              ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)              ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
@@ -219,11 +221,15 @@ CONTAINS
     beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_theta(:)     , &
                                                 lctlib%lambda_soil_ps    , &
                                                 lctlib%weibull_k_soil_ps)
+    ! beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
+    !                                            lctlib%phi_leaf_min    )
     ! catch beta_soil_ps getting zero
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
     beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_theta(:)     , &
                                                 lctlib%lambda_soil_gs    , &
                                                 lctlib%weibull_k_soil_gs)
+    ! beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
+    !                                            lctlib%phi_leaf_min   )
 
     ga(:) = heat_transfer_coef(drag_srf(:),model%options%steplen) * MAX(wind_10m, min_wind) 
 
@@ -694,7 +700,7 @@ CONTAINS
   !!
   !! @todo (calc_soil_moisture_stress) this should account for rooting and soil moisture profile in the long-term
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(theta,lambda,weibull_k) RESULT(beta)
+   PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(theta,lambda,weibull_k) RESULT(beta)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -714,7 +720,27 @@ CONTAINS
     ELSE
       beta = 1.0_wp - exp(-(lambda*theta)**weibull_k)
     END IF
-  END FUNCTION calc_soil_moisture_stress
+  END FUNCTION calc_soil_moisture_stress  
+
+  !PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(phi,phi_leaf_min) RESULT(beta)
+  !
+  !  IMPLICIT NONE
+  !  ! ---------------------------
+  !  ! 0.1 InOut
+  !  REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
+  !  REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
+  !  REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
+  !  ! ---------------------------
+  !  ! 0.2 Local
+  !  CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'!
+
+
+ !   !> 1.0 Moisture stress as a function of soil water potential and minimum leaf water potential
+ !   !!
+
+!      beta = MAX(0.0_wp, 1._wp - phi / phi_leaf_min)
+
+ ! END FUNCTION calc_soil_moisture_stress
 
 
   !-------------------------------------------------------------------------------------------------------

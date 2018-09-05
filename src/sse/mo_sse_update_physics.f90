@@ -651,6 +651,7 @@ CONTAINS
           hlp1(:) = (w_soil_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) / & 
                     (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
           hlp1(:) = calc_soil_moisture_stress(hlp1(:), lctlib%lambda_soil_gs, lctlib%weibull_k_soil_gs)
+          ! hlp1(:) = calc_soil_moisture_stress(w_soil_pot_sl(:, isoil), lctlib%phi_leaf_min)
           ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
        END WHERE
     ENDDO
