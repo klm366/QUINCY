@@ -163,8 +163,8 @@ CONTAINS
       ka            = 0.005_wp 
       kn            = 0.11_wp
 
-      soa_min_temp  = -5.0_wp
-      soa_max_temp  = 5.0_wp
+      soa_min_temp  = -3.0_wp
+      soa_max_temp  = 17.0_wp
 
   END SUBROUTINE init_assimi_constants
 
