@@ -623,7 +623,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
@@ -707,7 +709,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
@@ -1057,9 +1061,9 @@ CONTAINS
               write(lun,'(20F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
                 hlp1, l2r, s2c, bcf, &
                 target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
-                growth_cn_talloc_mavg(ipoi), npp_talloc_mavg(ipoi), &
+                growth_cn_tcnl_mavg(ipoi), npp_talloc_mavg(ipoi), &
                 growing_season(ipoi), & 
-                cost_n_uptake_root(ipoi), cost_n_fixation_tuptake_mavg(ipoi), &
+                labile_carbon_tcnl_mavg(ipoi), labile_nitrogen_tcnl_mavg(ipoi), &
                 unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, demand_uptake_n_tuptake_mavg(ipoi), beta_sinklim_ps(ipoi)
               lun=lun+1
            END IF  ! write output T/F (l_land_plant_canopy_out)

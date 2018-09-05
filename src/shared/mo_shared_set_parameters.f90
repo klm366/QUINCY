@@ -115,6 +115,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)            :: omega_clumping
     REAL(wp)            :: crown_shape_factor
     REAL(wp)            :: cn_leaf
+    REAL(wp)            :: cn_leaf_min
+    REAL(wp)            :: cn_leaf_max
     REAL(wp)            :: np_leaf
     REAL(wp)            :: k0_fn_struc
     REAL(wp)            :: fn_oth_min
@@ -665,6 +667,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p1
     REAL(wp)            :: crown_shape_factor_p1
     REAL(wp)            :: cn_leaf_p1
+    REAL(wp)            :: cn_leaf_min_p1
+    REAL(wp)            :: cn_leaf_max_p1
     REAL(wp)            :: np_leaf_p1
     REAL(wp)            :: k0_fn_struc_p1
     REAL(wp)            :: fn_oth_min_p1
@@ -720,6 +724,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p2
     REAL(wp)            :: crown_shape_factor_p2
     REAL(wp)            :: cn_leaf_p2
+    REAL(wp)            :: cn_leaf_min_p2
+    REAL(wp)            :: cn_leaf_max_p2
     REAL(wp)            :: np_leaf_p2
     REAL(wp)            :: k0_fn_struc_p2
     REAL(wp)            :: fn_oth_min_p2
@@ -775,6 +781,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p3
     REAL(wp)            :: crown_shape_factor_p3
     REAL(wp)            :: cn_leaf_p3
+    REAL(wp)            :: cn_leaf_min_p3
+    REAL(wp)            :: cn_leaf_max_p3
     REAL(wp)            :: np_leaf_p3
     REAL(wp)            :: k0_fn_struc_p3
     REAL(wp)            :: fn_oth_min_p3
@@ -830,6 +838,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p4
     REAL(wp)            :: crown_shape_factor_p4
     REAL(wp)            :: cn_leaf_p4
+    REAL(wp)            :: cn_leaf_min_p4
+    REAL(wp)            :: cn_leaf_max_p4
     REAL(wp)            :: np_leaf_p4
     REAL(wp)            :: k0_fn_struc_p4
     REAL(wp)            :: fn_oth_min_p4
@@ -885,6 +895,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p5
     REAL(wp)            :: crown_shape_factor_p5
     REAL(wp)            :: cn_leaf_p5
+    REAL(wp)            :: cn_leaf_min_p5
+    REAL(wp)            :: cn_leaf_max_p5
     REAL(wp)            :: np_leaf_p5
     REAL(wp)            :: k0_fn_struc_p5
     REAL(wp)            :: fn_oth_min_p5
@@ -940,6 +952,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p6
     REAL(wp)            :: crown_shape_factor_p6
     REAL(wp)            :: cn_leaf_p6
+    REAL(wp)            :: cn_leaf_min_p6
+    REAL(wp)            :: cn_leaf_max_p6
     REAL(wp)            :: np_leaf_p6
     REAL(wp)            :: k0_fn_struc_p6
     REAL(wp)            :: fn_oth_min_p6
@@ -995,6 +1009,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p7
     REAL(wp)            :: crown_shape_factor_p7
     REAL(wp)            :: cn_leaf_p7
+    REAL(wp)            :: cn_leaf_min_p7
+    REAL(wp)            :: cn_leaf_max_p7
     REAL(wp)            :: np_leaf_p7
     REAL(wp)            :: k0_fn_struc_p7
     REAL(wp)            :: fn_oth_min_p7
@@ -1050,6 +1066,8 @@ CONTAINS
     REAL(wp)            :: omega_clumping_p8
     REAL(wp)            :: crown_shape_factor_p8
     REAL(wp)            :: cn_leaf_p8
+    REAL(wp)            :: cn_leaf_min_p8
+    REAL(wp)            :: cn_leaf_max_p8
     REAL(wp)            :: np_leaf_p8
     REAL(wp)            :: k0_fn_struc_p8
     REAL(wp)            :: fn_oth_min_p8
@@ -1111,6 +1129,8 @@ CONTAINS
           omega_clumping_p1, &
           crown_shape_factor_p1, &
           cn_leaf_p1, &
+          cn_leaf_min_p1, &
+          cn_leaf_max_p1, &
           np_leaf_p1, &
           k0_fn_struc_p1, &
           fn_oth_min_p1, &
@@ -1167,6 +1187,8 @@ CONTAINS
           omega_clumping_p2, &
           crown_shape_factor_p2, &
           cn_leaf_p2, &
+          cn_leaf_min_p2, &
+          cn_leaf_max_p2, &
           np_leaf_p2, &
           k0_fn_struc_p2, &
           fn_oth_min_p2, &
@@ -1223,6 +1245,8 @@ CONTAINS
           omega_clumping_p3, &
           crown_shape_factor_p3, &
           cn_leaf_p3, &
+          cn_leaf_min_p3, &
+          cn_leaf_max_p3, &
           np_leaf_p3, &
           k0_fn_struc_p3, &
           fn_oth_min_p3, &
@@ -1279,6 +1303,8 @@ CONTAINS
           omega_clumping_p4, &
           crown_shape_factor_p4, &
           cn_leaf_p4, &
+          cn_leaf_min_p4, &
+          cn_leaf_max_p4, &
           np_leaf_p4, &
           k0_fn_struc_p4, &
           fn_oth_min_p4, &
@@ -1335,6 +1361,8 @@ CONTAINS
           omega_clumping_p5, &
           crown_shape_factor_p5, &
           cn_leaf_p5, &
+          cn_leaf_min_p5, &
+          cn_leaf_max_p5, &
           np_leaf_p5, &
           k0_fn_struc_p5, &
           fn_oth_min_p5, &
@@ -1391,6 +1419,8 @@ CONTAINS
           omega_clumping_p6, &
           crown_shape_factor_p6, &
           cn_leaf_p6, &
+          cn_leaf_min_p6, &
+          cn_leaf_max_p6, &
           np_leaf_p6, &
           k0_fn_struc_p6, &
           fn_oth_min_p6, &
@@ -1447,6 +1477,8 @@ CONTAINS
           omega_clumping_p7, &
           crown_shape_factor_p7, &
           cn_leaf_p7, &
+          cn_leaf_min_p7, &
+          cn_leaf_max_p7, &
           np_leaf_p7, &
           k0_fn_struc_p7, &
           fn_oth_min_p7, &
@@ -1503,6 +1535,8 @@ CONTAINS
           omega_clumping_p8, &
           crown_shape_factor_p8, &
           cn_leaf_p8, &
+          cn_leaf_min_p8, &
+          cn_leaf_max_p8, &
           np_leaf_p8, &
           k0_fn_struc_p8, &
           fn_oth_min_p8, &
@@ -1568,6 +1602,8 @@ CONTAINS
     omega_clumping_p1      = missval
     crown_shape_factor_p1      = missval
     cn_leaf_p1      = missval
+    cn_leaf_min_p1      = missval
+    cn_leaf_max_p1      = missval
     np_leaf_p1      = missval
     k0_fn_struc_p1      = missval
     fn_oth_min_p1      = missval
@@ -1623,6 +1659,8 @@ CONTAINS
     omega_clumping_p2      = missval
     crown_shape_factor_p2      = missval
     cn_leaf_p2      = missval
+    cn_leaf_min_p2      = missval
+    cn_leaf_max_p2      = missval
     np_leaf_p2      = missval
     k0_fn_struc_p2      = missval
     fn_oth_min_p2      = missval
@@ -1678,6 +1716,8 @@ CONTAINS
     omega_clumping_p3      = missval
     crown_shape_factor_p3      = missval
     cn_leaf_p3      = missval
+    cn_leaf_min_p3      = missval
+    cn_leaf_max_p3      = missval
     np_leaf_p3      = missval
     k0_fn_struc_p3      = missval
     fn_oth_min_p3      = missval
@@ -1733,6 +1773,8 @@ CONTAINS
     omega_clumping_p4      = missval
     crown_shape_factor_p4      = missval
     cn_leaf_p4      = missval
+    cn_leaf_min_p4      = missval
+    cn_leaf_max_p4      = missval
     np_leaf_p4      = missval
     k0_fn_struc_p4      = missval
     fn_oth_min_p4      = missval
@@ -1788,6 +1830,8 @@ CONTAINS
     omega_clumping_p5      = missval
     crown_shape_factor_p5      = missval
     cn_leaf_p5      = missval
+    cn_leaf_min_p5      = missval
+    cn_leaf_max_p5      = missval
     np_leaf_p5      = missval
     k0_fn_struc_p5      = missval
     fn_oth_min_p5      = missval
@@ -1843,6 +1887,8 @@ CONTAINS
     omega_clumping_p6      = missval
     crown_shape_factor_p6      = missval
     cn_leaf_p6      = missval
+    cn_leaf_min_p6      = missval
+    cn_leaf_max_p6      = missval
     np_leaf_p6      = missval
     k0_fn_struc_p6      = missval
     fn_oth_min_p6      = missval
@@ -1898,6 +1944,8 @@ CONTAINS
     omega_clumping_p7      = missval
     crown_shape_factor_p7      = missval
     cn_leaf_p7      = missval
+    cn_leaf_min_p7      = missval
+    cn_leaf_max_p7      = missval
     np_leaf_p7      = missval
     k0_fn_struc_p7      = missval
     fn_oth_min_p7      = missval
@@ -1953,6 +2001,8 @@ CONTAINS
     omega_clumping_p8      = missval
     crown_shape_factor_p8      = missval
     cn_leaf_p8      = missval
+    cn_leaf_min_p8      = missval
+    cn_leaf_max_p8      = missval
     np_leaf_p8      = missval
     k0_fn_struc_p8      = missval
     fn_oth_min_p8      = missval
@@ -2056,6 +2106,8 @@ CONTAINS
     param_pft1_from_file%omega_clumping   = omega_clumping_p1
     param_pft1_from_file%crown_shape_factor   = crown_shape_factor_p1
     param_pft1_from_file%cn_leaf   = cn_leaf_p1
+    param_pft1_from_file%cn_leaf_min   = cn_leaf_min_p1
+    param_pft1_from_file%cn_leaf_max   = cn_leaf_max_p1
     param_pft1_from_file%np_leaf   = np_leaf_p1
     param_pft1_from_file%k0_fn_struc   = k0_fn_struc_p1
     param_pft1_from_file%fn_oth_min   = fn_oth_min_p1
@@ -2111,6 +2163,8 @@ CONTAINS
     param_pft2_from_file%omega_clumping   = omega_clumping_p2
     param_pft2_from_file%crown_shape_factor   = crown_shape_factor_p2
     param_pft2_from_file%cn_leaf   = cn_leaf_p2
+    param_pft2_from_file%cn_leaf_min   = cn_leaf_min_p2
+    param_pft2_from_file%cn_leaf_max   = cn_leaf_max_p2
     param_pft2_from_file%np_leaf   = np_leaf_p2
     param_pft2_from_file%k0_fn_struc   = k0_fn_struc_p2
     param_pft2_from_file%fn_oth_min   = fn_oth_min_p2
@@ -2166,6 +2220,8 @@ CONTAINS
     param_pft3_from_file%omega_clumping   = omega_clumping_p3
     param_pft3_from_file%crown_shape_factor   = crown_shape_factor_p3
     param_pft3_from_file%cn_leaf   = cn_leaf_p3
+    param_pft3_from_file%cn_leaf_min   = cn_leaf_min_p3
+    param_pft3_from_file%cn_leaf_max   = cn_leaf_max_p3
     param_pft3_from_file%np_leaf   = np_leaf_p3
     param_pft3_from_file%k0_fn_struc   = k0_fn_struc_p3
     param_pft3_from_file%fn_oth_min   = fn_oth_min_p3
@@ -2221,6 +2277,8 @@ CONTAINS
     param_pft4_from_file%omega_clumping   = omega_clumping_p4
     param_pft4_from_file%crown_shape_factor   = crown_shape_factor_p4
     param_pft4_from_file%cn_leaf   = cn_leaf_p4
+    param_pft4_from_file%cn_leaf_min   = cn_leaf_min_p4
+    param_pft4_from_file%cn_leaf_max   = cn_leaf_max_p4
     param_pft4_from_file%np_leaf   = np_leaf_p4
     param_pft4_from_file%k0_fn_struc   = k0_fn_struc_p4
     param_pft4_from_file%fn_oth_min   = fn_oth_min_p4
@@ -2276,6 +2334,8 @@ CONTAINS
     param_pft5_from_file%omega_clumping   = omega_clumping_p5
     param_pft5_from_file%crown_shape_factor   = crown_shape_factor_p5
     param_pft5_from_file%cn_leaf   = cn_leaf_p5
+    param_pft5_from_file%cn_leaf_min   = cn_leaf_min_p5
+    param_pft5_from_file%cn_leaf_max   = cn_leaf_max_p5
     param_pft5_from_file%np_leaf   = np_leaf_p5
     param_pft5_from_file%k0_fn_struc   = k0_fn_struc_p5
     param_pft5_from_file%fn_oth_min   = fn_oth_min_p5
@@ -2331,6 +2391,8 @@ CONTAINS
     param_pft6_from_file%omega_clumping   = omega_clumping_p6
     param_pft6_from_file%crown_shape_factor   = crown_shape_factor_p6
     param_pft6_from_file%cn_leaf   = cn_leaf_p6
+    param_pft6_from_file%cn_leaf_min   = cn_leaf_min_p6
+    param_pft6_from_file%cn_leaf_max   = cn_leaf_max_p6
     param_pft6_from_file%np_leaf   = np_leaf_p6
     param_pft6_from_file%k0_fn_struc   = k0_fn_struc_p6
     param_pft6_from_file%fn_oth_min   = fn_oth_min_p6
@@ -2386,6 +2448,8 @@ CONTAINS
     param_pft7_from_file%omega_clumping   = omega_clumping_p7
     param_pft7_from_file%crown_shape_factor   = crown_shape_factor_p7
     param_pft7_from_file%cn_leaf   = cn_leaf_p7
+    param_pft7_from_file%cn_leaf_min   = cn_leaf_min_p7
+    param_pft7_from_file%cn_leaf_max   = cn_leaf_max_p7
     param_pft7_from_file%np_leaf   = np_leaf_p7
     param_pft7_from_file%k0_fn_struc   = k0_fn_struc_p7
     param_pft7_from_file%fn_oth_min   = fn_oth_min_p7
@@ -2441,6 +2505,8 @@ CONTAINS
     param_pft8_from_file%omega_clumping   = omega_clumping_p8
     param_pft8_from_file%crown_shape_factor   = crown_shape_factor_p8
     param_pft8_from_file%cn_leaf   = cn_leaf_p8
+    param_pft8_from_file%cn_leaf_min   = cn_leaf_min_p8
+    param_pft8_from_file%cn_leaf_max   = cn_leaf_max_p8
     param_pft8_from_file%np_leaf   = np_leaf_p8
     param_pft8_from_file%k0_fn_struc   = k0_fn_struc_p8
     param_pft8_from_file%fn_oth_min   = fn_oth_min_p8
@@ -2580,6 +2646,10 @@ CONTAINS
        lctlib%crown_shape_factor = param_pft_from_file%crown_shape_factor
     IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
        lctlib%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf
+    IF (ABS(param_pft_from_file%cn_leaf_min               - missval) > eps8) &
+       lctlib%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf_min
+    IF (ABS(param_pft_from_file%cn_leaf_max               - missval) > eps8) &
+       lctlib%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf_max
     IF (ABS(param_pft_from_file%np_leaf                   - missval) > eps8) &
        lctlib%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
                         param_pft_from_file%np_leaf

@@ -54,6 +54,8 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: omega_clumping 
     REAL(wp) :: crown_shape_factor 
     REAL(wp) :: cn_leaf             
+    REAL(wp) :: cn_leaf_min
+    REAL(wp) :: cn_leaf_max
     REAL(wp) :: np_leaf             
     REAL(wp) :: k0_fn_struc
     REAL(wp) :: fn_oth_min
@@ -289,6 +291,10 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%crown_shape_factor
           CASE ('cn_leaf')
             READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf
+          CASE ('cn_leaf_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_min
+          CASE ('cn_leaf_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_max
           CASE ('np_leaf')
             READ(line(pos:length),*) lctlib(1:nlct)%np_leaf
           CASE ('k0_fn_struc')
@@ -414,6 +420,14 @@ CONTAINS
         !! cn_leaf
           DO i=1,nlct
             lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
+          END DO
+        !! cn_leaf_min
+          DO i=1,nlct
+            lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
+          END DO
+        !! cn_leaf_max
+          DO i=1,nlct
+            lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
           END DO
         !! np_leaf
           DO i=1,nlct

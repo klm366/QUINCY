@@ -554,12 +554,20 @@ CONTAINS
                                         leaf_cn_direction(:)                           )   ! inout
     END IF 
 
-    CALL calc_stoichiometry_changes(  lctlib%growthform                               , & ! lctlib
+    CALL calc_stoichiometry_changes(  lctlib%growthform                            , & ! lctlib
+                                      lctlib%phenology_type                           , &
                                       lctlib%cn_leaf                                  , & ! lctlib
+                                      lctlib%cn_leaf_min                              , & ! lctlib
+                                      lctlib%cn_leaf_max                              , & ! lctlib
                                       TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , & ! in
                                       growing_season(:)                               , &
                                       leaf_cn_direction(:)                            , &
                                       target_np_leaf(:)                               , &
+                                      labile_carbon_tcnl_mavg(:)                      , &
+                                      labile_nitrogen_tcnl_mavg(:)                    , &
+                                      growth_cn_tcnl_mavg(:)                          , &
+                                      lai(:)                                          , &
+                                      target_lai(:)                                   , &
                                       target_cn_leaf(:)                               , & ! inout
                                       target_cn_fine_root(:)                          , & ! out
                                       target_cn_coarse_root(:)                        , &
@@ -569,7 +577,7 @@ CONTAINS
                                       target_np_coarse_root(:)                        , &
                                       target_np_sap_wood(:)                           , &
                                       target_np_fruit(:)                              )
-
+             
 
     !> 3.0 calculate current allometry 
     !! 
@@ -1298,11 +1306,19 @@ CONTAINS
   !! output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_stoichiometry_changes(growthform              , &   ! lctlib
+                                                  phenology_type          , &
                                                   cn_leaf                 , &   ! lctlib
+                                                  cn_leaf_min             , &
+                                                  cn_leaf_max             , &
                                                   leaf_stoichom_scheme    , &   ! in
                                                   growing_season          , &
                                                   leaf_cn_direction       , &
                                                   target_np_leaf          , &
+                                                  labile_carbon           , &
+                                                  labile_nitrogen         , &
+                                                  cn_growth               , &
+                                                  lai                     , &
+                                                  target_lai              , &
                                                   target_cn_leaf          , &   ! inout
                                                   target_cn_fine_root     , &   ! out
                                                   target_cn_coarse_root   , &
@@ -1311,20 +1327,29 @@ CONTAINS
                                                   target_np_fine_root     , &
                                                   target_np_coarse_root   , &
                                                   target_np_sap_wood      , &
-                                                  target_np_fruit  )         
+                                                  target_np_fruit           )
 
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants          ! e.g. delta_n_leaf
+    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                  INTENT(in)    :: growthform                !< land-cover-type library parameter
-    REAL(wp),                 INTENT(in)    :: cn_leaf                   !< land-cover-type library parameter
+    INTEGER,                  INTENT(in)    :: phenology_type            !< land-cover-type library parameter
+    REAL(wp),                 INTENT(in)    :: cn_leaf               , & !< land-cover-type library parameter
+                                               cn_leaf_min           , & !<
+                                               cn_leaf_max
     CHARACTER(len=*),         INTENT(in)    :: leaf_stoichom_scheme      !< from veg config
     REAL(wp),                 INTENT(in)    :: growing_season            !< 
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
-                                               target_np_leaf            !< 
+                                               target_np_leaf            !<
+    REAL(Wp),                 INTENT(in)    :: labile_carbon         , & !< average labile carbon
+                                               labile_nitrogen       , & !< average labile nitrogen
+                                               cn_growth                 !< average CN ratio of new growth
+    REAL(wp),                 INTENT(in)    :: lai                   , &
+                                               target_lai
     REAL(wp),                 INTENT(inout) :: target_cn_leaf            !< 
     REAL(wp),                 INTENT(out)   :: target_cn_fine_root   , & !< fine root target C:N
                                                target_cn_coarse_root , & !< coarse root target C:N
@@ -1336,16 +1361,42 @@ CONTAINS
                                                target_np_fruit           !< fruit target N:P
     ! ---------------------------
     ! 0.2 Local
+    REAL(wp) :: delta_cn, f_growing_leaf
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_stoichiometry_changes'
 
 
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (leaf_stoichom_scheme == "optimal" .AND. growing_season > test_false_true) THEN
-       ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
-       target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
-    !ELSE
-    !  target_cn_leaf = cn_leaf
+    IF (growing_season > test_false_true) THEN
+       SELECT CASE (leaf_stoichom_scheme)
+       CASE ("optimal")
+          ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
+          target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
+       CASE ("dynamic")
+          
+          SELECT CASE (phenology_type)
+          CASE (iraingreen, isummergreen)
+             IF (lai/MAX(eps8, target_lai) < 0.5_wp) THEN
+                f_growing_leaf = 0._wp
+             ELSE
+                f_growing_leaf = 1._wp
+             ENDIF
+          CASE DEFAULT
+             f_growing_leaf = 1._wp
+          END SELECT
+          
+             IF (labile_carbon / MAX(eps8, labile_nitrogen) >= cn_growth) THEN
+             ! If plants are N limited, i.e. if the CN of the labile pool is higher than the growth CN
+             ! increase leaf CN (decrease leaf N concentration)
+             delta_cn = (exp(-(2._wp * target_cn_leaf/(cn_leaf_min + cn_leaf_max))**8._wp))
+          ELSE
+             ! If plants are not N limited and have more N than they need
+             ! decrease leaf CN (increase leaf N concentration)
+             delta_cn = - (1._wp - exp(-(2._wp*target_cn_leaf/(cn_leaf_min + cn_leaf_max))**8._wp))
+          END IF
+          ! Apply CN modifier calculated above to actual change in leaf CN target, given by the maximum change per timestep
+             target_cn_leaf = target_cn_leaf * (1._wp +  delta_cn  * f_growing_leaf * delta_n_leaf * dtime/one_day)
+       END SELECT
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues

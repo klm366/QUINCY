@@ -913,17 +913,17 @@ CONTAINS
     ELSEWHERE
        hlp(:) = 0._wp
     ENDWHERE
-    growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tgrowth,  do_calc=l_growing_season(:))
-    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tgrowth,  do_calc=l_growing_season(:))
+    growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
+    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
    
     labile_carbon_tcnl_mavg(:)        = calc_mavg(labile_carbon_tcnl_mavg(:), veg_pool%labile%carbon, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
+                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
     labile_nitrogen_tcnl_mavg(:)      = calc_mavg(labile_nitrogen_tcnl_mavg(:), veg_pool%labile%nitrogen, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
+                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
     reserve_carbon_tcnl_mavg(:)       = calc_mavg(reserve_carbon_tcnl_mavg(:), veg_pool%reserve%carbon, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
+                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
     reserve_nitrogen_tcnl_mavg(:)     = calc_mavg(reserve_nitrogen_tcnl_mavg(:), veg_pool%reserve%nitrogen, &
-                                                      mavg_period_talloc, do_calc=l_growing_season(:))
+                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
     
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
