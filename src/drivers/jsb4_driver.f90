@@ -25,7 +25,7 @@ PROGRAM jsb4_driver
   USE mo_carbon_interface,   ONLY: check_carbon_conservation, calculate_current_c_ta_state_sum
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
-  dsl4jsb_Use_processes SEB_, TURB_, HYDRO_, CARBON_, FM_
+  dsl4jsb_Use_processes SEB_, TURB_, HYDRO_, CARBON_, FM_, DISTURB_
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TURB_)
@@ -78,6 +78,7 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics, no_omp_thread, pft
+  INTEGER:: tmp_count_days
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -356,12 +357,14 @@ PROGRAM jsb4_driver
   CALL init_output
   CALL open_output_streams
 
+tmp_count_days = 0
   ! - Main loop
   main_loop:DO
 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
+      tmp_count_days = tmp_count_days + 1
     ENDIF
 
     CALL jsbach_start_timestep(model_id)
@@ -452,12 +455,20 @@ PROGRAM jsb4_driver
           CO2_flux_yday(:,iblk) = dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta) &
             & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta) &
             & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)
-          CALL check_carbon_conservation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
-            & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
-          IF(.NOT. jsbach_is_restarted()) THEN
+
+          IF (model%processes(DISTURB_)%p%config%active) THEN
+            CALL check_carbon_conservation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
+              & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day &
+              & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta)), cconservation(:,iblk))
+          ELSE
+            CALL check_carbon_conservation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
+              & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
+          ENDIF
+
+          IF(.NOT. jsbach_is_restarted() .AND. tmp_count_days > 3) THEN
             !TODO-JN: where to put this cconservation test? 
             !IF (iblk .EQ. 1) THEN
-            IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+            IF (ANY(ABS(cconservation(:,iblk)) .GT. 1.e-11_wp)) THEN
               print *, '----------------'
               print *, 'iblk: ', iblk
               print *, 'current sum: ', old_c_state_sum(:,iblk)
@@ -466,12 +477,12 @@ PROGRAM jsb4_driver
             ENDIF
             CALL calculate_current_c_ta_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
             !IF (iblk .EQ. 1) THEN
-            IF (ANY(cconservation(:,iblk) .GT. 1.e-12_wp)) THEN
+            IF (ANY(ABS(cconservation(:,iblk)) .GT. 1.e-11_wp)) THEN
               print *, '***********************'
               print *, 'iblk:', iblk
               print *, 'old sum:', old_c_state_sum(:,iblk)
             ENDIF
-            IF (ANY(cconservation(:,iblk) .GT. 1.e-11_wp)) THEN
+            IF (ANY(ABS(cconservation(:,iblk)) .GT. 1.e-5_wp)) THEN
               time_loop:DO 
                 CALL time_set   !(echam!)
                 IF(is_newday()) THEN
