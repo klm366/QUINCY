@@ -128,6 +128,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
+    USE mo_jsb_process_class,     ONLY: ON_TILE_
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -264,14 +265,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
 
-    IF (.NOT. tile%Is_process_active(FAGE_)) THEN
-      dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)     ! out
-      dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
-    END IF 
-
-    !
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)     ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_fire)     ! out
+
     !
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_green)                  ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_woods)                  ! inout
@@ -396,7 +392,7 @@ CONTAINS
 
       END IF
 
-      IF ( tile%parent_tile%Is_process_active(FAGE_) ) THEN
+      IF ( tile%parent_tile%process_action(FAGE_) == ON_TILE_ ) THEN
         ! In this case the carbon cannot be relocated immediately
         ! because disturbances now move area to the first age cohort 
         ! (i.e. disturbances during one year contribute to a new age cohort)
@@ -407,7 +403,6 @@ CONTAINS
         IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
           & TRIM(tile%name)//' - Run with AGE COHORTS: Delayed relocation of damaged and burned carbon.')
       ELSE
-
         !Else relocate carbon as previously implemented
         IF ( tile%Is_process_active(CARBON_) ) THEN
           ! Calculate carbon relocation connected with damages and fires
@@ -422,7 +417,6 @@ CONTAINS
 
               !Calculate current sum before operation for c conservation test
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
-  
               CALL relocate_carbon_damage(                 &
                 & damaged_fract(:),                        & ! in
                 & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)), & ! in

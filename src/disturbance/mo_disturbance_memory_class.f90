@@ -136,26 +136,22 @@ CONTAINS
         & prefix, suffix,                                                           &
         & lrestart=.TRUE., initval_r=0.0_wp ) 
 
+      CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,                                         &
+        & hgrid, surface,                                                                                          &
+        & t_cf('cconservation_wind', 'mol(C) m-2(canopy)',                                                         &
+         & 'Test for c conservation on relocation for wind damaged area (not applicable for pfts with cohorts).'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
+        & prefix, suffix,                                                                                          &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
-      IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
-        ! C conservation on the tile can only be tested for disturbances, 
-        !    if the disturbed area stays on the tile, i.e. if fage is not active
-        CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,          &
-          & hgrid, surface,                                                           &
-          & t_cf('cconservation_wind', 'mol(C) m-2(canopy)',                          &
-            & 'Test for c conservation on relocation for wind damaged area.'),        &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-          & prefix, suffix,                                                           &
-          & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+      CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,                                    &
+        & hgrid, surface,                                                                                     &
+        & t_cf('cconservation_fire', 'mol(C) m-2(canopy)',                                                    &
+          & 'Test for c conservation on relocation for burned area (not applicable for pfts with cohorts).'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
+        & prefix, suffix,                                                                                     &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,          &
-          & hgrid, surface,                                                           &
-          & t_cf('cconservation_fire', 'mol(C) m-2(canopy)',                          &
-            & 'Test for c conservation on relocation for burned area.'),              &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-          & prefix, suffix,                                                           &
-          & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
-      END IF
     END IF
 
   END SUBROUTINE Init_disturb_memory

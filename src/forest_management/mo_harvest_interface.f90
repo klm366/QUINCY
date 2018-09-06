@@ -228,9 +228,9 @@ CONTAINS
         harvested_area(:) = 0._wp
         area_to_harvest(:) = MAX(to_harvest(:,tile%lcts(1)%lib_id), 0._wp)
 
-        IF ( tile%Is_process_active(FAGE_) ) THEN
+        IF ( tile%parent_tile%process_action(FAGE_) == ON_TILE_ ) THEN
           ! In this case the carbon cannot be relocated immediately
-          ! because harvest now adds area to the first age cohort (controbutes to a 'new' cohort)
+          ! because harvest now adds area to the first age cohort (contributes to a 'new' cohort)
 
           !@todo: maybe for a more general concept it could be considered to always do it like this
           !       i.e. only calculate the damage here and then apply it later maybe in a carbon task?

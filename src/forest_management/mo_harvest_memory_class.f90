@@ -74,31 +74,27 @@ CONTAINS
         &  )                                       &
         & .AND. .NOT. ASSOCIATED(mem%area_to_harvest%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'area_to_harvest', mem%area_to_harvest,                   &
+      CALL jsb_add_var( mem, 'area_to_harvest', mem%area_to_harvest,                         &
         & hgrid, surface,                                                                    &
-        & t_cf('area_to_harvest', '', 'Area to be harvested.'), &
+        & t_cf('area_to_harvest', '', 'Area to be harvested.'),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
-      CALL jsb_add_var( mem, 'harvested_area', mem%harvested_area,                   &
+      CALL jsb_add_var( mem, 'harvested_area', mem%harvested_area,                           &
         & hgrid, surface,                                                                    &
-        & t_cf('harvested_area', '', 'Actually harvested area.'), &
+        & t_cf('harvested_area', '', 'Actually harvested area.'),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
-      IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
-        ! C conservation on the tile can only be tested for harvest, 
-        !    if the harvested area stays on the tile, i.e. if fage is not active
-        CALL jsb_add_var( mem, 'cconservation_harvest', mem%cconservation_harvest,    &
-          & hgrid, surface,                                                           &
-          & t_cf('cconservation_harvest', 'mol(C) m-2(canopy)', &
-            & 'Test for c conservation on relocation for harvest.'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-          & prefix, suffix,                                                           &
-          & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
-      END IF
+      CALL jsb_add_var( mem, 'cconservation_harvest', mem%cconservation_harvest,                          &
+        & hgrid, surface,                                                                                 &
+        & t_cf('cconservation_harvest', 'mol(C) m-2(canopy)',                                             &
+          & 'Test for c conservation on relocation for harvest (not applicable for pfts with cohorts).'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & prefix, suffix,                                                                                 &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
     END IF
 
