@@ -2680,12 +2680,12 @@ CONTAINS
             & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
         ENDIF
 
-        CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
+        CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test(:))
+        carbon_conservation_test(:) = carbon_conservation_test(:) - yday_c_state_sum(:)  - C_flux_yday(:)
 
-        IF (ANY(carbon_conservation_test .GT. 1.E-13)) THEN !@todo: constant for accuracy?
+        IF (ANY(carbon_conservation_test(:) .GT. 1.E-11)) THEN !@todo: constant for accuracy?
           CALL finish(TRIM(routine), 'Carbon conservation violated - cc test min,max: '// &
-             & real2string(MINVAL(carbon_conservation_test))//','// real2string(MAXVAL(carbon_conservation_test)))
+             & real2string(MINVAL(carbon_conservation_test(:)))//','// real2string(MAXVAL(carbon_conservation_test(:))))
         ENDIF
 
       ELSE
