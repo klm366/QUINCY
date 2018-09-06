@@ -910,37 +910,36 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-    IF(ANY(tile%l_update_c(ics:ice, iblk))) THEN 
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,               weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,               weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,             weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_crop_harvest_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag1_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag1_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag1_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag1_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag2_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag2_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag2_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag2_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_bg1_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_bg1_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_bg1_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_bg1_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_bg2_ta,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_bg2_ta,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_bg2_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_bg2_ta,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
 
-      ! in case of disturbance also these variables need to be aggregated:
-      dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil_ta, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta,        weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_crop_harvest_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag1_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag1_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag1_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag1_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_ag2_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_ag2_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_ag2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag2_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_bg1_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_bg1_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_bg1_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_bg1_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_acid_bg2_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_water_bg2_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_ethanol_bg2_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_bg2_ta,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
 
-      !TODO-JN-COHORTS: other aggregations required?
-    ENDIF
+    ! in case of disturbance also these variables need to be aggregated:
+    dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil_ta, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm_ta,           weighted_by_fract)
+
+    !TODO-JN-COHORTS: other aggregations required?
 
     !NOTE: despite changes, currently no aggregation of fractions because:
     !      for fage fractions are only redistributed on child tiles, i.e. no changes on above tiles
@@ -2651,8 +2650,20 @@ CONTAINS
             & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
         ENDIF
 
+print *, '*******************************************'
+print *, 'yday_c_state_sum(:)', yday_c_state_sum(:)
+print *, 'C_flux_yday(:)', - C_flux_yday(:)
+print *, 'npp', (dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)/ molarMassCO2_kg) * sec_per_day
+print *, 'soilresp', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)/ molarMassCO2_kg) * sec_per_day
+print *, 'herb', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)/ molarMassCO2_kg) * sec_per_day
+print *, 'fire', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
+
+        !@todo: co2 fluxes due to other processes - fire, harvest, ?
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
+print *, 'current c state sum', carbon_conservation_test(:)
         carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
+print *, '==', carbon_conservation_test
+
 
       ELSE
         carbon_conservation_test = 0._wp
