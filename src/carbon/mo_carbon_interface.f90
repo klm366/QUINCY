@@ -2633,10 +2633,13 @@ CONTAINS
 
     USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_grid,           ONLY: Get_grid
+    USE mo_util,               ONLY: real2string
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':yday_carbon_conservation_test'
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(L2A_)
@@ -2671,25 +2674,19 @@ CONTAINS
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)                   &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)) / molarMassCO2_kg) * sec_per_day
 
+        ! And due to fire
         IF (model%processes(DISTURB_)%p%config%active) THEN
           C_flux_yday(:) =  C_flux_yday(:) &
             & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
         ENDIF
 
-print *, '*******************************************'
-print *, 'yday_c_state_sum(:)', yday_c_state_sum(:)
-print *, 'C_flux_yday(:)', C_flux_yday(:)
-print *, 'npp', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)/ molarMassCO2_kg) * sec_per_day
-print *, 'soilresp', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)/ molarMassCO2_kg) * sec_per_day
-print *, 'herb', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)/ molarMassCO2_kg) * sec_per_day
-print *, 'fire', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
-
-        !@todo: co2 fluxes due to other processes - fire, harvest, ?
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-print *, 'current c state sum', carbon_conservation_test(:)
         carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
-print *, '==', carbon_conservation_test
 
+        IF (ANY(carbon_conservation_test .GT. 1.E-13)) THEN !@todo: constant for accuracy?
+          CALL finish(TRIM(routine), 'Carbon conservation violated - cc test min,max: '// &
+             & real2string(MINVAL(carbon_conservation_test))//','// real2string(MAXVAL(carbon_conservation_test)))
+        ENDIF
 
       ELSE
         carbon_conservation_test = 0._wp

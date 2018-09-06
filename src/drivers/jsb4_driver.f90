@@ -17,7 +17,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
-  USE mo_jsb_time,           ONLY: is_newday, is_newyear
+  USE mo_jsb_time,           ONLY: is_newday
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -78,7 +78,6 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics, no_omp_thread, pft
-  INTEGER:: tmp_count_days
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -154,10 +153,6 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
 
   REAL(wp), ALLOCATABLE :: CO2_flux(:)
-
-  !! only required for conservation tests
-  REAL(wp), ALLOCATABLE :: old_c_state_sum(:,:), cconservation(:,:)
-  REAL(wp), ALLOCATABLE :: CO2_flux_yday(:,:)
 
   !! only required for FM - temporal solution 
   REAL(wp), ALLOCATABLE :: harvest_from_files(:,:,:)
@@ -281,14 +276,6 @@ PROGRAM jsb4_driver
   ALLOCATE(alb_nir_dif(nproma))
   ALLOCATE(CO2_flux(nproma))
 
-  ! Only required for c conservation test
-  ALLOCATE(old_c_state_sum(nproma, nblks))
-  old_c_state_sum = 0._wp
-  CO2_flux = 0._wp
-  ALLOCATE(cconservation(nproma, nblks))
-  ALLOCATE(CO2_flux_yday(nproma, nblks))
-  CO2_flux_yday = 0.0_wp
-
   IF (.NOT. read_interface_vars) THEN
     CALL init_forcing(model_id)
 
@@ -357,14 +344,12 @@ PROGRAM jsb4_driver
   CALL init_output
   CALL open_output_streams
 
-tmp_count_days = 0
   ! - Main loop
   main_loop:DO
 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
-      tmp_count_days = tmp_count_days + 1
     ENDIF
 
     CALL jsbach_start_timestep(model_id)
@@ -447,57 +432,6 @@ tmp_count_days = 0
 
     DO iblk = 1, nblks
       CALL model%Set_options(iblk=iblk)
-
-      IF(is_newday()) THEN
-
-        IF (model%processes(CARBON_)%p%config%active) THEN 
-          dsl4jsb_Get_memory(CARBON_)
-          CO2_flux_yday(:,iblk) = dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta) &
-            & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta) &
-            & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)
-
-          IF (model%processes(DISTURB_)%p%config%active) THEN
-            CALL check_carbon_conservation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
-              & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day &
-              & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta)), cconservation(:,iblk))
-          ELSE
-            CALL check_carbon_conservation(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk), &
-              & - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day, cconservation(:,iblk))
-          ENDIF
-
-          IF(.NOT. jsbach_is_restarted() .AND. tmp_count_days > 3) THEN
-            !TODO-JN: where to put this cconservation test? 
-            !IF (iblk .EQ. 1) THEN
-            IF (ANY(ABS(cconservation(:,iblk)) .GT. 1.e-11_wp)) THEN
-              print *, '----------------'
-              print *, 'iblk: ', iblk
-              print *, 'current sum: ', old_c_state_sum(:,iblk)
-              print *, 'flux: ', - CO2_flux_yday(:,iblk)/molarMassCO2_kg * sec_per_day
-              print *, 'error: ', cconservation(:,iblk)
-            ENDIF
-            CALL calculate_current_c_ta_state_sum(tile, model%options(no_omp_thread), old_c_state_sum(:,iblk))
-            !IF (iblk .EQ. 1) THEN
-            IF (ANY(ABS(cconservation(:,iblk)) .GT. 1.e-11_wp)) THEN
-              print *, '***********************'
-              print *, 'iblk:', iblk
-              print *, 'old sum:', old_c_state_sum(:,iblk)
-            ENDIF
-            IF (ANY(ABS(cconservation(:,iblk)) .GT. 1.e-5_wp)) THEN
-              time_loop:DO 
-                CALL time_set   !(echam!)
-                IF(is_newday()) THEN
-                  CALL write_date(current_date,'Calculate for: ')
-                ENDIF
-                CALL out_streams
-
-                CALL time_reset
-                IF(is_newyear()) STOP
-              ENDDO time_loop
-            STOP
-            ENDIF
-          ENDIF
-        ENDIF
-      ENDIF
 
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
@@ -594,9 +528,6 @@ tmp_count_days = 0
   DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
   DEALLOCATE(q_snocpymlt, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
   DEALLOCATE(CO2_flux)
-
-  DEALLOCATE(old_c_state_sum)
-  DEALLOCATE(cconservation)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
