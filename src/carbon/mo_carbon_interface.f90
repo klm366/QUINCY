@@ -1003,6 +1003,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  c_humus_2
 
+    dsl4jsb_Real2D_onChunk ::  cflux_fire_all_2_atm
+    dsl4jsb_Real2D_onChunk ::  cflux_dist_greenreserve_2_soil
+    dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil
+
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
     IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN
       CALL finish(TRIM(routine), &
@@ -1070,6 +1074,16 @@ CONTAINS
     c_nonsoluble_bg2 = c_nonsoluble_bg2 * (oldRefArea / newRefArea)
     c_humus_2        = c_humus_2        * (oldRefArea / newRefArea)
 
+    ! only required in case of disturbances
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_fire_all_2_atm) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil) ! inout
+
+    cflux_fire_all_2_atm = cflux_fire_all_2_atm                      * (oldRefArea / newRefArea)
+    cflux_dist_greenreserve_2_soil = cflux_dist_greenreserve_2_soil  * (oldRefArea / newRefArea)
+    cflux_dist_woods_2_soil = cflux_dist_woods_2_soil                * (oldRefArea / newRefArea)
+
+
     CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
@@ -1082,7 +1096,10 @@ CONTAINS
       & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
       & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
       & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:))
+      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:), &
+      & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),&
+      & cflux_dist_greenreserve_2_soil = cflux_dist_greenreserve_2_soil(:), &
+      & cflux_fire_all_2_atm = cflux_fire_all_2_atm(:) )
 
   END SUBROUTINE rescale_carbon_upon_reference_area_change
 
@@ -1457,7 +1474,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief updates delta of carbon state variables upon disturbance (including clear-cuts!)
-  !!        -> source densities stay the same
+  !!        -> source densities stay the same (change in absolute carbon through area change)
   !!        -> sink (first age cohort) gets fraction of source litter/soil 
   !!            + fraction of green/reserve/wood are also distributed into litter/soil
   !!            + in case of fire some of the litter pools are redistributed
@@ -1498,9 +1515,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = &
       & modname//':recalc_delta_carbon_rp_upon_disturbance'
     INTEGER                     :: ics, ice, iblk, nc, i
-    REAL(wp), DIMENSION(options%nc) :: helper, d_green_new, d_reserve_new, d_wood_new
-    REAL(wp), DIMENSION(options%nc) :: d_acid_ag1_new, d_water_ag1_new, d_ethanol_ag1_new, d_nonsoluble_ag1_new
-    REAL(wp), DIMENSION(options%nc) :: d_acid_ag2_new, d_water_ag2_new, d_ethanol_ag2_new, d_nonsoluble_ag2_new
+    REAL(wp), DIMENSION(options%nc) :: helper, dist_green_c, dist_reserve_c, dist_wood_c, new_cflux_fire_2_atm
+    REAL(wp), DIMENSION(options%nc) :: dist_acid_ag1_c, dist_water_ag1_c, dist_ethanol_ag1_c, dist_nonsoluble_ag1_c
+    REAL(wp), DIMENSION(options%nc) :: dist_acid_ag2_c, dist_water_ag2_c, dist_ethanol_ag2_c, dist_nonsoluble_ag2_c
 
     dsl4jsb_Real2D_onChunk ::  c_green
     dsl4jsb_Real2D_onChunk ::  c_woods
@@ -1642,43 +1659,49 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_c_nonsoluble_bg2_rp, sinkT)
     dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, delta_c_humus_2_rp, sinkT)
 
-    d_green_new(:) = 0._wp
-    d_reserve_new(:) = 0._wp
-    d_wood_new(:) = 0._wp
+    dist_green_c(:) = 0._wp
+    dist_reserve_c(:) = 0._wp
+    dist_wood_c(:) = 0._wp
 
-    d_acid_ag1_new(:) = 0._wp 
-    d_water_ag1_new(:) = 0._wp
-    d_ethanol_ag1_new(:) = 0._wp
-    d_nonsoluble_ag1_new(:) = 0._wp
-    d_acid_ag2_new(:) = 0._wp
-    d_water_ag2_new(:) = 0._wp
-    d_ethanol_ag2_new(:) = 0._wp
-    d_nonsoluble_ag2_new(:) = 0._wp
+    dist_acid_ag1_c(:) = 0._wp 
+    dist_water_ag1_c(:) = 0._wp
+    dist_ethanol_ag1_c(:) = 0._wp
+    dist_nonsoluble_ag1_c(:) = 0._wp
+    dist_acid_ag2_c(:) = 0._wp
+    dist_water_ag2_c(:) = 0._wp
+    dist_ethanol_ag2_c(:) = 0._wp
+    dist_nonsoluble_ag2_c(:) = 0._wp
 
     ! For all implemented disturbance kinds the vegetation carbon on the disturbed area 
-    ! is entirely distributed to other pools, therefore, additional pools are required 
-    CALL recalc_delta_carbon_rp(c_green(:), helper(:), d_green_new(:), delta_fract(:), veg_fract_correction(:))
-    CALL recalc_delta_carbon_rp(c_woods(:), helper(:), d_wood_new(:), delta_fract(:), veg_fract_correction(:))
-    CALL recalc_delta_carbon_rp(c_reserve(:), helper(:), d_reserve_new(:), delta_fract(:), veg_fract_correction(:))
+    ! is entirely distributed to other pools, therefore, additional pools are required to 
+    ! temporaly store the to be distributed carbon 
+    !   (upon area clearing disturbances the source carbon density does not need to be reduced, 
+    !    it is sufficient that the area is reduced and thus the total carbon stays the same,
+    !    therefore a 'helper' variable is used for the source part whose content does not matter at al) 
+    CALL recalc_delta_carbon_rp(c_green(:), helper(:), dist_green_c(:), delta_fract(:), veg_fract_correction(:))
+    CALL recalc_delta_carbon_rp(c_woods(:), helper(:), dist_wood_c(:), delta_fract(:), veg_fract_correction(:))
+    CALL recalc_delta_carbon_rp(c_reserve(:), helper(:), dist_reserve_c(:), delta_fract(:), veg_fract_correction(:))
 
     IF ((distKind .EQ. FIRE)) THEN
-      ! For fire disturbance, parts of the above ground litter carbon are burned 
-      ! to deal with the first and all other childs in the same function call, therefore, additional pools are used
-      CALL recalc_delta_carbon_rp(c_acid_ag1(:), helper(:), d_acid_ag1_new(:), delta_fract(:), veg_fract_correction(:))
-      CALL recalc_delta_carbon_rp(c_water_ag1(:), helper(:), d_water_ag1_new(:), delta_fract(:), veg_fract_correction(:))
+      ! For fire disturbance, parts of the above ground litter carbon are burned, therefore, 
+      ! additional pools are used to be able to deal with the first and all other childs in the same function call 
+      CALL recalc_delta_carbon_rp(c_acid_ag1(:), helper(:), dist_acid_ag1_c(:), delta_fract(:), veg_fract_correction(:))
+      CALL recalc_delta_carbon_rp(c_water_ag1(:), helper(:), dist_water_ag1_c(:), delta_fract(:), veg_fract_correction(:))
       CALL recalc_delta_carbon_rp(c_ethanol_ag1(:), helper(:), &
-        & d_ethanol_ag1_new(:), delta_fract(:), veg_fract_correction(:))
+        & dist_ethanol_ag1_c(:), delta_fract(:), veg_fract_correction(:))
       CALL recalc_delta_carbon_rp(c_nonsoluble_ag1(:), helper(:), &
-        & d_nonsoluble_ag1_new(:), delta_fract(:), veg_fract_correction(:))
-      CALL recalc_delta_carbon_rp(c_acid_ag2(:), helper(:), d_acid_ag2_new(:), delta_fract(:), veg_fract_correction(:))
-      CALL recalc_delta_carbon_rp(c_water_ag2(:), helper(:), d_water_ag2_new(:), delta_fract(:), veg_fract_correction(:))
+        & dist_nonsoluble_ag1_c(:), delta_fract(:), veg_fract_correction(:))
+      CALL recalc_delta_carbon_rp(c_acid_ag2(:), helper(:), dist_acid_ag2_c(:), delta_fract(:), veg_fract_correction(:))
+      CALL recalc_delta_carbon_rp(c_water_ag2(:), helper(:), dist_water_ag2_c(:), delta_fract(:), veg_fract_correction(:))
       CALL recalc_delta_carbon_rp(c_ethanol_ag2(:), helper(:), &
-        & d_ethanol_ag2_new(:), delta_fract(:), veg_fract_correction(:))
+        & dist_ethanol_ag2_c(:), delta_fract(:), veg_fract_correction(:))
       CALL recalc_delta_carbon_rp(c_nonsoluble_ag2(:), helper(:), &
-        & d_nonsoluble_ag2_new(:), delta_fract(:), veg_fract_correction(:))
+        & dist_nonsoluble_ag2_c(:), delta_fract(:), veg_fract_correction(:))
     ELSEIF (.NOT. l_sourceisfirstChild) THEN
       ! For other disturbances above ground litter is only redistributed 
-      ! However, for the first child the damaged area stays within the first age cohort and so do the ag litter pools
+      ! However, for the first child the damaged area stays within the first age cohort 
+      ! and so do the ag litter pools, i.e. the delta_c's are zero
+      ! For other sources:
       CALL recalc_delta_carbon_rp(c_acid_ag1(:), helper(:), &
         & delta_c_acid_ag1_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
       CALL recalc_delta_carbon_rp(c_water_ag1(:), helper(:), &
@@ -1699,8 +1722,11 @@ CONTAINS
     ENDIF
 
     IF (.NOT. l_sourceisfirstChild) THEN
-      ! As opposed to the ag litter, the bg litter/soil is not changed by fire, thus here it is always the case that 
-      ! when the first child is the source, the damaged area stays within the first age cohort and same for bg soil/litter pools
+      ! As opposed to the ag litter, the bg litter/soil is not changed by fire, 
+      ! thus, here only first/ and other childs have to be distinguised
+      ! When the first child is the source, the damaged area stays within the first age cohort 
+      ! and so does the bg soil/litter pools, i.e. the delta_c's are zero
+      ! For other sources:
       CALL recalc_delta_carbon_rp(c_crop_harvest(:), helper(:), &
         delta_c_crop_harvest_rp_sinkT(:), delta_fract(:), veg_fract_correction(:))
 
@@ -1730,12 +1756,14 @@ CONTAINS
     IF (l_sourceisfirstChild) THEN
       ! If source and sink is the same child - i.e. the first child, 
       !  changes in green, reserve and wood need to be subtracted from the delta carbon pools 
-      !  after being distributed to the soil/litter (or probably later in case of harvest to a harvest pool)
-      delta_c_green_rp_sinkT(:) = delta_c_green_rp_sinkT(:) - d_green_new(:)
-      delta_c_reserve_rp_sinkT(:) = delta_c_reserve_rp_sinkT(:) - d_reserve_new(:)
-      delta_c_woods_rp_sinkT(:) = delta_c_woods_rp_sinkT(:) - d_wood_new(:)
+      !  since they are distributed to the soil/litter (or probably later in case of harvest to a harvest pool)
+      delta_c_green_rp_sinkT(:) = delta_c_green_rp_sinkT(:) - dist_green_c(:)
+      delta_c_reserve_rp_sinkT(:) = delta_c_reserve_rp_sinkT(:) - dist_reserve_c(:)
+      delta_c_woods_rp_sinkT(:) = delta_c_woods_rp_sinkT(:) - dist_wood_c(:)
     ENDIF
 
+    ! in the function calls to relocate_carbon_damage and relocate_carbon_fire below, all the carbon in the input pools
+    ! should be affected - i.e. 'the hole area', therefore the 'helper' giving the affected area is set to 1._wp
     helper(:) = 1._wp
 
     IF((distKind .EQ. WIND) .OR. (distKind .EQ. CLEARCUT)) THEN
@@ -1745,9 +1773,9 @@ CONTAINS
       CALL relocate_carbon_damage( helper(:), & ! in
         & model%lctlib(sinkT%lcts(1)%lib_id)%LeafLit_coef(1:5), & ! in
         & model%lctlib(sinkT%lcts(1)%lib_id)%WoodLit_coef(1:5), & ! in
-        & d_green_new(:),                     & ! inout
-        & d_wood_new(:),                      & ! inout
-        & d_reserve_new(:),                   & ! inout
+        & dist_green_c(:),                         & ! inout
+        & dist_wood_c(:),                          & ! inout
+        & dist_reserve_c(:),                       & ! inout
         & delta_cflux_dist_greenreserve_2_soil_rp_sinkT(:),  & ! inout
         & delta_cflux_dist_woods_2_soil_rp_sinkT(:),   & ! inout
         & delta_c_acid_ag1_rp_sinkT(:),            & ! inout
@@ -1773,38 +1801,36 @@ CONTAINS
     ELSEIF (distKind .EQ. FIRE) THEN 
 
       IF (l_sourceisfirstChild) THEN
-        ! in case of fire, the aboveground litter is altered, when the firest child is the source, some of the 
-        ! above ground carbon therefore will need to be substracted. 
-        ! Here before the function call below, all ag litter carbon on the disturbed area is subtracted
-        ! -> below the function call the not-burned part will be then added back   
-        delta_c_acid_ag1_rp_sinkT = delta_c_acid_ag1_rp_sinkT - d_acid_ag1_new
-        delta_c_water_ag1_rp_sinkT = delta_c_water_ag1_rp_sinkT - d_water_ag1_new
-        delta_c_ethanol_ag1_rp_sinkT = delta_c_ethanol_ag1_rp_sinkT - d_ethanol_ag1_new
-        delta_c_nonsoluble_ag1_rp_sinkT = delta_c_nonsoluble_ag1_rp_sinkT - d_nonsoluble_ag1_new
-        delta_c_acid_ag2_rp_sinkT = delta_c_acid_ag2_rp_sinkT - d_acid_ag2_new
-        delta_c_water_ag2_rp_sinkT = delta_c_water_ag2_rp_sinkT - d_water_ag2_new
-        delta_c_ethanol_ag2_rp_sinkT = delta_c_ethanol_ag2_rp_sinkT - d_ethanol_ag2_new
-        delta_c_nonsoluble_ag2_rp_sinkT = delta_c_nonsoluble_ag2_rp_sinkT - d_nonsoluble_ag2_new
+        ! in case of fire, the aboveground litter is burned, when the first child is the source, the  
+        ! affected part of the above ground carbon therefore needs to be subtracted.  
+        delta_c_acid_ag1_rp_sinkT = delta_c_acid_ag1_rp_sinkT - dist_acid_ag1_c
+        delta_c_water_ag1_rp_sinkT = delta_c_water_ag1_rp_sinkT - dist_water_ag1_c
+        delta_c_ethanol_ag1_rp_sinkT = delta_c_ethanol_ag1_rp_sinkT - dist_ethanol_ag1_c
+        delta_c_nonsoluble_ag1_rp_sinkT = delta_c_nonsoluble_ag1_rp_sinkT - dist_nonsoluble_ag1_c
+        delta_c_acid_ag2_rp_sinkT = delta_c_acid_ag2_rp_sinkT - dist_acid_ag2_c
+        delta_c_water_ag2_rp_sinkT = delta_c_water_ag2_rp_sinkT - dist_water_ag2_c
+        delta_c_ethanol_ag2_rp_sinkT = delta_c_ethanol_ag2_rp_sinkT - dist_ethanol_ag2_c
+        delta_c_nonsoluble_ag2_rp_sinkT = delta_c_nonsoluble_ag2_rp_sinkT - dist_nonsoluble_ag2_c
       ENDIF
 
       CALL relocate_carbon_fire( &
-        & helper(:),                     & ! in
-        & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
+        & helper(:),                                            & ! in
+        & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos ,     & ! in
         & model%lctlib(sinkT%lcts(1)%lib_id)%LeafLit_coef(1:5), & ! in
         & model%lctlib(sinkT%lcts(1)%lib_id)%WoodLit_coef(1:5), & ! in
-        & d_green_new(:),                & ! inout
-        & d_wood_new(:),                 & ! inout
-        & d_reserve_new(:),              & ! inout
-        & delta_cflux_dist_greenreserve_2_soil_rp_sinkT(:),  & ! inout
-        & delta_cflux_dist_woods_2_soil_rp_sinkT(:),   & ! inout
-        & d_acid_ag1_new(:),            & ! inout
-        & d_water_ag1_new(:),           & ! inout
-        & d_ethanol_ag1_new(:),         & ! inout
-        & d_nonsoluble_ag1_new(:),      & ! inout
-        & d_acid_ag2_new(:),            & ! inout
-        & d_water_ag2_new(:),           & ! inout
-        & d_ethanol_ag2_new(:),         & ! inout
-        & d_nonsoluble_ag2_new(:),      & ! inout
+        & dist_green_c(:),                         & ! inout
+        & dist_wood_c(:),                          & ! inout
+        & dist_reserve_c(:),                       & ! inout
+        & delta_cflux_dist_greenreserve_2_soil_rp_sinkT(:),     & ! inout
+        & delta_cflux_dist_woods_2_soil_rp_sinkT(:),            & ! inout
+        & dist_acid_ag1_c(:),                      & ! inout
+        & dist_water_ag1_c(:),                     & ! inout
+        & dist_ethanol_ag1_c(:),                   & ! inout
+        & dist_nonsoluble_ag1_c(:),                & ! inout
+        & dist_acid_ag2_c(:),                      & ! inout
+        & dist_water_ag2_c(:),                     & ! inout
+        & dist_ethanol_ag2_c(:),                   & ! inout
+        & dist_nonsoluble_ag2_c(:),                & ! inout
         & delta_c_acid_bg1_rp_sinkT(:),            & ! inout
         & delta_c_water_bg1_rp_sinkT(:),           & ! inout
         & delta_c_ethanol_bg1_rp_sinkT(:),         & ! inout
@@ -1815,18 +1841,18 @@ CONTAINS
         & delta_c_nonsoluble_bg2_rp_sinkT(:),      & ! inout
         & delta_c_humus_1_rp_sinkT(:),             & ! inout
         & delta_c_humus_2_rp_sinkT(:),             & ! inout
-        & delta_cflux_fire_all_2_atm_rp_sinkT(:)   & ! inout
+        & new_cflux_fire_2_atm(:)                  & ! out
         & )
 
-      ! Add those parts of the ag litter carbon that remain after the fire
-      delta_c_acid_ag1_rp_sinkT = delta_c_acid_ag1_rp_sinkT + d_acid_ag1_new
-      delta_c_water_ag1_rp_sinkT = delta_c_water_ag1_rp_sinkT + d_water_ag1_new
-      delta_c_ethanol_ag1_rp_sinkT = delta_c_ethanol_ag1_rp_sinkT + d_ethanol_ag1_new
-      delta_c_nonsoluble_ag1_rp_sinkT = delta_c_nonsoluble_ag1_rp_sinkT + d_nonsoluble_ag1_new
-      delta_c_acid_ag2_rp_sinkT = delta_c_acid_ag2_rp_sinkT + d_acid_ag2_new
-      delta_c_water_ag2_rp_sinkT = delta_c_water_ag2_rp_sinkT + d_water_ag2_new
-      delta_c_ethanol_ag2_rp_sinkT = delta_c_ethanol_ag2_rp_sinkT + d_ethanol_ag2_new
-      delta_c_nonsoluble_ag2_rp_sinkT = delta_c_nonsoluble_ag2_rp_sinkT + d_nonsoluble_ag2_new
+      ! During redistribution some of the wood c is added to the ag2 pools 
+      ! and thus needs to be added to their delta variables
+      delta_c_acid_ag2_rp_sinkT = delta_c_acid_ag2_rp_sinkT + dist_acid_ag2_c
+      delta_c_water_ag2_rp_sinkT = delta_c_water_ag2_rp_sinkT + dist_water_ag2_c
+      delta_c_ethanol_ag2_rp_sinkT = delta_c_ethanol_ag2_rp_sinkT + dist_ethanol_ag2_c
+      delta_c_nonsoluble_ag2_rp_sinkT = delta_c_nonsoluble_ag2_rp_sinkT + dist_nonsoluble_ag2_c
+
+      ! Add the burned c to the delta variable keeping track of changes in burned c 
+      delta_cflux_fire_all_2_atm_rp_sinkT = delta_cflux_fire_all_2_atm_rp_sinkT + new_cflux_fire_2_atm
 
     ELSE
       WRITE (message_text,*) 'Unknown disturbance kind (', distKind, ')'
@@ -2652,8 +2678,8 @@ CONTAINS
 
 print *, '*******************************************'
 print *, 'yday_c_state_sum(:)', yday_c_state_sum(:)
-print *, 'C_flux_yday(:)', - C_flux_yday(:)
-print *, 'npp', (dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)/ molarMassCO2_kg) * sec_per_day
+print *, 'C_flux_yday(:)', C_flux_yday(:)
+print *, 'npp', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)/ molarMassCO2_kg) * sec_per_day
 print *, 'soilresp', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)/ molarMassCO2_kg) * sec_per_day
 print *, 'herb', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)/ molarMassCO2_kg) * sec_per_day
 print *, 'fire', - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))

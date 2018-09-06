@@ -474,20 +474,21 @@ CONTAINS
         !*** care for fire damage
         burnedArea(:) = burned_fract(:) * source_fract(:)
 
-        ! a) changes in area
-        ! reduce current tiles delta fraction  
-        currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - burnedArea(:)
-        ! and add it to the first childs delta
-        firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
+        IF(ANY(burnedArea(:) .GT. 0._wp)) THEN
+          ! a) changes in area
+          ! reduce current tiles delta fraction  
+          currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - burnedArea(:)
+          ! and add it to the first childs delta
+          firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + burnedArea(:)
 
-        ! b) carbon consequences 
-        CALL recalc_delta_carbon_rp_upon_disturbance( &
-          currentChild, firstChild, l_sourceisfirstChild, options, burnedArea(:), source_fract(:), FIRE)
+          ! b) carbon consequences 
+          CALL recalc_delta_carbon_rp_upon_disturbance( &
+            currentChild, firstChild, l_sourceisfirstChild, options, burnedArea(:), source_fract(:), FIRE)
 
-        !@todo: with flux aggregation - i.e. when more processes are calculated on the leaves, 
-        !                                    probably more variables will need to be considered here
-        ! c) TODO-JN-COHORTS what else to shift? 
-
+          !@todo: with flux aggregation - i.e. when more processes are calculated on the leaves, 
+          !                                    probably more variables will need to be considered here
+          ! c) TODO-JN-COHORTS what else to shift? 
+        ENDIF
 
         !***********************************************
         !*** care for wind damage 

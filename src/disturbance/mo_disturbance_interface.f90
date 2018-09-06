@@ -331,8 +331,11 @@ CONTAINS
     END IF
 
     IF (is_newday()) THEN ! only once per day
+      ! When simulating with cohorts, it is important to reset cflux_fire_all_2_atm here,
+      ! all burning cohorts add emissions to the youngest cohort 
       cflux_dist_greenreserve_2_soil(:) = 0._wp
       cflux_dist_woods_2_soil(:) = 0._wp
+      cflux_fire_all_2_atm = 0._wp
 
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
@@ -473,7 +476,6 @@ CONTAINS
               CALL finish('disturbed_fract','Unknown windbreak algorithm')
           END SELECT
 
-          cflux_fire_all_2_atm = 0._wp
           SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
             CASE (0) !! No fire algorithm
             CASE (1) !! jsbach algorithm
