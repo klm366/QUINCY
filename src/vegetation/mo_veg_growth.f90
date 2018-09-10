@@ -1722,10 +1722,13 @@ CONTAINS
               k2_opt = k2_opt_w 
             ENDIF 
          CASE("dynamic")
+              ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
              n_l2r_scal = growth_cn / MAX(eps8, ns_carbon / MAX(eps8, ns_nitrogen))
              p_l2r_scal = growth_cp / MAX(eps8, ns_carbon / MAX(eps8, ns_phosphorus))
              w_l2r_scal = w_root_lim / w_root_lim_max
-             leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)
+             ! actual ratio is given by the minimum of the three factors
+             leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+                  sm2lm_grass * k_rtos * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
           CASE("fixed")
             leaf2root_mass_ratio = sm2lm_grass * k_rtos 
         END SELECT ! biomass_alloc_scheme
