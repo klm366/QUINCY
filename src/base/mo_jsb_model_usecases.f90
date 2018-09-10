@@ -255,17 +255,18 @@ CONTAINS
   
   SUBROUTINE init_usecase_age_cohorts(model)
 
+    dsl4jsb_Use_config(FAGE_)
+
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, cohort_tile
 
-    INTEGER :: i, j
+    dsl4jsb_Def_config(FAGE_)
 
+    INTEGER :: i, j
+    INTEGER :: ncohorts
     INTEGER, PARAMETER :: npft = 11
-    INTEGER, PARAMETER :: ncohorts = 16 !TODO-JN-COHORTS should be a namelist parameter! ++ currently >0 <=99
-                          ! -> cannot get it via model%processes(FAGE_)%p%config% here!?
-                          !    thus, on model%config% ? But then how to get it in mo_fage_config_class???
-                          ! + test ncohorts >0 & <=99 ! (age_cohort_name len=10: pft_shortname(5) + '_fc' + j (2))
+
     CHARACTER(len=5)  :: pft_shortname
     CHARACTER(len=10) :: age_cohort_name
 
@@ -294,6 +295,23 @@ CONTAINS
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
     model%top => box_tile
+
+    dsl4jsb_Get_config(FAGE_)
+
+    ! FAGE is the process that organises the age cohorts. 
+    ! There is no sense in running age cohorts without FAGE and vice versa! 
+    IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
+      CALL finish(TRIM(routine), "There is no sense in running age cohorts without FAGE and vice versa!")
+    END IF
+    IF (.NOT. model%processes(CARBON_)%p%config%active) THEN
+      CALL finish(TRIM(routine), "Current forest age cohort implementation assumes CARBON process to be active!")
+    END IF
+    IF (.NOT. model%processes(PHENO_)%p%config%active) THEN
+      CALL finish(TRIM(routine), "Current forest age cohort implementation assumes PHENO process to be active!")
+    END IF
+
+    ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
+
 
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
@@ -351,17 +369,6 @@ CONTAINS
 
             ! TODO-JN: decide on ForestFlag vs is_Woody! (model%lctlib(pft_ids(i))%WOODY_PFT)
             IF (model%lctlib(pft_ids(i))%ForestFlag) THEN 
-              ! FAGE is the process that organises the age cohorts. 
-              ! There is no sense in running age cohorts without FAGE and vice versa! 
-              IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
-                CALL finish(TRIM(routine), "There is no sense in running age cohorts without FAGE and vice versa!")
-              END IF
-              IF (.NOT. model%processes(CARBON_)%p%config%active) THEN
-                CALL finish(TRIM(routine), "Current forest age cohort implementation assumes CARBON process to be active!")
-              END IF
-              IF (.NOT. model%processes(PHENO_)%p%config%active) THEN
-                CALL finish(TRIM(routine), "Current forest age cohort implementation assumes PHENO process to be active!")
-              END IF
 
               CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
 

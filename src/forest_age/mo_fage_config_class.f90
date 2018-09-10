@@ -44,11 +44,6 @@ CONTAINS
 
     CLASS(t_fage_config), INTENT(inout) :: config
 
-    INTEGER, PARAMETER :: ncohorts = 16 !16 !TODO-JN-COHORTS should be a namelist parameter 
-                                       ! I wanted to add it to model%config%
-                                       ! since it is also required in the usecases (see there...)
-                                       ! but here I have no tile and thus no model?!
-
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     INTEGER                     :: max_age
@@ -57,7 +52,8 @@ CONTAINS
       & active,                     &
       & ic_filename,                &
       & bc_filename,                &
-      & max_age
+      & max_age,                    &
+      & ncohorts
 
 !TODO-JN: namelist char selecting different age cohort schemes "age_cohort_scheme"
 !  (e.g. static-equal, static-shorterYoung, dynamic-biomass, dynamic-MaxLai, ...)
@@ -65,8 +61,8 @@ CONTAINS
 
 
     INTEGER :: nml_handler, nml_unit, istat
-    INTEGER :: i
-    REAL(wp) :: cohorts_grid_levels(ncohorts)
+    INTEGER :: i, ncohorts
+    REAL(wp), ALLOCATABLE :: cohorts_grid_levels(:)
     REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
     TYPE(t_jsb_vgrid), POINTER :: forest_age, age_cohorts_grid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fage_config'
@@ -78,6 +74,7 @@ CONTAINS
     bc_filename       = 'bc_land_fage.nc'  !TODO-JN do I need it at all?
     ic_filename       = 'ic_land_fage.nc'  !TODO-JN
     max_age           = 150
+    ncohorts          = 16
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -94,6 +91,7 @@ CONTAINS
 
     config%disturbance_distribution_scheme = TRIM("equal")
 
+    ALLOCATE(cohorts_grid_levels(ncohorts))
     ALLOCATE(fage_grid_levels(max_age))
 
     !Assertion: 
