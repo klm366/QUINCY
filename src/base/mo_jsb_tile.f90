@@ -417,7 +417,7 @@ CONTAINS
       &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & loutput=.TRUE., initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &

@@ -4,6 +4,8 @@
 !!
 !! - TODO-JN-COHORTS: if this really should run on box it probably will all not be required 
 !!   depends on the reading -- but might also run on veg later?
+!! - TODO-JN harvest could also be useful for non forest types
+!!         -> however than FM_ sould rather be called MANAGE_ or something!
 !!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg

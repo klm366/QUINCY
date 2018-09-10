@@ -243,77 +243,77 @@ CONTAINS
           & t_cf('days_since_growth_begin_SummerGreen', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
           & prefix, suffix,                                                                 &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+          & lrestart=.TRUE., initval_r=0.0_wp )
 
         CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
           & hgrid, surface,                                                              &
           & t_cf('previous_day_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),        &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+          & lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &
         !   & hgrid, surface,                                                    &
         !   & t_cf('laiMax_dyn', '', ''),                                        &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         !   & prefix, suffix,                                                    &
-        !   & loutput=.TRUE., lrestart=.TRUE., initval_r=-1.0_wp)
+        !   & lrestart=.TRUE., initval_r=-1.0_wp)
 
         ! CALL jsb_add_var( mem,'year_npp_sum', mem%year_NPP_sum,                 &
         !   & hgrid, surface,                                                     &
         !   & t_cf('year_NPP_sum', '', ''),                                       &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         !   & prefix, suffix,                                                     &
-        !   & loutput=.TRUE., lrestart=.TRUE., initval_r=2.0_wp)
+        !   & lrestart=.TRUE., initval_r=2.0_wp)
 
         CALL jsb_add_var( mem,'day_npp_sum', mem%day_NPP_sum,                  &
           & hgrid, surface,                                                    &
           & t_cf('day_NPP_sum', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & lrestart=.TRUE., initval_r=0._wp)
 
         CALL jsb_add_var( mem,'heat_sum_eg', mem%heat_sum_EG,                  &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_EG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp)
+          & lrestart=.TRUE., initval_r=-99.0_wp)
 
         CALL jsb_add_var( mem,'heat_sum_sg', mem%heat_sum_SG,                  &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_SG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
+          & lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
 
         CALL jsb_add_var( mem,'heat_sum_crp', mem%heat_sum_CRP,                &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_CRP', '', ''),                                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=9999.0_wp)
+          & lrestart=.TRUE., initval_r=9999.0_wp)
 
         CALL jsb_add_var( mem,'heat_sum_winter', mem%heat_sum_winter,          &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_winter', '', ''),                                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
+          & lrestart=.TRUE., initval_r=-EPSILON(1._wp))
 
         CALL jsb_add_var( mem,'chill_days_eg', mem%chill_days_EG,              &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_EG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & lrestart=.TRUE., initval_r=0._wp)
 
         CALL jsb_add_var( mem,'chill_days_sg', mem%chill_days_SG,              &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_SG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & lrestart=.TRUE., initval_r=0._wp)
 
 !TODO-JN-COHORT: nochmal Reiner ansprechen, hier gibt es ja jetzt einen Haufen von Variablen, die 
 !         nur für pft1-4 interessant wären und für die anderen nicht -> doch als eigenen prozess???
@@ -331,13 +331,13 @@ CONTAINS
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_wp)
+            & lrestart=.TRUE., initval_r=15000.0_wp)
           CALL jsb_add_var( mem,'biomass_per_ind', mem%biomass_per_individual, &
             & hgrid, surface,                                                    &
             & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & lrestart=.TRUE., initval_r=0.0_wp)
 
           CALL jsb_add_var( mem, 'cconservation_allom', mem%cconservation_allom,              &
             & hgrid, surface,                                                           &
@@ -345,7 +345,7 @@ CONTAINS
               & 'Test for c conservation on rescaling of c states for allom.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
-            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+            & lrestart=.FALSE., initval_r=0.0_wp )
 
           IF (model%processes(FAGE_)%p%config%active) THEN
             CALL jsb_add_var( mem, 'delta_day_npp_sum_rp', mem%delta_day_npp_sum_rp, hgrid, surface, &

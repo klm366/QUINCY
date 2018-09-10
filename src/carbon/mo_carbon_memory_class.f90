@@ -658,21 +658,21 @@ CONTAINS
         & t_cf('LAI_sum', '-', 'Used to accumulate LAI over a day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput = .TRUE.,lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 !@todo: why not using PHENO_ day_npp_sum?
       CALL jsb_add_var( mem, 'npp_pot_sum', mem%NPP_pot_sum,                                   &
         & hgrid, surface,                                                                      &
         & t_cf('NPP_pot_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate NPP over a day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
-        & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        &  lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'gpp_sum', mem%GPP_sum,                                       &
         & hgrid, surface,                                                                  &
         & t_cf('GPP_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate GPP over a day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 !@todo: relict from CBALANCE?
       CALL jsb_add_var( mem, 'topsoiltemp_sum', mem%topSoilTemp_sum,                                    &
@@ -844,7 +844,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
         & output_level=BASIC,                                                                            &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_woods_ta', mem%c_woods_ta,                                         &
         & hgrid, surface,                                                                              &
@@ -860,7 +860,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                            &
         & prefix, suffix,                                                                                               &
         & output_level=BASIC,                                                                            &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_crop_harvest_ta', mem%c_crop_harvest_ta,                        &
         & hgrid, surface,                                                                           &
@@ -919,7 +919,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
         & prefix, suffix,                                                                                     &
         & output_level=MEDIUM,                                                                                &
-        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        &  lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_water_ag1_ta', mem%c_water_ag1_ta,                                         &
         & hgrid, surface,                                                                                       &
@@ -1193,7 +1193,7 @@ CONTAINS
         & t_cf('cflux_fire_all_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from C pools to atmosphere due to fire.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
         & prefix, suffix,                                                                                   &
-        & loutput=.TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
 !       CALL jsb_add_var( mem, 'cflux_herb_2_littergreen_ta', mem%cflux_herb_2_littergreen_ta,                                   &
@@ -1253,7 +1253,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
         & prefix, suffix,                                                                                              &
         & output_level=BASIC,                                                                                &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        &  lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
         & hgrid, surface,                                                           &
@@ -1261,7 +1261,7 @@ CONTAINS
           & 'Test for c conservation on allocation and respiration.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+        & lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &
@@ -1269,13 +1269,13 @@ CONTAINS
             & t_cf('current_max_green', 'mol(C) m-2(canopy)', 'Running maximum of the green pool'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            &  lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'max_green_veg_c', mem%veg_carbon_at_max_green, &
             & hgrid, surface,                                                    &
             & t_cf('veg_carbon_at_max_green', 'mol(C) m-2(canopy)', 'Total vegetation carbon at green pool maximum'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            &  lrestart=.TRUE., initval_r=0.0_wp)
 
           CALL jsb_add_var( mem,'annual_avg_NPP', mem%annual_avg_NPP, &
             & hgrid, surface,                                                    &
@@ -1288,13 +1288,13 @@ CONTAINS
             & t_cf('biennial_avg_NPP', 'mol(C) m-2(canopy) y-1', 'NPP increment with biennial weighting'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'decennial_avg_NPP', mem%decennial_avg_NPP, &
             & hgrid, surface,                                                    &
             & t_cf('decennial_avg_NPP', 'mol(C) m-2(canopy) y-1', 'NPP increment with decennial weighting'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & lrestart=.TRUE., initval_r=0.0_wp)
 
       ENDIF
 
@@ -1316,19 +1316,19 @@ CONTAINS
             & t_cf('delta_annual_avg_NPP_rp', 'mol(C) m-2(canopy) y-1', 'Change in NPP increment with annual weighting'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'delta_biennial_avg_NPP_rp', mem%delta_biennial_avg_NPP_rp, &
             & hgrid, surface,                                                    &
             & t_cf('delta_biennial_avg_NPP_rp', 'mol(C) m-2(canopy) y-1', 'Change in NPP increment with biennial weighting'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & lrestart=.TRUE., initval_r=0.0_wp)
           CALL jsb_add_var( mem,'delta_decennial_avg_NPP_rp', mem%delta_decennial_avg_NPP_rp, &
             & hgrid, surface,                                                    &
             & t_cf('delta_decennial_avg_NPP_rp', 'mol(C) m-2(canopy) y-1', 'Change in NPP increment with decennial weighting'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & lrestart=.TRUE., initval_r=0.0_wp)
         ENDIF
 
 !TODO-JN-COHORTS: change unit when absolute areas are implemented

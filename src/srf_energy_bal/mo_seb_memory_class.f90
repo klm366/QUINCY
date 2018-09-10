@@ -142,7 +142,7 @@ CONTAINS
         & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput = .TRUE.,output_level=BASIC, &
+        & output_level=BASIC, &
         & initval_r=280.0_wp )
 
       CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &
@@ -271,63 +271,63 @@ CONTAINS
         & t_cf('previous_day_temp_mean', '', ''),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                          &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
+        & lrestart=.TRUE., initval_r=10.0_wp )
 
       CALL jsb_add_var( mem, 'previous_day_temp_min', mem%previous_day_temp_min, &
         & hgrid, surface,                                                        &
         & t_cf('previous_day_temp_min', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=5.0_wp )
+        & lrestart=.TRUE., initval_r=5.0_wp )
 
       CALL jsb_add_var( mem, 'previous_day_temp_max', mem%previous_day_temp_max, &
         & hgrid, surface,                                                        &
         & t_cf('albedo_nir_previous_day_temp_maxsnow', '', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=15.0_wp )
+        & lrestart=.TRUE., initval_r=15.0_wp )
 
       CALL jsb_add_var( mem, 'pseudo_soil_temp', mem%pseudo_soil_temp,           &
         & hgrid, surface,                                                        &
         & t_cf('pseudo_soil_temp', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
+        & lrestart=.TRUE., initval_r=10.0_wp )
 
       CALL jsb_add_var( mem,'day_temp_sum', mem%day_temp_sum,                    &
         & hgrid, surface,                                                        &
         & t_cf('day_temp_sum', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+        & lrestart=.TRUE., initval_r=0._wp )
 
       CALL jsb_add_var( mem,'day_temp_min', mem%day_temp_min,                    &
         & hgrid, surface,                                                        &
         & t_cf('day_temp_min', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+        & lrestart=.TRUE., initval_r=0._wp )
 
       CALL jsb_add_var( mem,'day_temp_max', mem%day_temp_max,                    &
         & hgrid, surface,                                                        &
         & t_cf('day_temp_max', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+        & lrestart=.TRUE., initval_r=0._wp)
 
       CALL jsb_add_var( mem,'N_pseudo_soil_temp', mem%N_pseudo_soil_temp,        &
         & hgrid, surface,                                                        &
         & t_cf('N_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+        & lrestart=.TRUE., initval_r=10._wp )
 
       CALL jsb_add_var( mem,'F_pseudo_soil_temp', mem%F_pseudo_soil_temp,        &
         & hgrid, surface,                                                        &
         & t_cf('F_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+        & lrestart=.TRUE., initval_r=10._wp )
 
     END IF
 

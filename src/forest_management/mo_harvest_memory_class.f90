@@ -94,7 +94,7 @@ CONTAINS
           & 'Test for c conservation on relocation for harvest (not applicable for pfts with cohorts).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                                                 &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+        & lrestart=.FALSE., initval_r=0.0_wp ) 
 
     END IF
 

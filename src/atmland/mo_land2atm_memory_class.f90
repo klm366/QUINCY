@@ -89,7 +89,7 @@ CONTAINS
       & t_cf('surface_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & loutput = .TRUE., lrestart=.FALSE.,                                                    &
+      & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 't_eff_srf', mem%t_eff_srf,              &
@@ -145,7 +145,7 @@ CONTAINS
       & t_cf('albedo_visible_diffuse', '', ''),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & loutput = .TRUE.,lrestart=.FALSE.,                                                    &
+      & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_nir_dif', mem%alb_nir_dif,          &
@@ -153,7 +153,7 @@ CONTAINS
       & t_cf('albedo_near_infrared_diffuse', '', ''),                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & loutput = .TRUE.,lrestart=.FALSE.,                                                    &
+      & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_vis_dir', mem%alb_vis_dir,          &
@@ -161,7 +161,7 @@ CONTAINS
       & t_cf('albedo_visible_direct', '', ''),                                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & loutput = .TRUE.,lrestart=.FALSE.,                                                    &
+      & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir,          &
@@ -169,7 +169,7 @@ CONTAINS
       & t_cf('albedo_near_infrared_dir', '', ''),                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & loutput = .TRUE.,lrestart=.FALSE.,                                                    &
+      & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%latent_hflx_wtr%ptr)) THEN
