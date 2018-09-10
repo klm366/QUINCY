@@ -9,6 +9,7 @@
 ##  Rscript --vanilla ./generate_fluxnet_transient_slm_forcing.R
 ## 
 ## note: allsiteinfo is ./generate_fluxnet_site_list.dat 
+##       some swdown values in IL-Yat are corrected manually
 ## 
 ## output may be generated per default in:
 ##  ./new_fluxnet_transient_met_forcing/
@@ -103,6 +104,11 @@ for (s in 1:length(site_list)) {
         lonsite <- ncvar_get(fid,"x")
         latsite <- ncvar_get(fid,"y")
         swdown  <- ncvar_get(fid,"SWdown")
+        ## correct some swdown values in IL-Yat
+        if (site_list[s] == "IL-Yat"){
+          print(paste0("manual correction of ", length(which(round(swdown,4) == 275.0768)), " swdown values; set all 275.0768 to 0.0"))
+          swdown[which(round(swdown,4) == 275.0768)] <- 0.0
+        }
         lwdown  <- ncvar_get(fid,"LWdown")
         tair    <- ncvar_get(fid,"Tair")
         rain    <- ncvar_get(fid,"Rainf")*86400
