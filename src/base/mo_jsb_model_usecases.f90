@@ -269,6 +269,7 @@ CONTAINS
 
     CHARACTER(len=5)  :: pft_shortname
     CHARACTER(len=10) :: age_cohort_name
+    CHARACTER(len=10) :: age_cohort_area_fracts
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
       & 'Tropical broadleaf evergreen', &
@@ -311,7 +312,7 @@ CONTAINS
     END IF
 
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
-
+    age_cohort_area_fracts = dsl4jsb_Config(FAGE_)%age_cohort_area_fracts
 
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
@@ -386,7 +387,7 @@ CONTAINS
                 WRITE(age_cohort_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
                 cohort_tile => t_jsb_tile(age_cohort_name, TRIM(age_cohort_name // ' tile'), &
                  & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=pft_tile, &
-                 & fract_varname='allFirst') !-> TODO-JN-COHORTS: cross check with SUBROUTINE fage_init_ic(tile)
+                 & fract_varname=TRIM(age_cohort_area_fracts))
               ENDDO
             ENDIF
           END DO

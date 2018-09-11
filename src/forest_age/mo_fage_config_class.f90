@@ -26,7 +26,8 @@ MODULE mo_fage_config_class
     INTEGER                   :: max_age                        ! Maximum age tracked  
     INTEGER                   :: ncohorts                       ! number of age cohorts
     CHARACTER(len=20)         :: age_cohort_scheme
-    CHARACTER(len=20)         :: disturbance_distribution_scheme
+    CHARACTER(len=10)         :: age_cohort_area_fracts
+    CHARACTER(len=20)         :: disturb_distribution_scheme
   CONTAINS
     PROCEDURE             :: Init => Init_fage_config
   END type t_fage_config
@@ -53,15 +54,16 @@ CONTAINS
       & ic_filename,                &
       & bc_filename,                &
       & max_age,                    &
-      & ncohorts
-
-!TODO-JN: namelist char selecting different age cohort schemes "age_cohort_scheme"
-!  (e.g. static-equal, static-shorterYoung, dynamic-biomass, dynamic-MaxLai, ...)
-!TODO-JN: namelist char for disturbance_distribution_scheme?
-
+      & ncohorts,                   &
+      & age_cohort_scheme,          &
+      & age_cohort_area_fracts,     &
+      & disturb_distribution_scheme
 
     INTEGER :: nml_handler, nml_unit, istat
     INTEGER :: i, ncohorts
+    CHARACTER(len=20)     :: age_cohort_scheme
+    CHARACTER(len=10)     :: age_cohort_area_fracts
+    CHARACTER(len=20)     :: disturb_distribution_scheme
     REAL(wp), ALLOCATABLE :: cohorts_grid_levels(:)
     REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
     TYPE(t_jsb_vgrid), POINTER :: forest_age, age_cohorts_grid
@@ -75,6 +77,10 @@ CONTAINS
     ic_filename       = 'ic_land_fage.nc'  !TODO-JN
     max_age           = 150
     ncohorts          = 16
+    age_cohort_scheme = "static-equal" ! alternative: "static-shorterYoung"
+    !TODO-JN: dynamic-biomass, dynamic-MaxLai, ...)
+    age_cohort_area_fracts = "allFirst"     !TODO-JN: fromFile; allLast
+    disturb_distribution_scheme = "equal"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -85,11 +91,10 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%max_age             = max_age
-
     config%ncohorts            = ncohorts
-    config%age_cohort_scheme   = TRIM("static-equal")
-
-    config%disturbance_distribution_scheme = TRIM("equal")
+    config%age_cohort_scheme   = TRIM(age_cohort_scheme)
+    config%age_cohort_area_fracts = TRIM(age_cohort_area_fracts)
+    config%disturb_distribution_scheme = TRIM(disturb_distribution_scheme)
 
     ALLOCATE(cohorts_grid_levels(ncohorts))
     ALLOCATE(fage_grid_levels(max_age))

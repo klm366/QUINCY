@@ -516,7 +516,7 @@ CONTAINS
         IF (i .GT. 1) THEN ! area moved within the first age cohort requires no update (it stays between year 0 and 1)
           disturbed_area(:,i) = damagedArea(:) + burnedArea(:)
           IF(ANY(disturbed_area(:,i) .GT. 0._wp)) THEN
-            IF (dsl4jsb_Config(FAGE_)%disturbance_distribution_scheme == 'equal' ) THEN
+            IF (dsl4jsb_Config(FAGE_)%disturb_distribution_scheme == 'equal' ) THEN
               CALL recalc_fract_per_age_equally_upon_disturbance(nc, max_age, ncohorts, &
                 & i, disturbed_area(:,i), cohort_max_age(:,:), fract_per_age(:,:))
             ELSE

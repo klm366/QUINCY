@@ -169,13 +169,17 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onDomain(FAGE_, fract_per_age)
 
-    !TODO-JN-COHORTS: for now all fracts to youngest age, later initialise from file
-    !TODO-JN-COHORTS: needs to comply with the fractions in the age cohorts!  
-    !   --- cross check with call in mo...usecase: "fract_varname='allFirst'"! 
-    ! ++ what happens on restart?
-    ! ++ what when absolute area introduced?
-    dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._wp
-    dsl4jsb_var_ptr(FAGE_, fract_per_age) (:,1,:) = 1._wp
+    !@todo: needs to be adapted when absolute areas are introduced!!!
+
+    ! Distribution of age fractions - needs to comply with the fractions in the age cohorts (mo_jsb_tile - Init_tile)
+    ! TODO-JN-COHORTS: options fromFile; allLast
+    IF (dsl4jsb_Config(FAGE_)%age_cohort_area_fracts == 'allFirst') THEN
+      ! all fracts to youngest age
+      dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._wp
+      dsl4jsb_var_ptr(FAGE_, fract_per_age) (:,1,:) = 1._wp
+    ELSE
+      CALL finish(TRIM(routine), 'Currently only "allFirst" implemented for the distribution of age fractions and cohorts.')
+    ENDIF
 
     ! input_file = jsb_netcdf_open_input(dsl4jsb_Config(FAGE_)%ic_filename, model%grid_id)
 !    ptr_2D(:,:) = tile%fract(:,:)
