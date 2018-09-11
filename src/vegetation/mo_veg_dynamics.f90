@@ -382,8 +382,8 @@ CONTAINS
         !! 
         WHERE(lai_tvegdyn_mavg(:) > eps8)
           !> growth efficiency per unit leaf area in mol C / m2 LAI / yr
-          !!
-          greff(:) = net_growth_tvegdyn_mavg(:) / lai_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp
+          !!  the application of 'MAX()' avoids negative values of greff_mortality_rate(:) and mortality_rate(:)
+          greff(:) = MAX(net_growth_tvegdyn_mavg(:) / lai_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp, 0.0_wp)
           !> 1.1 deduce mortality from asymptoptic mortality rate given growth efficiency, 
           !!     below a minimum threshold mortality rises to 100%
           !!
