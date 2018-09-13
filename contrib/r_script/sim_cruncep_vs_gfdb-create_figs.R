@@ -17,32 +17,54 @@ ipath<-args[1]  # /Net/Groups/BGI/scratch/""$username""/slm/"exp_ID"/
 setwd(ipath)
 
 ## get observational data - absolute path
-obs_path<-'/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/'
-obs_file<-'global_forest_database_cue_sites_01082017.csv'
-obs<-read.csv(paste0(obs_path,obs_file),stringsAsFactors=F)
-obsdim<-dim(obs)
+obs_path <- '/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/'
+obs_file <- 'global_forest_database_cue_sites_01082017.csv'
+obs      <- read.csv(paste0(obs_path,obs_file), header=T, stringsAsFactors=F)
+obs_nvar <- ncol(obs)
 
-model_path<-''
-model_expid<-''
-model_mean_file<-'slm_site_mean.csv'
-model_std_file<-'slm_site_sd.csv'
-model_mean<-read.csv(paste(model_path,model_expid,model_mean_file,sep=''),stringsAsFactors=F)
-model_std<-read.csv(paste(model_path,model_expid,model_std_file,sep=''),stringsAsFactors=F)
+## get model results 
+model_mean_file <- 'slm_site_mean.csv'
+model_std_file  <- 'slm_site_sd.csv'
+model_mean      <- read.csv(model_mean_file, header=T, stringsAsFactors=F)
+model_std       <- read.csv(model_std_file, header=T, stringsAsFactors=F)
+nsite_all       <- nrow(model_mean)
+nsite_cue       <- 0
 
-moddim<-dim(model_mean)
-nsite<-moddim[1]
+## only cue sites - changing model_mean & model_std objects
+print("  Note: this script does create figures only for cruncep CUE sites present in the the 'obs_file'.")
 
-mod2obs_idx<-numeric(nsite)
-obs4mod<-obs[1:nsite,]   # create a new data.frame by copying part of the obs data.frame
-for (s in 1:nsite) {
-  mod2obs_idx[s]<-which(model_mean$Site_ID[s]==obs$Site.Code)
-  for (v in 1:obsdim[2]) obs4mod[s,v]<-obs[mod2obs_idx[s],v]
+# get a vector with only the sites that are present in 'obs'
+# and also exclude sites present in 'obs' but not in 'model_mean'
+mod2obs_idx     <- numeric(nsite_all)
+model_cue_sites <- numeric(nsite_all)
+for (s in 1:nsite_all){
+  if (length(which(model_mean$Site_ID[s] == obs$Site.Code)) > 0){
+    nsite_cue                  <- nsite_cue + 1
+    model_cue_sites[nsite_cue] <- s
+    mod2obs_idx[s]             <- which(model_mean$Site_ID[s] == obs$Site.Code)
+  }
 }
+model_cue_sites <- model_cue_sites[1:nsite_cue]
+mod2obs_idx     <- mod2obs_idx[1:nsite_cue]
+model_mean      <- model_mean[model_cue_sites,]
+model_std       <- model_std[model_cue_sites,]
+
+# create data.frame with obs data matching the model data
+obs4mod     <- obs[1:nsite_cue,]   # create a new data.frame by copying part of the obs data.frame
+for (s in mod2obs_idx){
+  for (v in 1:obs_nvar){
+    obs4mod[s,v]<-obs[mod2obs_idx[s],v]
+  }
+}
+
+# write file for documentation
 write.csv(obs4mod,file='obs_site.csv',row.names=F)
 
+
+## prepare figures
 pchidx<-c(1,19,0,15,2,17)
 pchleg<-c('BroadDec','BroadEve','NeedleDec','NeedleEve','BroadMix','Mixed')
-pch_site<-numeric(nsite)
+pch_site<-numeric(nsite_cue)
 pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Deciduous']<-pchidx[1]
 pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Evergreen']<-pchidx[2]
 pch_site[obs4mod$Needles.leaves=='Needle-leaved'&obs4mod$Evergreen.Deciduous=='Deciduous']<-pchidx[3]
@@ -52,7 +74,7 @@ pch_site[obs4mod$Needles.leaves=='Mixed'&obs4mod$Evergreen.Deciduous=='Mixed']<-
 
 colidx<-c('blue','black','orange','red')
 colleg<-c('boreal','temperate','mediterr.','tropical')
-col_site<-numeric(nsite)
+col_site<-numeric(nsite_cue)
 col_site[obs4mod$Climatic.region=="Boreal Humid"|obs4mod$Climatic.region=="Boreal Semi-arid"]<-colidx[1]
 col_site[obs4mod$Climatic.region=="Temperate Humid"|obs4mod$Climatic.region=="Temperate Semi-arid"]<-colidx[2]
 col_site[obs4mod$Climatic.region=="Mediterranean Warm"]<-colidx[3]
@@ -135,4 +157,4 @@ xvar<-xvar*0.48;yvar=(model_mean$SapWood_C+model_mean$HeartWood_C)*12.001;label=
 plot_mod2obs(xvar,yvar,label)
 
 
-dev.off()
+trash <- dev.off()
