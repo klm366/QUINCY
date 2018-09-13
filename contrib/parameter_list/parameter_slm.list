@@ -35,7 +35,12 @@
   f_maxresp_myc=NAN
   f_surface_myc2fineroot=NAN
   k_diff_org=NAN
+  k_adsorpt_dom=NAN
+  k_desorpt_dom=NAN
+  k_adsorpt_det=NAN
+  k_desorpt_det=NAN
   ! additional jsm parameters
+  vmax_mic_uptake=NAN
   vmax_mic_uptake_nh4=NAN
   km_mic_uptake_nh4=NAN
   vmax_mic_uptake_no3=NAN

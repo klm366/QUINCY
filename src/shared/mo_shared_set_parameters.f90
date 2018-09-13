@@ -59,8 +59,13 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: f_maxresp_myc         
     REAL(wp)           :: f_surface_myc2fineroot
     REAL(wp)           :: k_diff_org
+    REAL(wp)           :: k_adsorpt_dom
+    REAL(wp)           :: k_desorpt_dom
+    REAL(wp)           :: k_adsorpt_det
+    REAL(wp)           :: k_desorpt_det
     ! additional jsm parameters
-    REAL(wp)           :: vmax_mic_uptake_nh4, &    
+    REAL(wp)           :: vmax_mic_uptake, &
+                          vmax_mic_uptake_nh4, &    
                           km_mic_uptake_nh4, &      
                           vmax_mic_uptake_no3, &    
                           km_mic_uptake_no3, &      
@@ -238,8 +243,13 @@ CONTAINS
     REAL(wp)           :: f_maxresp_myc         
     REAL(wp)           :: f_surface_myc2fineroot
     REAL(wp)           :: k_diff_org
+    REAL(wp)           :: k_adsorpt_dom
+    REAL(wp)           :: k_desorpt_dom
+    REAL(wp)           :: k_adsorpt_det
+    REAL(wp)           :: k_desorpt_det
     ! additional jsm parameters
-    REAL(wp)           :: vmax_mic_uptake_nh4, &    
+    REAL(wp)           :: vmax_mic_uptake, &
+                          vmax_mic_uptake_nh4, &    
                           km_mic_uptake_nh4, &      
                           vmax_mic_uptake_no3, &    
                           km_mic_uptake_no3, &      
@@ -313,6 +323,11 @@ CONTAINS
         f_maxresp_myc             , &
         f_surface_myc2fineroot    , &
         k_diff_org                , &
+        k_adsorpt_dom             , &
+        k_desorpt_dom             , &
+        k_adsorpt_det             , &
+        k_desorpt_det             , &
+        vmax_mic_uptake           , &
         vmax_mic_uptake_nh4       , &    
         km_mic_uptake_nh4         , &      
         vmax_mic_uptake_no3       , &    
@@ -390,6 +405,11 @@ CONTAINS
     f_maxresp_myc               = missval
     f_surface_myc2fineroot      = missval
     k_diff_org                  = missval
+    k_adsorpt_dom               = missval
+    k_desorpt_dom               = missval
+    k_adsorpt_det               = missval
+    k_desorpt_det               = missval
+    vmax_mic_uptake             = missval    
     vmax_mic_uptake_nh4         = missval    
     km_mic_uptake_nh4           = missval      
     vmax_mic_uptake_no3         = missval    
@@ -478,6 +498,11 @@ CONTAINS
     this%f_maxresp_myc               = f_maxresp_myc         
     this%f_surface_myc2fineroot      = f_surface_myc2fineroot
     this%k_diff_org                  = k_diff_org
+    this%k_adsorpt_dom               = k_adsorpt_dom  
+    this%k_desorpt_dom               = k_desorpt_dom  
+    this%k_adsorpt_det               = k_adsorpt_det  
+    this%k_desorpt_det               = k_desorpt_det  
+    this%vmax_mic_uptake             = vmax_mic_uptake
     this%vmax_mic_uptake_nh4         = vmax_mic_uptake_nh4       
     this%km_mic_uptake_nh4           = km_mic_uptake_nh4           
     this%vmax_mic_uptake_no3         = vmax_mic_uptake_no3       
@@ -595,8 +620,16 @@ CONTAINS
                                                                                        molar_mass_N
     IF (ABS(this%f_maxresp_myc          - missval) > eps8)  f_maxresp_myc          = this%f_maxresp_myc
     IF (ABS(this%f_surface_myc2fineroot - missval) > eps8)  f_surface_myc2fineroot = this%f_surface_myc2fineroot
-
     IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org             = this%k_diff_org / one_year / one_day
+    IF (ABS(this%k_adsorpt_dom          - missval) > eps8)  k_adsorpt_dom          = this%k_adsorpt_dom / one_year / one_day * &
+                                                                                       molar_mass_C  / 1000._wp
+    IF (ABS(this%k_desorpt_dom          - missval) > eps8)  k_desorpt_dom          = this%k_desorpt_dom / one_year / one_day
+    IF (ABS(this%k_adsorpt_det          - missval) > eps8)  k_adsorpt_det          = this%k_adsorpt_det / one_year / one_day * &
+                                                                                       molar_mass_C / 1000._wp
+    IF (ABS(this%k_desorpt_det          - missval) > eps8)  k_desorpt_det          = this%k_desorpt_det / one_year / one_day
+    
+    IF (ABS(this%vmax_mic_uptake        - missval) > eps8)  vmax_mic_uptake        = this%vmax_mic_uptake / &
+                                                                                       one_year / one_day * 1000000._wp
     IF (ABS(this%vmax_mic_uptake_nh4    - missval) > eps8)  vmax_mic_uptake_nh4    = this%vmax_mic_uptake_nh4 / &
                                                                                        3600._wp * molar_mass_C
     IF (ABS(this%km_mic_uptake_nh4      - missval) > eps8)  km_mic_uptake_nh4      = this%km_mic_uptake_nh4 / molar_mass_N
