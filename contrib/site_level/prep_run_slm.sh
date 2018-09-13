@@ -55,7 +55,7 @@ specialFluxnetOutput="F"
 ##(2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
 # when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", specialFluxnetOutput="F"
-# the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
+# the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R & sim_cruncep_all_vs_gfdb-create_figs.R
 # you can run simulations for all/some CRUNCEPv7 sites of the "cue" set (cue_gfdb_sites*.dat) ; for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
 # data for comparison is all of the the daily model output following the spinupLengthGFDB
 compareSimCRUNCEPvsGFDB="F"
@@ -500,7 +500,7 @@ slmParamTableFilename="parameter_table.txt"               ## this filename is al
  slmRscript4fluxBarPlots="../r_script/sim_fluxnet_diagnostics-process_timestep.R" ## R-Script for postprocessing FLUXNET diagnostics as barplots
  slmRscriptCompCruncepGfdb1="../r_script/sim_cruncep_vs_gfdb-process_daily.R"     ## R-Script for postprocessing simulation data for CRUNCEP vs GFDB
  slmRscriptCompCruncepGfdb2="../r_script/sim_cruncep_vs_gfdb-create_figs.R"       ## R-Script for creating comparision figures CRUNCEP vs GFDB
-
+ slmRscriptCompCruncepGfdb3="../r_script/sim_cruncep_all_vs_gfdb-create_figs.R"   ## R-Script for creating comparision figures CRUNCEP vs GFDB
 
 ## experimental ID & simulation specific folders at scratch ##
 # if experimental ID is empty, use date as: YYYYMMDD_HHMMSS
@@ -1249,6 +1249,7 @@ fi
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   cp "$slmRscriptCompCruncepGfdb1" "$simFoldDefaultFiles"
   cp "$slmRscriptCompCruncepGfdb2" "$simFoldDefaultFiles"
+  cp "$slmRscriptCompCruncepGfdb3" "$simFoldDefaultFiles"
 fi
 
 ## syncronize all data with the file system ##

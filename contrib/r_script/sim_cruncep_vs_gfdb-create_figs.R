@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-## Rscript for creating figures comparing SLM simulation results of CRUNCEP sites with global forest data base
+## Rscript for creating figures comparing SLM simulation results of only CUE CRUNCEP sites with global forest data base
 ##
 ## Uses input from:
 ##  1) observational data
@@ -44,6 +44,13 @@ for (s in 1:nsite_all){
     mod2obs_idx[s]             <- which(model_mean$Site_ID[s] == obs$Site.Code)
   }
 }
+
+# exit if no site cue site present in model data
+if (nsite_cue == 0){
+  print("  No simulated site seems to be a cue site. EXIT this script.")
+  quit(save="no", status=1)
+}
+
 model_cue_sites <- model_cue_sites[1:nsite_cue]
 mod2obs_idx     <- mod2obs_idx[1:nsite_cue]
 model_mean      <- model_mean[model_cue_sites,]
