@@ -218,18 +218,12 @@ CONTAINS
     !> 1.0 calculate the moisture scaling factor for photosynthesis
     !!
     beta_air(:)     = calc_atm_moisture_stress(t_air(:), q_air(:), press_srf(:))
-    beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_theta(:)     , &
-                                                lctlib%lambda_soil_ps    , &
-                                                lctlib%weibull_k_soil_ps)
-    ! beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
-    !                                            lctlib%phi_leaf_min    )
+    beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
+                                               lctlib%phi_leaf_min    )
     ! catch beta_soil_ps getting zero
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
-    beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_theta(:)     , &
-                                                lctlib%lambda_soil_gs    , &
-                                                lctlib%weibull_k_soil_gs)
-    ! beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
-    !                                            lctlib%phi_leaf_min   )
+    beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
+                                               lctlib%phi_leaf_min   )
 
     ga(:) = heat_transfer_coef(drag_srf(:),model%options%steplen) * MAX(wind_10m, min_wind) 
 
@@ -698,49 +692,25 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> calculate soil moisture stress on photosynthesis or conductance given current soil moisture
   !!
-  !! @todo (calc_soil_moisture_stress) this should account for rooting and soil moisture profile in the long-term
   !-----------------------------------------------------------------------------------------------------
-   PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(theta,lambda,weibull_k) RESULT(beta)
-
+  PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(phi,phi_leaf_min) RESULT(beta)
+  
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp),INTENT(in) :: theta       !< soil plant available water (fractions)
-    REAL(wp),INTENT(in) :: lambda      !< slope parameter of Weibull function from lctlib
-    REAL(wp),INTENT(in) :: weibull_k   !< shape parameter of Weibull function from lctlib
-    REAL(wp)            :: beta        !< veg\%beta_soil_ps / veg\%beta_soil_gs
+    REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
+    REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
+    REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
     ! ---------------------------
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'!
 
-    !> 1.0 Moisture stress now as a Weibull function to avoid MIN/MAX statements
+
+    !> 1.0 Moisture stress as a function of soil water potential and minimum leaf water potential
     !!
-    IF(theta < eps8) THEN
-      beta = 0.0_wp
-    ELSE
-      beta = 1.0_wp - exp(-(lambda*theta)**weibull_k)
-    END IF
-  END FUNCTION calc_soil_moisture_stress  
+    beta = MAX(0.0_wp, 1._wp - phi / phi_leaf_min)
 
-  !PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(phi,phi_leaf_min) RESULT(beta)
-  !
-  !  IMPLICIT NONE
-  !  ! ---------------------------
-  !  ! 0.1 InOut
-  !  REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
-  !  REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
-  !  REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
-  !  ! ---------------------------
-  !  ! 0.2 Local
-  !  CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'!
-
-
- !   !> 1.0 Moisture stress as a function of soil water potential and minimum leaf water potential
- !   !!
-
-!      beta = MAX(0.0_wp, 1._wp - phi / phi_leaf_min)
-
- ! END FUNCTION calc_soil_moisture_stress
+  END FUNCTION calc_soil_moisture_stress
 
 
   !-------------------------------------------------------------------------------------------------------
