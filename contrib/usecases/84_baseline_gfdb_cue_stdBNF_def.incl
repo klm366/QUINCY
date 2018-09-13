@@ -12,6 +12,7 @@ experimentalID="84_baseline_gfdb_cue_stdBNF"
 slmModel="land"
 
 forcingDataSet="cruncep"
+siteSelection="cue"
 forcingMode="transient"
 customSiteList="F"
 customSiteListFileName=""
