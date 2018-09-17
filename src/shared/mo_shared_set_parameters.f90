@@ -130,10 +130,6 @@ MODULE mo_shared_set_parameters
     REAL(wp)            :: g0
     REAL(wp)            :: g1
     REAL(wp)            :: gmin
-    REAL(wp)            :: lambda_soil_ps
-    REAL(wp)            :: weibull_k_soil_ps
-    REAL(wp)            :: lambda_soil_gs
-    REAL(wp)            :: weibull_k_soil_gs
     ! turnover times
     REAL(wp)            :: tau_leaf
     REAL(wp)            :: tau_fine_root
@@ -710,10 +706,6 @@ CONTAINS
     REAL(wp)            :: g0_p1
     REAL(wp)            :: g1_p1
     REAL(wp)            :: gmin_p1
-    REAL(wp)            :: lambda_soil_ps_p1
-    REAL(wp)            :: weibull_k_soil_ps_p1
-    REAL(wp)            :: lambda_soil_gs_p1
-    REAL(wp)            :: weibull_k_soil_gs_p1
     REAL(wp)            :: tau_leaf_p1
     REAL(wp)            :: tau_fine_root_p1
     REAL(wp)            :: tau_coarse_root_p1
@@ -767,10 +759,6 @@ CONTAINS
     REAL(wp)            :: g0_p2
     REAL(wp)            :: g1_p2
     REAL(wp)            :: gmin_p2
-    REAL(wp)            :: lambda_soil_ps_p2
-    REAL(wp)            :: weibull_k_soil_ps_p2
-    REAL(wp)            :: lambda_soil_gs_p2
-    REAL(wp)            :: weibull_k_soil_gs_p2
     REAL(wp)            :: tau_leaf_p2
     REAL(wp)            :: tau_fine_root_p2
     REAL(wp)            :: tau_coarse_root_p2
@@ -824,10 +812,6 @@ CONTAINS
     REAL(wp)            :: g0_p3
     REAL(wp)            :: g1_p3
     REAL(wp)            :: gmin_p3
-    REAL(wp)            :: lambda_soil_ps_p3
-    REAL(wp)            :: weibull_k_soil_ps_p3
-    REAL(wp)            :: lambda_soil_gs_p3
-    REAL(wp)            :: weibull_k_soil_gs_p3
     REAL(wp)            :: tau_leaf_p3
     REAL(wp)            :: tau_fine_root_p3
     REAL(wp)            :: tau_coarse_root_p3
@@ -881,10 +865,6 @@ CONTAINS
     REAL(wp)            :: g0_p4
     REAL(wp)            :: g1_p4
     REAL(wp)            :: gmin_p4
-    REAL(wp)            :: lambda_soil_ps_p4
-    REAL(wp)            :: weibull_k_soil_ps_p4
-    REAL(wp)            :: lambda_soil_gs_p4
-    REAL(wp)            :: weibull_k_soil_gs_p4
     REAL(wp)            :: tau_leaf_p4
     REAL(wp)            :: tau_fine_root_p4
     REAL(wp)            :: tau_coarse_root_p4
@@ -938,10 +918,6 @@ CONTAINS
     REAL(wp)            :: g0_p5
     REAL(wp)            :: g1_p5
     REAL(wp)            :: gmin_p5
-    REAL(wp)            :: lambda_soil_ps_p5
-    REAL(wp)            :: weibull_k_soil_ps_p5
-    REAL(wp)            :: lambda_soil_gs_p5
-    REAL(wp)            :: weibull_k_soil_gs_p5
     REAL(wp)            :: tau_leaf_p5
     REAL(wp)            :: tau_fine_root_p5
     REAL(wp)            :: tau_coarse_root_p5
@@ -995,10 +971,6 @@ CONTAINS
     REAL(wp)            :: g0_p6
     REAL(wp)            :: g1_p6
     REAL(wp)            :: gmin_p6
-    REAL(wp)            :: lambda_soil_ps_p6
-    REAL(wp)            :: weibull_k_soil_ps_p6
-    REAL(wp)            :: lambda_soil_gs_p6
-    REAL(wp)            :: weibull_k_soil_gs_p6
     REAL(wp)            :: tau_leaf_p6
     REAL(wp)            :: tau_fine_root_p6
     REAL(wp)            :: tau_coarse_root_p6
@@ -1052,10 +1024,6 @@ CONTAINS
     REAL(wp)            :: g0_p7
     REAL(wp)            :: g1_p7
     REAL(wp)            :: gmin_p7
-    REAL(wp)            :: lambda_soil_ps_p7
-    REAL(wp)            :: weibull_k_soil_ps_p7
-    REAL(wp)            :: lambda_soil_gs_p7
-    REAL(wp)            :: weibull_k_soil_gs_p7
     REAL(wp)            :: tau_leaf_p7
     REAL(wp)            :: tau_fine_root_p7
     REAL(wp)            :: tau_coarse_root_p7
@@ -1109,10 +1077,6 @@ CONTAINS
     REAL(wp)            :: g0_p8
     REAL(wp)            :: g1_p8
     REAL(wp)            :: gmin_p8
-    REAL(wp)            :: lambda_soil_ps_p8
-    REAL(wp)            :: weibull_k_soil_ps_p8
-    REAL(wp)            :: lambda_soil_gs_p8
-    REAL(wp)            :: weibull_k_soil_gs_p8
     REAL(wp)            :: tau_leaf_p8
     REAL(wp)            :: tau_fine_root_p8
     REAL(wp)            :: tau_coarse_root_p8
@@ -1172,10 +1136,6 @@ CONTAINS
           g0_p1, &
           g1_p1, &
           gmin_p1, &
-          lambda_soil_ps_p1, &
-          weibull_k_soil_ps_p1, &
-          lambda_soil_gs_p1, &
-          weibull_k_soil_gs_p1, &
           tau_leaf_p1, &
           tau_fine_root_p1, &
           tau_coarse_root_p1, &
@@ -1230,10 +1190,6 @@ CONTAINS
           g0_p2, &
           g1_p2, &
           gmin_p2, &
-          lambda_soil_ps_p2, &
-          weibull_k_soil_ps_p2, &
-          lambda_soil_gs_p2, &
-          weibull_k_soil_gs_p2, &
           tau_leaf_p2, &
           tau_fine_root_p2, &
           tau_coarse_root_p2, &
@@ -1288,10 +1244,6 @@ CONTAINS
           g0_p3, &
           g1_p3, &
           gmin_p3, &
-          lambda_soil_ps_p3, &
-          weibull_k_soil_ps_p3, &
-          lambda_soil_gs_p3, &
-          weibull_k_soil_gs_p3, &
           tau_leaf_p3, &
           tau_fine_root_p3, &
           tau_coarse_root_p3, &
@@ -1346,10 +1298,6 @@ CONTAINS
           g0_p4, &
           g1_p4, &
           gmin_p4, &
-          lambda_soil_ps_p4, &
-          weibull_k_soil_ps_p4, &
-          lambda_soil_gs_p4, &
-          weibull_k_soil_gs_p4, &
           tau_leaf_p4, &
           tau_fine_root_p4, &
           tau_coarse_root_p4, &
@@ -1404,10 +1352,6 @@ CONTAINS
           g0_p5, &
           g1_p5, &
           gmin_p5, &
-          lambda_soil_ps_p5, &
-          weibull_k_soil_ps_p5, &
-          lambda_soil_gs_p5, &
-          weibull_k_soil_gs_p5, &
           tau_leaf_p5, &
           tau_fine_root_p5, &
           tau_coarse_root_p5, &
@@ -1462,10 +1406,6 @@ CONTAINS
           g0_p6, &
           g1_p6, &
           gmin_p6, &
-          lambda_soil_ps_p6, &
-          weibull_k_soil_ps_p6, &
-          lambda_soil_gs_p6, &
-          weibull_k_soil_gs_p6, &
           tau_leaf_p6, &
           tau_fine_root_p6, &
           tau_coarse_root_p6, &
@@ -1520,10 +1460,6 @@ CONTAINS
           g0_p7, &
           g1_p7, &
           gmin_p7, &
-          lambda_soil_ps_p7, &
-          weibull_k_soil_ps_p7, &
-          lambda_soil_gs_p7, &
-          weibull_k_soil_gs_p7, &
           tau_leaf_p7, &
           tau_fine_root_p7, &
           tau_coarse_root_p7, &
@@ -1578,10 +1514,6 @@ CONTAINS
           g0_p8, &
           g1_p8, &
           gmin_p8, &
-          lambda_soil_ps_p8, &
-          weibull_k_soil_ps_p8, &
-          lambda_soil_gs_p8, &
-          weibull_k_soil_gs_p8, &
           tau_leaf_p8, &
           tau_fine_root_p8, &
           tau_coarse_root_p8, &
@@ -1645,10 +1577,6 @@ CONTAINS
     g0_p1      = missval
     g1_p1      = missval
     gmin_p1      = missval
-    lambda_soil_ps_p1      = missval
-    weibull_k_soil_ps_p1      = missval
-    lambda_soil_gs_p1      = missval
-    weibull_k_soil_gs_p1      = missval
     tau_leaf_p1      = missval
     tau_fine_root_p1      = missval
     tau_coarse_root_p1      = missval
@@ -1702,10 +1630,6 @@ CONTAINS
     g0_p2      = missval
     g1_p2      = missval
     gmin_p2      = missval
-    lambda_soil_ps_p2      = missval
-    weibull_k_soil_ps_p2      = missval
-    lambda_soil_gs_p2      = missval
-    weibull_k_soil_gs_p2      = missval
     tau_leaf_p2      = missval
     tau_fine_root_p2      = missval
     tau_coarse_root_p2      = missval
@@ -1759,10 +1683,6 @@ CONTAINS
     g0_p3      = missval
     g1_p3      = missval
     gmin_p3      = missval
-    lambda_soil_ps_p3      = missval
-    weibull_k_soil_ps_p3      = missval
-    lambda_soil_gs_p3      = missval
-    weibull_k_soil_gs_p3      = missval
     tau_leaf_p3      = missval
     tau_fine_root_p3      = missval
     tau_coarse_root_p3      = missval
@@ -1816,10 +1736,6 @@ CONTAINS
     g0_p4      = missval
     g1_p4      = missval
     gmin_p4      = missval
-    lambda_soil_ps_p4      = missval
-    weibull_k_soil_ps_p4      = missval
-    lambda_soil_gs_p4      = missval
-    weibull_k_soil_gs_p4      = missval
     tau_leaf_p4      = missval
     tau_fine_root_p4      = missval
     tau_coarse_root_p4      = missval
@@ -1873,10 +1789,6 @@ CONTAINS
     g0_p5      = missval
     g1_p5      = missval
     gmin_p5      = missval
-    lambda_soil_ps_p5      = missval
-    weibull_k_soil_ps_p5      = missval
-    lambda_soil_gs_p5      = missval
-    weibull_k_soil_gs_p5      = missval
     tau_leaf_p5      = missval
     tau_fine_root_p5      = missval
     tau_coarse_root_p5      = missval
@@ -1930,10 +1842,6 @@ CONTAINS
     g0_p6      = missval
     g1_p6      = missval
     gmin_p6      = missval
-    lambda_soil_ps_p6      = missval
-    weibull_k_soil_ps_p6      = missval
-    lambda_soil_gs_p6      = missval
-    weibull_k_soil_gs_p6      = missval
     tau_leaf_p6      = missval
     tau_fine_root_p6      = missval
     tau_coarse_root_p6      = missval
@@ -1987,10 +1895,6 @@ CONTAINS
     g0_p7      = missval
     g1_p7      = missval
     gmin_p7      = missval
-    lambda_soil_ps_p7      = missval
-    weibull_k_soil_ps_p7      = missval
-    lambda_soil_gs_p7      = missval
-    weibull_k_soil_gs_p7      = missval
     tau_leaf_p7      = missval
     tau_fine_root_p7      = missval
     tau_coarse_root_p7      = missval
@@ -2044,10 +1948,6 @@ CONTAINS
     g0_p8      = missval
     g1_p8      = missval
     gmin_p8      = missval
-    lambda_soil_ps_p8      = missval
-    weibull_k_soil_ps_p8      = missval
-    lambda_soil_gs_p8      = missval
-    weibull_k_soil_gs_p8      = missval
     tau_leaf_p8      = missval
     tau_fine_root_p8      = missval
     tau_coarse_root_p8      = missval
@@ -2149,10 +2049,6 @@ CONTAINS
     param_pft1_from_file%g0   = g0_p1
     param_pft1_from_file%g1   = g1_p1
     param_pft1_from_file%gmin   = gmin_p1
-    param_pft1_from_file%lambda_soil_ps   = lambda_soil_ps_p1
-    param_pft1_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p1
-    param_pft1_from_file%lambda_soil_gs   = lambda_soil_gs_p1
-    param_pft1_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p1
     param_pft1_from_file%tau_leaf   = tau_leaf_p1
     param_pft1_from_file%tau_fine_root   = tau_fine_root_p1
     param_pft1_from_file%tau_coarse_root   = tau_coarse_root_p1
@@ -2206,10 +2102,6 @@ CONTAINS
     param_pft2_from_file%g0   = g0_p2
     param_pft2_from_file%g1   = g1_p2
     param_pft2_from_file%gmin   = gmin_p2
-    param_pft2_from_file%lambda_soil_ps   = lambda_soil_ps_p2
-    param_pft2_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p2
-    param_pft2_from_file%lambda_soil_gs   = lambda_soil_gs_p2
-    param_pft2_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p2
     param_pft2_from_file%tau_leaf   = tau_leaf_p2
     param_pft2_from_file%tau_fine_root   = tau_fine_root_p2
     param_pft2_from_file%tau_coarse_root   = tau_coarse_root_p2
@@ -2263,10 +2155,6 @@ CONTAINS
     param_pft3_from_file%g0   = g0_p3
     param_pft3_from_file%g1   = g1_p3
     param_pft3_from_file%gmin   = gmin_p3
-    param_pft3_from_file%lambda_soil_ps   = lambda_soil_ps_p3
-    param_pft3_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p3
-    param_pft3_from_file%lambda_soil_gs   = lambda_soil_gs_p3
-    param_pft3_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p3
     param_pft3_from_file%tau_leaf   = tau_leaf_p3
     param_pft3_from_file%tau_fine_root   = tau_fine_root_p3
     param_pft3_from_file%tau_coarse_root   = tau_coarse_root_p3
@@ -2320,10 +2208,6 @@ CONTAINS
     param_pft4_from_file%g0   = g0_p4
     param_pft4_from_file%g1   = g1_p4
     param_pft4_from_file%gmin   = gmin_p4
-    param_pft4_from_file%lambda_soil_ps   = lambda_soil_ps_p4
-    param_pft4_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p4
-    param_pft4_from_file%lambda_soil_gs   = lambda_soil_gs_p4
-    param_pft4_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p4
     param_pft4_from_file%tau_leaf   = tau_leaf_p4
     param_pft4_from_file%tau_fine_root   = tau_fine_root_p4
     param_pft4_from_file%tau_coarse_root   = tau_coarse_root_p4
@@ -2377,10 +2261,6 @@ CONTAINS
     param_pft5_from_file%g0   = g0_p5
     param_pft5_from_file%g1   = g1_p5
     param_pft5_from_file%gmin   = gmin_p5
-    param_pft5_from_file%lambda_soil_ps   = lambda_soil_ps_p5
-    param_pft5_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p5
-    param_pft5_from_file%lambda_soil_gs   = lambda_soil_gs_p5
-    param_pft5_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p5
     param_pft5_from_file%tau_leaf   = tau_leaf_p5
     param_pft5_from_file%tau_fine_root   = tau_fine_root_p5
     param_pft5_from_file%tau_coarse_root   = tau_coarse_root_p5
@@ -2434,10 +2314,6 @@ CONTAINS
     param_pft6_from_file%g0   = g0_p6
     param_pft6_from_file%g1   = g1_p6
     param_pft6_from_file%gmin   = gmin_p6
-    param_pft6_from_file%lambda_soil_ps   = lambda_soil_ps_p6
-    param_pft6_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p6
-    param_pft6_from_file%lambda_soil_gs   = lambda_soil_gs_p6
-    param_pft6_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p6
     param_pft6_from_file%tau_leaf   = tau_leaf_p6
     param_pft6_from_file%tau_fine_root   = tau_fine_root_p6
     param_pft6_from_file%tau_coarse_root   = tau_coarse_root_p6
@@ -2491,10 +2367,6 @@ CONTAINS
     param_pft7_from_file%g0   = g0_p7
     param_pft7_from_file%g1   = g1_p7
     param_pft7_from_file%gmin   = gmin_p7
-    param_pft7_from_file%lambda_soil_ps   = lambda_soil_ps_p7
-    param_pft7_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p7
-    param_pft7_from_file%lambda_soil_gs   = lambda_soil_gs_p7
-    param_pft7_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p7
     param_pft7_from_file%tau_leaf   = tau_leaf_p7
     param_pft7_from_file%tau_fine_root   = tau_fine_root_p7
     param_pft7_from_file%tau_coarse_root   = tau_coarse_root_p7
@@ -2548,10 +2420,6 @@ CONTAINS
     param_pft8_from_file%g0   = g0_p8
     param_pft8_from_file%g1   = g1_p8
     param_pft8_from_file%gmin   = gmin_p8
-    param_pft8_from_file%lambda_soil_ps   = lambda_soil_ps_p8
-    param_pft8_from_file%weibull_k_soil_ps   = weibull_k_soil_ps_p8
-    param_pft8_from_file%lambda_soil_gs   = lambda_soil_gs_p8
-    param_pft8_from_file%weibull_k_soil_gs   = weibull_k_soil_gs_p8
     param_pft8_from_file%tau_leaf   = tau_leaf_p8
     param_pft8_from_file%tau_fine_root   = tau_fine_root_p8
     param_pft8_from_file%tau_coarse_root   = tau_coarse_root_p8
@@ -2704,14 +2572,6 @@ CONTAINS
        lctlib%g1 = param_pft_from_file%g1
     IF (ABS(param_pft_from_file%gmin                      - missval) > eps8) &
        lctlib%gmin = param_pft_from_file%gmin
-    IF (ABS(param_pft_from_file%lambda_soil_ps            - missval) > eps8) &
-       lctlib%lambda_soil_ps = param_pft_from_file%lambda_soil_ps
-    IF (ABS(param_pft_from_file%weibull_k_soil_ps         - missval) > eps8) &
-       lctlib%weibull_k_soil_ps = param_pft_from_file%weibull_k_soil_ps
-    IF (ABS(param_pft_from_file%lambda_soil_gs            - missval) > eps8) &
-       lctlib%lambda_soil_gs = param_pft_from_file%lambda_soil_gs
-    IF (ABS(param_pft_from_file%weibull_k_soil_gs         - missval) > eps8) &
-       lctlib%weibull_k_soil_gs = param_pft_from_file%weibull_k_soil_gs
     IF (ABS(param_pft_from_file%tau_leaf                  - missval) > eps8) &
        lctlib%tau_leaf = param_pft_from_file%tau_leaf / 12.0_wp
     IF (ABS(param_pft_from_file%tau_fine_root             - missval) > eps8) &

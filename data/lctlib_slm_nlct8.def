@@ -126,18 +126,6 @@ g1 9.3 8.3 7.0 10.9 5.5 7.0 9.3 2.0
 #gmin: minimum stomatal conductance (m/s)        
 gmin 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006
         
-#lambda_soil_ps: Weibull parameter describing the response of leaf-level photosynthesis to fractional water availability        
-lambda_soil_ps 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
-        
-#weibull_k_soil_ps: Weibull parameter describing the response of leaf-level photosynthesis to fractional water availability        
-weibull_k_soil_ps 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
-        
-#lambda_soil_gs: Weibull parameters describing the response of stomatal conductance to fractional water availability        
-lambda_soil_gs 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
-        
-#weibull_k_soil_gs: Weibull parameters describing the response of stomatal conductance to fractional water availability        
-weibull_k_soil_gs 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0
-        
 #                             
 # turnover times        
 #           

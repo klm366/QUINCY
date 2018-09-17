@@ -64,10 +64,6 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: g0
     REAL(wp) :: g1
     REAL(wp) :: gmin
-    REAL(wp) :: lambda_soil_ps
-    REAL(wp) :: weibull_k_soil_ps
-    REAL(wp) :: lambda_soil_gs
-    REAL(wp) :: weibull_k_soil_gs
 
 ! turnover times
     REAL(wp) :: tau_leaf          , &
@@ -311,14 +307,6 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%g1
           CASE ('gmin')
             READ(line(pos:length),*) lctlib(1:nlct)%gmin
-          CASE ('lambda_soil_ps')
-            READ(line(pos:length),*) lctlib(1:nlct)%lambda_soil_ps
-          CASE ('weibull_k_soil_ps')
-            READ(line(pos:length),*) lctlib(1:nlct)%weibull_k_soil_ps
-          CASE ('lambda_soil_gs')
-            READ(line(pos:length),*) lctlib(1:nlct)%lambda_soil_gs
-          CASE ('weibull_k_soil_gs')
-            READ(line(pos:length),*) lctlib(1:nlct)%weibull_k_soil_gs
 
           CASE ('tau_leaf')
             READ(line(pos:length),*) lctlib(1:nlct)%tau_leaf
