@@ -56,7 +56,9 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: cn_leaf             
     REAL(wp) :: cn_leaf_min
     REAL(wp) :: cn_leaf_max
-    REAL(wp) :: np_leaf             
+    REAL(wp) :: np_leaf  
+    REAL(wp) :: np_leaf_min
+    REAL(wp) :: np_leaf_max
     REAL(wp) :: k0_fn_struc
     REAL(wp) :: fn_oth_min
     REAL(wp) :: t_jmax_opt
@@ -293,6 +295,10 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_max
           CASE ('np_leaf')
             READ(line(pos:length),*) lctlib(1:nlct)%np_leaf
+          CASE ('np_leaf_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_min
+          CASE ('np_leaf_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_max
           CASE ('k0_fn_struc')
             READ(line(pos:length),*) lctlib(1:nlct)%k0_fn_struc
           CASE ('fn_oth_min')
@@ -421,6 +427,16 @@ CONTAINS
           DO i=1,nlct
             lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                  lctlib(i)%np_leaf
+          END DO
+        !! np_leaf_min
+          DO i=1,nlct
+            lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+                                    lctlib(i)%np_leaf_min
+          END DO
+        !! np_leaf_max
+          DO i=1,nlct
+            lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+                                    lctlib(i)%np_leaf_max
           END DO
         !! fn_oth_min
           DO i=1,nlct

@@ -123,6 +123,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)            :: cn_leaf_min
     REAL(wp)            :: cn_leaf_max
     REAL(wp)            :: np_leaf
+    REAL(wp)            :: np_leaf_min
+    REAL(wp)            :: np_leaf_max
     REAL(wp)            :: k0_fn_struc
     REAL(wp)            :: fn_oth_min
     REAL(wp)            :: t_jmax_opt
@@ -699,6 +701,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p1
     REAL(wp)            :: cn_leaf_max_p1
     REAL(wp)            :: np_leaf_p1
+    REAL(wp)            :: np_leaf_min_p1
+    REAL(wp)            :: np_leaf_max_p1
     REAL(wp)            :: k0_fn_struc_p1
     REAL(wp)            :: fn_oth_min_p1
     REAL(wp)            :: t_jmax_opt_p1
@@ -752,6 +756,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p2
     REAL(wp)            :: cn_leaf_max_p2
     REAL(wp)            :: np_leaf_p2
+    REAL(wp)            :: np_leaf_min_p2
+    REAL(wp)            :: np_leaf_max_p2
     REAL(wp)            :: k0_fn_struc_p2
     REAL(wp)            :: fn_oth_min_p2
     REAL(wp)            :: t_jmax_opt_p2
@@ -805,6 +811,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p3
     REAL(wp)            :: cn_leaf_max_p3
     REAL(wp)            :: np_leaf_p3
+    REAL(wp)            :: np_leaf_min_p3
+    REAL(wp)            :: np_leaf_max_p3
     REAL(wp)            :: k0_fn_struc_p3
     REAL(wp)            :: fn_oth_min_p3
     REAL(wp)            :: t_jmax_opt_p3
@@ -858,6 +866,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p4
     REAL(wp)            :: cn_leaf_max_p4
     REAL(wp)            :: np_leaf_p4
+    REAL(wp)            :: np_leaf_min_p4
+    REAL(wp)            :: np_leaf_max_p4
     REAL(wp)            :: k0_fn_struc_p4
     REAL(wp)            :: fn_oth_min_p4
     REAL(wp)            :: t_jmax_opt_p4
@@ -911,6 +921,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p5
     REAL(wp)            :: cn_leaf_max_p5
     REAL(wp)            :: np_leaf_p5
+    REAL(wp)            :: np_leaf_min_p5
+    REAL(wp)            :: np_leaf_max_p5
     REAL(wp)            :: k0_fn_struc_p5
     REAL(wp)            :: fn_oth_min_p5
     REAL(wp)            :: t_jmax_opt_p5
@@ -964,6 +976,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p6
     REAL(wp)            :: cn_leaf_max_p6
     REAL(wp)            :: np_leaf_p6
+    REAL(wp)            :: np_leaf_min_p6
+    REAL(wp)            :: np_leaf_max_p6
     REAL(wp)            :: k0_fn_struc_p6
     REAL(wp)            :: fn_oth_min_p6
     REAL(wp)            :: t_jmax_opt_p6
@@ -1017,6 +1031,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p7
     REAL(wp)            :: cn_leaf_max_p7
     REAL(wp)            :: np_leaf_p7
+    REAL(wp)            :: np_leaf_min_p7
+    REAL(wp)            :: np_leaf_max_p7
     REAL(wp)            :: k0_fn_struc_p7
     REAL(wp)            :: fn_oth_min_p7
     REAL(wp)            :: t_jmax_opt_p7
@@ -1070,6 +1086,8 @@ CONTAINS
     REAL(wp)            :: cn_leaf_min_p8
     REAL(wp)            :: cn_leaf_max_p8
     REAL(wp)            :: np_leaf_p8
+    REAL(wp)            :: np_leaf_min_p8
+    REAL(wp)            :: np_leaf_max_p8
     REAL(wp)            :: k0_fn_struc_p8
     REAL(wp)            :: fn_oth_min_p8
     REAL(wp)            :: t_jmax_opt_p8
@@ -1129,6 +1147,8 @@ CONTAINS
           cn_leaf_min_p1, &
           cn_leaf_max_p1, &
           np_leaf_p1, &
+          np_leaf_min_p1, &
+          np_leaf_max_p1, &
           k0_fn_struc_p1, &
           fn_oth_min_p1, &
           t_jmax_opt_p1, &
@@ -1183,6 +1203,8 @@ CONTAINS
           cn_leaf_min_p2, &
           cn_leaf_max_p2, &
           np_leaf_p2, &
+          np_leaf_min_p2, &
+          np_leaf_max_p2, &
           k0_fn_struc_p2, &
           fn_oth_min_p2, &
           t_jmax_opt_p2, &
@@ -1237,6 +1259,8 @@ CONTAINS
           cn_leaf_min_p3, &
           cn_leaf_max_p3, &
           np_leaf_p3, &
+          np_leaf_min_p3, &
+          np_leaf_max_p3, &
           k0_fn_struc_p3, &
           fn_oth_min_p3, &
           t_jmax_opt_p3, &
@@ -1291,6 +1315,8 @@ CONTAINS
           cn_leaf_min_p4, &
           cn_leaf_max_p4, &
           np_leaf_p4, &
+          np_leaf_min_p4, &
+          np_leaf_max_p4, &
           k0_fn_struc_p4, &
           fn_oth_min_p4, &
           t_jmax_opt_p4, &
@@ -1345,6 +1371,8 @@ CONTAINS
           cn_leaf_min_p5, &
           cn_leaf_max_p5, &
           np_leaf_p5, &
+          np_leaf_min_p5, &
+          np_leaf_max_p5, &
           k0_fn_struc_p5, &
           fn_oth_min_p5, &
           t_jmax_opt_p5, &
@@ -1399,6 +1427,8 @@ CONTAINS
           cn_leaf_min_p6, &
           cn_leaf_max_p6, &
           np_leaf_p6, &
+          np_leaf_min_p6, &
+          np_leaf_max_p6, &
           k0_fn_struc_p6, &
           fn_oth_min_p6, &
           t_jmax_opt_p6, &
@@ -1453,6 +1483,8 @@ CONTAINS
           cn_leaf_min_p7, &
           cn_leaf_max_p7, &
           np_leaf_p7, &
+          np_leaf_min_p7, &
+          np_leaf_max_p7, &
           k0_fn_struc_p7, &
           fn_oth_min_p7, &
           t_jmax_opt_p7, &
@@ -1507,6 +1539,8 @@ CONTAINS
           cn_leaf_min_p8, &
           cn_leaf_max_p8, &
           np_leaf_p8, &
+          np_leaf_min_p8, &
+          np_leaf_max_p8, &
           k0_fn_struc_p8, &
           fn_oth_min_p8, &
           t_jmax_opt_p8, &
@@ -1570,6 +1604,8 @@ CONTAINS
     cn_leaf_min_p1      = missval
     cn_leaf_max_p1      = missval
     np_leaf_p1      = missval
+    np_leaf_min_p1      = missval
+    np_leaf_max_p1      = missval
     k0_fn_struc_p1      = missval
     fn_oth_min_p1      = missval
     t_jmax_opt_p1      = missval
@@ -1623,6 +1659,8 @@ CONTAINS
     cn_leaf_min_p2      = missval
     cn_leaf_max_p2      = missval
     np_leaf_p2      = missval
+    np_leaf_min_p2      = missval
+    np_leaf_max_p2      = missval
     k0_fn_struc_p2      = missval
     fn_oth_min_p2      = missval
     t_jmax_opt_p2      = missval
@@ -1676,6 +1714,8 @@ CONTAINS
     cn_leaf_min_p3      = missval
     cn_leaf_max_p3      = missval
     np_leaf_p3      = missval
+    np_leaf_min_p3      = missval
+    np_leaf_max_p3      = missval
     k0_fn_struc_p3      = missval
     fn_oth_min_p3      = missval
     t_jmax_opt_p3      = missval
@@ -1729,6 +1769,8 @@ CONTAINS
     cn_leaf_min_p4      = missval
     cn_leaf_max_p4      = missval
     np_leaf_p4      = missval
+    np_leaf_min_p4      = missval
+    np_leaf_max_p4      = missval
     k0_fn_struc_p4      = missval
     fn_oth_min_p4      = missval
     t_jmax_opt_p4      = missval
@@ -1782,6 +1824,8 @@ CONTAINS
     cn_leaf_min_p5      = missval
     cn_leaf_max_p5      = missval
     np_leaf_p5      = missval
+    np_leaf_min_p5      = missval
+    np_leaf_max_p5      = missval
     k0_fn_struc_p5      = missval
     fn_oth_min_p5      = missval
     t_jmax_opt_p5      = missval
@@ -1835,6 +1879,8 @@ CONTAINS
     cn_leaf_min_p6      = missval
     cn_leaf_max_p6      = missval
     np_leaf_p6      = missval
+    np_leaf_min_p6      = missval
+    np_leaf_max_p6      = missval
     k0_fn_struc_p6      = missval
     fn_oth_min_p6      = missval
     t_jmax_opt_p6      = missval
@@ -1888,6 +1934,8 @@ CONTAINS
     cn_leaf_min_p7      = missval
     cn_leaf_max_p7      = missval
     np_leaf_p7      = missval
+    np_leaf_min_p7      = missval
+    np_leaf_max_p7      = missval
     k0_fn_struc_p7      = missval
     fn_oth_min_p7      = missval
     t_jmax_opt_p7      = missval
@@ -1941,6 +1989,8 @@ CONTAINS
     cn_leaf_min_p8      = missval
     cn_leaf_max_p8      = missval
     np_leaf_p8      = missval
+    np_leaf_min_p8      = missval
+    np_leaf_max_p8      = missval
     k0_fn_struc_p8      = missval
     fn_oth_min_p8      = missval
     t_jmax_opt_p8      = missval
@@ -2042,6 +2092,8 @@ CONTAINS
     param_pft1_from_file%cn_leaf_min   = cn_leaf_min_p1
     param_pft1_from_file%cn_leaf_max   = cn_leaf_max_p1
     param_pft1_from_file%np_leaf   = np_leaf_p1
+    param_pft1_from_file%np_leaf_min   = np_leaf_min_p1
+    param_pft1_from_file%np_leaf_max   = np_leaf_max_p1
     param_pft1_from_file%k0_fn_struc   = k0_fn_struc_p1
     param_pft1_from_file%fn_oth_min   = fn_oth_min_p1
     param_pft1_from_file%t_jmax_opt   = t_jmax_opt_p1
@@ -2095,6 +2147,8 @@ CONTAINS
     param_pft2_from_file%cn_leaf_min   = cn_leaf_min_p2
     param_pft2_from_file%cn_leaf_max   = cn_leaf_max_p2
     param_pft2_from_file%np_leaf   = np_leaf_p2
+    param_pft2_from_file%np_leaf_min   = np_leaf_min_p2
+    param_pft2_from_file%np_leaf_max   = np_leaf_max_p2
     param_pft2_from_file%k0_fn_struc   = k0_fn_struc_p2
     param_pft2_from_file%fn_oth_min   = fn_oth_min_p2
     param_pft2_from_file%t_jmax_opt   = t_jmax_opt_p2
@@ -2148,6 +2202,8 @@ CONTAINS
     param_pft3_from_file%cn_leaf_min   = cn_leaf_min_p3
     param_pft3_from_file%cn_leaf_max   = cn_leaf_max_p3
     param_pft3_from_file%np_leaf   = np_leaf_p3
+    param_pft3_from_file%np_leaf_min   = np_leaf_min_p3
+    param_pft3_from_file%np_leaf_max   = np_leaf_max_p3
     param_pft3_from_file%k0_fn_struc   = k0_fn_struc_p3
     param_pft3_from_file%fn_oth_min   = fn_oth_min_p3
     param_pft3_from_file%t_jmax_opt   = t_jmax_opt_p3
@@ -2201,6 +2257,8 @@ CONTAINS
     param_pft4_from_file%cn_leaf_min   = cn_leaf_min_p4
     param_pft4_from_file%cn_leaf_max   = cn_leaf_max_p4
     param_pft4_from_file%np_leaf   = np_leaf_p4
+    param_pft4_from_file%np_leaf_min   = np_leaf_min_p4
+    param_pft4_from_file%np_leaf_max   = np_leaf_max_p4
     param_pft4_from_file%k0_fn_struc   = k0_fn_struc_p4
     param_pft4_from_file%fn_oth_min   = fn_oth_min_p4
     param_pft4_from_file%t_jmax_opt   = t_jmax_opt_p4
@@ -2254,6 +2312,8 @@ CONTAINS
     param_pft5_from_file%cn_leaf_min   = cn_leaf_min_p5
     param_pft5_from_file%cn_leaf_max   = cn_leaf_max_p5
     param_pft5_from_file%np_leaf   = np_leaf_p5
+    param_pft5_from_file%np_leaf_min   = np_leaf_min_p5
+    param_pft5_from_file%np_leaf_max   = np_leaf_max_p5
     param_pft5_from_file%k0_fn_struc   = k0_fn_struc_p5
     param_pft5_from_file%fn_oth_min   = fn_oth_min_p5
     param_pft5_from_file%t_jmax_opt   = t_jmax_opt_p5
@@ -2307,6 +2367,8 @@ CONTAINS
     param_pft6_from_file%cn_leaf_min   = cn_leaf_min_p6
     param_pft6_from_file%cn_leaf_max   = cn_leaf_max_p6
     param_pft6_from_file%np_leaf   = np_leaf_p6
+    param_pft6_from_file%np_leaf_min   = np_leaf_min_p6
+    param_pft6_from_file%np_leaf_max   = np_leaf_max_p6
     param_pft6_from_file%k0_fn_struc   = k0_fn_struc_p6
     param_pft6_from_file%fn_oth_min   = fn_oth_min_p6
     param_pft6_from_file%t_jmax_opt   = t_jmax_opt_p6
@@ -2360,6 +2422,8 @@ CONTAINS
     param_pft7_from_file%cn_leaf_min   = cn_leaf_min_p7
     param_pft7_from_file%cn_leaf_max   = cn_leaf_max_p7
     param_pft7_from_file%np_leaf   = np_leaf_p7
+    param_pft7_from_file%np_leaf_min   = np_leaf_min_p7
+    param_pft7_from_file%np_leaf_max   = np_leaf_max_p7
     param_pft7_from_file%k0_fn_struc   = k0_fn_struc_p7
     param_pft7_from_file%fn_oth_min   = fn_oth_min_p7
     param_pft7_from_file%t_jmax_opt   = t_jmax_opt_p7
@@ -2413,6 +2477,8 @@ CONTAINS
     param_pft8_from_file%cn_leaf_min   = cn_leaf_min_p8
     param_pft8_from_file%cn_leaf_max   = cn_leaf_max_p8
     param_pft8_from_file%np_leaf   = np_leaf_p8
+    param_pft8_from_file%np_leaf_min   = np_leaf_min_p8
+    param_pft8_from_file%np_leaf_max   = np_leaf_max_p8
     param_pft8_from_file%k0_fn_struc   = k0_fn_struc_p8
     param_pft8_from_file%fn_oth_min   = fn_oth_min_p8
     param_pft8_from_file%t_jmax_opt   = t_jmax_opt_p8
@@ -2551,9 +2617,27 @@ CONTAINS
        lctlib%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf_min
     IF (ABS(param_pft_from_file%cn_leaf_max               - missval) > eps8) &
        lctlib%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf_max
+    ! 1) np_leaf np_leaf_min np_leaf_max: variation in these parameters 
     IF (ABS(param_pft_from_file%np_leaf                   - missval) > eps8) &
        lctlib%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
                         param_pft_from_file%np_leaf
+    IF (ABS(param_pft_from_file%np_leaf_min               - missval) > eps8) &
+       lctlib%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
+                            param_pft_from_file%np_leaf_min
+    IF (ABS(param_pft_from_file%np_leaf_max               - missval) > eps8) &
+       lctlib%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
+                            param_pft_from_file%np_leaf_max
+    ! 2) np_leaf np_leaf_min np_leaf_max: variation in cn_leaf
+    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
+       lctlib%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / param_pft_from_file%cn_leaf / & 
+                        lctlib%np_leaf
+    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
+       lctlib%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / param_pft_from_file%cn_leaf / & 
+                            lctlib%np_leaf_min
+    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
+       lctlib%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / param_pft_from_file%cn_leaf / & 
+                            lctlib%np_leaf_max
+
     IF (ABS(param_pft_from_file%k0_fn_struc               - missval) > eps8) &
        lctlib%k0_fn_struc = param_pft_from_file%k0_fn_struc
     ! fn_oth_min might not be changed directly but via k0_fn_struc

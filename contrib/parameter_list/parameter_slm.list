@@ -97,6 +97,8 @@
   crown_shape_factor_p1=NAN
   cn_leaf_p1=NAN
   np_leaf_p1=NAN
+  np_leaf_min_p1=NAN
+  np_leaf_max_p1=NAN
   k0_fn_struc_p1=NAN
   fn_oth_min_p1=NAN
   t_jmax_opt_p1=NAN
@@ -149,6 +151,8 @@
   crown_shape_factor_p2=NAN
   cn_leaf_p2=NAN
   np_leaf_p2=NAN
+  np_leaf_min_p2=NAN
+  np_leaf_max_p2=NAN
   k0_fn_struc_p2=NAN
   fn_oth_min_p2=NAN
   t_jmax_opt_p2=NAN
@@ -201,6 +205,8 @@
   crown_shape_factor_p3=NAN
   cn_leaf_p3=NAN
   np_leaf_p3=NAN
+  np_leaf_min_p3=NAN
+  np_leaf_max_p3=NAN
   k0_fn_struc_p3=NAN
   fn_oth_min_p3=NAN
   t_jmax_opt_p3=NAN
@@ -253,6 +259,8 @@
   crown_shape_factor_p4=NAN
   cn_leaf_p4=NAN
   np_leaf_p4=NAN
+  np_leaf_min_p4=NAN
+  np_leaf_max_p4=NAN
   k0_fn_struc_p4=NAN
   fn_oth_min_p4=NAN
   t_jmax_opt_p4=NAN
@@ -305,6 +313,8 @@
   crown_shape_factor_p5=NAN
   cn_leaf_p5=NAN
   np_leaf_p5=NAN
+  np_leaf_min_p5=NAN
+  np_leaf_max_p5=NAN
   k0_fn_struc_p5=NAN
   fn_oth_min_p5=NAN
   t_jmax_opt_p5=NAN
@@ -357,6 +367,8 @@
   crown_shape_factor_p6=NAN
   cn_leaf_p6=NAN
   np_leaf_p6=NAN
+  np_leaf_min_p6=NAN
+  np_leaf_max_p6=NAN
   k0_fn_struc_p6=NAN
   fn_oth_min_p6=NAN
   t_jmax_opt_p6=NAN
@@ -409,6 +421,8 @@
   crown_shape_factor_p7=NAN
   cn_leaf_p7=NAN
   np_leaf_p7=NAN
+  np_leaf_min_p7=NAN
+  np_leaf_max_p7=NAN
   k0_fn_struc_p7=NAN
   fn_oth_min_p7=NAN
   t_jmax_opt_p7=NAN
@@ -461,6 +475,8 @@
   crown_shape_factor_p8=NAN
   cn_leaf_p8=NAN
   np_leaf_p8=NAN
+  np_leaf_min_p8=NAN
+  np_leaf_max_p8=NAN
   k0_fn_struc_p8=NAN
   fn_oth_min_p8=NAN
   t_jmax_opt_p8=NAN
