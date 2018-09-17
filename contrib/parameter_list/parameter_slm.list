@@ -104,10 +104,6 @@
   g0_p1=NAN
   g1_p1=NAN
   gmin_p1=NAN
-  lambda_soil_ps_p1=NAN
-  weibull_k_soil_ps_p1=NAN
-  lambda_soil_gs_p1=NAN
-  weibull_k_soil_gs_p1=NAN
   tau_leaf_p1=NAN
   tau_fine_root_p1=NAN
   tau_coarse_root_p1=NAN
@@ -160,10 +156,6 @@
   g0_p2=NAN
   g1_p2=NAN
   gmin_p2=NAN
-  lambda_soil_ps_p2=NAN
-  weibull_k_soil_ps_p2=NAN
-  lambda_soil_gs_p2=NAN
-  weibull_k_soil_gs_p2=NAN
   tau_leaf_p2=NAN
   tau_fine_root_p2=NAN
   tau_coarse_root_p2=NAN
@@ -216,10 +208,6 @@
   g0_p3=NAN
   g1_p3=NAN
   gmin_p3=NAN
-  lambda_soil_ps_p3=NAN
-  weibull_k_soil_ps_p3=NAN
-  lambda_soil_gs_p3=NAN
-  weibull_k_soil_gs_p3=NAN
   tau_leaf_p3=NAN
   tau_fine_root_p3=NAN
   tau_coarse_root_p3=NAN
@@ -272,10 +260,6 @@
   g0_p4=NAN
   g1_p4=NAN
   gmin_p4=NAN
-  lambda_soil_ps_p4=NAN
-  weibull_k_soil_ps_p4=NAN
-  lambda_soil_gs_p4=NAN
-  weibull_k_soil_gs_p4=NAN
   tau_leaf_p4=NAN
   tau_fine_root_p4=NAN
   tau_coarse_root_p4=NAN
@@ -328,10 +312,6 @@
   g0_p5=NAN
   g1_p5=NAN
   gmin_p5=NAN
-  lambda_soil_ps_p5=NAN
-  weibull_k_soil_ps_p5=NAN
-  lambda_soil_gs_p5=NAN
-  weibull_k_soil_gs_p5=NAN
   tau_leaf_p5=NAN
   tau_fine_root_p5=NAN
   tau_coarse_root_p5=NAN
@@ -384,10 +364,6 @@
   g0_p6=NAN
   g1_p6=NAN
   gmin_p6=NAN
-  lambda_soil_ps_p6=NAN
-  weibull_k_soil_ps_p6=NAN
-  lambda_soil_gs_p6=NAN
-  weibull_k_soil_gs_p6=NAN
   tau_leaf_p6=NAN
   tau_fine_root_p6=NAN
   tau_coarse_root_p6=NAN
@@ -440,10 +416,6 @@
   g0_p7=NAN
   g1_p7=NAN
   gmin_p7=NAN
-  lambda_soil_ps_p7=NAN
-  weibull_k_soil_ps_p7=NAN
-  lambda_soil_gs_p7=NAN
-  weibull_k_soil_gs_p7=NAN
   tau_leaf_p7=NAN
   tau_fine_root_p7=NAN
   tau_coarse_root_p7=NAN
@@ -496,10 +468,6 @@
   g0_p8=NAN
   g1_p8=NAN
   gmin_p8=NAN
-  lambda_soil_ps_p8=NAN
-  weibull_k_soil_ps_p8=NAN
-  lambda_soil_gs_p8=NAN
-  weibull_k_soil_gs_p8=NAN
   tau_leaf_p8=NAN
   tau_fine_root_p8=NAN
   tau_coarse_root_p8=NAN
