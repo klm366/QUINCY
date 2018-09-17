@@ -60,8 +60,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':fage_init_bc'
 
-    INTEGER :: i, max_age, age_interval, ncohorts
-
+    INTEGER :: i, max_age, ncohorts
+    REAL(wp):: age_interval
     IF (.NOT. tile%Is_process_active(FAGE_)) RETURN
 
     model => get_model(tile%owner_model_id)
@@ -81,10 +81,10 @@ CONTAINS
     !        much more simple and set in the confic_class, etc
     IF (dsl4jsb_Config(FAGE_)%age_cohort_scheme == 'static-equal' ) THEN
       ! Equal intervals distributed equally over all but the first age cohort
-      age_interval = int((max_age-1) / (ncohorts-1))
+      age_interval = (max_age-1) / (ncohorts-1)
       DO i=1,ncohorts-1
         dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
-          & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + age_interval
+          & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + int(age_interval)
       END DO
     ELSEIF (dsl4jsb_Config(FAGE_)%age_cohort_scheme == 'static-shorterYoung' ) THEN
       ! Equal intervals distributed unequally such that younger age cohorts have shorter steps
@@ -93,10 +93,11 @@ CONTAINS
       DO i=1,ncohorts-1
         age_interval = age_interval + i
       END DO
-      age_interval = int(max_age / age_interval)
-      DO i=1,ncohorts-1
+      age_interval = max_age / age_interval
+      dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,1,:) = 1
+      DO i=1,ncohorts-2
         dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i+1,:) &
-          & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + (i * age_interval)
+          & = dsl4jsb_var_ptr(FAGE_, cohort_max_age) (:,i,:) + int(i * age_interval)
       END DO
     ELSE
       CALL finish(TRIM(routine), 'Currently only "static-shorterYoung" and "static-equal" implemented as forest ageing schemes')
