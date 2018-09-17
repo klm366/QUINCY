@@ -38,10 +38,10 @@ print("  Note: this script does create figures only for GPP & NPP for ALL crunce
 mod2obs_idx     <- numeric(nsite_all)
 model_sel_sites <- numeric(nsite_all)
 for (s in 1:nsite_all){
-  if (length(which(model_mean$Site_ID[s] == obs$Site.Code)) > 0){
+  if (length(which(model_mean$Site_ID[s] == obs$X)) > 0){                # note: the column with siteID is named X not Site.Code in the obs file for "all gfdb sites"
     nsite_sel                  <- nsite_sel + 1
     model_sel_sites[nsite_sel] <- s
-    mod2obs_idx[s]             <- which(model_mean$Site_ID[s] == obs$Site.Code)
+    mod2obs_idx[nsite_sel]     <- which(model_mean$Site_ID[s] == obs$X)  # note: the column with siteID is named X not Site.Code in the obs file for "all gfdb sites"
   }
 }
 
@@ -58,9 +58,11 @@ model_std       <- model_std[model_sel_sites,]
 
 # create data.frame with obs data matching the model data
 obs4mod     <- obs[1:nsite_sel,]   # create a new data.frame by copying part of the obs data.frame
+obsSite     <- 0
 for (s in mod2obs_idx){
+  obsSite <- obsSite + 1
   for (v in 1:obs_nvar){
-    obs4mod[s,v]<-obs[mod2obs_idx[s],v]
+    obs4mod[obsSite,v] <- obs[s,v]
   }
 }
 
@@ -71,72 +73,38 @@ write.csv(obs4mod,file='obs_all_site.csv',row.names=F)
 ## prepare figures
 pchidx<-c(1,19,0,15,2,17)
 pchleg<-c('BroadDec','BroadEve','NeedleDec','NeedleEve','BroadMix','Mixed')
-pch_site<-numeric(nsite_sel)
-pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Deciduous']<-pchidx[1]
-pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Evergreen']<-pchidx[2]
-pch_site[obs4mod$Needles.leaves=='Needle-leaved'&obs4mod$Evergreen.Deciduous=='Deciduous']<-pchidx[3]
-pch_site[obs4mod$Needles.leaves=='Needle-leaved'&obs4mod$Evergreen.Deciduous=='Evergreen']<-pchidx[4]
-pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Mixed']<-pchidx[5]
-pch_site[obs4mod$Needles.leaves=='Mixed'&obs4mod$Evergreen.Deciduous=='Mixed']<-pchidx[6]
+# pch_site<-numeric(nsite_sel)
+# pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Deciduous']<-pchidx[1]
+# pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Evergreen']<-pchidx[2]
+# pch_site[obs4mod$Needles.leaves=='Needle-leaved'&obs4mod$Evergreen.Deciduous=='Deciduous']<-pchidx[3]
+# pch_site[obs4mod$Needles.leaves=='Needle-leaved'&obs4mod$Evergreen.Deciduous=='Evergreen']<-pchidx[4]
+# pch_site[obs4mod$Needles.leaves=='Broadleaved'&obs4mod$Evergreen.Deciduous=='Mixed']<-pchidx[5]
+# pch_site[obs4mod$Needles.leaves=='Mixed'&obs4mod$Evergreen.Deciduous=='Mixed']<-pchidx[6]
 
 colidx<-c('blue','black','orange','red')
 colleg<-c('boreal','temperate','mediterr.','tropical')
-col_site<-numeric(nsite_sel)
-col_site[obs4mod$Climatic.region=="Boreal Humid"|obs4mod$Climatic.region=="Boreal Semi-arid"]<-colidx[1]
-col_site[obs4mod$Climatic.region=="Temperate Humid"|obs4mod$Climatic.region=="Temperate Semi-arid"]<-colidx[2]
-col_site[obs4mod$Climatic.region=="Mediterranean Warm"]<-colidx[3]
-col_site[obs4mod$Climatic.region=="Tropical Humid"|obs4mod$Climatic.region=="Tropical Semi-arid"]<-colidx[4]
+# col_site<-numeric(nsite_sel)
+# col_site[obs4mod$Climatic.region=="Boreal Humid"|obs4mod$Climatic.region=="Boreal Semi-arid"]<-colidx[1]
+# col_site[obs4mod$Climatic.region=="Temperate Humid"|obs4mod$Climatic.region=="Temperate Semi-arid"]<-colidx[2]
+# col_site[obs4mod$Climatic.region=="Mediterranean Warm"]<-colidx[3]
+# col_site[obs4mod$Climatic.region=="Tropical Humid"|obs4mod$Climatic.region=="Tropical Semi-arid"]<-colidx[4]
 
 plot_mod2obs<-function(xvar,yvar,label) {
   vmax<-max(xvar,yvar,na.rm=TRUE)
   vmax<-vmax+(vmax*0.2)  # add 20% to create space for the legend
-  plot(xvar,yvar,xlim=c(0,vmax),ylim=c(0,vmax),pch=pch_site,col=col_site,
+  plot(xvar,yvar, 
+       xlim=c(0,vmax), ylim=c(0,vmax),
+       pch=5, col="blue1",    # pch=pch_site,col=col_site,
+       cex=0.8,
        xlab=paste('observed',label),ylab=paste('modelled',label))
   abline(0,1)
-  legend('bottomright',legend=c(pchleg,colleg),pch=c(pchidx,rep(19,4)),col=c(rep('grey',6),colidx),cex=0.7)
-}
-
-plot_sitelocs<-function(lon,lat,pchx,colx) {
-
-   library(maps)
-   library(lattice)
-
-   tatdegx=seq(-180,180,45)
-   tatdegy=seq(-180,180,30)
-   frgmap=map('world',xlim=c(-180,180),ylim=c(-60,90),plot=FALSE,interior=TRUE,add=TRUE)
-
-   value=rep(0,10);lon1=value;lat1=value
-   grid=data.frame(lon1,lat1,value);gridfmla=value~lon1*lat1
-
-   pplot=levelplot(gridfmla,data=grid,region=TRUE,xlim=c(-180,180),
-        ylim=c(-60,90),aspect=0.5,pretty=TRUE,
-        colorkey=FALSE,col.regions='transparent',
-        xlab='longitude',ylab='latitude',
-        scales=list(x=list(at=tatdegx),y=list(at=tatdegy),tck=1,cex=1))
-
-   print(pplot)
-
-   panel.locs=trellis.currentLayout()
-   for (i in 1:nrow(panel.locs)) {
-         for (j in 1:ncol(panel.locs)) {
-          if (panel.locs[i,j]>0) {
-             trellis.focus("panel",j,i,highlight=FALSE);
-             panel.lines(frgmap,col="grey",cex=0.1,lwd=1)
-             for ( l in 1:length(lon) ) { 
-                panel.points(lon[l],lat[l],pch=pchx[l],col=colx[l])
-                 }
-               }
-         }
-   }
-   trellis.unfocus()
+  # legend('bottomright',legend=c(pchleg,colleg),pch=c(pchidx,rep(19,4)),col=c(rep('grey',6),colidx),cex=0.7)
 }
 
 
 pdf('compare_sim_cruncep_all_vs_gfdb-plots.pdf')
 
-plot_sitelocs(obs4mod$Longitude,obs4mod$Latitude,pch_site,col_site)
-
-xvar<-obs4mod$TNPPcorr;yvar=model_mean$NPP*12.001;label='NPP (observ corrected) [gC/m2/yr]'
+xvar<-obs4mod$TNPPcorr;yvar=model_mean$NPP*12.001;label='NPP (corrected NPP_observed) [gC/m2/yr]'
 plot_mod2obs(xvar,yvar,label)
 
 xvar<-obs4mod$TNPP;yvar=model_mean$NPP*12.001;label='NPP [gC/m2/yr]'
@@ -145,11 +113,14 @@ plot_mod2obs(xvar,yvar,label)
 xvar<-obs4mod$GPP;yvar=model_mean$GPP*12.001;label='GPP [gC/m2/yr]'
 plot_mod2obs(xvar,yvar,label)
 
-xvar<-obs4mod$TNPPcorr;yvar=model_mean$NPP/model_mean$GPP;label='NPP/GPP (NPP observ corrected)' 
+xvar<-obs4mod$TNPPcorr/obs4mod$GPP
+yvar=model_mean$NPP/model_mean$GPP
+label='NPP/GPP (corrected NPP_observed)' 
 plot_mod2obs(xvar,yvar,label)
 
-xvar<-obs4mod$TNPP;yvar=model_mean$NPP/model_mean$GPP;label='NPP/GPP' 
+xvar<-obs4mod$TNPP/obs4mod$GPP
+yvar=model_mean$NPP/model_mean$GPP
+label='NPP/GPP' 
 plot_mod2obs(xvar,yvar,label)
-
 
 trash <- dev.off()

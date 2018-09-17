@@ -26,7 +26,7 @@ obs_nvar <- ncol(obs)
 model_mean_file <- 'slm_site_mean.csv'
 model_std_file  <- 'slm_site_sd.csv'
 model_mean      <- read.csv(model_mean_file, header=T, stringsAsFactors=F)
-model_std       <- read.csv(model_std_file, header=T, stringsAsFactors=F)
+model_std       <- read.csv(model_std_file,  header=T, stringsAsFactors=F)
 nsite_all       <- nrow(model_mean)
 nsite_cue       <- 0
 
@@ -35,13 +35,13 @@ print("  Note: this script does create figures only for cruncep CUE sites presen
 
 # get a vector with only the sites that are present in 'obs'
 # and also exclude sites present in 'obs' but not in 'model_mean'
-mod2obs_idx     <- numeric(nsite_all)
-model_cue_sites <- numeric(nsite_all)
+obs_cue_idx   <- numeric(nsite_all)
+model_cue_idx <- numeric(nsite_all)
 for (s in 1:nsite_all){
   if (length(which(model_mean$Site_ID[s] == obs$Site.Code)) > 0){
-    nsite_cue                  <- nsite_cue + 1
-    model_cue_sites[nsite_cue] <- s
-    mod2obs_idx[s]             <- which(model_mean$Site_ID[s] == obs$Site.Code)
+    nsite_cue                 <- nsite_cue + 1
+    model_cue_idx[nsite_cue]  <- s
+    obs_cue_idx[nsite_cue]    <- which(model_mean$Site_ID[s] == obs$Site.Code)
   }
 }
 
@@ -51,18 +51,22 @@ if (nsite_cue == 0){
   quit(save="no", status=1)
 }
 
-model_cue_sites <- model_cue_sites[1:nsite_cue]
-mod2obs_idx     <- mod2obs_idx[1:nsite_cue]
-model_mean      <- model_mean[model_cue_sites,]
-model_std       <- model_std[model_cue_sites,]
+model_cue_idx <- model_cue_idx[1:nsite_cue]
+obs_cue_idx   <- obs_cue_idx[1:nsite_cue]
+model_mean    <- model_mean[model_cue_idx,]
+model_std     <- model_std[model_cue_idx,]
 
 # create data.frame with obs data matching the model data
 obs4mod     <- obs[1:nsite_cue,]   # create a new data.frame by copying part of the obs data.frame
-for (s in mod2obs_idx){
+obsSite     <- 0
+for (s in obs_cue_idx){
+  obsSite <- obsSite + 1
   for (v in 1:obs_nvar){
-    obs4mod[s,v]<-obs[mod2obs_idx[s],v]
+    obs4mod[obsSite,v] <- obs[s,v]
   }
 }
+
+# dbg info: model_mean$Site_ID and obs4mod$Site.Code are a match
 
 # write file for documentation
 write.csv(obs4mod,file='obs_site.csv',row.names=F)
@@ -87,7 +91,7 @@ col_site[obs4mod$Climatic.region=="Temperate Humid"|obs4mod$Climatic.region=="Te
 col_site[obs4mod$Climatic.region=="Mediterranean Warm"]<-colidx[3]
 col_site[obs4mod$Climatic.region=="Tropical Humid"|obs4mod$Climatic.region=="Tropical Semi-arid"]<-colidx[4]
 
-plot_mod2obs<-function(xvar,yvar,label) {
+plot_model2obs<-function(xvar,yvar,label) {
   vmax<-max(xvar,yvar,na.rm=TRUE)
   vmax<-vmax+(vmax*0.2)  # add 20% to create space for the legend
   plot(xvar,yvar,xlim=c(0,vmax),ylim=c(0,vmax),pch=pch_site,col=col_site,
@@ -137,31 +141,31 @@ pdf('compare_sim_cruncep_vs_gfdb-plots.pdf')
 plot_sitelocs(obs4mod$Longitude,obs4mod$Latitude,pch_site,col_site)
 
 xvar<-obs4mod$BPo;yvar=model_mean$NPP*12.001;label='NPP (gC/m2/yr)'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$GPP;yvar=model_mean$GPP*12.001;label='GPP (gC/m2/yr)'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$BPEo;yvar=model_mean$NPP/model_mean$GPP;label='NPP/GPP' 
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$LAI;yvar=model_mean$LAI;label='LAI'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$Foliar.BM*0.48;yvar=model_mean$Leaf_C*12.001;label='Leaf C (gC/m2)'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$Fine.Root.BM*0.48;yvar=model_mean$FineRoot_C*12.001;label='Fine Root C (gC/m2)'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$Coarse.root.BM*0.48;yvar=model_mean$CoarseRoot_C*12.001;label='Coarse Root C (gC/m2)'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 xvar<-obs4mod$Stem.BM
 xvar[!is.na(obs4mod$Branch.BM)]<-xvar[!is.na(obs4mod$Branch.BM)]+obs4mod$Branch.BM[!is.na(obs4mod$Branch.BM)]
 xvar[!is.na(obs4mod$Stump.BM)]<-xvar[!is.na(obs4mod$Stump.BM)]+obs4mod$Stump.BM[!is.na(obs4mod$Stump.BM)]
 xvar<-xvar*0.48;yvar=(model_mean$SapWood_C+model_mean$HeartWood_C)*12.001;label='Woody C (gC/m2)'
-plot_mod2obs(xvar,yvar,label)
+plot_model2obs(xvar,yvar,label)
 
 
 trash <- dev.off()
