@@ -93,7 +93,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     ! SSE_
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -163,8 +162,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)              ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)              ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)                ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
