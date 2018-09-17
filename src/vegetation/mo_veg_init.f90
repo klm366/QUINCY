@@ -111,6 +111,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
@@ -206,6 +207,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)
@@ -440,6 +442,7 @@ CONTAINS
     co2_mixing_ratio_tcnl_mavg(:)       = def_co2_mixing_ratio
     beta_sinklim_ps_tcnl_mavg(:)        = 1.0_wp
     growth_cn_tcnl_mavg(:)              = 60.0_wp
+    growth_np_tcnl_mavg(:)              = 30.0_wp
     uptake_n_tcnl_mavg(:)               = eps8
     npp_tcnl_mavg(:)                    = uptake_n_tcnl_mavg(:) * growth_cn_tcnl_mavg(:)
 

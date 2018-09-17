@@ -593,11 +593,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
@@ -758,11 +760,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
@@ -914,11 +918,21 @@ CONTAINS
        hlp(:) = 0._wp
     ENDWHERE
     growth_cn_tcnl_mavg(:)  = calc_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
+
+    WHERE (growth_req_p(:) > 0._wp)
+       hlp(:) = 1._wp/growth_req_p(:)
+    ELSEWHERE
+       hlp(:) = 0._wp
+    ENDWHERE
+    growth_np_tcnl_mavg(:)  = calc_mavg(growth_np_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
+    
     npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
    
     labile_carbon_tcnl_mavg(:)        = calc_mavg(labile_carbon_tcnl_mavg(:), veg_pool%labile%carbon, &
                                                       mavg_period_tcnl, do_calc=l_growing_season(:))
     labile_nitrogen_tcnl_mavg(:)      = calc_mavg(labile_nitrogen_tcnl_mavg(:), veg_pool%labile%nitrogen, &
+         mavg_period_tcnl, do_calc=l_growing_season(:))
+    labile_phosphorus_tcnl_mavg(:)    = calc_mavg(labile_phosphorus_tcnl_mavg(:), veg_pool%labile%phosphorus, &
                                                       mavg_period_tcnl, do_calc=l_growing_season(:))
     reserve_carbon_tcnl_mavg(:)       = calc_mavg(reserve_carbon_tcnl_mavg(:), veg_pool%reserve%carbon, &
                                                       mavg_period_tcnl, do_calc=l_growing_season(:))

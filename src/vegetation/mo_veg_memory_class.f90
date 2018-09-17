@@ -340,11 +340,13 @@ MODULE mo_veg_memory_class
                                     beta_sinklim_ps_tcnl_mavg      , &     !< scaling factor to account for soil moisture constraints on conductance
                                     uptake_n_tcnl_mavg             , &  !< root N uptake
                                     growth_cn_tcnl_mavg            , &  !< new growth CN ratio
+                                    growth_np_tcnl_mavg            , &
                                     npp_tcnl_mavg                  , &     !< NPP
                                     reserve_nitrogen_tcnl_mavg     , &
                                     reserve_carbon_tcnl_mavg       , &
                                     labile_nitrogen_tcnl_mavg      , &
-                                    labile_carbon_tcnl_mavg
+                                    labile_carbon_tcnl_mavg        , &
+                                    labile_phosphorus_tcnl_mavg
 
     ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real2d)          :: &   
@@ -1999,6 +2001,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL jsb_add_var(mem, 'growth_np_tcnl_mavg', mem%growth_np_tcnl_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'npp_tcnl_mavg', mem%npp_tcnl_mavg, &
             hgrid, surface, &
             t_cf('', '', ''), &
@@ -2038,6 +2048,15 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'labile_phosphorus_tcnl_mavg', mem%labile_phosphorus_tcnl_mavg, &
+            hgrid, surface, &
+            t_cf('', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
   
       CALL jsb_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
             hgrid, surface, &

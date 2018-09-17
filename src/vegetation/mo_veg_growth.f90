@@ -174,11 +174,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
@@ -342,11 +344,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                           ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_tcnl_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)                      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)        ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)      ! in
@@ -557,18 +561,23 @@ CONTAINS
     CALL calc_stoichiometry_changes(  lctlib%growthform                            , & ! lctlib
                                       lctlib%phenology_type                           , &
                                       lctlib%cn_leaf                                  , & ! lctlib
+                                      lctlib%np_leaf                                  , &
                                       lctlib%cn_leaf_min                              , & ! lctlib
                                       lctlib%cn_leaf_max                              , & ! lctlib
+                                      lctlib%np_leaf_min                              , & ! lctlib
+                                      lctlib%np_leaf_max                              , & ! lctlib
                                       TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , & ! in
                                       growing_season(:)                               , &
                                       leaf_cn_direction(:)                            , &
-                                      target_np_leaf(:)                               , &
                                       labile_carbon_tcnl_mavg(:)                      , &
                                       labile_nitrogen_tcnl_mavg(:)                    , &
+                                      labile_phosphorus_tcnl_mavg(:)                  , &
                                       growth_cn_tcnl_mavg(:)                          , &
+                                      growth_np_tcnl_mavg(:)                          , &
                                       lai(:)                                          , &
                                       target_lai(:)                                   , &
                                       target_cn_leaf(:)                               , & ! inout
+                                      target_np_leaf(:)                               , &
                                       target_cn_fine_root(:)                          , & ! out
                                       target_cn_coarse_root(:)                        , &
                                       target_cn_sap_wood(:)                           , &
@@ -1308,18 +1317,23 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_stoichiometry_changes(growthform              , &   ! lctlib
                                                   phenology_type          , &
                                                   cn_leaf                 , &   ! lctlib
+                                                  np_leaf                 , &
                                                   cn_leaf_min             , &
                                                   cn_leaf_max             , &
+                                                  np_leaf_min             , &
+                                                  np_leaf_max             , &
                                                   leaf_stoichom_scheme    , &   ! in
                                                   growing_season          , &
                                                   leaf_cn_direction       , &
-                                                  target_np_leaf          , &
                                                   labile_carbon           , &
                                                   labile_nitrogen         , &
+                                                  labile_phosphorus       , &
                                                   cn_growth               , &
+                                                  np_growth               , &
                                                   lai                     , &
                                                   target_lai              , &
                                                   target_cn_leaf          , &   ! inout
+                                                  target_np_leaf          , &
                                                   target_cn_fine_root     , &   ! out
                                                   target_cn_coarse_root   , &
                                                   target_cn_sap_wood      , &
@@ -1339,18 +1353,23 @@ CONTAINS
     INTEGER,                  INTENT(in)    :: growthform                !< land-cover-type library parameter
     INTEGER,                  INTENT(in)    :: phenology_type            !< land-cover-type library parameter
     REAL(wp),                 INTENT(in)    :: cn_leaf               , & !< land-cover-type library parameter
-                                               cn_leaf_min           , & !<
-                                               cn_leaf_max
+                                               cn_leaf_min           , & !< 
+                                               cn_leaf_max           , &
+                                               np_leaf               , &
+                                               np_leaf_min           , & !<
+                                               np_leaf_max           
     CHARACTER(len=*),         INTENT(in)    :: leaf_stoichom_scheme      !< from veg config
     REAL(wp),                 INTENT(in)    :: growing_season            !< 
-    REAL(wp),                 INTENT(in)    :: leaf_cn_direction     , & !< 
-                                               target_np_leaf            !<
+    REAL(wp),                 INTENT(in)    :: leaf_cn_direction     
     REAL(Wp),                 INTENT(in)    :: labile_carbon         , & !< average labile carbon
                                                labile_nitrogen       , & !< average labile nitrogen
-                                               cn_growth                 !< average CN ratio of new growth
+                                               labile_phosphorus     , & !< average labile phpsphorus
+                                               cn_growth             , & !< average CN ratio of new growth
+                                               np_growth
     REAL(wp),                 INTENT(in)    :: lai                   , &
                                                target_lai
-    REAL(wp),                 INTENT(inout) :: target_cn_leaf            !< 
+    REAL(wp),                 INTENT(inout) :: target_cn_leaf        , &    !<
+                                               target_np_leaf
     REAL(wp),                 INTENT(out)   :: target_cn_fine_root   , & !< fine root target C:N
                                                target_cn_coarse_root , & !< coarse root target C:N
                                                target_cn_sap_wood    , & !< sap wood target C:N
@@ -1361,29 +1380,32 @@ CONTAINS
                                                target_np_fruit           !< fruit target N:P
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: delta_cn, f_growing_leaf
+    REAL(wp) :: delta_cn, delta_np, f_growing_leaf
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_stoichiometry_changes'
 
+    !> 1.0 calculate leaf C:N
+    !!
 
-    !> 1.0 calculate optimal allocation fractions
-    !! 
+    ! factor to limit changes in stoichiometry at the start of the growing season
+    SELECT CASE (phenology_type)
+    CASE (iraingreen, isummergreen)
+       IF (lai/MAX(eps8, target_lai) < 0.5_wp) THEN
+          f_growing_leaf = 0._wp
+       ELSE
+          f_growing_leaf = 1._wp
+       ENDIF
+    CASE DEFAULT
+       f_growing_leaf = 1._wp
+    END SELECT
+    
     IF (growing_season > test_false_true) THEN
        SELECT CASE (leaf_stoichom_scheme)
        CASE ("optimal")
           ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
           target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
+          ! root target CN is independent of optimal target
+          target_cn_fine_root = cn_leaf / root2leaf_cn
        CASE ("dynamic")
-          
-          SELECT CASE (phenology_type)
-          CASE (iraingreen, isummergreen)
-             IF (lai/MAX(eps8, target_lai) < 0.5_wp) THEN
-                f_growing_leaf = 0._wp
-             ELSE
-                f_growing_leaf = 1._wp
-             ENDIF
-          CASE DEFAULT
-             f_growing_leaf = 1._wp
-          END SELECT
           
              IF (labile_carbon / MAX(eps8, labile_nitrogen) >= cn_growth) THEN
              ! If plants are N limited, i.e. if the CN of the labile pool is higher than the growth CN
@@ -1395,13 +1417,18 @@ CONTAINS
              delta_cn = - (1._wp - exp(-(2._wp*target_cn_leaf/(cn_leaf_min + cn_leaf_max))**8._wp))
           END IF
           ! Apply CN modifier calculated above to actual change in leaf CN target, given by the maximum change per timestep
-             target_cn_leaf = target_cn_leaf * (1._wp +  delta_cn  * f_growing_leaf * delta_n_leaf * dtime/one_day)
+          target_cn_leaf = target_cn_leaf * (1._wp +  delta_cn  * f_growing_leaf * delta_n_leaf * dtime/one_day)
+
+          ! Root target CN is fucniton fo new leaf target
+          target_cn_fine_root = target_cn_leaf / root2leaf_cn
+       CASE DEFAULT
+          target_cn_fine_root = target_cn_leaf / root2leaf_cn
        END SELECT
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
     !!
-    target_cn_fine_root = cn_leaf / root2leaf_cn
+  
     SELECT CASE(growthform)
       CASE (itree) ! trees
          target_cn_coarse_root  = cn_leaf / wood2leaf_cn
@@ -1414,16 +1441,36 @@ CONTAINS
 
     !> 3.0 determine N:P of other plant tissues
     !!
+
+    ! Leaf N:P
+    IF (growing_season > test_false_true) THEN
+       SELECT CASE (leaf_stoichom_scheme)
+       CASE ("dynamic")
+          
+          IF (labile_nitrogen / MAX(eps8, labile_phosphorus) >= np_growth) THEN
+             ! If plants are P limited, i.e. if the NP of the labile pool is higher than the growth NP
+             ! increase leaf NP (decrease leaf P concentration)
+             delta_np = (exp(-(2._wp * target_np_leaf/(np_leaf_min + np_leaf_max))**8._wp))
+          ELSE
+             ! If plants are not P limited and have more P than they need
+             ! decrease leaf NP (increase leaf P concentration)
+             delta_np = - (1._wp - exp(-(2._wp*target_np_leaf/(np_leaf_min + np_leaf_max))**8._wp))
+          END IF
+          ! Apply NP modifier calculated above to actual change in leaf NP target, given by the maximum change per timestep
+             target_np_leaf = target_np_leaf * (1._wp +  delta_np  * f_growing_leaf * delta_n_leaf * dtime/one_day)
+       END SELECT
+    ENDIF
+
     target_np_fine_root = target_np_leaf / root2leaf_np
     SELECT CASE(growthform)
       CASE (itree) ! trees
-         target_np_coarse_root  = target_np_leaf / wood2leaf_np
-         target_np_sap_wood     = target_np_leaf / wood2leaf_np
+         target_np_coarse_root  = np_leaf / wood2leaf_np
+         target_np_sap_wood     = np_leaf / wood2leaf_np
       CASE (igrass) ! grasses 
-         target_np_coarse_root  = target_np_leaf / root2leaf_np
-         target_np_sap_wood     = target_np_leaf / root2leaf_np
+         target_np_coarse_root  = np_leaf / root2leaf_np
+         target_np_sap_wood     = np_leaf / root2leaf_np
     END SELECT
-    target_np_fruit = target_np_leaf / root2leaf_np
+    target_np_fruit = np_leaf / root2leaf_np
 
   END SUBROUTINE calc_stoichiometry_changes
 
