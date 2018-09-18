@@ -140,7 +140,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'sw_srf_net', mem%sw_srf_net, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('sw_srf_net', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -148,7 +148,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'swvis_srf_net', mem%swvis_srf_net, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('swvis_srf_net', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -156,7 +156,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'swnir_srf_net', mem%swnir_srf_net, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('swnir_srf_net', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -164,7 +164,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lw_srf_net', mem%lw_srf_net, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('lw_srf_net', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -172,7 +172,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'rad_srf_net', mem%rad_srf_net, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('rad_srf_net', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -180,7 +180,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis', mem%alb_vis, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_vis', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -188,7 +188,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir', mem%alb_nir, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_nir', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -196,7 +196,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_vis_snow', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -204,7 +204,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_nir_snow', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -212,7 +212,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_vis_soil', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -220,7 +220,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_nir_soil', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -228,7 +228,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_vis_soil', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -236,7 +236,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_nir_soil', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -244,7 +244,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_vis_can', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -252,7 +252,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_nir_can', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -260,7 +260,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_vis_can', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -268,7 +268,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_nir_can', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -276,7 +276,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'appfd', mem%appfd, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('appfd', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -284,7 +284,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'rfr_ratio_boc', mem%rfr_ratio_boc, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('rfr_ratio_boc', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -292,7 +292,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('rfr_ratio_boc_tvegdyn_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -300,7 +300,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_sunlit_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -308,7 +308,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_cl', mem%ppfd_shaded_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_shaded_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -316,7 +316,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_sunlit_daytime_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -324,7 +324,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_shaded_daytime_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -332,7 +332,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_sunlit_daytime_dacc_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -340,7 +340,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_shaded_daytime_dacc_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -348,7 +348,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_sunlit_tfrac_mavg_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -356,7 +356,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_shaded_tfrac_mavg_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -364,7 +364,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_sunlit_tcnl_mavg_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -372,7 +372,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ppfd_shaded_tcnl_mavg_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -380,7 +380,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'arad_sunlit_vis_cl', mem%arad_sunlit_vis_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_sunlit_vis_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -388,7 +388,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'arad_shaded_vis_cl', mem%arad_shaded_vis_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_shaded_vis_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -396,7 +396,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'fleaf_sunlit_vis_cl', mem%fleaf_sunlit_vis_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('fleaf_sunlit_vis_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -404,7 +404,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'arad_sunlit_nir_cl', mem%arad_sunlit_nir_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_sunlit_nir_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -412,7 +412,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'arad_shaded_nir_cl', mem%arad_shaded_nir_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('arad_shaded_nir_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -420,7 +420,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'fleaf_sunlit_nir_cl', mem%fleaf_sunlit_nir_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('fleaf_sunlit_nir_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

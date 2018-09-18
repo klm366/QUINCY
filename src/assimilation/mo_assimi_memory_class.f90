@@ -148,7 +148,7 @@ CONTAINS
       !!  
       CALL jsb_add_var(mem, 'gross_assimilation', mem%gross_assimilation, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('gross_assimilation', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -156,7 +156,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'gross_assimilation_C13', mem%gross_assimilation_C13, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('gross_assimilation_C13', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -164,7 +164,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'gross_assimilation_C14', mem%gross_assimilation_C14, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('gross_assimilation_C14', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -172,7 +172,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_assimilation', mem%net_assimilation, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('net_assimilation', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -180,7 +180,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_assimilation_boc', mem%net_assimilation_boc, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('net_assimilation_boc', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -188,7 +188,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration_leaf', mem%maint_respiration_leaf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('maint_respiration_leaf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -196,7 +196,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'canopy_cond', mem%canopy_cond, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('canopy_cond', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -204,7 +204,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'co2_conc_leaf', mem%co2_conc_leaf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('co2_conc_leaf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -212,7 +212,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air', mem%beta_air, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_air', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -220,7 +220,7 @@ CONTAINS
  
       CALL jsb_add_var(mem, 'beta_soa', mem%beta_soa, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soa', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -228,7 +228,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'soa_tsoa_mavg', mem%soa_tsoa_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('soa_tsoa_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -236,7 +236,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soa_tphen_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -244,7 +244,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_ps', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -252,7 +252,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_gs', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -260,7 +260,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_jmax_opt', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -268,7 +268,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'gross_assimilation_cl', mem%gross_assimilation_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('gross_assimilation_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -276,7 +276,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_assimilation_cl', mem%net_assimilation_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('net_assimilation_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -284,7 +284,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('maint_respiration_leaf_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -292,7 +292,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'canopy_cond_cl', mem%canopy_cond_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('canopy_cond_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -300,7 +300,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('co2_conc_leaf_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -308,7 +308,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'jmax_cl', mem%jmax_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('jmax_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -316,7 +316,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'vcmax_cl', mem%vcmax_cl, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('vcmax_cl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -324,7 +324,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_air_daytime', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -332,7 +332,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_air_daytime_dacc', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -340,7 +340,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_air_tfrac_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -348,7 +348,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_air_tcnl_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -356,7 +356,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_ps_daytime', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -364,7 +364,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_ps_daytime_dacc', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -372,7 +372,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_ps_tfrac_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -380,7 +380,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_ps_tcnl_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -388,7 +388,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_gs_daytime', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -396,7 +396,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_gs_daytime_dacc', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -404,7 +404,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_gs_tphen_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -412,7 +412,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_gs_tfrac_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -420,7 +420,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('beta_soil_gs_tcnl_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

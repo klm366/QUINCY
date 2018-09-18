@@ -110,7 +110,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 't_srf', mem%t_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -118,7 +118,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 't_eff_srf', mem%t_eff_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_eff_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -126,7 +126,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'qsat_srf', mem%qsat_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('qsat_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -134,7 +134,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('fact_q_air', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -142,7 +142,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('fact_qsat_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -150,7 +150,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'zh_srf', mem%zh_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('zh_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -158,7 +158,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'zm_srf', mem%zm_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('zm_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -166,7 +166,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_vis_dif', mem%alb_vis_dif, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_vis_dif', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -174,7 +174,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_nir_dif', mem%alb_nir_dif, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_nir_dif', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -182,7 +182,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_vis_dir', mem%alb_vis_dir, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_vis_dir', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -190,7 +190,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('alb_nir_dir', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -198,7 +198,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'albedo', mem%albedo, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('albedo', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -206,7 +206,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'sensible_heat_flx', mem%sensible_heat_flx, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('sensible_heat_flx', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -214,7 +214,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'latent_heat_flx', mem%latent_heat_flx, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('latent_heat_flx', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -222,7 +222,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'ground_heat_flx', mem%ground_heat_flx, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ground_heat_flx', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -230,7 +230,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ground_heat_flx_old', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -238,7 +238,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'net_radiation', mem%net_radiation, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('net_radiation', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -246,7 +246,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'vpd', mem%vpd, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('vpd', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -256,7 +256,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('latent_hflx_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -264,7 +264,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('sensible_hflx_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -272,7 +272,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('latent_hflx_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -280,7 +280,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('sensible_hflx_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

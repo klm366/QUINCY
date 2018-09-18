@@ -186,153 +186,153 @@ CONTAINS
     !! allocate and init variables
     !! 
     !! 
-    CALL jsb_add_var( mem, 't_air', mem%t_air,       &
+    CALL jsb_add_var( mem, 't_air', mem%t_air, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_air', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= t_air_init )
 
-    CALL jsb_add_var( mem, 'q_air', mem%q_air,                      &
+    CALL jsb_add_var( mem, 'q_air', mem%q_air, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_air', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= q_air_init )
 
-    CALL jsb_add_var( mem, 'rain', mem%rain,                        &
+    CALL jsb_add_var( mem, 'rain', mem%rain, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('rain', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'snow', mem%snow,                        &
+    CALL jsb_add_var( mem, 'snow', mem%snow, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('snow', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'wind_air', mem%wind_air,                &
+    CALL jsb_add_var( mem, 'wind_air', mem%wind_air, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('wind_air', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= wind_air_init )
 
-    CALL jsb_add_var( mem, 'wind_10m', mem%wind_10m,                &
+    CALL jsb_add_var( mem, 'wind_10m', mem%wind_10m, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('wind_10m', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= wind_10m_init )
 
-    CALL jsb_add_var( mem, 'lw_srf_down', mem%lw_srf_down,          &
+    CALL jsb_add_var( mem, 'lw_srf_down', mem%lw_srf_down, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('lw_srf_down', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,    &
+    CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('swvis_srf_down', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= swvis_srf_down_init )
 
-    CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,    &
+    CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('swnir_srf_down', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= swnir_srf_down_init )
 
-    CALL jsb_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down,    &
+    CALL jsb_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('swpar_srf_down', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= swpar_srf_down_init )
 
-    CALL jsb_add_var( mem, 'swpar_fdiffuse', mem%swpar_fdiffuse,&
+    CALL jsb_add_var( mem, 'swpar_fdiffuse', mem%swpar_fdiffuse, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('swpar_fdiffuse', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= swpar_fdiffuse_init )
 
-    CALL jsb_add_var( mem, 'press_srf', mem%press_srf,              &
+    CALL jsb_add_var( mem, 'press_srf', mem%press_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('press_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= press_srf_init )
 
-    CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf,                &
+    CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('drag_srf', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= drag_srf_init )
 
-    CALL jsb_add_var( mem, 't_acoef', mem%t_acoef,                  &
+    CALL jsb_add_var( mem, 't_acoef', mem%t_acoef, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_acoef', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef,                  &
+    CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_bcoef', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef,                  &
+    CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_acoef', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef,                  &
+    CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_bcoef', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'pch', mem%pch,                          &
+    CALL jsb_add_var( mem, 'pch', mem%pch, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('pch', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,&
+    CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('cos_zenith_angle', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -354,73 +354,73 @@ CONTAINS
 !!!      & lrestart=.FALSE., &
 !!      & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'co2_mixing_ratio', mem%co2_mixing_ratio,&
+    CALL jsb_add_var( mem, 'co2_mixing_ratio', mem%co2_mixing_ratio, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('co2_mixing_ratio', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= co2_mixing_ratio_init )
 
-    CALL jsb_add_var( mem, 'co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13,&
+    CALL jsb_add_var( mem, 'co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('co2_mixing_ratio_c13', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= co2_mixing_ratio_c13_init )
 
-    CALL jsb_add_var( mem, 'co2_mixing_ratio_c14', mem%co2_mixing_ratio_c14,&
+    CALL jsb_add_var( mem, 'co2_mixing_ratio_c14', mem%co2_mixing_ratio_c14, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('co2_mixing_ratio_c14', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= co2_mixing_ratio_c14_init )
 
-    CALL jsb_add_var( mem, 'ga', mem%ga,&
+    CALL jsb_add_var( mem, 'ga', mem%ga, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('ga', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r= ga_init )
 
-    CALL jsb_add_var( mem, 'nhx_deposition', mem%nhx_deposition,&
+    CALL jsb_add_var( mem, 'nhx_deposition', mem%nhx_deposition, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('nhx_deposition', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'noy_deposition', mem%noy_deposition,&
+    CALL jsb_add_var( mem, 'noy_deposition', mem%noy_deposition, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('noy_deposition', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'nhx_n15_deposition', mem%nhx_n15_deposition,&
+    CALL jsb_add_var( mem, 'nhx_n15_deposition', mem%nhx_n15_deposition, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('nhx_n15_deposition', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'noy_n15_deposition', mem%noy_n15_deposition,&
+    CALL jsb_add_var( mem, 'noy_n15_deposition', mem%noy_n15_deposition, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('noy_n15_deposition', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'p_deposition', mem%p_deposition,&
+    CALL jsb_add_var( mem, 'p_deposition', mem%p_deposition, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('p_deposition', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -428,89 +428,89 @@ CONTAINS
 
 !    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr,                &
+      CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('drag_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL  jsb_add_var( mem, 'drag_ice', mem%drag_ice,                &
+      CALL  jsb_add_var( mem, 'drag_ice', mem%drag_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('drag_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr,                   &
+      CALL jsb_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_acoef_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr,                   &
+      CALL jsb_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_bcoef_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr,                   &
+      CALL jsb_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_acoef_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'q_bcoef_wtr', mem%q_bcoef_wtr,                   &
+      CALL jsb_add_var( mem, 'q_bcoef_wtr', mem%q_bcoef_wtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_bcoef_wtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 't_acoef_ice', mem%t_acoef_ice,                   &
+      CALL jsb_add_var( mem, 't_acoef_ice', mem%t_acoef_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_acoef_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice,                   &
+      CALL jsb_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('t_bcoef_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice,                   &
+      CALL jsb_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_acoef_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice,                   &
+      CALL jsb_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('q_bcoef_ice', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr,                   &
+      CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('albedo_lwtr', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -518,17 +518,17 @@ CONTAINS
 
 !    END IF
 
-    CALL jsb_add_var( mem, 'prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle,                   &
+    CALL jsb_add_var( mem, 'prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('prev_one_cos_zenith_angle', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'prev_two_cos_zenith_angle', mem%prev_two_cos_zenith_angle,                   &
+    CALL jsb_add_var( mem, 'prev_two_cos_zenith_angle', mem%prev_two_cos_zenith_angle, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('prev_two_cos_zenith_angle', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

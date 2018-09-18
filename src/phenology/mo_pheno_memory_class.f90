@@ -103,7 +103,7 @@ CONTAINS
       !!  
       CALL jsb_add_var(mem, 'growing_season', mem%growing_season, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('growing_season', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -111,7 +111,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'gdd', mem%gdd, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('gdd', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -119,7 +119,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('nd_dormance', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -127,7 +127,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'lai_max', mem%lai_max, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('lai_max', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
