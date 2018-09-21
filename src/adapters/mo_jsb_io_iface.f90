@@ -12,8 +12,6 @@ MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
-  USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
@@ -126,11 +124,18 @@ CONTAINS
     REAL(wp),          INTENT(in)    :: lbounds(:)
     REAL(wp),          INTENT(in)    :: ubounds(:)
 
-    INTEGER :: i
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Create_zaxis'
 
 #ifdef __ICON__
+    ! Note: This is only here to suppress compiler warnings about unused dummy arguments
+    IF (.FALSE.) THEN
+      IF (SIZE(levels)  > 1) CONTINUE
+      IF (SIZE(lbounds) > 1) CONTINUE
+      IF (SIZE(ubounds) > 1) CONTINUE
+      IF (LEN(units)    > 1) CONTINUE
+      IF (LEN(longname) > 1) CONTINUE
+    END IF
+
     echamZaxisIdx = -1
 
     IF (TRIM(name) == 'surface') THEN
@@ -169,9 +174,10 @@ CONTAINS
 
   SUBROUTINE read_io_namelist(filename)
 
-    USE mo_jsb_test, ONLY: read_interface_vars, write_interface_vars
-
 #ifndef __ICON__
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
+    USE mo_jsb_test,           ONLY: read_interface_vars, write_interface_vars
 #ifdef STANDALONE
     USE mo_filename, ONLY: out_expname
 #endif
@@ -179,22 +185,25 @@ CONTAINS
 
     CHARACTER(LEN=*), INTENT(in) :: filename
 
+#ifdef __ICON__
+    CHARACTER(len=:), ALLOCATABLE :: filename_loc
+#else
     INTEGER :: nml_handler, nml_unit, istat
 
     NAMELIST /jsb_io_nml/ &
 #ifdef STANDALONE
       out_expname,          &
+      out_expname,          &
       read_interface_vars,  &
 #endif
       write_interface_vars
+#endif
 
 #ifdef __ICON__
-    ! TODO: mo_jsb_test for now not inplemented with ICON
-    read_interface_vars = .FALSE.
-    write_interface_vars = .FALSE.
+    ! Note: This is only here to suppress compiler warnings about unused dummy argument
+    !       This function is not implemented for ICON, yet.
+    IF (.FALSE.) filename_loc = filename
 #else
-
-
     IF(my_process_is_stdio()) THEN
       ! default values
 #ifdef STANDALONE

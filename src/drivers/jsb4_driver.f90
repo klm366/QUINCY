@@ -9,6 +9,7 @@
 !! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
 !!
 PROGRAM jsb4_driver
+#ifndef __NO_JSBACH__
 #ifndef __ICON__
 
   USE mo_jsb_interface,      ONLY: jsbach_interface
@@ -461,5 +462,6 @@ PROGRAM jsb4_driver
 
   ! Stop MPI
   CALL p_stop
+#endif
 #endif
 END PROGRAM jsb4_driver

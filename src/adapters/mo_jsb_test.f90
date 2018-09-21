@@ -12,6 +12,7 @@
 !!
 MODULE mo_jsb_test
 #ifndef __NO_JSBACH__
+#ifndef __ICON__
 
   USE mo_kind,               ONLY: wp
   USE mo_jsb_time,           ONLY: is_time_experiment_start
@@ -432,5 +433,6 @@ CONTAINS
 
   END SUBROUTINE read_interface_variables
 
+#endif
 #endif
 END MODULE mo_jsb_test
