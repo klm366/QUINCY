@@ -14,27 +14,27 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\
 \hline
  • & landcover type index numbers & \texttt{LctNumber} & • & • & • \\
  • & landcover classes (not to be confused with landcover types) & \texttt{LandcoverClass} & • & • & • \\
- • & vegetation growth form (tree, grass) & \texttt{growthform} & • & • & • \\
- • & photosynthetic pathway (C3, C4)  & \texttt{ps\_pathway} & • & • & • \\
+ • & vegetation growth form & \texttt{growthform} & tree, grass & • & • \\
+ • & photosynthetic pathway & \texttt{ps\_pathway} & C3, C4 & • & • \\
  • & phenological type (evergreen, summergreen, raingreen, perennial) & \texttt{phenology\_type} & • & • & • \\
 $sla$ & specific leaf area of a plant & \texttt{sla} & mm/mgDW & • & \cite{Kattge:2011fc}, Table 5 \\
 $\sigma_{vis}$ & single leaf scattering albedo in the visible range & \texttt{sigma\_vis} & • & • & • \\
 $\sigma_{nir}$ & single leaf scattering albedo in the near infrared range & \texttt{sigma\_nir} & • & • & • \\
 $\omega_{clumping}$ & canopy clumping factor & \texttt{omega\_clumping} & • & • & • \\
- • & crown shape factor & \texttt{crown\_shape\_factor} & • & • & • \\
+ • & crown shape factor & \texttt{crown\_shape\_factor} & crown depth/crown diameter & • & • \\
 $\chi_{leaf}^{C:N}$ & default leaf nitrogen concentration & \texttt{cn\_leaf} & mgN/gDW & • & \cite{Kattge:2011fc}, Table 5 \\
+ • & min leaf nitrogen concentration & \texttt{cn\_leaf\_min} & mgN/gDW & • & tuned from OCN \\
+ • & max leaf nitrogen concentration & \texttt{cn\_leaf\_max} & mgN/gDW & • & tuned from OCN \\
 $\chi_{leaf}^{N:P}$ & default leaf phosphorus concentration & \texttt{np\_leaf} & mgP/gDW & • & \cite{Kattge:2011fc}, Table 5 \\
- • & fraction of leaf N not used for photosynthesis & \texttt{k0\_fn\_struc} & • & • & (Friend 1997) \\
- • & minimum fraction of non-photosynthetic leaf N & \texttt{fn\_oth\_min} & • & • & • \\
+ • & min leaf phosphorus concentration & \texttt{np\_leaf\_min} & mgP/gDW & • & set to 0.5 of fixed np\_leaf value \\
+ • & max leaf phosphorus concentration & \texttt{np\_leaf\_max} & mgP/gDW & • & set to 1.5 of fixed np\_leaf value \\
+ • & fraction of leaf N not used for photosynthesis & \texttt{k0\_fn\_struc} & • & • & Friend 1997, temp. Kattge 2012 \\
+ • & minimum fraction of non-photosynthetic leaf N & \texttt{fn\_oth\_min} & • & • & Le Maire 2012 \\
  • & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{t\_jmax\_opt} & degC & • & • \\
 $\omega_{t jmax}$ & • & \texttt{t\_jmax\_omega} & • & • & • \\
-$g0$ & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & • & • & \\
-$g1$ & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & • & • & \cite{Lin:2015er} \\
+$g0$ & intercept of the An $\sim$ gs relationship & \texttt{g0} & mmol/$\mu$mol & • & \\
+$g1$ & slope of the An $\sim$ gs relationship & \texttt{g1} & kPa$^{0.5}$ & • & \cite{Lin:2015er} \\
 $g_{min}$ & minimum stomatal conductance & \texttt{gmin} & m/s & • & • \\
- • & response of leaf-level photosynthesis to fractional water availability (weibull parameter) & \texttt{lambda\_soil\_ps} & • & • & • \\
- • & response of leaf-level photosynthesis to fractional water availability (weibull parameter) & \texttt{weibull\_k\_soil\_ps} & • & • & • \\
- • & response of stomatal conductance to fractional water availability (weibull parameter) & \texttt{lambda\_soil\_gs} & • & • & • \\
- • & response of stomatal conductance to fractional water availability (weibull parameter) & \texttt{weibull\_k\_soil\_gs} & • & • & • \\
 % • & • & \texttt{} & • & • & • \\
 % • & • & \texttt{} & • & • & • \\
 \hline 
@@ -53,14 +53,14 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\
 $\tau_{leaf}$  & average turnover time of a leaf & \texttt{tau\_leaf} & months & • & \cite{Kattge:2011fc}, Table 5 \\
 $\tau_{{fine}\_{root}}$ & average turnover time of a fine root & \texttt{tau\_fine\_root} & years & • & \cite{Ahrens:2014gi} \\
 $\tau_{{coarse}\_{root}}$ & average turnover time of a coarse root & \texttt{tau\_coarse\_root} & years & • & \cite{Ahrens:2014gi} \\
-$\tau_{branch}$ & turnover time of the fraction of sapwood that is in branches & \texttt{tau\_branches} & years & • & • \\
+$\tau_{branch}$ & turnover time of the fraction of sapwood that is in branches & \texttt{tau\_branch} & years & • & • \\
 $\tau_{{sap}\_{wood}}$ & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & years & • & • \\
 $\tau_{fruit}$ & turnover time of the fruit pool & \texttt{tau\_fruit} & years & • & • \\
 $\tau_{{seed}\_{litter}}$ & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & years & • & • \\
 $\tau_{{seed}\_{est}}$ & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & years & • & • \\
 $\tau_{mycorrhiza}$  & turnover time of mycorrhizal fungi & \texttt{tau\_mycorrhiza} & years & • & • \\
  • & $v_{max}$ of N uptake & \texttt{vmax\_uptake\_n} & $\sim\mu$mol N/mol C/s & • & tuned from OCN \\
- • & $v_{max}$ of P uptake & \texttt{vmax\_uptake\_p} & $\sim\mu$mol P/mol C/s & • & tuned from OCN \\
+ • & $v_{max}$ of P uptake & \texttt{vmax\_uptake\_p} & $\sim\mu$mol P/mol C/s & • & tuned from OCN, Kavka \& Polle 2016 \\
  • & base nitrogen fixation rate & \texttt{bnf\_base} & g N /$m^2$ /year & • & • \\
  • & control of light-limited establishment (weibull parameter) & \texttt{lambda\_est\_light} & • & • & • \\
  • & control of light-limited establishment (weibull parameter) & \texttt{k\_est\_light} & • & • & • \\
@@ -68,7 +68,7 @@ $\tau_{mycorrhiza}$  & turnover time of mycorrhizal fungi & \texttt{tau\_mycorrh
 $\beta_{soil}^{flush}$ & soil moisture limitation factor on stomatal conductance inducing leaf flushing & \texttt{beta\_soil\_flush} & • & • & • \\
 $\beta_{soil}^{sen}$ & soil moisture limitation factor on stomatal conductance inducing leaf senescence & \texttt{beta\_soil\_senescence} & • & • & • \\
 $t_{air}^{GDD}$ & temperature threshold for the accumulation of growing degree days & \texttt{gdd\_t\_air\_threshold} & degC & • & • \\
-$GDD_{req}^{max}$ & maximum GDD requirement (degC days) in the absence of chilling & \texttt{gdd\_req\_max} & days & • & • \\
+$GDD_{req}^{max}$ & maximum GDD requirement (degC days) in the absence of chilling & \texttt{gdd\_req\_max} & degC days & • & • \\
 $k_{GDD}^{dormance} $ & scaling factor in the GDD to number of dormant days relationship & \texttt{k\_gdd\_dormance} & days$^{-1}$ & • & • \\
 $t_{air}^{sen} $ & weekly air temperature threshold inducing senescence of leaves & \texttt{t\_air\_senescence} & degC & • & • \\
  • & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & • & • \\
@@ -98,7 +98,7 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Citation \\
  • & minimum leaf water potential & \texttt{phi\_leaf\_min} & MPa & • & • \\
  • & fine root hydraulic conductance & \texttt{k\_root} & $10^{10} m^3 mol^{-1} s^{-1} MPa^{-1}$ & • & • \\
  • & sapwood hydraulic conductance & \texttt{k\_sapwood} & $10^3 m^2 s^{-1} MPa^{-1}$ & • & • \\
- • & sapwood hydraulic conductance & \texttt{k\_sapwood} & $10^3 m^2 s^{-1} MPa^{-1}$ & • & • \\
+ • & hydraulic trade-off parameter for fine root growth & \texttt{c0\_allom} & • & • & • \\
  • & fraction of annual \texttt{leaf} + \texttt{fine\_root} biomass production that is the target for the size of the long-term reserve pool & \texttt{fstore\_target} & • & • & • \\
  • & • & \texttt{k\_root\_dist} & • & • & • \\
 % • & • & \texttt{} & • & • & • \\
