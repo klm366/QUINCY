@@ -14,7 +14,6 @@ MODULE mo_jsb_varlist_iface
   USE mo_exception,          ONLY: finish
 #ifdef __ICON__
   USE mo_var_list,           ONLY: new_var_list_icon => new_var_list, &
-                                   default_var_list_settings,         &
                                    get_var_list,                      &
                                    add_var_icon => add_var,           &
                                    find_list_element
@@ -65,11 +64,13 @@ CONTAINS
     LOGICAL,          INTENT(in), OPTIONAL   :: loutput      ! write to  output file
     LOGICAL,          INTENT(in), OPTIONAL   :: lrestart     ! write to restart file
     LOGICAL,          INTENT(in), OPTIONAL   :: linitial     ! read from initial file
-    INTEGER,          INTENT(in), OPTIONAL   :: table
+    INTEGER,          INTENT(in), OPTIONAL   :: table        ! used only for ECHAM
 
 #ifdef __ICON__
+    IF (PRESENT(table)) CONTINUE ! Only here to avoid compiler warning about "table" not being used
+
     CALL new_var_list_icon(this_list, name,                                    &
-                      output_type=output_type,                                 &
+                      output_type=output_type, restart_type=restart_type,      &
                       post_suf=post_suf, rest_suf=rest_suf, init_suf=init_suf, &
                       loutput=loutput, lrestart=lrestart, linitial=linitial,   &
                       patch_id=patch_id                                        &
@@ -141,6 +142,14 @@ CONTAINS
     TYPE (t_list_element), POINTER :: element
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r2d'
+
+    ! These variables are not used for ICON, but avoid compiler warnings about dummy arguments not being used
+#ifdef __ICON__
+    IF (code > 0) CONTINUE
+    IF (table > 0) CONTINUE
+    IF (PRESENT(gdims)) CONTINUE
+    IF (PRESENT(levelindx)) CONTINUE
+#endif
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
@@ -237,6 +246,14 @@ CONTAINS
     TYPE (t_list_element), POINTER :: element
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':add_var_list_element_r3d'
+
+    ! These variables are not used for ICON, but avoid compiler warnings about dummy arguments not being used
+#ifdef __ICON__
+    IF (code > 0) CONTINUE
+    IF (table > 0) CONTINUE
+    IF (PRESENT(gdims)) CONTINUE
+    IF (PRESENT(levelindx)) CONTINUE
+#endif
 
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &

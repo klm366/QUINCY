@@ -11,16 +11,15 @@ MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,         ONLY: debug_on
-  USE mo_kind,                ONLY: wp, dp
-  USE mo_util,                ONLY: real2string
-  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_kind,                ONLY: wp !, dp
+  USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,       ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   IMPLICIT NONE
   PRIVATE
@@ -37,8 +36,8 @@ MODULE mo_jsb_tile_class
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
-    PROCEDURE(aggregate_interface_setopt_logical), DEFERRED :: Set_aggregator_option_logical
-    GENERIC                                                 :: Set_option => Set_aggregator_option_logical
+    ! PROCEDURE(aggregate_interface_setopt_logical), DEFERRED :: Set_aggregator_option_logical
+    ! GENERIC                                                 :: Set_option => Set_aggregator_option_logical
   END TYPE t_jsb_aggregator
 
   TYPE t_jsb_aggregator_p
@@ -130,11 +129,9 @@ MODULE mo_jsb_tile_class
   END INTERFACE
 
   ABSTRACT INTERFACE
-    ! FUNCTION Handler_interface(this, hsm, msg_in) RESULT(return_ptr)
     FUNCTION Handler_interface(this, msg_in) RESULT(return_ptr)
       IMPORT :: t_jsb_tile_abstract, t_Hsm, t_Message
       CLASS(t_jsb_tile_abstract),  INTENT(inout) :: this
-      ! CLASS(t_Hsm),                INTENT(inout) :: hsm
       CLASS(t_Message),            INTENT(in)    :: msg_in
       CLASS(t_Message),            POINTER       :: return_ptr
     END FUNCTION Handler_interface
@@ -182,7 +179,7 @@ MODULE mo_jsb_tile_class
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_3d
     PROCEDURE :: Aggregate_2d                  => Aggregate_weighted_by_fract_2d
     PROCEDURE :: Aggregate_3d                  => Aggregate_weighted_by_fract_3d
-    PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
+    ! PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
     FINAL     :: Finalize_aggregator_weighted_by_fract
   END TYPE t_jsb_aggregator_weighted_by_fract
 
@@ -414,7 +411,7 @@ CONTAINS
       & fract_old(:,:),    &
       & fract_max_old(:,:)
 
-    INTEGER :: ilct
+    ! INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
@@ -724,16 +721,14 @@ CONTAINS
 
   SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
 
-    USE mo_hsm_class,      ONLY: t_State
-
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, iproc, nc
-    REAL(dp) :: missval
+    INTEGER :: no_children, i, iproc
+    ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
 
@@ -747,9 +742,7 @@ CONTAINS
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
-    nc = ice - ics + 1
-
-    missval = var%missval
+    ! missval = var%missval
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
@@ -811,16 +804,14 @@ CONTAINS
 
   SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
 
-    USE mo_hsm_class,      ONLY: t_State
-
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, iproc, nc, ilev
-    REAL(dp) :: missval
+    INTEGER :: no_children, i, iproc, ilev
+    ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
 
@@ -834,9 +825,7 @@ CONTAINS
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
-    nc = ice - ics + 1
-
-    missval = var%missval
+    ! missval = var%missval
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
@@ -893,18 +882,18 @@ CONTAINS
 
   END SUBROUTINE Aggregate_weighted_by_fract_3d
 
-  SUBROUTINE Aggregate_weighted_by_fract_set_option_logical(this, name, value)
+  ! SUBROUTINE Aggregate_weighted_by_fract_set_option_logical(this, name, value)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CHARACTER(len=*),                          INTENT(in)    :: name
-    LOGICAL,                                   INTENT(in)    :: value
+  !   CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
+  !   CHARACTER(len=*),                          INTENT(in)    :: name
+  !   LOGICAL,                                   INTENT(in)    :: value
 
-    ! SELECT CASE (TRIM(name))
-    ! CASE ('option')
-    !   this%option = value
-    ! END SELECT
+  !   SELECT CASE (TRIM(name))
+  !   CASE ('option')
+  !     this%option = value
+  !   END SELECT
 
-  END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
+  ! END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
 
   FUNCTION Get_first_child_tile(this) RESULT(return_ptr)
 
