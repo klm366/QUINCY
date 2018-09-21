@@ -101,7 +101,7 @@ MODULE mo_rad_memory_class
       & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
                                 ! As fraction of incoming radiation at the top of the canopy layers (=1).
-      & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime. 
+      & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
                                 ! [(absorbed photons) / (m^2(leaf area) * s)]
       & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
       & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
@@ -343,14 +343,14 @@ CONTAINS
         & t_cf('sky_view_fract', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'sky_view_fract_stem', mem%sky_view_fract_stem, &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract_stem', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'par', mem%par,                                 &
         & hgrid, surface,                                                    &

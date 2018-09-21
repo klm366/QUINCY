@@ -49,7 +49,7 @@ MODULE mo_jsb_memory_class
     PROCEDURE                                    :: Collect_var_real2d  ! Collect var from its child tiles
                                                                         ! R: Note, we do not want to keep a "var collection" in the memory
                                                                         !    because we already have all child values in the memory.
-    PROCEDURE                                    :: Collect_var_real3d  ! Collect var from its child tiles                                                                        
+    PROCEDURE                                    :: Collect_var_real3d  ! Collect var from its child tiles
     PROCEDURE                                    :: HandDown_var_real3d ! Hand back var to child tiles
     PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
   END TYPE t_jsb_memory
@@ -98,7 +98,7 @@ CONTAINS
         EXIT
       END IF
     END DO
-      
+
     ! Note: Not finding the variable in this memory, i.e. returning NULL(), should only happen because
     !       the variable belongs to an LCT that's not handled by this tile.
 
@@ -125,7 +125,7 @@ CONTAINS
         EXIT
       END IF
     END DO
-      
+
     ! Note: Not finding the variable in this memory, i.e. returning NULL(), should only happen because
     !       the variable belongs to an LCT that's not handled by this tile.
 
@@ -161,7 +161,7 @@ CONTAINS
     !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
 
   END FUNCTION Get_var_position
- 
+
 
   FUNCTION Collect_var_real2d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
 
@@ -238,7 +238,7 @@ CONTAINS
     REAL(wp), allocatable               :: var_averaged(:)
 
     ! local variables
-    INTEGER :: i 
+    INTEGER :: i
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
 

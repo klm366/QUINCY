@@ -67,7 +67,7 @@ MODULE mo_jsb_tile_class
     REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
-                                                                   !! must be either "fract[_max]_"//tile%name, or specified by 
+                                                                   !! must be either "fract[_max]_"//tile%name, or specified by
                                                                    !! fract_varname.
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
@@ -696,7 +696,7 @@ CONTAINS
     ! by looping over children of tile
     IF (ANY(tile%l_fract_children_changed(ics:ice,iblk))) THEN
       no_children = tile%Get_no_of_children()
-      current => tile%first_child 
+      current => tile%first_child
       DO i=1,no_children
         SELECT TYPE (current)
         CLASS IS (t_jsb_tile_abstract)
@@ -788,7 +788,7 @@ CONTAINS
     ! END IF
 
     IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
-      ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction 
+      ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
       var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk)
     ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
       ! For tiles where variable is not defined data(:,tile) is 0
@@ -864,7 +864,7 @@ CONTAINS
         END IF
       END DO
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
-        ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction 
+        ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
         var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
       ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
         ! For tiles where variable is not defined data(:,ilev,tile) is 0

@@ -142,7 +142,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-      
+
     ! Expresse radiation in  mol(photons)/(m^2 s)
     par_down_mol = par / Epar
 
@@ -447,7 +447,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     IF (.NOT. l_day) RETURN
 
     ! @todo: use method from mo_surface_ocean:update_albedo_ocean from ECHAM6
@@ -480,10 +480,10 @@ CONTAINS
     ! Local variables
     REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
     REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
-    
+
     ! ---------------------------
     ! Go
-    
+
     IF (.NOT. l_day) RETURN
 
     t_upper_limit = tmelt - 1._wp
@@ -513,7 +513,7 @@ CONTAINS
   !
   PURE ELEMENTAL SUBROUTINE calc_glacier_albedo( &
     & l_day,   &
-    & t,       &    
+    & t,       &
     & alb_vis, &
     & alb_nir  &
     & )
@@ -539,7 +539,7 @@ CONTAINS
     ! Go
 
     IF (.NOT. l_day) RETURN
-    
+
     ! calculate new glacier albedo (visible and NIR) only at grid points with solar radiation (i.e. during daytime)
     IF (t >= tmelt) THEN
        alb_vis = AlbedoGlacierVisMin
@@ -640,14 +640,14 @@ CONTAINS
     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
        alb_vis_mineralsoil = AlbedoSoilConstVis
        alb_nir_mineralsoil = AlbedoSoilConstNir
-    ELSE 
-       alb_vis_mineralsoil = alb_background ! R: This is Rainers invention to mitigate the "error" in 
+    ELSE
+       alb_vis_mineralsoil = alb_background ! R: This is Rainers invention to mitigate the "error" in
                                             !    the JSBACH3 version. But still it should not be used.
                                             !    In JSBACH3 it was filled with albedo_soil_vis_base,
                                             !    which included soil and litter carbon. alb_background
                                             !    is the albedo without snow or canopy, BUT it still
        alb_nir_mineralsoil = alb_background !    includes carbon. However, this all is done to
-                                            !    implement the possibility to use mineral soil albedos 
+                                            !    implement the possibility to use mineral soil albedos
                                             !    which would then be consitent with the soil albedo parametrisations!
     END IF
 
@@ -669,7 +669,7 @@ CONTAINS
                                                   !    which could include different kinds of albedos
                                                   !    (see comment above) but in each case not the
                                                   !    correct one.
-                                             
+
       alb_nir_soil_nolitter = alb_nir_mineralsoil
     END IF ! use_alb_soil_organic_C
 
@@ -843,9 +843,9 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     IF (.NOT. l_day) RETURN
-    
+
     ! Fraction of "visible" bare ground below vegetation regarding only the LAI coverage
     sky_view_fract = 1._wp - fract_fpc_max * (1._wp - EXP(- SkyViewFactor * lai))
 
@@ -876,11 +876,11 @@ CONTAINS
     & alb_vis,             & ! inout
     & alb_nir              & ! inout
     & )
-    
+
     ! Arguments
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
     LOGICAL,  INTENT(in) :: l_forest
-        
+
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem,  &

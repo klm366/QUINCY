@@ -55,7 +55,7 @@ CONTAINS
 
     TYPE(t_input_file)  :: input_file
 
-    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx 
+    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx
     INTEGER :: nblks, nproma
 
     CHARACTER(len=*),  PARAMETER     :: routine = modname//':hd_init_bc'
@@ -232,14 +232,14 @@ CONTAINS
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd_mem%nres_o_max,             &
 !vg       & fill_array = hd__mem%overlflow_res%ptr)
-!vg 
+!vg
 !vg     ! Baseflow reservoir
 !vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FGMEM',                    &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd%hd_hd_mem%nres_b_max,        &
 !vg       & fill_array = hd_mem%baseflow_res%ptr)
-!vg 
+!vg
 !vg     ! Riverflow reservoir
 !vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FRFMEM',                   &

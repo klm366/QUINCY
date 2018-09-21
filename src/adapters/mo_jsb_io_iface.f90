@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interface to io 
+!! @brief Contains the interface to io
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg

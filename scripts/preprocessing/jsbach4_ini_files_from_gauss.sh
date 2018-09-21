@@ -36,7 +36,7 @@ old_r2b4_amip=false                                       # Temporary: old r2b4_
   grid_path=/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids || \
   grid_path=/pool/data/ICON/grids/private/r2b4_amip
 
-bisections="0 1 2 3 4 5 6 7 8 9 10 11"
+bisections="0 1 2 3 4 5 6 7 8 9 10"
 #bisections="4"                          # for testing
 #ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
 #ggrids="T63"                            # for testing
@@ -187,14 +187,19 @@ function generate_gauss_data {
 
 function generate_land_sea_mask {
 
-  echo "Generating land sea mask ..."
+  echo "Generating land sea mask and lake/glacier fractions ..."
+
+  temp=$(mktemp -u --tmpdir=.)
+
   if [[ ${coupled} == "true" ]]
   then
     ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
     if [[ "${old_r2b4_amip}" != "true" ]]; then
       # Note: blend out some grid boxes which are land in FR_LAND_TOPO
-      ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
+      # Set all values above 0.85 to 1 because FR_LAND_TOPO contains ocean points around the Caspian Sea
+      #${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
+      ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.85,1.1,1 -selvar,FR_LAND_TOPO  \
              ${extpar_file} ${grid_name}_notsea.nc
     else
       ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
@@ -202,10 +207,29 @@ function generate_land_sea_mask {
     fi
     ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
   fi
+
+  # Generate glacier fractions, making sure that fraction is either 0 or 1
+  ${cdo} remapnn,${grid_name}_notsea.nc gauss_${source_res}_glac.nc ${temp}
+  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 -ifthen ${grid_name}_notsea.nc -gec,0.9 ${temp} ${grid_name}_glac_remap.nc
+
+  # Adjust land sea mask with glacier fraction
+  ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
+  mv ${temp} ${grid_name}_notsea.nc
+
+  # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
+  # Set small lake fractions below 0.1 to zero
+  ${cdo} setvar,lake -setrtoc,-1,0.0999,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
+  ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc ${temp} ${grid_name}_lake_remap.nc
+
+  rm ${temp}
+
   # Used to mask out ocean with missing values, debug_file needs this
   ${cdo} setctomiss,0 -setmissval,-9e33 ${grid_name}_notsea.nc ${grid_name}_notsea_miss.nc
   debug_file ${grid_name}_notsea_miss.nc
   debug_file ${grid_name}_notsea.nc
+  debug_file ${grid_name}_lake_remap.nc
+  debug_file ${grid_name}_glac_remap.nc
 }
 
 function extrapolate_var {
@@ -238,10 +262,6 @@ function extrapolate_var {
     forest_fract| snow )
       echo "Extrapolating $var ..."
       ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc ${cdo_files}
-      ;;
-    glac | lake )
-      echo "Extrapolating $var ..."
-      ${cdo} setvar,${var} -setmissval,-9.e33 -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc ${cdo_files}
       ;;
     lai_clim | veg_fract | veg_ratio_max | roughness_length_oro | \
     soil_depth | bclapp | soil_field_cap | heat_capacity | heat_conductivity | hyd_cond_sat | \
@@ -377,12 +397,7 @@ function remap_var {
       ${cdo} setvar,${var} -setmissval,-9.e33 -setmisstoc,${oce_rough} -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
       rm ${temp}
       ;;
-    glac )
-      echo "Remapping $var ..."
-      temp=$(mktemp -u --tmpdir=.)
-      ${cdo} remap,${icon_grid_file},${remap_weights} gauss_${source_res}_${var}_ext.nc ${temp}
-      ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc -gec,0.5 ${temp} ${grid_name}_${var}_remap.nc
-      rm ${temp}
+    glac | lake )
       ;;
     surf_temp )
       echo "Remapping $var ..."
@@ -499,7 +514,7 @@ function crosscheck_vars {
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
-  debug_file ${grid_name}_soil_field_remap.nc
+  debug_file ${grid_name}_soil_depth_remap.nc
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}

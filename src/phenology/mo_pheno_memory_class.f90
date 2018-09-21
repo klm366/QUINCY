@@ -6,7 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
-!!
+!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth
+!!                          (derive maxLAI from biomass via allometric relationships)
 
 MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
@@ -64,6 +65,16 @@ MODULE mo_pheno_memory_class
       & previous_day_NPP_pot_rate_ca,   & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
                                           ! at previous day, because not known for current day; updated at ..
                                           ! the beginning of each new day (stream)
+
+                                          !! JN: variables required when l_forestRegrowth = true, i.e. when the
+                                          !      maxLAI is derived from biomass via allometric relationships
+      & number_of_individuals,          & ! Number of individuals in last calculation [trees ha-1]
+      & biomass_per_individual,         & ! Biomass per individual according to allometric relationships [kg/tree]
+
+      & cconservation_allom,            & ! Tester for c conservation upon rescaling due to changed max lai
+      & maxLAI_allom,                   & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]:
+                                          ! Current max LAI according to allometric relationships --> only changes ones a year!
+
       ! & laiMax_dyn,                    & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
       !                                    ! coming from JSBACH, but smaller than that value when NPP is negative for more
       !                                    ! than 1 year. (stream)
@@ -81,6 +92,10 @@ MODULE mo_pheno_memory_class
       & veg_fract_correction              ! Factor representing clumpyness of vegetation (for each tile type).
                                           ! To write it in the output file we define it as 2d even when there is no change
                                           ! between gridcells as it is in fact a 1d constant for each tile.
+                                          !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
+                                          !       and is spatially variable
+                                          !       if l_forestRegrowth = false there is still no change between gridcells
+                                          !       and it is a 1d constant for each tile in this case.
                                           ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                           ! canopy area = veg_fract_correction * tile area.
                                           ! var (tile area) = veg_fract_correction * var(canopy area).
@@ -186,7 +201,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=FULL,                                                   &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
@@ -295,6 +310,38 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+
+        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
+            & hgrid, surface,                                                    &
+            & t_cf('maxLAI_allom', 'm^2(leaf)/m^2(ground)', 'maximum LAI according to allometric relationships'),  &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
+
+!@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
+          CALL jsb_add_var( mem,'individuals', mem%number_of_individuals, &
+            & hgrid, surface,                                                    &
+            & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_wp)
+          CALL jsb_add_var( mem,'biomass_per_ind', mem%biomass_per_individual, &
+            & hgrid, surface,                                                    &
+            & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+            & prefix, suffix,                                                    &
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
+          CALL jsb_add_var( mem, 'cconservation_allom', mem%cconservation_allom,              &
+            & hgrid, surface,                                                           &
+            & t_cf('cconservation_allom', 'mol(C) m-2(canopy)', &
+              & 'Test for c conservation on rescaling of c states for allom.'), &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+            & prefix, suffix,                                                           &
+            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+
+        END IF
 
       END IF
 

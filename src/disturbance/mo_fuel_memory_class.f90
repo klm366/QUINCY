@@ -30,7 +30,7 @@ MODULE mo_fuel_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_fuel_memory
 
    TYPE(t_jsb_var_real2d) ::   &
-      fuel                       ! R: Normalerweise wäre dies eine lokale Variable, weil sie nur für das veg Tile berechnet wird 
+      fuel                       ! R: Normalerweise wäre dies eine lokale Variable, weil sie nur für das veg Tile berechnet wird
                                  ! und nur für Feuer benötigt wird. Aber sie wird 1. nach dem Zeitschritt wieder verwendet und
                                  ! sollte 2. im Output sein, da sie nicht nur technisch wichtig ist!
   CONTAINS

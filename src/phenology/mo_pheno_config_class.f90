@@ -6,6 +6,8 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
+!! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth
+!!                          (derive maxLAI from biomass via allometric relationships)
 !!
 MODULE mo_pheno_config_class
 #ifndef __NO_JSBACH__
@@ -21,6 +23,7 @@ MODULE mo_pheno_config_class
   PUBLIC :: t_pheno_config, Init_pheno_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
+    LOGICAL :: l_forestRegrowth ! If TRUE, the maxLAI is derived from biomass via allometric relationships
     CHARACTER(len=15) :: scheme   !< Phenology scheme to use ('logrop', 'climatology')
      !LOGICAL :: first_call_phenology_this_day  ! TRUE marks if a new day has just started and update_phenology is called for the top tile
     CONTAINS
@@ -37,12 +40,13 @@ CONTAINS
 
     CLASS(t_pheno_config), INTENT(inout) :: config
 
-    LOGICAL :: active
+    LOGICAL :: active, l_forestRegrowth
     CHARACTER(len=15) :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
+      & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
       & bc_filename
@@ -55,6 +59,7 @@ CONTAINS
 
     ! Set defaults
     active              = .TRUE.
+    l_forestRegrowth    = .FALSE.
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
@@ -68,6 +73,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active              = active
+    config%l_forestRegrowth    = l_forestRegrowth
     config%scheme              = TRIM(scheme)
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename

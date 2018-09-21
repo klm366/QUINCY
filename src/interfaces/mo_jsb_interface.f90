@@ -44,7 +44,7 @@ CONTAINS
     & iblk, ics, ice, dtime, steplen, &
     & t_air,            &
     & q_air,            &
-    & rain,             &  
+    & rain,             &
     & snow,             &
     & wind_air,         &
     & wind_10m,         &
@@ -334,7 +334,7 @@ CONTAINS
   END SUBROUTINE interface_inquire
 
   SUBROUTINE jsbach_start_timestep(model_id)
- 
+
     USE mo_jsb_time,          ONLY: is_time_experiment_start
     USE mo_jsb_time_iface,    ONLY: is_time_restart
     USE mo_util,              ONLY: one_of

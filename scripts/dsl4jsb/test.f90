@@ -4,7 +4,9 @@ PROGRAM example
     & VEG_
   dsl4jsb_Use_memory(ATM2LAND_)
   dsl4jsb_Def_memory(SOIL_)
+  dsl4jsb_Def_memory_tile(SOIL_, thisTile)
   dsl4jsb_get_memory(SOIL_) ! comment
+  dsl4jsb_get_memory_tile(SOIL_, currentChild) ! get soil memory from tile source
   var3(:) = a1 * dsl4jsb_memory(SOIL_)%var1(:) + a2 * dsl4jsb_memory(SOIL_)%var2(:)
   dsl4jsb_Use_config(SOIL_)
   dsl4jsb_Def_config(SOIL_)
@@ -19,6 +21,8 @@ PROGRAM example
     & ws3
   dsl4jsb_Get_var2D_onChunk(SOIL_,ws)
   dsl4jsb_Get_var2D_onChunk(SOIL_, ws)
+  dsl4jsb_Get_var2d_onChunk_tile(SOIL_, ws, sourceT)
+  dsl4jsb_Get_var2d_onChunk_tile_name(SOIL_, ws, sourceT)
   dsl4jsb_var2d_onChunk(SOIL_,ws)
   CALL subroutine( &
     & dsl4jsb_var2D_onChunk (SOIL_, var1   ), &

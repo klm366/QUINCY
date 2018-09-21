@@ -29,7 +29,7 @@ MODULE mo_carbon_config_class
                             ! overwritten by values from file).
                             ! ATTENTION: The run script has to take care that read_cpools is set to .FALSE.
                             !            in the experiment jobs following the first one! Or re-set it manually!
-    REAL(wp) :: fire_fract_wood_2_atmos 
+    REAL(wp) :: fire_fract_wood_2_atmos
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -54,7 +54,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: read_cpools
     REAL(wp)                    :: fire_fract_wood_2_atmos
-    ! LOGICAL           :: lemissions 
+    ! LOGICAL           :: lemissions
 
     NAMELIST /jsb_carbon_nml/      &
          active,                   &

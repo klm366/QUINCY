@@ -18,7 +18,7 @@ MODULE mo_sse_constants
 
   REAL(wp), PARAMETER :: &
     ! Parameters for solid soil particulate
-    & hcond_dry_soil     = 0.05_wp,         & !< Dry soil heat conductivity (O'Donnel et al 2009)             [W/m/K]  
+    & hcond_dry_soil     = 0.05_wp,         & !< Dry soil heat conductivity (O'Donnel et al 2009)             [W/m/K]
     ! Parameters for liquid water
     & vol_hcap_water     = clw * rhoh2o,    & !< Volumetric heat capacity of liquid water                     [J/m3/K]
     & hcond_water        = 0.57_wp,         & !< Thermal conductivity of liquid water (Hillel 1982)           [W/K/m]
@@ -27,11 +27,11 @@ MODULE mo_sse_constants
     & vol_hcap_ice       = ci * dens_ice,   & !< =1931202 Volumetric heat capacity of ice                     [J/m3/K]
     & hcond_ice          = ki,              & !< =2.1656  thermal conductivity of ice                         [W/K/m]
     ! Parameters for organic soil component
-    & vol_hcap_org       = 2.5e+06_wp,      & !< Organic layer volumetric heat capacity (Beringer et al 2001) [J/m3/K] 
-    & hcond_org          = 0.25_wp,         & !< Organic layer heat conductivity (Beringer et al 2001)        [W/m/K]  
-    & hcond_dry_org      = 0.05_wp,         & !< Dry soil heat conductivity (Farouki 1981)                    [W/m/K]  
+    & vol_hcap_org       = 2.5e+06_wp,      & !< Organic layer volumetric heat capacity (Beringer et al 2001) [J/m3/K]
+    & hcond_org          = 0.25_wp,         & !< Organic layer heat conductivity (Beringer et al 2001)        [W/m/K]
+    & hcond_dry_org      = 0.05_wp,         & !< Dry soil heat conductivity (Farouki 1981)                    [W/m/K]
     ! Parameters for bedrock
-    & vol_hcap_bedrock   = 2.e+06_wp,       & !< Volumetric heat capacity of bedrock (Bonan 2002)             [J/m3/K] 
+    & vol_hcap_bedrock   = 2.e+06_wp,       & !< Volumetric heat capacity of bedrock (Bonan 2002)             [J/m3/K]
     & hcond_bedrock      = 2._wp,           & !< Thermal conductivity of bedrock (Tarnocai 2004)              [W/m/K]
     ! Parameters for free soil pores (air)
     & vol_hcap_air       = 1300._wp,        & !< Volumetric heat capacity of free soil pores (from VIC model) [J/m3/K]

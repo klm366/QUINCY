@@ -976,7 +976,7 @@ CONTAINS
         IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN  ! Take transition to next
           ! CALL this%Process_entry_to_next()
           IF (this%next(no_omp_thread)%p%level == this%current(no_omp_thread)%p%level) THEN
-            ! Goto to a sibling: exit current state   
+            ! Goto to a sibling: exit current state
             this%current(no_omp_thread)%p%visited = .FALSE.   ! Exit current on way up
           END IF
           this%current(no_omp_thread)%p => this%next(no_omp_thread)%p

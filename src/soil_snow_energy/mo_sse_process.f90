@@ -133,7 +133,7 @@ CONTAINS
 
       ! ! --- Alternate formulation ---
       ! ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
-      ! ! are such that some ice can remain in a layer even if t_soil > tmelt. 
+      ! ! are such that some ice can remain in a layer even if t_soil > tmelt.
       ! IF (ice > 0._wp) THEN  ! Frozen case
       !   kersten = saturation
       !   fract_water = water / layer_depth
@@ -160,7 +160,7 @@ CONTAINS
       ! END IF
 
       ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
-      ! are such that some ice can remain in a layer even if t_soil > tmelt. 
+      ! are such that some ice can remain in a layer even if t_soil > tmelt.
       IF (ice > 0._wp) THEN  ! Frozen case
         kersten = saturation
       ELSE                   ! Unfrozen case
@@ -220,7 +220,7 @@ CONTAINS
 
   !>
   !
-  ! Initialize soil and surface temperature 
+  ! Initialize soil and surface temperature
   !
   ! Method:
   !
@@ -240,7 +240,7 @@ CONTAINS
   ! U. Schulzweida, MPI, May 2002, blocking (nproma)
   ! E. Roeckner, MPI, Sep 2002, initialization of mixed layer ocean
   ! T. Raddatz, MPI, Mai 2005, adaption to JSBACH
-  ! 
+  !
   SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
 
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
@@ -250,7 +250,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
-    REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures   
+    REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
     REAL(wp), INTENT(out) :: tsurf(:)    !< Surface temperature
 
     INTEGER               :: nsoil, ndim
@@ -405,13 +405,13 @@ CONTAINS
     !     MODIFIED BY ALTUG EKICI
     !
     !     INCLUDED:
-    !     -PHASE CHANGE 
+    !     -PHASE CHANGE
     !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
     !     -SUPERCOOLED WATER EQUATION
     !     -THAW DEPTH CALCULATION
-    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES 
+    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
     !     -ORGANIC LAYER ABOVE THE SOIL
-    !     
+    !
     !----------------------------------------------------------------------------------------------
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
@@ -422,7 +422,7 @@ CONTAINS
     !  arguments
 
     INTEGER,  INTENT(in)    ::  nidx                     !! length of the vector
-    INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers 
+    INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers
     REAL(wp), INTENT(in)    ::  delta_time               !! Time step
     LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
     LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
@@ -466,7 +466,7 @@ CONTAINS
     heat_cap(:,:) = SPREAD(dz(:), DIM=1, ncopies=nidx) * vol_heat_cap(:,:)
 
     !-----------------------------------------------------------------------------------------------
-    !  Computation of soil temperaturs 
+    !  Computation of soil temperaturs
     !    from surface temperatur and A and B coefficients computed at the previous time step
     !-----------------------------------------------------------------------------------------------
 
@@ -624,13 +624,13 @@ CONTAINS
     !     MODIFIED BY ALTUG EKICI
     !
     !     INCLUDED:
-    !     -PHASE CHANGE 
+    !     -PHASE CHANGE
     !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
     !     -SUPERCOOLED WATER EQUATION
     !     -THAW DEPTH CALCULATION
-    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES 
+    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
     !     -ORGANIC LAYER ABOVE THE SOIL
-    !     
+    !
     !----------------------------------------------------------------------------------------------
 
     IMPLICIT NONE
@@ -639,7 +639,7 @@ CONTAINS
     !  arguments
 
     INTEGER,  INTENT(in)    :: nidx                       !! length of the vector
-    INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers 
+    INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
     REAL(wp), INTENT(in)    :: delta_time                 !! Time step
     LOGICAL,  INTENT(in)    :: lstart                     !! if T, start of experiment
     REAL(wp), INTENT(in)    :: dz(nidx,nsnow)             !! (dynamic) snow layer thickness [m]
