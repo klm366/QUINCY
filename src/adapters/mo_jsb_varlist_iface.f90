@@ -18,7 +18,7 @@ MODULE mo_jsb_varlist_iface
                                    get_var_list,                      &
                                    add_var_icon => add_var,           &
                                    find_list_element
-  USE mo_var_metadata,       ONLY: groups
+  USE mo_var_groups,         ONLY: groups
   USE mo_var_metadata_types, ONLY: t_var_metadata, VARNAME_LEN
   USE mo_linked_list,        ONLY: t_var_list, t_list_element
 #else
