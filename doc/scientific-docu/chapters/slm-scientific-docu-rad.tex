@@ -125,14 +125,23 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \multicolumn{6}{l}{\bf Albedo and fapar calculation}\\
 \hline
 
-$k_{bl,0,vis}$ & extinction coefficient over black leaves in the VIS range & \texttt{kbl0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.5 & \cite{Spitters:1986tv} \\    
-$k_{df,0,vis}$ & extinction coefficient for diffuse radiation in the VIS range & \texttt{kdf0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.8 & \cite{Spitters:1986tv} \\  
-$k_{bl,0,nir}$ & extinction coefficient over black leaves in the NIR range & \texttt{kbl0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.5 & \cite{Spitters:1986tv} \\    
-$k_{df,0,nir}$ & extinction coefficient for diffuse radiation in the NIR range & \texttt{kdf0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.8 & \cite{Spitters:1986tv} \\  
-$k_{csf}$ & coefficient in crown-shape correction & \texttt{k\_csf} & -- & \ref{eq:rad:omega} & 0.8 & \cite{Campbell:1998vb}\\  
-$\rho^{sbeta}$ & scaling factor of solar angle in reflection calculation& \texttt{rho2sbeta} & -- & \ref{eq:rad:leaf_albedo}  & 1.6 & \cite{Spitters:1986tv} \\        
+$k_{bl,0,vis}$ & extinction coefficient over black leaves in the VIS range & \texttt{kbl0\_vis} & • & \ref{eq:rad:extinction_coef} & 0.5 & \cite{Spitters:1986tv} \\    
+$k_{df,0,vis}$ & extinction coefficient for diffuse radiation in the VIS range & \texttt{kdf0\_vis} & • & \ref{eq:rad:extinction_coef} & 0.8 & \cite{Spitters:1986tv} \\  
+$k_{bl,0,nir}$ & extinction coefficient over black leaves in the NIR range & \texttt{kbl0\_nir} & • & \ref{eq:rad:extinction_coef} & 0.5 & \cite{Spitters:1986tv} \\    
+$k_{df,0,nir}$ & extinction coefficient for diffuse radiation in the NIR range & \texttt{kdf0\_nir} & • & \ref{eq:rad:extinction_coef} & 0.8 & \cite{Spitters:1986tv} \\  
+$\rho^{sbeta}$ & scaling factor of solar angle in reflection calculation& \texttt{rho2sbeta} & • & \ref{eq:rad:leaf_albedo}  & 1.6 & \cite{Spitters:1986tv} \\
+$k_{csf}$ & coefficient in crown-shape correction & \texttt{k\_csf} & • & \ref{eq:rad:omega} & 2.2 & \cite{Campbell:1998vb}, eq 15.35 \\  
+• & minimum cosine zenith angle for radiation calculation & \texttt{min\_cos\_zenith\_angle\_rad} & • & • & 0.1736482 & corresponding to 10$^{\circ}$ solar elevation \\
+• & default VIS albedo for soil & \texttt{def\_alb\_vis\_soil} & • & • & 0.15 & Bonan 2008 \\
+• & default NIR albedo for soil & \texttt{def\_alb\_nir\_soil} & • & • & 0.30 & Bonan 2008 \\
+• & • & \texttt{rad2ppfd} & $\mu$mol/J & • & 4.6 & Monteith \& Unsworth 1995 \\
+• & top of the canopy red:farred ratio & \texttt{rfr\_ratio\_toc} & • & • & 1.2 & Kull \& Kruij 1998 \\
+• & extinction of red:farred ratio on leaf chlorophyll & \texttt{k\_r2fr\_chl} & 1/mmol N & • & 0.0012-0.012 & Kull \& Kruij 1998, tuned \\
+
+%• & • & \texttt{\_} & • & • & • & • \\
+%• & • & \texttt{\_} & • & • & • & • \\
 \hline 
-\hline 
+%\hline 
 \end{tabularx}
 \end{sidewaystable}
 
