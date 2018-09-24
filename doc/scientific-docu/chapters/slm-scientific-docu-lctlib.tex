@@ -132,18 +132,20 @@ Parameter name in code & PFT specific values (1-8) & Notes \\
 \texttt{omega\_clumping} & 0.9 0.9 0.9 0.9 0.5 0.7 1.0 1.0 & • \\
 \texttt{crown\_shape\_factor} & 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34 & • \\
 \texttt{cn\_leaf} & 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 & converted at runtime from nitrogen concentration mg N/gDW to CN mol C / mol N \\
+\texttt{cn\_leaf\_min} & 10.56 10.56 10.56 10.56 6.42 10.56 10.56 10.56 & converted at runtime from nitrogen concentration mg N/gDW to CN mol C / mol N \\
+\texttt{cn\_leaf\_max} & 30.0 30.0 30.0 30.0 17.0 30.0 30.0 30.0 & converted at runtime from nitrogen concentration mg N/gDW to CN mol C / mol N \\
 \texttt{np\_leaf} & 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36 & converted at runtime from from phosphorus concentration mg P/gDW to NP mol N / mol P \\
-\texttt{k0\_fn\_struc} & 0.75 0.70 0.63 0.63 0.83 0.79 0.3 0.3 & • \\
-\texttt{fn\_oth\_min} & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 & calculation of actual values at runtime \\
+\texttt{np\_leaf\_min} & 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68 & converted at runtime from from phosphorus concentration mg P/gDW to NP mol N / mol P \\
+\texttt{np\_leaf\_max} & 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04 & converted at runtime from from phosphorus concentration mg P/gDW to NP mol N / mol P \\
+\texttt{k0\_fn\_struc} & 0.75 0.70 0.63 0.63 0.83 0.79 0.3 0.3 & temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5 \\
+\texttt{fn\_oth\_min} & • & calculation of actual values at model init \\
 \texttt{t\_jmax\_opt} & 30.0 30.0 25.0 25.0 25.0 25.0 25.0 35.0 & • \\
 \texttt{t\_jmax\_omega} & 18.0 18.0 18.0 18.0 18.0 18.0 18.0 18.0 & • \\
 \texttt{g0} & 0.01 0.01 0.01 0.01 0.01 0.01 0.03 0.03 & • \\
-\texttt{g1} & 9.3 8.3 7.0 10.9 5.5 7.0 9.3 2.0 & • \\
+\texttt{g1} & 9.3 8.3 7.0 10.9 5.5 7.0 9.3 2.0 & tuned to get similar Amax/N values as with Lin et al. \\
 \texttt{gmin} & 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006 & • \\
-\texttt{lambda\_soil\_ps} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
-\texttt{weibull\_k\_soil\_ps} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
-\texttt{lambda\_soil\_gs} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
-\texttt{weibull\_k\_soil\_gs} & 3.0 3.0 3.0 3.0 3.0 3.0 3.0 3.0 & • \\
+
+%\texttt{} & • & • \\
 %\texttt{} & • & • \\
 \hline 
 \end{tabularx}
@@ -161,14 +163,14 @@ Parameter name in code & PFT specific values (1-8) & Notes \\
 \texttt{tau\_leaf} & 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 & converted at runtime from month to years \\
 \texttt{tau\_fine\_root} & 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 & • \\
 \texttt{tau\_coarse\_root} & 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 & • \\
-\texttt{tau\_branches} & 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 & • \\
+\texttt{tau\_branch} & 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 & • \\
 \texttt{tau\_sap\_wood} & 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 & • \\
 \texttt{tau\_fruit} & 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 & • \\
 \texttt{tau\_seed\_litter} & 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 & • \\
 \texttt{tau\_seed\_est} & 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 & • \\
 \texttt{tau\_mycorrhiza} & 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 & • \\
-\texttt{vmax\_uptake\_n} & 0.14 0.14 0.14 0.14 0.14 0.14 0.14 0.14 & tuned from OCN's 1.5 gN/gC/1800s \\
-\texttt{vmax\_uptake\_p} & 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 0.1428 & tuned from OCN's 1.5 gN/gC/1800s \\
+\texttt{vmax\_uptake\_n} & 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 & tuned from OCN's 1.5 gN/gC/1800s \\
+\texttt{vmax\_uptake\_p} & 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 & tuned from OCN's 1.5 gN/gC/1800s, plus changes by Lin following Kavka and Polle 2016 \\
 \texttt{bnf\_base} & 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0 & converted at runtime from g N /$m^2$ /year to $\mu$mol N $m^{-2} s^{-1}$ \\
 \texttt{lambda\_est\_light} & 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 & • \\
 \texttt{k\_est\_light} & 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0 & • \\
@@ -180,6 +182,8 @@ Parameter name in code & PFT specific values (1-8) & Notes \\
 \texttt{k\_gdd\_dormance} & 0.0 0.0 0.0 0.007 0.0 0.0098 0.1 0.1 & • \\
 \texttt{t\_air\_senescence} & 0.0 0.0 0.0 8.5 0.0 5.0 0.0 0.0 & converted at runtime to Kelvin \\
 \texttt{min\_leaf\_age} & 10 10 10 50 10 10 10 10 & • \\
+
+%\texttt{} & • & • \\
 %\texttt{} & • & • \\
 \hline 
 \end{tabularx}
@@ -197,15 +201,18 @@ Parameter name in code & PFT specific values (1-8) & Notes \\
 \texttt{wood\_density} & 0.3 0.3 0.3 0.3 0.3 0.3 0.22 0.22 & converted at runtime from g C $cm^{-3}$ to mol C $m^{-3}$ \\
 \texttt{k\_latosa} & 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 & • \\
 \texttt{k\_crtos} & 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 & • \\
-\texttt{k\_rtos} & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 & calculation of actual values at runtime \\
+\texttt{k\_rtos} & • & calculation of actual values at model init \\
 \texttt{k2\_fruit\_alloc} & 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 & • \\
 \texttt{allom\_k1} & 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 & • \\
 \texttt{allom\_k2} & 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 & • \\
 \texttt{phi\_leaf\_min} & -1.0 -1.0 -1.0 -1.0 -1.0 -1.0 -0.75 -0.75 & • \\
 \texttt{k\_root} & 2.3 2.3 2.3 4.3 2.3 2.3 2.3 2.3 & converted at runtime from $10^{10} m^3 mol^{-1} s^{-1} MPa^{-1}$ to $m^3 mol^{-1} s^{-1} MPa^{-1}$ \\
 \texttt{k\_sapwood} & 3.0 3.0 3.0 3.0 1.3 1.3 0.0 0.0 & converted at runtime from $10^3 m^2 s^{-1} MPa^{-1}$ to $m^2 s^{-1} MPa^{-1}$ \\
-\texttt{c0\_allom} & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 & calculation of actual values at runtime \\
+\texttt{c0\_allom} & • & calculation of actual values at model init \\
+\texttt{fstore\_target} & 1.0 1.2 1.0 1.0 0.5 1.0 1.0 1.0 & • \\
 \texttt{k\_root\_dist} & 3.5 2.8 2.5 3.5 3.5 3.5 5.5 5.5 & • \\
+
+%\texttt{} & • & • \\
 %\texttt{} & • & • \\
 \hline 
 \end{tabularx}
