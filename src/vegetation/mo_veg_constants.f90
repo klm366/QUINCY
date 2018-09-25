@@ -226,10 +226,10 @@ CONTAINS
       k_phimaint_nut          = 3._wp 
       lambda_phistore         = 2._wp
       k_phistore              = 3._wp 
+      knut_labile             = 1.2_wp 
       lambda_sinklim_ps       = 0.1_wp
       k_sinklim_ps            = 2.0_wp 
       k_cnp_sinklim_ps        = 4.0_wp 
-      knut_labile             = 1.2_wp 
       beta_sinklim_ps_min     = 0.25_wp 
       fstore_leaf_max         = 0.02_wp
       fstore_fine_root_max    = 0.2_wp
@@ -238,12 +238,13 @@ CONTAINS
 
 
   ! Resorption parameters
-      resorp_fract_leaf     = 0.5_wp  
-      resorp_fract_wood     = 0.2_wp 
-      root2leaf_cn          = 0.85_wp 
-      wood2leaf_cn          = 0.145_wp 
-      root2leaf_np          = 1.0_wp 
-      wood2leaf_np          = 1.0_wp 
+      resorp_fract_leaf       = 0.5_wp  
+      resorp_fract_wood       = 0.2_wp 
+      root2leaf_cn            = 0.85_wp 
+      wood2leaf_cn            = 0.145_wp 
+      root2leaf_np            = 1.0_wp 
+      wood2leaf_np            = 1.0_wp 
+      tau_nutrient_recycling  = 10._wp
 
   ! N uptake parameters
       kappa_f_demand_nc   = 0.75_wp 
@@ -291,7 +292,7 @@ CONTAINS
       k1_mort_greff               = 0.05_wp 
       k2_mort_greff               = 0.3_wp 
       k3_mort_greff               = 25.0_wp 
-      min_greff                   = 1.0_wp    ! mol C / LAI / year
+      min_greff                   = 1.0_wp
       max_crown_area              = 15._wp
       min_diameter                = 0.01_wp
       k_crown_area                = 100._wp
@@ -309,9 +310,6 @@ CONTAINS
       w_root_lim_max              = 0.8_wp
       leaf2root_min_ratio         = 0.2_wp
       leaf2root_max_ratio         = 15.0_wp
-
-  ! moved here from mo_assimi_constants
-      tau_nutrient_recycling      = 10._wp 
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?

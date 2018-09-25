@@ -248,13 +248,12 @@ from with the number of new individuals can be calculated using a PFT-specific s
 ind_{est} = flux_{est} / seed\_size
 \end{equation}
 
-  
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
 %\newpage
 \begin{sidewaystable}
 \section{Parameters}\label{TabVegParam}
-
-
-% PARAMETER LIST - Start %
 
 %\resizebox{\textwidth}{!}{  % to resize table to fit the page, needs \usepackage{graphicx}
 \begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
@@ -262,17 +261,47 @@ ind_{est} = flux_{est} / seed\_size
 Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
 \hline 
 
-% Example:
-% $\tau_{labile,def}$ & default turnover time of labile pool & \texttt{tau\_labile\_default} & \ref{eq\_tau\_lab} & 1.0 & \cite{zaehle:2013} \\ 
-
 \multicolumn{6}{l}{\bf Respiration parameters}\\
 \hline
-• & growth respiration per unit new biomass & \texttt{fresp\_growth} & $mol^{-1}$ & • & 0.25 & Needed \\ 
-• & N-specific foliar maintenance respiration rate & \texttt{fmaint\_rate\_base} & $\mu$mol CO2/ mmol N/ s & • & 1.0 & Sprugel et al. \\ 
-• & Temperature sensitivity of maintenance respiration & \texttt{t\_maint\_k1} & • & • & 308.56 & • \\ 
-• & same as above & \texttt{t\_maint\_k2} & • & • & 56.02 & • \\ 
-• & same as above & \texttt{t\_maint\_k3} & • & • & 227.13 & • \\ 
+• & growth respiration per unit new biomass & \texttt{fresp\_growth} & $mol^{-1}$ & • & 0.25 & needed \\ 
+• & N-specific maintenance respiration rate for roots and leaves & \texttt{fmaint\_rate\_base} & $\mu$mol CO2/ mmol N/ s & • & 1.0 & Sprugel et al. \\ 
+• & N-specific maintenance respiration rate for wood & \texttt{fmaint\_rate\_wood} & $\mu$mol CO2/ mmol N/ s & • & \texttt{fmaint\_rate\_base} * 0.25 & Sprugel et al. \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k1} & • & • & 308.56 & Lloyd \& Taylor 1996 \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k2} & • & • & 56.02 & Lloyd \& Taylor 1996 \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k3} & • & • & 227.13 & Lloyd \& Taylor 1996 \\ 
+• & respiration temperature acclimation factor & \texttt{f\_resp\_acclim} & • & • & -0.008 & Lloyd \& Taylor 1996 \\
+• & base temperature for respiration acclimation & \texttt{t\_acclim\_zero} & K & • & 283.15 & Lloyd \& Taylor 1996 \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+%}  % end \resizebox
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
 \hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline
+
+\multicolumn{6}{l}{\bf Parameters describing the PS $\sim$ An relationship (describing photosynthetic activity)}\\
+\hline
+• & fraction of N in PEP and PPKD (C3 plants only) & \texttt{k0\_fn\_pepc\_C3} & • & • & 0.0 & • \\ 
+• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fn\_pepc\_C4} & • & • & 0.045 & Makino et al. 2003, Tazoe et al. 2006 \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & 1.92 & text book \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & 1.4 & calibrated to Jmax=vcmax at 25 degC \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
 \multicolumn{6}{l}{\bf Labile pool parameters}\\
 \hline
 $\tau_{labile}$ & turnover time of the labile carbo-hydrates & \texttt{tau\_labile} & days & • & 5 & • \\ 
@@ -280,20 +309,29 @@ $\lambda^{labile}_{temp}$ & lambda in temperature response function of labile po
 $k^{labile}_{temp}$ & k in temperature response function of labile pool & \texttt{k\_labile\_temp} & • & \ref{eq:veg:k0_lab} & 2.0 & • \\ 
 $\lambda^{labile}_{\theta}$ & lambda in moisture response function of labile pool & \texttt{lambda\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 10.0 & • \\ 
 $k^{labile}_{\theta}$ & k in moisture response function of labile pool & \texttt{k\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 2.0 & • \\ 
-$\lambda^{\Phi}_{phen}$ & lambda in storage response function to phenology & \texttt{lambda\_phiphen} &  & \ref{eq:veg:phiphen} & 1.3 &  \\ 
-$k^{\Phi}_{phen}$ & k in storage response function to phenology & \texttt{k\_phiphen} & & \ref{eq:veg:phiphen} & 8.0 & \\ 
-$\lambda^{\Phi}_{maint}$ & lambda in storage response function to maintenance needs & \texttt{lambda\_phimaint} & & \ref{eq:veg:phimaint} & 4.0 & \\ 
-$k^{\Phi}_{maint}$ & k in storage response function to maintenance needs & \texttt{k\_phimaint} & • & \ref{eq:veg:phimaint} & 1.2 & \\ 
-$\lambda^{\Phi}_{store}$ & lambda in storage response function to storage size & \texttt{lambda\_phistore} & • & \ref{eq:veg:phistore} & 2.0 &  \\ 
-$k^{\Phi}_{store}$ & k in storage response function to storage size & \texttt{k\_phistore} & & \ref{eq:veg:phistore} & 3.0 & \\ 
-
+$\lambda^{\Phi}_{phen}$ & lambda in storage response function to phenology & \texttt{lambda\_phiphen} & • & \ref{eq:veg:phiphen} & 1.3 & • \\ 
+$k^{\Phi}_{phen}$ & k in storage response function to phenology & \texttt{k\_phiphen} & • & \ref{eq:veg:phiphen} & 8.0 & • \\ 
+$\lambda^{\Phi}_{maint}$ & lambda in storage response function to maintenance needs & \texttt{lambda\_phimaint} & • & \ref{eq:veg:phimaint} & 4.0 & • \\ 
+$k^{\Phi}_{maint}$ & k in storage response function to maintenance needs & \texttt{k\_phimaint} & • & \ref{eq:veg:phimaint} & 1.2 & • \\ 
+• & • & \texttt{lambda\_phimaint\_nut} & • & • & 1.6 & • \\ 
+• & • & \texttt{k\_phimaint\_nut} & • & • & 3.0 & • \\ 
+$\lambda^{\Phi}_{store}$ & lambda in storage response function to storage size & \texttt{lambda\_phistore} & • & \ref{eq:veg:phistore} & 2.0 & • \\ 
+$k^{\Phi}_{store}$ & k in storage response function to storage size & \texttt{k\_phistore} & & \ref{eq:veg:phistore} & 3.0 & • \\ 
+• & rate at which nutrients can retrieved quicker for growth than carbon & \texttt{knut\_labile} & • & • & 1.2 & • \\
+• & lambda in photosynthesis response function to labile pool size & \texttt{lambda\_sinklim\_ps} & • & • & 0.1 & • \\
+• & k in photosynthesis response function to labile pool size & \texttt{k\_sinklim\_ps} & • & • & 2.0 & • \\
+• & scaling factor to limit PS if labile CNP becomes too wide & \texttt{k\_cnp\_sinklim\_ps} & • & • & 4.0 & • \\
+• & maximum downacclimation of photosynthetic capacity due to sink limitation & \texttt{beta\_sinklim\_ps\_min} & • & • & 0.25 & • \\
+• & maximum reserve storage in leaves relative to leaf mass & \texttt{fstore\_leaf\_max} & • & • & 0.02 & • \\
+• & maximum reserve storage in fine roots relative to fine root mass & \texttt{fstore\_fine\_root\_max} & • & • & 0.2 & • \\
+• & maximum reserve storage in sap wood relative to sap wood mass & \texttt{fstore\_sap\_wood\_max} & • & • & 0.15 & • \\
+• & value of reserve pull phi\_X at which the inverse reserve pull phi\_Y is reduced & \texttt{k\_phi\_interact} & • & • & 0.75 & • \\
 \hline 
 \end{tabularx}
-%}  % end \resizebox
 \end{sidewaystable}
 
 \begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|X|c|} % textwidth  
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
 \hline 
 Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
 \hline 
@@ -306,6 +344,7 @@ $\chi_{root}^{C:N}$ & relative C:N of fine roots compared to leaves & \texttt{ro
 $\chi_{wood}^{C:N}$ & relative C:N of woody biomass compared to leaves & \texttt{wood2leaf\_cn} & • & • & 0.145 & \cite{Zaehle:2010cz} \\ 
 $\chi_{root}^{N:P}$ & relative N:P of fine roots compared to leaves & \texttt{root2leaf\_np} & • & • & 1.0 & • \\ 
 $\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt{wood2leaf\_np} & • & • & 1.0 & • \\ 
+• & time scale of enzyme, RNA etc., turnover (i.e. return to labile pool) & \texttt{tau\_nutrient\_recycling} & days & • & 10.0 & • \\
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -315,58 +354,26 @@ $\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt
 \hline 
 Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
 \hline 
-\multicolumn{6}{l}{\bf Canopy profile and canopy light extinction}\\
+
+\multicolumn{6}{l}{\bf Parameters to describe the varying fraction of N in chlorophyll through the canopy}\\
 \hline
-• & extinction coefficient to describe decline of N within the canopy & \texttt{kn} & • & • & 0.11 & • \\    
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fn\_chl\_C3} & • & • & 6.0 & • \\  
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fn\_chl\_C4} & • & • & 15.0 & • \\    
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fn\_chl\_C3} & • & • & 3.6 & • \\  
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fn\_chl\_C4} & • & • & 4.4 & • \\    
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{kfn\_chl} & • & • & 0.7 & • \\  
-• & fraction of N in PEP and PPKD (C3 plants only) & \texttt{k0\_fn\_pepc\_C3} & • & • & 0.0 & • \\ 
-• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fn\_pepc\_C4} & • & • & 0.045 & • \\ 
-• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & 1.92 & • \\ 
-• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & 1.4 & • \\
-\hline 
-\multicolumn{6}{l}{\bf Changes in canopy N fractions}\\
-\hline
- • & maximum fractional change for optimal adjustment of photosynthetic N fraction & \texttt{delta\_n\_fraction} & • & • & 0.048 & • \\ 
- • & maximum fractional change for optimal adjustment of canopy N allocation & \texttt{delta\_n\_leaf} & • & • & 0.0048 & • \\ 
-\hline 
-\end{tabularx}
-\end{sidewaystable}
-
-
-\begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
-\hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
 \hline 
 
-\multicolumn{6}{l}{\bf Phenology calculations}\\
+\multicolumn{6}{l}{\bf Parameters used for phenology calculations}\\
 \hline
 • & minimum LAI beyond which all leaves are shed & \texttt{min\_lai} & • & • & 0.1 & • \\    
 • & maximum LAI target for reserve use calculations & \texttt{target\_lai\_max} & • & • & 5.0 & • \\  
 • & maximum rate of leaf shedding & \texttt{max\_leaf\_shedding\_rate} & days & • & 0.05 & • \\  
+• & scaling coefficient for leaf on in the canopy model & \texttt{k\_leafon\_canopy} & • & • & 0.1 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
 \hline 
 \end{tabularx}
 \end{sidewaystable}
-
-\begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
-\hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
-\hline 
-
-\multicolumn{6}{l}{\bf Other}\\
-\hline
-• & carbon mass per unit dry weight of leaves & \texttt{carbon\_per\_dryweight\_leaf} & g C/ g DW & • & 0.48 & • \\    
-• & minimum permissable height of an individual & \texttt{min\_height} & • & • & 0.1 & • \\  
-• & stem mass to leaf mass ratio of grasses & \texttt{sm2lm\_grass} & • & • & 0.05 & • \\        
-\hline 
-\end{tabularx}
-\end{sidewaystable}
-
 
 
 \begin{sidewaystable}
@@ -385,9 +392,52 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 • & controlling temperature-limited establishment & \texttt{k\_est\_temp} & • & • & 4.0 & • \\
 • & controlling moisture-limited establishment & \texttt{lambda\_est\_moist} & • & • & 10.0 & • \\
 • & controlling moisture-limited establishment & \texttt{k\_est\_moist} & • & • & 2.0 & • \\
+• & fraction of wood removed from site after harvesting & \texttt{wood\_extraction\_rate} & • & • & 0.8 & • \\
+• & minimum growth efficiency & \texttt{min\_greff} & mol C/ $m^2$ (LAI)/ yr & • & 1.0 & • \\
+• & asymptotic growth efficiency mortality rate & \texttt{k1\_mort\_greff} & 1/ year & • & 0.05 & • \\
+• & scaling coefficient & \texttt{k2\_mort\_greff} & • & • & 0.3 & • \\
+• & scaling coefficient in growth efficiency mortality below minimum growth efficiency & \texttt{k3\_mort\_greff} & • & • & 25.0 & • \\
+• & maximum crown area & \texttt{max\_crown\_area} & $m^2$ & • & 15.0 & • \\
+• & minimum diameter for crown area calculation & \texttt{min\_diameter} & m & • & 0.01 & • \\
+• & scaling parameter in crownarea to diameter relationship & \texttt{k\_crown\_area} & • & • & 100.0 & • \\
+• & scaling exponent in crownarea to diameter relationship & \texttt{k\_rp} & • & • & 1.6 & • \\
+• & maximum foliage projective cover & \texttt{fpc\_max} & • & • & 0.95 & • \\
 \hline 
 \end{tabularx}
 \end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Other parameters}\\
+\hline
+• & carbon mass per unit dry weight of leaves & \texttt{carbon\_per\_dryweight\_leaf} & g C/ g DW & • & 0.48 & • \\    
+• & minimum permissable height of an individual & \texttt{min\_height} & • & • & 0.1 & • \\  
+• & stem mass to leaf mass ratio of grasses & \texttt{sm2lm\_grass} & • & • & 0.05 & • \\
+• & parameter in the Weibull function controlling fruit growth & \texttt{lambda\_fruit\_alloc} & • & • & 10.0 & • \\
+• & parameter in the Weibull function controlling fruit growth & \texttt{k4\_fruit\_alloc} & • & • & 2.0 & • \\
+• & parameter in the Weibull function controlling fruit growth & \texttt{k3\_fruit\_alloc} & $\sim\mu$mol C/ $m^2$/ s & • & 0.1 & • \\
+• & minimum fraction of allocation going to fruit (flowers etc.) & \texttt{k1\_fruit\_alloc} & • & • & 0.01 & • \\
+• & value of the root water limitation below which root allocation starts responding & \texttt{w\_root\_lim\_max} & • & • & 0.8 & • \\
+• & minimum leaf to root ratio for dynamic allocation & \texttt{leaf2root\_min\_ratio} & • & • & 0.2 & • \\
+• & maximum leaf to root ratio for dynamic allocation & \texttt{leaf2root\_max\_ratio} & • & • & 15.0 & • \\
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Parameters for changes in canopy N fractions}\\
+\hline
+ • & maximum fractional change for optimal adjustment of photosynthetic N fraction & \texttt{delta\_n\_fraction} & • & • & 0.048 & • \\ 
+ • & maximum fractional change for optimal adjustment of canopy N allocation & \texttt{delta\_n\_leaf} & • & • & 0.0048 & • \\ 
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
 
 \pagebreak
 
