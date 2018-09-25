@@ -255,7 +255,6 @@ ind_{est} = flux_{est} / seed\_size
 
 
 % PARAMETER LIST - Start %
-Parameter List and Information according to mo\_assimi\_constants from SLM r281. \\
 
 %\resizebox{\textwidth}{!}{  % to resize table to fit the page, needs \usepackage{graphicx}
 \begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
@@ -276,13 +275,13 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \hline 
 \multicolumn{6}{l}{\bf Labile pool parameters}\\
 \hline
-$\tau_{labile}$ & default turnover time of the labile carbo-hydrates & \texttt{tau\_labile\_default} & days & • & 5 & • \\ 
+$\tau_{labile}$ & turnover time of the labile carbo-hydrates & \texttt{tau\_labile} & days & • & 5 & • \\ 
 $\lambda^{labile}_{temp}$ & lambda in temperature response function of labile pool & \texttt{lambda\_labile\_temp} & • & \ref{eq:veg:k0_lab} & 0.5 & • \\ 
 $k^{labile}_{temp}$ & k in temperature response function of labile pool & \texttt{k\_labile\_temp} & • & \ref{eq:veg:k0_lab} & 2.0 & • \\ 
-$\lambda^{labile}_{\theta}$ & lambda in moisture response function of labile pool & \texttt{lambda\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 0.1 & • \\ 
+$\lambda^{labile}_{\theta}$ & lambda in moisture response function of labile pool & \texttt{lambda\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 10.0 & • \\ 
 $k^{labile}_{\theta}$ & k in moisture response function of labile pool & \texttt{k\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 2.0 & • \\ 
-$\lambda^{\Phi}_{phen}$ & lambda in storage response function to phenology & \texttt{lambda\_phiphen} &  & \ref{eq:veg:phiphen} & 1.8 &  \\ 
-$k^{\Phi}_{phen}$ & k in storage response function to phenology & \texttt{k\_phiphen} & & \ref{eq:veg:phiphen} & 4.0 & \\ 
+$\lambda^{\Phi}_{phen}$ & lambda in storage response function to phenology & \texttt{lambda\_phiphen} &  & \ref{eq:veg:phiphen} & 1.3 &  \\ 
+$k^{\Phi}_{phen}$ & k in storage response function to phenology & \texttt{k\_phiphen} & & \ref{eq:veg:phiphen} & 8.0 & \\ 
 $\lambda^{\Phi}_{maint}$ & lambda in storage response function to maintenance needs & \texttt{lambda\_phimaint} & & \ref{eq:veg:phimaint} & 4.0 & \\ 
 $k^{\Phi}_{maint}$ & k in storage response function to maintenance needs & \texttt{k\_phimaint} & • & \ref{eq:veg:phimaint} & 1.2 & \\ 
 $\lambda^{\Phi}_{store}$ & lambda in storage response function to storage size & \texttt{lambda\_phistore} & • & \ref{eq:veg:phistore} & 2.0 &  \\ 
@@ -301,12 +300,12 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 
 \multicolumn{6}{l}{\bf Resorption parameters}\\
 \hline
-$k_{resorb}^{leaf}$ & default fraction of nutrient resorption before leaf shedding & \texttt{resorp\_fract\_leaf} & 0.5 & • & • & • \\ 
-$k_{resorb}^{wood}$ & default fraction of nutrient resorption before wood death & \texttt{resorp\_fract\_wood} & 0.2 & • & • & • \\ 
-$\chi_{root}^{C:N}$ & relative C:N of fine roots compared to leaves & \texttt{root2leaf\_cn} &  & • & 0.85 & \cite{Zaehle:2010cz} \\ 
-$\chi_{wood}^{C:N}$ & relative C:N of woody biomass compared to leaves & \texttt{wood2leaf\_cn} &  & • & 0.145 & \cite{Zaehle:2010cz} \\ 
-$\chi_{root}^{N:P}$ & relative N:P of fine roots compared to leaves & \texttt{root2leaf\_np} & & • & 1.0  & • \\ 
-$\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt{wood2leaf\_np} &  & • & 1.0  & • \\ 
+$k_{resorb}^{leaf}$ & default fraction of nutrient resorption before leaf shedding & \texttt{resorp\_fract\_leaf} & • & • & 0.5 & • \\ 
+$k_{resorb}^{wood}$ & default fraction of nutrient resorption before wood death & \texttt{resorp\_fract\_wood} & • & • & 0.2 & • \\ 
+$\chi_{root}^{C:N}$ & relative C:N of fine roots compared to leaves & \texttt{root2leaf\_cn} & • & • & 0.85 & \cite{Zaehle:2010cz} \\ 
+$\chi_{wood}^{C:N}$ & relative C:N of woody biomass compared to leaves & \texttt{wood2leaf\_cn} & • & • & 0.145 & \cite{Zaehle:2010cz} \\ 
+$\chi_{root}^{N:P}$ & relative N:P of fine roots compared to leaves & \texttt{root2leaf\_np} & • & • & 1.0 & • \\ 
+$\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt{wood2leaf\_np} & • & • & 1.0 & • \\ 
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -316,35 +315,23 @@ $\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt
 \hline 
 Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
 \hline 
-
-\multicolumn{6}{l}{\bf Fractionation due to photosynthesis}\\
-\hline
-• & discrimination of C13 due to stomatal diffusion & \texttt{discr\_ps\_a\_C13} & • & • & 4.4 & • \\  
-• & discrimination of C13 due to Rubisco & \texttt{discr\_ps\_b\_C13} & • & • & 27.0 & • \\
-• & discrimination of C13 due to PEP C & \texttt{discr\_ps\_c\_C13} & • & • & 5.7 & • \\  
-• & discrimination of C13 due to stomatal diffusion & \texttt{discr\_ps\_a\_C14} & • & • & $discr\_ps\_a\_C13 * 1.97$ & • \\    
-• & discrimination of C13 due to Rubisco & \texttt{discr\_ps\_b\_C14} & • & • & $discr\_ps\_b\_C13 * 1.97$ & • \\  
-• & discrimination of C13 due to PEP C & \texttt{discr\_ps\_c\_C14} & • & • & $discr\_ps\_c\_C13 * 1.89$ & • \\    
-• & leakage rate of bundle sheath cells & \texttt{discr\_ps\_phi} & • & • & 0.16 & • \\  
-\hline 
 \multicolumn{6}{l}{\bf Canopy profile and canopy light extinction}\\
 \hline
 • & extinction coefficient to describe decline of N within the canopy & \texttt{kn} & • & • & 0.11 & • \\    
-• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fnl\_chl\_C3} & • & • & 6.0 & • \\  
-• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fnl\_chl\_C4} & • & • & 15.0 & • \\    
-• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fnl\_chl\_C3} & • & • & 3.6 & • \\  
-• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fnl\_chl\_C4} & • & • & 4.4 & • \\    
-• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{kfnl\_chl} & • & • & 0.7 & • \\  
-• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fnl\_pepc} & • & • & 0.045 & • \\ 
-• & slope of the fraction of leaf N not associated with PS against leaf N & \texttt{k1\_fnl\_struc} & --/mmolN & • & $\frac{71.4 * molar\_mass\_N}{1000000.0}$ & • \\ 
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fn\_chl\_C3} & • & • & 6.0 & • \\  
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fn\_chl\_C4} & • & • & 15.0 & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fn\_chl\_C3} & • & • & 3.6 & • \\  
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fn\_chl\_C4} & • & • & 4.4 & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{kfn\_chl} & • & • & 0.7 & • \\  
+• & fraction of N in PEP and PPKD (C3 plants only) & \texttt{k0\_fn\_pepc\_C3} & • & • & 0.0 & • \\ 
+• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fn\_pepc\_C4} & • & • & 0.045 & • \\ 
 • & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & 1.92 & • \\ 
 • & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & 1.4 & • \\
 \hline 
 \multicolumn{6}{l}{\bf Changes in canopy N fractions}\\
 \hline
- • & maximum change in CN ratio of canopy & \texttt{dn} & • & • & 0.001 & • \\ 
- • & maximum change in photosynthetic N fractions & \texttt{dnf} & • & • & 0.01 & • \\ 
- • & time scale of acclimation of canopy processes (N, P, T) & \texttt{tau\_canopy\_acclimation} & days & • & 10.0 & • \\ 
+ • & maximum fractional change for optimal adjustment of photosynthetic N fraction & \texttt{delta\_n\_fraction} & • & • & 0.048 & • \\ 
+ • & maximum fractional change for optimal adjustment of canopy N allocation & \texttt{delta\_n\_leaf} & • & • & 0.0048 & • \\ 
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -360,8 +347,7 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \hline
 • & minimum LAI beyond which all leaves are shed & \texttt{min\_lai} & • & • & 0.1 & • \\    
 • & maximum LAI target for reserve use calculations & \texttt{target\_lai\_max} & • & • & 5.0 & • \\  
-• & maximum rate of leaf shedding & \texttt{max\_leaf\_shedding\_rate} & days & • & 0.2 & • \\  
-$leaf\_age_{min}$ & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & n.a. & 10.0 & n.a. \\         
+• & maximum rate of leaf shedding & \texttt{max\_leaf\_shedding\_rate} & days & • & 0.05 & • \\  
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -377,10 +363,6 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 • & carbon mass per unit dry weight of leaves & \texttt{carbon\_per\_dryweight\_leaf} & g C/ g DW & • & 0.48 & • \\    
 • & minimum permissable height of an individual & \texttt{min\_height} & • & • & 0.1 & • \\  
 • & stem mass to leaf mass ratio of grasses & \texttt{sm2lm\_grass} & • & • & 0.05 & • \\        
-%$\lambda^{fruit}_{alloc} & parameter in the Weibull function controlling fruit growth & \texttt{lambda\_fruit\_alloc} & • & \ref{eq:veg:falloc_fruit} & 10.0 & • \\    
-%$k1^{fruit}_{alloc} & minimum fraction of allocation going to fruit (flowers etc.) & \texttt{k1\_fruit\_alloc} & • & \ref{eq:veg:falloc_fruit}& 0.01 & • \\    
-%$k3^{fruit}_{alloc} & parameter in the Weibull function controlling fruit growth & \texttt{k3\_fruit\_alloc} & $\mu$mol C/ m2/ s & \ref{eq:veg:falloc_fruit} & 0.1 & • \\ 
-%$k4^{fruit}_{alloc} & parameter in the Weibull function controlling fruit growth & \texttt{k4\_fruit\_alloc} & • & \ref{eq:veg:falloc_fruit} & 2.0 & • \\  
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -396,19 +378,13 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \multicolumn{6}{l}{\bf Vegetation dynamics}\\
 \hline
 • & background mortality rate of trees in static mortality case & \texttt{background\_mort\_rate\_tree} & • & • & 0.01 & • \\  
-• & background mortality rate of grasses in static mortality case & \texttt{background\_mort\_rate\_grass} & • & • & 0.01 & • \\
+• & background mortality rate of grasses in static mortality case & \texttt{background\_mort\_rate\_grass} & • & • & 0.05 & • \\
 • & controlling self-thinning mortality & \texttt{lambda\_mort\_light} & • & • & 0.15 & • \\
 • & controlling self-thinning mortality & \texttt{k\_mort\_light} & • & • & 4.0 & • \\
-• & controlling temperature-limited establishment & \texttt{lambda\_est\_temp} & • & • & 0.1 & • \\
+• & controlling temperature-limited establishment & \texttt{lambda\_est\_temp} & • & • & 0.075 & • \\
 • & controlling temperature-limited establishment & \texttt{k\_est\_temp} & • & • & 4.0 & • \\
-• & controlling moisture-limited establishment & \texttt{lambda\_est\_moist} & • & • & 0.1 & • \\
+• & controlling moisture-limited establishment & \texttt{lambda\_est\_moist} & • & • & 10.0 & • \\
 • & controlling moisture-limited establishment & \texttt{k\_est\_moist} & • & • & 2.0 & • \\
-• & top of the canopy red:farred ratio & \texttt{toc\_rfr\_ratio} & • & • & 1.2 & Kull \& Kruij 1998 \\
-• & extinction of red:farred ratio on leaf chlorophyll & \texttt{k\_r2fr\_chl} & 1/ mmol N & • & 0.0012 - 0.012 & Kull \& Krujit 1998, tuned \\   
-\hline 
-\multicolumn{6}{l}{\bf Soil pools}\\
-\hline
-• & soil litter pool turnover time & \texttt{tau\_litter} & • & • & $1.0 * 3600.0 * 24.0 * 365.0$ & • \\
 \hline 
 \end{tabularx}
 \end{sidewaystable}
