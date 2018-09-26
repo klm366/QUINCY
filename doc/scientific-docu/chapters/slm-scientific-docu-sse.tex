@@ -1,1 +1,83 @@
-\chapter{Soil Snow Energy}
+\chapter{Soil Snow Energy}\label{ch:sse}
+
+
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
+%\newpage
+\begin{sidewaystable}
+\section{Parameters}\label{tab:sse:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline
+• & soil heat capacity (temporarily for SLM offline) & \texttt{soil\_heat\_cap} & J/kg/K & • & 1480.0 & textbook for wet sandy soil \\
+• & soil thermal conductivity & \texttt{soil\_therm\_cond} & W $m^{-1}$ $K^{-1}$ & • & 2.0 & Text book for wet sandy soil \\
+• & Efficiency of interception of precipitation as rain & \texttt{InterceptionEfficiency} & • & • & 0.25 & JSBACH4 \\
+• & maximum water storage per unit LAI & \texttt{w\_skin\_max} & m & • & 0.0002 & JSBACH4 \\
+• & preferential flow fraction of infiltrating water per meter soil & \texttt{drain\_frac} & • & • & 0.01 & tuned \\
+• & preferential flow fraction of runoff & \texttt{fdrain\_runoff} & • & • & 0.95 & set from ORCHIDEE \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Constants in pedo-transfer functions (part 1/2)}\\
+\hline
+• & water potential at permanent wilitng point & \texttt{wpot\_pwp} & Pa & • & 1500.0 & Saxton \& Rawls 2006 \\
+• & water potential at field capacity & \texttt{wpot\_fc} & Pa & • & 33.0 & Saxton \& Rawls 2006 \\
+• & minimum water potential for numerical reasons & \texttt{wpot\_min} & MPa & • & -15.0 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & \texttt{k\_pwp\_a} & • & • & 0.031 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & \texttt{k\_pwp\_c} & • & • & 0.487 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & \texttt{k\_pwp\_s} & • & • & -0.024 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & \texttt{k\_pwp\_sc} & • & • & 0.068 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & \texttt{k\_pwp\_at} & • & • & -0.02 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & \texttt{k\_pwp\_bt} & • & • & 0.14 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_a} & • & • & 0.299 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_c} & • & • & 0.195 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_s} & • & • & -0.251 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_sc} & • & • & 0.452 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_at} & • & • & -0.015 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_bt} & • & • & -0.373 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & \texttt{k\_fc\_ct} & • & • & 1.293 & Saxton \& Rawls 2006 \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Constants in pedo-transfer functions (part 2/2)}\\
+\hline
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_a} & • & • & 0.078 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_c} & • & • & 0.034 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_s} & • & • & 0.278 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_sc} & • & • & -0.584 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_at} & • & • & -0.107 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_bt} & • & • & 0.6360 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_ct} & • & • & 0.097 & Saxton \& Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & \texttt{k\_sat\_dt} & • & • & 0.043 & Saxton \& Rawls 2006 \\
+• & maximum diffusivity of soil at saturation & \texttt{kdiff\_sat\_max} & m/s & • & 0.00053611 & Saxton \& Rawls 2006 \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+
+\pagebreak
+
+\newpage
+% PARAMETER LIST - End %
