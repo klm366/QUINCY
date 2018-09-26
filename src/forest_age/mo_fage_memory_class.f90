@@ -102,30 +102,30 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('mean_age', '', ''),                                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, output_level=BASIC,                                  &
         & loutput = .TRUE.,initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_per_age', mem%fract_per_age,               &
         & hgrid, forest_age,                                                   &
         & t_cf('fract_per_age', 'y', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, output_level=FULL,                                   &
         & lrestart=.TRUE., loutput = .TRUE.,initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'cohort_max_age', mem%cohort_max_age,             &
-        & hgrid, age_cohorts_grid,                                                  &
-        & t_cf('cohort_max_age', 'y', 'max age per age cohort'),                                     &
+        & hgrid, age_cohorts_grid,                                             &
+        & t_cf('cohort_max_age', 'y', 'max age per age cohort'),               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
+        & prefix, suffix, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp )
 
       IF (model%processes(DISTURB_)%p%config%active) THEN
 
         CALL jsb_add_var( mem, 'disturbed_area', mem%disturbed_area,             &
-          & hgrid, age_cohorts_grid,                                                  &
+          & hgrid, age_cohorts_grid,                                             &
           & t_cf('disturbed_area', 'y', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
+          & prefix, suffix, output_level=BASIC,                                  &
           & initval_r=0.0_wp )
 
       ENDIF
