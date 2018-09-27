@@ -399,7 +399,7 @@ CONTAINS
     fleach_nh4            = 0.1_wp                            ! 
     fleach_po4            = 0.001_wp                          ! 
     soil_n_threshold_bnf  = 0.05_wp                           ! 
-    standard_bnf_max_rate = 3.0_wp / molar_mass_N / one_year / one_day * 1000000.0_wp
+    standard_bnf_max_rate = 2.5_wp / molar_mass_N / one_year / one_day * 1000000.0_wp
 
     ! All values from Robinson 2001, TREE
     eta_mic_uptake_nh4     = 17._wp                           ! 

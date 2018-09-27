@@ -714,6 +714,7 @@ CONTAINS
                             biochem_mineralisation_po4(:,:), &
                             sb_formation )
 
+
     !> 3.3 formation of metabolic and strucutral litter by woody liter decay and 
     !!     associated respiration, net mineralisation fluxes    
     IF(lctlib%growthform==itree)THEN 
@@ -771,7 +772,8 @@ CONTAINS
                                      root_fraction_act_sl(:,:), &
                                      asymb_n_fixation(:,:), &
                                      asymb_n_fixation_n15(:,:))
-                    
+
+                
     !> 6.1 For sb_model = fixed, estimate N losses
     !! 
     IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='fixed')THEN
@@ -3304,7 +3306,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
          hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb)
        CASE("standard")
          hlp2(:) = standard_bnf_max_rate / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
-         hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb) * rtm_fixation_act(:,:) * rmm_fixation_act(:,:)
+         hlp2_2d(:,:) = SPREAD(hlp2,2,options%nsoil_sb) * rtm_fixation_act(:,:) 
        CASE default
          hlp2_2d(:,:) = 0.0_wp
     END SELECT
