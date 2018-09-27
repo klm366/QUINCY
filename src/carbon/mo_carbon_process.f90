@@ -1523,7 +1523,7 @@ CONTAINS
   ! calculate per tile density from density per canopy m2
   !
   ELEMENTAL SUBROUTINE get_per_tile(  &
-    & Cpool_per_tile,                 & ! in
+    & Cpool_per_tile,                 & ! out
     & Cpool_per_canopy,               & ! in
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in
