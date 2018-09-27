@@ -54,7 +54,7 @@ PROGRAM jsb4_driver
 
   ! io
   USE mo_io,               ONLY: write_streams, IO_read_streams
-  USE mo_filename,         ONLY: out_filetype
+  USE mo_filename,         ONLY: out_filetype, rerun_filetype, NETCDF4
   USE mo_netcdf,           ONLY: nf_check, nf_close
   USE mo_memory_base,      ONLY: default_output, NETCDF
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
@@ -171,6 +171,7 @@ PROGRAM jsb4_driver
   model_id = 1
   default_output = .TRUE.
   out_filetype = NETCDF
+  rerun_filetype = NETCDF4
 
   ! Start MPI
   CALL p_start
