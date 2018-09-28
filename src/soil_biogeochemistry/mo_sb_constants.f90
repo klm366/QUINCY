@@ -66,7 +66,7 @@ MODULE mo_sb_constants
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
       microbial_nue, &           !< microbial nitrogen use efficiency
-      microbial_pue, &           !< microibal phosphorus use efficiency
+      microbial_pue, &           !< microbial phosphorus use efficiency
       microbial_cue, &           !< microbial carbon-use efficiency
       microbial_cue_max, &       !< maximum microbial carbon-use efficiency
       microbial_cue_min, &       !< minimum microbial carbon-use efficiency
@@ -76,12 +76,12 @@ MODULE mo_sb_constants
       frac_woody2dec_litter, &   !< fraction of woody litter transformed into soluable or polymeric litter 
       frac_litter2fast_som, &    !< fraction of litter transformed into fast SOM
       frac_fast2slow_som, &      !< fraction of fast SOM transformed into slow SOM
-      frac_slow2fast_som, &      !< fraction of slow SOM transformed into fast SOM
-      fc_woody2polymeric         !< fraction of woody litter transformed into polymeric litter (JSM version) 
+      frac_slow2fast_som         !< fraction of slow SOM transformed into fast SOM
 
   ! additional microbial parameters for JSM implementation
   REAL(wp), SAVE :: & 
-      k_mort_microbial , &              !< mortality rate of microbes [s-1]
+      fc_woody2polymeric, &             !< fraction of woody litter transformed into polymeric litter (JSM version) 
+      k_mort_microbial, &               !< mortality rate of microbes [s-1]
       min_mic_biomass, &                !< minimum microbial biomass density (stopping mortality) [mol C/m3]
       vmax_mic_uptake, &                !< maximum uptake rates of microbes [s-1] 
       km_mic_uptake, &                  !< half-saturation DOM density for microbial DOM consumption 
@@ -89,7 +89,7 @@ MODULE mo_sb_constants
       vmax_depolymerisation_residue, &  !< maximum depolymerisation rate of residue
       vmax_depolymerisation_litter      !< maximum depolymerisation rate of polymeric litter
 
-   ! parameters controlliong litter partitioning
+   ! parameters controlling litter partitioning
    REAL(wp), SAVE :: & 
       f_soluable_residue, &      !< fraction of microbial residue entering the DOM pool
       f_soluable_leaf, &         !< fraction of leaf litter that becomes DOM
@@ -111,22 +111,21 @@ MODULE mo_sb_constants
    ! mycorrhizal parameters
    REAL(wp), SAVE :: & 
       mycorrhiza_cue, &          !< mycorrhizal carbon-use efficiency
-      mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fung
+      mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fungi
       mycorrhiza_np, &           !< molar ratio of N:P of mycorrhizal fungi
       f_maxresp_myc, &           !< maximum fraction of mycorrhizal carbon used for N transformation [1/day]
       f_surface_myc2fineroot     !< ratio of surface to mass relationship between mycorrhizal fungi and fine roots
 
-   ! nutrient uptake kinetics & ECA approach
-   ! simple model
+   ! nutrient uptake kinetics & ECA approach: simple model
    REAL(wp), SAVE :: & 
       km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
+      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]  unit correct ?
       km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
-      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3] unit correct ?
 
-   ! additional jsm parameters
+   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
    REAL(wp), SAVE :: &
       vmax_mic_uptake_nh4, &     !< maximum NH4 uptake capacity of microbes (mol N / mol biomass C / s)  
       km_mic_uptake_nh4, &       !< half-saturation concentration (mol N / m3)
@@ -291,18 +290,18 @@ CONTAINS
     frac_litter2fast_som    = 0.45_wp                                ! 
     frac_fast2slow_som      = 0.15_wp                                ! 
     frac_slow2fast_som      = 0.3_wp                                 ! 
-    fc_woody2polymeric      = 0.3_wp                                 !  
    
     ! additional microbial parameters for JSM implementation
+    fc_woody2polymeric            = 0.3_wp                                 !  
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                                ! 
     min_mic_biomass               = 0.01_wp                                           ! 
     vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp  ! 
     km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000_wp            ! conversion to mol C / m3
-    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                 ! 
-    vmax_depolymerisation_litter  = 0.369800811690762_wp / one_year / one_day         ! note: this is very likely beyond '_wp' precission
     km_depolymerisation           = 0.08876_wp / molar_mass_C * 1000_wp               ! conversion to mol C / m3
+    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                 ! 
+    vmax_depolymerisation_litter  = 0.369800811690762_wp / one_year / one_day         ! beyond '_wp' precission ?; R calcs it as 1.172631e-08
 
-    ! parameters controlliong litter partitioning
+    ! parameters controlling litter partitioning
     f_soluable_residue   = 0.172_wp                                   ! 
     f_soluable_leaf      = 0.5_wp                                     ! 
     f_soluable_fine_root = 0.5_wp                                     ! 
@@ -327,8 +326,7 @@ CONTAINS
     f_maxresp_myc           = 0.4_wp                                  !! ??? SOURCE
     f_surface_myc2fineroot  = 10.0_wp                                 !! ??? SOURCE
 
-    ! nutrient uptake kinetics
-    ! simple model
+   ! nutrient uptake kinetics & ECA approach: simple model
     km1_up_nh4 = 0.0416_wp                 ! 
     km2_up_nh4 = 1.0_wp                    ! 
     km1_up_no3 = 0.0416_wp                 ! 
@@ -337,10 +335,10 @@ CONTAINS
                                            ! assuming Km for low-affinity transporter is 300 µmol/L
     km2_up_po4 = 22.0_wp / 1000000._wp     ! mol/L, Kavka and Polle 2016
 
-    ! additional jsm parameters 
+   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
     vmax_mic_uptake_nh4     = 480.0_wp / 3600._wp * molar_mass_C          ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily 48 times 10 !
     km_mic_uptake_nh4       = 1.2_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein    
-    vmax_mic_uptake_no3     = 390.0_wp / 3600._wp * molar_mass_C  ! µmol / mol / s from Zhu et al. 2017, and references therein         !temporarily 39 times 10 !
+    vmax_mic_uptake_no3     = 390.0_wp / 3600._wp * molar_mass_C          ! µmol / mol / s from Zhu et al. 2017, and references therein         !temporarily 39 times 10 !
     km_mic_uptake_no3       = 1.8_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein   
     f_mic_carrier_n         = 0.05_wp                                     ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     vmax_plant_uptake_nh4   = 9.7_wp / 3600._wp * molar_mass_C            ! µmol / mol / s from Zhu et al. 2017, and references therein
@@ -365,16 +363,6 @@ CONTAINS
                                                                           ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
     km_adsorpt_OM_po4       = 14._wp / 1000._wp / molar_mass_P            ! 200 times of km_adsorpt_mineral_po4, from literature data analysis
 
-   ! soil Pi fluxes
-    k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
-    eq_sorp_mineral_po4   = 80._wp / molar_mass_P                                 ! [mol P m-3] ! random guess based on init value of assoc_slow
-    k_occlude_po4         = 1.0_wp / 1000000._wp / 30._wp / one_day               ! [s-1], Yang et al. 2014
-    vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [s-1], estimated from Bunemann et al. 2016, LUS site
-    km_mic_biochem_po4    = 0.1_wp / molar_mass_C                                 ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
-    km_dip_biochem_po4    = 0.001_wp                                              ! estimated
-    km_rootc_biochem_po4  = 20._wp                                                ! 
-    km_rootc_weath_po4    = 10._wp                                                !
-
     ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
     ea_nitrification       = 80000._wp                        ! Xu-Ri & Prentice, 2008, to fit their function
     ed_nitrification       = 200000._wp                       ! Xu-Ri & Prentice, 2008, to fit their function
@@ -392,7 +380,7 @@ CONTAINS
     lambda_anvf            = 1.3_wp                           ! fitted from Zaehle et al. 2011, NatGeo 
     k_anvf                 = 3.0_wp                           ! fitted from Zaehle et al. 2011, NatGeo
 
-    ! parameters for simple soil biogeochemical model 
+    ! Simple-model fixed loss and simple leaching parameterisation
     floss_nmin            = 0.05_wp                           ! 
     fnit_nmin             = 0.1_wp                            ! 
     ! simple leaching
@@ -401,7 +389,7 @@ CONTAINS
     soil_n_threshold_bnf  = 0.05_wp                           ! 
     standard_bnf_max_rate = 2.5_wp / molar_mass_N / one_year / one_day * 1000000.0_wp
 
-    ! All values from Robinson 2001, TREE
+    ! Isoptope stuff: all values from Robinson 2001, TREE
     eta_mic_uptake_nh4     = 17._wp                           ! 
     eta_mic_uptake_no3     = 13._wp                           ! 
     eta_plant_uptake_nh4   = 13.5_wp                          ! 
@@ -412,6 +400,15 @@ CONTAINS
     eta_ammonification     = 2.5_wp                           ! 
     eta_volatilisation_nh3 = 50._wp                           ! 
 
+   ! soil Pi fluxes
+    k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
+    eq_sorp_mineral_po4   = 80._wp / molar_mass_P                                 ! [mol P m-3] ! random guess based on init value of assoc_slow
+    k_occlude_po4         = 1.0_wp / 1000000._wp / 30._wp / one_day               ! [s-1], Yang et al. 2014
+    vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [s-1], estimated from Bunemann et al. 2016, LUS site
+    km_mic_biochem_po4    = 0.1_wp / molar_mass_C                                 ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
+    km_dip_biochem_po4    = 0.001_wp                                              ! estimated
+    km_rootc_biochem_po4  = 20._wp                                                ! 
+    km_rootc_weath_po4    = 10._wp                                                !
 
     !! BLARPP only temporarily, mol / m2 !!
     nh4_solute_prescribe = 0.1_wp
