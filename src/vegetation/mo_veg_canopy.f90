@@ -1089,8 +1089,8 @@ CONTAINS
     REAL(wp),DIMENSION(options%nc),         INTENT(inout) :: leaf_cn_direction
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp),DIMENSION(options%nc)                        :: leaf_nitrogen_new
-    REAL(wp),DIMENSION(options%nc,ncanopy)                :: leaf_nitrogen_new_cl, &
+    REAL(wp), DIMENSION(options%nc)                       :: leaf_nitrogen_new
+    REAL(wp), DIMENSION(options%nc,ncanopy)               :: leaf_nitrogen_new_cl, &
                                                              fn_oth_new_cl, &
                                                              fn_chl_new_cl, &
                                                              fn_et_new_cl, &
@@ -1098,16 +1098,22 @@ CONTAINS
                                                              fn_pepc_new_cl, &
                                                              lai_new_cl, &
                                                              cumm_lai_new_cl
-    REAL(wp),DIMENSION(options%nc,ncanopy)                :: loc_ppfd_sunlit_cl   , &
+    REAL(wp), DIMENSION(options%nc,ncanopy)               :: loc_ppfd_sunlit_cl   , &
                                                              loc_ppfd_shaded_cl   , &
                                                              loc_fleaf_sunlit_cl
-    REAL(wp),DIMENSION(3)                                 :: npp_direction
+    REAL(wp), DIMENSION(3)                                :: npp_direction             ! three states: lower, neutral, higher; one of which is selected per cl
     REAL(wp)                                              :: anl, agl, rl
     REAL(wp)                                              :: hlp1
     REAL(wp)                                              :: direction
     REAL(wp), DIMENSION(options%nc)                       :: ns_carbon, ns_nitrogen, beta_sinklim_ps_local
     INTEGER                                               :: icanopy, dd, ipoint    ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
 
     !> 0.9 init local var
@@ -1132,7 +1138,8 @@ CONTAINS
 
 
 
-    !> 1.0 ...
+    !> 1.0 calc leaf_cn_direction(:) for each point in the chunk looping over canopy layers
+    !!  only during growing_season
     !!
     DO ipoint=1,options%nc
     IF(growing_season(ipoint) > test_false_true)THEN
@@ -1223,8 +1230,8 @@ CONTAINS
       ENDDO  ! dd = 1,3
 
       ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
-  !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
-      leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
+      ! MAXLOC(x(:),1) works along the 1st dimension of x(:), where x(:) actually has only one dimension; this avoids a compile error for non-conforming shapes
+      leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction(:), 1), KIND=wp) - 2.0_wp)
 
       IF ((uptake_n(ipoint) * lctlib%tau_fine_root * one_year*one_day*1e-6_wp + ns_nitrogen(ipoint)) * growth_cn(ipoint) < &
           (npp(ipoint)*lctlib%tau_leaf * 1e-6_wp * one_year*one_day + ns_carbon(ipoint))) THEN

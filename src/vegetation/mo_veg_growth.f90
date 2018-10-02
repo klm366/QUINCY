@@ -513,10 +513,10 @@ CONTAINS
 
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
-    !! in this function it is looped over chunks with two IF staments:  \n
-    !!   DO ichunk=1,nc                                                 \n
-    !!   IF(growing_season(ichunk))THEN                                 \n
-    !!   IF(veg_pool_leaf_nitrogen(ichunk) > eps4)THEN
+    !! this function loops over:                    \n
+    !!   points:          DO ipoint=1,options%nc    \n
+    !!   direction:       DO dd = 1,3               \n
+    !!   canopy layers:   DO icanopy =1, ncanopy
     !! 
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
       CALL calc_dir_optimal_cn_leaf(    options                                        , & ! in
