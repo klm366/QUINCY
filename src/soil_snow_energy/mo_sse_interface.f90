@@ -40,28 +40,28 @@ MODULE mo_sse_interface
   PUBLIC :: Register_sse_tasks
 
   !> Type definition for soil_temp_and_hydro task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_temp_and_hydro
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_and_snow_temp
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_soil_temperature
-    PROCEDURE, NOPASS :: Aggregate => aggregate_soil_temperature
-  END TYPE tsk_soil_temp_and_hydro
+    PROCEDURE, NOPASS :: Integrate => update_soil_and_snow_temperature
+    PROCEDURE, NOPASS :: Aggregate => aggregate_soil_and_snow_temperature
+  END TYPE tsk_soil_and_snow_temp
 
   !> Constructor interface for soil_temperature task
-  INTERFACE Create_task_soil_temperature
-    PROCEDURE Create_task_soil_temperature
-  END INTERFACE Create_task_soil_temperature
+  INTERFACE tsk_soil_and_snow_temp
+    PROCEDURE Create_task_soil_and_snow_temperature
+  END INTERFACE tsk_soil_and_snow_temp
 
   !> Type definition for soil_properties
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_properties
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_and_snow_properties
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_soil_properties
-    PROCEDURE, NOPASS :: Aggregate => aggregate_soil_properties
-  END TYPE tsk_soil_properties
+    PROCEDURE, NOPASS :: Integrate => update_soil_and_snow_properties
+    PROCEDURE, NOPASS :: Aggregate => aggregate_soil_and_snow_properties
+  END TYPE tsk_soil_and_snow_properties
 
   !> Constructor interface for soil_properties
-  INTERFACE tsk_soil_properties
-    PROCEDURE Create_task_soil_properties
-  END INTERFACE tsk_soil_properties
+  INTERFACE tsk_soil_and_snow_properties
+    PROCEDURE Create_task_soil_and_snow_properties
+  END INTERFACE tsk_soil_and_snow_properties
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_interface'
 
@@ -76,15 +76,15 @@ CONTAINS
   !! @param[in]     model_id     Model id
   !! @return        return_ptr   Instance of process task "soil_temperature"
   !!
-  FUNCTION Create_task_soil_temperature(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_soil_and_snow_temperature(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_soil_temp_and_hydro::return_ptr)
-    CALL return_ptr%Construct(name='soil_temperature', process_id=SSE_, owner_model_id=model_id)
+    ALLOCATE(tsk_soil_and_snow_temp::return_ptr)
+    CALL return_ptr%Construct(name='soil_and_snow_temperature', process_id=SSE_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_soil_temperature
+  END FUNCTION Create_task_soil_and_snow_temperature
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for soil_properties task
@@ -92,27 +92,27 @@ CONTAINS
   !! @param[in]     model_id     Model id
   !! @return        return_ptr   Instance of process task "soil_properties"
   !!
-  FUNCTION Create_task_soil_properties(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_soil_and_snow_properties(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_soil_properties::return_ptr)
-    CALL return_ptr%Construct(name='soil_properties', process_id=SSE_, owner_model_id=model_id)
+    ALLOCATE(tsk_soil_and_snow_properties::return_ptr)
+    CALL return_ptr%Construct(name='soil_and_snow_properties', process_id=SSE_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_soil_properties
+  END FUNCTION Create_task_soil_and_snow_properties
 
   SUBROUTINE Register_sse_tasks(process, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL process%Register_task(Create_task_soil_temperature(model_id))
-    CALL process%Register_task(Create_task_soil_properties(model_id))
+    CALL process%Register_task(tsk_soil_and_snow_temp(model_id))
+    CALL process%Register_task(tsk_soil_and_snow_properties(model_id))
 
   END SUBROUTINE Register_sse_tasks
 
-  SUBROUTINE update_soil_temperature(tile, options)
+  SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
@@ -187,7 +187,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -439,9 +439,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_soil_temperature
+  END SUBROUTINE update_soil_and_snow_temperature
 
-  SUBROUTINE aggregate_soil_temperature(tile, options)
+  SUBROUTINE aggregate_soil_and_snow_temperature(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -455,7 +455,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_temperature'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_and_snow_temperature'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -493,9 +493,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_soil_temperature
+  END SUBROUTINE aggregate_soil_and_snow_temperature
 
-  SUBROUTINE update_soil_properties(tile, options)
+  SUBROUTINE update_soil_and_snow_properties(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: ci, cs, dens_snow_min
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, vol_hcap_snow_min, hcond_ice, hcond_snow, hcond_snow_min
@@ -536,7 +536,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     INTEGER  :: nsoil
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_properties'
 
     iblk  = options%iblk
     ics   = options%ics
@@ -661,7 +661,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_soil_properties
+  END SUBROUTINE update_soil_and_snow_properties
   !
   ! -------------------------------------------------------------------------------------------------------
   !>
@@ -670,7 +670,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_soil_properties(tile, options)
+  SUBROUTINE aggregate_soil_and_snow_properties(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -681,7 +681,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_properties'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_and_snow_properties'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -705,7 +705,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_soil_properties
+  END SUBROUTINE aggregate_soil_and_snow_properties
 
 #endif
 END MODULE mo_sse_interface
