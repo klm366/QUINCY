@@ -156,12 +156,12 @@ if [ -d "$pathSourceBase""$expNameCS" ] # if folder is present, i.e., new soil_f
  then
 
   echo " "
-  echo " Removing old cruncep CUE soil_forcing files from: ""$pathServerC""$soilForce"
+  echo " Removing old cruncep SPP soil_forcing files from: ""$pathServerC""$soilForce"
   echo " and copy cruncep SPP soil_forcing from :""$pathSourceBase""$expNameCS"
   for site in $(ls -d "$pathSourceBase""$expNameCS"/*/)
    do
 
-    siteBase=$(basename $site)  # just: BBR_01 & LUE_01
+    siteBase=$(basename $site)  # just: BBR_01 & LUE_01 & VES_01
 
     if [ $siteBase != "x_binary" ]
     then
