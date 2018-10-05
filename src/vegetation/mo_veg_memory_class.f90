@@ -992,20 +992,21 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: suffix          !> ?
     INTEGER,                         INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,                         INTENT(in)    :: model_id        !> model ID model\%id
-    CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables, for variable description
+    CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=50)           :: var_name
-    CHARACTER(len=100)          :: var_name_long    
+    CHARACTER(len=100)          :: var_name_long
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
     table = 1
 
 
+    ! run add_var()
     var_name      = TRIM(this%name)//'_carbon'
-    var_name_long = 'Carbon_in_'//TRIM(this%name)
+    var_name_long = 'Carbon in vegetation '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%carbon, &
           hgrid, surface, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
@@ -1014,7 +1015,7 @@ CONTAINS
           prefix, suffix, &
           initval_r=0.0_wp)     ! initvalue
     var_name      = TRIM(this%name)//'_nitrogen'
-    var_name_long = 'Nitrogen_in_'//TRIM(this%name)
+    var_name_long = 'Nitrogen in vegetation '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%nitrogen, &
           hgrid, surface, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
@@ -1023,7 +1024,7 @@ CONTAINS
           prefix, suffix, &
           initval_r=0.0_wp)     ! initvalue
     var_name      = TRIM(this%name)//'_phosphorus'
-    var_name_long = 'Phosphorus_in_'//TRIM(this%name)
+    var_name_long = 'Phosphorus in vegetation '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%phosphorus, &
           hgrid, surface, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
@@ -1032,7 +1033,7 @@ CONTAINS
           prefix, suffix, &
           initval_r=0.0_wp)     ! initvalue
     var_name      = TRIM(this%name)//'_carbon13'
-    var_name_long = 'Carbon13_in_'//TRIM(this%name)
+    var_name_long = 'Carbon13 in vegetation '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%carbon13, &
           hgrid, surface, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
@@ -1041,7 +1042,7 @@ CONTAINS
           prefix, suffix, &
           initval_r=0.0_wp)     ! initvalue
     var_name      = TRIM(this%name)//'_carbon14'
-    var_name_long = 'Carbon14_in_'//TRIM(this%name)
+    var_name_long = 'Carbon14 in vegetation '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%carbon14, &
           hgrid, surface, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
@@ -1050,7 +1051,7 @@ CONTAINS
           prefix, suffix, &
           initval_r=0.0_wp)     ! initvalue
     var_name      = TRIM(this%name)//'_nitrogen15'
-    var_name_long = 'Nitrogen15_in_'//TRIM(this%name)
+    var_name_long = 'Nitrogen15 in vegetation '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%nitrogen15, &
           hgrid, surface, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
@@ -1092,8 +1093,9 @@ CONTAINS
     table = 1
 
 
+    ! run add_var()
     element_name      = TRIM(this%name)//'_leaf'
-    element_name_long = 'Leaf_element_of_'//TRIM(this%name)
+    element_name_long = 'Leaf element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%leaf, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1101,7 +1103,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_fine_root'
-    element_name_long = 'Fine_root_element_of_'//TRIM(this%name)
+    element_name_long = 'Fine_root element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%fine_root, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1109,7 +1111,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_coarse_root'
-    element_name_long = 'Coarse_root_element_of_'//TRIM(this%name)
+    element_name_long = 'Coarse_root element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%coarse_root, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1117,7 +1119,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_sap_wood'
-    element_name_long = 'Sap_wood_element_of_'//TRIM(this%name)
+    element_name_long = 'Sap_wood element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%sap_wood, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1125,7 +1127,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_heart_wood'
-    element_name_long = 'Heart_wood_element_of_'//TRIM(this%name)
+    element_name_long = 'Heart_wood element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%heart_wood, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1133,7 +1135,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_labile'
-    element_name_long = 'Labile_element_of_'//TRIM(this%name)
+    element_name_long = 'Labile element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%labile, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1141,7 +1143,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_reserve'
-    element_name_long = 'Reserve_element_of_'//TRIM(this%name)
+    element_name_long = 'Reserve element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%reserve, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1149,7 +1151,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_fruit'
-    element_name_long = 'Fruit_element_of_'//TRIM(this%name)
+    element_name_long = 'Fruit element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%fruit, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1157,7 +1159,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
     element_name      = TRIM(this%name)//'_seed_bed'
-    element_name_long = 'Seed_bed_element_of_'//TRIM(this%name)
+    element_name_long = 'Seed_bed element of vegetation '//TRIM(this%name)
       CALL jsb_add_var(this, TRIM(element_name), this%seed_bed, &
             hgrid, surface, &
             t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
@@ -1196,6 +1198,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
     CHARACTER(len=30)          :: unit_veg_pool
+    CHARACTER(len=30)          :: unit_veg_flux
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
 
 
@@ -1206,6 +1209,7 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
     unit_veg_pool = "mol m-2"
+    unit_veg_flux = "mol m-2 timestep-1"
 
 
 
@@ -2507,27 +2511,27 @@ CONTAINS
       !! jsb_add_var -> slm_add_struct()
       !! 
       !-----------------------------------------------------------------------------------------------------
-      CALL jsb_add_var(mem, 'veg_exudation',              mem%exudation, &
+      CALL jsb_add_var(mem, 'exudation',              mem%exudation, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('exudation', TRIM(unit_veg_flux), 'Exudation element in vegetation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'veg_establishment',          mem%establishment, &
+      CALL jsb_add_var(mem, 'establishment',          mem%establishment, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('establishment', TRIM(unit_veg_flux), 'Establishment element in vegetation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'veg_reserve_use',            mem%reserve_use, &
+      CALL jsb_add_var(mem, 'reserve_use',            mem%reserve_use, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('reserve_use', TRIM(unit_veg_flux), 'Reserve_use element in vegetation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'veg_total_biomass',          mem%total_biomass, &
+      CALL jsb_add_var(mem, 'total_biomass',          mem%total_biomass, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('total_biomass', TRIM(unit_veg_pool), 'Total_biomass element in vegetation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
@@ -2536,9 +2540,9 @@ CONTAINS
       !! 
       !! veg\%elements\%VAR
       !! 
-      CALL mem%exudation%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%establishment%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%reserve_use%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
+      CALL mem%exudation%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%establishment%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%reserve_use%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%total_biomass%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
 
 
@@ -2550,31 +2554,31 @@ CONTAINS
       !-----------------------------------------------------------------------------------------------------
       CALL jsb_add_var(mem, 'pool'        , mem%pool, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('pool', TRIM(unit_veg_pool), 'Pool vegetation pool'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'growth'      , mem%growth, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('growth', TRIM(unit_veg_flux), 'Growth vegetation flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'litterfall'  , mem%litterfall, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('litterfall', TRIM(unit_veg_flux), 'Litterfall vegetation flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'falloc'      , mem%falloc, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('falloc', TRIM(unit_veg_flux), 'Falloc vegetation flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'total_flux'  , mem%total_flux, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('total_flux', TRIM(unit_veg_flux), 'Total_flux vegetation flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)     ! mass conservation diagnosis
@@ -2584,10 +2588,10 @@ CONTAINS
       !! jsb_add_var -> slm_add_l2_struct()
       !! 
       CALL mem%pool%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
+      CALL mem%growth%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
 
       !> add variables to the elements in the pools
       !!
@@ -2603,45 +2607,45 @@ CONTAINS
       CALL mem%pool%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
       CALL mem%pool%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
  
-      CALL mem%growth%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%growth%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
+      CALL mem%growth%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%growth%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
        
-      CALL mem%litterfall%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%litterfall%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
+      CALL mem%litterfall%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%litterfall%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       
-      CALL mem%falloc%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%falloc%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
+      CALL mem%falloc%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%falloc%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       
-      CALL mem%total_flux%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
-      CALL mem%total_flux%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
+      CALL mem%total_flux%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%sap_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%heart_wood%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%labile%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+      CALL mem%total_flux%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
 
     END IF
 
